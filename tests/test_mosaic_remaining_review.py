@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from types import SimpleNamespace
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -25,7 +26,9 @@ class CorrectionParkingFrontierTests(unittest.TestCase):
                 return SimpleNamespace(returncode=code,stdout='',stderr=error)
             def physical(command,**kwargs):
                 nonlocal parked
-                script=next(Path(v).name for v in command if v.endswith('.py'))
+                script=next((Path(v).name for v in command if v.endswith('.py')),None)
+                # The patch replaces the shared subprocess.run; let unrelated probes through.
+                if script is None:return real_run(command,**kwargs)
                 if script=='execute_mosaic_repair_transfer.py':
                     goal=command[command.index('--goal')+1];calls.append('place-'+goal)
                     if goal=='g1':return finished(1,'Original evaluator did not establish requested goal')
@@ -40,6 +43,7 @@ class CorrectionParkingFrontierTests(unittest.TestCase):
                     if parking_fails:return finished(1,'Blocked empty-arm parking route')
                     parked=True;return finished()
                 raise AssertionError(script)
+            real_run=subprocess.run
             option=dict(contact_height=.035,contact_offset_m=(0.,0.,0.),centering_contact_m=0.)
             args=SimpleNamespace(trial=root,supply_plan=root/'proposal.json',id='batch',expanded_pickups=False,resume_at_full=False)
             with patch('scripts.execute_mosaic_remaining_review.subprocess.run',side_effect=physical), \
