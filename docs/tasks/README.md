@@ -1,7 +1,7 @@
 # Frontier V2 tasks
 
 Four families each have three scales and three levels, giving 36 cases.
-`configs/task_families/current.json` distinguishes `gpt` and `oracle` purposes.
+`benchmark/release.json` distinguishes `gpt` and `oracle` purposes.
 
 | Family | GPT input | Oracle presentation | Speed | Specification/evidence |
 | --- | --- | --- | --- | --- |

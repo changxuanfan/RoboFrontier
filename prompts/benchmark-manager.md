@@ -31,7 +31,7 @@ Modes:
 Authorization must cover the selected provider/profile, tasks and stage. Reuse
 existing authorization where applicable; a prompt example is not spend consent.
 
-1. Check the checkout, branch, commit and configs/task_families/current.json.
+1. Check the checkout, branch, commit and benchmark/release.json.
    Identify the selected release. Manage only this new batch; other sessions'
    runs remain with their original operators.
 2. Use robofrontier doctor with the requested engine/profile and render backend.

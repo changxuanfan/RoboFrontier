@@ -1,5 +1,5 @@
 {
-  "scene": "configs/environments/cube_transport/frontier-v2-r14-transport-a04-d2",
+  "scene": "benchmark/transport/transport-a04-d2",
   "source": "Recorded qpos at event 869 after the receiver approach, with the original contact target exactly reconstructed from matched plan/donor state 865; static continuation regression, not a physics checkpoint",
   "scene_sha256": "7bd4dfe4e3620d10e12855473120a31c24f6b2520a83b11c7e7adcc8058597df",
   "qpos": [

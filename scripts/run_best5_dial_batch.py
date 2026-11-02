@@ -24,7 +24,7 @@ def main():
     p.add_argument('--workers',type=int,choices=(1,2),default=2);p.add_argument('--wall-s',type=float,default=0,help='Optional wall budget per case; 0 means no limit')
     p.add_argument('--cases',nargs='*');a=p.parse_args();base=a.output_root.resolve()
     if not math.isfinite(a.wall_s) or a.wall_s<0:p.error('Wall budget must be nonnegative; zero disables it')
-    catalog=ROOT/'configs/suites/dial-best5-r11.json';cases=json.loads(catalog.read_text())['cases']
+    catalog=ROOT/'benchmark/dial/catalog.json';cases=json.loads(catalog.read_text())['cases']
     ids=[c['id'] for c in cases if not a.cases or c['id'] in a.cases]
     if a.cases and set(ids)!=set(a.cases):raise ValueError('Unknown case')
     if not ids:raise ValueError('No cases selected')

@@ -55,7 +55,7 @@ def main():
     p.add_argument('--live-repair',action='store_true',help='Retain this engineering world for owner-supplied forward repairs')
     args=p.parse_args();root=Path(__file__).resolve().parents[1]
     harness=args.harness or root/'configs/harness-frontier-v2-servo2.json'
-    catalog=root/'configs/suites/dial-best5-r11.json'
+    catalog=root/'benchmark/dial/catalog.json'
     from robofrontier.suite.source_snapshot import reexec_entry
     reexec_entry(root,args.output,Path(__file__),sys.argv[1:],harness,catalog)
     import numpy as np

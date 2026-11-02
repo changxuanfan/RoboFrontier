@@ -17,9 +17,9 @@ from .v2 import public_task
 from .dial_pose_timeline import PRESENTATION,DIAL_RECORD_HZ
 
 
-CATALOG = 'configs/suites/dial-best5-r11.json'
+CATALOG = 'benchmark/dial/catalog.json'
 SELECTION = 'runs/oracle/dial-best5-recovery-20261026/batch-status.json'
-REGISTRY = 'configs/task_families/dial/best5-r11.json'
+REGISTRY = 'benchmark/dial/best5-r11.json'
 # The registry records the guidance by its released path; its bytes now live in the archive.
 GUIDANCE = 'prompts/tasks/dial-best5.md'
 SHARED_INPUTS = ('prompts/rules.md', 'prompts/roles/adaptive-controller.md',

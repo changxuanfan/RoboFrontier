@@ -1,0 +1,7 @@
+{
+  "schema": "robofrontier.mosaic-purpose-selection.v1",
+  "future_gpt_registry": "benchmark/mosaic/r14.json",
+  "oracle_and_factory_replay_registry": "benchmark/mosaic/r13.json",
+  "policy_launch_ready": false,
+  "note": "Explicit future integration selection, not a shared runtime switch. Do not replay R13 poses into R14 colours."
+}

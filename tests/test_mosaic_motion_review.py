@@ -10,7 +10,7 @@ JOINTS=[dict(id='A_joint1',type=3,qpos_address=0),
 
 class MosaicMotionReviewTests(unittest.TestCase):
     def setUp(self):
-        self.settings=read(ROOT/'configs/task_families/mosaic/motion-review-r13.json')
+        self.settings=read(ROOT/'benchmark/mosaic/motion-review-r13.json')
         self.times=np.arange(601)/60
         self.states=np.zeros((601,9));self.states[:,5]=1
 

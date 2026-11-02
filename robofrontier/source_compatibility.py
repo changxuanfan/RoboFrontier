@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 import textwrap
 
-RECEIPT = 'configs/task_families/source-compatibility.json'
+RECEIPT = 'benchmark/source-compatibility.json'
 
 
 def _revert(tree, current, original, what, count=1):

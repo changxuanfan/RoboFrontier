@@ -76,7 +76,7 @@ def main():
     if any(not math.isfinite(x) or x<0 for x in (a.wall_s,a.sim_s,a.actions,a.guesses)):p.error('Budgets must be nonnegative; zero disables the budget')
     from robofrontier.suite.source_snapshot import reexec_entry
     harness=a.harness or root/'configs/harness-frontier-v2-servo2.json'
-    catalog=root/'configs/suites/dial-best5-r11.json'
+    catalog=root/'benchmark/dial/catalog.json'
     reexec_entry(root,a.output,Path(__file__),sys.argv[1:],harness,catalog)
     from robofrontier.suite.oracle import Trial
     from robofrontier.suite.dial_best_oracle import BestMonitor,solve

@@ -16,7 +16,7 @@ class LiveRepairTests(unittest.TestCase):
         from robofrontier.suite.oracle import Trial
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(__file__).resolve().parents[1]
-            scene=root/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n06-d3'
+            scene=root/'benchmark/dial/dial-best5-n06-d3'
             cfg=json.loads((root/'configs/harness-frontier-v2-servo2.json').read_text())
             t=Trial(scene,Path(tmp)/'world',frames=False,controller_cfg=cfg)
             m=BestManipulator(t);entry=m.dials[3];m.lift([entry])
@@ -47,7 +47,7 @@ class LiveRepairTests(unittest.TestCase):
         from robofrontier.suite.oracle_recovery import OracleRecovery, RecoverablePlanError
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            scene=Path(__file__).resolve().parents[1]/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n04-d1'
+            scene=Path(__file__).resolve().parents[1]/'benchmark/dial/dial-best5-n04-d1'
             t=Trial(scene,root/'world',frames=False)
             adapter=OracleRecovery(t,owner='test',world_id='one',observe=lambda:{})
             recovery=adapter.recover(RecoverablePlanError('Aperture recovery'),['A'])
@@ -70,7 +70,7 @@ class LiveRepairTests(unittest.TestCase):
         from scripts.run_blind_dial_oracle import close_trial
         from robofrontier.suite.oracle_recovery import OracleRecovery
         with tempfile.TemporaryDirectory() as tmp:
-            scene=Path(__file__).resolve().parents[1]/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n04-d1'
+            scene=Path(__file__).resolve().parents[1]/'benchmark/dial/dial-best5-n04-d1'
             t=Trial(scene,Path(tmp)/'world',frames=False)
             adapter=OracleRecovery(t,owner='test',world_id='one',observe=lambda:{})
             adapter.submit(dict(owner='test',world_id='one',id='unknown',robot='A',review='Test uncertain acknowledgement',
@@ -84,7 +84,7 @@ class LiveRepairTests(unittest.TestCase):
     def test_failed_plan_keeps_world_and_accepts_a_later_repair(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);events=[];calls=[];deadline=time.monotonic()+10
-            scene=Path(__file__).resolve().parents[1]/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n04-d1'
+            scene=Path(__file__).resolve().parents[1]/'benchmark/dial/dial-best5-n04-d1'
             t=Trial(scene,root/'world',frames=False)
             t.stop_requested=lambda:time.monotonic()>deadline
             m=SimpleNamespace(dials=[]);repair=LiveRepair(t,m)
@@ -108,7 +108,7 @@ class LiveRepairTests(unittest.TestCase):
         from unittest.mock import patch
         from robofrontier.suite.oracle_protocol import unresolved_robots
         with tempfile.TemporaryDirectory() as tmp:
-            scene=Path(__file__).resolve().parents[1]/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n04-d1'
+            scene=Path(__file__).resolve().parents[1]/'benchmark/dial/dial-best5-n04-d1'
             t=Trial(scene,Path(tmp)/'world',frames=False)
             t.task['run_protocol']={'evaluation_semantics':'terminal_outcome_v2'}
             try:

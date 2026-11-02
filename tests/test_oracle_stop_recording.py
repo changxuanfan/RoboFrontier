@@ -14,7 +14,7 @@ from robofrontier.suite.oracle import Trial
 
 class OracleStopRecordingTests(unittest.TestCase):
     def test_failed_operation_retains_its_measured_tail_without_marking_complete(self):
-        scene=ROOT/'configs/environments/cube_transport/frontier-v2-r14-transport-a04-d1'
+        scene=ROOT/'benchmark/transport/transport-a04-d1'
         with TemporaryDirectory() as directory:
             trial=Trial(scene,Path(directory)/'trial')
             trial.step()
@@ -33,7 +33,7 @@ class OracleStopRecordingTests(unittest.TestCase):
             self.assertFalse(report['passed'])
 
     def test_between_sample_stop_retains_actual_final_state_and_interrupted_status(self):
-        scene=ROOT/'configs/environments/cube_transport/frontier-v2-r14-transport-a04-d1'
+        scene=ROOT/'benchmark/transport/transport-a04-d1'
         with TemporaryDirectory() as directory:
             trial=Trial(scene,Path(directory)/'trial')
             trial.step()  # 2 ms lies before the next 60-Hz motion sample.
@@ -52,7 +52,7 @@ class OracleStopRecordingTests(unittest.TestCase):
             self.assertFalse(report['passed'])
 
     def test_invalid_final_state_keeps_prefix_and_records_missing_tail_honestly(self):
-        scene=ROOT/'configs/environments/cube_transport/frontier-v2-r14-transport-a04-d1'
+        scene=ROOT/'benchmark/transport/transport-a04-d1'
         with TemporaryDirectory() as directory:
             trial=Trial(scene,Path(directory)/'trial')
             trial.step();trial.data.qpos[0]=float('nan')

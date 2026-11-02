@@ -66,7 +66,7 @@ class HistoricalMosaicProvenanceTests(unittest.TestCase):
             _verify_recorded_evaluator(self.trial, self.sources, report, self.task)
 
     def test_registered_old_builder_rechecks_unchanged_public_boundary(self):
-        receipt = json.loads((ROOT/'configs/task_families/mosaic/builder-compatibility.json').read_text())
+        receipt = json.loads((ROOT/'benchmark/mosaic/builder-compatibility.json').read_text())
         recorded = receipt['historical_builders'][0]['source_sha256']
         _verify_builder(recorded, ROOT)
         with self.assertRaisesRegex(ValueError, 'Review builder changed'):

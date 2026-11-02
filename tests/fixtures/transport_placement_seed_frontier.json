@@ -1,5 +1,5 @@
 {
-  "scene": "configs/environments/cube_transport/frontier-v2-r14-transport-a04-d1",
+  "scene": "benchmark/transport/transport-a04-d1",
   "source": "Recorded FK at the stopped d433f91 full reference, event state 289; scratch planning regression, not an episode checkpoint or a full-task success",
   "source_scene_sha256": "53713645c019e1625f20a4b0355ad9979578bf73bb6fa110571d6b7b90f47201",
   "sim_s": 83.2859999999873,

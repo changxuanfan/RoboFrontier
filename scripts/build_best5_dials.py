@@ -21,7 +21,7 @@ from robofrontier.workstation import Workstation
 from robofrontier.run_setup import write_json
 
 ROOT=Path(__file__).resolve().parents[1]
-CATALOG=ROOT/'configs/suites/dial-best5-r11.json'
+CATALOG=ROOT/'benchmark/dial/catalog.json'
 SPEC=dict(version='best5-v1',mode='best_so_far',symbol_count=5,total_marks=6,step_deg=60.,
     angle_tolerance_deg=4.,dwell_sim_s=.25,zero_valid=False,require_red_grasp=True,
     initial_best=0,display_digits=1,display_brightness='Bright only when READY is green; otherwise dim but readable',record_scope='episode',settlement='automatic_stable_configuration',

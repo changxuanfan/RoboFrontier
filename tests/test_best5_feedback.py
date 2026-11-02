@@ -30,7 +30,7 @@ class BestFiveFeedbackTests(unittest.TestCase):
         self.assertTrue(game.ready)
         self.assertTrue(game.won)
     def test_all_digits_zero_to_eight_render_dim_and_ready_without_losing_segments(self):
-        folder=ROOT/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n08-d1'
+        folder=ROOT/'benchmark/dial/dial-best5-n08-d1'
         if not folder.exists():self.skipTest('Generate the new scene first')
         m=mujoco.MjModel.from_xml_path(str(folder/'scene.xml'))
         # Explicit reference masks, independent of the renderer's lookup table.
@@ -47,7 +47,7 @@ class BestFiveFeedbackTests(unittest.TestCase):
                     self.assertEqual(game.display,score)
 
     def test_record_brightness_tracks_readiness_and_replay_records_it(self):
-        folder=ROOT/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n04-d1'
+        folder=ROOT/'benchmark/dial/dial-best5-n04-d1'
         if not folder.exists():self.skipTest('Generate the new scene first')
         from robofrontier.motion_recording import MotionWriter,MotionReader
         m=mujoco.MjModel.from_xml_path(str(folder/'scene.xml'));d=mujoco.MjData(m)
@@ -75,7 +75,7 @@ class BestFiveFeedbackTests(unittest.TestCase):
             np.testing.assert_allclose(colors,[[*DIGIT_DIM_RGB,1],[*DIGIT_BRIGHT_RGB,1]])
 
     def test_five_symbol_inputs_are_private_and_feedback_source_is_fingerprinted(self):
-        task=ROOT/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n04-d1/task.json'
+        task=ROOT/'benchmark/dial/dial-best5-n04-d1/task.json'
         if not task.exists():self.skipTest('Generate the new scene first')
         from robofrontier.run_setup import prepare_run,verify_inputs
         with tempfile.TemporaryDirectory() as tmp:
@@ -140,7 +140,7 @@ class BestFiveFeedbackTests(unittest.TestCase):
         self.assertEqual(old.queries,new.queries)
 
     def test_compiled_world_cannot_qualify_angles_without_robot_grasps(self):
-        folder=ROOT/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n04-d1'
+        folder=ROOT/'benchmark/dial/dial-best5-n04-d1'
         if not folder.exists():self.skipTest('Generate the new scene first')
         from robofrontier.robot_control import PandaArm
         task=json.loads((folder/'task.json').read_text());m=mujoco.MjModel.from_xml_path(str(folder/'scene.xml'));d=mujoco.MjData(m);mujoco.mj_resetDataKeyframe(m,d,m.key('initial').id)

@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--config',type=Path,default=ROOT/'configs/task_families/transport/half-opening-r14.json')
+    parser.add_argument('--config',type=Path,default=ROOT/'benchmark/transport/half-opening-r14.json')
     parser.add_argument('--output',type=Path)
     parser.add_argument('--assets-only',action='store_true',help='Restore ignored assets of existing R14 scenes; no package or previews')
     parser.add_argument('--no-previews',action='store_true')

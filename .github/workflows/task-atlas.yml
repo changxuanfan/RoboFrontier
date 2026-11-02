@@ -8,7 +8,7 @@ on:
       - 'tests/test_task_atlas.py'
       - 'web/task-atlas/**'
       - 'docs/task-atlas/**'
-      - 'configs/task_families/**'
+      - 'benchmark/**'
       - 'configs/environments/**'
       - 'robofrontier/task_families.py'
       - 'robofrontier/task_config.py'

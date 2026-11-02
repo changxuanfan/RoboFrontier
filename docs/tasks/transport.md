@@ -1,10 +1,10 @@
 # Transport: current specification and evidence
 
 The current geometry is the **R14 half-opening** family, with nine cases in
-`configs/suites/frontier-transport-r14.json`. Specification and acceptance metadata
-are in `configs/task_families/transport/half-opening-r14.json`; policy guidance is
+`benchmark/transport/catalog.json`. Specification and acceptance metadata
+are in `benchmark/transport/half-opening-r14.json`; policy guidance is
 `prompts/archive/tasks/transport.md`. New experiments use the released entries selected
-by `configs/task_families/current.json` and the [unified CLI](../unified-cli.md).
+by `benchmark/release.json` and the [unified CLI](../unified-cli.md).
 The current policy asset lock also identifies the
 [rolling-friction revision](#rolling-friction-003-engineering-candidate-2026-10-29);
 R14 geometry alone does not prove equality of all physical parameters.
@@ -58,7 +58,7 @@ Oracle evaluators retain their original criteria; their reports are not rewritte
 The original nine R13 independent physical witnesses passed 216/216 placements:
 three frozen-program and six engineering-assisted runs. Their reports, failures,
 timings, executors, and full 60 Hz motion remain preserved under the index
-`configs/task_families/transport/r13-qualified.json`.
+`benchmark/transport/r13-qualified.json`.
 
 The original R14 release compiled the changed collision geometry and checked
 that it differed only in the table openings. In six opening-bearing recordings,

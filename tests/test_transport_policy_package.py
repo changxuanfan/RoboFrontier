@@ -49,7 +49,7 @@ class TableGeometryTests(unittest.TestCase):
 class ActualFamilyPreflightTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config=ROOT/'configs/task_families/transport/half-opening-r14.json';cls.cfg=load_json(cls.config)
+        cls.config=ROOT/'benchmark/transport/half-opening-r14.json';cls.cfg=load_json(cls.config)
         first=ROOT/cls.cfg['cases'][0]['physical_scene']
         if not(first/'assets').exists():raise unittest.SkipTest('Materialize the generated Transport family scenes first')
     def test_all_nine_physical_revisions_have_half_holes_and_preview_gate(self):

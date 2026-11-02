@@ -55,7 +55,7 @@ def check(root, output):
         shared_harness_modified=False,shared_compositor_implemented=False,
         removed_source_s=sum(r['removed_source_s'] for r in rows),
         measured_force_available=False,
-        integration_requests='configs/task_families/dial/integration-requests.json')
+        integration_requests='benchmark/dial/integration-requests.json')
     write_json(output/'summary.json',report)
     return report
 

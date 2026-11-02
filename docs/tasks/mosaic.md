@@ -7,12 +7,12 @@ correctly colored cubes satisfying release, placement, orientation, and stabilit
 ## Current selection and Legacy sources
 
 New policy and unified Oracle executions select the current **R14** released
-scene through `configs/task_families/current.json`. R14 uses locally mixed stock
+scene through `benchmark/release.json`. R14 uses locally mixed stock
 colors and an **81 mm** grid pitch. The R15 draft is not the default or a substitute
 asset. New Factory imports use the actual policy/Oracle recording's own frozen
 scene, source hashes, motion, and events.
 
-Historical purpose files, including `configs/task_families/mosaic/delivery.json`
+Historical purpose files, including `benchmark/mosaic/delivery.json`
 and `selection.json`, retain their original R13 Oracle/R14 future-policy split
 for provenance. They do not override unified new-run selection. The nine original
 complete Oracle witnesses and their Factory recordings use R13 stock colors;

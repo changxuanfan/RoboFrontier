@@ -1,6 +1,6 @@
 # Configuration and frozen inputs
 
-For a new run, start with [`../robofrontier.toml`](../robofrontier.toml), not a
+The released tasks are in [`../benchmark/`](../benchmark/README.md). For a new run, start with [`../robofrontier.toml`](../robofrontier.toml), not a
 legacy family JSON or the root `config.json` single-arm demo. The unified loader
 resolves repository defaults, a partial operator TOML, and explicit CLI overrides
 in that order. It rejects unknown fields and freezes the effective configuration
@@ -13,18 +13,15 @@ See the [configuration and CLI guide](../docs/unified-cli.md).
 | `claude-models.json` | Native Claude Code model/provider profiles; select an engine-specific profile explicitly |
 | `policy-assets.json` | Pinned policy asset archive and integrity inventory used by automatic bootstrap/preparation |
 | `factory-assets.json` | Independent R14 Factory recording release, split sizes and SHA-256 fingerprints; it does not change policy scene selection |
-| `task_families/current.json` | Reviewed four-family selections for policy/Oracle purposes, public inputs and source presentation edits |
-| `task_families/<family>/public/` | Reviewed static material that may be exposed to a new policy |
 | `harnesses/policy.json` | Native shared runtime/tool defaults; model fields are baseline native settings, not overrides of a frozen unified profile |
 | `backgrounds/robo_factory.json` | Factory appearance, layout and shared visual resources |
 | `suites/frontier-current-oracle.json` | Frozen 36-station Oracle recording inputs for Factory layout; not proof of current task-solving qualification |
-| `environments/` | Versioned scene revisions and physical metadata; do not rewrite published revisions in place |
-| `task_families/source-compatibility.json` | Explicitly scoped historical source-compatibility checks |
+| `environments/` | Scene revisions before release, and the earlier revisions released cases and Oracle recordings name as sources |
 
 The remaining family registries, catalogs, harness JSON and older task configs
 preserve the original experiments' version identities. Legacy
 `suites/frontier-v2.json` and general generators do not replace purpose-specific
-selection in `task_families/current.json`. Compatibility evidence does not change
+selection in [`../benchmark/release.json`](../benchmark/release.json). Compatibility evidence does not change
 an original fingerprint, establish equivalent old/new Relay scoring, or authorize
 applying new physical properties to an archived recording.
 

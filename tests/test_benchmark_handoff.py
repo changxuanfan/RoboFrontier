@@ -16,9 +16,9 @@ class HandoffAssetsTests(unittest.TestCase):
         self.fixture(source); self.fixture(target)
         archive = root/'assets.tar.gz'
         export_assets(source, archive, source)
-        path = target/'configs/task_families/current.json'
+        path = target/'benchmark/release.json'
         release = json.loads(path.read_text()); change(release); path.write_text(json.dumps(release))
-        config = dict(release_sha256=digest(path), archive_release_sha256=digest(source/'configs/task_families/current.json'),
+        config = dict(release_sha256=digest(path), archive_release_sha256=digest(source/'benchmark/release.json'),
             archive_sha256=digest(archive), panda_source_sha256=digest(target/'vendor/panda/SOURCE.json'),
             url='https://example.invalid/assets')
         (target/'configs/policy-assets.json').write_text(json.dumps(config))
@@ -41,7 +41,7 @@ class HandoffAssetsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             _, target, archive, config = self.revision_fixture(Path(tmp), self.new_rule)
             # The release changed again after review.
-            path = target/'configs/task_families/current.json'
+            path = target/'benchmark/release.json'
             release = json.loads(path.read_text()); release['families']['test']['gpt'][0]['note'] = 'unreviewed'
             path.write_text(json.dumps(release))
             with self.assertRaisesRegex(ValueError, 'Task release does not match'):
@@ -53,6 +53,27 @@ class HandoffAssetsTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'different task release'):
                 setup_assets(target, archive)
             self.assertFalse((target/'configs/environments/test/assets/table.obj').exists())
+
+    def test_the_pinned_archive_restores_into_moved_case_folders(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); source, target = root/'source', root/'target'
+            self.fixture(source); self.fixture(target)
+            archive = root/'assets.tar.gz'
+            export_assets(source, archive, source)
+            old, new = 'configs/environments/test', 'benchmark/test/case'
+            (target/new).parent.mkdir(parents=True); (target/old).rename(target/new)
+            path = target/'benchmark/release.json'
+            release = json.loads(path.read_text()); release['families']['test']['gpt'][0]['directory'] = new
+            path.write_text(json.dumps(release))
+            (target/'benchmark/legacy-paths.json').write_text(json.dumps({'paths': {old: new}}))
+            (target/'configs/policy-assets.json').write_text(json.dumps(dict(
+                release_sha256=digest(path), archive_release_sha256=digest(source/'benchmark/release.json'),
+                archive_sha256=digest(archive), panda_source_sha256=digest(target/'vendor/panda/SOURCE.json'),
+                url='https://example.invalid/assets')))
+            (target/new/'assets/table.obj').unlink()
+            self.assertEqual(setup_assets(target, archive)['restored'], 1)
+            self.assertEqual((target/new/'assets/table.obj').read_text(), 'geometry')
+            self.assertFalse((target/old).exists())
 
     def test_a_changed_scene_asset_is_never_restored_from_the_pinned_archive(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -68,7 +89,7 @@ class HandoffAssetsTests(unittest.TestCase):
             root=Path(tmp);source=root/'source';target=root/'target'
             self.fixture(source);scene=self.fixture(target)
             archive=root/'assets.tar.gz';export_assets(source,archive,source)
-            config={'release_sha256':digest(target/'configs/task_families/current.json'),
+            config={'release_sha256':digest(target/'benchmark/release.json'),
                     'panda_source_sha256':digest(target/'vendor/panda/SOURCE.json'),
                     'archive_sha256':'0'*64, 'url':'https://example.invalid/assets'}
             (target/'configs/policy-assets.json').write_text(json.dumps(config))
@@ -87,7 +108,7 @@ class HandoffAssetsTests(unittest.TestCase):
         scene=write('configs/environments/test/assets/table.obj','geometry')
         write('configs/environments/test/workstation.json',json.dumps({'assets':[
             {'path':'assets/table.obj','sha256':checksum(scene)}]}))
-        write('configs/task_families/current.json',json.dumps({'families':{'test':{'gpt':[
+        write('benchmark/release.json',json.dumps({'families':{'test':{'gpt':[
             {'directory':'configs/environments/test'}]}}}))
         robot=write('vendor/panda/robot.xml','robot')
         write('vendor/panda/SOURCE.json',json.dumps({'sha256':{'robot.xml':checksum(robot)}}))
@@ -113,7 +134,7 @@ class HandoffAssetsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);source=root/'source';scene=self.fixture(source)
             archive=root/'assets.tar.gz';export_assets(source,archive,source)
-            release=source/'configs/task_families/current.json'
+            release=source/'benchmark/release.json'
             release.write_text(release.read_text()+'\n')
             with self.assertRaisesRegex(ValueError,'different task release'):restore_assets(archive,source)
             scene.write_text('changed')

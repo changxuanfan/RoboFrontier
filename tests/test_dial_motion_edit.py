@@ -91,7 +91,7 @@ class DialMotionEditTests(unittest.TestCase):
 
     def test_independent_tracks_skip_different_times_and_preserve_feedback_on_seek(self):
         root = Path(__file__).resolve().parents[1]
-        row = json.loads((root/'configs/task_families/dial/best5-r11.json').read_text())['cases'][0]
+        row = json.loads((root/'benchmark/dial/best5-r11.json').read_text())['cases'][0]
         source = Workstation(root/row['source_directory'])
         with tempfile.TemporaryDirectory() as td,patch('mujoco.mj_step',side_effect=AssertionError('No replay physics')):
             path = Path(td)/'motion'
@@ -127,7 +127,7 @@ class DialMotionEditTests(unittest.TestCase):
 
     def test_repeat_hold_is_distinct_from_force_change_or_tiny_real_closure(self):
         root = Path(__file__).resolve().parents[1]
-        row = json.loads((root/'configs/task_families/dial/best5-r11.json').read_text())['cases'][0]
+        row = json.loads((root/'benchmark/dial/best5-r11.json').read_text())['cases'][0]
         source = Workstation(root/row['source_directory'])
         q = np.tile(source.initial_qpos,(121,1))
         times = np.arange(121)/60

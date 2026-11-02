@@ -14,7 +14,7 @@ LEGACY_RULE_REVISION = 'relay-final-goal-50mm-v1'
 RULE_REVISION = 'relay-timber-goal-70pct-v1'
 BOUNDARY_TOLERANCE_M = .050
 LOW_RELEASE_GAP_M = .030
-CATALOG_RELATIVE = 'configs/suites/frontier-relay.json'
+CATALOG_RELATIVE = 'benchmark/relay/catalog.json'
 HARNESS_RELATIVE = 'configs/harness-frontier-v2-servo2.json'
 
 

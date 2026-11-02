@@ -6,8 +6,8 @@ import mujoco
 from robofrontier.suite.mosaic_equivalence import check,compare_models,check_prefix_candidate
 
 ROOT=Path(__file__).resolve().parents[1]
-SOURCE=ROOT/'configs/environments/mosaic/frontier-v2-r14-mosaic-a04-6x12-d2'
-TARGET=ROOT/'configs/environments/mosaic/frontier-v2-r14-mosaic-a04-6x12-d3'
+SOURCE=ROOT/'benchmark/mosaic/mosaic-a04-6x12-d2'
+TARGET=ROOT/'benchmark/mosaic/mosaic-a04-6x12-d3'
 
 
 class MosaicEquivalenceTests(unittest.TestCase):

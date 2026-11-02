@@ -23,7 +23,7 @@ runs' plans and experience are not automatically loaded into a new experiment.
 Use `python -m robofrontier.cli`; see [CLI configuration](unified-cli.md).
 The root `config.json` is a Legacy single-arm demonstration, not a second
 benchmark-wide configuration. Current task inputs are selected through
-`configs/task_families/current.json`. Historical Oracle witnesses and new
+`benchmark/release.json`. Historical Oracle witnesses and new
 policy inputs have separate purposes and qualification records. New unified
 Oracle executions select current released scenes; Factory playback uses each
 recording's own frozen source. See [Oracle](oracle.md), [Factory](factory.md)

@@ -114,7 +114,7 @@ def main():
         if subprocess.check_output(['git', 'status', '--porcelain'], cwd=root, text=True).strip():
             raise ValueError('Commissioning requires committed source')
         reexec_entry(root, a.output, Path(__file__), sys.argv[1:],
-                     root/'configs/harness-frontier-v2-servo2.json', root/'configs/suites/frontier-transport-r14.json')
+                     root/'configs/harness-frontier-v2-servo2.json', root/'benchmark/transport/catalog.json')
     root = Path(os.environ[MARKER]); snapshot = read(root/'snapshot.json')
     source_root = Path(snapshot['source_root'])
     case = next(c for c in read(root/'inputs/catalog.json')['cases'] if c['id'] == a.case)

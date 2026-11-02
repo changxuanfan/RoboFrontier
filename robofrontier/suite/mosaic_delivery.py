@@ -57,10 +57,10 @@ def check_gpt(engineering,package):
     if (package/'public').is_symlink() or any(p.is_symlink() for p in (package/'public').rglob('*')):
         raise ValueError('Public symlink is outside the review artifact contract')
     baseline,_=verify_registry()
-    registry=read(ROOT/'configs/task_families/mosaic/r14.json')
-    selection=read(ROOT/'configs/task_families/mosaic/selection.json')
-    assert selection['future_gpt_registry']=='configs/task_families/mosaic/r14.json'
-    assert selection['oracle_and_factory_replay_registry']=='configs/task_families/mosaic/r13.json'
+    registry=read(ROOT/'benchmark/mosaic/r14.json')
+    selection=read(ROOT/'benchmark/mosaic/selection.json')
+    assert selection['future_gpt_registry']=='benchmark/mosaic/r14.json'
+    assert selection['oracle_and_factory_replay_registry']=='benchmark/mosaic/r13.json'
     assert registry['readiness']['policy_launch_ready'] is False and registry['readiness']['oracle_verified'] is False
     assert checksum(ROOT/registry['catalog'])==registry['catalog_sha256']
     assert checksum(ROOT/registry['baseline_oracle_registry'])==registry['baseline_oracle_registry_sha256']
@@ -121,7 +121,7 @@ def check_gpt(engineering,package):
             per_robot=[{k:r[k] for k in ('robot','nearby_stock','certified_local_pairs','certified_local_fraction')} for r in plan['per_robot']]))
     manifest=read(package/'engineering/package-manifest.json')
     assert manifest['policy_launch_ready'] is False
-    assert checksum(ROOT/'configs/task_families/mosaic/r14.json')==manifest['registry_sha256']
+    assert checksum(ROOT/'benchmark/mosaic/r14.json')==manifest['registry_sha256']
     from ..source_compatibility import historical_digest
     for file,sha in manifest['builder_sources'].items():assert historical_digest(ROOT,file,'mosaic')==sha
     for file,sha in manifest['plan_files'].items():assert checksum(_design_file(file))==sha
@@ -141,8 +141,8 @@ def check_gpt(engineering,package):
 
 def settings(root=ROOT):
     root=Path(root)
-    value=read(root/'configs/task_families/mosaic/delivery.json')
-    selection=read(root/'configs/task_families/mosaic/selection.json')
+    value=read(root/'benchmark/mosaic/delivery.json')
+    selection=read(root/'benchmark/mosaic/selection.json')
     if (value['default_purpose']!='gpt' or value['purposes']['gpt']['registry']!=selection['future_gpt_registry']
             or value['purposes']['oracle']['registry']!=selection['oracle_and_factory_replay_registry']):
         raise ValueError('Mosaic purpose selection differs from the declared delivery')

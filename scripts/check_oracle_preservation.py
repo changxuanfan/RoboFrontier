@@ -45,7 +45,7 @@ def check_historical():
                             previously_removed_by_family_cleanup=previously_removed,
                             current_source_changes_preserved_in_git=versioned))
         print(family,'verified',verified,'failed',len(failed),flush=True)
-    dial=read(ROOT/'configs/task_families/dial/best5-r11.json')
+    dial=read(ROOT/'benchmark/dial/best5-r11.json')
     pins=[(dial['selection'],dial['selection_sha256'])]
     for row in dial['cases']:
         pins.extend((str(Path(row['source_directory'])/name),expected)for name,expected in row['source_sha256'].items())

@@ -27,7 +27,7 @@ class DeliveryTests(unittest.TestCase):
         check.assert_called_once_with('gpt',None,False)
 
     def test_selection_disagreement_is_rejected(self):
-        path=self.root/'configs/task_families/mosaic'
+        path=self.root/'benchmark/mosaic'
         write(path/'delivery.json',dict(default_purpose='gpt',purposes={'gpt':dict(registry='r14'),'oracle':dict(registry='r13')}))
         write(path/'selection.json',dict(future_gpt_registry='r10',oracle_and_factory_replay_registry='r13'))
         with self.assertRaisesRegex(ValueError,'purpose selection'):settings(self.root)

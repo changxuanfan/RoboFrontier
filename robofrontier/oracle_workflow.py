@@ -145,7 +145,7 @@ def prepare(output, config, *, codebook=None):
             raise ValueError('Dial codebook requires one configured nonzero symbol per dial')
     # Absolute host-local scene path avoids silently selecting a legacy folder
     # when each native runner rebinds its imports to the frozen source tree.
-    current = _read(ROOT/'configs/task_families/current.json')['families'][family]['catalog']
+    current = _read(ROOT/'benchmark/release.json')['families'][family]['catalog']
     if _sha(ROOT/current['path']) != current['sha256']:
         raise ValueError('Released Oracle catalog changed')
     catalog = _read(ROOT/current['path'])

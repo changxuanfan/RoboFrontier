@@ -63,7 +63,7 @@ class BestOracleTests(unittest.TestCase):
     def test_live_monitor_uses_remote_evaluator_without_generating_parent_secret(self):
         from robofrontier.suite.oracle import Trial
         from robofrontier.suite.dial_best_oracle import BestMonitor
-        scene=ROOT/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n04-d1'
+        scene=ROOT/'benchmark/dial/dial-best5-n04-d1'
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);code=p/'private.json';code.write_text(json.dumps({'code_symbols':[1]*4}))
             t=Trial(scene,p/'run',frames=False,monitor_factory=lambda w:BestMonitor(w,code))
@@ -118,7 +118,7 @@ class BestOracleTests(unittest.TestCase):
     def test_isolated_evaluator_holds_history_and_does_not_return_current_score(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);code=p/'code.json';code.write_text(json.dumps({'code_symbols':[1]*4}))
-            c=Channel('evaluator',[code,ROOT/'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n04-d1/task.json',ROOT/'robofrontier/suite/dial_feedback.py'],p/'eval.jsonl',worker=WORKER)
+            c=Channel('evaluator',[code,ROOT/'benchmark/dial/dial-best5-n04-d1/task.json',ROOT/'robofrontier/suite/dial_feedback.py'],p/'eval.jsonl',worker=WORKER)
             try:
                 for i in range(15):r=c.call(dict(op='sample',t=i*.02,angles=np.radians([60,60,60,120]).tolist(),eligible=True))
                 self.assertEqual(set(r),{'display','won','queries','since','ready','input_valid','indicator'})
@@ -140,7 +140,7 @@ class BestOracleTests(unittest.TestCase):
     def test_panel_layout_has_actual_table_support_and_expected_sizes(self):
         for n in (4,6,8):
             for level in (1,2,3):
-                folder=ROOT/f'configs/environments/spring_dial/frontier-v2-r11-dial-best5-n{n:02}-d{level}'
+                folder=ROOT/f'benchmark/dial/dial-best5-n{n:02}-d{level}'
                 m=mujoco.MjModel.from_xml_path(str(folder/'scene.xml'));d=mujoco.MjData(m);mujoco.mj_resetDataKeyframe(m,d,m.key('initial').id);mujoco.mj_forward(m,d)
                 verify_panel_support(m,d)
                 scale=1.5 if n>=6 and level>1 else 1.

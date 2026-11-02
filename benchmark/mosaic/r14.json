@@ -1,0 +1,181 @@
+{
+  "schema": "robofrontier.mosaic-local-colour-family.v1",
+  "family": "mosaic",
+  "scene_revision": 14,
+  "purpose": "Future GPT input; historical Oracle and factory replay retain R13",
+  "catalog": "benchmark/mosaic/catalog.json",
+  "catalog_sha256": "cc3e1e699818ac311d0daf673b841ce52bf7f410c1fbbcc80198e942b80bc2ce",
+  "baseline_oracle_registry": "benchmark/mosaic/r13.json",
+  "baseline_oracle_registry_sha256": "4c73b92961b992d8a5b061d9d8557e4d4bc6e90a18de03c52754bb5005b95172",
+  "harness": "configs/harness-frontier-v2-servo2.json",
+  "harness_sha256": "035ad5c3703d0ed0bde8c99e9d5c0e8e2e98f282b956577fe16fe0d2ffe4ae58",
+  "completion": {
+    "stable_duration_sim_s": 1.0,
+    "stable_linear_speed_m_s_exclusive": 0.01,
+    "stable_angular_speed_rad_s_exclusive": 0.1,
+    "axis_alignment_tolerance_deg_inclusive": 8.0,
+    "robot_contact_release_distance_m_inclusive": 0.0002,
+    "flat": {
+      "xy_center_tolerance_m_inclusive": 0.005,
+      "z_center_tolerance_m_inclusive": 0.003
+    },
+    "recessed": {
+      "footprint_containment_margin_m_inclusive": 0.0003,
+      "bottom_height_tolerance_m_inclusive": 0.0008,
+      "floor_contact_distance_m_inclusive": 0.0002
+    }
+  },
+  "guidance": {
+    "prompt": "prompts/tasks/mosaic-r14.md",
+    "skill": ".agents/skills/mosaic-r13/SKILL.md"
+  },
+  "presentation_defaults": {
+    "speedup": 30,
+    "fps": 30,
+    "source_sample_hz": 60,
+    "end_policy": "hold_final"
+  },
+  "readiness": {
+    "policy_launch_ready": false,
+    "oracle_verified": false,
+    "status": "colour_design_review_shared_integration_pending",
+    "shared_dependencies": [
+      "formal_readiness_registration",
+      "public_projection_supplement_loading",
+      "family_prompt_and_skill_freezing"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "mosaic-a04-6x12-d1",
+      "environment": "benchmark/mosaic/mosaic-a04-6x12-d1",
+      "source_files": {
+        "scene.xml": "0794eb592888fac3b9250d55945c2dc8eff16f59c239cca19cc2061769962da6",
+        "environment.json": "4a34965dd8d2c2a1c017caba35e3a9f12cdfc83edc3954a0952a5bc09c446301",
+        "task.json": "87d2c0d7a63649ed90984aa76a814aebbff42069faa04ce81c585f2c25a0651f",
+        "public-task.json": "2a6f72e43effe04839fa478c90e4854d478a14bd4e4597c9f287b7a304fbe823",
+        "workstation.json": "220736436118b5215f5185459004308c960f2c344e1e0777abcf412f71937b9b",
+        "validation.json": "978ebcf0d993d9eed70b33bf14d529f0beaddd99b8fa313817999ddaa3051681"
+      },
+      "baseline_scene_sha256": "08e15714ce39dae36b7cfa215edb1867414f23f4bb3ea57e4e7a6e2cbb081652",
+      "local_fraction_min": 0.7222222222222222
+    },
+    {
+      "case_id": "mosaic-a04-6x12-d2",
+      "environment": "benchmark/mosaic/mosaic-a04-6x12-d2",
+      "source_files": {
+        "scene.xml": "605e6119b3a7f5b4e2cb5f148d74292ec79974e384740a5efaa6f261e46af4df",
+        "environment.json": "3f4f9b2a7ed6fe27a4c2b7d366544c8857bfa59b60f1aee6728b7d0dca42d63e",
+        "task.json": "b8c268fe004fac3b9c91e6a1d409ca91b9a82b60246bd1049b7fa4dcddbec2be",
+        "public-task.json": "5422c6ea5b37d7123d34fa3faae68778b15b410540062c881f51e086ad291d4a",
+        "workstation.json": "ac7f243db685791179d3017522487ccc66464567718a2d55a5329ec4ba949cc5",
+        "validation.json": "3d8d4b9812cee5afbc54b2dcbab86fbd5aba02738d4945ae2a80396e2c7533f7"
+      },
+      "baseline_scene_sha256": "ba65b6cf96ab4697f426001ae57ffe8f6f4f336a0a0469a36bf028c4684acaf3",
+      "local_fraction_min": 0.7222222222222222
+    },
+    {
+      "case_id": "mosaic-a04-6x12-d3",
+      "environment": "benchmark/mosaic/mosaic-a04-6x12-d3",
+      "source_files": {
+        "scene.xml": "c1ad7eeaa2e576a296f402db0235818c5e4cc0980561b692a1f04d9470dc9c95",
+        "environment.json": "f0383709f4cfce20687bdfcc4198930e604d1a03d7adc51e0370241ce3db1d1f",
+        "task.json": "f635e9239c0c12281b11047bc5699891e160f6e3dd91e630ee1c69ef0ced1d52",
+        "public-task.json": "41154ae094e7d68da50c2633fce029fa725c0e2c45129586a77de5a43e46a69f",
+        "workstation.json": "39ed91fe4428bf508aba079c90154104cdbf7f964f23c61541552bcbfba5bf99",
+        "validation.json": "4200cfc8588863b5ce3e1c0f650995522238bd783b0e9529a77d1638874d2ef8"
+      },
+      "baseline_scene_sha256": "da6fa55d17b49558ab296e1ffad2e1016d3047abb5603e9da538f02731441089",
+      "local_fraction_min": 0.7222222222222222
+    },
+    {
+      "case_id": "mosaic-a06-9x18-d1",
+      "environment": "benchmark/mosaic/mosaic-a06-9x18-d1",
+      "source_files": {
+        "scene.xml": "abfe3afdacb721c5714c9b1a1ecf5bca0f72a5bf77f094827a616195554e0c13",
+        "environment.json": "8ca5203dce5abffe4f64ace8e58ca8a5b39e26827a00df075943a8937d7f2fe8",
+        "task.json": "7786466da23b976983ce5c1a74663140e0fc06b55f9cd35c64d74089b3273490",
+        "public-task.json": "0b2d19a995802e5b3f1c89a5ca08122513ab3463e58133ac72fdfcaeef0cdf48",
+        "workstation.json": "84c889971cb691abd6749033c3d2a239deb5f30c86ca1236a929fab5333d305d",
+        "validation.json": "77a5f6a1770b0052ebcb918e714c6620b316fa2167aa65cff589b0a6808c03be"
+      },
+      "baseline_scene_sha256": "aa280f70d14d49fc2fc7a91e9d7ffb092b279b5a8741dcd6aad9670f5d55b177",
+      "local_fraction_min": 0.7
+    },
+    {
+      "case_id": "mosaic-a06-9x18-d2",
+      "environment": "benchmark/mosaic/mosaic-a06-9x18-d2",
+      "source_files": {
+        "scene.xml": "13d23b31df7c961208b09b31b02562b9aa39b31e51b002161c0dbe1dea597d95",
+        "environment.json": "b48aca88a42f3a9b4edd7074fedb565d28a82379d796a34bb26a1a5e88b8b471",
+        "task.json": "4811bd44712227c6b4e9bbde4314cea06fc1a8a34d0a10c2fb45e6ff1b12919b",
+        "public-task.json": "99825629fdb6b2738f790e1f8413217312b399221c263bd16c40b90eb6e1cbaa",
+        "workstation.json": "c9d21bc7e78232549538f103499f034c192a796f18298adefa53c0d1e0bfd294",
+        "validation.json": "f15c9a33935928461f261ba5c9f7592c21f8b04678a65f5fb0e67276e9b33ae5"
+      },
+      "baseline_scene_sha256": "5f68cd53cfae33eaa1df1f51677eaaa93777f6afeb167045bd6f83df96b59b91",
+      "local_fraction_min": 0.7
+    },
+    {
+      "case_id": "mosaic-a06-9x18-d3",
+      "environment": "benchmark/mosaic/mosaic-a06-9x18-d3",
+      "source_files": {
+        "scene.xml": "9a21a32dd14477a449f9a1a0f93bf4bfd6d8fcd304ca380538c8141d54cdf0f0",
+        "environment.json": "dd763d7c17f56a228b1f9d611542caacb1371189931418dac02633c0013b082f",
+        "task.json": "0ce2d95330442801077653a8900bade8e7ad3369c2ea8f7b105485fd22d1a040",
+        "public-task.json": "ded30c25625ab4d15a343a16aae9b36b4ca404678cd3e4852f9b635dd59dd7e3",
+        "workstation.json": "783e16de169f2128ffdf18ac8e35e97ebc71f9a6f64d8fc7b154c2127dd791b8",
+        "validation.json": "48130b62e78925a0d87d0f59fbf4ff859fd6a2538e39a9ce83656e9fb2375e0a"
+      },
+      "baseline_scene_sha256": "b10a0fe2b333a454b18644ee919663dc5310c30cdea9acb0a36c1f044cdbd4bc",
+      "local_fraction_min": 0.7
+    },
+    {
+      "case_id": "mosaic-a08-12x24-d1",
+      "environment": "benchmark/mosaic/mosaic-a08-12x24-d1",
+      "source_files": {
+        "scene.xml": "7036c3ce49c07c9e0b6b31cc13324da7d3040f3826f77b05ead5498df2f8ac8b",
+        "environment.json": "dd57d090272ec7d9b317f6fb3a60c8df1619cf82b07601b9d046c71d1f453c76",
+        "task.json": "af51b2723aafcb8946dcdf1cd84aa8e7ac9e6c170253358f5d998919a9807270",
+        "public-task.json": "8ece2e755ef9acf0215dddddefdaec9badc1272fa0a3ec6c80cb5fe116d91afd",
+        "workstation.json": "8b107d613d127add13481f833ebebf3e61e57d6882890e390262932b34c12e6c",
+        "validation.json": "0919f0eaa346948e10400127b5142b3a1d93d8c9231f2b96415f48becfcc1bbb"
+      },
+      "baseline_scene_sha256": "60725536b5eea206d40fb86ce1aee852e8e417110d9b8634c27201558c8e5688",
+      "local_fraction_min": 0.7
+    },
+    {
+      "case_id": "mosaic-a08-12x24-d2",
+      "environment": "benchmark/mosaic/mosaic-a08-12x24-d2",
+      "source_files": {
+        "scene.xml": "e83d7bb17ee2a0849f00bb2c4c17ea817bffd908a76c33cb9e8e993a89284bd8",
+        "environment.json": "98cfb3a492baa18577f329757fd5ff698517d6f992211a0768b09825b3c89474",
+        "task.json": "077bee04bc0f509528952afbd4b2308cc858596b33d78d7fbd1d8ca807234da7",
+        "public-task.json": "102fe1ce055651a5817271d18b98c1b250d3923bcb701f3e477a9f95433173f8",
+        "workstation.json": "463f9847d073da2bb205032d7266bb2584d5603593484d6e9224d82bc636fd79",
+        "validation.json": "3f4cffda69f1ba08b7b6836f57ba5dd62826f6a2398f85cab6dda5f7739adcb0"
+      },
+      "baseline_scene_sha256": "56f221e638a80cb1756bb471d0fb66fa595aa76515d3ed92d2cfc6ed1a7a2c32",
+      "local_fraction_min": 0.7
+    },
+    {
+      "case_id": "mosaic-a08-12x24-d3",
+      "environment": "benchmark/mosaic/mosaic-a08-12x24-d3",
+      "source_files": {
+        "scene.xml": "3ef29947b51fe420b3e1bc516a8e3b512cc2e0f3568b3ec1f21c8169ed5c9547",
+        "environment.json": "37d514e52f1b34278aa66267eaebadade99804cb0379d59d08b692b851eaa2a3",
+        "task.json": "54973da9aafbfca8db6a8c97d087d010d642521d9f69f5c316a78205f1108215",
+        "public-task.json": "2ed8d840d42c2d675bdf8dbff67c4f3b3ba42cc22d2ce5d46bd55f96889a2f18",
+        "workstation.json": "bef6829a98a39b6070d5fa4a51b3400714d53cb14bea473d49d37fa334586085",
+        "validation.json": "b9b3bbe1a8a1056309dd59e8cde2f0f436a5d56e0d98233c7f0110e74bb85739"
+      },
+      "baseline_scene_sha256": "16e8f60824abcc78c778d13eb2f27259b1dfe4bf4b05794faf4fd2a8c1183a19",
+      "local_fraction_min": 0.7
+    }
+  ],
+  "design_evidence": {
+    "/Users/fanchangxuan/Repos/roomscript2/runs/engineering/mosaic-local-colours-r14-20261027/a04-plan.json": "de98c4394d804a2bd8fb90989ad14268c7fc57fdadc7a1af4ffe982646dda21d",
+    "/Users/fanchangxuan/Repos/roomscript2/runs/engineering/mosaic-local-colours-r14-20261027/a06-plan.json": "b73f26ab6e35cead0e4e607ea98e20d7f91185af515bc261269487990bf8c617",
+    "/Users/fanchangxuan/Repos/roomscript2/runs/engineering/mosaic-local-colours-r14-20261027/a08-plan.json": "788af01132c72c596c42f718a1b4cdd05128ff36fdc9ed29404e3cb88a905381"
+  }
+}

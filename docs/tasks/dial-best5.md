@@ -1,7 +1,7 @@
 # BEST5 Dial: current specification and preserved evidence
 
 The current Dial family is **R11 BEST5**, with nine cases selected through
-`configs/task_families/current.json`. Original Oracle evidence includes eight
+`benchmark/release.json`. Original Oracle evidence includes eight
 programmatic witnesses and one assisted eight-dial Level 3 witness. Their success
 is historical evidence for their frozen source, not automatic qualification of
 later physics or harness revisions. Use the [unified CLI](../unified-cli.md) for
@@ -12,10 +12,10 @@ reference executions.
 
 | Content | Path |
 | --- | --- |
-| Nine-case model catalog | `configs/suites/dial-best5-r11.json` |
-| Specification, defaults, frozen evidence registry | `configs/task_families/dial/best5-r11.json` |
+| Nine-case model catalog | `benchmark/dial/catalog.json` |
+| Specification, defaults, frozen evidence registry | `benchmark/dial/best5-r11.json` |
 | Policy-specific guidance | `prompts/archive/tasks/dial-best5.md` |
-| Original shared integration requests | `configs/task_families/dial/integration-requests.json` |
+| Original shared integration requests | `benchmark/dial/integration-requests.json` |
 | Historical review package and progress-aware edits | `outputs/engineering/dial-family-current/` |
 | Delivered nine simple-background videos | `outputs/oracle/dial-nine-videos-20261027/` |
 | Delivered nine Factory videos and matching scenes | `outputs/robo-factory/dial-best5-edited-10x-20261027/` |

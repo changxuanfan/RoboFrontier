@@ -10,7 +10,7 @@ Cloning source is not a backup of ignored recordings or credentials.
 | `robofrontier.toml` | Unified defaults for new runs; prepared runs freeze their resolved settings |
 | `robofrontier/` | Shared physics/runtime/evidence contracts and native engine modules |
 | `robofrontier/codex/`, `robofrontier/claude/` | Native Codex and Claude Code engines |
-| `configs/task_families/current.json` | Current 36-case policy/Oracle source registry |
+| `benchmark/release.json` | Current 36-case policy/Oracle source registry |
 | `configs/policy-assets.json` | Pinned policy asset archive, hashes and release identity |
 | `configs/factory-assets.json` | Separate optional Factory recording bundle lock |
 | `configs/models.json`, `configs/claude-models.json` | Engine-specific provider/model profiles |

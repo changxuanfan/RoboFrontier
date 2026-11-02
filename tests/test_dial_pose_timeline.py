@@ -70,7 +70,7 @@ class MotionEditTests(unittest.TestCase):
 
     def test_source_edit_protects_feedback_binds_hashes_and_preserves_states(self):
         root = Path(__file__).resolve().parents[1]
-        case = json.loads((root/'configs/suites/dial-best5-r11.json').read_text())['cases'][0]
+        case = json.loads((root/'benchmark/dial/catalog.json').read_text())['cases'][0]
         source = Workstation(root/case['directory'])
         with tempfile.TemporaryDirectory() as td, patch('mujoco.mj_step', side_effect=AssertionError('No edit physics')):
             path = Path(td)/'motion'
@@ -102,7 +102,7 @@ class MotionEditTests(unittest.TestCase):
         from robofrontier.factory.workstations import FactoryPlayback, compose
         from robofrontier.robot_control import quat_matrix
         root = Path(__file__).resolve().parents[1]
-        case = json.loads((root/'configs/suites/dial-best5-r11.json').read_text())['cases'][0]
+        case = json.loads((root/'benchmark/dial/catalog.json').read_text())['cases'][0]
         source = Workstation(root/case['directory'])
         place = dict(case_id=case['id'],family='dial',source_directory=str(source.path),
             translation_m=[0.,0.,0.],yaw_rad=0.,scale=1.,planning_bounds_xy_m=[-3.,-3.,3.,3.],table_bounds_xy_m=[-3.,-3.,3.,3.])

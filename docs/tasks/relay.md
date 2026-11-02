@@ -70,7 +70,7 @@ the policy's START clock. An Oracle monitor's engineering corrections are not
 an autonomous model result.
 
 Legacy `scripts/run_relay_nine_oracles.py` reads nine cases from
-`configs/suites/frontier-relay.json` and
+`benchmark/relay/catalog.json` and
 `configs/harness-frontier-v2-servo2.json`. Its old default has no total deadline;
 individual action deadlines, STOP and uncertain-result protection remain.
 `run_relay_live_oracle.py` handles individual reference executions. Local static

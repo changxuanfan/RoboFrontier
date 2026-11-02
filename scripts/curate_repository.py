@@ -29,12 +29,12 @@ def plan(root):
         if p in {root, *(root/x for x in ('runs','outputs','runs/oracle','runs/engineering','docs/generated','configs/evaluations/private'))}:return
         if p.exists() and p.is_relative_to(root):protected.add(p)
     for name in policy['keep']:protect(name)
-    for file in (root/'configs/task_families').rglob('*.json'):
+    for file in (root/'benchmark').rglob('*.json'):
         for name in strings(json.loads(file.read_text())):
             if name.startswith(('runs/','outputs/',str(root)+'/')):protect(name)
     # Entire selected attempts include source snapshots, chunks and action/process
     # evidence. Failed sibling attempts are not selected by this operation.
-    release=json.loads((root/'configs/task_families/current.json').read_text())
+    release=json.loads((root/'benchmark/release.json').read_text())
     for f in release['families'].values():
         for c in f['oracle']:
             p=Path(c['recording']);p=p if p.is_absolute() else root/p

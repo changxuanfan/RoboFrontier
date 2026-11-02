@@ -13,7 +13,7 @@ import numpy as np
 
 from .mosaic_policy_package import ROOT,checksum,read,write
 
-SETTINGS='configs/task_families/mosaic/motion-review-r13.json'
+SETTINGS='benchmark/mosaic/motion-review-r13.json'
 CRITICAL_EVENTS={'picked','placed','grip_relocalized','mosaic_review_adopted_hold',
                  'mosaic_review_reconciled_release','reference_placement_repair','trial_end'}
 

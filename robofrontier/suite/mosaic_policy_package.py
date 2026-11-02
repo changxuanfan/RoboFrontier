@@ -14,7 +14,7 @@ import shutil
 from .. import prompt_archive
 
 ROOT = Path(__file__).resolve().parents[2]
-REGISTRY = 'configs/task_families/mosaic/r13.json'
+REGISTRY = 'benchmark/mosaic/r13.json'
 CONTROL_FILES = ('robot_control.py', 'sim.py', 'motion_check.py', 'task_config.py', 'pipeline.py')
 FORBIDDEN_PUBLIC_KEYS = {'objects', 'goals', 'assignments', 'qpos', 'qvel', 'initial_position_m',
                          'initial_quaternion_wxyz', 'repair_recipe', 'oracle', 'oracle_mode',
@@ -71,7 +71,7 @@ def _verify_builder(recorded, root):
     if recorded==checksum(__file__):
         return
     from ..source_compatibility import normalized_digest
-    receipt=read(Path(root)/'configs/task_families/mosaic/builder-compatibility.json')
+    receipt=read(Path(root)/'benchmark/mosaic/builder-compatibility.json')
     for item in receipt['historical_builders']:
         if recorded==item['source_sha256'] and normalized_digest(Path(__file__).read_bytes(),item['projection_rule'])==item['projection_ast_sha256']:
             return

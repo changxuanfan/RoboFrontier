@@ -142,7 +142,7 @@ recordings and their private review evidence are separate data; bootstrap does
 not manufacture those witnesses. A Factory presentation package is not permission
 to claim that every historical Oracle has been rerun on current physics.
 
-Mosaic uses `configs/suites/frontier-mosaic-r14.json` by default. Case IDs are
+Mosaic uses `benchmark/mosaic/catalog.json` by default. Case IDs are
 reused across revisions, so identify a run by its catalog, scene and executor
 hashes as well as its case ID. The runner verifies the selected case, scene hash
 and matching catalog/task revision before constructing a physical world. Keep an

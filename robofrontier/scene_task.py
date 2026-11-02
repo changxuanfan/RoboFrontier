@@ -61,8 +61,8 @@ def validate_scene_asset(task):
     from .task_config import check_position
     import re
     folder=(ROOT/task['scene_asset']).resolve()
-    if not folder.is_relative_to(ROOT/'configs/environments') or not folder.is_dir():
-        raise ValueError('Use a generated scene directory under configs/environments')
+    if not any(folder.is_relative_to(ROOT/base) for base in ('benchmark', 'configs/environments')) or not folder.is_dir():
+        raise ValueError('Use a released scene under benchmark or a generated one under configs/environments')
     if hashlib.sha256((folder/'scene.xml').read_bytes()).hexdigest()!=task['scene_sha256']:
         raise ValueError('Generated scene differs from the requested task')
     env=json.loads((folder/'environment.json').read_text())

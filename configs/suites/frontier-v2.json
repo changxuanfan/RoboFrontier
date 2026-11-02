@@ -256,7 +256,7 @@
       "id": "relay-a08-d1",
       "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "configs/environments/beam_handoff/frontier-v2-r13-relay-a08-d1"
+      "directory": "benchmark/relay/relay-a08-d1"
     },
     {
       "family": "relay",
@@ -268,7 +268,7 @@
       "id": "relay-a08-d2",
       "source_scene_revision": 16,
       "table_height_m": 0.8,
-      "directory": "configs/environments/beam_handoff/frontier-v2-r17-relay-a08-d2"
+      "directory": "benchmark/relay/relay-a08-d2"
     },
     {
       "family": "relay",
@@ -280,7 +280,7 @@
       "id": "relay-a08-d3",
       "source_scene_revision": 16,
       "table_height_m": 0.8,
-      "directory": "configs/environments/beam_handoff/frontier-v2-r17-relay-a08-d3"
+      "directory": "benchmark/relay/relay-a08-d3"
     },
     {
       "family": "relay",
@@ -292,7 +292,7 @@
       "id": "relay-a12-d1",
       "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "configs/environments/beam_handoff/frontier-v2-r15-relay-a12-d1"
+      "directory": "benchmark/relay/relay-a12-d1"
     },
     {
       "family": "relay",
@@ -304,7 +304,7 @@
       "id": "relay-a12-d2",
       "source_scene_revision": 16,
       "table_height_m": 0.8,
-      "directory": "configs/environments/beam_handoff/frontier-v2-r17-relay-a12-d2"
+      "directory": "benchmark/relay/relay-a12-d2"
     },
     {
       "family": "relay",
@@ -316,7 +316,7 @@
       "id": "relay-a12-d3",
       "source_scene_revision": 16,
       "table_height_m": 0.8,
-      "directory": "configs/environments/beam_handoff/frontier-v2-r17-relay-a12-d3"
+      "directory": "benchmark/relay/relay-a12-d3"
     },
     {
       "family": "relay",
@@ -328,7 +328,7 @@
       "id": "relay-a16-d1",
       "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "configs/environments/beam_handoff/frontier-v2-r13-relay-a16-d1"
+      "directory": "benchmark/relay/relay-a16-d1"
     },
     {
       "family": "relay",
@@ -340,7 +340,7 @@
       "id": "relay-a16-d2",
       "source_scene_revision": 16,
       "table_height_m": 0.8,
-      "directory": "configs/environments/beam_handoff/frontier-v2-r17-relay-a16-d2"
+      "directory": "benchmark/relay/relay-a16-d2"
     },
     {
       "family": "relay",
@@ -352,7 +352,7 @@
       "id": "relay-a16-d3",
       "source_scene_revision": 16,
       "table_height_m": 0.8,
-      "directory": "configs/environments/beam_handoff/frontier-v2-r17-relay-a16-d3"
+      "directory": "benchmark/relay/relay-a16-d3"
     },
     {
       "family": "dial",

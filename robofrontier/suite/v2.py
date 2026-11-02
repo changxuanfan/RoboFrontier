@@ -68,8 +68,10 @@ def cases():
 
 
 def directory(case):
+    from ..task_families import current_path
     prefix='frontier-v2-' if case.get('scene_revision',1)==1 else f'frontier-v2-r{case["scene_revision"]}-'
-    return ROOT/'configs/environments'/FOLDERS[case['family']]/(prefix+case['id'])
+    # Released revisions live in benchmark/; earlier ones stay where they were built.
+    return ROOT/current_path(f'configs/environments/{FOLDERS[case["family"]]}/{prefix}{case["id"]}')
 
 
 def env_base(case,stations,tables):

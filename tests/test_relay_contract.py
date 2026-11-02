@@ -78,7 +78,7 @@ class RelayContractTests(unittest.TestCase):
 
     def test_l1_rebuild_emits_the_current_task_and_public_rules(self):
         from robofrontier.suite import relay_scene
-        catalog=json.loads((Path(__file__).resolve().parents[1]/'configs/suites/frontier-relay.json').read_text())
+        catalog=json.loads((Path(__file__).resolve().parents[1]/'benchmark/relay/catalog.json').read_text())
         case=next(c for c in catalog['cases'] if c['id']=='relay-a08-d1')
         root=Path(__file__).resolve().parents[1]
         task=json.loads((root/case['directory']/'task.json').read_text())

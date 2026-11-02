@@ -21,7 +21,7 @@ class ParallelCoverageTests(unittest.TestCase):
 
     def test_parallel_matches_original_nominal_coverage_on_r14_scene(self):
         root=Path(__file__).resolve().parents[1]
-        folder=root/'configs/environments/mosaic/frontier-v2-r14-mosaic-a04-6x12-d1'
+        folder=root/'benchmark/mosaic/mosaic-a04-6x12-d1'
         if not (folder/'assets').exists():
             self.skipTest('R14 scene assets not materialized')
         task=json.loads((folder/'task.json').read_text())

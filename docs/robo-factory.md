@@ -77,7 +77,7 @@ wavy.
 ## Frozen sources, edits and independent loops
 
 Historical V9/V10 bound each desk's scene, recording and edits through the then
-current `configs/task_families/current.json`. The portable server handoff freezes
+current `benchmark/release.json`. The portable server handoff freezes
 those inputs independently and does not depend on that file pointing into a
 maintainer's Oracle cache.
 

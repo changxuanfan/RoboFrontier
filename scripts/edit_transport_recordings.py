@@ -6,7 +6,7 @@ from robofrontier.suite.transport_motion_edit import build_edit,TransportEdit
 from robofrontier.run_setup import write_json
 ROOT=Path(__file__).resolve().parents[1]
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--config',type=Path,default=ROOT/'configs/task_families/transport/half-opening-r14.json');p.add_argument('--case');p.add_argument('--output',type=Path,required=True);a=p.parse_args();config=load_json(a.config)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--config',type=Path,default=ROOT/'benchmark/transport/half-opening-r14.json');p.add_argument('--case');p.add_argument('--output',type=Path,required=True);a=p.parse_args();config=load_json(a.config)
     if a.case and a.case not in {r['case_id']for r in config['cases']}:p.error('Unknown Transport case')
     a.output.mkdir(parents=True,exist_ok=True);rows=[]
     for row in config['cases']:

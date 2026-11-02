@@ -13,5 +13,8 @@ docs/generated
 configs/environments/**/assets
 configs/environments/**/preview-*.png
 configs/environments/**/FROZEN
+benchmark/*/*/assets
+benchmark/*/*/preview-*.png
+benchmark/*/*/FROZEN
 **/__pycache__/
 **/*.pyc

@@ -11,6 +11,7 @@ import numpy as np
 
 from robofrontier.suite.v2 import ROOT, cases as current_cases, directory, rz
 from robofrontier.suite.relay_scene import validate, subtract_convex, merge_convex_pieces, polygon_area
+from robofrontier.task_families import legacy_bytes
 from robofrontier.workstation import Workstation
 
 
@@ -111,7 +112,7 @@ class RelaySceneTests(unittest.TestCase):
         contract=json.loads((ROOT/'tests/fixtures/relay_contract_source_hashes.json').read_text())
         self.assertGreater(len(saved),100)
         for name,checksum in saved.items():
-            payload=(ROOT/name).read_bytes()
+            payload=legacy_bytes(name)
             if name in contract['fields_sha256']:
                 task=json.loads(payload)
                 if name.endswith('/task.json'):

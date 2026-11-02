@@ -10,7 +10,8 @@ from pathlib import Path
 import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE = 'configs/task_families/current.json'
+RELEASE = 'benchmark/release.json'
+LEGACY_PATHS = 'benchmark/legacy-paths.json'
 READINESS = 'prepared_policy_trial'
 
 
@@ -20,6 +21,26 @@ def sha(path):
 
 def read(path):
     return json.loads(Path(path).read_text())
+
+
+def current_path(name, root=ROOT):
+    """Translate a pre-benchmark/ released path, as frozen records name it."""
+    name = str(name)
+    moved = read(Path(root)/LEGACY_PATHS)['paths']
+    for old in sorted(moved, key=len, reverse=True):
+        if name == old or name.startswith(old+'/'):
+            return moved[old]+name[len(old):]
+    return name
+
+
+def legacy_bytes(name, root=ROOT):
+    """A released file's bytes as recorded before the move; only path text changed."""
+    import re
+    moved = read(Path(root)/LEGACY_PATHS)['paths']
+    data = (Path(root)/current_path(name, root)).read_bytes()
+    back = {new.encode(): old.encode() for old, new in moved.items()}
+    pattern = re.compile(b'(' + b'|'.join(re.escape(n) for n in sorted(back, key=len, reverse=True)) + rb')(?![A-Za-z0-9_.-])')
+    return pattern.sub(lambda m: back[m.group(1)], data)
 
 
 def resolve_case(case_id, purpose='gpt', root=ROOT):

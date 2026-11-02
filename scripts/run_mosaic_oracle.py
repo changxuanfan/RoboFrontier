@@ -213,7 +213,7 @@ def run(args):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--case',default='mosaic-a04-6x12-d1');p.add_argument('--output',required=True,type=Path)
-    p.add_argument('--catalog',type=Path,default=ROOT/'configs/suites/frontier-mosaic-r14.json')
+    p.add_argument('--catalog',type=Path,default=ROOT/'benchmark/mosaic/catalog.json')
     p.add_argument('--harness',type=Path,default=ROOT/'configs/harness-frontier-v2-servo2.json')
     p.add_argument('--wall-s',type=float);p.add_argument('--sim-s',type=float)
     p.add_argument('--action-batches',type=int);p.add_argument('--review-wall-s',type=float)
