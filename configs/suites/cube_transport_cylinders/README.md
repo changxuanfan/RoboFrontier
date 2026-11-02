@@ -85,11 +85,11 @@ this collection's summary/manifest subset; generate every size for a full
 publication. Raw cameras are 1280×900 and bordered previews 1536×1152; calibration
 and viewport offsets are in `startup.json`.
 
-Preserved sphere configurations/videos belong to `cube_transport`; cones and
-failed attempts belong to `cube_transport_cones`. Generator sources are archived
-in `configs/suites/cube_transport_cones/history/v3-generator-source.tar.gz` and
-`configs/suites/cube_transport/history/v2-generator-source.tar.gz`. Old playback
-scripts retain their original collections; do not overwrite historical results.
+The earlier sphere collection keeps its scenes in `configs/environments/cube_transport/`
+and its order seeds in `configs/tasks/cube_transport/`; the tests check that this
+collection keeps those orders. The cones collection, the two collections' catalogs
+and their archived generator sources were removed on 2026-11-03 and are kept at the
+Git tag `archive/pre-prune-20261103`. Do not overwrite historical results.
 
 ## Historical full Oracle program reference, 6-12 arms
 

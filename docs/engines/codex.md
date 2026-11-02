@@ -213,6 +213,15 @@ When auditing native `thread/list`, include the relevant app-server/exec sources
 rather than assuming the interactive default covers every session. See the
 [official app-server guide](https://developers.openai.com/codex/app-server/).
 
+Threads that Codex Desktop creates cannot receive the CLI host's dynamic `robot`
+tool. `python -m robofrontier.desktop_robot_mcp` is one global MCP stdio server
+that gives them the same role API: it maps the calling thread, which Codex puts in
+each call's `_meta`, to the role bound to that thread in a run's runtime database.
+The model never names its role or sees a connection file. Print the entry for the
+Desktop `config.toml` with `--print-config` (add `--runs-root` when runs are not
+under `runs/`) and register it once. The entry sets
+`default_tools_approval_mode = "approve"`; without it every call waits for a person.
+
 Local real-CLI checks use a synthetic Responses service without external billing:
 
 ```sh

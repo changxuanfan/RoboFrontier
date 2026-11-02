@@ -75,7 +75,6 @@
     "configs/task_families/dial/public/dial-best5-n08-d3/public-task.json": "benchmark/dial/dial-best5-n08-d3/public/reviewed-task.json",
     "configs/task_families/mosaic/builder-compatibility.json": "benchmark/mosaic/builder-compatibility.json",
     "configs/task_families/mosaic/delivery.json": "benchmark/mosaic/delivery.json",
-    "configs/task_families/mosaic/motion-review-r13.json": "benchmark/mosaic/motion-review-r13.json",
     "configs/task_families/mosaic/public/mosaic-a04-6x12-d1": "benchmark/mosaic/mosaic-a04-6x12-d1/public",
     "configs/task_families/mosaic/public/mosaic-a04-6x12-d1/family-guidance.md": "prompts/archive/tasks/mosaic-r14.md",
     "configs/task_families/mosaic/public/mosaic-a04-6x12-d1/public-task.json": "benchmark/mosaic/mosaic-a04-6x12-d1/public/reviewed-task.json",
