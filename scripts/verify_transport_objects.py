@@ -30,7 +30,7 @@ def check(count, arm, record=False):
     renderer, encoder = None, None
     frames = 0
     if record:
-        output = ROOT/f'benchmarks/{COLLECTION}/validation/{env["id"]}-{arm}-pick-place.mp4'
+        output = ROOT/f'configs/suites/{COLLECTION}/validation/{env["id"]}-{arm}-pick-place.mp4'
         renderer = mujoco.Renderer(model, height=720, width=960)
         encoder = subprocess.Popen(['/opt/homebrew/bin/ffmpeg', '-y', '-loglevel', 'error',
             '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '960x720', '-r', '20', '-i', '-',
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     parser.add_argument('--record', action='store_true')
     args = parser.parse_args()
     results = [check(3, 'A', args.record), check(7, 'G', args.record), check(12, 'L', args.record)]
-    path = ROOT/f'benchmarks/{COLLECTION}/validation/object-fixtures.json'
+    path = ROOT/f'configs/suites/{COLLECTION}/validation/object-fixtures.json'
     path.write_text(json.dumps(results, indent=2)+'\n')
     if not all(r['passed'] for r in results):
         raise SystemExit('Some fixtures failed; see object-fixtures.json')

@@ -175,7 +175,7 @@ def _frozen_configuration(batch):
 
 def run(batch, *, engineering=False, continuing=False):
     """Run a prepared batch. `continuing` picks up a batch whose supervisor died: a run that
-    had started continues once in its next segment and unstarted runs start (docs/run-segments.md)."""
+    had started continues once in its next segment and unstarted runs start (docs/running/run-segments.md)."""
     config = _frozen_configuration(batch)
     if config['policy']['engine'] == 'claude' and not engineering:
         raise ValueError('Claude runs remain unqualified; explicitly select run --engineering')
@@ -261,7 +261,7 @@ def argument_parser(*, prog=None):
             p.add_argument('--durable', action='store_true',
                            help='Run under the macOS user launchd service, so it outlives this terminal')
             p.add_argument('--continue', dest='continuing', action='store_true',
-                           help='Continue a batch whose supervisor died; started runs continue once (docs/run-segments.md)')
+                           help='Continue a batch whose supervisor died; started runs continue once (docs/running/run-segments.md)')
     p = sub.add_parser('collect', help='Collect stopped native sessions, motion and evidence')
     p.add_argument('batch', type=Path)
     p.add_argument('--output', type=Path, required=True)

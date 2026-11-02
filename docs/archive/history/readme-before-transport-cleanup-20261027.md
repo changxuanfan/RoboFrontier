@@ -49,7 +49,7 @@ then-current 36 environments:
 - [Eight-arm opposing-pair beam environment](../../../configs/environments/beam_handoff/facing-08/README.md).
 - [Command semantics and grasp-force audit](../robot-command-reality-audit-20261022.md):
   shared multi-arm tools added grasp mode; the keyboard exercise kept position control.
-- [3–12-arm cube/cylinder standalone catalog](../../../benchmarks/cube_transport_cylinders/README.md).
+- [3–12-arm cube/cylinder standalone catalog](../../../configs/suites/cube_transport_cylinders/README.md).
 - Earlier cube/sphere catalog: `benchmarks/cube_transport/README.md`, removed from the tree; it is kept at tag `archive/pre-prune-20261103`.
 - [Historical pilots and diagnostics](.).
 

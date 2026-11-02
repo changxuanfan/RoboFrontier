@@ -56,7 +56,7 @@ engineering-stop mechanism when authorizing a short test. A stop is not a model
 success or a complete physical checkpoint. Real-time video is optional and off
 by default; motion supports later offline video rendering.
 
-For queued execution use [Slurm](slurm.md); for Docker use [containers](docker.md).
+For queued execution use [Slurm](running/slurm.md); for Docker use [containers](running/docker.md).
 Live databases and native CLI state must stay on local storage. Monitor atomic
 status JSON or service APIs rather than opening another process's database
 across Docker/shared-filesystem boundaries. A running process, stale lock or

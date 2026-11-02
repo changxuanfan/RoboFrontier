@@ -5,10 +5,10 @@ Every new policy run selects its case from [`release.json`](release.json).
 
 | Family | Cases | What the robots do |
 | --- | --- | --- |
-| [`transport/`](transport/) | `transport-a{04,08,12}-d{1,2,3}` | Deliver ordered items and insert them into boards, by handover or staging |
-| [`relay/`](relay/) | `relay-a{08,12,16}-d{1,2,3}` | Carry long timbers in relay and release each one at least 70% over the GOAL |
-| [`mosaic/`](mosaic/) | `mosaic-a04-6x12`, `a06-9x18`, `a08-12x24`, each `d{1,2,3}` | Place distinct, correctly colored cubes in every cell of a target pattern |
-| [`dial/`](dial/) | `dial-best5-n{04,06,08}-d{1,2,3}` | Operate spring dials and movable modules, using BEST/READY feedback to unlock |
+| [`transport/`](transport) | `transport-a{04,08,12}-d{1,2,3}` | Deliver ordered items and insert them into boards, by handover or staging |
+| [`relay/`](relay) | `relay-a{08,12,16}-d{1,2,3}` | Carry long timbers in relay and release each one at least 70% over the GOAL |
+| [`mosaic/`](mosaic) | `mosaic-a04-6x12`, `a06-9x18`, `a08-12x24`, each `d{1,2,3}` | Place distinct, correctly colored cubes in every cell of a target pattern |
+| [`dial/`](dial) | `dial-best5-n{04,06,08}-d{1,2,3}` | Operate spring dials and movable modules, using BEST/READY feedback to unlock |
 
 `aNN` is the number of arms, `nNN` the number of dials and `dN` the difficulty level.
 Task contracts and scoring are described in the [task guides](../docs/tasks/README.md).

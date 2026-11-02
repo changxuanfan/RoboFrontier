@@ -36,11 +36,11 @@ single-arm application remains available as `robofrontier-demo` or
 a standalone wheel containing the required catalogs and assets is not yet a
 qualified distribution format.
 
-For queue execution, use the frozen, node-local [Slurm submission flow](slurm.md).
+For queue execution, use the frozen, node-local [Slurm submission flow](running/slurm.md).
 It has a separate `[slurm]` section in the same TOML and does not copy active
 SQLite databases to shared storage. Real-cluster acceptance remains pending.
 
-For Linux Docker or Docker Desktop, use the [container command flow](docker.md).
+For Linux Docker or Docker Desktop, use the [container command flow](running/docker.md).
 It builds committed source and keeps active runtime/session data in plain local
 Docker volumes. Verified stopped ZIPs are exported back to the worktree.
 
@@ -109,9 +109,9 @@ physics steps, or model turns. It is not a provider rate-limit guarantee.
 
 The current schema covers policy execution, evidence, Slurm resources,
 Factory replay/render preparation and native Oracle supervision. See the
-[Factory guide](factory.md) and [Oracle guide](oracle.md) for their subcommands.
+[Factory guide](factory/replay.md) and [Oracle guide](oracle/README.md) for their subcommands.
 Editorial camera/title/subtitle inputs use the
-[project commands](factory-editorial.md): `factory project`,
+[project commands](factory/editorial.md): `factory project`,
 `factory prepare --project`, and `factory edit-video`. These specialized project
 files and typed live Oracle recovery retain their native interfaces. They are
 not interpreted as unsupported TOML

@@ -2,7 +2,7 @@
 
 This page is the **2026-10-27 merge acceptance snapshot**, not the current launch
 configuration. New operation uses the [unified CLI](../unified-cli.md),
-[Oracle supervision](../oracle.md), and [Factory workflow](../factory.md). Current
+[Oracle supervision](../oracle/README.md), and [Factory workflow](../factory/replay.md). Current
 qualification is recorded in the [integration ledger](unified-main.md).
 The [repository layout](../repository-layout.md) distinguishes retained recordings
 from installed code and assets.
@@ -17,7 +17,7 @@ and introduced native CLI hosts. Those later changes do not rewrite this snapsho
 ## Structure at the original integration
 
 The daily entries were the [task catalog](../tasks/README.md),
-[Codex guide](../engines/codex.md), and [Factory design](../robo-factory.md), backed by
+[Codex guide](../engines/codex.md), and [Factory design](../factory/README.md), backed by
 `scripts.tasks` and `scripts.factory`. Public family materials moved into
 `configs/task_families/FAMILY/public/` with original hashes preserved.
 `current.json` distinguished policy and recorded-Oracle purposes. Historical

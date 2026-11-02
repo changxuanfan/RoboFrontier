@@ -1,7 +1,7 @@
 # Model providers, profiles and authentication
 
-For new work use the [unified CLI](../unified-cli.md), [Docker](../docker.md),
-[Slurm](../slurm.md) and [evidence storage](../evidence-storage.md) guides. This
+For new work use the [unified CLI](../unified-cli.md), [Docker](../running/docker.md),
+[Slurm](../running/slurm.md) and [evidence storage](../running/evidence-storage.md) guides. This
 guide was first written while the checkout was integrating
 `integration/unified-main`, before that work replaced the published default
 branch. The native `scripts.benchmark` entry is retained for Codex compatibility
@@ -256,7 +256,7 @@ not an implicit promotion by the runner. Task limits are not payment caps.
 The host event file under each task's `private/outputs/` is distinct from native
 session JSONL. Tool observations are rendered scene images, not automatic desktop
 screenshots. Use the shared stopped-evidence collector/ZIP verifier for sessions,
-motion, referenced JPEGs and scoring evidence; see [storage](../evidence-storage.md).
+motion, referenced JPEGs and scoring evidence; see [storage](../running/evidence-storage.md).
 Never monitor a live database across Docker/network filesystem boundaries.
 
 ## Branches, bundles and worktrees for multi-model work

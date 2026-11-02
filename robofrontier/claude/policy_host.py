@@ -26,7 +26,7 @@ class CentralizedPolicyHost:
                 raise ValueError('Only centralized Claude engineering runs are supported')
             if config.get('model') != profile.get('model') or config.get('effort') != profile.get('effort'):
                 raise ValueError('Profile differs from frozen runtime configuration')
-            # A run continued after an unexpected exit (docs/run-segments.md) keeps its session.
+            # A run continued after an unexpected exit (docs/running/run-segments.md) keeps its session.
             self.resuming = resume
             if resume:
                 if self.store.get('lifecycle') != 'resuming' or not self.store.agent('Controller')['thread_id']:

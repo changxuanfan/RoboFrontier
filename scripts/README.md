@@ -23,7 +23,7 @@ repository root. Keep existing module names when reproducing historical evidence
 | `curate_repository` | Plan and verify data cleanup while protecting frozen source recordings |
 | `tasks list/check/prepare/prepare-batch` | Audit current release selection and inputs, or use the retained lower-level preparation interface |
 | `factory build/video/poses` | Low-level scene construction, public pose export, and Cycles video; requires an explicitly matching source |
-| `factory_server setup/doctor/prepare/submit/run/status/import-motion/project/edit-video` | Restore independent R14 Factory data, prepare Linux render arrays, import motion, edit source-bound camera/subtitle projects and verify movies; see the [server guide](../docs/factory-server.md) and [editorial guide](../docs/factory-editorial.md) |
+| `factory_server setup/doctor/prepare/submit/run/status/import-motion/project/edit-video` | Restore independent R14 Factory data, prepare Linux render arrays, import motion, edit source-bound camera/subtitle projects and verify movies; see the [server guide](../docs/factory/server.md) and [editorial guide](../docs/factory/editorial.md) |
 | `restore_scene_assets` | Restore ignored historical scene assets by their original SHA; refuse to overwrite drifted files |
 | `check_harness` | Run the offline Python, JavaScript, documentation, and protocol regression inventory; historical fixtures may require separate assets |
 | `check_oracle_preservation` | Check the preservation manifest and frozen Oracle source bindings |
@@ -55,8 +55,6 @@ Native Codex and Claude hosts, preparation and provider checks. `robofrontier` c
 | `meta_dispatcher.js` | Loaded by Meta into functions.exec. |
 | `portable_benchmark.py` | Submit one benchmark batch without an LLM supervisor (macOS or Linux CPU). |
 | `role_tools.js` | Thin local adapter for a single Agent-selected operation. |
-| `slurm_luna_cpu.sh` | Legacy entry: it formerly created active SQLite files on shared storage. |
-| `slurm_luna_l3_max_test.sh` | Legacy entry: active SQLite and temporary state must not use the shared checkout. |
 | `tasks.py` | List released tasks, audit their inputs, or prepare isolated policy runs. |
 
 ### Evidence, reports and viewers
@@ -78,7 +76,6 @@ Read finished runs; none starts a model or physics.
 
 | Script | Purpose |
 | --- | --- |
-| `archive_worktree_dependencies.py` | Preserve live historical aliases in a stable, content-deduplicated archive. |
 | `build_task_atlas.py` | Build or verify an offline English atlas of current public policy tasks. |
 | `check_harness.py` | Offline checks: fake services, robot/contact physics and real encoder recovery. |
 | `check_oracle_preservation.py` | Verify protected historical bytes with inode-aware hashing. |
@@ -120,7 +117,6 @@ Offline presentation of recorded motion; never steps task physics.
 | `render_edited_dial_batch.py` | Render selected closed dial episodes in both backgrounds with shared edits. |
 | `render_factory_blender.py` | Run with Blender --background --python SCRIPT -- --asset DIR --output DIR. |
 | `render_frontier_oracle.py` | Render stored physical configurations, including the shared chunked format. |
-| `render_transport_replay.py` | Film recorded real-physics qpos samples from a successful program attempt. |
 | `replay_dial_motion.py` | Verify immutable Dial source motion and a shared edit in the factory. |
 | `replay_motion_in_factory.py` | Replay immutable source states and optional scene-independent cuts in a factory. |
 | `slurm_factory.sbatch` | Invoked by scripts.factory_server submit. |
@@ -132,10 +128,8 @@ Build or inspect released scenes; names are kept for provenance.
 
 | Script | Purpose |
 | --- | --- |
-| `build_beam_handoff.py` | Build and inspect the eight-arm environment only. |
 | `build_best5_dials.py` | Nine versioned six-mark BEST scenes. |
 | `build_dial_policy_package.py` | Build or check the dial-only policy review. |
-| `build_floating_crank.py` | Separate eight-arm floating crank variant. |
 | `build_floating_dial_puzzle.py` | Generate a separate eight-arm/four-free-module puzzle. |
 | `build_floating_spring_dial.py` | Build a two-arm MuJoCo preview with one movable spring-dial module. |
 | `build_frontier_v2.py` | Build simple v2 scenes only. |
@@ -152,12 +146,7 @@ Build or inspect released scenes; names are kept for provenance.
 | `mosaic.py` | Check or export the current Mosaic delivery. |
 | `preview_mosaic_local_colors.py` | Exact colour/layout diagrams and zero-step MuJoCo previews for Mosaic R14. |
 | `preview_suite_rockets.py` | Draft pixel targets only: no MuJoCo scene, robot motion or benchmark run. |
-| `render_spring_dial_designs.py` | Three cosmetic designs rendered by MuJoCo. |
 | `revise_relay_scenes.py` | Build and show only the current Relay revision. |
-| `view_beam_handoff.py` | Native MuJoCo scene preview. |
-| `view_cube_transport.py` | Open one generated world at its saved initial keyframe. |
-| `view_mosaic.py` | Open the four-arm mosaic in native MuJoCo. |
-| `view_spring_dial.py` | Native physical preview. |
 
 ### Oracle runs and engineering
 
@@ -179,24 +168,19 @@ Privileged reference execution and its diagnostics. A name with `oracle`, `commi
 | `park_mosaic_review_robot.py` | Actuate an empty reviewed arm back to its original parked joint reference. |
 | `plan_mosaic_repair_pick.py` | Private read-only observed-state planning, emitting ordinary repair commands. |
 | `probe_mosaic_pick_place.py` | Independent real-dynamics pickup -> arbitrary central placement units. |
-| `render_transport_program.py` | Execute saved deterministic schedules through Panda IK/actuators and film. |
 | `run_best5_dial_batch.py` | Frozen BEST5 blind batch, one pilot then at most two independent worlds. |
 | `run_blind_dial_oracle.py` | One frozen R11 BEST5 physical Oracle. |
 | `run_mosaic_oracle.py` | Frozen Mosaic Oracle with bounded live review. |
 | `run_relay_live_oracle.py` | One continuous committed Relay Oracle with a live, typed recovery boundary. |
 | `run_relay_nine_oracles.py` | Frozen Relay case queue with explicit concurrency and no total deadlines. |
 | `run_transport_full_oracle.py` | Frozen R13 full-order transport Oracle, with exclusive physics ownership. |
-| `session_mailbox_demo.py` | Historical two-thread communication pilot. |
 | `simulate_dial_alphabets.py` | BEST feedback across alphabet sizes, with exact posterior beliefs. |
 | `simulate_dial_feedback.py` | Exhaustive discrete-logic comparison. |
-| `solve_transport_program.py` | Optional offline CP-SAT proof, installed only inside the engineering run. |
 | `summarize_mosaic_parallel_phase.py` | Read-only observed overlap and fixed-plan critical-path diagnostics. |
 | `supervise_mosaic_dropped_payloads.py` | Continue explicitly reviewed Mosaic payload and near-goal placement errors. |
 | `supervise_mosaic_normal_routes.py` | Continue known frozen NoHover errors, with opt-in small flat pose repairs. |
 | `verify_floating_dial_oracle.py` | Oracle engineering trial: one Panda holds the blue handle while another turns the red dial. |
-| `verify_floating_puzzle_oracle.py` | Engineering-only eight-arm contact test. |
 | `verify_frontier_v2.py` | V2 preflight by default. |
-| `verify_spring_dial.py` | Engineering contact witness, not an LLM trial or general puzzle solver. |
 | `verify_transport_objects.py` | Engineering-only known-pose grasp/place fixtures. |
 | `verify_transport_parallel_unit.py` | Two qualified disjoint local jobs, one canonical world, serial or batched. |
 
@@ -209,7 +193,6 @@ provenance, tests, and reproducibility. A name containing `oracle`, `commission`
 or `probe` does not make that script a scored policy entry or select the current
 released task version.
 
-`archive_worktree_dependencies` preserves migration receipts.
 `prepare_factory_edits` creates new source edit versions without modifying the
 original recording or previous edits. Do not modify frozen inputs or delete
 source evidence merely to make a preparation or archive check pass.

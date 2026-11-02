@@ -84,5 +84,5 @@ def require_runtime(config, *, render=True):
         errors = '; '.join(name+': '+check['error'] for name, check in report['checks'].items()
                            if not check['passed'])
         raise ValueError('Local execution prerequisites failed before model calls. '+errors+
-                         ' Run robofrontier doctor (or container doctor); see docs/docker.md for nested sandbox settings.')
+                         ' Run robofrontier doctor (or container doctor); see docs/running/docker.md for nested sandbox settings.')
     return report

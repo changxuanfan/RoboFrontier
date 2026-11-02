@@ -26,7 +26,7 @@ benchmark-wide configuration. Current task inputs are selected through
 `benchmark/release.json`. Historical Oracle witnesses and new
 policy inputs have separate purposes and qualification records. New unified
 Oracle executions select current released scenes; Factory playback uses each
-recording's own frozen source. See [Oracle](oracle.md), [Factory](factory.md)
+recording's own frozen source. See [Oracle](oracle/README.md), [Factory](factory/replay.md)
 and the [integration ledger](archive/unified-main.md).
 
 ## Native engines and topologies
@@ -98,7 +98,7 @@ private/state/runtime.sqlite  Authoritative run-local execution database
 private/state/connections/    Role authentication and service addresses
 private/state/client-state/   Submitted requests, results and delivery receipts
 private/outputs/              Motion, events, exports, evaluation and sealing evidence
-private/inputs/segments/<k>/  Restore pose of segment k after an unexpected exit (docs/run-segments.md)
+private/inputs/segments/<k>/  Restore pose of segment k after an unexpected exit (docs/running/run-segments.md)
 private/outputs/segments/<k>/ Segment k's own motion, video and post-mortem evaluation
 ```
 
@@ -111,7 +111,7 @@ SQLite stores ownership, calls, messages, work and lifecycle facts. A copy is
 neither complete evidence nor a physical restart. Slurm keeps live SQLite and
 CLI state on verified node-local storage. Monitoring uses atomic JSON or the
 service API, not a host-side database opened across Docker/shared filesystems.
-Collection waits for writers and owner locks; see [Slurm](slurm.md).
+Collection waits for writers and owner locks; see [Slurm](running/slurm.md).
 
 ## State and its writers
 

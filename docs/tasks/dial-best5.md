@@ -5,7 +5,7 @@ The current Dial family is **R11 BEST5**, with nine cases selected through
 programmatic witnesses and one assisted eight-dial Level 3 witness. Their success
 is historical evidence for their frozen source, not automatic qualification of
 later physics or harness revisions. Use the [unified CLI](../unified-cli.md) for
-new policy experiments and the [Oracle entry](../oracle.md) for new privileged
+new policy experiments and the [Oracle entry](../oracle/README.md) for new privileged
 reference executions.
 
 ## Current catalogs and historical artifacts
@@ -87,7 +87,7 @@ or mesh geometry. Private evidence indexes are engineering-only.
 ```
 
 Simple-background rendering uses the frozen source and edit. Current
-[Factory commands](../factory.md) provide the complex-background Cycles path;
+[Factory commands](../factory/replay.md) provide the complex-background Cycles path;
 `python -m scripts.factory video` remains the lower-level entry. The historical
 Classic final-video entry is retired; source frames and delivered videos remain.
 

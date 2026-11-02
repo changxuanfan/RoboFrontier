@@ -1,8 +1,8 @@
 # Dated native Factory server acceptance: 2026-11-01
 
 These checks were recorded on `codex/factory-server-handoff` before unified-main
-integration. See the [native handoff](../factory-server.md) for commands and the
-[unified Factory guide](../factory.md) for current configuration. Data was published
+integration. See the [native handoff](../factory/server.md) for commands and the
+[unified Factory guide](../factory/replay.md) for current configuration. Data was published
 as [factory-r14-20261101](https://github.com/changxuanfan/RoboFrontier/releases/tag/factory-r14-20261101).
 This record establishes the scoped native data/rendering checks below, not
 benchmark scores, a full presentation or acceptance of every later integration

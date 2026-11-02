@@ -103,7 +103,7 @@ def run_batch(folder, parallel, continuing=False):
     """Run a prepared batch; with `continuing`, pick up a batch whose supervisor died.
 
     Continuing never restarts a world: a run that had started continues in its next
-    segment, at most once (docs/run-segments.md); runs that never started start now.
+    segment, at most once (docs/running/run-segments.md); runs that never started start now.
     """
     folder=Path(folder).resolve();batch=read(folder/'batch.json')
     expected='running' if continuing else 'prepared_not_started'
@@ -181,7 +181,7 @@ def _run_batch_locked(folder, parallel, batch, continuing=False):
                       model_calls_note='Per-task native usage events are recorded; aggregate API request count is not measured')
     write_json(folder/'batch.json',batch)
     def task(job):
-        # An unexpected exit continues the same run once (docs/run-segments.md).
+        # An unexpected exit continues the same run once (docs/running/run-segments.md).
         run=Path(job['run_directory'])
         # A segment prepared just before the supervisor died starts as it is.
         if continuing and read_lifecycle(run) not in ('prepared','resuming'):
@@ -243,7 +243,7 @@ def main():
         a.add_argument('--cases',nargs='+');a.add_argument('--model-config',type=Path)
         a.add_argument('--level',type=int,choices=(1,2,3))
         a.add_argument('--min-arms',action='store_true',help='Smallest released arm count within each selected family')
-    a=sub.add_parser('continue',help='Continue a batch whose supervisor died (docs/run-segments.md)')
+    a=sub.add_parser('continue',help='Continue a batch whose supervisor died (docs/running/run-segments.md)')
     a.add_argument('batch',type=Path);a.add_argument('--parallel',type=int,default=9)
     a=sub.add_parser('run');a.add_argument('batch',type=Path);a.add_argument('--parallel',type=int,default=9)
     a=sub.add_parser('status');a.add_argument('batch',type=Path)

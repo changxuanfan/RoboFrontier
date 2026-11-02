@@ -92,7 +92,7 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
     if profile.get('auth_mode') == 'native_login':
         build_env(profile, base_env, config_directory(run, profile))
     if run_layout.path(run, 'stop', 'claude').exists(): raise ValueError('Run was stopped before launch')
-    # A run continued after an unexpected exit (docs/run-segments.md) starts again only
+    # A run continued after an unexpected exit (docs/running/run-segments.md) starts again only
     # from a prepared segment; its claim stays and its sessions are resumed.
     from robofrontier.runtime_store import RuntimeStore
     state_store = RuntimeStore(run / 'private/state/runtime.sqlite')

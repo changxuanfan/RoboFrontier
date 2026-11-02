@@ -8,4 +8,4 @@ The CORRECT panel is centered at X=-0.25 m, midway between front-row robots C an
 
 The strict lift-before-knob-contact rules, relative dial symbols, qualitative load-moment hints, observation boundary and private contact-sequence audit are identical to the preceding 0.60 m task. Grasp points, orientations, ordering, coordination and Adaptive scopes remain Agent choices. No Oracle coordinates or trajectories are policy inputs.
 
-The full contact-dynamics Oracle is recorded separately in `runs/floating-puzzle-060-tight-oracle-20261023-r1`. The camera-only framing adjustment is documented in `camera-only-change.json`; its before/after hashes verify all non-camera XML elements were identical. A saved-state replay may use the corrected framing without advancing physics.
+The full contact-dynamics Oracle is recorded separately in `runs/oracle/floating-puzzle-060-tight-oracle-20261023-r1`. The camera-only framing adjustment is documented in `camera-only-change.json`; its before/after hashes verify all non-camera XML elements were identical. A saved-state replay may use the corrected framing without advancing physics.

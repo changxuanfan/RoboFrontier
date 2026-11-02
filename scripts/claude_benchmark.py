@@ -199,7 +199,7 @@ def main():
                            help='Engineering draft topology; no topology qualifies a scored run')
             p.add_argument('--record-video', action='store_true', help='Record a real-time MP4 during the engineering run')
     for command, text in (('run-engineering', 'Unqualified native Claude topology experiments; may spend API funds'),
-                          ('continue-engineering', 'Continue a batch whose process died (docs/run-segments.md); may spend API funds')):
+                          ('continue-engineering', 'Continue a batch whose process died (docs/running/run-segments.md); may spend API funds')):
       p = sub.add_parser(command, help=text)
       p.add_argument('batch', type=Path); p.add_argument('--parallel', type=int, required=True)
       p.add_argument('--turn-budget-usd', type=float, default=None,

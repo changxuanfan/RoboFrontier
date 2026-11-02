@@ -295,7 +295,7 @@ class ClaudeSessionHost:
 
     def adopt(self, session_id):
         """Continue an existing session of this role (a run continued after an unexpected
-        exit, docs/run-segments.md): the next turn resumes it instead of creating one."""
+        exit, docs/running/run-segments.md): the next turn resumes it instead of creating one."""
         with self.lock:
             if self.state != 'new': raise ValueError('Only a new host can adopt a session')
             self.session_id = str(session_id); self.state = 'idle'

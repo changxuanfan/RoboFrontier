@@ -21,11 +21,11 @@ compatibility certificates.
 
 ## Factory tour
 
-[![Original Factory tour, 1080p](docs/media/factory-tour-original.jpg)](https://github.com/changxuanfan/RoboFrontier/releases/tag/factory-tour-media-20261102)
+[![Original Factory tour, 1080p](docs/factory/media/factory-tour-original.jpg)](https://github.com/changxuanfan/RoboFrontier/releases/tag/factory-tour-media-20261102)
 
 [Watch or download the original full video](https://github.com/changxuanfan/RoboFrontier/releases/download/factory-tour-media-20261102/robofrontier-factory-tour-original.mp4)
 (210.5 seconds, 1920 × 1080, 30 fps). The original MP4 is unchanged;
-[media identity](docs/media/factory-tour-original.json) and
+[media identity](docs/factory/media/factory-tour-original.json) and
 [release checksums](https://github.com/changxuanfan/RoboFrontier/releases/download/factory-tour-media-20261102/SHA256SUMS)
 are available. This historical offline presentation is not a new current-scene
 render or evidence of model/task success. A new full render is deferred at the
@@ -36,15 +36,15 @@ user's request; the editable English project remains available.
 | Goal | Guide |
 | --- | --- |
 | Configure, prepare and run a benchmark | [Unified CLI and TOML](docs/unified-cli.md) |
-| Run on Linux Docker or macOS Docker Desktop | [Docker execution](docs/docker.md) |
-| Queue a job with node-local runtime state | [Slurm submission](docs/slurm.md) |
-| Replay motion and render Factory backgrounds | [Factory workflow](docs/factory.md) |
-| Edit the full Factory camera plan and English video titles/subtitles | [Editable video project](docs/factory-editorial.md) |
-| Browse the 36 current tasks and initial scenes | [Download the offline atlas](https://github.com/changxuanfan/RoboFrontier/releases/download/development-fixtures-20261102/robofrontier-task-atlas-20261102.zip) · [Atlas guide](docs/task-atlas.md) |
+| Run on Linux Docker or macOS Docker Desktop | [Docker execution](docs/running/docker.md) |
+| Queue a job with node-local runtime state | [Slurm submission](docs/running/slurm.md) |
+| Replay motion and render Factory backgrounds | [Factory workflow](docs/factory/replay.md) |
+| Edit the full Factory camera plan and English video titles/subtitles | [Editable video project](docs/factory/editorial.md) |
+| Browse the 36 current tasks and initial scenes | [Download the offline atlas](https://github.com/changxuanfan/RoboFrontier/releases/download/development-fixtures-20261102/robofrontier-task-atlas-20261102.zip) · [Atlas guide](docs/tasks/atlas.md) |
 | See which integration gates have passed | [Acceptance and source provenance](docs/archive/unified-main.md) |
 | Read the policy's role and tool contract | [Robot collaboration skill](prompts/skills/robot-collaboration/SKILL.md) |
 | Read completion and recovery rules | [Shared policy rules](prompts/rules.md) |
-| Run privileged references and interpret recovery checks | [Oracle execution](docs/oracle.md) and [recovery boundaries](docs/oracle-recovery.md) |
+| Run privileged references and interpret recovery checks | [Oracle execution](docs/oracle/README.md) and [recovery boundaries](docs/oracle/recovery.md) |
 
 Current source, documentation and historical prose use English. Frozen legacy
 inputs retain their original filenames, language, protocol and source;
@@ -269,7 +269,7 @@ Factory has a unified configuration/command entry:
 ```
 
 The `[factory]` section controls its independent video/device settings; prepared
-plans freeze the effective configuration. See the [Factory guide](docs/factory.md)
+plans freeze the effective configuration. See the [Factory guide](docs/factory/replay.md)
 for closed-recording import, full tour, CPU/GPU rendering and queue submission.
 Native Oracle planning, frozen preparation and bounded supervision also have a
 unified entry:
@@ -284,16 +284,16 @@ unified entry:
 Use `--render native` during preparation on macOS or `--render cpu` for Linux
 software rendering. Commit the executor before preparation. The `[oracle]`
 engineering clock includes planning/review time and is separate from a model
-benchmark's START clock. The [Oracle guide](docs/oracle.md) documents native
+benchmark's START clock. The [Oracle guide](docs/oracle/README.md) documents native
 recovery, evidence and the distinction between commissioning and full success.
 All four families have passed current compressed-motion Factory import and
 all-frame replay checks, with small CPU video previews. The editable
-[full-length English video project](docs/factory-editorial.md) is tracked and has
+[full-length English video project](docs/factory/editorial.md) is tracked and has
 passed CPU/Metal preview and media round trips. The original full movie is
 published above; a new current-source full render is deferred. New full physical
 Oracle qualification remains open. The tracked
 [English task atlas](docs/task-atlas/index.html) includes current
-public task contracts and 72 regenerated initial views; its [guide](docs/task-atlas.md)
+public task contracts and 72 regenerated initial views; its [guide](docs/tasks/atlas.md)
 provides verification and offline ZIP commands. Existing Oracle intervention records and historical source identities must
 be preserved; assisted execution is not automatically an autonomous benchmark.
 
@@ -301,16 +301,19 @@ be preserved; assisted execution is not automatically an autonomous benchmark.
 
 | Path | Purpose |
 | --- | --- |
+| `benchmark/` | The released tasks: four families, nine cases each, and `release.json` |
 | `robofrontier.toml` | Public defaults for newly prepared unified batches |
 | `robofrontier/` | Simulation, native hosts, runtime protocol and evidence interfaces |
-| `configs/` | Released task registries, model catalogs, scenes and asset locks |
-| `prompts/` | Public policy and role/tool contracts |
-| `scripts/`, `tests/` | Engineering entries and regression checks |
-| `docker/` | Unified image and explicitly retained legacy image |
-| `docs/` | Current guides, tracked public task atlas, provenance and historical migration records |
-| `web/task-atlas/` | Editable HTML/CSS/JavaScript sources for the offline public atlas |
+| `prompts/` | Every text a model reads: rules, roles, skills and the two manager prompts |
+| `configs/` | Model catalogs, harnesses, asset locks, and scene revisions not yet released |
+| `scripts/`, `tests/` | Engineering commands and regression checks |
+| `docs/` | Guides by topic, the tracked public task atlas and dated history |
+| `assets/`, `web/task-atlas/` | Shared art and the atlas page templates |
+| `docker/` | The container image |
 | `runs/`, `outputs/` | Ignored runtime evidence and media; back up separately from Git |
 | `.robofrontier/` | Ignored private native state and container command receipts |
+
+The full layout and where new files go: [repository layout](docs/repository-layout.md).
 
 The early single-arm application is available as `robofrontier demo` or
 `robofrontier-demo`; it is not the default benchmark entry. A standalone wheel,

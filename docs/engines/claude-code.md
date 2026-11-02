@@ -499,7 +499,7 @@ The normal stopped collection includes all role-bound native transcripts and
 linked auxiliaries, motion, action/message/wake records and reports. Collectors
 identify roles from runtime metadata, so no Controller is required in peer mode.
 The normal ZIP archive, restore and replay path also applies. See
-[evidence storage](../evidence-storage.md) for locations and retention.
+[evidence storage](../running/evidence-storage.md) for locations and retention.
 
 ### Measured coverage
 

@@ -72,7 +72,7 @@ def export(directory, codex_home=None):
         start_sim_time=store.get('start_sim_time');run_id=store.get('run_id');robot_count=len(store.get('robots',[]))
         messages=[store._message(row) for row in store.db.execute('SELECT * FROM messages ORDER BY seq')]
         async_actions=sum('started_sim_s' in a and not external_wait(store,a) for a in actions.values())
-        # A run continued after an unexpected exit (docs/run-segments.md) counts as one trial.
+        # A run continued after an unexpected exit (docs/running/run-segments.md) counts as one trial.
         segments={'count':len(store.get('segments') or [{}]),'continued':store.get('segment',0)>0,
                   'downtime_s':store.get('downtime_s',0.),'segments':store.get('segments') or []}
         from robofrontier.run_segments import motion_dirs, process_summary

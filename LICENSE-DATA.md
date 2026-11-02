@@ -10,8 +10,8 @@ The source code is licensed separately under the MIT License ([`LICENSE`](LICENS
 
 ## What this covers
 
-- Task, scene and environment data: `configs/environments/`, `configs/task_families/`,
-  `configs/suites/` and `benchmarks/`.
+- Task, scene and environment data: the released tasks in `benchmark/`, and
+  `configs/environments/` and `configs/suites/`.
 - Rendered media: the task atlas images in `docs/task-atlas/images/`, benchmark
   previews, the Factory meshes, textures and tour material in `assets/robo_factory/`,
   the backgrounds in `assets/backgrounds/`, and the videos published from this

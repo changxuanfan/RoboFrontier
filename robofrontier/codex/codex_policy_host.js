@@ -156,7 +156,7 @@ class PolicyHost {
   }
   stopRequested() { return this.stopped || fs.existsSync(this.hostPath('stop')); }
   // The world process is gone: stop dispatching so the run is sealed and can continue
-  // in its next segment (docs/run-segments.md) instead of failing every robot call.
+  // in its next segment (docs/running/run-segments.md) instead of failing every robot call.
   ownerExited() {
     const gone=Boolean(this.owner && (this.owner.exitCode!==null || this.owner.signalCode!==null));
     if (gone && !this.ownerExitLogged) {this.ownerExitLogged=true;
@@ -282,7 +282,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
       '--connection',connection,'--call-id','bind-'+actor,'bind','--data',JSON.stringify({actor,thread_id:id})],{cwd:this.cwd});
     return JSON.parse(stdout);
   }
-  // A run continued after an unexpected exit (docs/run-segments.md): reopen every role's
+  // A run continued after an unexpected exit (docs/running/run-segments.md): reopen every role's
   // own thread, let the world resume, then send each working role its frozen resume message.
   async resumeSessions() {
     const snapshot=await this.admin('snapshot');

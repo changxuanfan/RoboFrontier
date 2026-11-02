@@ -145,7 +145,7 @@ def motion_inventory(run):
         return ['task metadata unreadable; motion inventory requires review']
     folders = [run/'private/outputs/motion']
     if run_segments.supported(run):
-        # A continued run records one motion stream per segment (docs/run-segments.md).
+        # A continued run records one motion stream per segment (docs/running/run-segments.md).
         folders += [run_segments.output_dir(run, k)/'motion' for k in range(1, load_segment(run)+1)]
     issues = []
     for k, path in enumerate(folders):

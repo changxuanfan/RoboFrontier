@@ -10,4 +10,4 @@ Symbols 0/1/2/3 are attached to the white disk. The rotor's relative hinge is cl
 
 Fixed cameras: global/global_side/top, board (aggregate display), front/side for each robot, four detail angles for each module. Camera selection, grasping, approach, support orientation, parallelism and Adaptive scope are Agent decisions.
 
-Oracle evidence is separate in `runs/floating-puzzle-oracle-20261023-r1`. It tests physical contact, all three nonzero marks, airborne holding and passive return. It is engineering validation, not a model score or a policy recipe.
+Oracle evidence is separate in `runs/oracle/floating-puzzle-oracle-20261023-r1`. It tests physical contact, all three nonzero marks, airborne holding and passive return. It is engineering validation, not a model score or a policy recipe.

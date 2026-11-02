@@ -47,7 +47,7 @@ native sessions; an outer chat does not have to remain inside a tool turn.
 
 The selected engine profile and frozen runtime configuration determine the
 actual policy, not the manager's chat model. The
-[manager prompt](../../prompts/benchmark-manager.md) defines the manager's
+[manager prompt](../../prompts/managers/codex.md) defines the manager's
 authority: it performs engineering operations, not private task strategy or
 physical recovery. Policy decisions, task images and robot actions belong to the
 evaluated roles. An outer manager that changes inputs or injects strategy can
@@ -249,7 +249,7 @@ Model, tool and setup times overlap and include waits; summing them does not giv
 elapsed time percentages or pure API latency. Native host events live in
 `private/outputs/codex-host.jsonl` or `claude-host.jsonl`. They supplement, rather
 than replace, native sessions, motion, private evaluation and archive validation.
-See [evidence storage](../evidence-storage.md) for collection and archives.
+See [evidence storage](../running/evidence-storage.md) for collection and archives.
 
 ## Engine differences
 

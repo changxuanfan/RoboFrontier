@@ -953,7 +953,7 @@ title cues, 34 subtitle cues, and the existing licensed Barlow font. It spans
 210.5 seconds/6,315 frames at 30 fps. Task subtitles use the actual inspection
 camera/task metadata. Camera positions, targets, FOV, timing, SRT text and style
 are editable; camera edits do not implicitly retime existing subtitle tracks.
-The [editorial guide](../factory-editorial.md) documents the complete workflow.
+The [editorial guide](../factory/editorial.md) documents the complete workflow.
 
 Unified and native commands now expose `factory project`, `prepare --project`,
 and `edit-video`. New promo plans generate or copy the complete project into a
@@ -1424,7 +1424,7 @@ Transport retains force-off release phases across rejected exits. Its empty-hand
 screen requires real upward board support, compares identical geometry-distance
 queries, bounds finger contact across the whole phase and rejects new/worsened
 penetration without falling back to insertion tolerance. Final scoring and normal
-arm/world guards are preserved. See [recovery boundaries](../oracle-recovery.md).
+arm/world guards are preserved. See [recovery boundaries](../oracle/recovery.md).
 
 The previously failing Linux Dial pressure-requalification test was reproduced
 unchanged. Nominal 20 mm regrasp failed at a measured 26.709 mm aperture. At that

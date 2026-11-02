@@ -32,8 +32,8 @@ def _revert(tree, current, original, what, count=1):
         body[i:i+len(expected)] = ast.parse(textwrap.dedent(original)).body if original else []
 
 
-# Reviewed run-storage and segment changes to World (docs/run-segments.md,
-# docs/evidence-storage.md). Each acts only for a new run that freezes the setting
+# Reviewed run-storage and segment changes to World (docs/running/run-segments.md,
+# docs/running/evidence-storage.md). Each acts only for a new run that freezes the setting
 # or continues in a new segment; a historical run reaches the original statements.
 WORLD_RUN_STORAGE = (
     ('portable scene copy', """

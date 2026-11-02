@@ -3,7 +3,7 @@
 The continued segment is the same trial: same run directory, runtime database, workspace
 and model sessions. Only the physical world is new, rebuilt from the last recorded
 motion frame; the time the host was down does not count against the wall limit.
-See docs/run-segments.md.
+See docs/running/run-segments.md.
 """
 import fcntl
 import json

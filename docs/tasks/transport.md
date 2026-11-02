@@ -68,7 +68,7 @@ execution. Later rolling-friction assets and commissioning attempts have their
 own fingerprints and evidence. Historical qualification must not be inherited
 by a changed scene, controller, or contact candidate. Current integration
 acceptance and outstanding full-task gates are in the
-[integration ledger](../archive/unified-main.md) and [Oracle guide](../oracle.md).
+[integration ledger](../archive/unified-main.md) and [Oracle guide](../oracle/README.md).
 
 ## Restore current assets or build a review package
 
@@ -98,7 +98,7 @@ for new policy runs and this family-specific builder for historical review.
 and process events; `transport_motion_signals.py` provides motion signals and
 optional visual checks. `scripts/edit_transport_recordings.py` writes
 `robofrontier.transport-source-edit.v1` edits without changing the original stream.
-Current readers also accept compressed motion; see [evidence storage](../evidence-storage.md).
+Current readers also accept compressed motion; see [evidence storage](../running/evidence-storage.md).
 
 Retain a whole-table interval whenever an arm, gripper, or object has meaningful
 motion. Editorial classification removes idle intervals and repetitive motion
@@ -120,7 +120,7 @@ R14 already contains the half-size central opening: its source-relative opening
 scale is 1. Historical R13 recordings used a 0.5 opening display scale. The
 renderer distinguishes those sources instead of halving an R14 opening again.
 Use each recording's frozen geometry and contact parameters, not a replacement
-scene with a familiar family name. See the [Factory workflow](../factory.md).
+scene with a familiar family name. See the [Factory workflow](../factory/replay.md).
 
 ## Preserved delivery locations
 

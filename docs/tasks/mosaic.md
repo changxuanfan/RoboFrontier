@@ -26,7 +26,7 @@ index and original edit hashes. Legacy direct edit paths remain supported.
 Original non-English filenames stay in the immutable evidence, not current
 configuration strings. No historical file is renamed or rewritten.
 New R14 Oracle attempts have separate qualification; the old success does not
-transfer automatically. See [Oracle execution](../oracle.md) and the
+transfer automatically. See [Oracle execution](../oracle/README.md) and the
 [integration ledger](../archive/unified-main.md).
 
 At its original release, R14 changed stock color identities/RGB only: stock
@@ -132,7 +132,7 @@ states without advancing physics. Move a whole station rigidly in the horizontal
 plane while preserving internal geometry and dimensions. Each new policy
 recording uses its own source scene, events, and edit table, not an Oracle's
 pairings or timing as an assumed replacement. Compressed and Legacy motion
-readers share this replay contract; see [Factory](../factory.md).
+readers share this replay contract; see [Factory](../factory/replay.md).
 
 Each station independently skips its own unneeded intervals and uses its own
 playback speed. Update all stations before rendering one 30 fps frame. Current
@@ -144,7 +144,7 @@ The shared timeline and source-level editing use `station-edit.v2`. Original
 edit tables and the historical review of 135 candidates/five slow-motion
 segments remain preserved. Classification protects directed movement and semantic
 events; missing measured contact-force data cannot establish zero force. See
-[Factory design](../robo-factory.md). The
+[Factory design](../factory/README.md). The
 [Legacy merge handoff](../archive/plans/suite-v2/mosaic-merge-handoff.md) records the
 original asset materialization, public-input loading, and shared merge gates;
 its pending-state statements do not override current integration evidence.

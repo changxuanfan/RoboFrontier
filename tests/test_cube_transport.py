@@ -52,7 +52,7 @@ class CubeTransportTests(unittest.TestCase):
                     codes = [''.join(kinds[(g['requires']['color'], g['requires']['shape'])] for g in goals)
                              for goals in task['orders'].values()]
                     self.assertEqual(codes, SMALL_ORDERS[n])
-                result = json.loads((ROOT/f"benchmarks/{COLLECTION}/references/{task['id']}.json").read_text())
+                result = json.loads((ROOT/f"configs/suites/{COLLECTION}/references/{task['id']}.json").read_text())
                 replay_reference(env, task, result)
                 self.assertEqual(sum(result['arm_phase_load'].values()), result['serial_phase_slots'])
                 self.assertEqual(sum(map(len, result['schedule'])), result['serial_phase_slots'])
@@ -91,7 +91,7 @@ class CubeTransportTests(unittest.TestCase):
     def test_schedule_replay_rejects_double_booking(self):
         env = layout(4)
         task = json.loads((ROOT/f'configs/tasks/{COLLECTION}/ring-04/seed-0.json').read_text())
-        result = json.loads((ROOT/f"benchmarks/{COLLECTION}/references/{task['id']}.json").read_text())
+        result = json.loads((ROOT/f"configs/suites/{COLLECTION}/references/{task['id']}.json").read_text())
         broken = copy.deepcopy(result)
         broken['schedule'][0].append(copy.deepcopy(broken['schedule'][0][0]))
         with self.assertRaises(AssertionError):
@@ -169,7 +169,7 @@ class CubeTransportTests(unittest.TestCase):
             expected = {s['id'] for s in env['stations']}
             self.assertEqual({s['robot_id'] for s in context['robots']}, expected)
             for view in ('top', 'global'):
-                meta = json.loads((ROOT/f"benchmarks/{COLLECTION}/previews/{env['id']}-{view}.json").read_text())
+                meta = json.loads((ROOT/f"configs/suites/{COLLECTION}/previews/{env['id']}-{view}.json").read_text())
                 self.assertEqual({s['robot_id'] for s in meta['robot_labels']}, expected)
                 self.assertFalse(any(s['overlap_area_pixel2'] for s in meta['robot_labels']))
                 left, top, right, bottom = meta['scene_viewport_pixel']

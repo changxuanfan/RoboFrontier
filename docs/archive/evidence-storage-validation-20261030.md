@@ -89,7 +89,7 @@ and `luna-final-collector-check.json`. The corresponding Claude worktree directo
 contains the matching `claude-*` artifacts. These include private experimental
 data and are not published as repository source.
 
-See [collection, archival and restoration](../evidence-storage.md) for operation and
+See [collection, archival and restoration](../running/evidence-storage.md) for operation and
 current boundaries. This acceptance covers offline archival after writers stop.
 It does not automatically reduce active-run storage or remove multiple retained
 source copies. Cross-host paths, native CLI resume, different CLI versions and

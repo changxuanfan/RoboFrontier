@@ -15,20 +15,6 @@ from robofrontier import slurm_job as slurm
 
 
 class SlurmJobTests(unittest.TestCase):
-    def test_retired_shared_storage_entries_exit_before_creating_runtime_data(self):
-        checkout = Path(__file__).resolve().parents[1]
-        with tempfile.TemporaryDirectory() as temporary:
-            target = Path(temporary)
-            for name in ('slurm_luna_cpu.sh','slurm_luna_l3_max_test.sh'):
-                with self.subTest(entry=name):
-                    result = subprocess.run(['bash',str(checkout/'scripts'/name)],cwd=target,
-                        env={'PATH':os.defpath,'SLURM_SUBMIT_DIR':str(target),'SLURM_JOB_ID':'123'},
-                        capture_output=True,text=True,timeout=5)
-                    self.assertEqual(result.returncode,2,result.stderr)
-                    self.assertIn('frozen node-local submission flow',result.stderr)
-                    self.assertIn('No model call or simulation was started',result.stderr)
-                    self.assertEqual(list(target.iterdir()),[])
-
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)

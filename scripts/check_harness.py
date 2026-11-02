@@ -58,7 +58,7 @@ def main():
         modules=('test_action_batch','test_sync_groups','test_beam_policy','test_spring_dial','test_spring_dial_policy','test_pipeline','test_pipeline_client',
                  'test_runtime_store','test_run_setup','test_scheduling','test_centralized','test_delegation',
                  'test_delegate_callbacks','test_private_evaluation','test_run_seal','test_run_report',
-                 'test_session_mailbox_demo','test_transport_schedule','test_recording','test_harness_checker','test_policy_batch_viewer',
+                 'test_transport_schedule','test_recording','test_harness_checker','test_policy_batch_viewer',
                  'test_oracle_protocol','test_oracle_terminal_recovery','test_source_compatibility',
                  'test_mosaic_historical_provenance')
         suite=unittest.defaultTestLoader.loadTestsFromNames(modules)
@@ -94,7 +94,9 @@ def main():
     doc_js="const fs=require('fs');const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;const s=fs.readFileSync(process.argv[1],'utf8');for(const m of s.matchAll(/```javascript\\n([\\s\\S]*?)```/g))new AsyncFunction(m[1]);"
     runbook=subprocess.run(['node','-e',doc_js,str(ROOT/'docs/meta-runbook.md')],capture_output=True,text=True)
     tool_docs=subprocess.run(['node','-e',doc_js,str(ROOT/'prompts/skills/robot-collaboration/references/tools.md')],capture_output=True,text=True)
-    documents=[ROOT/'README.md',*(ROOT/'docs').rglob('*.md'),*(ROOT/'prompts').rglob('*.md')]
+    # Tracked Markdown only: ignored local renders under docs/generated are not documentation.
+    tracked=subprocess.run(['git','ls-files','-z','*.md'],capture_output=True,text=True,cwd=ROOT).stdout.split('\0')
+    documents=[ROOT/name for name in tracked if name]
     broken_links=documentation_links(ROOT,documents)
     validator=None
     if args.skill_validator:

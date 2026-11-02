@@ -114,7 +114,7 @@ def startup_context(env, model, data):
             'raw_render_size_pixel': [1280, 900],
             'annotated_image': {'size_pixel': [1536, 1152], 'scene_viewport_pixel': [128, 126, 1408, 1026],
                                 'calibration': 'camera intrinsics use raw render size; add viewport origin for annotated pixels'},
-            'initial_top_image': f'../../../../benchmarks/{COLLECTION}/previews/{env["id"]}-top.png',
+            'initial_top_image': f'../../../../configs/suites/{COLLECTION}/previews/{env["id"]}-top.png',
             'adapter_status': 'offline assets; robot_id names are not yet bound to the live action service'}
 
 

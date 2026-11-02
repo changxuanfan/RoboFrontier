@@ -672,6 +672,6 @@
     ],
     "calibration": "camera intrinsics use raw render size; add viewport origin for annotated pixels"
   },
-  "initial_top_image": "../../../../benchmarks/cube_transport/previews/ring-07-top.png",
+  "initial_top_image": "../../../../configs/suites/cube_transport/previews/ring-07-top.png",
   "adapter_status": "offline assets; robot_id names are not yet bound to the live action service"
 }

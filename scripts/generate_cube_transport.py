@@ -103,7 +103,7 @@ def validate(model, data, env):
 
 
 def generate(counts, render=True):
-    base = ROOT/'benchmarks'/COLLECTION
+    base = ROOT/'configs/suites'/COLLECTION
     (base/'previews').mkdir(parents=True, exist_ok=True)
     rows, manifest, summaries, task_overview = [], [], [], []
     for count in counts:

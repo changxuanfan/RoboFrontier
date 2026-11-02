@@ -10,13 +10,22 @@ See the [configuration and CLI guide](../docs/unified-cli.md).
 | Path | Purpose |
 | --- | --- |
 | `models.json` | Native Codex model/provider profiles; unified defaults select Luna/high with API authentication |
-| `claude-models.json` | Native Claude Code model/provider profiles; select an engine-specific profile explicitly |
+| `codex-model-template.json` | Model metadata a Codex run starts from when its home has no cached entry for the model |
+| `claude-models.json` | Native Claude Code model/provider profiles and transcript pricing; select an engine-specific profile explicitly |
+| `harness.json` | Default runtime harness, used when a task names none |
+| `harnesses/policy.json` | Native shared runtime/tool defaults for policy runs; model fields are baseline native settings, not overrides of a frozen unified profile |
+| `harness-frontier-v2.json`, `harness-frontier-v2-servo2.json` | Harnesses of the Frontier V2 scenes; the servo2 variant is the one released records and Oracle executions name |
 | `policy-assets.json` | Pinned policy asset archive and integrity inventory used by automatic bootstrap/preparation |
 | `factory-assets.json` | Independent R14 Factory recording release, split sizes and SHA-256 fingerprints; it does not change policy scene selection |
-| `harnesses/policy.json` | Native shared runtime/tool defaults; model fields are baseline native settings, not overrides of a frozen unified profile |
 | `backgrounds/robo_factory.json` | Factory appearance, layout and shared visual resources |
-| `suites/frontier-current-oracle.json` | Frozen 36-station Oracle recording inputs for Factory layout; not proof of current task-solving qualification |
-| `environments/` | Scene revisions before release, and the earlier revisions released cases and Oracle recordings name as sources |
+| `backgrounds/robo_factory_lookdev*.json` | Offline lighting and camera overrides for `render_factory_blender --lighting-config/--camera-config` |
+| `patterns/` | Tulip pattern parameters used by the Frontier V2 scene builder |
+| `retention.json` | What `scripts/curate_repository.py` keeps: Oracle sources, released inputs, final media and selected policy evidence |
+| `noslip.json` | No-slip physics variant for the single-arm demo |
+| `examples/luna-l3-cpu.toml` | CPU Slurm example for the four maximum-arm Level 3 tasks |
+| `environments/` | Scene revisions before release, the earlier revisions released cases and Oracle recordings name as sources, and scenes the tests open |
+| `suites/` | Generated catalogs of earlier collections; `frontier-current-oracle.json` is the 36-station Oracle layout used by the Factory |
+| `tasks/` | Task files of the original single-scene pipeline and the cube-transport v4 seeds |
 
 The remaining family registries, catalogs, harness JSON and older task configs
 preserve the original experiments' version identities. Legacy
@@ -36,6 +45,6 @@ from an old native script's defaults.
 Editable Factory camera/title/subtitle projects are presentation inputs, not
 policy settings. The shipped project is
 [`tour-project.json`](../assets/robo_factory/tour-project.json); use the
-[editorial commands](../docs/factory-editorial.md) to make and freeze a working
+[editorial commands](../docs/factory/editorial.md) to make and freeze a working
 copy. Do not manually replace asset hashes or rewrite frozen motion to make a
 different input appear to match the release.

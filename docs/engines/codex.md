@@ -3,7 +3,7 @@
 For new experiments, use the [unified CLI](../unified-cli.md) and its versioned
 TOML. This guide explains the native Codex path, the retained
 `python -m scripts.benchmark` interface, and Luna execution on Linux CPU and
-Slurm. See the [Linux guide](../server-benchmark.md) for environment choices,
+Slurm. See the [Linux guide](../running/server-benchmark.md) for environment choices,
 the [engine overview](README.md) for what Codex shares with Claude and for
 [shared setup](README.md#shared-setup), and [providers](providers.md) for
 catalogs, credentials and third-party endpoints.
@@ -93,7 +93,7 @@ and delegates share its home to retain native lineage. Different tasks have
 different homes. The resolved home is recorded in the run's Codex home marker;
 original transcripts are under its `sessions/` directory, and run-v6 runs also
 keep verified copies in `private/engine/transcripts/`
-([evidence storage](../evidence-storage.md#session-transcripts)). Legacy
+([evidence storage](../running/evidence-storage.md#session-transcripts)). Legacy
 shared-home runs keep their recorded location. Collection preserves the relevant
 native traces without exporting authentication/config/state databases.
 
@@ -190,9 +190,9 @@ compression retains states and timestamps; old streams remain readable. Removing
 idle or unproductive intervals is an editable presentation derivative and does
 not overwrite the original evidence. Native session collection externalizes
 image payloads into shared objects for portable archives; it does not change
-what was sent to the API. See [evidence storage](../evidence-storage.md).
+what was sent to the API. See [evidence storage](../running/evidence-storage.md).
 
-Later [Factory rendering](../factory.md) replays recorded motion without dynamics,
+Later [Factory rendering](../factory/replay.md) replays recorded motion without dynamics,
 with independent 30 fps/1080p or configured output quality. It need not use the
 model-observation resolution. Each recording uses matching frozen geometry,
 parameters, appearance events, and edits.
@@ -230,7 +230,7 @@ operating-system containment against malicious policy code.
 
 This section was written for the unified `integration/unified-main` checkout
 before it replaced the published default branch. Start with the
-[unified CLI](../unified-cli.md) and use the [Slurm staging guide](../slurm.md)
+[unified CLI](../unified-cli.md) and use the [Slurm staging guide](../running/slurm.md)
 for queue execution. The native `scripts.luna_cpu` wrapper remains a
 compatibility entry, with different Codex home behavior; it is not the new
 cluster submission mechanism.
@@ -272,7 +272,7 @@ chmod 600 .env
 On Debian-family systems, `libosmesa6` supplies the relevant software GL
 library. Doctor checks local CLI, sandbox and actual rendering prerequisites
 without calling a model. Native macOS does not support this OSMesa mode: use
-`--render native` for Mac rendering, or use the [Linux container flow](../docker.md)
+`--render native` for Mac rendering, or use the [Linux container flow](../running/docker.md)
 for CPU OSMesa.
 
 ### Configure and run without Slurm
@@ -329,7 +329,7 @@ Active SQLite WAL files, Codex homes/sessions, temporary data, observations and
 motion must live on verified **node-local storage**, not Lustre/NFS. Shared
 storage can hold the committed source, read-only assets and stopped stage-out
 packages. Do not write large data into quota-limited home directories. The
-[Slurm guide](../slurm.md) specifies node-local filesystem checks,
+[Slurm guide](../running/slurm.md) specifies node-local filesystem checks,
 descendant-process tracking, API credential handling, stop warnings and verified
 stage-out. Real allocation, x86_64/NVIDIA and site-specific capacity
 qualification remain open.
@@ -351,10 +351,8 @@ launcher and verified assets. It does not rely on later checkout edits. Resource
 requests are not proof that 36 tasks plus delegates fit available memory/API
 limits. Slurm time includes setup and cleanup, independently of task START.
 
-Both old sbatch files, `scripts/slurm_luna_cpu.sh` and
-`scripts/slurm_luna_l3_max_test.sh`, exit with migration instructions. They do not
-create shared active databases or run a hidden paid preflight. Their old
-`RF_BATCH_OUTPUT`, `RF_WALL_LIMIT_S` and `RF_PARALLEL` workflow is retired.
+The old sbatch entries and their `RF_BATCH_OUTPUT`, `RF_WALL_LIMIT_S` and
+`RF_PARALLEL` workflow are retired; use `slurm-submit`.
 
 ### Four maximum-arm Level 3 tasks
 
@@ -395,7 +393,7 @@ own recorded paths rather than guessing a host path.
 not the complete native session. Native `<session-id>.jsonl` traces retain model
 turn evidence. Motion, frozen source, process events and referenced JPEGs have
 separate output paths. Realtime MP4 is off by default; later offline video can
-use another resolution/background. The [evidence guide](../evidence-storage.md)
+use another resolution/background. The [evidence guide](../running/evidence-storage.md)
 explains compression, image references, collection manifests, verified ZIPs,
 restore and provenance. Collection copies originals; it does not silently delete
 source evidence or turn engineering errors into model failures.
@@ -441,4 +439,4 @@ prepared directory is executed with its separate native `run` command after a
 matching preflight, not by invoking `l3-max-test` over it again. Never move a
 prepared live batch between machines/absolute paths or mix native and unified
 configuration markers. Old Docker commands/image defaults are documented as
-Legacy; new work should use the frozen [Docker commands](../docker.md).
+Legacy; new work should use the frozen [Docker commands](../running/docker.md).

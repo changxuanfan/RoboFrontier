@@ -90,9 +90,9 @@ research records, not public assets to upload without review.
 
 ## Docker and Slurm
 
-Use the same profile TOML with the [Docker wrapper](../docker.md), which builds
+Use the same profile TOML with the [Docker wrapper](../running/docker.md), which builds
 committed source and stores active runtime/session data in local Docker volumes.
-Use the frozen, node-local [Slurm flow](../slurm.md) for queue execution. Neither
+Use the frozen, node-local [Slurm flow](../running/slurm.md) for queue execution. Neither
 entry should put active SQLite files directly on Lustre/NFS. Real cluster,
 NVIDIA and provider resource qualification remain separate acceptance gates.
 

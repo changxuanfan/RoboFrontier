@@ -60,7 +60,7 @@ WORLD_DIED = ('owner_unavailable', 'world_interrupted')
 
 
 def _run_once_continued(runner, run_dir, base_env, continuing=False, **options):
-    """One run, continued once in a new segment after an unexpected exit (docs/run-segments.md).
+    """One run, continued once in a new segment after an unexpected exit (docs/running/run-segments.md).
 
     With `continuing`, a run that had started before the batch process died is first
     prepared for its next segment; a run that never started starts normally.

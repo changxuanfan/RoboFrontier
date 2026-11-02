@@ -93,7 +93,7 @@ class Monitor:
         from .contact_episodes import ContactEpisodes
         self.contact_episodes = ContactEpisodes()
         self.motion_overlap_s=0.;self.any_motion_s=0.;self.robot_motion_s=0.;self.max_moving=0
-        # A continued segment appends to the same process log (docs/run-segments.md).
+        # A continued segment appends to the same process log (docs/running/run-segments.md).
         self.log=Path(log_path).open('a' if append else 'w') if log_path else None;self.active=True
         if log_format not in PROCESS_LOG_FORMATS:raise ValueError('Unknown process log format')
         self.log_format=log_format;self.snapshot_interval=PROCESS_LOG_FORMATS[log_format];self.last_event=None;self.final_logged=False

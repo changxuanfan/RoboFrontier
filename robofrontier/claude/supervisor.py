@@ -76,7 +76,7 @@ class CentralizedSupervisor:
             elif not self.owner_alive():
                 reason = 'owner_unavailable'
             else:
-                # A run continued after an unexpected exit resumes its sessions (docs/run-segments.md).
+                # A run continued after an unexpected exit resumes its sessions (docs/running/run-segments.md).
                 if getattr(self.policy, 'resuming', False): self.policy.resume_segment()
                 else: self.policy.bind_and_bootstrap()
                 if self.policy.store.get('lifecycle') == 'running':

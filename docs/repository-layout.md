@@ -1,72 +1,69 @@
-# Repository layout and retained data
+# Repository layout
 
-The repository contains source, pinned metadata and the public task atlas.
-Runtime data and large assets have separate explicit installation/backup paths.
-Cloning source is not a backup of ignored recordings or credentials.
+Each top-level folder has one job. When adding a file, put it where its job is
+described here; if no folder fits, the file probably belongs in a run or output
+folder rather than in Git.
 
-| Path | Purpose |
+```text
+RoboFrontier/
+  benchmark/        the released tasks: 4 families x 9 cases
+  robofrontier/     the Python package: runtime, task logic, engines
+  prompts/          every text a model reads
+  configs/          run settings, and scenes that are not (yet) released
+  scripts/          engineering commands
+  tests/            regression tests and their fixtures
+  docs/             guides; docs/task-atlas/ is the published atlas site
+  assets/           shared art: scene textures, Factory meshes, HTML panels
+  web/              atlas page templates
+  docker/           the container image
+  runs/ outputs/ vendor/ .robofrontier/    not in Git (see below)
+```
+
+## Tracked folders
+
+| Folder | Holds | Does not hold |
+| --- | --- | --- |
+| `benchmark/` | `release.json`, and per family its catalog, records and nine case folders. A case folder has the scene, task, workstation and the `public/` material a policy may see. See [benchmark/README.md](../benchmark/README.md). | Draft or historical scene revisions; run results |
+| `robofrontier/` | The package. Engines are `codex/` and `claude/`; `suite/` builds and scores the four families; `factory/` replays recorded motion in the 3D Factory; `demo/` is the small teleoperation demo. Modules at the top level are the shared runtime (world, robot control, run setup and storage, evidence) and the scene adapters of earlier tasks that tests still exercise. | Data files; one-off analysis |
+| `prompts/` | `rules.md` and `roles/` (every policy role), `skills/` (one per family, plus robot collaboration), `managers/codex.md` and `managers/claude.md` (the outer manager for each engine), `archive/` (texts that released records still name). | Anything a model does not read |
+| `configs/` | Engine model profiles (`models.json`, `claude-models.json`, `codex-model-template.json`), harnesses (`harness.json`, `harness-frontier-v2*.json`, `harnesses/`), the pinned asset locks (`policy-assets.json`, `factory-assets.json`), Factory looks (`backgrounds/`), data retention (`retention.json`), the CPU slurm example (`examples/`), and three kinds of scenes: `environments/` (scene revisions before release, and the earlier revisions that released cases and Oracle recordings name as sources), `suites/` (generated catalogs of earlier collections) and `tasks/` (the original single-scene task files). | Released tasks; credentials |
+| `scripts/` | Commands an engineer runs with `python -m scripts.NAME`. Each is listed in [scripts/README.md](../scripts/README.md). Generators of released or tracked data stay so that data can be rebuilt. | Library code (put it in `robofrontier/`) |
+| `tests/` | `test_*.py`, Node host tests (`*.js`, `*.cjs`) and `fixtures/`. | Large recorded evidence |
+| `docs/` | Guides by topic: `engines/`, `tasks/`, `running/`, `oracle/`, `factory/`, `development/`, `archive/` (dated history). The top level keeps the overview guides; `meta-runbook.md`, `architecture.md` and `harness-v2-verification.md` stay there because every prepared run freezes them by name. | Generated renders (`docs/generated/` is ignored) |
+| `assets/` | `backgrounds/` (scene textures), `robo_factory/` (Factory meshes, textures, fonts, tour project), and the two HTML panels the runtime serves. | Task scenes |
+| `web/` | Templates for the task atlas; the built site is `docs/task-atlas/`. | |
+| `docker/` | `Dockerfile` for `robofrontier container`. | |
+
+At the root: `robofrontier.toml` holds the defaults for new runs; `config.json`
+holds the physics defaults of the single-arm demo and the original scene
+pipeline; `pyproject.toml` and `uv.lock` pin the Python environment.
+
+## Folders not in Git
+
+| Folder | Holds |
 | --- | --- |
-| `README.md` | Installation, defaults, command examples and integration status |
-| `robofrontier.toml` | Unified defaults for new runs; prepared runs freeze their resolved settings |
-| `robofrontier/` | Shared physics/runtime/evidence contracts and native engine modules |
-| `robofrontier/codex/`, `robofrontier/claude/` | Native Codex and Claude Code engines |
-| `benchmark/release.json` | Current 36-case policy/Oracle source registry |
-| `configs/policy-assets.json` | Pinned policy asset archive, hashes and release identity |
-| `configs/factory-assets.json` | Separate optional Factory recording bundle lock |
-| `configs/models.json`, `configs/claude-models.json` | Engine-specific provider/model profiles |
-| `prompts/` | Public policy and role/tool instructions |
-| `scripts/`, `tests/` | Engineering commands, retained scene/reference builders and regression checks |
-| `web/task-atlas/` | Editable English atlas templates and browser interactions |
-| `docs/task-atlas/` | Tracked, verified public offline atlas with 72 current initial JPEG views |
-| `docs/` | Guides, source provenance, acceptance ledger and explicitly historical material |
-| `docker/` | Unified image and labeled legacy image |
-| `runs/policy/`, `runs/oracle/` | Ignored original run evidence, frozen inputs and motion |
-| `runs/exports/` | Ignored stopped-run collections and portable evidence ZIP files |
-| `runs/engineering/` | Ignored engineering checks, failure evidence and acceptance receipts |
-| `outputs/` | Ignored renders, editable media projects and exported delivery packages |
-| `.robofrontier/` | Ignored task-local native state and container command receipts |
-| `vendor/`, `configs/environments/**/assets/` | Ignored large assets restored from the pinned package |
+| `runs/policy/`, `runs/oracle/` | Original run evidence, frozen inputs and recorded motion. The released Oracle motion is protected by `outputs/final/preservation.json`. |
+| `runs/engineering/` | Engineering checks, failure evidence and acceptance receipts |
+| `runs/exports/` | Collections of stopped runs and portable evidence ZIPs |
+| `runs/state-assets/`, `runs/asset-cache/` | Content-addressed caches used by preparation and bootstrap |
+| `outputs/` | Renders, video projects and delivery packages. `outputs/final/` is the curated delivery; `outputs/oracle-renders/` holds the Factory renders and the promo. |
+| `vendor/panda/` | The Franka Panda model, fetched by `robofrontier bootstrap` |
+| `benchmark/*/*/assets/`, `configs/environments/**/assets/` | Scene meshes and textures, restored from the pinned asset archive |
+| `.robofrontier/` | Native engine homes and container receipts |
 
-Use the [unified CLI guide](unified-cli.md) to run a benchmark, the
-[Oracle guide](oracle.md) for explicit reference execution, and the
-[Factory guide](factory.md) to import a recording and render a different
-background. The [atlas guide](task-atlas.md) explains current public browsing,
-verification and offline ZIP distribution.
+Cloning the repository does not back up any of these. See
+[evidence storage](running/evidence-storage.md) for collection, archiving and restore.
 
-## Original evidence versus collections
+## Rules
 
-Original task evidence and native session homes are the writable sources during
-execution. Each run's `codex-home.json` records its exact native home; new API
-runs use a separate task home below `.robofrontier/codex/`. Claude engineering
-runs use their run-local `private/claude-config`. Host JSONL events are not a
-substitute for native session transcripts.
-
-Collection occurs after writers stop. It resolves task-associated sessions and
-copies the required portable evidence into `runs/exports/`, where an archive can
-deduplicate identical files and extract inline images reversibly. Originals stay
-available for audit and native history. A successful ZIP does not reclaim their
-disk space automatically. Deleting originals is a separate decision after
-verified restore and independent backup; see [evidence storage](evidence-storage.md).
-Never monitor active node/container SQLite files through a shared mount.
-
-## Legacy local delivery layouts
-
-Older local worktrees may contain `outputs/final/manifest.json` and relative
-media links under `outputs/final/oracle/` and `outputs/final/factory/`. These were
-browsing indexes, not source-controlled media bundles. Their manifests preserve
-original paths, source-frame edits, playback rates, hashes and assisted labels.
-Keep those records with the matching recordings. A new release cannot silently
-reinterpret an old Oracle recording as autonomous or replace its frozen physics.
-
-The previous untracked atlas under `outputs/task-atlas/v1-20261027/` and its
-exported ZIP are legacy local artifacts. The tracked English replacement is
-`docs/task-atlas/`; it is generated anew from the current public release. Old
-worktree cleanup/retention receipts under
-`runs/engineering/cli-migration-cleanup-20261027/` describe that historical local
-inventory, not permission to delete future recordings. Current cleanup must use
-its own explicit scope and verification.
-
-The early `config.json` and single-arm demo remain legacy application inputs.
-They are not the unified benchmark configuration. Historical docs and plan files
-must be read with their date/source context; current defaults and acceptance are
-stated in the unified guides and [integration ledger](archive/unified-main.md).
+- Released files are never edited in place. Build a new revision under
+  `configs/environments/`, review it, then promote it into `benchmark/` with new
+  hashes in `release.json`.
+- Frozen runs and recordings keep the paths they were made with. Read them through
+  `robofrontier.task_families.current_path`; [benchmark/legacy-paths.json](../benchmark/legacy-paths.json)
+  lists every move.
+- Five shared source files are bound by
+  [benchmark/source-compatibility.json](../benchmark/source-compatibility.json).
+  Any byte change to them, comments included, needs a reviewed receipt update.
+- Historical material keeps its date. Current behavior is described in the guides
+  outside `docs/archive/`.

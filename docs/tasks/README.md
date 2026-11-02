@@ -23,7 +23,7 @@ New runs freeze public material and use a source-bound evaluation/recording
 protocol; original task preview labels are not rewritten. See
 [policy preparation](../engines/codex.md#preflight-preparation-and-launch).
 Factory uses source-level edits, independent station loops and 30 fps,
-superseding the old play-once/stop instruction. See [Factory](../robo-factory.md).
+superseding the old play-once/stop instruction. See [Factory](../factory/README.md).
 
 Historical catalogs, generators and packages explain old experiments; they do
 not directly select the current release. The
