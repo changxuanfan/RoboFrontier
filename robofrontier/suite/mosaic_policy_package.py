@@ -11,7 +11,7 @@ import math
 from pathlib import Path, PurePosixPath
 import shutil
 
-from .. import prompt_archive
+from ..task_families import current_path
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = 'benchmark/mosaic/r13.json'
@@ -40,7 +40,7 @@ def local(root, relative):
     if value.is_absolute() or '..' in value.parts or not value.parts:
         raise ValueError('Expected a repository-relative reference')
     # runs/outputs are intentionally external data symlinks in managed worktrees.
-    return Path(root).joinpath(*PurePosixPath(prompt_archive.source(value)).parts)
+    return Path(root).joinpath(*PurePosixPath(current_path(value)).parts)
 
 
 def _pinned(path, expected):

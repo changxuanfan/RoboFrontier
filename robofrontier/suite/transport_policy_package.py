@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from .. import prompt_archive
+from ..task_families import current_path
 from ..motion_recording import digest
 from ..run_setup import write_json
 from ..workstation import Workstation
@@ -34,7 +34,7 @@ def load_json(path):
 
 
 def resolve(root,path):
-    return Path(path) if Path(path).is_absolute() else Path(root)/prompt_archive.source(path)
+    return Path(path) if Path(path).is_absolute() else Path(root)/current_path(path)
 
 
 def table_geometry(model):

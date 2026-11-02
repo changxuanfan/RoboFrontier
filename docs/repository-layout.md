@@ -23,9 +23,9 @@ RoboFrontier/
 
 | Folder | Holds | Does not hold |
 | --- | --- | --- |
-| `benchmark/` | `release.json`, and per family its catalog, records and nine case folders. A case folder has the scene, task, workstation and the `public/` material a policy may see. See [benchmark/README.md](../benchmark/README.md). | Draft or historical scene revisions; run results |
+| `benchmark/` | `release.json`, and per family its catalog, records and nine case folders. A case folder has the scene, task and workstation, and `public/` for reviewed material that belongs to that case only. See [benchmark/README.md](../benchmark/README.md). | Draft or historical scene revisions; run results |
 | `robofrontier/` | The package. Engines are `codex/` and `claude/`; `suite/` builds and scores the four families; `factory/` replays recorded motion in the 3D Factory; `demo/` is the small teleoperation demo. Modules at the top level are the shared runtime (world, robot control, run setup and storage, evidence) and the scene adapters of earlier tasks that tests still exercise. | Data files; one-off analysis |
-| `prompts/` | `rules.md` and `roles/` (every policy role), `skills/` (one per family, plus robot collaboration), `managers/codex.md` and `managers/claude.md` (the outer manager for each engine), `archive/` (texts that released records still name). | Anything a model does not read |
+| `prompts/` | `rules.md` and `roles/` (every policy role), `skills/` (one per family, plus robot collaboration), `managers/codex.md` and `managers/claude.md` (the outer manager for each engine), `archive/` (earlier texts that released records still name, including the family guidance `benchmark/release.json` delivers). | Anything a model does not read |
 | `configs/` | Engine model profiles (`models.json`, `claude-models.json`, `codex-model-template.json`), harnesses (`harness.json`, `harness-frontier-v2*.json`, `harnesses/`), the pinned asset locks (`policy-assets.json`, `factory-assets.json`), Factory looks (`backgrounds/`), data retention (`retention.json`), the CPU slurm example (`examples/`), and three kinds of scenes: `environments/` (scene revisions before release, and the earlier revisions that released cases and Oracle recordings name as sources), `suites/` (generated catalogs of earlier collections) and `tasks/` (the original single-scene task files). | Released tasks; credentials |
 | `scripts/` | Commands an engineer runs with `python -m scripts.NAME`. Each is listed in [scripts/README.md](../scripts/README.md). Generators of released or tracked data stay so that data can be rebuilt. | Library code (put it in `robofrontier/`) |
 | `tests/` | `test_*.py`, Node host tests (`*.js`, `*.cjs`) and `fixtures/`. | Large recorded evidence |
@@ -59,9 +59,15 @@ Cloning the repository does not back up any of these. See
 - Released files are never edited in place. Build a new revision under
   `configs/environments/`, review it, then promote it into `benchmark/` with new
   hashes in `release.json`.
-- Frozen runs and recordings keep the paths they were made with. Read them through
-  `robofrontier.task_families.current_path`; [benchmark/legacy-paths.json](../benchmark/legacy-paths.json)
-  lists every move.
+- Frozen runs, recordings and review packages keep the paths they were made with.
+  Read them through `robofrontier.task_families.current_path`;
+  [benchmark/legacy-paths.json](../benchmark/legacy-paths.json) lists every move,
+  of released inputs and of policy texts alike.
+- Store shared material once. A text or file that several cases use by design, such
+  as family guidance, has one copy that every record points at. Files generated from
+  a case's own scene stay in that case, even when two cases generate the same bytes:
+  a scene folder is frozen whole, so it must be complete. Git stores identical
+  contents once either way.
 - Five shared source files are bound by
   [benchmark/source-compatibility.json](../benchmark/source-compatibility.json).
   Any byte change to them, comments included, needs a reviewed receipt update.

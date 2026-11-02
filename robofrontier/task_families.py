@@ -23,10 +23,15 @@ def read(path):
     return json.loads(Path(path).read_text())
 
 
+def _moved(root):
+    path = Path(root)/LEGACY_PATHS
+    return read(path if path.is_file() else ROOT/LEGACY_PATHS)['paths']
+
+
 def current_path(name, root=ROOT):
-    """Translate a pre-benchmark/ released path, as frozen records name it."""
+    """Where a file that a frozen record names by an earlier path lives now."""
     name = str(name)
-    moved = read(Path(root)/LEGACY_PATHS)['paths']
+    moved = _moved(root)
     for old in sorted(moved, key=len, reverse=True):
         if name == old or name.startswith(old+'/'):
             return moved[old]+name[len(old):]
@@ -34,11 +39,11 @@ def current_path(name, root=ROOT):
 
 
 def legacy_bytes(name, root=ROOT):
-    """A released file's bytes as recorded before the move; only path text changed."""
+    """A released file's bytes as recorded before the benchmark/ move; only path text changed."""
     import re
-    moved = read(Path(root)/LEGACY_PATHS)['paths']
+    moved = _moved(root)
     data = (Path(root)/current_path(name, root)).read_bytes()
-    back = {new.encode(): old.encode() for old, new in moved.items()}
+    back = {new.encode(): old.encode() for old, new in moved.items() if Path(new).parts[0] == 'benchmark'}
     pattern = re.compile(b'(' + b'|'.join(re.escape(n) for n in sorted(back, key=len, reverse=True)) + rb')(?![A-Za-z0-9_.-])')
     return pattern.sub(lambda m: back[m.group(1)], data)
 

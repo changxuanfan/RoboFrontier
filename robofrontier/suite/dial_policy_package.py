@@ -7,7 +7,7 @@ import shutil
 
 import mujoco
 
-from .. import prompt_archive
+from ..task_families import current_path
 from ..motion_recording import MotionReader
 from ..robot_control import matrix_quat
 from ..task_config import physical_control_fingerprint
@@ -278,7 +278,7 @@ def build_review(root, output, registered):
             cameras=deepcopy(source.manifest['cameras']),
             scope='Declared fixed camera calibration; live robot/object feedback comes from observe'))
         (destination/'task-guide.md').write_text(task_guide(task))
-        (destination/'family-guidance.md').write_text((root/prompt_archive.source(GUIDANCE)).read_text())
+        (destination/'family-guidance.md').write_text((root/current_path(GUIDANCE)).read_text())
         from ..task_families import resolve_case
         _,_,spec=resolve_case(row['case_id'],root=root)
         for name in images:
@@ -294,7 +294,7 @@ def build_review(root, output, registered):
         formal_policy_ready=False,simulation_started=False,inference_started=False,
         source_registry_sha256=digest(root/REGISTRY),public_files_sha256=public_hashes,
         shared_source_sha256={name:digest(root/name) for name in SHARED_INPUTS},
-        guidance_sha256=digest(root/prompt_archive.source(GUIDANCE)),shared_integration_required=list(BLOCKERS),
+        guidance_sha256=digest(root/current_path(GUIDANCE)),shared_integration_required=list(BLOCKERS),
         scope='Public family input preview, not a prepared runtime or a promoted readiness state'))
     return current
 
@@ -308,7 +308,7 @@ def verify_review(root, output):
     manifest = read(output/'review.json')
     if manifest['formal_policy_ready'] or manifest['simulation_started'] or manifest['inference_started']:
         raise ValueError('A review cannot claim runtime readiness or execution')
-    if manifest['source_registry_sha256'] != digest(root/REGISTRY) or manifest['guidance_sha256'] != digest(root/prompt_archive.source(GUIDANCE)):
+    if manifest['source_registry_sha256'] != digest(root/REGISTRY) or manifest['guidance_sha256'] != digest(root/current_path(GUIDANCE)):
         raise ValueError('Family inputs changed')
     for name,expected in manifest['shared_source_sha256'].items():
         if digest(root/name) != expected:raise ValueError('Shared input changed: '+name)
@@ -324,7 +324,7 @@ def verify_review(root, output):
             raise ValueError('Public task or guide differs from its source')
         if read(folder/'table-geometry.json') != static_geometry(source):
             raise ValueError('Table geometry differs from source')
-        if (folder/'family-guidance.md').read_text() != (root/prompt_archive.source(GUIDANCE)).read_text():
+        if (folder/'family-guidance.md').read_text() != (root/current_path(GUIDANCE)).read_text():
             raise ValueError('Family guidance changed')
         calibration = read(folder/'camera-calibration.json')
         expected_calibration = dict(coordinate_frame=task['coordinate_frame'],image_size_pixel=[1280,800],

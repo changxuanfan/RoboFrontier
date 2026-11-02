@@ -20,13 +20,13 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/transport/transport-a04-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/transport.md",
               "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
             }
           },
           "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
-            "path": "benchmark/transport/transport-a04-d1/public/public-task.json",
+            "path": "benchmark/transport/transport-a04-d1/public-task.json",
             "sha256": "a459c3a4f8454cc482e4af3af567435f2aef7947ec9a314a412bd14773058c48"
           }
         },
@@ -41,13 +41,13 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/transport/transport-a04-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/transport.md",
               "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
             }
           },
           "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
-            "path": "benchmark/transport/transport-a04-d2/public/public-task.json",
+            "path": "benchmark/transport/transport-a04-d2/public-task.json",
             "sha256": "b6efa19bf7cdf6644739f9c45ca34f6fd9a76071a6229c14aca67f4e93214b0e"
           }
         },
@@ -62,13 +62,13 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/transport/transport-a04-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/transport.md",
               "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
             }
           },
           "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
-            "path": "benchmark/transport/transport-a04-d3/public/public-task.json",
+            "path": "benchmark/transport/transport-a04-d3/public-task.json",
             "sha256": "06b73d0061b99d2506adb4ced94e9280c3a2ee4d411884567cdc9a9703fe75a1"
           }
         },
@@ -83,13 +83,13 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/transport/transport-a08-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/transport.md",
               "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a08-d1/public/public-task.json",
+            "path": "benchmark/transport/transport-a08-d1/public-task.json",
             "sha256": "03be230e9579284d4b4b386ef21d3d596dc1a9572d7103e58b112ac6bb9ca484"
           }
         },
@@ -104,13 +104,13 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/transport/transport-a08-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/transport.md",
               "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a08-d2/public/public-task.json",
+            "path": "benchmark/transport/transport-a08-d2/public-task.json",
             "sha256": "18e0e481a54097647a950865d05974b71615cc66e3783e45bd37c7e9229dd254"
           }
         },
@@ -125,13 +125,13 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/transport/transport-a08-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/transport.md",
               "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a08-d3/public/public-task.json",
+            "path": "benchmark/transport/transport-a08-d3/public-task.json",
             "sha256": "6200e5f52d190577819506b5ffa012617ddb5cb38d7f06a76a48e425cbe7fe58"
           }
         },
@@ -146,13 +146,13 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/transport/transport-a12-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/transport.md",
               "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a12-d1/public/public-task.json",
+            "path": "benchmark/transport/transport-a12-d1/public-task.json",
             "sha256": "0cc8325d6b0b033246708b5bf4985cb7bd9e8cc8c4d3897cb8e640e9a30fe6eb"
           }
         },
@@ -167,13 +167,13 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/transport/transport-a12-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/transport.md",
               "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a12-d2/public/public-task.json",
+            "path": "benchmark/transport/transport-a12-d2/public-task.json",
             "sha256": "36b6670621df028dd2f037f9455222dd51464e7ea5d0f0263d10079113cf6d0c"
           }
         },
@@ -188,13 +188,13 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/transport/transport-a12-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/transport.md",
               "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a12-d3/public/public-task.json",
+            "path": "benchmark/transport/transport-a12-d3/public-task.json",
             "sha256": "709ebcfdb38a7884fd9c92884b5c3c41e0ac235f7b263d433cdb3d023d5b1729"
           }
         }
@@ -374,17 +374,17 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/mosaic-r14.md",
               "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
             },
             "skill.md": {
-              "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/skill.md",
+              "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
           "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/public-task.json",
+            "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/reviewed-task.json",
             "sha256": "e15f241e437c478b3b9d2eab1b0e24a5cd0788ec1d4e43aa2f964d3c0a391244"
           }
         },
@@ -399,17 +399,17 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/mosaic-r14.md",
               "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
             },
             "skill.md": {
-              "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/skill.md",
+              "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
           "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/public-task.json",
+            "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/reviewed-task.json",
             "sha256": "d850b6c886dd033028f7195ce503e7b452f917694663caffe912bde2e76d2f89"
           }
         },
@@ -424,17 +424,17 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/mosaic-r14.md",
               "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
             },
             "skill.md": {
-              "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/skill.md",
+              "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
           "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/public-task.json",
+            "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/reviewed-task.json",
             "sha256": "455bc497bbc077f6c5b5f7bc7135e0e056469e90b5b4bfa8c4a97f878ad79fe9"
           }
         },
@@ -449,17 +449,17 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/mosaic-r14.md",
               "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
             },
             "skill.md": {
-              "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/skill.md",
+              "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
           "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/public-task.json",
+            "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/reviewed-task.json",
             "sha256": "74430765ad5e68ed29d80fcaae5ac12ee8c0da21778b7d14b455dcf36a7f7551"
           }
         },
@@ -474,17 +474,17 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/mosaic-r14.md",
               "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
             },
             "skill.md": {
-              "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/skill.md",
+              "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
           "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/public-task.json",
+            "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/reviewed-task.json",
             "sha256": "d323ccf1ebda6e24654bd65abfc5e05b802669aa8ce81e423693be8d3bf151bd"
           }
         },
@@ -499,17 +499,17 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/mosaic-r14.md",
               "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
             },
             "skill.md": {
-              "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/skill.md",
+              "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
           "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/public-task.json",
+            "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/reviewed-task.json",
             "sha256": "9e1e536620db3a3896d1b1c6a4c4a6542d6f6039c89df35622a4e28394c4b9af"
           }
         },
@@ -524,17 +524,17 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/mosaic-r14.md",
               "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
             },
             "skill.md": {
-              "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/skill.md",
+              "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
           "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/public-task.json",
+            "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/reviewed-task.json",
             "sha256": "ab6ae947522378838f5beb4864dc86b8a88eb338f39aeadd7bad10e438d4e542"
           }
         },
@@ -549,17 +549,17 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/mosaic-r14.md",
               "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
             },
             "skill.md": {
-              "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/skill.md",
+              "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
           "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/public-task.json",
+            "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/reviewed-task.json",
             "sha256": "203890f88d629ee8633b3f6a65b6204bbee24f52b4a677ba221229b9f8bed484"
           }
         },
@@ -574,17 +574,17 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/mosaic-r14.md",
               "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
             },
             "skill.md": {
-              "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/skill.md",
+              "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
           "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/public-task.json",
+            "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/reviewed-task.json",
             "sha256": "420532adc61ecbf00d685485120abb09a68030b159b3bcd2ac55e18a24133c92"
           }
         }
@@ -791,7 +791,7 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/relay/relay-a08-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/relay.md",
               "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
             }
           },
@@ -808,7 +808,7 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/relay/relay-a08-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/relay.md",
               "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
             }
           },
@@ -825,7 +825,7 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/relay/relay-a08-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/relay.md",
               "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
             }
           },
@@ -842,7 +842,7 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/relay/relay-a12-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/relay.md",
               "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
             }
           },
@@ -859,7 +859,7 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/relay/relay-a12-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/relay.md",
               "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
             }
           },
@@ -876,7 +876,7 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/relay/relay-a12-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/relay.md",
               "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
             }
           },
@@ -893,7 +893,7 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/relay/relay-a16-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/relay.md",
               "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
             }
           },
@@ -910,7 +910,7 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/relay/relay-a16-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/relay.md",
               "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
             }
           },
@@ -927,7 +927,7 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "benchmark/relay/relay-a16-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/relay.md",
               "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
             }
           },
@@ -1108,7 +1108,7 @@
               "sha256": "09188517b7a925ea74080d3e9e209d045570ce39dd6f8a301bdc240c63b39485"
             },
             "family-guidance.md": {
-              "path": "benchmark/dial/dial-best5-n04-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/dial-best5.md",
               "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
             },
             "preview-global_rear.png": {
@@ -1130,7 +1130,7 @@
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n04-d1/public/public-task.json",
+            "path": "benchmark/dial/dial-best5-n04-d1/public/reviewed-task.json",
             "sha256": "051f4cb11984fa6f68723f70211221a648c8c9d5b897a3a51c0b313c781f854f"
           }
         },
@@ -1153,7 +1153,7 @@
               "sha256": "bf43712dbb61015c0537f0598c8c640d04ae6263df334167a4990181c6754c2e"
             },
             "family-guidance.md": {
-              "path": "benchmark/dial/dial-best5-n04-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/dial-best5.md",
               "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
             },
             "preview-global_rear.png": {
@@ -1175,7 +1175,7 @@
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n04-d2/public/public-task.json",
+            "path": "benchmark/dial/dial-best5-n04-d2/public/reviewed-task.json",
             "sha256": "bd385255f914a010551a5fbc5a66ee5cdc26154448a923fada0f205a32bc1d9d"
           }
         },
@@ -1198,7 +1198,7 @@
               "sha256": "1e21b85d4695de6bf65d8cf8501fc5f859c62c661f1157c47d7a8e71a584ca10"
             },
             "family-guidance.md": {
-              "path": "benchmark/dial/dial-best5-n04-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/dial-best5.md",
               "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
             },
             "preview-global_rear.png": {
@@ -1220,7 +1220,7 @@
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n04-d3/public/public-task.json",
+            "path": "benchmark/dial/dial-best5-n04-d3/public/reviewed-task.json",
             "sha256": "7e3f9d282c82b528d924d9d1504230b694427135b750504b3adb86f7e817fd2f"
           }
         },
@@ -1243,7 +1243,7 @@
               "sha256": "b5173454362d8c14ea86f06a1579352525f0f7f97e1d281e07b6c54d19d67b8c"
             },
             "family-guidance.md": {
-              "path": "benchmark/dial/dial-best5-n06-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/dial-best5.md",
               "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
             },
             "preview-global_rear.png": {
@@ -1265,7 +1265,7 @@
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n06-d1/public/public-task.json",
+            "path": "benchmark/dial/dial-best5-n06-d1/public/reviewed-task.json",
             "sha256": "1b4b388eb8ff942fc5f949648286b3cf8d8dfb7b1ca2b186b3daa1c1cee23b97"
           }
         },
@@ -1288,7 +1288,7 @@
               "sha256": "9b010d6bc3b9e07fd894173917e9679248dcd24b1da72c76de0cd765abbaf772"
             },
             "family-guidance.md": {
-              "path": "benchmark/dial/dial-best5-n06-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/dial-best5.md",
               "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
             },
             "preview-global_rear.png": {
@@ -1310,7 +1310,7 @@
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n06-d2/public/public-task.json",
+            "path": "benchmark/dial/dial-best5-n06-d2/public/reviewed-task.json",
             "sha256": "cfbb4c71f9b073e148dc15a49f674516666831a4f439bc27dc11cbf8e43bc07b"
           }
         },
@@ -1333,7 +1333,7 @@
               "sha256": "92b442a00d2650419c387b0dde39a7183187121d28cba40379abc55ec81a7bf0"
             },
             "family-guidance.md": {
-              "path": "benchmark/dial/dial-best5-n06-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/dial-best5.md",
               "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
             },
             "preview-global_rear.png": {
@@ -1355,7 +1355,7 @@
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n06-d3/public/public-task.json",
+            "path": "benchmark/dial/dial-best5-n06-d3/public/reviewed-task.json",
             "sha256": "e4fd89e95bf854a88c41d87766aa44d22dd6ed22fc6cb49dd7908a26792a0258"
           }
         },
@@ -1378,7 +1378,7 @@
               "sha256": "85f79111fde9dcab562f583aca54197c7c6ab3f93f379d1def8a7d5753de4f84"
             },
             "family-guidance.md": {
-              "path": "benchmark/dial/dial-best5-n08-d1/public/family-guidance.md",
+              "path": "prompts/archive/tasks/dial-best5.md",
               "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
             },
             "preview-global_rear.png": {
@@ -1400,7 +1400,7 @@
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n08-d1/public/public-task.json",
+            "path": "benchmark/dial/dial-best5-n08-d1/public/reviewed-task.json",
             "sha256": "2cc95ab472edf1a90045a27017a64edca92b7df9dac4fa4cf68c1455be1c8435"
           }
         },
@@ -1423,7 +1423,7 @@
               "sha256": "e830d80bba733a3ce1343ed6cb44fda8bc59e993e93fa7af9ca28fb244094eac"
             },
             "family-guidance.md": {
-              "path": "benchmark/dial/dial-best5-n08-d2/public/family-guidance.md",
+              "path": "prompts/archive/tasks/dial-best5.md",
               "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
             },
             "preview-global_rear.png": {
@@ -1445,7 +1445,7 @@
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n08-d2/public/public-task.json",
+            "path": "benchmark/dial/dial-best5-n08-d2/public/reviewed-task.json",
             "sha256": "770f0971cccbaccaa4ee881095cb53df6218527ee16d5258f7f0bb21ba3c60c2"
           }
         },
@@ -1468,7 +1468,7 @@
               "sha256": "04d6b84c0010130169198be92ab710707a6db327f48312dff4fae6e466a2985c"
             },
             "family-guidance.md": {
-              "path": "benchmark/dial/dial-best5-n08-d3/public/family-guidance.md",
+              "path": "prompts/archive/tasks/dial-best5.md",
               "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
             },
             "preview-global_rear.png": {
@@ -1490,7 +1490,7 @@
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n08-d3/public/public-task.json",
+            "path": "benchmark/dial/dial-best5-n08-d3/public/reviewed-task.json",
             "sha256": "62fa8c7fd40e81eea603f7697e400cf65c929017c8195a2420ca84e435ff3fa4"
           }
         }
