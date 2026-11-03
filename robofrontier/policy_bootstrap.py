@@ -99,8 +99,16 @@ def bootstrap_text(run, actor):
         listed.append('- the headings of ' + str(lessons) + ', the run\'s shared lessons')
     startup = STARTUP[harness.get('startup_protocol', 'ready_barrier_v1')]
     return ('This is a new, independent RoboFrontier trial in ' + str(run) + '. Your role is ' + actor + '.\n\n'
-            'Read these files with your file tools before acting:\n' + '\n'.join(listed) + '\n\n' + startup + '\n\n'
+            'Read these files with your file tools before acting:\n' + '\n'.join(listed) + '\n\n' + READABLE + '\n\n'
+            + startup + '\n\n'
             + ENGINE_LINES[harness.get('engine', 'codex')] + '\n')
+
+
+# A permission list that denies the repository and then allows this run's folder
+# inside it read to some models as "denied"; the more specific entry wins.
+READABLE = ('These files are readable. Your filesystem permissions deny the repository that '
+            'holds this run but allow this run\'s folder; the more specific entry wins. Only '
+            'the run\'s private/ folder stays closed. Read them now, for example with cat.')
 
 
 def write_bootstraps(run):

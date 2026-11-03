@@ -14,6 +14,8 @@ class SetupTests(unittest.TestCase):
         run=prepare_run(self.root/'run')
         self.assertEqual(verify_inputs(run),[])
         self.assertEqual(json.loads((run/'public/inputs/task.json').read_text())['goals'],load_task()['goals'])
+        # New runs show letter labels where their videos do.
+        self.assertEqual(json.loads((run/'private/inputs/harness.json').read_text())['robot_labels'],'beside-robot-v1')
         store=RuntimeStore(run/'private/state/runtime.sqlite')
         try:
             self.assertEqual(store.get('lifecycle'),'prepared')

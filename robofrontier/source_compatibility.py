@@ -82,6 +82,13 @@ if self.task.get('scene_asset') and segment_restore:
         self.data.ctrl[arm.grip]=-min(force,ceiling-1e-6)
 """, None),
     ('saved scene', "(output/'scene.xml').write_text(portable_xml(self.xml,output))", "(output/'scene.xml').write_text(self.xml)"),
+    # Display only: letter labels are visual world geometry; a run that freezes the
+    # setting shows them where its videos do (robofrontier/factory/labels.py).
+    ('robot label display', """
+if self.task.get('scene_asset') and frozen_cfg.get('robot_labels')=='beside-robot-v1':
+    from .factory.labels import place_robot_labels
+    place_robot_labels(self.model,self.data,self.task)
+""", None),
     ('held grasp snapshot', """
 def held_grasps(self):
     '''Arms holding a confirmed grasp, as a continued segment would restore them.'''

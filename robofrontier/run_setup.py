@@ -48,6 +48,8 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     cfg['coordinator'] = 'Controller'
     # Freeze new-run defaults; absent fields in already prepared runs remain legacy.
     cfg.setdefault('observation_image_profile', DEFAULT_PROFILE)
+    # Letter labels sit beside each robot, as in this run's videos.
+    cfg.setdefault('robot_labels', 'beside-robot-v1')
     image_profile = observation_profile(cfg)
     puzzle=None;puzzle_relative=None
     if task.get('kind')=='spring_dial':

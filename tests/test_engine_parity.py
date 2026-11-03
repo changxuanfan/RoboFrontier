@@ -81,6 +81,7 @@ class EngineParityTests(unittest.TestCase):
                         if info['kind'] != 'manager':
                             text = (runs['codex']/'private/inputs/bootstrap'/(actor+'.md')).read_text()
                             self.assertIn(policy_bootstrap.STARTUP[STARTUP[topology]], text)
+                            self.assertIn(policy_bootstrap.READABLE, text)
 
     def test_resume_message_is_one_frozen_template_for_both_engines(self):
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):

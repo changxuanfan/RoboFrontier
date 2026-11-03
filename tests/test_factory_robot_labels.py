@@ -9,7 +9,7 @@ from robofrontier.workstation import Workstation
 
 
 class RobotLabelTests(unittest.TestCase):
-    """Letter labels sit 5 cm outside their robot's outline seen from above, for display only."""
+    """Letter labels sit on their robot's outline seen from above, upright for the front view."""
 
     def check(self, case):
         source = ROOT/resolve_case(case)[2]['directory']
@@ -34,6 +34,19 @@ class RobotLabelTests(unittest.TestCase):
             np.testing.assert_allclose(again[name]['to_xy'], move['to_xy'], atol=1e-9)
         self.assertEqual(len(labels), len(set(labels)))
         self.assertEqual(hashlib.sha256((source/'scene.xml').read_bytes()).hexdigest(), before)
+
+    def test_a_run_places_its_labels_where_its_videos_do(self):
+        from robofrontier.factory.labels import place_robot_labels
+        case = resolve_case('mosaic-a04-6x12-d2')[2]
+        world = Workstation(ROOT/case['directory']); world.frame()
+        expected = robot_label_moves(world.model, world.data, avoid_objects=False)
+        moved = place_robot_labels(world.model, world.data, dict(family='mosaic'))
+        self.assertEqual(set(moved), set(expected))
+        for name, move in expected.items():
+            gid = world.model.geom(name).id
+            np.testing.assert_allclose(world.data.geom_xpos[gid][:2], move['to_xy'], atol=1e-9)
+            np.testing.assert_allclose(world.model.geom_quat[gid], move['quat_wxyz'], atol=1e-9)
+            self.assertEqual(world.model.geom_contype[gid], 0)  # display only, no contact
 
     def test_mosaic_labels_leave_the_robot_bases(self):
         self.check('mosaic-a04-6x12-d1')

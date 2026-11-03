@@ -30,7 +30,7 @@ def place_label(candidates,half,occupied,margin=.10):
 
 # A robot's letter is printed on the tabletop next to its base and partly reaches
 # under it. The display (never the source scene) places every letter label, upright
-# for the front camera, with its near edge 2 cm beyond the robot's whole outline
+# for the front camera, with its near edge on the robot's whole outline
 # seen from above, arm included, so a top view shows it: along its own direction
 # from the base, away from the arm; where that spot leaves the table (a robot at
 # the table edge) or, where objects matter, lies under them (a Dial module), on the
@@ -39,7 +39,7 @@ def place_label(candidates,half,occupied,margin=.10):
 # geometry's projected outline at the current pose.
 ROBOT_LABEL = re.compile(r'([A-Z]{1,2})_label')
 ROBOT_LINK = re.compile(r'([A-Z]{1,2})_link\d+')  # robot geometry is often unnamed; its body is not
-LABEL_GAP_M = .02
+LABEL_GAP_M = 0.
 LABEL_SIDES_DEG = (0, -90, 90, 180)
 OBJECT_COVER = .10  # largest share of a label that objects may cover
 STANDING_M = .05  # robot geometry whose bottom is this close to the tabletop is its base
@@ -123,8 +123,11 @@ def robot_label_moves(model, data, avoid_objects=True):
     # Letters read upright in the front view: a label's local +y is the letter's top,
     # so it points along the front camera's horizontal viewing direction.
     front = None
-    if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, 'global') >= 0:
-        view = -data.cam_xmat[model.camera('global').id].reshape(3, 3)[:, 2]
+    cam = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, 'global')
+    if cam >= 0 and model.cam_bodyid[cam] == 0:
+        # A world-fixed camera: its model orientation is its pose, whatever data holds.
+        matrix = np.zeros(9); mujoco.mju_quat2Mat(matrix, model.cam_quat[cam])
+        view = -matrix.reshape(3, 3)[:, 2]
         front = math.atan2(view[1], view[0])-math.pi/2
     moves = {}
     for g in labels:
@@ -163,4 +166,22 @@ def robot_label_moves(model, data, avoid_objects=True):
         moves[names[g]] = dict(robot=robot, from_xy=current.tolist(), to_xy=centre.tolist(), side_deg=side,
                                quat_wxyz=[math.cos(yaw/2), 0., 0., math.sin(yaw/2)],
                                object_cover=cover, distance_from_base_m=float(np.linalg.norm(centre-base)))
+    return moves
+
+
+def place_robot_labels(model, data, task):
+    """Put a run's letter labels where its videos show them, before the run starts.
+
+    Labels are visual geometry on the world body, so no contact or dynamics changes.
+    Spots come from the scene's initial keyframe, so every segment and every video of
+    the run agrees."""
+    scratch = mujoco.MjData(model)
+    mujoco.mj_resetDataKeyframe(model, scratch, model.key('initial').id)
+    mujoco.mj_kinematics(model, scratch)
+    moves = robot_label_moves(model, scratch, avoid_objects=task.get('family') != 'mosaic')
+    for name, move in moves.items():
+        gid = model.geom(name).id
+        model.geom_pos[gid][:2] = move['to_xy']
+        model.geom_quat[gid] = move['quat_wxyz']
+    mujoco.mj_kinematics(model, data)
     return moves

@@ -219,6 +219,9 @@ class World:
         hand_cfg=self.directory/'private/inputs/harness.json'
         frozen_cfg=json.loads(hand_cfg.read_text()) if hand_cfg.exists() else {}
         self.observation_image=observation_profile(frozen_cfg)
+        if self.task.get('scene_asset') and frozen_cfg.get('robot_labels')=='beside-robot-v1':
+            from .factory.labels import place_robot_labels
+            place_robot_labels(self.model,self.data,self.task)
         profile=frozen_cfg.get('gripper_position_servo','legacy')
         for arm in self.arms.values():arm.configure_hand_position_servo(profile)
         if self.task.get('scene_asset') and segment_restore:
