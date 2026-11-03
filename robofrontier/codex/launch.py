@@ -115,10 +115,11 @@ def launch_config(p, folder, run_dir=None):
         experimental_supported_tools=[],node_repl_disabled=True,
         default_reasoning_level=p['effort'],supported_reasoning_levels=[{'effort':p['effort'],'description':'Declared benchmark effort'}])
     model['model_messages']=None
-    # The same system prompt as the Claude route, replacing Codex's own instructions:
-    # the run's frozen one (role statement and rules) when there is a run.
-    from robofrontier.policy_bootstrap import SYSTEM_PROMPT, frozen_system_prompt
-    model['base_instructions']=(frozen_system_prompt(run_dir) if run_dir is not None else None) or SYSTEM_PROMPT
+    # Replaces Codex's own instructions. The catalog stays the same for every run, since the
+    # model preflight receipt pins its hash; each thread receives the run's frozen system
+    # prompt (role statement and rules) as baseInstructions (codex_policy_host.js).
+    from robofrontier.policy_bootstrap import SYSTEM_PROMPT
+    model['base_instructions']=SYSTEM_PROMPT
     model['availability_nux']=None
     model['service_tiers']=[];model['additional_speed_tiers']=[]
     model['available_access_programs']=None

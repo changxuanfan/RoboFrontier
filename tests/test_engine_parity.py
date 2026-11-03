@@ -206,6 +206,12 @@ class EngineRenderingTests(unittest.TestCase):
             self.assertIn('web_search="disabled"', args)
             self.assertIn('project_doc_max_bytes=0', args)
             catalog = json.loads((run/'private/inputs/models.json').read_text())
-            self.assertEqual(catalog['models'][0]['base_instructions'], policy_bootstrap.system_prompt(run))
+            # The catalog is the same for every run (the model preflight pins its hash); threads
+            # get the run's system prompt as baseInstructions.
+            self.assertEqual(catalog['models'][0]['base_instructions'], policy_bootstrap.SYSTEM_PROMPT)
+            (Path(tmp)/'other').mkdir()
+            other = self.prepared(Path(tmp)/'other', 'codex')
+            launch_config(profile('luna'), other/'private/inputs', other)
+            self.assertEqual((other/'private/inputs/models.json').read_bytes(), (run/'private/inputs/models.json').read_bytes())
             self.assertEqual(launch['context_window'], 272000)
             self.assertEqual(launch['auto_compact_token_limit'], 258400)
