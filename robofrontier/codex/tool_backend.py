@@ -54,18 +54,21 @@ def prepare(run, profile):
     if access.get('network') is not False:
         raise ValueError('The Landlock broker does not permit model networking')
     access['filesystem'].update({'/proc': 'deny', '/tmp': 'deny', '/dev': 'deny'})
+    if os.environ.get('TMPDIR'):
+        access['filesystem'][str(Path(os.environ['TMPDIR']).resolve())] = 'deny'
+    access['filesystem'][str(run/'workspace')] = 'write'
     # Job-local virtualenvs can live beneath denied /tmp or source roots. Allow
     # only interpreter metadata and libraries, never the entire environment or
     # its parent. These grants are frozen before a policy turn can run.
     runtime_paths = {Path(sys.prefix)/'pyvenv.cfg',
                      Path(sysconfig.get_path('purelib')), Path(sysconfig.get_path('platlib'))}
     private_roots = [run/'private', *policy_access._auth_homes(Path.home())]
-    for path in runtime_paths:
-        if path.exists():
-            path = path.resolve()
-            if any(path.is_relative_to(Path(root).resolve()) for root in private_roots):
+    for runtime_path in runtime_paths:
+        if runtime_path.exists():
+            runtime_path = runtime_path.resolve()
+            if any(runtime_path.is_relative_to(Path(root).resolve()) for root in private_roots):
                 raise ValueError('Keep the Python runtime outside private credential/control directories')
-            access['filesystem'][str(path)] = 'read'
+            access['filesystem'][str(runtime_path)] = 'read'
     (run/'workspace/.tmp').mkdir(exist_ok=True)
     write_json(path, access)
     write_json(run/'private/inputs/codex-tools.json', {'schema': SCHEMA, 'backend': 'landlock-v1'})
