@@ -52,6 +52,16 @@ class SchedulingTests(unittest.TestCase):
         self.assertEqual(self.commands(101),[])
         self.assertEqual(self.s.actions()['move-A']['status'],'running')
         self.assertEqual(len(self.s.actions()),1)
+
+    def test_isolated_unknown_action_notifies_worker_without_pausing_world(self):
+        self.start_motion()
+        self.s.uncertain_action('move-A','Executor acknowledgement unavailable',isolate=True)
+        self.assertEqual(self.s.get('lifecycle'),'running')
+        self.s.observe_session('A','idle','t0',101,'codex.wait_threads')
+        wake=self.commands(101)[0]
+        self.assertEqual(wake['actor'],'A')
+        self.assertFalse(self.planner.execution_blocks_wake('A'))
+        self.assertTrue(self.s.actions()['move-A']['isolated'])
     def test_async_work_waits_for_agent_selected_deadline_or_continuation(self):
         self.start_motion()
         self.assertEqual(self.commands(),[])
@@ -81,7 +91,7 @@ class SchedulingTests(unittest.TestCase):
         self.assertEqual(wake['actor'],'A')
         self.assertIsNotNone(self.planner.claim(wake['wake_id'],'owner',100))
         self.assertEqual(len(self.s.actions()),1)
-        self.assertEqual(self.s.actions()['move-A']['status'],'uncertain')
+        self.assertEqual(self.s.actions()['move-A']['phase'],'stopping')
 
     def test_claim_rechecks_motion_state_after_wake_was_planned(self):
         self.s.send('Controller',['A'],'update','1')

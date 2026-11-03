@@ -58,8 +58,9 @@ def recover(host, store, now=None):
         except ValueError:
             return False
         actions = store.actions(host.actor).values()
-        if any(a['status'] == 'uncertain' for a in actions): return False
-        busy = any(a['status'] in ('pending', 'running') for a in store.actions(host.actor).values())
+        if any(a['status'] == 'uncertain' and not (a.get('isolated') or a.get('local_recovery')) for a in actions): return False
+        from robofrontier.scheduling import blocks_model_recovery
+        busy = any(blocks_model_recovery(a) for a in store.actions(host.actor).values())
         busy = busy or bool(store.db.execute("SELECT 1 FROM calls WHERE actor=? AND status='accepted' LIMIT 1",
                                             (host.actor,)).fetchone())
         # A delegate batch still being forked must not be retried through this mechanism.
@@ -99,7 +100,8 @@ def recover_model_loss(host, store):
                 or store.get('lifecycle') != 'running' or store.get('dispatch_paused', False)):
             return False
         if host.budget_status not in ('tracking', 'not_set'): return False
-        busy = any(a['status'] in ('pending', 'running', 'uncertain') for a in store.actions(host.actor).values())
+        from robofrontier.scheduling import blocks_model_recovery
+        busy = any(blocks_model_recovery(a) for a in store.actions(host.actor).values())
         busy = busy or bool(store.db.execute("SELECT 1 FROM calls WHERE actor=? AND status='accepted' LIMIT 1",
                                             (host.actor,)).fetchone())
         if busy: return True

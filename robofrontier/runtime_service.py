@@ -17,6 +17,7 @@ from . import run_layout
 from .run_setup import verify_inputs, write_json
 from .delegation import Delegations
 from .scene_task import camera_names
+from .stop_diagnostics import stop_diagnostics
 from .task_config import action_limits, execution_timing
 
 
@@ -75,6 +76,7 @@ class RuntimeService:
         self.requests = {}
         self.waiters = {}
         self.action_batches = {}
+        self.recovery_checks = {}
         self.motion_check = None
         self.shutdown = False
         lifecycle = self.store.get('lifecycle')
@@ -197,6 +199,24 @@ class RuntimeService:
                              'result': answer if job['op'] != 'state' else {'snapshot': True}})
             job['result'] = answer
         # The outer operation releases the client after its transaction commits.
+
+    def stopping_diagnostics(self, action):
+        arm=getattr(self.world,'arms',{}).get(action['arm'])
+        if hasattr(self.world,'stop_diagnostics') or arm is not None and hasattr(arm,'data'):
+            return stop_diagnostics(self.world,action['arm'],action['action_id'],action)
+        return action.get('stop_diagnostics')
+
+    def isolated_diagnostics(self, action):
+        arm=getattr(self.world,'arms',{}).get(action['arm'])
+        if arm is None:
+            return {'controller_state':'unavailable',
+                    'note':'The executor cannot report this robot; the original result remains unknown.'}
+        current=getattr(arm,'job',None)
+        state='original_active' if current==action['action_id'] else 'no_active_action' if current is None else 'different_action_active'
+        result={'controller_state':state,'stopping':bool(getattr(arm,'stopping',False)),
+                'note':'This is the current controller state, not proof of the original action outcome.'}
+        if hasattr(arm,'observe'):result['robot']=arm.observe()
+        return result
 
     def snapshot(self):
         agents = self.store.agents()
@@ -430,7 +450,20 @@ class RuntimeService:
                 original=self.store.call(data['call_id'],actor)
                 action=self.store.actions(actor).get(data['call_id'])
                 if not action or action['arm']!=robot:raise ValueError('Stop requires an own action on the selected robot')
-                if action['status']=='uncertain':raise ValueError('Uncertain execution requires engineering review')
+                if action['status']=='uncertain':
+                    if not action.get('isolated'):raise ValueError('Uncertain execution requires engineering review')
+                    diagnostic=self.isolated_diagnostics(action)
+                    if diagnostic['controller_state']!='original_active':
+                        self.respond(job,{'stop_requested':False,'original_call_id':data['call_id'],
+                            'execution':action,'execution_diagnostics':diagnostic,
+                            'note':'The original action is not confirmed active; inspect the robot. The original outcome remains unknown.'})
+                        job['done'].set();return
+                    self.world.request_stop(robot,data['call_id'])
+                    self.store.event('STOP_REQUESTED',actor,{'robot':robot,'call_id':data['call_id']})
+                    self.respond(job,{'stop_requested':True,'original_call_id':data['call_id'],
+                        'execution':action,'execution_diagnostics':diagnostic,
+                        'note':'Stop requested for the original action; inspect and query that action until the owner confirms its result.'})
+                    job['done'].set();return
                 if action['status']=='pending' and action.get('sync_group_id'):
                     from .action_batch import cancel_collecting
                     cancel_collecting(self.store,'withdrawn_by_participant',float(self.world.time),action['sync_group_id'])
@@ -459,8 +492,9 @@ class RuntimeService:
                     injected = inject(robot, job['id'], op) if callable(inject) else None
                     if injected: self.store.event('ENGINEERING_FAULT_INJECTED', 'Meta', injected)
                 except Exception as error:
-                    self.store.uncertain_action(job['id'],'Executor acknowledgement failed: '+str(error))
-                    self.respond(job,{'execution_status':'uncertain','error':'Execution owner failed; engineering review required'})
+                    self.store.uncertain_action(job['id'],'Executor acknowledgement failed: '+str(error),isolate=True)
+                    self.respond(job,{'execution_status':'uncertain',
+                        'error':'Execution acknowledgement unavailable; inspect the affected robot and original call. Other robots may continue.'})
                 else:
                     self.store.event('ACTION_ACCEPTED_BY_EXECUTOR',actor,action)
                     if not data.get('wait', True):
@@ -470,17 +504,21 @@ class RuntimeService:
                 if set(data)!={'call_id'}:raise ValueError('recover_action requires only the original call_id')
                 original=self.store.call(data['call_id'],actor)
                 action=self.store.actions(actor).get(data['call_id'])
-                if not action or action['status']!='uncertain' or not action.get('local_recovery'):
+                if (not action or action['status'] not in ('running','uncertain') or not action.get('local_recovery')
+                        or action['status']=='running' and action.get('phase')!='stopping'):
                     raise ValueError('No locally recoverable action for this role')
                 robot=self.store.action_robot(actor,action['arm'])
                 if self.store.get('lifecycle')!='running' or self.store.get('physics_state')!='running' or self.store.get('dispatch_paused',False):
                     raise ValueError('Recovery requires the original live and running world')
                 recovered=self.world.recover_action(robot,data['call_id'])
                 if recovered is None:
-                    self.respond(job,{'recovered':False,'execution':action,
-                        'note':'Stop is not yet confirmed stable; observe and retry recovery later. Do not replay the action.'})
+                    diagnostics=self.stopping_diagnostics(action)
+                    self.respond(job,{'recovered':False,'execution':action,'stop_diagnostics':diagnostics,
+                        'note':'Stop is still settling; inspect the measurements and retry recovery later. Do not replay the action.'})
                 else:
                     action=self.store.reconcile_stopped_action(data['call_id'],actor,recovered,float(self.world.time))
+                    if data['call_id'] in self.requests:
+                        self.requests[data['call_id']]['result']=self.store.call(data['call_id'],actor)['result']
                     self.respond(job,{'recovered':True,'execution':action,
                         'note':'The original action failed and is now confirmed stopped. Decide any new action independently.'})
             elif op == 'job':
@@ -492,7 +530,12 @@ class RuntimeService:
                                       'execution':{'call_id':data['call_id'],'status':value['execution_status']},'original_result':call['result']})
                     job['done'].set();return
                 action = self.store.actions().get(data['call_id'])
-                self.respond(job, {'execution': action or {'call_id':data['call_id'],'status':call['status']}, 'original_result':call['result']})
+                diagnostics=None
+                if action and action.get('phase')=='stopping':
+                    diagnostics=self.stopping_diagnostics(action)
+                self.respond(job, {'execution': action or {'call_id':data['call_id'],'status':call['status']},
+                                   'original_result':call['result'], **({'stop_diagnostics':diagnostics} if diagnostics is not None else {}),
+                                   **({'execution_diagnostics':self.isolated_diagnostics(action)} if action and action.get('isolated') else {})})
             elif op == 'state':
                 self.respond(job, self.snapshot())
             elif op == 'finish':
@@ -545,18 +588,22 @@ class RuntimeService:
         for result in self.world.poll_actions(self.config['action_timeout_sim_s']):
             job = self.requests[result['call_id']]
             with self.store.transaction():
-                if result['status']=='uncertain':
+                if result['status'] in ('stopping','uncertain'):
                     action=self.store.actions().get(job['id'],{})
                     arm=getattr(self.world,'arms',{}).get(action.get('arm'))
-                    locally_stopping=(result.get('reason')=='Stop did not settle; engineering review required'
-                        and result.get('stop_reason')=='Action timeout; stopped at current reference'
-                        and arm is not None and arm.job==job['id'] and arm.stopping and arm.uncertainty_reported
-                        and not action.get('batch_id') and not action.get('sync_group_id'))
-                    if locally_stopping:action=self.store.isolate_stopping_action(job['id'],result['reason'])
-                    else:action=self.store.uncertain_action(job['id'],result['reason'])
-                    self.respond(job,{'execution_status':'uncertain','execution':action,
-                                      'execution_feedback':{k:v for k,v in result.items() if k not in ('call_id','status','reason')},
-                                      'error':result['reason']})
+                    locally_stopping=(result.get('reason') in ('Stop is still settling','Stop did not settle; engineering review required')
+                                      and arm is not None and arm.job==job['id'] and arm.stopping and arm.uncertainty_reported)
+                    if locally_stopping:
+                        diagnostics=result.get('stop_diagnostics') or self.stopping_diagnostics(action)
+                        action=self.store.isolate_stopping_action(job['id'],'Stop is still settling',diagnostics)
+                        self.respond(job,{'execution_status':'running','execution':action,
+                                          'stop_diagnostics':diagnostics,
+                                          'note':'Action is still stopping; inspect and recover it. Other robots may continue.'})
+                    else:
+                        action=self.store.uncertain_action(job['id'],result['reason'],isolate=True)
+                        self.respond(job,{'execution_status':'uncertain','execution':action,
+                                          'execution_feedback':{k:v for k,v in result.items() if k not in ('call_id','status','reason')},
+                                          'error':result['reason']})
                     job['done'].set()
                     continue
                 action = self.store.finish_action(job['id'], result['status'], float(self.world.time), result.get('reason'))
@@ -566,6 +613,7 @@ class RuntimeService:
                 cameras = job['data'].get('cameras',[action['arm']+'_front',action['arm']+'_side'])
                 self.respond(job, {'execution': action, 'execution_feedback':{k:v for k,v in result.items() if k not in ('call_id','status','reason')}, 'observation': self.capture(cameras)})
             job['done'].set()
+        self.poll_local_recovery()
         self.poll_delegations()
         from .action_batch import poll
         poll(self)
@@ -575,6 +623,51 @@ class RuntimeService:
             self.policy_budget.tick(self)
             if self.ended:
                 self.shutdown = True
+
+    def poll_local_recovery(self):
+        """Recheck a live stop and periodically remind the owner about unknowns."""
+        if self.ended or self.store.get('physics_state') != 'running':
+            return
+        now = float(self.world.time)
+        actions = self.store.actions()
+        active = {ident for ident, action in actions.items()
+                  if action.get('status') in ('running','uncertain') and
+                  (action.get('local_recovery') or action.get('status') == 'uncertain' and action.get('isolated'))}
+        self.recovery_checks = {ident: due for ident, due in self.recovery_checks.items() if ident in active}
+        for ident in active:
+            action = actions[ident]
+            interval = 5.0 if action.get('local_recovery') else 30.0
+            due = self.recovery_checks.setdefault(ident, now + interval)
+            if now < due:
+                continue
+            self.recovery_checks[ident] = now + interval
+            call = self.store.call(ident)
+            actor = call['actor']
+            if action.get('local_recovery'):
+                try:
+                    recovered = self.world.recover_action(action['arm'], ident)
+                except (ValueError, KeyError) as error:
+                    self.store.uncertain_action(ident, 'Stop recheck lost the original controller state: '+str(error), isolate=True)
+                    self.recovery_checks.pop(ident, None)
+                    continue
+                if recovered is None:
+                    notice = {'event':'arm_recovery_check', 'robot':action['arm'], 'call_id':ident,
+                              'stop_diagnostics':self.stopping_diagnostics(action),
+                              'note':'Still stopping; inspect the evidence and continue independent work.'}
+                else:
+                    action = self.store.reconcile_stopped_action(ident, actor, recovered, now)
+                    if ident in self.requests:
+                        self.requests[ident]['result'] = self.store.call(ident, actor)['result']
+                    notice = {'event':'arm_recovery_confirmed', 'robot':action['arm'], 'call_id':ident,
+                              'execution':action, 'note':'The original action failed and its stop is confirmed.'}
+                    self.recovery_checks.pop(ident, None)
+            else:
+                notice = {'event':'arm_execution_check', 'robot':action['arm'], 'call_id':ident,
+                          'execution_diagnostics':self.isolated_diagnostics(action),
+                          'note':'Outcome remains unknown; inspect the original action. Never replay it.'}
+            self.store.signal(actor, notice)
+            if self.config.get('topology') == 'adaptive' and actor != 'Controller':
+                self.store.signal('Controller', notice)
 
     def poll_motion_check(self):
         if self.motion_check is None:

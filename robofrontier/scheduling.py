@@ -1,6 +1,12 @@
 """Deterministic continuation planning; contains no task planner or model calls."""
 import time
 import uuid
+
+
+def blocks_model_recovery(action):
+    """An isolated arm can be inspected after a model session resumes."""
+    return (action.get('status') in ('pending','running','uncertain')
+            and not action.get('isolated') and not action.get('local_recovery'))
 from .runtime_store import packed
 
 
@@ -12,8 +18,8 @@ class Scheduler:
         # Planning/mail may continue during acknowledged nonblocking execution.
         # A blocking robot action or unknown outcome still needs its existing result.
         from .action_batch import external_wait
-        return any(v['status']=='uncertain' and not v.get('local_recovery') or
-                   v['status']=='running' and external_wait(self.store,v)
+        return any(v['status']=='uncertain' and not v.get('local_recovery') and not v.get('isolated') or
+                   v['status']=='running' and not v.get('local_recovery') and external_wait(self.store,v)
                    for v in self.store.actions(actor).values())
 
     def stopped_delegate_without_new_mail(self, actor, value):
@@ -27,7 +33,7 @@ class Scheduler:
                 and value.get('session_turn_status')=='failed'
                 and value.get('last_stop_notice_turn')==value['session_turn']
                 and not self.stopped_delegate_without_new_mail(actor,value)
-                and not any(v['status'] in ('running','uncertain') for v in self.store.actions(actor).values())
+                and not any(blocks_model_recovery(v) for v in self.store.actions(actor).values())
                 and not self.store.db.execute("SELECT 1 FROM calls WHERE actor=? AND status='accepted' AND op IN ('move','gripper','action_batch') LIMIT 1",(actor,)).fetchone())
 
     def can_wake(self, actor, value, now):

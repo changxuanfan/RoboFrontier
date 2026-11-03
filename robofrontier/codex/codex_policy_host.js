@@ -195,8 +195,8 @@ class PolicyHost {
         this.event({event:'capacity_wait',actor,thread_id:id,failed_turn_id:t.id,attempt:attempt+1,delay_s:capacityDelayMs(attempt,id)/1000});
       }
       if (Date.now()-this.failures.get(key)<capacityDelayMs(attempt,id)) continue;
-      // Physical uncertainty blocks retries; retrying a model never replays its tools.
-      const code="from robofrontier.runtime_store import RuntimeStore;import sys,json;s=RuntimeStore(sys.argv[1]);a=sys.argv[2];print(json.dumps(any(v['status'] in ('pending','running','uncertain') for v in s.actions(a).values()) or any(True for r in s.db.execute(\"SELECT 1 FROM calls WHERE actor=? AND status='accepted' AND op IN ('move','gripper','action_batch','delegate')\",(a,)))));s.close()";
+      // Isolated robots remain reserved, but their owners can resume to inspect them.
+      const code="from robofrontier.runtime_store import RuntimeStore;from robofrontier.scheduling import blocks_model_recovery;import sys,json;s=RuntimeStore(sys.argv[1]);a=sys.argv[2];print(json.dumps(any(blocks_model_recovery(v) for v in s.actions(a).values()) or any(True for r in s.db.execute(\"SELECT 1 FROM calls WHERE actor=? AND status='accepted' AND op IN ('move','gripper','action_batch','delegate')\",(a,)))));s.close()";
       const {stdout}=await execFileAsync(this.python,['-c',code,path.join(this.run,'private/state/runtime.sqlite'),actor],{cwd:this.cwd});
       if (JSON.parse(stdout)) continue;
       this.retries.add(key); // An unknown turn/start acknowledgement is never repeated.

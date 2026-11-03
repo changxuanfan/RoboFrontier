@@ -1,7 +1,7 @@
 """An injected unsettled stop is recovered locally in a real world while other arms work.
 
 The run's frozen fault makes the first move of one arm time out and stay unsettled for a
-few seconds after stopping. The action must become uncertain with local recovery, the
+few seconds after stopping. The live action must report stopping with diagnostics, the
 world keep running, `recover_action` decline until the arm is stable and then confirm
 the stop with the action failed; another arm moves normally meanwhile. No model calls.
 """
@@ -40,8 +40,13 @@ class FaultInjectionTests(unittest.TestCase):
                 client_call(meta, 'start', {}, 'start-1')
                 faulty = client_call(controller, 'move', {'robot': first, 'delta_m': [0, 0, .05], 'speed_m_s': .01,
                                                           'wait': True, 'cameras': []}, 'move-fault')
-                self.assertEqual(faulty['execution_status'], 'uncertain', faulty)
+                self.assertEqual(faulty['execution_status'], 'running', faulty)
+                self.assertEqual(faulty['execution']['phase'], 'stopping')
                 self.assertTrue(faulty['execution']['local_recovery'])
+                self.assertIn('unmet_conditions',faulty['stop_diagnostics'])
+                checked=client_call(controller, 'job', {'call_id': 'move-fault'}, 'inspect-stop')
+                self.assertEqual(checked['execution']['phase'],'stopping')
+                self.assertIn('actual_joint_velocity_rad_s',checked['stop_diagnostics'])
                 pending = client_call(controller, 'recover_action', {'call_id': 'move-fault'}, 'recover-1')
                 self.assertFalse(pending['recovered'])
                 # The world keeps running: the other arm acts while the first is unresolved.

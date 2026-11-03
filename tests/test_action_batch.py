@@ -80,10 +80,28 @@ class BatchTests(unittest.TestCase):
         with patch.object(self.s.world,'start_action',side_effect=start):
             j=self.call('Controller','action_batch',self.data,'bad-start')
         self.assertEqual(j['result']['execution_status'],'uncertain')
-        self.assertEqual(self.s.store.get('lifecycle'),'recovery_required')
+        self.assertEqual(self.s.store.get('lifecycle'),'running')
         self.assertEqual(self.s.store.actions()[j['result']['action_ids'][1]]['status'],'uncertain')
         self.assertEqual(self.s.store.actions()[j['result']['action_ids'][0]]['status'],'failed')
         self.call('Controller','action_batch',self.data,'bad-start');self.assertEqual(len(self.s.world.executed),1)
+
+    def test_isolated_batch_result_can_settle_after_owner_reports_each_outcome(self):
+        original=self.s.world.start_action
+        def start(robot,*args):
+            if robot=='B':raise RuntimeError('drive acknowledgement lost')
+            return original(robot,*args)
+        with patch.object(self.s.world,'start_action',side_effect=start):
+            job=self.call('Controller','action_batch',self.data,'bad-start-reconciled')
+        self.assertEqual(job['result']['execution_status'],'uncertain')
+        ids=job['result']['action_ids']
+        self.assertEqual(self.s.store.get('lifecycle'),'running')
+        # A was stopped by the group after the error. B's owner later reports its
+        # original command failed; neither command is replayed.
+        self.s.world.finished.append({'call_id':ids[1],'status':'failed','reason':'original stop confirmed'})
+        self.s.pump()
+        result=self.call('Controller','job',{'call_id':'bad-start-reconciled'})['result']
+        self.assertEqual(result['execution_status'],'failed')
+        self.assertEqual(len(self.s.world.executed),1)
     def test_owner_death_before_reservation_marks_members_unknown(self):
         self.s.store.begin_call('accepted-group','Controller','action_batch',self.data)
         count=self.s.store.recover_execution();self.assertEqual(count,2)
@@ -111,8 +129,8 @@ class BatchTests(unittest.TestCase):
         self.call('Controller','move',{'robot':'A','delta_m':[0,0,.01],'wait':False},'arm-A')
         self.call('Controller','move',{'robot':'B','delta_m':[0,0,.01],'wait':False},'arm-B')
         self.s.world.arms={'A':SimpleNamespace(job='arm-A',stopping=True,uncertainty_reported=True)}
-        self.s.world.finished.append({'call_id':'arm-A','status':'uncertain',
-            'reason':'Stop did not settle; engineering review required',
+        self.s.world.finished.append({'call_id':'arm-A','status':'stopping',
+            'reason':'Stop is still settling',
             'stop_reason':'Action timeout; stopped at current reference'})
         self.s.pump()
         self.assertEqual(self.s.store.get('lifecycle'),'running')
@@ -120,8 +138,34 @@ class BatchTests(unittest.TestCase):
         self.assertTrue(any(x['event']=='arm_recovery_required' for x in self.s.store.delivery('Controller')['system_events']))
         self.s.world.complete('B');self.s.pump()
         self.assertEqual(self.s.store.actions()['arm-B']['status'],'completed')
-        self.assertEqual(self.s.store.actions()['arm-A']['status'],'uncertain')
+        self.assertEqual(self.s.store.actions()['arm-A']['phase'],'stopping')
         self.assertEqual(self.call('Controller','move',{'robot':'C','delta_m':[0,0,.01],'wait':False})['result']['execution_status'],'running')
+
+    def test_batch_member_still_stopping_wakes_agent_and_only_brakes_its_group(self):
+        from types import SimpleNamespace
+        self.call('Controller','move',{'robot':'C','delta_m':[0,0,.01],'wait':False},'independent')
+        group=self.call('Controller','action_batch',{**self.data,'wait':True},'group-stop')
+        members=[(i,a) for i,a in self.s.store.actions().items() if a.get('batch_id')=='group-stop']
+        action_a=next(i for i,a in members if a['arm']=='A')
+        self.s.world.arms={'A':SimpleNamespace(job=action_a,stopping=True,uncertainty_reported=True)}
+        self.s.world.finished.append({'call_id':action_a,'status':'uncertain',
+            'reason':'Stop did not settle; engineering review required',
+            'stop_reason':'Action timeout; stopped at current reference'})
+        self.s.pump()
+        self.assertEqual(self.s.store.get('lifecycle'),'running')
+        self.assertTrue(group['done'].is_set())
+        self.assertEqual(group['result']['execution_status'],'running')
+        self.assertEqual(self.s.store.actions()[action_a]['phase'],'stopping')
+        self.assertIn('C',self.s.world.running)
+        self.assertEqual([robot for robot,_ in self.stops],['B'])
+        self.s.pump()  # The other group member finishes braking.
+        self.s.world.recover_action=lambda robot,ident:{'call_id':ident,'status':'failed','reason':'stop confirmed'}
+        result=self.call('Controller','recover_action',{'call_id':action_a})['result']
+        self.assertTrue(result['recovered'])
+        self.assertEqual(group['result']['execution_status'],'failed')
+        self.assertIn('C',self.s.world.running)
+        signals=[json.loads(row['value']) for row in self.s.store.db.execute("SELECT value FROM signals WHERE actor='Controller'")]
+        self.assertTrue(any(e['event']=='action_batch_finished' for e in signals))
 
     def test_terminal_failed_query_uses_physical_outcome_not_rpc_status(self):
         self.call('Controller','action_batch',self.data,'failed-group')

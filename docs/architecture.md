@@ -174,9 +174,14 @@ transport error does not establish that nothing executed. Model-provider
 recovery must never replay physical actions under fresh IDs.
 
 Action budgets derive from distance, angle, aperture and speed and are recorded
-at acceptance. Timeout requests controlled stopping. Unconfirmed stopping keeps
-the action uncertain and its execution ownership intact. A network timeout is
-not physical cancellation. `wait:false` returns while the action remains running
+at acceptance. Timeout requests controlled stopping. A known live stop that has
+not settled remains running with `phase: stopping`; diagnostics expose the actual
+and reference velocities, unmet stability conditions and applicable target error.
+The affected robot stays reserved while the agent investigates or calls
+`recover_action`, and independent robots continue. An unavailable execution
+acknowledgement remains uncertain and isolates its robot without ending the live
+world; it is never treated as success or replayed. A network timeout is not
+physical cancellation. `wait:false` returns while the action remains running
 under its original ID, without caching it as terminal. Mutual exclusion applies
 per physical robot, leaving other arms and non-conflicting tools available.
 

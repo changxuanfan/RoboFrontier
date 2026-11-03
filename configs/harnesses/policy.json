@@ -16,7 +16,7 @@
   "max_message_chars": 8000,
   "min_check_interval_s": 1.0,
   "max_check_interval_s": 600.0,
-  "action_timeout_sim_s": 15.0,
+  "action_timeout_sim_s": 30.0,
   "max_action_timeout_sim_s": 600.0,
   "allowed_tcp_speed_m_s": [
     0.005,

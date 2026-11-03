@@ -51,14 +51,15 @@ def get_batch_status(store,call_id):
     if call['op']!='action_batch':raise ValueError('Not an action batch')
     own_ids=member_ids(store,call_id);ids=member_ids(store,call_id,True);all_actions=store.actions()
     actions={i:all_actions[i] for i in ids if i in all_actions};original=call['result'] or {}
-    if call['status']=='uncertain' or any(a['status']=='uncertain' for a in actions.values()):status='uncertain'
+    if any(a['status']=='uncertain' for a in actions.values()):status='uncertain'
     elif any(a['status']=='running' for a in actions.values()):status='running'
     elif any(a['status']=='pending' for a in actions.values()):status='pending'
     elif actions and len(actions)==len(ids):status='completed' if all(a['status']=='completed' for a in actions.values()) else 'failed'
+    elif call['status']=='uncertain':status='uncertain'
     else:status='failed' if original.get('error') else 'pending'
     # Shared execution facts do not open another role's commands or mailbox.
     executions={i:(a if i in own_ids else {k:v for k,v in a.items() if k in
-                    ('action_id','arm','type','status','started_sim_s','finished_sim_s','reason')}) for i,a in actions.items()}
+                    ('action_id','arm','type','status','phase','isolated','started_sim_s','finished_sim_s','reason')}) for i,a in actions.items()}
     feedback={}
     for ident in own_ids:
         if ident in actions:
@@ -108,8 +109,10 @@ def _start(service,parts,prepared,activate=False):
             if action['op']=='move':
                 try:service.world.request_stop(robot,ident)
                 except Exception:pass
-            service.store.uncertain_action(ident,'Batch start acknowledgement failed: '+str(error))
-        for job in parts:service.respond(job,summary(service,job));job['done'].set()
+            service.store.uncertain_action(ident,'Batch start acknowledgement failed: '+str(error),isolate=True)
+        for job in parts:
+            service.action_batches[job['id']]=job
+            service.respond(job,summary(service,job));job['returned_unknown']=True;job['done'].set()
         return
     for job in parts:
         service.action_batches[job['id']]=job
@@ -190,7 +193,8 @@ def stop_group_motions(service,job,reason):
     actions=service.store.actions()
     for ident in member_ids(service.store,job['id'],True):
         action=actions.get(ident)
-        if action and action['status']=='running' and action['type']=='move':service.world.request_stop(action['arm'],ident)
+        if action and action['status']=='running' and action.get('phase')!='stopping' and action['type']=='move':
+            service.world.request_stop(action['arm'],ident)
     service.store.event('ACTION_BATCH_MOTION_STOP_REQUESTED',job['actor'],{'batch_id':job['id'],'reason':reason,
                             'scope':'Agreed group braking; does not open grippers or assert payload retention'})
 
@@ -218,14 +222,27 @@ def poll(service):
     for ident,job in list(service.action_batches.items()):
         value=summary(service,job)
         if value['execution_status']=='pending':continue
-        if not job.get('batch_braking') and any(a['status'] in ('failed','uncertain') for a in value['executions'].values()):
+        stopping=any(a.get('phase')=='stopping' for a in value['executions'].values())
+        isolated_unknown=any(a['status']=='uncertain' and a.get('isolated') for a in value['executions'].values())
+        if not job.get('batch_braking') and any(a['status'] in ('failed','uncertain') or a.get('phase')=='stopping'
+                                                for a in value['executions'].values()):
             stop_group_motions(service,job,'A member did not complete')
             for part in part_ids(store,ident):
                 if part in service.action_batches:service.action_batches[part]['batch_braking']=True
-        if value['execution_status']=='running':continue
+        if value['execution_status']=='running':
+            if stopping and not job['done'].is_set():
+                service.respond(job,{**value,'note':'A member is still stopping; inspect its diagnostics and recover it. Other independent robots may continue.'})
+                job['returned_stopping']=True
+                job['done'].set()
+            continue
+        if value['execution_status']=='uncertain' and isolated_unknown:
+            if not job['done'].is_set():
+                service.respond(job,value);job['returned_unknown']=True;job['done'].set()
+            continue
         value['observation']=service.capture(job['data'].get('cameras',[]))
         service.respond(job,value);job['done'].set()
-        if not job['data'].get('wait',True):store.signal(job['actor'],{'event':'action_batch_finished','call_id':ident,'status':value['execution_status']})
+        if not job['data'].get('wait',True) or job.get('returned_stopping') or job.get('returned_unknown'):
+            store.signal(job['actor'],{'event':'action_batch_finished','call_id':ident,'status':value['execution_status']})
         spec=job['data'].get('sync_group')
         if spec:
             group=groups(store)[spec['id']]

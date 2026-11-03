@@ -137,8 +137,28 @@ class SyncTests(unittest.TestCase):
             return original(robot,*args)
         with patch.object(s.world,'start_action',side_effect=start):b=self.call(s,'B','action_batch',self.part('B'),'b-part')
         self.assertEqual(a['result']['execution_status'],'uncertain');self.assertEqual(b['result']['execution_status'],'uncertain')
-        self.assertEqual(s.store.get('lifecycle'),'recovery_required')
+        self.assertEqual(s.store.get('lifecycle'),'running')
         self.call(s,'A','action_batch',self.part('A'),'a-part');self.assertEqual(len(s.world.executed),1)
+
+    def test_stopping_member_notifies_both_owners_and_preserves_independent_work(self):
+        from types import SimpleNamespace
+        s=self.service('peer')
+        self.call(s,'C','move',{'delta_m':[0,0,.01],'wait':False},'independent')
+        a=self.call(s,'A','action_batch',self.part('A',wait=True),'part-a')
+        b=self.call(s,'B','action_batch',self.part('B',wait=True),'part-b')
+        ident=next(i for i,v in s.store.actions().items() if v.get('batch_id')=='part-a')
+        s.world.arms={'A':SimpleNamespace(job=ident,stopping=True,uncertainty_reported=True)}
+        s.world.finished.append({'call_id':ident,'status':'uncertain',
+            'reason':'Stop did not settle; engineering review required',
+            'stop_reason':'Action timeout; stopped at current reference'})
+        s.pump()
+        self.assertEqual(s.store.get('lifecycle'),'running')
+        self.assertTrue(a['done'].is_set());self.assertTrue(b['done'].is_set())
+        self.assertEqual(a['result']['execution_status'],'running')
+        self.assertEqual(b['result']['execution_status'],'running')
+        self.assertEqual(s.stops,['B'])
+        self.assertIn('C',s.world.running)
+        self.assertEqual(s.store.actions()[ident]['phase'],'stopping')
 
     def test_completed_own_member_cannot_hand_back_unresolved_signed_operation(self):
         s=self.service('adaptive');b=self.delegate_b(s)

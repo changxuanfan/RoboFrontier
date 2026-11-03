@@ -407,15 +407,25 @@ class RuntimeStore:
             self.event('ACTION_RESERVED' if pending else 'ACTION_STARTED', actor, value)
             return value
 
-    def uncertain_action(self, call_id, reason):
+    def uncertain_action(self, call_id, reason, isolate=False):
         with self.transaction():
             row=self.db.execute('SELECT * FROM actions WHERE id=?',(call_id,)).fetchone()
             if not row:raise ValueError('Unknown action')
             value=json.loads(row['value']);value.update(status='uncertain',reason=reason)
+            if isolate:
+                value['isolated']=True
+                value.pop('local_recovery',None)
+                value.pop('phase',None)
             self.db.execute("UPDATE actions SET status='uncertain',value=? WHERE id=?",(packed(value),call_id))
             self.db.execute("UPDATE calls SET status='uncertain' WHERE id=?",(call_id,))
-            self.update_agent(row['actor'],recovery_required=True)
-            self.put('physics_state','recovery_required');self.put('lifecycle','recovery_required')
+            if isolate:
+                notice={'event':'arm_execution_unknown','robot':value['arm'],'call_id':call_id,'reason':reason,
+                        'note':'Inspect the original action and robot; this robot is reserved, but independent robots may continue. Never replay the original action.'}
+                self.signal(row['actor'],notice)
+                if self.get('config').get('topology')=='adaptive' and row['actor']!='Controller':self.signal('Controller',notice)
+            else:
+                self.update_agent(row['actor'],recovery_required=True)
+                self.put('physics_state','recovery_required');self.put('lifecycle','recovery_required')
             self.event('EXECUTION_OUTCOME_UNCERTAIN','Meta',value)
             return value
 
@@ -433,19 +443,22 @@ class RuntimeStore:
             self.event('MODEL_RESTARTED', actor, {'engine': engine, 'restart': count+1, 'maximum': maximum})
             return count+1
 
-    def isolate_stopping_action(self, call_id, reason):
-        """Keep the live world running while one known stopped command settles."""
+    def isolate_stopping_action(self, call_id, reason, diagnostics=None):
+        """Keep a known live stop running while the affected robot settles."""
         with self.transaction():
             row = self.db.execute('SELECT * FROM actions WHERE id=?', (call_id,)).fetchone()
             if not row: raise ValueError('Unknown action')
             value = json.loads(row['value'])
-            if value['status'] != 'running' or value.get('batch_id') or value.get('sync_group_id'):
-                raise ValueError('Only an independently running action can be isolated')
-            value.update(status='uncertain', reason=reason, local_recovery=True)
-            self.db.execute("UPDATE actions SET status='uncertain',value=? WHERE id=?", (packed(value), call_id))
-            self.db.execute("UPDATE calls SET status='uncertain' WHERE id=?", (call_id,))
+            if value['status'] != 'running' and not (value['status']=='uncertain' and value.get('isolated')):
+                raise ValueError('Only a running action can be isolated')
+            value.update(phase='stopping', reason=reason, local_recovery=True)
+            value['status']='running'
+            if diagnostics is not None:value['stop_diagnostics']=diagnostics
+            self.db.execute("UPDATE actions SET status='running',value=? WHERE id=?", (packed(value), call_id))
+            self.db.execute("UPDATE calls SET status='running' WHERE id=?", (call_id,))
             notice={'event':'arm_recovery_required','robot':value['arm'],'call_id':call_id,
-                    'reason':reason,'note':'Original action was stopped but not confirmed stable; inspect and call recover_action. Never replay it.'}
+                    'reason':reason,'stop_diagnostics':diagnostics,
+                    'note':'Original action is still stopping; inspect the measurements and call recover_action. Other robots may continue. Never replay it.'}
             self.signal(row['actor'],notice)
             cfg=self.get('config')
             if cfg.get('topology')=='adaptive' and row['actor']!='Controller':
@@ -458,14 +471,21 @@ class RuntimeStore:
             row=self.db.execute('SELECT * FROM actions WHERE id=? AND actor=?',(call_id,actor)).fetchone()
             if not row: raise ValueError('Unknown action for role')
             value=json.loads(row['value'])
-            if value.get('status')!='uncertain' or not value.get('local_recovery'):
+            if (value.get('status') not in ('running','uncertain') or not value.get('local_recovery')
+                    or value.get('status')=='running' and value.get('phase')!='stopping'):
                 raise ValueError('Action is not in local recovery')
             if result.get('call_id')!=call_id or result.get('status')!='failed':
                 raise ValueError('A confirmed stopped failure is required')
             value.update(status='failed', reason=result.get('reason'), finished_sim_s=sim_time,
-                         finished_at=time.time(), recovered_from_uncertain=True)
+                         finished_at=time.time(), recovered_from_uncertain=value.get('status')=='uncertain',
+                         phase='stopped')
             self.db.execute("UPDATE actions SET status='failed',value=? WHERE id=?",(packed(value),call_id))
-            self.db.execute("UPDATE calls SET status='failed',updated=? WHERE id=?",(time.time(),call_id))
+            stored=self.db.execute('SELECT result FROM calls WHERE id=?',(call_id,)).fetchone()
+            response=json.loads(stored['result']) if stored and stored['result'] else {'call_id':call_id}
+            response.update(execution_status='failed',execution=value,
+                            note='Original action stopped and was confirmed during local recovery.')
+            response.pop('error',None)
+            self.db.execute("UPDATE calls SET status='failed',result=?,updated=? WHERE id=?",(packed(response),time.time(),call_id))
             self.event('ARM_RECOVERY_CONFIRMED',actor,value)
             return value
 

@@ -68,6 +68,19 @@ class CapacityRecoveryTests(unittest.TestCase):
         self.assertFalse(self.host.recover_capacity(self.store, now=100))
         self.assertEqual(len(self.calls), 1)
 
+    def test_isolated_robot_does_not_prevent_model_resuming_to_investigate(self):
+        self.fail_turn()
+        for action in ({'status':'uncertain','isolated':True},
+                       {'status':'running','local_recovery':True,'phase':'stopping'}):
+            with self.subTest(action=action), patch.object(self.store, 'actions', return_value={'x':action}):
+                self.host.capacity_retry_due=None
+                self.assertTrue(self.host.recover_capacity(self.store, now=0))
+                self.assertTrue(self.host.recover_capacity(self.store, now=100))
+                self.assertEqual(self.host.wait(3)['status'],'idle')
+                self.assertEqual(self.calls[-1]['resume'],self.host.session_id)
+                if action.get('isolated'):
+                    self.host.state='error';self.host.retryable_capacity=True
+
     def test_accepted_request_must_settle_before_retry(self):
         self.fail_turn(); self.store.begin_call('old', 'Controller', 'move', {})
         self.assertTrue(self.host.recover_capacity(self.store, now=0))

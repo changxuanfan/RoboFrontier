@@ -26,6 +26,29 @@ class TerminalServoTests(unittest.TestCase):
     def setUp(self):
         self.world=robot_fixture();self.arm=self.world.arms['A'];self.cfg=load_harness()
 
+    def test_default_action_timeout_allows_more_time_than_previous_15_second_base(self):
+        q=self.arm.qref.copy();q[0]+=.2
+        cmd=self.world.validate_action('A','move',{'joint_rad':q.tolist(),'joint_speed_rad_s':.8},self.cfg)
+        self.assertGreaterEqual(cmd['timing']['timeout_sim_s'],30.0)
+
+    def test_live_nonsettling_stop_reports_the_unmet_conditions(self):
+        from robofrontier.stop_diagnostics import stop_diagnostics
+        a=self.arm;cmd=self.world.validate_action('A','move',{'joint_rad':a.qref.tolist()},self.cfg)
+        a.start('move',cmd,0);a.request_stop(.1,'Action timeout; stopped at current reference')
+        a.velocity[:]=.02;self.world.data.qvel[a.dofs]=.04
+        result=a.poll(3.2,15)
+        self.assertEqual(result['status'],'uncertain')  # Internal executor notification.
+        self.world.data.time=3.2
+        target=(self.world.data.qpos[a.qids]+.005).tolist()
+        detail=stop_diagnostics(self.world,'A','move',{'parameters':{'joint_rad':target}})
+        self.assertGreater(detail['max_reference_joint_speed_rad_s'],detail['reference_speed_limit_rad_s'])
+        self.assertGreater(detail['max_actual_joint_speed_rad_s'],detail['actual_speed_limit_rad_s'])
+        self.assertIn('reference_joint_speed',detail['unmet_conditions'])
+        self.assertIn('actual_joint_speed',detail['unmet_conditions'])
+        self.assertAlmostEqual(detail['max_joint_target_error_rad'],.005)
+        self.assertEqual(detail['joint_target_tolerance_rad'],.004)
+        self.assertEqual(a.job,'move')
+
     def test_accepted_slow_motion_has_enough_budget_for_reference_travel(self):
         w=self.world;a=self.arm
         jaw=w.validate_action('A','gripper',{'state':'close','speed_m_s':.005},self.cfg)
@@ -205,7 +228,8 @@ class SceneTopologyContractTests(unittest.TestCase):
             ok(call(owner,'gripper',{'robot':'A','width_m':.05,'wait':False},'unsettled'))
             s.world.finished.append({'call_id':'unsettled','status':'uncertain','reason':'Injected nonsettling stop'})
             s.pump();self.assertEqual(s.store.actions()['unsettled']['status'],'uncertain')
-            self.assertEqual(s.store.get('lifecycle'),'recovery_required')
+            self.assertEqual(s.store.get('lifecycle'),'running')
+            self.assertTrue(s.store.actions()['unsettled']['isolated'])
             self.assertIn('error',call(owner,'gripper',{'robot':'A','state':'open'})['result'])
             self.assertIn('error',call('Controller' if mode=='hierarchical' else owner,'finish')['result'])
         finally:s.close()

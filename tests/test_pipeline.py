@@ -314,28 +314,59 @@ class PipelineTests(unittest.TestCase):
         job=service.accept('A','send',{'to':['Controller'],'text':'reply'},'atomic-reply')
         job['done']=ReceiptEvent();service.pump()
         self.assertTrue(job['done'].is_set())
-    def test_executor_fault_is_uncertain_and_cannot_be_replayed(self):
+    def test_executor_fault_is_isolated_and_cannot_be_replayed(self):
         self.start()
-        def fail(*args):raise RuntimeError('fake acknowledgement lost')
+        original=self.service.world.start_action
+        def fail(robot,*args):
+            if robot=='A':raise RuntimeError('fake acknowledgement lost')
+            return original(robot,*args)
         self.service.world.start_action=fail
         result=self.call('A','gripper',{'state':'close'},'unknown')['result']
         self.assertEqual(result['execution_status'],'uncertain')
         self.assertEqual(self.service.store.actions()['unknown']['status'],'uncertain')
-        self.assertEqual(self.service.store.get('lifecycle'),'recovery_required')
+        self.assertEqual(self.service.store.get('lifecycle'),'running')
         self.assertIn('error',self.call('A','gripper',{'state':'open'})['result'])
+        self.assertEqual(self.call('B','gripper',{'state':'open','wait':False})['result']['execution_status'],'running')
+        self.assertTrue(any(e['event']=='arm_execution_unknown' for e in self.service.store.delivery('A')['system_events']))
+        inspection=self.call('A','job',{'call_id':'unknown'})['result']['execution_diagnostics']
+        self.assertEqual(inspection['controller_state'],'unavailable')
+        self.assertFalse(self.call('A','stop',{'call_id':'unknown'})['result']['stop_requested'])
+        self.service.world.time += 30.1
+        self.service.pump()
+        checks=[json.loads(r[0]) for r in self.service.store.db.execute("SELECT value FROM signals WHERE actor='A'")
+                if json.loads(r[0])['event']=='arm_execution_check']
+        self.assertEqual(checks[-1]['execution_diagnostics']['controller_state'],'unavailable')
+        self.assertEqual(self.service.store.actions()['unknown']['status'],'uncertain')
+        self.assertEqual(self.service.store.get('lifecycle'),'running')
+
+    def test_isolated_unknown_can_be_inspected_and_stopped_when_original_is_active(self):
+        from types import SimpleNamespace
+        self.start()
+        self.service.world.start_action=lambda *args: (_ for _ in ()).throw(RuntimeError('ack lost'))
+        self.call('A','move',{'delta_m':[0,0,.01]},'unknown-active')
+        self.service.world.arms={'A':SimpleNamespace(job='unknown-active',stopping=False,
+                                                     observe=lambda:{'joint_velocity_rad_s':[.1]})}
+        stops=[];self.service.world.request_stop=lambda robot,ident:stops.append((robot,ident))
+        inspected=self.call('A','job',{'call_id':'unknown-active'})['result']['execution_diagnostics']
+        self.assertEqual(inspected['controller_state'],'original_active')
+        self.assertEqual(inspected['robot']['joint_velocity_rad_s'],[.1])
+        result=self.call('A','stop',{'call_id':'unknown-active'})['result']
+        self.assertTrue(result['stop_requested']);self.assertEqual(stops,[('A','unknown-active')])
+        self.assertEqual(self.service.store.actions()['unknown-active']['status'],'uncertain')
+        self.assertEqual(self.service.store.get('lifecycle'),'running')
     def test_local_unsettled_arm_does_not_end_world_and_agent_can_reconcile(self):
         from types import SimpleNamespace
         self.start()
         self.call('A','gripper',{'state':'close','wait':False},'unsettled-A')
         self.call('B','gripper',{'state':'close','wait':False},'running-B')
         self.service.world.arms={'A':SimpleNamespace(job='unsettled-A',stopping=True,uncertainty_reported=True)}
-        self.service.world.finished.append({'call_id':'unsettled-A','status':'uncertain',
-            'reason':'Stop did not settle; engineering review required',
+        self.service.world.finished.append({'call_id':'unsettled-A','status':'stopping',
+            'reason':'Stop is still settling',
             'stop_reason':'Action timeout; stopped at current reference'})
         self.service.pump()
         self.assertEqual(self.service.store.get('lifecycle'),'running')
         self.assertFalse(self.service.ended)
-        self.assertEqual(self.service.store.actions()['unsettled-A']['status'],'uncertain')
+        self.assertEqual(self.service.store.actions()['unsettled-A']['phase'],'stopping')
         self.assertIn('B',self.service.world.running)
         self.assertIn('error',self.call('A','gripper',{'state':'open'})['result'])
         self.assertIn('error',self.call('B','recover_action',{'call_id':'unsettled-A'})['result'])
@@ -344,13 +375,61 @@ class PipelineTests(unittest.TestCase):
         self.service.world.recover_action=lambda robot,ident: None
         pending=self.call('A','recover_action',{'call_id':'unsettled-A'})['result']
         self.assertFalse(pending['recovered'])
-        self.assertEqual(self.service.store.actions()['unsettled-A']['status'],'uncertain')
+        self.assertEqual(self.service.store.actions()['unsettled-A']['phase'],'stopping')
         self.service.world.recover_action=lambda robot,ident: {'call_id':ident,'status':'failed','reason':'Action timed out; stopped and reconciled'}
         done=self.call('A','recover_action',{'call_id':'unsettled-A'})['result']
         self.assertTrue(done['recovered'])
         self.assertEqual(self.service.store.actions()['unsettled-A']['status'],'failed')
         self.service.world.running.pop('A')
         self.assertEqual(self.call('A','gripper',{'state':'open','wait':False},'new-action')['result']['execution_status'],'running')
+
+    def test_live_stopping_arm_has_diagnostics_and_other_arms_continue(self):
+        from types import SimpleNamespace
+        self.start()
+        self.call('A','gripper',{'state':'close','wait':False},'stopping-A')
+        self.call('B','gripper',{'state':'close','wait':False},'running-B')
+        self.service.world.arms={'A':SimpleNamespace(job='stopping-A',stopping=True,uncertainty_reported=True)}
+        diagnosis={'unmet_conditions':['actual_joint_speed'],'max_actual_joint_speed_rad_s':.07}
+        self.service.world.stop_diagnostics=lambda robot,ident:diagnosis
+        self.service.world.finished.append({'call_id':'stopping-A','status':'stopping',
+            'reason':'Stop is still settling','stop_reason':'Action timeout; stopped at current reference',
+            'stop_diagnostics':diagnosis})
+        self.service.pump()
+        action=self.service.store.actions()['stopping-A']
+        self.assertEqual(action['status'],'running');self.assertEqual(action['phase'],'stopping')
+        self.assertEqual(self.service.store.get('lifecycle'),'running')
+        self.assertIn('B',self.service.world.running)
+        self.assertIn('error',self.call('A','gripper',{'state':'open'})['result'])
+        self.assertEqual(self.call('A','job',{'call_id':'stopping-A'})['result']['stop_diagnostics'],diagnosis)
+        self.service.world.recover_action=lambda robot,ident: None
+        response=self.call('A','recover_action',{'call_id':'stopping-A'})['result']
+        self.assertFalse(response['recovered']);self.assertEqual(response['stop_diagnostics'],diagnosis)
+        self.service.world.recover_action=lambda robot,ident: {'call_id':ident,'status':'failed','reason':'stop confirmed'}
+        self.assertTrue(self.call('A','recover_action',{'call_id':'stopping-A'})['result']['recovered'])
+        self.assertEqual(self.service.store.actions()['stopping-A']['status'],'failed')
+        self.assertEqual(self.service.store.call('stopping-A')['result']['execution_status'],'failed')
+
+    def test_stopping_action_is_automatically_rechecked_and_confirmed(self):
+        from types import SimpleNamespace
+        self.start()
+        self.call('A','gripper',{'state':'close','wait':False},'auto-stop')
+        self.service.world.arms={'A':SimpleNamespace(job='auto-stop',stopping=True,uncertainty_reported=True)}
+        self.service.world.finished.append({'call_id':'auto-stop','status':'stopping','reason':'Stop is still settling'})
+        self.service.pump()
+        checks=[]
+        self.service.world.recover_action=lambda robot,ident: checks.append((robot,ident)) or None
+        self.service.world.time += 5.1
+        self.service.pump()
+        self.assertEqual(checks,[('A','auto-stop')])
+        self.assertEqual(self.service.store.actions()['auto-stop']['phase'],'stopping')
+        self.service.world.recover_action=lambda robot,ident: {'call_id':ident,'status':'failed','reason':'stop confirmed'}
+        self.service.world.time += 5.1
+        self.service.pump()
+        self.assertEqual(self.service.store.actions()['auto-stop']['status'],'failed')
+        self.assertEqual(self.service.store.call('auto-stop')['result']['execution_status'],'failed')
+        self.service.world.time += 10
+        self.service.pump()
+        self.assertEqual(self.service.store.actions()['auto-stop']['status'],'failed')
 
     def test_finish_closes_team_but_not_a_success_claim(self):
         self.start()
