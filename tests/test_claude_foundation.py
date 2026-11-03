@@ -85,6 +85,11 @@ class ClaudeFoundationTests(unittest.TestCase):
             bridge.call({'op':'observe','data':{'cameras':['top']},'views':['top']})
             self.assertEqual(calls[-1][1:3], ('observe', {'cameras':['top']}))
             with self.assertRaises(ValueError): bridge.call({'op': 'start', 'data': {}})
+            # A permitted operation with JSON text as data names the real mistake.
+            with self.assertRaisesRegex(ValueError, 'data must be a JSON object.*not a string'):
+                bridge.call({'op': 'send', 'data': '{"to": ["Controller"], "text": "hi"}'})
+            with self.assertRaisesRegex(ValueError, 'Unknown or administrative robot operation: start'):
+                bridge.call({'op': 'start', 'data': {}})
             self.assertEqual(handle({'method': 'tools/list'}, bridge)['tools'][0]['name'], 'robot')
             outside = Path(tmp) / 'outside.png'; outside.write_bytes(png)
             image.unlink(); image.symlink_to(outside)

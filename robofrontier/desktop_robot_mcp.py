@@ -39,7 +39,7 @@ TOOL = {
         'required': ['op', 'data'], 'additionalProperties': False},
 }
 # Same policy surface as the CLI robot tool; administrative methods stay with Meta.
-from robofrontier.robot_ops import POLICY_OPS
+from robofrontier.robot_ops import POLICY_OPS, check_request
 MAX_RUN_DEPTH = 6
 
 
@@ -107,8 +107,7 @@ class DesktopRobotBridge:
         if not isinstance(args, dict) or set(args) - {'op', 'data', 'call_id', 'views'}:
             raise ValueError('Invalid robot arguments')
         op, data, views = args.get('op'), args.get('data'), args.get('views', [])
-        if op not in POLICY_OPS or not isinstance(data, dict):
-            raise ValueError('Unknown or administrative robot operation')
+        check_request(op, data)
         if not isinstance(views, list) or not all(isinstance(v, str) and v for v in views):
             raise ValueError('views must be an array of camera names')
         # Like the CLI host: native call IDs are scoped by role and stable across retries.

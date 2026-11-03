@@ -26,7 +26,7 @@ TOOL = {
         'required': ['op', 'data'], 'additionalProperties': False},
 }
 # Administrative methods are never made available through the policy connection.
-from robofrontier.robot_ops import POLICY_OPS
+from robofrontier.robot_ops import POLICY_OPS, check_request
 
 
 class RobotBridge:
@@ -51,8 +51,7 @@ class RobotBridge:
             raise ValueError('Invalid robot arguments')
         op, data = args.get('op'), args.get('data')
         views = args.get('views', [])
-        if op not in POLICY_OPS or not isinstance(data, dict):
-            raise ValueError('Unknown or administrative robot operation')
+        check_request(op, data)
         if not isinstance(views, list) or not all(isinstance(v, str) and v for v in views):
             raise ValueError('views must be an array of camera names')
         with self.request_lock:
