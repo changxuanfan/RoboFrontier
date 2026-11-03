@@ -16,7 +16,7 @@ The task's family Skill (`task_skill`) covers that family's manipulation.
 Use the current mode. Centralized has one Controller planning and operating all
 robots, including concurrent actions. Hierarchical has a Controller and standing
 Workers; peer has standing Workers negotiating directly. Adaptive has a Controller
-and optional temporary delegates that execute a bounded scope and hand it back
+and temporary delegates that execute a bounded scope and promptly hand it back
 with `return_task`. Standing Workers stay team members after local completion; an
 ended reply ends neither membership nor a delegation. Runtime forks follow their
 current assignment, not team startup. Meta runs infrastructure, not the task plan.
