@@ -15,7 +15,8 @@ from pathlib import Path
 import re
 import time
 
-from robofrontier.claude.provenance import ForkDiverged, first_input, fork_provenance, history, transcript_rows
+from robofrontier.claude.provenance import (ForkDiverged, copied_history_length, first_input, fork_provenance,
+                                          history, transcript_rows)
 from robofrontier.delegation import Delegations
 from robofrontier.run_metrics import host_event
 from robofrontier.run_setup import write_json
@@ -150,7 +151,7 @@ def create_fork(store, parent_host, batch_id, actor, owner, *, host, prompt, sou
                 raise
             except ValueError:
                 proof = copy = None
-            if proof is not None and first_input(copy[len(source):]) == prompt:
+            if proof is not None and first_input(copy[copied_history_length(source, copy):]) == prompt:
                 break
             if time.time() >= batch['setup_deadline']:
                 raise ValueError('Delegate fork history was not verified before the setup deadline')

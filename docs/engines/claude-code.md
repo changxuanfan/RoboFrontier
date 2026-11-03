@@ -327,8 +327,13 @@ The child UUID is persisted before that turn. Until the batch is activated, a
 PreToolUse hook (`runner.gate_settings`) holds every tool call, robot or file,
 on gate files under `private/claude-forks/`; the runtime also refuses robot
 operations of a delegate that is not active. Setup verifies that the child's
-transcript copies exactly the pinned parent history, with no later parent row,
-and that its first input is the delegate message, then binds scope, activates
+transcript copies the pinned parent history, or its verified compacted projection,
+with no later parent row, and that its first input is the delegate message. For a
+compacted projection, the latest boundary's preserved-message metadata determines
+the exact retained segment and the two reparented edges; the summary and message
+contents are still checked. Per-session cwd, slug, branch, and preserved assistant
+usage metadata are excluded from that comparison. Unrecognized compaction layouts
+fail closed. Setup then binds scope, activates
 the batch and opens each gate. A failure closes the gates of children not yet
 released, stops them and pauses the run for review; no tool of theirs runs.
 

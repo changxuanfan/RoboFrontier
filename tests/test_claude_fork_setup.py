@@ -103,6 +103,27 @@ class ForkSetupTests(unittest.TestCase):
         created=[e for e in events if e['event']=='fork_created']
         self.assertEqual(created[0]['session_id'],output['child_session'])
 
+    def test_compacted_history_verifies_delegate_input_at_child_boundary(self):
+        from tests.test_claude_compacted_fork import child_copy, compacted_source
+        source = compacted_source()
+        source[-1]['message'] = self.row['message']  # The saved boundary is a pending delegate call.
+        source = [{**item, 'sessionId': PARENT} for item in source]
+        transcript = self.folder/(PARENT+'.jsonl')
+        transcript.write_text(''.join(json.dumps(item)+'\n' for item in source))
+        def compacted_runner(*args, **kwargs):
+            child = kwargs['session_id']
+            inherited = child_copy(source)
+            inherited = [{**item, 'sessionId': child} for item in inherited]
+            inherited.append({'type':'user', 'uuid':'child-prompt', 'sessionId':child,
+                              'message':{'role':'user', 'content':args[4]}})
+            (self.folder/(child+'.jsonl')).write_text(''.join(json.dumps(item)+'\n' for item in inherited))
+            return {'process':'exited','exit_code':0,'summary':{'session_id':child,'turn_status':'ended',
+                    'malformed_lines':0,'total_cost_usd':.01}}
+        output = self.create(compacted_runner)
+        self.assertEqual(output['status'], 'history_verified_gated')
+        self.assertEqual(output['proof']['source_ordinal'], len(source))
+        self.assertFalse(Path(self.gate()['open']).exists())
+
     def test_generated_delegate_id_is_bound_to_native_tool_use(self):
         from robofrontier.claude.request_identity import bind_delegate
         item = self.row['message']['content'][0]

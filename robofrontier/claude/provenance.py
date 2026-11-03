@@ -1,12 +1,13 @@
 """Verify that a Claude Code fork inherited its parent's history, from native transcripts.
 
 `claude --resume PARENT --fork-session` writes the child's transcript under the same
-config directory. Observed with CLI 2.1.312 and 2.1.316: the child carries every parent
-message row with the same uuid and content, differing only in `sessionId` and
-`promptId`, and the CLI writes it as the child's first turn starts, before the model
-replies. Anything else that differs, or a parent that changed after the fork, is
-rejected rather than tolerated. The model's own claims are never used as evidence.
+config directory. An uncompacted fork preserves the source history exactly. After
+compaction, the CLI resumes at the latest boundary and reinserts the preserved
+segment described by that boundary. Only documented-by-observation metadata changes
+are normalized; unrecognized history changes fail closed. The model's own claims are
+never used as evidence.
 """
+import copy
 import hashlib
 import json
 import re
@@ -56,13 +57,65 @@ class ForkDiverged(ValueError):
     """The histories differ in a way no further transcript write can repair."""
 
 
+def copied_history_length(source, copied):
+    """Verify the inherited prefix and return its length in the child transcript.
+
+    Claude can resume from a compact boundary instead of copying earlier history.
+    Its preserved-message metadata describes the only supported reordering and the
+    two reparented edges. Unknown compaction formats fail closed.
+    """
+    if copied[:len(source)] == source:
+        return len(source)
+    boundaries = [i for i, row in enumerate(source)
+                  if row.get('type') == 'system' and row.get('subtype') == 'compact_boundary']
+    if not boundaries:
+        raise ValueError('Native fork history does not match the source session')
+    boundary = boundaries[-1]
+    metadata = source[boundary].get('compactMetadata')
+    if not isinstance(metadata, dict):
+        raise ValueError('Compaction metadata missing')
+    preserved = metadata.get('preservedMessages')
+    segment = metadata.get('preservedSegment')
+    if not isinstance(preserved, dict) or not isinstance(segment, dict):
+        raise ValueError('Unsupported compaction metadata')
+    ids = preserved.get('uuids')
+    anchor = preserved.get('anchorUuid')
+    if (not isinstance(ids, list) or not ids or any(not isinstance(i, str) for i in ids)
+            or len(set(ids)) != len(ids) or preserved.get('allUuids') != ids
+            or segment.get('headUuid') != ids[0] or segment.get('tailUuid') != ids[-1]
+            or segment.get('anchorUuid') != anchor):
+        raise ValueError('Invalid preserved compaction segment')
+    if boundary < len(ids) or [row['uuid'] for row in source[boundary-len(ids):boundary]] != ids:
+        raise ValueError('Preserved segment is not contiguous before compaction')
+    anchors = [i for i in range(boundary+1, len(source)) if source[i]['uuid'] == anchor]
+    if len(anchors) != 1 or source[anchors[0]].get('isCompactSummary') is not True:
+        raise ValueError('Compaction summary anchor is missing or ambiguous')
+    anchor_index = anchors[0]
+    if anchor_index + 1 >= len(source):
+        raise ValueError('Compaction has no post-summary history')
+    expected = copy.deepcopy(source[boundary:anchor_index+1] + source[boundary-len(ids):boundary]
+                             + source[anchor_index+1:])
+    insertion = anchor_index-boundary+1
+    expected[insertion]['parentUuid'] = anchor
+    expected[insertion+len(ids)]['parentUuid'] = ids[-1]
+    actual = copy.deepcopy(copied[:len(expected)])
+    for row in expected + actual:
+        row.pop('cwd', None)
+        row.pop('slug', None)
+        row.pop('gitBranch', None)
+        if row.get('uuid') in ids and row.get('type') == 'assistant' and isinstance(row.get('message'), dict):
+            row['message'].pop('usage', None)
+    if actual != expected:
+        raise ValueError('Compacted native fork history does not match the source session')
+    return len(expected)
+
+
 def fork_provenance(parent, child, config_dir, at=None):
     """Compare the native history prefix; this alone does not prove fork creation.
 
-    Without `at`, the child must copy the parent's whole current history. `at` pins the
-    parent's history at the fork point (for a delegate, its pending delegate call): the
-    parent must still begin with it, though it may have moved on since, and the child
-    must copy exactly it, with no later parent row.
+    `at` pins the parent's history at the fork point (for a delegate, its pending
+    delegate call). The parent must still begin with it, and the child must carry the
+    exact source or its verified compacted projection, with no later parent row.
     """
     if parent == child:
         raise ValueError('A fork cannot be its own source')
@@ -73,9 +126,8 @@ def fork_provenance(parent, child, config_dir, at=None):
         raise ValueError('Source session has no recorded history')
     if current[:len(source)] != source:
         raise ForkDiverged('Source session no longer begins with the fork point')
-    if copy[:len(source)] != source:
-        raise ValueError('Native fork history does not match the source session')
-    if at is not None and {row['uuid'] for row in copy[len(source):]} & {row['uuid'] for row in current}:
+    copied_length = copied_history_length(source, copy)
+    if at is not None and {row['uuid'] for row in copy[copied_length:]} & {row['uuid'] for row in current}:
         raise ForkDiverged('Native fork copied source history beyond the fork point')
     digest = hashlib.sha256(json.dumps(source, sort_keys=True).encode()).hexdigest()
     return {'source_thread_id': parent, 'source_ordinal': len(source),
