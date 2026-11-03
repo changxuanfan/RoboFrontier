@@ -173,3 +173,43 @@ result, use its original outer ID and exactly the same operation and data.
 Do not assign a new ID to replay an uncertain physical action. How the Claude
 host generates and binds IDs is described in
 [new requests, queries and delegation](engines/README.md#new-requests-queries-and-delegation).
+
+## Start message, system prompt and wall limit
+
+New runs give every policy role its inputs without depending on file reads, and
+keep the rules through context compaction. Both engines receive the same bytes.
+
+- **System prompt.** `private/inputs/bootstrap/system.md` is the policy role
+  statement followed by this run's `public/inputs/rules.md`. Claude Code receives
+  it as `--system-prompt`, Codex as each thread's `baseInstructions`, delegates
+  included. A compacted conversation keeps it whole.
+- **Start message.** Each initial role's first message carries its other public
+  text inputs in full (`task.json`, `roles.json`, its role file, the Skill, its
+  tool, motion-check, communication and adaptive references as the topology needs,
+  and the family materials), each under its absolute path. The files stay
+  readable on disk. The message is limited to 400,000 bytes.
+- **Wall limit.** The public `task.json` no longer states
+  `run_protocol.total_wall_limit_s`; the private task keeps it and the host
+  enforces it as before. The rules ask policies to plan as if time were
+  unlimited, and a policy can no longer estimate the time left from its inputs.
+
+Earlier runs keep their frozen system prompt, start message and public task.
+
+## IK failure detail
+
+A `move`, `check_motion` candidate or `action_batch` member whose pose has no
+verified IK solution is still rejected before execution with the same `error`.
+The response now also carries `ik_detail`:
+
+| Field | Meaning |
+| --- | --- |
+| `closest_found_tcp_m`, `position_error_m`, `rotation_error_rad` | The closest TCP pose the solver found and how far it is from the request |
+| `horizontal_distance_from_base_m` | The target's and that pose's horizontal distance from the robot base |
+| `orientation` | The orientation used: the requested `quaternion_wxyz`, or the current one kept |
+| `home_orientation` | Whether the same position solves with the robot's home hand orientation, and that quaternion |
+
+The solver searches locally from the current joint references, so these are
+solver facts, not a proof of the reach limit or a suggested target. No object
+state is used. The extra home-orientation solve runs only after the rejection;
+accepted moves and execution are unchanged (`robofrontier/robot_control.py`,
+reviewed in `benchmark/source-compatibility.json`).

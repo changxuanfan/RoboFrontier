@@ -824,7 +824,8 @@ def task_for(case,env,folder):
 def public_task(task):
     keys=('kind','id','suite_version','family','level','arms','rules','objective','observation_contract','gripper_profile','cameras','coordinate_frame','execution_readiness')
     result={k:deepcopy(task[k]) for k in keys}
-    if 'run_protocol' in task:result['run_protocol']=deepcopy(task['run_protocol'])
+    # The host enforces the wall limit; policies plan as if time were unlimited, so it stays private.
+    if 'run_protocol' in task:result['run_protocol']={k:deepcopy(v) for k,v in task['run_protocol'].items() if k!='total_wall_limit_s'}
     if task['family']!='dial':result['initial_supplies']=[dict(source=s,color=c,count=n) for (s,c),n in sorted(Counter((o.get('source'),o.get('color')) for o in task['objects']).items())]
     result['mechanism']=deepcopy(task['mechanism'])
     for assembly in result['mechanism'].get('payload_assemblies',[]):assembly.pop('initial_position_m',None)

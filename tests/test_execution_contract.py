@@ -42,6 +42,31 @@ class TerminalServoTests(unittest.TestCase):
             w.validate_action('A','gripper',{'state':'close','speed_m_s':.005},limited)
         np.testing.assert_array_equal(before,w.data.qpos);self.assertIsNone(a.job)
 
+    def test_a_move_without_ik_solution_reports_what_the_solver_found(self):
+        from robofrontier.robot_control import IKNoSolution, IK_MESSAGE, quat_matrix
+        w=self.world;a=self.arm;before=w.data.qpos.copy()
+        # Too far at that height with the current hand: the closest pose found falls short.
+        with self.assertRaises(IKNoSolution) as caught:
+            w.validate_action('A','move',{'target_m':[.635,-.395,.895]},self.cfg)
+        far=caught.exception.detail
+        self.assertEqual(str(caught.exception),IK_MESSAGE)
+        self.assertGreater(far['position_error_m'],.0025)
+        reach=far['horizontal_distance_from_base_m']
+        self.assertLess(reach['closest_found'],reach['target'])
+        self.assertIn('kept the current hand orientation',far['orientation']['source'])
+        self.assertFalse(far['home_orientation']['solvable'])
+        # Within reach but with the hand flipped: the home orientation it reports solves it.
+        target=(w.data.site_xpos[a.site]+np.array([0,0,-.1])).tolist()
+        flipped=matrix_quat(quat_matrix([0,0,1,0])@a.home_rotation).tolist()
+        with self.assertRaises(IKNoSolution) as caught:
+            w.validate_action('A','move',{'target_m':target,'quaternion_wxyz':flipped},self.cfg)
+        tilted=caught.exception.detail
+        self.assertEqual(tilted['orientation']['source'],'requested quaternion_wxyz')
+        self.assertTrue(tilted['home_orientation']['solvable'])
+        w.validate_action('A','move',{'target_m':target,'quaternion_wxyz':tilted['home_orientation']['quaternion_wxyz']},self.cfg)
+        # Both were rejected before execution.
+        np.testing.assert_array_equal(before,w.data.qpos);self.assertIsNone(a.job)
+
     def test_timeout_stops_reference_and_retains_job_until_settled(self):
         a=self.arm;command=self.world.validate_action('A','gripper',{'state':'close'},self.cfg)
         command['timing']['timeout_sim_s']=.1;a.start('jaw',command,0)

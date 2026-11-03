@@ -527,7 +527,9 @@ class RuntimeService:
             else:
                 raise ValueError('Unknown tool operation')
         except (ValueError, KeyError, TypeError) as error:
-            self.respond(job, {'error': str(error)})
+            # A failed IK request also reports what the solver found (robot_control.IKNoSolution).
+            detail = getattr(error, 'detail', None)
+            self.respond(job, {'error': str(error), **({'ik_detail': detail} if detail is not None else {})})
         if job['result'] is not None:
             job['done'].set()
 

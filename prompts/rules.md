@@ -4,11 +4,12 @@ These rules apply to every policy role in this run. Paths are under `{{RUN_DIR}}
 
 ## Inputs
 
-Your first message lists the files to read: these rules, `task.json`, `roles.json`,
-your role file, the robot-collaboration Skill and its tool reference, and the
-family materials task.json lists (paths relative to `public/inputs/`). task.json
-states what this task requires; `task_skill` is the family Skill on how to do it
-well.
+These rules are part of your system prompt. Your first message carries your other
+inputs in full, each under its path: `task.json`, `roles.json`, your role file, the
+robot-collaboration Skill and its tool reference, and the family materials
+task.json lists (paths relative to `public/inputs/`). The same files stay readable
+on disk. task.json states what this task requires; `task_skill` is the family Skill
+on how to do it well.
 
 Policy inputs are the public task and family materials, permitted RGB and robot
 feedback, your work note, authorized messages and the reports referenced to you,
@@ -59,8 +60,8 @@ inspect current evidence, resolve uncertain actions by their original IDs and
 continue with recovery or a feasible alternative. Lack of progress calls for
 reassessment, coordination or a bounded wait followed by review.
 
-Plan and act as if time were unlimited, whatever wall limit READY reports. The
-host enforces the clock and ends the run itself; a short limit, a large task or
+Plan and act as if time were unlimited. The host keeps any clock and ends the
+run itself; the run's length, a large task or
 little progress so far is never a reason to shorten the plan, skip work,
 summarize an incomplete task or call `finish`. Elapsed time or an estimate of
 remaining time is not evidence of a blocker. Continue useful work until

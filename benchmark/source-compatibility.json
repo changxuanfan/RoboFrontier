@@ -59,9 +59,9 @@
         "dial"
       ],
       "historical_sha256": "46a02d147383673cf36a17865ad601c034dea6ff7f9c3a72561c28b64fc899b2",
-      "integrated_sha256": "57f5d92e52d5ab44d81e6d5281df3c193fc2590183836737f5f61b09bb06694f",
+      "integrated_sha256": "93f22a4ff0d19b26239ce95e046846a1f51fd991144edeb00fa3066f6df892e0",
       "unaffected_ast_sha256": "0a44db54291887a829f4ab3118c73ae0ae14992efec4b12a45bf1e9d03854026",
-      "review": "Only the exact reviewed PandaArm statements for local recovery of an uncertain stop (recover_stopped and its stability sampling after uncertainty) and the engineering fault hold are normalized (source_compatibility.ARM_RECOVERY). They act only after a stop was already reported uncertain or when a fault is frozen in private/inputs; with them reverted the AST equals the historical source, including motion, gripper, grasp and stop control. This is historical control-source compatibility, not new physics qualification."
+      "review": "Only the exact reviewed PandaArm statements for local recovery of an uncertain stop (recover_stopped and its stability sampling after uncertainty), the engineering fault hold, and the details a move without a verified IK solution reports (IKNoSolution and PandaArm.ik_failure; same rejection before execution, same message) are normalized (source_compatibility.ARM_RECOVERY). The recovery and fault statements act only after a stop was already reported uncertain or when a fault is frozen in private/inputs, and the IK details are computed only after the move is already rejected; with them reverted the AST equals the historical source, including motion, gripper, grasp and stop control. This is historical control-source compatibility, not new physics qualification."
     }
   ]
 }

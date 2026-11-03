@@ -43,6 +43,15 @@ def advance_rotation(current,target,angle):
     return quat_matrix(q)@current
 
 
+IK_MESSAGE='Requested pose has no verified IK solution; change pose or allocation'
+
+
+class IKNoSolution(ValueError):
+    """A move without a verified IK solution; detail states what the solver found."""
+    def __init__(self,detail):
+        super().__init__(IK_MESSAGE);self.detail=detail
+
+
 def finite_vector(value,length,label):
     vector=np.asarray(value,dtype=float)
     if vector.shape!=(length,) or not np.isfinite(vector).all():raise ValueError('Finite '+label+' required')
@@ -198,11 +207,28 @@ class PandaArm:
         angular=bounded(p.get('angular_speed_rad_s',limits['default_angular_speed_rad_s']),limits['allowed_angular_speed_rad_s'],'Angular speed')
         q,error=self.ik.solve(goal,rotation,self.qref,250);_,reached=self.ik.pose(q)
         if error>.0025 or np.linalg.norm(rotation_vector(rotation,reached))>.02:
-            raise ValueError('Requested pose has no verified IK solution; change pose or allocation')
+            raise IKNoSolution(self.ik_failure(goal,rotation,'quaternion_wxyz' in p,q,error))
         current_r=self.data.site_xmat[self.site].reshape(3,3)
         duration=max(np.linalg.norm(goal-actual)/speed,np.linalg.norm(rotation_vector(rotation,current_r))/angular,
                      np.max(np.abs(q-self.qref))/JOINT_SPEED_LIMIT)
         return self.timed({'op':op,'goal':goal,'rotation':rotation,'speed':speed,'angular_speed':angular},duration,cfg)
+
+    def ik_failure(self,goal,rotation,requested,q,error):
+        """Facts for a failed IK request: the closest pose found, and the same position with the home hand orientation."""
+        position,reached=self.ik.pose(q)
+        base=self.data.xpos[self.model.body(self.name+'_link0').id][:2]
+        home_q,home_error=self.ik.solve(goal,self.home_rotation,self.qref,250);_,home_reached=self.ik.pose(home_q)
+        home=home_error<=.0025 and np.linalg.norm(rotation_vector(self.home_rotation,home_reached))<=.02
+        values=lambda v:[round(float(x),4) for x in v]
+        quat=lambda r:values(matrix_quat(r)*(1 if matrix_quat(r)[0]>=0 else -1))
+        return dict(robot=self.name,closest_found_tcp_m=values(position),position_error_m=round(float(error),4),
+            rotation_error_rad=round(float(np.linalg.norm(rotation_vector(rotation,reached))),4),
+            horizontal_distance_from_base_m=dict(target=round(float(np.linalg.norm(goal[:2]-base)),4),
+                                                 closest_found=round(float(np.linalg.norm(position[:2]-base)),4)),
+            orientation=dict(source='requested quaternion_wxyz' if requested else 'kept the current hand orientation; no quaternion_wxyz given',
+                             quaternion_wxyz=quat(rotation)),
+            home_orientation=dict(solvable=bool(home),quaternion_wxyz=quat(self.home_rotation)),
+            scope='Found by a local IK search from the current joint references; not a proof of the reach limit')
 
     def timed(self,command,duration,cfg):
         timing=execution_timing(cfg);budget=timing['base_timeout_sim_s']+timing['reference_time_factor']*float(duration)

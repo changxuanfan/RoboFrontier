@@ -154,6 +154,18 @@ class StopProtocolTests(unittest.TestCase):
         self.assertFalse(self.call('A','stop',{'call_id':'moving-a'})['result']['stop_requested'])
         self.assertEqual(self.service.world.running['A'],'next-a')
 
+    def test_a_rejected_move_returns_the_ik_detail_and_other_errors_do_not(self):
+        from robofrontier.robot_control import IKNoSolution, IK_MESSAGE
+        detail={'robot':'A','closest_found_tcp_m':[.5,0,.7],'home_orientation':{'solvable':True}}
+        def unreachable(actor,op,data,cfg):raise IKNoSolution(detail)
+        self.service.world.validate_action=unreachable
+        result=self.call('A','move',{'target_m':[2,0,.7]})['result']
+        self.assertEqual(result['error'],IK_MESSAGE);self.assertEqual(result['ik_detail'],detail)
+        self.assertNotIn('A',self.service.world.running)
+        def other(actor,op,data,cfg):raise ValueError('TCP workspace target outside admitted bounds')
+        self.service.world.validate_action=other
+        self.assertNotIn('ik_detail',self.call('A','move',{'target_m':[9,0,.7]})['result'])
+
     def test_gripper_feedback_is_delivered_without_claiming_grasp(self):
         self.call('A','gripper',{'state':'close','wait':False},'closing')
         self.service.world.running.pop('A')

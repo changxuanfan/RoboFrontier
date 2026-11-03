@@ -83,6 +83,26 @@ class EngineParityTests(unittest.TestCase):
                             self.assertIn(policy_bootstrap.STARTUP[STARTUP[topology]], text)
                             self.assertIn(policy_bootstrap.READABLE, text)
 
+    def test_the_start_message_carries_the_inputs_and_the_system_prompt_the_rules(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
+            run = self.prepare_pair(tmp, 'mosaic-a04-6x12-d1', 'adaptive')['codex']
+            public = run/'public/inputs'
+            text = (run/'private/inputs/bootstrap/Controller.md').read_text()
+            for relative in ('task.json', 'roles.json', 'roles/Controller.md', 'skill/SKILL.md',
+                             'skill/references/tools.md', 'skill/references/motion-check.md',
+                             'skill/references/communication.md', 'skill/references/adaptive.md'):
+                self.assertIn('--- '+str(public/relative)+' ---\n'+(public/relative).read_text().rstrip('\n'), text)
+            rules = (public/'rules.md').read_text().rstrip('\n')
+            self.assertNotIn(rules, text)
+            self.assertEqual((run/'private/inputs/bootstrap/system.md').read_text(), policy_bootstrap.system_prompt(run))
+            self.assertIn(rules, policy_bootstrap.system_prompt(run))
+            # The host keeps the wall limit; no policy input states it.
+            private = json.loads((run/'private/inputs/task.json').read_text())['run_protocol']
+            self.assertIn('total_wall_limit_s', private)
+            self.assertNotIn('total_wall_limit_s', json.loads((public/'task.json').read_text())['run_protocol'])
+            for path in list(public.rglob('*.md'))+list(public.rglob('*.json'))+[run/'private/inputs/bootstrap/Controller.md']:
+                self.assertNotIn('total_wall_limit_s', path.read_text(), path)
+
     def test_resume_message_is_one_frozen_template_for_both_engines(self):
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
             root = Path(tmp).resolve()
@@ -154,7 +174,13 @@ class EngineRenderingTests(unittest.TestCase):
             self.assertEqual(set(tools), {'Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep'})
             self.assertNotIn('--bare', cmd)
             self.assertEqual(cmd[cmd.index('--setting-sources')+1], '')
-            self.assertEqual(cmd[cmd.index('--system-prompt')+1], policy_bootstrap.SYSTEM_PROMPT)
+            system = cmd[cmd.index('--system-prompt')+1]
+            # The system prompt is the role statement followed by the run's rules, which a
+            # compacted conversation therefore keeps.
+            self.assertEqual(system, policy_bootstrap.system_prompt(run))
+            self.assertTrue(system.startswith(policy_bootstrap.SYSTEM_PROMPT))
+            self.assertIn((run/'public/inputs/rules.md').read_text().rstrip('\n'), system)
+            self.assertIn('Plan and act as if time were unlimited.', system)
             self.assertEqual(policy_cwd(run), run/'workspace')
             # A delegate's fork turn gets the same tools and prompt, plus the gate that holds
             # them until the runtime activates it.
@@ -162,7 +188,7 @@ class EngineRenderingTests(unittest.TestCase):
             fork = build_command('m', 'high', 'mcp.json', 'go', session_id='c', fork_from='p', settings=settings,
                                  system_prompt=policy_system_prompt(run), prompt_via_stdin=True, gate=gate)
             self.assertEqual(fork[fork.index('--tools')+1], cmd[cmd.index('--tools')+1])
-            self.assertEqual(fork[fork.index('--system-prompt')+1], policy_bootstrap.SYSTEM_PROMPT)
+            self.assertEqual(fork[fork.index('--system-prompt')+1], system)
             forked = json.loads(fork[fork.index('--settings')+1])
             self.assertEqual(forked['permissions'], settings['permissions'])
             self.assertIn('PreToolUse', forked['hooks'])
@@ -180,6 +206,6 @@ class EngineRenderingTests(unittest.TestCase):
             self.assertIn('web_search="disabled"', args)
             self.assertIn('project_doc_max_bytes=0', args)
             catalog = json.loads((run/'private/inputs/models.json').read_text())
-            self.assertEqual(catalog['models'][0]['base_instructions'], policy_bootstrap.SYSTEM_PROMPT)
+            self.assertEqual(catalog['models'][0]['base_instructions'], policy_bootstrap.system_prompt(run))
             self.assertEqual(launch['context_window'], 272000)
             self.assertEqual(launch['auto_compact_token_limit'], 258400)

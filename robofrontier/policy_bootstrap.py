@@ -1,8 +1,10 @@
 """The first message every policy role receives, generated once at preparation.
 
 Hosts send private/inputs/bootstrap/<actor>.md unchanged. The text is the same for both
-engines except its last line (ENGINE_LINES). It points at the files to read and states
-this run's startup protocol; the rules, Skills and tool reference hold everything else.
+engines except its last line (ENGINE_LINES). It carries the role's public text inputs
+inline, so no role depends on reading files to start, and states this run's startup
+protocol. The run's rules go into the system prompt (system.md), which both engines keep
+whole when they compact a long conversation.
 """
 import json
 from pathlib import Path
@@ -15,8 +17,9 @@ ENGINE_LINES = {
     'codex': ('View images listed in the task with view_image. Do not use Codex collaboration tools '
               '(spawn_agent and similar); split work only through robot delegate.'),
 }
-# The whole system prompt of every policy turn on both engines: it replaces Claude Code's
-# and Codex's own coding-agent instructions, so both models see the same text.
+# The first part of every policy turn's system prompt on both engines (system_prompt adds the
+# run's rules): it replaces Claude Code's and Codex's own coding-agent instructions, so both
+# models see the same text.
 SYSTEM_PROMPT = ('You are a RoboFrontier policy agent. Follow the frozen public task, your current role, '
                  'the tool protocol and the evidence boundaries. Command only the robots assigned to your role, '
                  'use other tools within your permissions, and preserve original call IDs across uncertain results. Do not manage the model host, modify '
@@ -87,28 +90,41 @@ def bootstrap_text(run, actor):
     for name in task.get('family_materials', []):
         if not isinstance(name, str): raise ValueError('Invalid public material reference')
         if name.endswith(('.md', '.json', '.txt')): paths.append(name)
-    listed = []
+    parts = []
     for relative in dict.fromkeys(paths):
         path = (public / relative).resolve()
         if not path.is_relative_to(public) or not path.is_file():
             raise ValueError('Missing or invalid public input: ' + relative)
-        listed.append('- ' + str(public / relative))
+        # rules.md is the system prompt's second part (system_prompt); the others follow here.
+        if relative != 'rules.md':
+            parts.append('--- ' + str(public / relative) + ' ---\n' + path.read_text().rstrip('\n'))
     # Written only while a new run is prepared, before its manifest records the layout.
     lessons = run / run_layout.LAYOUTS[run_layout.CURRENT]['skills_file']
-    if lessons.is_file():
-        listed.append('- the headings of ' + str(lessons) + ', the run\'s shared lessons')
+    lessons_line = ('Before acting, read the headings of ' + str(lessons) + ', the run\'s shared lessons; '
+                    'teammates may add entries during the run.\n\n' if lessons.is_file() else '')
     startup = STARTUP[harness.get('startup_protocol', 'ready_barrier_v1')]
-    return ('This is a new, independent RoboFrontier trial in ' + str(run) + '. Your role is ' + actor + '.\n\n'
-            'Read these files with your file tools before acting:\n' + '\n'.join(listed) + '\n\n' + READABLE + '\n\n'
-            + startup + '\n\n'
+    text = ('This is a new, independent RoboFrontier trial in ' + str(run) + '. Your role is ' + actor + '.\n\n'
+            'The run\'s rules are in your system prompt (also at ' + str(public / 'rules.md') + '). Your other '
+            'public inputs follow in full, each under its path.\n\n' + '\n\n'.join(parts) + '\n\n--- end of inputs ---\n\n'
+            + READABLE + '\n\n' + lessons_line + startup + '\n\n'
             + ENGINE_LINES[harness.get('engine', 'codex')] + '\n')
+    if len(text.encode()) > MAX_BOOTSTRAP_BYTES:
+        raise ValueError('Public inputs exceed the start message size limit')
+    return text
 
 
 # A permission list that denies the repository and then allows this run's folder
 # inside it read to some models as "denied"; the more specific entry wins.
-READABLE = ('These files are readable. Your filesystem permissions deny the repository that '
-            'holds this run but allow this run\'s folder; the more specific entry wins. Only '
-            'the run\'s private/ folder stays closed. Read them now, for example with cat.')
+READABLE = ('The same files stay readable on disk. Your filesystem permissions deny the repository '
+            'that holds this run but allow this run\'s folder; the more specific entry wins. Only '
+            'the run\'s private/ folder stays closed. Reread any of them with your file tools when needed.')
+MAX_BOOTSTRAP_BYTES = 400_000
+
+
+def system_prompt(run):
+    """The frozen system prompt: the policy role statement, then this run's rules."""
+    rules = (Path(run) / 'public/inputs/rules.md').read_text()
+    return SYSTEM_PROMPT + '\n' + rules.rstrip('\n') + '\n'
 
 
 def write_bootstraps(run):
@@ -117,7 +133,7 @@ def write_bootstraps(run):
     roles = json.loads((run / 'public/inputs/roles.json').read_text())['roles']
     folder = run / 'private/inputs/bootstrap'
     folder.mkdir()
-    (folder / 'system.md').write_text(SYSTEM_PROMPT)
+    (folder / 'system.md').write_text(system_prompt(run))
     written = [folder / 'system.md']
     for actor, info in roles.items():
         if info.get('kind') == 'manager': continue
