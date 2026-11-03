@@ -157,6 +157,14 @@ EOF
   --output runs/policy/my-l1-batch --level 1 --min-arms --parallel 4
 ```
 
+On macOS, `robofrontier run BATCH --durable` submits a user launchd service with
+`ProcessType=Interactive` so explicitly launched benchmark work receives
+application-class CPU and I/O scheduling. This process classification does not
+force every thread to use the highest QoS. It applies to newly submitted services;
+changing source code does not reload an existing service. Keep active runs on
+their original source checkout and use a separate worktree for development,
+because run integrity checks verify the live source files.
+
 The NVIDIA/EGL owner path now creates a headless EGL context rather than opening
 a GLFW window. NVIDIA hardware verification remains required. Installing a
 Python environment alone does not install NVIDIA drivers or system OSMesa/EGL

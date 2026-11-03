@@ -2,7 +2,8 @@
 
 The service runs the unified `run` command, which loads credentials from the
 ignored .env itself, so the service file stores no credential. A batch is
-submitted once; its world is never restarted automatically.
+submitted once; its world is never restarted automatically. Explicit benchmark
+runs use application-class scheduling through ProcessType=Interactive.
 """
 import hashlib
 import json
@@ -29,7 +30,7 @@ def service(batch, *, engineering, python, environment):
     folder = run_layout.batch_path(batch, 'durable')
     command = [str(python), '-m', 'robofrontier.cli', 'run', str(batch)] + (['--engineering'] if engineering else [])
     return {'Label': service_label(batch), 'ProgramArguments': command, 'WorkingDirectory': str(ROOT),
-            'RunAtLoad': True, 'KeepAlive': False,
+            'RunAtLoad': True, 'KeepAlive': False, 'ProcessType': 'Interactive',
             'StandardOutPath': str(folder/'stdout.log'), 'StandardErrorPath': str(folder/'stderr.log'),
             'EnvironmentVariables': environment}
 

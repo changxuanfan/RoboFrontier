@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import plistlib
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -28,6 +29,8 @@ class DurableTests(unittest.TestCase):
                 durable.submit(batch)
             (batch/'batch.json').write_text(json.dumps({'status': 'prepared_not_started', 'jobs': [], **run_layout.batch_record()}))
             self.assertEqual(durable.submit(batch)['label'], durable.service_label(batch.resolve()))
+            with (batch/'control/durable/service.plist').open('rb') as source:
+                self.assertEqual(plistlib.load(source)['ProcessType'], 'Interactive')
             with self.assertRaises(FileExistsError):
                 durable.submit(batch)
 
