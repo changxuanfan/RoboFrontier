@@ -122,12 +122,24 @@ class MotionEditTests(unittest.TestCase):
             source.data.qpos[source.model.joint('A_joint1').qposadr[0]] += .12
             source.data.qpos[source.model.joint('D01_hinge').qposadr[0]] += .01
             expected = play.apply(case['id'],source,source.data.qpos,3.)
+            moved = play.manifest['workstation_names'][case['id']]['robot_labels_moved']
+            self.assertTrue(moved)
+            place = play.manifest['placements'][0]
+            angle = place['yaw_rad']
+            rotation = np.array([[np.cos(angle),-np.sin(angle)],[np.sin(angle),np.cos(angle)]])
             for name, target in play.manifest['workstation_names'][case['id']]['geom_names'].items():
                 geometry = play.model.geom(target).id
                 pose = expected['geometries'][name]
-                np.testing.assert_allclose(play.data.geom_xpos[geometry],pose['position_m'],atol=1e-6)
+                if name in moved:
+                    # A letter label under a base is displayed beside it; only its XY differs.
+                    np.testing.assert_allclose(play.data.geom_xpos[geometry][:2],rotation@moved[name]['to_xy']+np.asarray(place['translation_m'][:2]),atol=1e-6)
+                    np.testing.assert_allclose(play.data.geom_xpos[geometry][2],pose['position_m'][2],atol=1e-6)
+                else:
+                    np.testing.assert_allclose(play.data.geom_xpos[geometry],pose['position_m'],atol=1e-6)
                 np.testing.assert_allclose(play.data.geom_xmat[geometry].reshape(3,3),quat_matrix(pose['quaternion_wxyz']),atol=1e-6)
             self.assertEqual(play.model.nv,0)
+            # Playback verification ignores the display-only label moves.
+            play.apply_arrays(case['id'],source,source.data.qpos.copy(),3.,verify=True)
 
 
 

@@ -59,17 +59,21 @@ inspect current evidence, resolve uncertain actions by their original IDs and
 continue with recovery or a feasible alternative. Lack of progress calls for
 reassessment, coordination or a bounded wait followed by review.
 
-The host enforces the clock. Treat the wall limit as a host-enforced bound, not a
-cue to give up, summarize an incomplete task or call `finish` early; elapsed time
-or an estimate of remaining time is not evidence of an irrecoverable blocker.
-Continue useful work until completion is verified, an irrecoverable blocker is
-established, or the host reports pause, stop or run end; follow that signal.
+Plan and act as if time were unlimited, whatever wall limit READY reports. The
+host enforces the clock and ends the run itself; a short limit, a large task or
+little progress so far is never a reason to shorten the plan, skip work,
+summarize an incomplete task or call `finish`. Elapsed time or an estimate of
+remaining time is not evidence of a blocker. Continue useful work until
+completion is verified, an irrecoverable blocker is established, or the host
+reports pause, stop or run end; follow that signal.
 
 The role authorized to finish may end the run when the completion conditions are
 verified, or when concrete public evidence shows completion is no longer feasible
-within the task's rules with the available robots, objects and operations. Before
-declaring the latter, assess the relevant recovery options and explain the
-decisive blocker; a failed attempt or waiting alone does not establish it. Record
+within the task's rules with the available robots, objects and operations, even
+with unlimited time. Declare the latter only after repeated, varied recovery
+attempts keep failing on the same decisive blocker, one that more time would not
+remove; explain it. A failed attempt, waiting or the amount of remaining work
+does not establish it. Record
 the reason and evidence in the work note and `finish.note`, stating any unverified
 goals. Resolve active or uncertain actions and, in adaptive mode, outstanding
 delegates first. A reply ending, an idle session or a returned delegate is a

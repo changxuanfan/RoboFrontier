@@ -62,6 +62,11 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
     model=mujoco.MjModel.from_xml_path(str(scene));data=mujoco.MjData(model)
     from robofrontier.suite.table_presentation import scale_rectangular_opening_for_render
     presentation=scale_rectangular_opening_for_render(model,table_opening_scale)
+    # Display only, as in the Factory: a letter label under a robot base slides out.
+    from robofrontier.factory.labels import robot_label_moves
+    if mujoco.mj_name2id(model,mujoco.mjtObj.mjOBJ_KEY,'initial')>=0:mujoco.mj_resetDataKeyframe(model,data,model.key('initial').id)
+    mujoco.mj_kinematics(model,data);label_moves=robot_label_moves(model,data)
+    for name,move in label_moves.items():model.geom_pos[model.geom(name).id][:2]=move['to_xy']
     shared=(directory/'motion/stream.json').exists();events=None;event=None
     if shared:
         reader=MotionReader(directory/'motion')
@@ -147,7 +152,7 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
     for view in views:
         path=target/(view+'.mp4');check=subprocess.run(['ffmpeg','-v','error','-threads','1','-filter_threads','1','-i',str(path),'-f','null','-'],capture_output=True,text=True)
         checks[view]=dict(path=str(path.resolve()),decode_passed=check.returncode==0,error=check.stderr or None)
-    write_json(target/'manifest.json',dict(kind='Recorded-state FK rerender; no commands, IK, contacts or integration',source_trial=str(directory),source_scene_sha256=report['scene_sha256'],presentation_table=presentation,source_format='robofrontier.motion.v1' if shared else 'legacy_npz',recorded_source_hz=source_hz,speedup=speed,every=None if edit else every,fps=fps,source_frames=source_frames,rendered_states=rendered,wall_time_s=time.monotonic()-started,trial_passed=report.get('passed'),local_unit_passed=report.get('local_passed'),commissioning_only=report.get('commissioning_only',False),timeline=str(Path(timeline).resolve()) if edit else None,timeline_arrays_sha256=edit.meta['arrays_sha256'] if edit else None,views=checks))
+    write_json(target/'manifest.json',dict(kind='Recorded-state FK rerender; no commands, IK, contacts or integration',source_trial=str(directory),source_scene_sha256=report['scene_sha256'],presentation_table=presentation,robot_labels_moved=sorted(label_moves),source_format='robofrontier.motion.v1' if shared else 'legacy_npz',recorded_source_hz=source_hz,speedup=speed,every=None if edit else every,fps=fps,source_frames=source_frames,rendered_states=rendered,wall_time_s=time.monotonic()-started,trial_passed=report.get('passed'),local_unit_passed=report.get('local_passed'),commissioning_only=report.get('commissioning_only',False),timeline=str(Path(timeline).resolve()) if edit else None,timeline_arrays_sha256=edit.meta['arrays_sha256'] if edit else None,views=checks))
     if not all(c['decode_passed'] for c in checks.values()):raise RuntimeError('A video could not be fully decoded')
     print(target,flush=True)
 
