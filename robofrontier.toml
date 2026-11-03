@@ -1,5 +1,5 @@
 # Shared defaults for new runs. Secrets belong in the environment or .env.
-schema_version = 6
+schema_version = 7
 
 [policy]
 engine = "codex"                     # codex | claude
@@ -47,6 +47,9 @@ stop_warning_s = 600                 # Stop and collect before allocation expiry
 scratch_root = ""                    # Empty requires the node's SLURM_TMPDIR
 auth_mode = "api"                    # api | subscription (explicit job-scoped native manager)
 credential_store = ""                # Subscription: private persistent directory, outside checkout/evidence
+egress_mode = "direct"               # direct | mac-ssh (managed HTTP CONNECT over SSH)
+egress_root = ""                     # Private shared relay state, separate from credentials and evidence
+egress_wait_s = 120                   # Admission wait after allocation; no task clock starts here
 
 [container]
 image = ""                           # Empty selects a tag from the committed source revision

@@ -74,6 +74,8 @@ def launch_config(p, folder, run_dir=None):
               'web_search':'disabled', 'features.multi_agent':False,
               'features.apps':False, 'features.goals':False, 'project_doc_max_bytes':0}
     if backend == 'landlock-v1':
+        if os.environ.get('ROBOFRONTIER_EGRESS_INSTANCE') and p.get('runner_backend') == 'slurm-managed-v1':
+            values['features.respect_system_proxy'] = True
         for flag in ('shell_tool', 'view_image', 'shell_snapshot', 'unified_exec', 'plugins',
                      'browser_use', 'browser_use_external', 'browser_use_full_cdp_access',
                      'computer_use', 'code_mode', 'code_mode_only', 'code_mode_host', 'multi_agent_v2'):

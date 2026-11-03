@@ -159,6 +159,11 @@ def submit(config, output, *, queue=False, engineering=False, root=ROOT):
         for excluded in (Path(root).resolve(), Path(output).resolve()):
             if store.is_relative_to(excluded) or excluded.is_relative_to(store):
                 raise ValueError('Keep the credential store outside checkouts and submission/evidence directories')
+        if config['slurm'].get('egress_mode') == 'mac-ssh':
+            relay = Path(config['slurm']['egress_root']).resolve()
+            for excluded in (Path(root).resolve(), Path(output).resolve(), store):
+                if relay.is_relative_to(excluded) or excluded.is_relative_to(relay):
+                    raise ValueError('Keep egress state outside checkouts, submissions and credential directories')
     elif not selected.get('env_key') or selected.get('auth_mode') == 'oauth_token':
         raise ValueError('The Slurm entry currently supports API credentials only')
     root, output = Path(root).resolve(), Path(output).resolve()
@@ -273,6 +278,7 @@ def subscription_environment(config, local, *, on_failure):
     if platform.system() != 'Linux' or not os.environ.get('SLURM_JOB_ID'):
         raise ValueError('Job-scoped subscription execution requires a Linux Slurm allocation')
     from .slurm_auth import CredentialLease
+    from .slurm_proxy import environment as egress_environment
     local = Path(local).resolve()
     store = Path(config['slurm']['credential_store']).absolute()
     for excluded in (ROOT.resolve(), local):
@@ -281,6 +287,11 @@ def subscription_environment(config, local, *, on_failure):
     private = local/'engine'
     private.mkdir(mode=0o700, exist_ok=False)
     original = dict(os.environ)
+    if config['slurm'].get('egress_mode') == 'mac-ssh':
+        relay = Path(config['slurm']['egress_root']).absolute()
+        for excluded in (ROOT.resolve(), local, store):
+            if relay.is_relative_to(excluded) or excluded.is_relative_to(relay):
+                raise ValueError('Keep egress state separate from source, scratch and credentials')
     try:
         # No fallback into API billing, personal login homes or CLI overrides.
         for key in ('OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_BASE_URL',
@@ -289,12 +300,16 @@ def subscription_environment(config, local, *, on_failure):
         os.environ.update(CODEX_HOME=str(private/'codex'),
                           ROBOFRONTIER_JOB_PRIVATE_ROOT=str(private),
                           ROBOFRONTIER_CREDENTIAL_STORE=str(store))
-        with CredentialLease(store, private/'codex') as lease:
-            def failed():
-                (private/'CREDENTIAL_ERROR').touch(mode=0o600)
-                on_failure()
-            lease.watch(failed)
-            yield lease
+        def egress_failed():
+            (private/'EGRESS_ERROR').touch(mode=0o600)
+            on_failure()
+        with egress_environment(config, on_failure=egress_failed):
+            with CredentialLease(store, private/'codex') as lease:
+                def failed():
+                    (private/'CREDENTIAL_ERROR').touch(mode=0o600)
+                    on_failure()
+                lease.watch(failed)
+                yield lease
     finally:
         os.environ.clear()
         os.environ.update(original)

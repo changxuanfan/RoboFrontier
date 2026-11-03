@@ -1,5 +1,5 @@
 # Planning example only. No login or job is performed by reading this file.
-schema_version = 6
+schema_version = 7
 
 [policy]
 engine = "codex"
@@ -25,6 +25,11 @@ auth_mode = "subscription"
 # Replace with a canonical private directory on durable operator storage.
 # Only a reference is frozen at submission; no credentials are copied then.
 credential_store = "/ABSOLUTE/PRIVATE/robofrontier-luna"
+# Enable only with a live Mac relay for the allocated job; the reference carries
+# no proxy password, endpoint snapshot or native Codex credential.
+# egress_mode = "mac-ssh"
+# egress_root = "/ABSOLUTE/PRIVATE/robofrontier-egress"
+# egress_wait_s = 120
 gpus = 1
 # Initial resource requests, not measured concurrency guarantees. Confirm the
 # site's definition of an allocated CPU and the node's available resources.

@@ -114,6 +114,73 @@ No Landlock, missing seccomp or failed confinement is an admission failure.
 The actual compute-node worker must still pass doctor before START. Tests using
 old ABI masks on a newer local Linux kernel do not qualify an H800 allocation.
 
+## Managed Mac egress
+
+Schema 7 adds an explicit job-scoped `mac-ssh` route. Older frozen schemas keep
+their exact configuration shape and do not acquire a new proxy automatically.
+Configure a private canonical reference outside source, scratch, submissions and
+credential stores:
+
+```toml
+schema_version = 7
+
+[slurm]
+auth_mode = "subscription"
+egress_mode = "mac-ssh"
+egress_root = "/ABSOLUTE/PRIVATE/robofrontier-egress"
+egress_wait_s = 120
+```
+
+After the allocation is RUNNING, the operator keeps this command on the Mac:
+
+```sh
+python -m robofrontier.slurm_proxy connect \
+  --ssh-host CLUSTER_SSH_ALIAS --job-id EXISTING_JOB_ID \
+  --remote-script /CLUSTER/CHECKOUT/robofrontier/slurm_proxy.py \
+  --state-root /ABSOLUTE/PRIVATE/robofrontier-egress \
+  --remote-python /CLUSTER/PYTHON/bin/python3.12 \
+  --srun /CLUSTER/SLURM/bin/srun \
+  --slurm-conf /CLUSTER/SLURM/slurm.conf \
+  --status-file ~/.robofrontier/slurm-egress/status.json
+```
+
+The installed helper must match the Mac module's SHA-256. This command attaches
+one one-CPU/one-GiB relay step to the existing allocation; it does not call sbatch,
+request another GPU, authenticate Codex or start model/physics tasks. The Slurm
+execute/preflight entry waits for its own allocation/node's healthy route before
+taking the native credential lease. Start the Mac command promptly; admission
+fails after `egress_wait_s` instead of consuming a task's clock while waiting.
+
+The compute helper serves authenticated HTTP CONNECT on loopback. Native proxy
+passwords are generated inside the allocation and remain in 0600 readiness files
+under the 0700 state root, then in the trusted native process environment. They
+never enter source snapshots, configuration, command arguments or status output.
+Only OpenAI/ChatGPT HTTPS destinations are accepted. End-to-end TLS remains
+between native Codex and OpenAI; the relay forwards encrypted bytes. Native
+ChatGPT authentication, renewal and the credential lease remain on Slurm.
+
+The trusted runtime enables `features.respect_system_proxy` for this explicit
+route. It does not enable policy networking. Frozen file tables deny the egress
+root, and admission rejects a task that can read it. Isolated workers clear proxy
+environment variables, deny network socket creation and retain Landlock/seccomp.
+[Native-client proxy scope](https://learn.chatgpt.com/docs/enterprise/managed-configuration).
+
+SSH uses server-alive checks; both relay ends exchange two-second heartbeats.
+The Mac controller holds an idle/system-sleep assertion while connected. A
+missing/stale heartbeat, listener mismatch or changed relay instance fences the
+current owner, sets `EGRESS_ERROR`, stops its native engine and requests ordinary
+task sealing. It never recreates the engine or replays a model turn/robot action.
+Restarting the tunnel creates a fresh instance and cannot un-fence an existing
+run. Preserve uncertain evidence and review it before a new run. Mac shutdown,
+logout and network loss are therefore operational dependencies of this route.
+
+Stopping the controller closes only its SSH/relay step and sleep assertion. The
+allocation remains held until its normal expiry or an explicit operator release.
+Readiness is removed on normal closure; abrupt loss becomes stale within twelve
+seconds. Keep the published helper immutable while connected. A private launchd
+job may own the Mac command independently of a terminal; avoid automatic restart
+of an interrupted experiment.
+
 A shared-engine failure stops dispatch, seals task worlds and requires review.
 This backend disables automatic host/segment redispatch; it does not recreate a
 shared manager or repeat unknown turns/actions. API and legacy shared-home

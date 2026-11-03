@@ -1,7 +1,12 @@
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
+from unittest.mock import patch
 
 from robofrontier.codex.job_engine import build_manifest
 from robofrontier.run_setup import write_json
@@ -54,3 +59,30 @@ class JobManifestTests(unittest.TestCase):
         write_json(path, {'models': ['different']})
         with self.assertRaisesRegex(ValueError, 'one exact'):
             self.build()
+
+    def test_readable_managed_proxy_state_blocks_native_admission(self):
+        egress = self.root/'egress'
+        path = Path(self.jobs[0]['run_directory'])/'private/inputs/policy-access.json'
+        access = json.loads(path.read_text()); access['filesystem'][str(egress)] = 'read'
+        write_json(path, access)
+        with patch.dict(os.environ, {'ROBOFRONTIER_EGRESS_ROOT':str(egress)}):
+            with self.assertRaisesRegex(ValueError, 'frozen deny table'):
+                self.build()
+
+    def test_proxy_loss_terminates_only_the_owned_native_process_group(self):
+        from robofrontier.codex.job_engine import engine
+        self.private.mkdir(mode=0o700)
+        native = subprocess.Popen
+        def start(args, **options):
+            code = ('from pathlib import Path;import time;'
+                    'Path('+repr(str(self.private/'control/ready.json'))+').write_text("{}");time.sleep(30)')
+            return native([sys.executable,'-c',code],**options)
+        env={**os.environ,'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(self.private),
+             'ROBOFRONTIER_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
+        with patch('robofrontier.codex.job_engine.subprocess.Popen',side_effect=start):
+            with self.assertRaisesRegex(RuntimeError,'did not close cleanly'):
+                with engine(self.jobs,env=env,timeout_s=3) as (manifest,process):
+                    (self.private/'EGRESS_ERROR').touch()
+                    deadline=time.monotonic()+3
+                    while process.poll() is None and time.monotonic()<deadline:time.sleep(.05)
+                    self.assertIsNotNone(process.poll())

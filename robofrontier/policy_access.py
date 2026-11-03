@@ -37,7 +37,7 @@ def _auth_homes(home):
     """Credential homes of both engines, wherever this host keeps them."""
     homes = [home/name for name in HOME_SECRETS]
     for key in ('CODEX_HOME', 'CLAUDE_CONFIG_DIR', 'ROBOFRONTIER_CLAUDE_HOME', 'ROBOFRONTIER_CODEX_HOME',
-                'ROBOFRONTIER_JOB_PRIVATE_ROOT', 'ROBOFRONTIER_CREDENTIAL_STORE'):
+                'ROBOFRONTIER_JOB_PRIVATE_ROOT', 'ROBOFRONTIER_CREDENTIAL_STORE', 'ROBOFRONTIER_EGRESS_ROOT'):
         if os.environ.get(key):
             homes.append(Path(os.environ[key]).expanduser())
     return homes

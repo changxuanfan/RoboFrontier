@@ -23,7 +23,8 @@ SCHEMA = {
     'slurm': {'partition': str, 'account': str, 'qos': str, 'gpus': int,
               'cpus_per_task': int, 'memory_gib': int, 'time_limit_s': int,
               'stop_warning_s': int, 'scratch_root': str,
-              'auth_mode': str, 'credential_store': str},
+              'auth_mode': str, 'credential_store': str,
+              'egress_mode': str, 'egress_root': str, 'egress_wait_s': int},
     'container': {'image': str, 'workspace': str, 'memory_gib': int, 'cpus': float,
                   'seccomp_profile': str},
     'factory': {'data_root': str, 'asset_lock': str, 'source': str, 'device': str,
@@ -95,7 +96,7 @@ def load_configuration(path=None, overrides=None):
 
 
 def _configuration_shape(version):
-    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6):
+    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7):
         raise ValueError('Unsupported configuration schema_version')
     # Older frozen configurations remain exact. Do not append new Factory or
     # Oracle defaults to an already-hashed experiment configuration.
@@ -107,6 +108,9 @@ def _configuration_shape(version):
         shape['runtime'].pop('codex_tool_backend')
     if version < 6:
         for field in ('auth_mode', 'credential_store'):
+            shape['slurm'].pop(field)
+    if version < 7:
+        for field in ('egress_mode', 'egress_root', 'egress_wait_s'):
             shape['slurm'].pop(field)
     return shape
 
@@ -170,6 +174,16 @@ def validate_configuration(config):
                 raise ValueError('slurm.credential_store must be an absolute private directory')
         elif slurm['credential_store'] or config['runtime']['codex_home_scope'] == 'job':
             raise ValueError('Job scope and credential_store require slurm.auth_mode=subscription')
+    if version >= 7:
+        choice('slurm', 'egress_mode', ('direct', 'mac-ssh'))
+        if not 1 <= slurm['egress_wait_s'] <= 3600:
+            raise ValueError('slurm.egress_wait_s must be between 1 and 3600')
+        if slurm['egress_mode'] == 'mac-ssh':
+            path = Path(slurm['egress_root'])
+            if slurm['auth_mode'] != 'subscription' or not path.is_absolute() or '..' in path.parts:
+                raise ValueError('Mac egress requires subscription mode and an absolute private egress_root')
+        elif slurm['egress_root']:
+            raise ValueError('egress_root requires slurm.egress_mode=mac-ssh')
     for field in ('gpus', 'cpus_per_task', 'memory_gib', 'time_limit_s', 'stop_warning_s'):
         if slurm[field] < (0 if field == 'gpus' else 1):
             raise ValueError('Invalid slurm.' + field)

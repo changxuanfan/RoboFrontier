@@ -26,7 +26,7 @@ def fingerprint():
              'codex/file_sandbox.py', 'codex/tool_worker.py', 'codex/tool_backend.py',
              'codex/codex_rpc.js', 'codex/codex_policy_host.js', 'codex/batch.py',
              'codex/tool_broker.js', 'codex/launch.py', 'slurm_auth.py', 'slurm_job.py',
-             'policy_access.py')
+             'policy_access.py', 'slurm_proxy.py')
     digest = hashlib.sha256(BACKEND.encode())
     for name in names:
         digest.update(name.encode() + b'\0' + (ROOT/'robofrontier'/name).read_bytes() + b'\0')
@@ -67,7 +67,10 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
         access = json.loads((run/'private/inputs/policy-access.json').read_text())
         if access.get('network') is not False:
             raise ValueError('Job policy networking must be disabled')
-        for forbidden in (private_root, credential_store, '/proc', '/dev'):
+        forbidden_roots = [private_root, credential_store, '/proc', '/dev']
+        if os.environ.get('ROBOFRONTIER_EGRESS_ROOT'):
+            forbidden_roots.append(os.environ['ROBOFRONTIER_EGRESS_ROOT'])
+        for forbidden in forbidden_roots:
             if mode(access['filesystem'], forbidden) != 'deny':
                 raise ValueError('Job credential/control paths are absent from the frozen deny table')
         for other in jobs:
@@ -160,7 +163,7 @@ def engine(jobs, *, env, preflight=False, timeout_s=180):
     stopped = threading.Event()
     def supervise():
         while not stopped.wait(.1):
-            if (private/'CREDENTIAL_ERROR').exists() and proc.poll() is None:
+            if any((private/name).exists() for name in ('CREDENTIAL_ERROR', 'EGRESS_ERROR')) and proc.poll() is None:
                 proc.terminate()
                 return
     watcher = threading.Thread(target=supervise, name='codex-engine-custody', daemon=True)
