@@ -4,7 +4,8 @@ Only the board changes: it shrinks about its centre, with the Level 1 pocket
 walls, floor and the table frame around the opening, or the Level 2 printed
 lines, redrawn for the new pitch, and the goals moved to the new cell centres.
 Robots, stock, table, cameras, the initial keyframe, colours, pattern, physics
-and completion rules are R14's. No physics is stepped.
+and completion rules are R14's; the task supplement is R14's text titled R15.
+No physics is stepped.
 
 `build` writes the nine cases into benchmark/mosaic/, the catalog, and the Mosaic
 policy entries of benchmark/release.json.
@@ -28,6 +29,8 @@ CATALOG = 'benchmark/mosaic/catalog.json'
 RELEASE = 'benchmark/release.json'
 QUALIFICATION = 'r15_grid_pitch_71mm_from_r14_static_checks'
 STATUS = 'grid_pitch_review_only_no_r15_oracle_qualification'
+# R14's supplement with its title naming R15; it states no geometry numbers.
+GUIDANCE = 'prompts/archive/tasks/mosaic-r15.md'
 REVISION = 15
 PITCH = .071
 WALL = .001
@@ -153,10 +156,10 @@ def reviewed_projection(source, target):
                             read(target, 'workstation.json'), read(target, 'public-task.json'), completion)
     previous = read(source, 'public/reviewed-task.json')
     result.update(scene_revision=REVISION, completion=previous['completion'], package_status=STATUS,
-                  guidance=deepcopy(previous['guidance']))
+                  guidance=dict(previous['guidance'], task_prompt='../../guidance/'+Path(GUIDANCE).name))
     changed = {k for k in set(result) | set(previous) if result.get(k) != previous.get(k)}
     target_changed = {k for k in result['target'] if result['target'][k] != previous['target'].get(k)}
-    if changed - {'scene_revision', 'source_scene_sha256', 'target', 'package_status'} or \
+    if changed - {'scene_revision', 'source_scene_sha256', 'target', 'package_status', 'guidance'} or \
             target_changed - {'pitch_m', 'pocket_opening_m'}:
         raise ValueError('R15 public projection differs from R14 beyond the grid')
     return result
@@ -192,6 +195,7 @@ def build(render=True):
         entry['directory'] = case['directory']
         entry['source_files'] = {name: checksum(folder/name) for name in entry['source_files']}
         entry['qualification'] = QUALIFICATION
+        entry['public_files']['family-guidance.md'] = dict(path=GUIDANCE, sha256=checksum(ROOT/GUIDANCE))
         entry['public_projection'] = dict(path=case['directory']+'/public/reviewed-task.json',
                                           sha256=checksum(folder/'public/reviewed-task.json'))
     write_json(path, release)

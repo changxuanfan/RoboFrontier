@@ -551,7 +551,7 @@
   "execution_readiness": "environment_preview_only",
   "package_status": "grid_pitch_review_only_no_r15_oracle_qualification",
   "guidance": {
-    "task_prompt": "../../guidance/mosaic-r14.md",
+    "task_prompt": "../../guidance/mosaic-r15.md",
     "skill": "../../guidance/mosaic-r13/SKILL.md"
   }
 }

@@ -1,6 +1,6 @@
 {
   "schema": "robofrontier.task-atlas-manifest.v1",
-  "release_sha256": "4b041d6b3a8c952f8639b4a9b8721d91305032dac603d13db7f2bddf02c43105",
+  "release_sha256": "9691bcf69786d8dd97273d7890019b91c0d4c5a20df3530f4e2c68c0c090e9a2",
   "cases": 36,
   "sources": {
     "scripts/build_task_atlas.py": "4c02ce55832d20e109d2e001deba433c6d65efd0f090660901418fdbaed87914",
@@ -83,7 +83,7 @@
     "images/transport-a12-d2-top.jpg": "2eba5e14fbf62e1e823dab7c1b83e5e4e17be2bf6585434ce1f9326997cf0465",
     "images/transport-a12-d3-global.jpg": "189eff720454c0912ce588107f74b738723395d78fcbbaee7b1a629c500e35ea",
     "images/transport-a12-d3-top.jpg": "213f45b9cb617c4ad56998aeb437e0a8630e0ff73ba38463e029e73fd2e6788b",
-    "index.html": "270214dfaa1797728e484094a7303066eb947b7cb10f2f198f0c6770d7b10179",
+    "index.html": "a14bcf9a522fb152a6bf44730f6e724822207baac2708f2617a0642093b2f76d",
     "style.css": "900cb96c2033b303639c756a2ea5b07b7cbcfe0d7797ba636afba1b38e60b82a",
     "tasks/dial-best5-n04-d1.json": "5221516139d7a1daeef498ed784738c2364bfbe6aeefe615237d80173fd5ef6c",
     "tasks/dial-best5-n04-d2.json": "4bfab4e305822c3e7c0827ec4a39e09ea555d2163c8da43341247db4d9d335ef",
@@ -121,7 +121,7 @@
     "tasks/transport-a12-d1.json": "f9342c823609d63ffe43dded1451c8cdd433b5f9b7b91e01a433ccd4d5f6d19a",
     "tasks/transport-a12-d2.json": "d71a3e9f3d87a622707fc1795850485273e3c2ccc8dcd125d065ac0549dd07a5",
     "tasks/transport-a12-d3.json": "1156bd36b5500ef68ac74700747817935bf22d5fb04d419fc12368df5336265d",
-    "tasks.json": "2c63517e3829b7ea0b5356fa2a3f226fc8ac73b19de2a3c51b2c46be3a72b15e"
+    "tasks.json": "e1201e9e461c5f9e1c34b002ce829a56dfb82617d16131c1db4f1725f9d90408"
   },
   "renderer": {
     "requested_device": "native",

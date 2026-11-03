@@ -1,6 +1,6 @@
 {
   "schema": "robofrontier.public-task-atlas.v1",
-  "release_sha256": "4b041d6b3a8c952f8639b4a9b8721d91305032dac603d13db7f2bddf02c43105",
+  "release_sha256": "9691bcf69786d8dd97273d7890019b91c0d4c5a20df3530f4e2c68c0c090e9a2",
   "cases": [
     {
       "id": "transport-a04-d1",

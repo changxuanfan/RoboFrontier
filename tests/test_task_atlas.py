@@ -12,8 +12,9 @@ from scripts import build_task_atlas as atlas
 
 
 class TaskAtlasTests(unittest.TestCase):
-    # The committed publication of the current 72 verified captures (Mosaic R15).
-    capture_revision = 'b81e05cb35d701902bb795d4cd2820c27877f95a'
+    # The last committed publication; its 72 captures must match the current scenes.
+    capture_revision = subprocess.check_output(['git','log','-1','--format=%H','--',
+        'docs/task-atlas/atlas-manifest.json'],cwd=atlas.ROOT,text=True).strip()
 
     def original_publication(self, output):
         """Restore only public files, independently of the current publication."""

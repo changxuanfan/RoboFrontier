@@ -374,8 +374,8 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r14.md",
-              "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
+              "path": "prompts/archive/tasks/mosaic-r15.md",
+              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
             },
             "skill.md": {
               "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
@@ -385,7 +385,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/reviewed-task.json",
-            "sha256": "73b3e23290dbc3c328cf40126024f5466f273b742c8447deba094ce713b9e703"
+            "sha256": "e5fd8034acb8a808d33f3c0df596f37795ce32aa33a713a42679ce24bcf989af"
           }
         },
         {
@@ -399,8 +399,8 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r14.md",
-              "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
+              "path": "prompts/archive/tasks/mosaic-r15.md",
+              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
             },
             "skill.md": {
               "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
@@ -410,7 +410,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/reviewed-task.json",
-            "sha256": "4d36ea797bbe96834afa0eb479e9199233d17d1091e1c3361a1d2f706790dcd4"
+            "sha256": "2a2c27706ec7ea761d7d751f53ee697edca6bcfaba56867ec5af108cc62983ff"
           }
         },
         {
@@ -424,8 +424,8 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r14.md",
-              "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
+              "path": "prompts/archive/tasks/mosaic-r15.md",
+              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
             },
             "skill.md": {
               "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
@@ -435,7 +435,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/reviewed-task.json",
-            "sha256": "52ebc4522fb6c32a7a9cf4a7ccb8e5714de673999bc6cc203b80d1234201c742"
+            "sha256": "15b42ed71e231ccaba002294c3121a0f5f5f2906a01eac45c923742a45fd6797"
           }
         },
         {
@@ -449,8 +449,8 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r14.md",
-              "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
+              "path": "prompts/archive/tasks/mosaic-r15.md",
+              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
             },
             "skill.md": {
               "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
@@ -460,7 +460,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/reviewed-task.json",
-            "sha256": "9ec643def966088a448e53c31cc59c04bc61db430e42cbf02d72261e31772cb8"
+            "sha256": "44ff6c61b8b018d909de5dea07b090c4c59bb06e0f24ac104a6ffe624c588901"
           }
         },
         {
@@ -474,8 +474,8 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r14.md",
-              "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
+              "path": "prompts/archive/tasks/mosaic-r15.md",
+              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
             },
             "skill.md": {
               "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
@@ -485,7 +485,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/reviewed-task.json",
-            "sha256": "d295d7756925d5e4d5ac56d8bee17692e51616f3db266734dfcd231599135ec0"
+            "sha256": "729b2ebd5d3dfb04b75d53dfbe082aa54f0cfce7881b0498fd2bb6e52b6709e3"
           }
         },
         {
@@ -499,8 +499,8 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r14.md",
-              "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
+              "path": "prompts/archive/tasks/mosaic-r15.md",
+              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
             },
             "skill.md": {
               "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
@@ -510,7 +510,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/reviewed-task.json",
-            "sha256": "ff3e07dc8dfde3ee345044cad077a9ba878c02a7481f75d98ec55fcd28fa9297"
+            "sha256": "0b6fa80b85a2c4c2738c765c5965ba6200a725145bc1b7fe9be3806343858e0d"
           }
         },
         {
@@ -524,8 +524,8 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r14.md",
-              "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
+              "path": "prompts/archive/tasks/mosaic-r15.md",
+              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
             },
             "skill.md": {
               "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
@@ -535,7 +535,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/reviewed-task.json",
-            "sha256": "b9767fef675d2fdecf4c1ba34e3297f23a7b856a264ac34e08a2213666a297c5"
+            "sha256": "44ba51b2745be9468a3ce0fbb065a4e5110ae75a3f41d73cc9874f797a26c205"
           }
         },
         {
@@ -549,8 +549,8 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r14.md",
-              "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
+              "path": "prompts/archive/tasks/mosaic-r15.md",
+              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
             },
             "skill.md": {
               "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
@@ -560,7 +560,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/reviewed-task.json",
-            "sha256": "df4033bd47889cc064cd4254113164e0839335cf24520edfd919bf8140b45d67"
+            "sha256": "1ca866137565e8353413e2be7b77beb9bd43bbee69d7b2a8f288bd4e8ec1aaa3"
           }
         },
         {
@@ -574,8 +574,8 @@
           },
           "public_files": {
             "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r14.md",
-              "sha256": "1414f553b2851e723eea82e48308b3d7acbd15166a4371fb8585fae38caa6e4d"
+              "path": "prompts/archive/tasks/mosaic-r15.md",
+              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
             },
             "skill.md": {
               "path": "prompts/archive/skills/mosaic-r13/SKILL.md",
@@ -585,7 +585,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/reviewed-task.json",
-            "sha256": "fca4c8cfd425e5139a2612893df59bcb9b6c7eede8027a0543fccf2c607074ca"
+            "sha256": "5e79d67380949b0f64f682f88c36a5a6e3cd7680403f85a73e01e4df056c442e"
           }
         }
       ],
