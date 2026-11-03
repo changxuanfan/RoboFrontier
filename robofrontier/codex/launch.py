@@ -62,6 +62,9 @@ def codex_home(env=None):
 
 
 def launch_config(p, folder, run_dir=None):
+    from .tool_backend import selected, fingerprint
+    backend = selected(p)
+    provider = p['provider']
     args = []
     # Account apps and goals are personal Codex features, not task tools, and no
     # AGENTS.md is injected, as on the Claude route.
@@ -70,6 +73,23 @@ def launch_config(p, folder, run_dir=None):
               'model_auto_compact_token_limit':p['auto_compact_token_limit'],
               'web_search':'disabled', 'features.multi_agent':False,
               'features.apps':False, 'features.goals':False, 'project_doc_max_bytes':0}
+    if backend == 'landlock-v1':
+        for flag in ('shell_tool', 'view_image', 'shell_snapshot', 'unified_exec', 'plugins',
+                     'browser_use', 'browser_use_external', 'browser_use_full_cdp_access',
+                     'computer_use', 'code_mode', 'code_mode_only', 'code_mode_host', 'multi_agent_v2'):
+            values['features.'+flag] = False
+        values.update({'agents.enabled': False, 'tools.experimental_request_user_input.enabled': False})
+        if p['provider'] == 'openai':
+            values['forced_login_method'] = 'chatgpt'
+            # Built-in provider IDs cannot be overridden in CLI 0.165.0. Keep
+            # native AuthManager/account refresh, with its normal ChatGPT URL,
+            # but select HTTP/SSE without per-role WebSocket 403/retry bursts.
+            provider = 'robofrontier_openai_http'
+            values.update({'model_provider': provider,
+                           'model_providers.'+provider+'.name': 'OpenAI',
+                           'model_providers.'+provider+'.wire_api': 'responses',
+                           'model_providers.'+provider+'.requires_openai_auth': True,
+                           'model_providers.'+provider+'.supports_websockets': False})
     if p['provider'] == 'openai':
         # Shared subscription homes retain native auth, but their MCP servers
         # are not benchmark tools. Disable known layers without editing them;
@@ -123,8 +143,10 @@ def launch_config(p, folder, run_dir=None):
     model['availability_nux']=None
     model['service_tiers']=[];model['additional_speed_tiers']=[]
     model['available_access_programs']=None
+    if backend == 'landlock-v1':
+        model.update(apply_patch_tool_type=None, multi_agent_version='disabled')
     target=folder/'models.json';write_json(target,{'models':[model]})
-    values['model_catalog_json']=str(target)
+    values['model_catalog_json']=str(target.resolve())
     for key,value in values.items():
         # JSON scalar/array strings are also valid TOML values; argv, never shell.
         args.extend(['-c',key+'='+json.dumps(value)])
@@ -139,8 +161,9 @@ def launch_config(p, folder, run_dir=None):
         args.extend(['-c','default_permissions='+json.dumps(POLICY_PROFILE),
                      '-c','permissions.'+POLICY_PROFILE+'.filesystem={'+table+'}',
                      '-c','permissions.'+POLICY_PROFILE+'.network.enabled='+json.dumps(bool(frozen['network']))])
-    return dict(model=p['model'],provider=p['provider'],effort=p['effort'],args=args,
-                profile=p,context_window=p['context_window'],auto_compact_token_limit=p['auto_compact_token_limit'])
+    return dict(model=p['model'],provider=provider,effort=p['effort'],args=args,
+                profile=p,context_window=p['context_window'],auto_compact_token_limit=p['auto_compact_token_limit'],
+                tool_backend=backend,tool_backend_sha256=fingerprint(p),model_catalog=str(target.resolve()))
 
 
 def initialize_codex_home(launch, folder, timeout_s=90, *, env=None):

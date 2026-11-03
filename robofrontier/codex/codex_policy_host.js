@@ -5,6 +5,7 @@ const {execFile,execFileSync,exec:execShell,spawn} = require('node:child_process
 const {promisify} = require('node:util');
 const execFileAsync = promisify(execFile), execAsync = promisify(execShell);
 const {CodexRpc,STARTUP_ACK_MS,capacityFailure,requireNoMcpServers} = require('./codex_rpc');
+const fileTools = require('./tool_broker');
 const {runMetaDispatcher} = require('../../scripts/meta_dispatcher');
 const sleep = ms => new Promise(resolve=>setTimeout(resolve,ms));
 const read = file=>JSON.parse(fs.readFileSync(file,'utf8'));
@@ -73,9 +74,17 @@ class PolicyHost {
     return JSON.parse(stdout);
   }
   async toolRequest(method,p) {
-    if (method!=='item/tool/call' || p.tool!=='robot') throw new Error('Unsupported host tool');
+    if (method!=='item/tool/call') throw new Error('Unsupported host tool');
     const actor=this.actors.get(p.threadId); if (!actor) throw new Error('Unbound policy role');
     const a=typeof p.arguments==='string'?JSON.parse(p.arguments):p.arguments;
+    if (fileTools.enabled(this.launch) && ['policy_exec','policy_image'].includes(p.tool)) {
+      const started=Date.now();
+      const result=await fileTools.call(this.run,this.python,p.tool,a);
+      this.event({event:'file_tool_completed',actor,thread_id:p.threadId,tool:p.tool,
+        success:result.success,duration_s:(Date.now()-started)/1000});
+      return result;
+    }
+    if (p.tool!=='robot') throw new Error('Unsupported host tool');
     const toolStarted=Date.now();
     this.event({event:'robot_tool_started',actor,thread_id:p.threadId,op:a.op,call_id:p.callId});
     if (['move','gripper','action_batch'].includes(a.op) && a.data?.cameras===undefined)
@@ -137,7 +146,8 @@ class PolicyHost {
       if (m.method==='turn/completed') this.turnStarted.delete(turnKey);
     }});
     fs.closeSync(log); await this.rpc.initialize();
-    if(this.launch.provider==='openai') await requireNoMcpServers(this.rpc);
+    if(fileTools.subscription(this.launch)) await requireNoMcpServers(this.rpc);
+    await fileTools.admit(this.rpc,this.launch);
   }
   async observe(threadId) {
     const result=await this.rpc.call('thread/read',{threadId});
@@ -238,7 +248,8 @@ Use your assigned native session and bound robot tools. Read public task evidenc
       // a thread `sandbox` would replace that profile, so only earlier runs send one.
       const system=frozenText(this.run,'system.md');
       const result=await this.rpc.call('thread/start',{model:this.launch.model,modelProvider:this.launch.provider,
-        cwd:this.hostPath('policy_cwd'),approvalPolicy:'never',ephemeral:false,dynamicTools:[robotTool],
+        cwd:this.hostPath('policy_cwd'),approvalPolicy:'never',ephemeral:false,
+        dynamicTools:[robotTool,...(fileTools.enabled(this.launch)?fileTools.tools:[])],
         ...(system===null?{sandbox:'workspace-write'}:{}),baseInstructions:system??LEGACY_SYSTEM_PROMPT,
         threadSource:'robofrontier-benchmark',config:{web_search:'disabled','features.multi_agent':false}},STARTUP_ACK_MS);
       const id=result.thread.id; this.actors.set(id,actor);
@@ -374,7 +385,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
       if (!failure && !stopRequested && this.rpc) await this.drainFinishedTurns();
       // Seal the existing owner; never recreate its physical world.
       let sealError;
-      try {const result=await this.admin('seal',{timeout_s:30});
+      try {const result=await this.admin('seal',{timeout_s:fileTools.enabled(this.launch)?120:30});
         if (!result.sealed) throw new Error('Seal did not confirm closure');
       } catch(error) {sealError=error;this.event({event:'seal_error',message:error.message});}
       for (const id of this.actors.keys()) {

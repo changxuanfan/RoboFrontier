@@ -51,7 +51,7 @@ overrides its named settings; explicit CLI options override those settings.
 Unknown fields, incorrect types, non-finite intervals and invalid limits are
 errors. Credentials belong in `.env` or the environment, never in TOML.
 
-New settings use `schema_version=4`, with independent Factory and Oracle sections
+New settings use `schema_version=5`, with independent Factory and Oracle sections
 and an explicit Oracle evaluation mode. Frozen version 1, 2 and 3 configurations retain their exact shapes and hashes;
 new sections are not appended to archived configurations. New partial user TOML files
 can omit the version to inherit the current schema. A frozen configuration is
@@ -88,6 +88,7 @@ physics steps, or model turns. It is not a provider rate-limit guarantee.
 | `render.record_realtime_video` | Optional live video recording, disabled by default; separate from later motion-based rendering |
 | `runtime.codex_home_scope` | Isolate API task homes, or explicitly retain shared-home behavior |
 | `runtime.codex_home` | Optional home root; must remain outside the batch's collected evidence tree |
+| `runtime.codex_tool_backend` | `native` by default; explicit `landlock-v1` confines Codex file tools on Linux containers without namespaces |
 | `evidence.auto_collect` | Collect stopped native sessions, motion and audit evidence after the supervisor exits |
 | `evidence.auto_archive` | Create a verified portable ZIP from that collection |
 | `evidence.delete_sources` | Must remain false; automatic destructive cleanup is not implemented |

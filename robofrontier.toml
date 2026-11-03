@@ -1,5 +1,5 @@
 # Shared defaults for new runs. Secrets belong in the environment or .env.
-schema_version = 4
+schema_version = 5
 
 [policy]
 engine = "codex"                     # codex | claude
@@ -25,6 +25,7 @@ observation_profile = "jpeg_896x560_q85"
 record_realtime_video = false
 
 [runtime]
+codex_tool_backend = "native"         # native | landlock-v1 (Linux namespace-restricted containers)
 codex_home_scope = "task"             # API: task isolation; shared retains legacy authentication behavior
 codex_home = ""                      # Empty uses an automatically created private directory
 

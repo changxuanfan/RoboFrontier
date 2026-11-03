@@ -29,6 +29,7 @@ def _catalog(config):
         # New portable batches and their preflight use the same checked-in
         # template, independent of another Desktop session's mutable cache.
         catalog['profiles'][policy['profile']]['use_cached_model_metadata'] = False
+        catalog['profiles'][policy['profile']]['tool_backend'] = config['runtime'].get('codex_tool_backend', 'native')
     return catalog
 
 

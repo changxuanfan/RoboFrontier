@@ -99,6 +99,44 @@ native traces without exporting authentication/config/state databases.
 
 ## Preflight, preparation, and launch
 
+### Linux containers without namespaces
+
+Select `runtime.codex_tool_backend = "landlock-v1"` explicitly on Linux when the
+container cannot run the native namespace sandbox. The default remains `native`.
+The [Sol L3 CPU example](../../configs/examples/sol61-l3-cpu.toml) uses this backend
+with subscription authentication, four tasks, high effort and a 24-hour task limit.
+Keep the dedicated authentication home outside collected evidence.
+
+The backend replaces model-accessible shell, patch and image handlers with
+role-bound `policy_exec` and `policy_image`. Each call starts a fresh subprocess
+under the frozen access table, Landlock and seccomp. The subprocess receives no
+host credentials or inherited descriptors; `/proc` and general `/tmp` are denied,
+and temporary writes use `workspace/.tmp`. Sockets, io_uring, process-memory
+inspection, cross-process signals and privileged namespace operations are denied;
+worker capabilities are dropped. Images are opened inside that boundary. The
+trusted native Codex process retains authentication, sessions and robot transport.
+Native named permissions remain configured; this mode does not select full access.
+Subscription runs use a process-local `OpenAI` provider entry with native
+authentication and HTTP/SSE transport, avoiding rejected WebSocket handshakes in
+this container. Credentials remain in Codex's native store; no token is copied
+into provider settings. The broker host allows up to 120 seconds for engineering
+sealing, without extending the persisted task deadline or replaying actions.
+
+Doctor exercises real allowed and denied file/socket operations. The live preflight
+also checks the two broker tools, images, compaction and inherited fork tools;
+its receipt pins the backend source, model metadata and CLI version. A changed
+backend requires another preflight and newly prepared batches. Native and broker
+receipts are not interchangeable. Run the installed-CLI protocol/adversarial test
+without external inference using:
+
+```sh
+.venv/bin/python -m scripts.check_codex_broker --output runs/engineering/NEW_BROKER_CHECK
+```
+
+This test inspects the actual model tool inventory, rejects forged native calls,
+and exercises fork/resume and eight concurrent roles. Separate physical engineering
+runs still establish role startup, robot transport and shutdown on the target host.
+
 Prefer the unified commands, which use current TOML defaults:
 
 ```sh

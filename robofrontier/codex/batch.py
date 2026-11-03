@@ -56,12 +56,16 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
         for case in selected:
             run=output/name/case
             prepare(case,run,harness_path,puzzles.get(case),wall_limit_s=wall_limit_s)
+            from .tool_backend import prepare as prepare_tools
+            prepare_tools(run, p)
             launch=launch_config(p,run/'private/inputs',run)
             write_json(run/'private/inputs/codex.json',launch)
             # Host config/model catalog belong to immutable prepared inputs too.
             import hashlib
             manifest_path=run/'private/inputs/manifest.json';manifest=read(manifest_path)
-            for file in [run/'private/inputs/codex.json',run/'private/inputs/models.json']:
+            files = [run/'private/inputs'/name for name in ('codex.json','models.json','policy-access.json','codex-tools.json')]
+            files += list((run/'private/inputs/bootstrap').glob('*.md'))
+            for file in files:
                 if file.exists():manifest['input_sha256'][str(file.relative_to(run))]=hashlib.sha256(file.read_bytes()).hexdigest()
             write_json(manifest_path,manifest)
             batch['jobs'].append(dict(profile=name,case_id=case,run_directory=str(run),status='prepared'))
@@ -145,7 +149,12 @@ def _run_batch_locked(folder, parallel, batch, continuing=False):
         version=subprocess.check_output(['codex','--version'],text=True).strip()
         if checked.get('catalog_sha256')!=catalog_sha or checked.get('codex_version')!=version:
             raise ValueError('Model catalog or Codex CLI changed; rerun preflight')
+        from .tool_backend import selected, verify_receipt
+        verify_receipt(launch, checked)
         env=dict(os.environ)
+        if selected(launch['profile']) == 'landlock-v1' and launch['profile']['provider'] == 'openai':
+            for key in ('OPENAI_API_KEY', 'CODEX_API_KEY'):
+                env.pop(key, None)
         if execution.get('codex_home'):env['CODEX_HOME']=execution['codex_home']
         if scope=='task':
             if launch['profile'].get('provider')=='openai':
@@ -272,15 +281,27 @@ def main():
             # under the new provider/model fingerprint.
             write_json(target/'report.json',{'passed':False,'error':'Preflight did not complete'})
             write_json(target/'probe.json',preflight_probe.write(target/'colors.png',*preflight_probe.choose()))
+            from .tool_backend import selected as selected_backend, preflight_probe as broker_probe
+            if selected_backend(selected) == 'landlock-v1':
+                launch = read(target/'launch.json')
+                launch['tool_probe'] = broker_probe(target)
+                write_json(target/'launch.json', launch)
             command=['node',str(ROOT/'robofrontier/codex/codex_preflight.js'),str(target)]
             if args.smoke_only:command.append('--smoke-only')
-            result=subprocess.run(command)
+            environment={**os.environ, 'ROBOFRONTIER_PYTHON': sys.executable}
+            if selected_backend(selected) == 'landlock-v1' and selected['provider'] == 'openai':
+                for key in ('OPENAI_API_KEY', 'CODEX_API_KEY'):
+                    environment.pop(key, None)
+            result=subprocess.run(command, env=environment)
             receipt=read(target/'report.json');receipt['profile_sha256']=hashlib.sha256(json.dumps(selected,sort_keys=True).encode()).hexdigest()
             receipt['probe_version']=preflight_probe.VERSION
             if result.returncode:receipt['passed']=False
             if receipt.get('passed'):
                 receipt['catalog_sha256']=hashlib.sha256((target/'models.json').read_bytes()).hexdigest()
                 receipt['codex_version']=subprocess.check_output(['codex','--version'],text=True).strip()
+                from .tool_backend import selected as selected_backend, fingerprint
+                receipt['tool_backend']=selected_backend(selected)
+                receipt['tool_backend_sha256']=fingerprint(selected)
             write_json(target/'report.json',receipt)
             if result.returncode:raise SystemExit(result.returncode)
     elif args.command=='prepare':print(prepare_batch(args.output,args.models,args.families,args.cases,args.model_config,args.level,args.min_arms,args.wall_limit_s))

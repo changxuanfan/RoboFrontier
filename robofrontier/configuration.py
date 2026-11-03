@@ -18,7 +18,7 @@ SCHEMA = {
     'batch': {'parallel': int, 'startup_interval_s': float, 'task_wall_limit_s': float, 'startup_timeout_s': float},
     'selection': {'families': list, 'cases': list, 'level': int, 'min_arms': bool},
     'render': {'device': str, 'observation_profile': str, 'record_realtime_video': bool},
-    'runtime': {'codex_home_scope': str, 'codex_home': str},
+    'runtime': {'codex_home_scope': str, 'codex_home': str, 'codex_tool_backend': str},
     'evidence': {'auto_collect': bool, 'auto_archive': bool, 'archive_format': str, 'delete_sources': bool},
     'slurm': {'partition': str, 'account': str, 'qos': str, 'gpus': int,
               'cpus_per_task': int, 'memory_gib': int, 'time_limit_s': int,
@@ -94,7 +94,7 @@ def load_configuration(path=None, overrides=None):
 
 
 def _configuration_shape(version):
-    if type(version) is not int or version not in (1, 2, 3, 4):
+    if type(version) is not int or version not in (1, 2, 3, 4, 5):
         raise ValueError('Unsupported configuration schema_version')
     # Older frozen configurations remain exact. Do not append new Factory or
     # Oracle defaults to an already-hashed experiment configuration.
@@ -102,6 +102,8 @@ def _configuration_shape(version):
              if (version >= 2 or k != 'factory') and (version >= 3 or k != 'oracle')}
     if version == 3:
         shape['oracle'].pop('evaluation_mode')
+    if version < 5:
+        shape['runtime'].pop('codex_tool_backend')
     return shape
 
 
@@ -139,6 +141,10 @@ def validate_configuration(config):
     choice('render', 'device', ('nvidia', 'cpu', 'native'))
     choice('render', 'observation_profile', ('jpeg_896x560_q85', 'png_1280x800'))
     choice('runtime', 'codex_home_scope', ('task', 'shared'))
+    if version >= 5:
+        choice('runtime', 'codex_tool_backend', ('native', 'landlock-v1'))
+        if config['policy']['engine'] != 'codex' and config['runtime']['codex_tool_backend'] != 'native':
+            raise ValueError('codex_tool_backend applies only to the Codex engine')
     choice('container', 'seccomp_profile', ('default', 'unconfined'))
     choice('evidence', 'archive_format', ('zip',))
     if config['evidence']['auto_archive'] and not config['evidence']['auto_collect']:

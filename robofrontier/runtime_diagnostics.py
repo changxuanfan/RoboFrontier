@@ -20,7 +20,7 @@ def _checked(command, *, env, timeout=60):
     return result.stdout.strip()
 
 
-def _native_probe(engine):
+def _native_probe(engine, backend='native'):
     with tempfile.TemporaryDirectory(prefix='rf-native-probe-') as temporary:
         # Do not import another Desktop/session's mutable config or credentials.
         env = {key: value for key, value in os.environ.items() if key in (
@@ -31,8 +31,12 @@ def _native_probe(engine):
             Path(env[name]).mkdir(mode=0o700)
         version = _checked([engine, '--version'], env=env)
         if engine == 'codex':
-            _checked(['codex', 'sandbox', '--', 'sh', '-c',
-                      'test -r configs/models.json'], env=env, timeout=30)
+            if backend == 'landlock-v1':
+                checked = json.loads(_checked([sys.executable, '-m', 'robofrontier.codex.tool_backend'], env=env))
+                return {'version': version, **checked}
+            if backend != 'native':
+                raise ValueError('Unknown Codex tool backend')
+            _checked(['codex', 'sandbox', '--', 'sh', '-c', 'test -r configs/models.json'], env=env, timeout=30)
         return {'version': version, 'sandbox_checked': engine == 'codex'}
 
 
@@ -64,7 +68,8 @@ print(json.dumps(result))
 def inspect_runtime(config, *, render=True):
     """Return separate local checks; success does not qualify a provider or run."""
     checks = {}
-    probes = [('native_cli', lambda: _native_probe(config['policy']['engine']))]
+    backend = config['runtime'].get('codex_tool_backend', 'native')
+    probes = [('native_cli', lambda: _native_probe(config['policy']['engine'], backend))]
     if render:
         probes.append(('render', lambda: _render_probe(config['render']['device'])))
     for name, probe in probes:

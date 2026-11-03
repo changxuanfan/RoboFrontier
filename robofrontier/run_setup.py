@@ -19,7 +19,7 @@ from .task_config import ROOT, load_task, load_harness, public_task,physical_con
 # is frozen for each run; these are an engine's sources outside that tree.
 ENGINE_SCRIPTS = {
     'codex': ('robofrontier/codex/codex_rpc.js', 'robofrontier/codex/codex_policy_host.js',
-              'robofrontier/codex/codex_preflight.js'),
+              'robofrontier/codex/codex_preflight.js', 'robofrontier/codex/tool_broker.js'),
     # Claude's CLI imports shared digest, asset and case-check helpers from these.
     'claude': ('scripts/claude_benchmark.py', 'scripts/benchmark_handoff.py', 'scripts/tasks.py'),
 }
