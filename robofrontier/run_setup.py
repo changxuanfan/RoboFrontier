@@ -113,7 +113,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     write_json(directory/'private/inputs/harness.json', cfg)
     roles = {cfg['manager']: {'kind':'manager'}}
     if cfg['topology'] == 'hierarchical':
-        roles[cfg['coordinator']] = {'kind':'coordinator'}
+        roles[cfg['coordinator']] = {'kind':'team-controller'}
     if cfg['topology'] in ('centralized','adaptive'):
         roles['Controller'] = {'kind':'controller', 'robots':list(task['arms'])}
     else:
@@ -136,7 +136,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     python = ROOT/'.venv/bin/python'
     for actor, info in roles.items():
         kind = info['kind']
-        filename = {'manager':'meta-manager','coordinator':'coordinator','worker':'worker','controller':'controller'}[kind]
+        filename = {'manager':'meta-manager','team-controller':'team-controller','worker':'worker','controller':'single-controller'}[kind]
         if kind=='controller' and cfg['topology']=='adaptive':filename='adaptive-controller'
         values = {'RUN_DIR':str(directory),'REPO_ROOT':str(ROOT),'PYTHON':str(python), 'ACTOR':actor,
                   'CONNECTION':str(directory/'private/state/connections'/f'{actor}.json'),

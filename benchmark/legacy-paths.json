@@ -168,6 +168,8 @@
     "prompts/claude/standing-worker.md": "prompts/archive/claude/standing-worker.md",
     "prompts/common.md": "prompts/archive/common.md",
     "prompts/policy-rules.md": "prompts/archive/policy-rules.md",
-    "prompts/tasks": "prompts/archive/tasks"
+    "prompts/tasks": "prompts/archive/tasks",
+    "prompts/roles/coordinator.md": "prompts/roles/team-controller.md",
+    "prompts/roles/controller.md": "prompts/roles/single-controller.md"
   }
 }

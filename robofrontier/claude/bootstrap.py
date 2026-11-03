@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from robofrontier.policy_bootstrap import frozen_bootstrap
+from robofrontier.runtime_store import current_kind
 
 
 MAX_BOOTSTRAP_BYTES = 400_000
@@ -19,11 +20,11 @@ def bootstrap_prompt(run_dir, *, topology='centralized', startup_protocol='ready
     task = json.loads((public / 'task.json').read_text())
     roles = json.loads((public / 'roles.json').read_text())
     standing = topology in ('hierarchical', 'peer')
-    role = roles.get('roles', {}).get(actor, {})
+    role = current_kind(dict(roles.get('roles', {}).get(actor, {})))
     if roles.get('topology') != topology:
         raise ValueError('Expected a policy role in the selected topology')
     if standing:
-        if startup_protocol != 'direct_team_v3' or role.get('kind') not in ('coordinator', 'worker'):
+        if startup_protocol != 'direct_team_v3' or role.get('kind') not in ('team-controller', 'worker'):
             raise ValueError('Expected a direct-start standing policy role')
     elif topology not in ('centralized', 'adaptive') or actor != 'Controller' or role.get('kind') != 'controller':
         raise ValueError('Expected the selected Controller topology')

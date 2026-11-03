@@ -434,8 +434,9 @@ planning or preparation.
 Controller + Worker routes business messages through Controller. Worker-to-Worker
 business messages are rejected in that mode. Worker-Worker allows authorized
 peer messages. The runtime, rather than prompt wording alone, enforces these
-routes and robot authority. The old serialized `coordinator` kind is retained
-for compatibility; its public actor name is Controller in current defaults.
+routes and robot authority. The lead's role kind is `team-controller` and its
+actor name is Controller. Runs prepared before the rename record the kind as
+`coordinator`; the runtime reads it as `team-controller`.
 
 The host creates all initial native session IDs, binds each role once, and asks
 the existing physical owner to START only after every binding is confirmed.

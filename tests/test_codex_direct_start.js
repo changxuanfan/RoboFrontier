@@ -20,7 +20,7 @@ function fixture() {
   };
   return {host,operations};
 }
-const standing={Meta:{kind:'manager'},Controller:{kind:'coordinator'},A:{kind:'worker'},B:{kind:'worker'}};
+const standing={Meta:{kind:'manager'},Controller:{kind:'team-controller'},A:{kind:'worker'},B:{kind:'worker'}};
 
 test('direct team binds every role, starts once, then supplies explicit START prompts',async()=>{
   const {host,operations}=fixture();

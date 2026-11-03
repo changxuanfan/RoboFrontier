@@ -392,7 +392,7 @@ class RuntimeService:
                 event=Delegations(self.store).return_task(actor,data['outcome'],data['result'])
                 self.respond(job,{'returned':True,'delegation':event})
             elif op == 'team':
-                if kind != 'coordinator':
+                if kind != 'team-controller':
                     raise ValueError('Hierarchical Controller team view only')
                 with self.store.transaction():
                     workers={a:{'work':{'note':v['note'], 'saved_at':v.get('work_saved_at'), 'revision':v['work_revision']},
@@ -496,7 +496,7 @@ class RuntimeService:
             elif op == 'state':
                 self.respond(job, self.snapshot())
             elif op == 'finish':
-                authorized = kind=={'hierarchical':'coordinator','peer':'worker','centralized':'controller','adaptive':'controller'}[self.config['topology']]
+                authorized = kind=={'hierarchical':'team-controller','peer':'worker','centralized':'controller','adaptive':'controller'}[self.config['topology']]
                 if not authorized:
                     raise ValueError('Task-team finish proposal required')
                 if any(v['status'] in ('pending','running','uncertain') for v in self.store.actions().values()):

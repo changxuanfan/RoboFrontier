@@ -18,7 +18,7 @@ class SetupTests(unittest.TestCase):
         try:
             self.assertEqual(store.get('lifecycle'),'prepared')
             self.assertEqual(store.agent('Meta')['kind'],'manager')
-            self.assertEqual(store.agent('Controller')['kind'],'coordinator')
+            self.assertEqual(store.agent('Controller')['kind'],'team-controller')
             self.assertTrue(all(v['thread_id'] is None for v in store.agents().values()))
             self.assertEqual(store.actions(),{})
         finally:store.close()
@@ -124,7 +124,7 @@ class SetupTests(unittest.TestCase):
                 run=prepare_run(self.root/('run-'+name),harness_path=config)
                 roles=json.loads((run/'public/inputs/roles.json').read_text())
                 self.assertEqual(roles['coordinator'],'Controller')
-                self.assertEqual(roles['roles']['Controller']['kind'],'coordinator')
+                self.assertEqual(roles['roles']['Controller']['kind'],'team-controller')
                 self.assertTrue((run/'public/inputs/roles/Controller.md').exists())
                 self.assertEqual(verify_inputs(run),[])
 

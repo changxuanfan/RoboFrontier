@@ -23,6 +23,15 @@ SESSION_SOURCES = {
     'claude': ('claude.host',),
 }
 
+# Runs prepared before the rename record the controller-worker lead as 'coordinator'.
+LEGACY_KINDS = {'coordinator': 'team-controller'}
+
+
+def current_kind(value):
+    """A role record with its kind under the current name."""
+    value['kind'] = LEGACY_KINDS.get(value.get('kind'), value.get('kind'))
+    return value
+
 
 class RuntimeStore:
     def __init__(self, path):
@@ -110,7 +119,7 @@ class RuntimeStore:
             self.put('integrity_valid', True)
             roles = [(config['manager'], 'manager')]
             if config['topology'] == 'hierarchical':
-                roles.append((config['coordinator'], 'coordinator'))
+                roles.append((config['coordinator'], 'team-controller'))
             roles += [('Controller', 'controller')] if config['topology'] in ('centralized','adaptive') else [(w, 'worker') for w in workers]
             for actor, kind in roles:
                 self.db.execute('INSERT INTO agents VALUES (?,?)', (actor, packed({
@@ -122,14 +131,14 @@ class RuntimeStore:
 
     def agents(self):
         with self.lock:
-            return {r['id']: json.loads(r['value']) for r in self.db.execute('SELECT * FROM agents ORDER BY id')}
+            return {r['id']: current_kind(json.loads(r['value'])) for r in self.db.execute('SELECT * FROM agents ORDER BY id')}
 
     def agent(self, actor):
         with self.lock:
             row = self.db.execute('SELECT value FROM agents WHERE id=?', (actor,)).fetchone()
             if row is None:
                 raise ValueError('Unknown role: ' + actor)
-            return json.loads(row[0])
+            return current_kind(json.loads(row[0]))
 
     def update_agent(self, actor, **changes):
         with self.transaction():
@@ -225,7 +234,7 @@ class RuntimeStore:
                 if target == actor or recipient['kind'] == 'manager':
                     raise ValueError('Invalid business recipient')
             if cfg['topology'] == 'hierarchical' and not (
-                sender['kind'] == 'coordinator' and all(self.agent(t)['kind'] == 'worker' for t in to)
+                sender['kind'] == 'team-controller' and all(self.agent(t)['kind'] == 'worker' for t in to)
                 or sender['kind'] == 'worker' and to == [cfg['coordinator']]
             ):
                 raise ValueError('Tree topology requires Controller <-> Worker')

@@ -67,7 +67,8 @@ class BenchmarkCollectionTests(unittest.TestCase):
         return batch,run,sessions
 
     def test_all_role_kinds_and_failed_task_roundtrip(self):
-        for kind in ('controller','worker','coordinator'):
+        # 'coordinator' is how runs before the rename recorded 'team-controller'.
+        for kind in ('controller','worker','team-controller','coordinator'):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as tmp:
                 root=Path(tmp);batch,run,sessions=self.make_batch(root,kind=kind)
                 report=collect_batch(batch,root/'export')
