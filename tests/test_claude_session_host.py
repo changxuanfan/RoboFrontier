@@ -56,6 +56,15 @@ class SessionHostTests(unittest.TestCase):
             for actor in ('Meta', '../Controller', 'Unknown'):
                 with self.assertRaises(ValueError): role_mcp_config(run, actor)
 
+    def test_the_robot_server_keeps_the_virtual_environments_python(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = make_run(tmp)
+            base = Path(tmp)/'base-python'; base.write_text(''); venv = Path(tmp)/'venv/bin'; venv.mkdir(parents=True)
+            (venv/'python').symlink_to(base)
+            config = json.loads(role_mcp_config(run, 'Controller', python=str(venv/'python')).read_text())
+            # Following the link would run the base interpreter, which cannot import this project.
+            self.assertEqual(config['mcpServers']['robot']['command'], str(venv/'python'))
+
     def test_no_overlap_and_explicit_resume_of_the_same_role(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = make_run(tmp); entered = threading.Event(); release = threading.Event(); calls = []

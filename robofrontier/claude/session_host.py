@@ -6,6 +6,7 @@ outcomes are terminal for this host: never issue another turn automatically.
 """
 import json
 import math
+import os
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import re
@@ -50,7 +51,10 @@ def role_mcp_config(run_dir, actor, python=sys.executable, *, _validated_delegat
     # A model never chooses the actor or a connection path. The server binds it.
     project = Path(__file__).resolve().parents[2]
     write_json(target, {'mcpServers': {'robot': {
-        'command': str(Path(python).resolve()),
+        # Absolute but not resolved: a virtual environment's python is a link to the base
+        # interpreter, and following it loses the environment that installs this project.
+        # Claude Code does not pass the PYTHONPATH below to the server on every host.
+        'command': os.path.abspath(python),
         'args': ['-m', 'robofrontier.claude.robot_mcp', '--run-dir', str(run), '--connection', str(connection)],
         'env': {'PYTHONPATH': str(project)},
     }}})
