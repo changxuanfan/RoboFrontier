@@ -22,8 +22,9 @@ import numpy as np
 from mathutils import Matrix,Vector
 
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from factory_blender_materials import resolve as resolve_material, robot_role, task_role, ROBOT_BODY
+from factory_blender_materials import resolve as resolve_material, robot_role, task_role, ROBOT_BODY, apply_recorded_appearance
 from factory_mesh_rotation import asset_frame_rotation
+from factory_primitive_uv import primitive_uv
 
 SCRIPT_SHA256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
@@ -257,10 +258,9 @@ def main():
         elif kind==3:bmesh.ops.create_uvsphere(bm,u_segments=24,v_segments=12,radius=1.)
         bm.to_mesh(mesh);bm.free();mesh.update();uv=mesh.uv_layers.new(name='UVMap')
         for polygon in mesh.polygons:
-            axis=max(range(3),key=lambda i:abs(polygon.normal[i]))
             for li in polygon.loop_indices:
                 co=mesh.vertices[mesh.loops[li].vertex_index].co
-                ij=((1,2),(0,2),(0,1))[axis];uv.data[li].uv=((co[ij[0]]+1)/2,(co[ij[1]]+1)/2)
+                uv.data[li].uv=primitive_uv(kind,co,polygon.normal)
             polygon.use_smooth=kind==3 or (kind==5 and abs(polygon.normal.z)<.5)
         mesh.materials.append(next(iter(materials.values())));meshes[key]=mesh;return mesh
     max_position_error=0.;max_rotation_error=0.;objects={}
@@ -310,11 +310,7 @@ def main():
                 elif original['kind']==3:obj.scale=(size[0],)*3
             max_position_error=max(max_position_error,float(np.max(abs(np.asarray(obj.location)-position))))
             max_rotation_error=max(max_rotation_error,float(np.max(abs(np.asarray(obj.rotation_quaternion.to_matrix())-rotation))))
-        if not np.allclose(rgba,original['rgba'],rtol=0,atol=1e-7):
-                # Appearance events are per geometry, never a shared-material
-                # mutation that could change other workstations or digits.
-                spec=dict(original,material=-1,rgba=rgba.tolist())
-                obj.material_slots[0].material=geom_material(spec)
+            apply_recorded_appearance(obj,original,rgba,geom_material)
         metadata['cameras'].append(recorded['camera'])
         if max_position_error>1e-5 or max_rotation_error>1e-6:raise RuntimeError('Recorded visual transform precision exceeded')
     # Offline interior lighting: large soft ceiling fixtures, calibrated separately
@@ -547,6 +543,7 @@ def main():
         frame_storage_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_video_frames.py').read_bytes()).hexdigest(),
         instance_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_blender_objects.py').read_bytes()).hexdigest(),
         material_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_blender_materials.py').read_bytes()).hexdigest(),
+        primitive_uv_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_primitive_uv.py').read_bytes()).hexdigest(),
         asset_metadata_sha256=hashlib.sha256((args.asset/'scene.json').read_bytes()).hexdigest(),
         animation_sha256=hashlib.sha256(args.animation.read_bytes()).hexdigest()if args.animation else None)
     if args.animation and args.encode and not args.keep_frames:

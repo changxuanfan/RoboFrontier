@@ -106,6 +106,7 @@ Offline presentation of recorded motion; never steps task physics.
 | `factory_blender_objects.py` | Retain exact rigid body frames with shared meshes and isolated material slots. |
 | `factory_desk_cameras.py` | Place each source workstation's inspection cameras in the factory. |
 | `factory_mesh_rotation.py` | Compare animated mesh rotations in the exported asset's coordinate frame. |
+| `factory_primitive_uv.py` | Match primitive face texture coordinates to MuJoCo. |
 | `factory_server.py` | Portable factory data, render plans, local execution and Slurm submission. |
 | `factory_video_frames.py` | Discard reproducible animation PNGs only after successful video validation. |
 | `mosaic_motion_mask.py` | Read-only whole-scene motion detection for editing audited replay videos. |

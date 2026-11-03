@@ -6,6 +6,21 @@ from scripts.factory_blender_materials import resolve, robot_role, task_role
 
 
 class MaterialChecks(unittest.TestCase):
+    def test_recorded_pose_updates_each_changed_geom_independently(self):
+        from types import SimpleNamespace
+        from scripts.factory_blender_materials import apply_recorded_appearance
+        def obj():
+            return SimpleNamespace(material_slots=[SimpleNamespace(material='initial')])
+        first, second, unchanged = obj(), obj(), obj()
+        original = dict(material=4, rgba=[0., 0., 0., 1.])
+        make = lambda spec: tuple(spec['rgba'])
+        apply_recorded_appearance(first, original, [.1, .2, .3, 1.], make)
+        apply_recorded_appearance(second, original, [.4, .5, .6, 0.], make)
+        apply_recorded_appearance(unchanged, original, [0., 0., 0., 1.], make)
+        self.assertEqual(first.material_slots[0].material, (.1, .2, .3, 1.))
+        self.assertEqual(second.material_slots[0].material, (.4, .5, .6, 0.))
+        self.assertEqual(unchanged.material_slots[0].material, 'initial')
+
     def test_replayed_numpy_colors_are_json_safe(self):
         source=dict(rgba=np.array([.12,.34,.56,0.],dtype=np.float32),roughness=np.float32(.58),metallic=np.float32(0.))
         for role in (None,'joint','shell','painted_wood'):

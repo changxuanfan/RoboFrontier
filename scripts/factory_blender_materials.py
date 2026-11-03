@@ -6,6 +6,13 @@ import colorsys
 ROBOT_BODY = re.compile(r'__[A-Z]_(?:link\d|hand|left_?finger|right_?finger)$')
 
 
+def apply_recorded_appearance(obj, original, rgba, geom_material):
+    """Update only the geometry whose recorded appearance has changed."""
+    if any(abs(float(a)-float(b)) > 1e-7 for a,b in zip(rgba,original['rgba'])):
+        spec = dict(original, material=-1, rgba=list(rgba))
+        obj.material_slots[0].material = geom_material(spec)
+
+
 def robot_role(spec):
     """Classify the neutral authored robot parts, leaving colored indicators intact."""
     rgb = spec['rgba'][:3]
