@@ -83,6 +83,17 @@ class FactoryWorkflowTests(unittest.TestCase):
         self.assertEqual(result['model_calls'], 0)
         self.assertIn('export_blender', diagnostics.getvalue())
 
+    def test_import_defaults_to_the_family_speedup_and_cuts_stationary_intervals(self):
+        calls = []
+        def record(*args, **kwargs):
+            calls.append(kwargs)
+            return {'status': 'verified', 'data_root': str(self.root/'imported')}
+        with patch.object(server, 'import_motion', side_effect=record):
+            self.cli(['import-motion', self.root/'closed-recording', '--output', self.root/'imported'])
+            self.cli(['import-motion', self.root/'closed-recording', '--output', self.root/'imported-full',
+                      '--speedup', 5, '--keep-idle'])
+        self.assertEqual(calls, [dict(speedup=None, keep_idle=False, timeline=None), dict(speedup=5.0, keep_idle=True, timeline=None)])
+
     def test_promo_filter_error_precedes_installation_and_output_creation(self):
         with patch.object(bundle, 'setup') as install, contextlib.redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit):
@@ -145,7 +156,7 @@ class FactoryWorkflowTests(unittest.TestCase):
 
     def test_configuration_rejects_invalid_factory_values(self):
         for settings in ({'width': 1919}, {'samples': 0}, {'duration_s': float('nan')},
-                         {'import_speedup': 0}, {'views': [{}]}, {'device': 'automatic'}):
+                         {'import_speedup': -1}, {'views': [{}]}, {'device': 'automatic'}):
             with self.subTest(settings=settings), self.assertRaises(ValueError):
                 load_configuration(overrides={'factory': settings})
 

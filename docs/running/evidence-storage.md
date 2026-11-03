@@ -271,3 +271,14 @@ a home original goes only while it still equals the run's verified copy. An
 interrupted run that could still be continued is refused unless `--final` says
 it will not be. Readers accept both forms, and an archive that stops part way
 resumes on the next call.
+
+## Videos of policy runs
+
+`scripts/render_policy_videos.py` renders each run's simple-background video at
+1280 x 720 and its family speedup (Mosaic 30x). It first keeps only meaningful
+motion (`robofrontier/motion_cut.py`: directed arm, finger or object motion;
+jitter, drift and settling are still), then checks the rendered frames and also
+drops any frame in which no view visibly changes, until no still stretch is
+longer than two frames. The resulting `motion-cut.json` maps to the recording's
+own states; give it to `robofrontier factory import-motion --timeline` so the
+1920 x 1080 Factory video shows the same states. The recording is never changed.

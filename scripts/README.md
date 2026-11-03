@@ -117,6 +117,7 @@ Offline presentation of recorded motion; never steps task physics.
 | `render_edited_dial_batch.py` | Render selected closed dial episodes in both backgrounds with shared edits. |
 | `render_factory_blender.py` | Run with Blender --background --python SCRIPT -- --asset DIR --output DIR. |
 | `render_frontier_oracle.py` | Render stored physical configurations, including the shared chunked format. |
+| `render_policy_videos.py` | Render policy runs at 720p with only meaningful motion, checked frame by frame; writes the motion-cut.json Factory import reads. |
 | `replay_dial_motion.py` | Verify immutable Dial source motion and a shared edit in the factory. |
 | `replay_motion_in_factory.py` | Replay immutable source states and optional scene-independent cuts in a factory. |
 | `slurm_factory.sbatch` | Invoked by scripts.factory_server submit. |

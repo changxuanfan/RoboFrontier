@@ -41,6 +41,8 @@ def add_arguments(subparsers):
         if name == 'import-motion':
             command.add_argument('recording', type=Path)
             command.add_argument('--speedup', type=float)
+            command.add_argument('--keep-idle', action='store_true', help='Keep stationary intervals instead of cutting them')
+            command.add_argument('--timeline', type=Path, help='motion-cut.json from scripts.render_policy_videos for this recording')
     edit = actions.add_parser('edit-video', help='Reuse a movie for text-only editorial changes; no scene identity claim')
     edit.add_argument('--project', type=Path, required=True)
     edit.add_argument('--input', type=Path, required=True)
@@ -176,7 +178,8 @@ def execute(args):
         from .editorial import create
         return create(data, args.output)
     if action == 'import-motion':
-        result = server.import_motion(data, args.recording, args.output, speedup=factory['import_speedup'])
+        result = server.import_motion(data, args.recording, args.output, speedup=factory['import_speedup'] or None,
+                                      keep_idle=args.keep_idle, timeline=args.timeline)
         return dict(result, model_calls=0, next_prepare=['factory', 'prepare', '--source', 'imported',
                     '--data-root', result['data_root'], '--output', str(args.output.with_name(args.output.name+'-render'))])
     cases = _cases(data, config['selection']) if factory['mode'] == 'desks' else None

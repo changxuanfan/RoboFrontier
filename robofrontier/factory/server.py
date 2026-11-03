@@ -66,11 +66,15 @@ def doctor(data_root, blender=None, device=None):
     return result
 
 
-def import_motion(data_root, recording, output, speedup=1.):
+def import_motion(data_root, recording, output, speedup=None, keep_idle=False, timeline=None):
     """Bind a closed benchmark recording to a newly composed factory display.
 
-    Other desks are static background. This creates an uncut presentation, not
-    an Oracle edit or a benchmark qualification, and changes no source evidence.
+    Other desks are static background. The desk shows the states kept by timeline,
+    a motion-edit of this recording such as the motion-cut.json that
+    scripts/render_policy_videos.py checked on the simple background; without one
+    it keeps robofrontier.motion_cut's meaningful motion, and with keep_idle every
+    state. Speedup None plays at the family's release speedup. This is not an
+    Oracle edit or a benchmark qualification, and changes no source evidence.
     """
     import numpy as np
     from .scene import build_factory
@@ -83,7 +87,7 @@ def import_motion(data_root, recording, output, speedup=1.):
     reader=MotionReader(recording)
     if reader.meta['status']=='recording' or reader.meta['frames']<1:
         raise ValueError('Import only a closed, nonempty recording after all writers have stopped')
-    if not math.isfinite(speedup) or speedup<=0:
+    if speedup is not None and (not math.isfinite(speedup) or speedup<=0):
         raise ValueError('Positive finite playback speed required')
     release=resolved_release(data_root)
     entries=[(name,spec) for name,family in release['families'].items() for spec in family['oracle']]
@@ -91,6 +95,7 @@ def import_motion(data_root, recording, output, speedup=1.):
     if len(matches)!=1:
         raise ValueError('Recording must match one published factory task ID')
     name,spec=matches[0]
+    if speedup is None:speedup=float(release['families'][name]['speedup'])
     output.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.factory-import-',dir=output.parent) as tmp:
         tmp=Path(tmp)
@@ -111,12 +116,21 @@ def import_motion(data_root, recording, output, speedup=1.):
         times=np.concatenate(clocks)
         if len(times)!=reader.meta['frames'] or not np.isfinite(times).all() or np.any(np.diff(times)<=0):
             raise ValueError('Recorded motion clock differs')
-        np.savez_compressed(edit_dir/'selection.npz',source_time_s=times,keep=np.ones(len(times),dtype=bool))
+        keep=np.ones(len(times),dtype=bool)
+        if timeline is not None:
+            from ..motion_timeline import MotionTimeline
+            cut=MotionTimeline(timeline,reader)
+            if not np.array_equal(cut.times,times):raise ValueError('Timeline clock differs from the recording')
+            keep=cut.keep.astype(bool).copy()
+        elif not keep_idle:
+            from ..motion_cut import meaningful_keep
+            keep=meaningful_keep(recording)[1]
+        np.savez_compressed(edit_dir/'selection.npz',source_time_s=times,keep=keep)
         write(edit_dir/'edit.json',dict(schema='robofrontier.station-edit.v2',case_id=spec['id'],
             source_scene_sha256=reader.meta['source_scene_sha256'],source_stream_sha256=digest(recording/'stream.json'),
             events_sha256=digest(recording/'events.jsonl'),source_frames=len(times),source_hz=reader.meta['sample_hz'],
             source_end_frame=len(times)-1,input_evidence_sha256={},selection_file='selection.npz',
-            selection_sha256=digest(edit_dir/'selection.npz'),scope='Uncut closed benchmark recording; no inferred completion or semantic cuts'))
+            selection_sha256=digest(edit_dir/'selection.npz'),scope=('Uncut' if keep_idle and timeline is None else 'Still, jittering and drifting intervals cut from the')+' closed benchmark recording; no inferred completion or semantic cuts'))
         replacement=dict(id=spec['id'],level=read(recording/'source/task.json')['level'],directory=str(recording/'source'),
             recording=str(recording),edit=str(edit_dir/'edit.json'),edit_sha256=digest(edit_dir/'edit.json'),
             qualification='recorded_benchmark_presentation_only',table_opening_scale=1.)

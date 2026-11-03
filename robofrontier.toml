@@ -64,7 +64,7 @@ width = 1920
 height = 1080
 samples = 64
 duration_s = 0.0                     # 0 preserves the full reviewed timeline; positive values cap a preview
-import_speedup = 1.0                 # Applies only to a newly imported closed recording
+import_speedup = 0.0                 # Newly imported recording only; 0 uses the family release speedup
 parallel = 1                        # Slurm render array concurrency, independent of benchmark parallelism
 
 [oracle]

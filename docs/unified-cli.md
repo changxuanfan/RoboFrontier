@@ -100,7 +100,7 @@ physics steps, or model turns. It is not a provider rate-limit guarantee.
 | `factory.mode` / `views` | Station views or the full 210.5-second Factory tour |
 | `factory.duration_s` | 0 preserves the reviewed full timeline; a positive value explicitly caps a preview |
 | `factory.data_root` / `asset_lock` / `source` | Pinned release installation or an explicitly imported closed-recording bundle |
-| `factory.import_speedup` | Speed for a newly imported recording only; existing release edits remain intact |
+| `factory.import_speedup` | Speed for a newly imported recording only; 0 uses the family release speedup; existing release edits remain intact |
 | `factory.parallel` | Render array concurrency, independent of benchmark task concurrency |
 | `oracle.wall_limit_s` | Engineering elapsed limit from native owner launch, including planning and pauses; independent of policy START |
 | `oracle.stop_grace_s` | Cleanup allowance after a stop request before forced process-group termination |

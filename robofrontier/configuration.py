@@ -178,7 +178,8 @@ def validate_configuration(config):
             raise ValueError('Factory video dimensions must be even')
         for field in ('duration_s', 'import_speedup'):
             value = factory[field]
-            if not math.isfinite(value) or value < 0 or (field == 'import_speedup' and value == 0):
+            # duration_s 0 keeps the full timeline; import_speedup 0 uses the family's release speedup.
+            if not math.isfinite(value) or value < 0:
                 raise ValueError('Invalid factory.'+field)
     if version >= 3:
         oracle = config['oracle']
