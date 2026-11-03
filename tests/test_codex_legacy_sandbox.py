@@ -72,6 +72,8 @@ def denied(name,fn):
  except PermissionError:checks[name]=True;return
  checks[name]=False
 checks['public_read']=p.read_text()=='PUBLIC_READ_ONLY_CANARY'
+with open('/dev/urandom','rb') as entropy:checks['entropy_read']=len(entropy.read(16))==16
+denied('entropy_not_writable',lambda:os.open('/dev/urandom',os.O_WRONLY))
 Path('note').write_text('first');Path('note').write_text('updated')
 with Path('note').open('a') as f:f.write('-append')
 Path('replacement').write_text('replace');os.replace('replacement','note')

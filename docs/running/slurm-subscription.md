@@ -89,8 +89,9 @@ Robot calls and file tools remain host-bound. Native shell, apply-patch, browser
 MCP, plugins and native multi-agent tools stay disabled. Policy file workers close
 inherited descriptors, clear the environment, apply Landlock/seccomp and drop
 capabilities. Their frozen tables explicitly deny authentication/control roots,
-other checkouts/tasks, `/proc` and `/dev`; only `/dev/null` is added by the trusted
-worker. Rendering remains outside the policy worker. Same-UID mode 0600 files
+other checkouts/tasks, `/proc` and `/dev`; the trusted worker adds only writable
+`/dev/null` and read-only `/dev/urandom` for runtimes' entropy fallback. Rendering
+remains outside the policy worker. Same-UID mode 0600 files
 alone are not this isolation boundary.
 
 The Codex file worker supports filesystem Landlock ABI 1 or later, paired with

@@ -119,7 +119,9 @@ def main():
     # An inherited regular stdout/stderr could bypass filesystem-open checks.
     if any(not stat.S_ISFIFO(os.fstat(fd).st_mode) for fd in (0, 1, 2)):
         raise ValueError('Isolated tools require pipe-backed standard descriptors')
-    rules = allowlist(access['filesystem'], write=['/dev/null'])
+    # Some Python builds fall back from getrandom() to this read-only entropy
+    # source. No other device becomes readable through the /dev deny table.
+    rules = allowlist(access['filesystem'], read=['/dev/urandom'], write=['/dev/null'])
     temporary = run/'workspace/.tmp'
     if not temporary.is_dir():
         raise ValueError('Missing private tool temporary directory')
