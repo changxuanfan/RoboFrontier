@@ -53,8 +53,8 @@ hash, so it is never rewritten, only superseded by a new record.
 | `dial/best5-r11.json` | The BEST5 R11 family review: selected Oracle evidence per case, presentation defaults, policy guidance and the integration still required before a formal run | `suite/dial_policy_package.py`, `scripts/check_oracle_preservation.py` |
 | `dial/integration-requests.json` | The shared-runtime changes the Dial work asked for, each with its acceptance check | `scripts/check_dial_family.py` |
 | `mosaic/r13.json` | The R13 family registry: catalog, harness and evaluator hashes, guidance and readiness per case; the Oracle recordings and Factory replay use R13 | Mosaic Oracle, packaging and Factory tools |
-| `mosaic/r14.json` | The R14 local-colour revision prepared for future policy runs, with its R13 baseline by hash | `suite/mosaic_delivery.py`, `scripts/build_mosaic_local_colors.py` |
-| `mosaic/selection.json` | Which registry serves which purpose: R14 for future policy runs, R13 for Oracle and Factory replay | `suite/mosaic_delivery.py` |
+| `mosaic/r14.json` | The R14 local-colour revision, with its R13 baseline by hash. R14 now lives under `configs/environments/mosaic/frontier-v2-r14-*`; the release uses R15, built from R14 by `scripts/build_mosaic_pitch.py` | `suite/mosaic_delivery.py`, `scripts/build_mosaic_local_colors.py` |
+| `mosaic/selection.json` | Which registry served which purpose when R14 was prepared: R14 for future policy runs, R13 for Oracle and Factory replay. New runs follow `release.json` | `suite/mosaic_delivery.py` |
 | `mosaic/delivery.json` | Delivery purposes, the protected snapshot and the Factory playback setting | `suite/mosaic_delivery.py` |
 | `mosaic/builder-compatibility.json` | Historical builder identities whose static public projection is unchanged | `suite/mosaic_policy_package.py` |
 | `transport/half-opening-r14.json` | The R14 half-opening physical revision chosen for new runs, with its acceptance audit and witness registry | `scripts/build_transport_policy_package.py`, `scripts/edit_transport_recordings.py` |

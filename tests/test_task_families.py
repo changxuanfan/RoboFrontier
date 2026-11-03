@@ -35,7 +35,7 @@ class FamilyReleaseTests(unittest.TestCase):
             for c in rows:
                 resolve_case(c['id'], purpose)
         mosaic = release['families']['mosaic']
-        self.assertEqual(read(ROOT/mosaic['gpt'][0]['directory']/'task.json')['scale']['scene_revision'], 14)
+        self.assertEqual(read(ROOT/mosaic['gpt'][0]['directory']/'task.json')['scale']['scene_revision'], 15)
         self.assertNotEqual(mosaic['gpt'][0]['source_files']['scene.xml'],
                             mosaic['oracle'][0]['source_files']['scene.xml'])
 

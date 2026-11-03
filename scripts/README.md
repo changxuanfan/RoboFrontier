@@ -135,6 +135,7 @@ Build or inspect released scenes; names are kept for provenance.
 | `build_frontier_v2.py` | Build simple v2 scenes only. |
 | `build_mosaic.py` | Generate the four-arm shared-table mosaic environment. |
 | `build_mosaic_local_colors.py` | Prepare R14 local stock colours and visual previews, leaving R13 immutable. |
+| `build_mosaic_pitch.py` | Build Mosaic R15 (71 mm grid pitch, 60 mm cubes) from R14 into `benchmark/mosaic/` and update the release entries. |
 | `build_spring_crank_dial.py` | Build a preserved-geometry fixed-dial scene with red graspable crank handles. |
 | `build_spring_dial.py` | Generate four passive spring dials and four Panda arms. |
 | `build_transport_policy_package.py` | Build Transport R14 static scenes and reviewable family inputs. |

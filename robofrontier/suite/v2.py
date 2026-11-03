@@ -860,7 +860,7 @@ def validate_task(task):
         if task.get(key)!=env.get(key,[] if key=='goals' else None):raise ValueError('V2 geometry mismatch: '+key)
     if task['family'] in ('transport','mosaic') and len(task['objects'])!=len(task['goals']):raise ValueError('V2 inventory conservation')
     if task['family']=='mosaic':
-        expected_pitch={1:.126,2:.076}.get(case.get('scene_revision',1),PITCH)
+        expected_pitch={1:.126,2:.076,15:.071}.get(case.get('scene_revision',1),PITCH)
         if task['grid']['pitch_m']!=expected_pitch or len(task['goals'])!=case['rows']*case['columns']:raise ValueError('V2 mosaic dimensions')
         available=Counter(o['color'] for o in task['objects']);needed=Counter(g['requires']['color'] for g in task['goals'])
         if available!=needed:raise ValueError('V2 color conservation')

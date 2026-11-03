@@ -24,12 +24,12 @@
     "kind": "printed_grid",
     "stock_packing": "Single layer; non-exclusive station allocation",
     "stock_count": 288,
-    "robot_to_grid_edge_m": 0.2696446609406725,
+    "robot_to_grid_edge_m": 0.3296446609406726,
     "stock_edge_clearance_m": 0.055,
     "row_spacing_scale_from_r3": 0.95,
     "table_side_scale_from_r3": 1.25,
     "table_vertical_scale_from_r4": 0.9,
-    "outer_base_axis_inset_from_grid_end_m": 0.12935000000000008,
+    "outer_base_axis_inset_from_grid_end_m": -0.15529466094067268,
     "layout_revision": {
       "name": "corner-facing-r12-inward50mm",
       "source_revision": 11,
@@ -199,27 +199,36 @@
       1.0072946609406725
     ],
     "robot_to_grid_edge_m_by_robot": {
-      "A": 0.2696446609406725,
-      "B": 0.30499999999999994,
-      "C": 0.30499999999999994,
-      "D": 0.2696446609406725,
-      "E": 0.2696446609406725,
-      "F": 0.30499999999999994,
-      "G": 0.30499999999999994,
-      "H": 0.2696446609406725
+      "A": 0.3296446609406726,
+      "B": 0.365,
+      "C": 0.365,
+      "D": 0.3296446609406726,
+      "E": 0.3296446609406726,
+      "F": 0.365,
+      "G": 0.365,
+      "H": 0.3296446609406726
     },
     "stock_layout_revision": {
       "name": "individually-graspable-r13",
       "source_revision": 12,
       "changed_stock_count": 25,
       "robot_poses_changed": false
+    },
+    "pitch_revision": {
+      "name": "pitch-71mm-r15",
+      "source_revision": 14,
+      "previous_pitch_m": 0.081,
+      "pitch_m": 0.071,
+      "cube_side_m": 0.06,
+      "pocket_opening_m": null,
+      "unchanged": "Robots, stock, table, cameras, initial keyframe, colours, pattern and physics"
     }
   },
   "grid": {
     "rows": 12,
     "columns": 24,
     "colors": 4,
-    "pitch_m": 0.081,
+    "pitch_m": 0.071,
     "cube_side_m": 0.06,
     "pattern": [
       [
@@ -574,5 +583,6 @@
       }
     },
     "printed_line_width_m": 0.003
-  }
+  },
+  "scope": "Declared geometry/material and engineering parameters; not a task success proof"
 }

@@ -4,8 +4,8 @@
   "id": "mosaic-a04-6x12-d1",
   "family": "mosaic",
   "suite_version": 2,
-  "scene_revision": 14,
-  "source_scene_sha256": "0794eb592888fac3b9250d55945c2dc8eff16f59c239cca19cc2061769962da6",
+  "scene_revision": 15,
+  "source_scene_sha256": "90f704300cd0e17c5514e38bf4d0a5463a4c44e733291bbc7fb87c7707c936ac",
   "level": 1,
   "arms": {
     "A": {
@@ -162,7 +162,7 @@
     "rows": 6,
     "columns": 12,
     "colors": 4,
-    "pitch_m": 0.081,
+    "pitch_m": 0.071,
     "cube_side_m": 0.06,
     "pattern": [
       [
@@ -250,7 +250,7 @@
         "navy"
       ]
     ],
-    "pocket_opening_m": 0.08,
+    "pocket_opening_m": 0.06999999999999999,
     "depth_m": 0.02,
     "palette": {
       "cream": "#FFF4DA",
@@ -549,7 +549,7 @@
     "orientation": "Cube axes aligned to workstation axes, including cube symmetries"
   },
   "execution_readiness": "environment_preview_only",
-  "package_status": "colour_design_review_only_no_r14_oracle_qualification",
+  "package_status": "grid_pitch_review_only_no_r15_oracle_qualification",
   "guidance": {
     "task_prompt": "../../guidance/mosaic-r14.md",
     "skill": "../../guidance/mosaic-r13/SKILL.md"

@@ -1543,35 +1543,35 @@
       <freejoint name="F_stock27_free" />
       <geom name="F_stock27_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="1.0 0.9568627450980393 0.8549019607843137 1.0" friction="1 .005 .0001" condim="4" solref=".004 1" solimp=".95 .99 .001 .5 2" mass="0.16874999999999996" />
     </body>
-    <geom name="printed_column_0" type="box" pos="-0.729 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_1" type="box" pos="-0.648 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_2" type="box" pos="-0.5670000000000001 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_3" type="box" pos="-0.486 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_4" type="box" pos="-0.405 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_5" type="box" pos="-0.324 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_6" type="box" pos="-0.243 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_7" type="box" pos="-0.162 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_8" type="box" pos="-0.081 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_9" type="box" pos="0.0 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_10" type="box" pos="0.081 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_11" type="box" pos="0.162 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_12" type="box" pos="0.243 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_13" type="box" pos="0.324 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_14" type="box" pos="0.405 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_15" type="box" pos="0.486 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_16" type="box" pos="0.5670000000000001 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_17" type="box" pos="0.648 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_column_18" type="box" pos="0.729 0.0 0.8001" size="0.0015 0.3645 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_0" type="box" pos="0.0 -0.3645 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_1" type="box" pos="0.0 -0.28350000000000003 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_2" type="box" pos="0.0 -0.2025 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_3" type="box" pos="0.0 -0.1215 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_4" type="box" pos="0.0 -0.0405 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_5" type="box" pos="0.0 0.0405 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_6" type="box" pos="0.0 0.1215 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_7" type="box" pos="0.0 0.2025 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_8" type="box" pos="0.0 0.28350000000000003 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
-    <geom name="printed_row_9" type="box" pos="0.0 0.3645 0.8001" size="0.729 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_0" type="box" pos="-0.6389999999999999 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_1" type="box" pos="-0.568 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_2" type="box" pos="-0.49699999999999994 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_3" type="box" pos="-0.42599999999999993 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_4" type="box" pos="-0.355 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_5" type="box" pos="-0.284 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_6" type="box" pos="-0.21299999999999997 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_7" type="box" pos="-0.142 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_8" type="box" pos="-0.071 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_9" type="box" pos="0.0 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_10" type="box" pos="0.071 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_11" type="box" pos="0.142 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_12" type="box" pos="0.21299999999999997 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_13" type="box" pos="0.284 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_14" type="box" pos="0.355 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_15" type="box" pos="0.42599999999999993 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_16" type="box" pos="0.49699999999999994 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_17" type="box" pos="0.568 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_column_18" type="box" pos="0.6389999999999999 0.0 0.8001" size="0.0015 0.31949999999999995 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_0" type="box" pos="0.0 -0.31949999999999995 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_1" type="box" pos="0.0 -0.24849999999999997 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_2" type="box" pos="0.0 -0.1775 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_3" type="box" pos="0.0 -0.10649999999999998 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_4" type="box" pos="0.0 -0.0355 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_5" type="box" pos="0.0 0.0355 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_6" type="box" pos="0.0 0.10649999999999998 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_7" type="box" pos="0.0 0.1775 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_8" type="box" pos="0.0 0.24849999999999997 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
+    <geom name="printed_row_9" type="box" pos="0.0 0.31949999999999995 0.8001" size="0.6389999999999999 0.0015 8e-05" rgba="0.78 0.035 0.035 1.0" contype="0" conaffinity="0" mass="0" />
     <camera name="assembly_01" pos="-0.6118 0.0 2.4499999999999997" xyaxes="1 0 0 0 1 0" fovy="40" />
     <camera name="assembly_02" pos="0.0 0.0 2.4499999999999997" xyaxes="1 0 0 0 1 0" fovy="40" />
     <camera name="assembly_03" pos="0.6118 0.0 2.4499999999999997" xyaxes="1 0 0 0 1 0" fovy="40" />

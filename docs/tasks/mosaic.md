@@ -6,11 +6,16 @@ correctly colored cubes satisfying release, placement, orientation, and stabilit
 
 ## Current selection and Legacy sources
 
-New policy and unified Oracle executions select the current **R14** released
-scene through `benchmark/release.json`. R14 uses locally mixed stock
-colors and an **81 mm** grid pitch. The R15 draft is not the default or a substitute
-asset. New Factory imports use the actual policy/Oracle recording's own frozen
-scene, source hashes, motion, and events.
+New policy and unified Oracle executions select the current **R15** released
+scene through `benchmark/release.json`. R15 (2026-11-03) is R14 with a **71 mm**
+grid pitch; cubes stay 60 mm. Only the board changed: the Level 1 pocket walls,
+floor and the table frame around the opening, the Level 2 printed lines, and the
+goal cell centres. Robots, stock and its locally mixed colors, the table, cameras,
+the initial keyframe, the pattern and the completion rules are R14's; the Level 3
+scene file is byte-identical to R14. `scripts/build_mosaic_pitch.py` rebuilds it.
+R14 (81 mm) is kept under `configs/environments/mosaic/frontier-v2-r14-*`. No
+Oracle or policy run has qualified R15 yet. New Factory imports use the actual
+policy/Oracle recording's own frozen scene, source hashes, motion, and events.
 
 Historical purpose files, including `benchmark/mosaic/delivery.json`
 and `selection.json`, retain their original R13 Oracle/R14 future-policy split
@@ -46,7 +51,7 @@ handover count, or parallel-efficiency result.
 | 6 | 9 x 18 / 162 | 3.0725 x 3.41125 m |
 | 8 | 12 x 24 / 288 | 3.68 x 3.3435 m |
 
-Table height is 0.8 m, cube side 60 mm, and grid pitch 81 mm. Use the case's
+Table height is 0.8 m, cube side 60 mm, and grid pitch 71 mm. Use the case's
 published bases, workspaces, and camera calibration. Level 1 pockets are part
 of the real table; an outer bounding rectangle does not imply continuous support.
 
@@ -55,7 +60,7 @@ The target matrix/reference image is already north-up: row 1 lies toward +Y and
 column 1 toward -X. Background-colored cells are goals too. Stock-source labels
 identify inventory origin without exclusive arm ownership.
 
-- **Level 1:** square pockets with 80 mm clear openings, 20 mm deep; evaluate the
+- **Level 1:** square pockets with 70 mm clear openings, 20 mm deep; evaluate the
   full rotated cube footprint and actual seating.
 - **Level 2:** 3 mm printed red lines; cubes still need real stable support.
 - **Level 3:** no visible grid; the declared pattern and coordinate system remain
@@ -110,7 +115,8 @@ cells in the diagrams are the target reference. The R13 review package is
 `outputs/policy-packages/mosaic-r13-20261027`.
 
 Public policy material contains the corresponding task, target image, task
-prompt, and Mosaic skill. R14 uses `prompts/archive/tasks/mosaic-r14.md`; the shared
+prompt, and Mosaic skill. R14 and R15 use `prompts/archive/tasks/mosaic-r14.md`, which states
+no geometry numbers; the shared
 `prompts/archive/skills/mosaic-r13/SKILL.md` keeps its historical filename and describes
 the common geometry. Its name does not select R13 for a new run. Old prompts
 and builders remain provenance for their review packages. Private pairings,

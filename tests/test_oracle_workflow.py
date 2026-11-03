@@ -80,7 +80,7 @@ class OracleWorkflowTests(unittest.TestCase):
                 self.assertEqual(protocol['source_task_sha256'], manifest['source_sha256']['task.json'])
                 self.assertEqual(protocol['evaluation_semantics'], 'terminal_outcome_v2')
                 if manifest['family'] == 'mosaic':
-                    self.assertEqual(catalog['scene_revision'], 14)
+                    self.assertEqual(catalog['scene_revision'], 15)
                 if manifest['family'] == 'dial':
                     puzzle = json.loads((root/'private/codebook.json').read_text())
                     self.assertEqual(len(puzzle['code_symbols']), 4)

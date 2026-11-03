@@ -29,10 +29,10 @@ barrier. Claude exposes all four engineering topologies. Native permanent
 Workers are documented in [Claude standing teams](claude-code.md#standing-teams);
 formal scored Claude execution remains unavailable.
 
-Current policy selection retains Transport R14, Mosaic R14, Relay's final goal
-policy and BEST5 Dial R11 (see the [task index](../tasks/README.md)). Mosaic R15
-drafts are not a default; do not import a Mosaic R15 draft because another
-source branch has a newer-looking name. Frozen historical recordings retain
+Current policy selection is Transport R14, Mosaic R15 (71 mm grid pitch), Relay's
+final goal policy and BEST5 Dial R11 (see the [task index](../tasks/README.md)).
+Select scenes through `benchmark/release.json`, never by a newer-looking revision
+name on another source branch. Frozen historical recordings retain
 their own source, colors and physical parameters; new code must not silently
 apply current physics or scoring to an old recording.
 

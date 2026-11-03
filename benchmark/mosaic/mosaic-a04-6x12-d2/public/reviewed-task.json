@@ -4,8 +4,8 @@
   "id": "mosaic-a04-6x12-d2",
   "family": "mosaic",
   "suite_version": 2,
-  "scene_revision": 14,
-  "source_scene_sha256": "605e6119b3a7f5b4e2cb5f148d74292ec79974e384740a5efaa6f261e46af4df",
+  "scene_revision": 15,
+  "source_scene_sha256": "f333c41857356d46da3634595fda03b79969bee6eaf9f689bf7858993d61a437",
   "level": 2,
   "arms": {
     "A": {
@@ -162,7 +162,7 @@
     "rows": 6,
     "columns": 12,
     "colors": 4,
-    "pitch_m": 0.081,
+    "pitch_m": 0.071,
     "cube_side_m": 0.06,
     "pattern": [
       [
@@ -549,7 +549,7 @@
     "position_rule_revision": "mosaic-center-6mm-v1"
   },
   "execution_readiness": "environment_preview_only",
-  "package_status": "colour_design_review_only_no_r14_oracle_qualification",
+  "package_status": "grid_pitch_review_only_no_r15_oracle_qualification",
   "guidance": {
     "task_prompt": "../../guidance/mosaic-r14.md",
     "skill": "../../guidance/mosaic-r13/SKILL.md"

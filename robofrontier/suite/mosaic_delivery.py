@@ -9,6 +9,7 @@ import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 
+from robofrontier.task_families import current_path
 from robofrontier.suite.mosaic_local_colors import (geometry_signature,validate_plan,COVERAGE)
 from robofrontier.suite.mosaic_policy_package import (ROOT,read,write,checksum,verify_registry,
     project_public,_public_boundary,_check_target,_pinned)
@@ -62,11 +63,12 @@ def check_gpt(engineering,package):
     assert selection['future_gpt_registry']=='benchmark/mosaic/r14.json'
     assert selection['oracle_and_factory_replay_registry']=='benchmark/mosaic/r13.json'
     assert registry['readiness']['policy_launch_ready'] is False and registry['readiness']['oracle_verified'] is False
-    assert checksum(ROOT/registry['catalog'])==registry['catalog_sha256']
-    assert checksum(ROOT/registry['baseline_oracle_registry'])==registry['baseline_oracle_registry_sha256']
+    # The frozen registry names files by the paths they had when it was written.
+    assert checksum(ROOT/current_path(registry['catalog']))==registry['catalog_sha256']
+    assert checksum(ROOT/current_path(registry['baseline_oracle_registry']))==registry['baseline_oracle_registry_sha256']
     assert read(package/'engineering/registry.json')==registry
     for file,sha in registry['design_evidence'].items():assert checksum(_design_file(file))==sha
-    catalog=read(ROOT/registry['catalog'])['cases'];assert len(catalog)==9 and len({c['id'] for c in catalog})==9
+    catalog=read(ROOT/current_path(registry['catalog']))['cases'];assert len(catalog)==9 and len({c['id'] for c in catalog})==9
     plans={n:read(engineering/f'a{n:02d}-plan.json') for n in (4,6,8)}
     rows=[]
     for case,entry in zip(catalog,registry['cases']):

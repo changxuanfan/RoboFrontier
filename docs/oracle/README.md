@@ -250,6 +250,8 @@ cache diagnostic correction from `76d87ed`. Main also checks the task revision
 against the catalog and makes R14 the native default. The 71-mm Mosaic R15 scenes,
 15-percent color experiments, R15 selector and experimental source-order/scope
 changes were not imported. Relay's independent revision numbers are unrelated.
+On 2026-11-03 the release moved to a new grid-only Mosaic R15 (71 mm pitch, see
+[Mosaic](../tasks/mosaic.md)); it is not that unimported draft and has no Oracle run.
 
 Focused tests cover actual R14 serial/parallel endpoint equivalence, unchanged
 live state, worker initialization failures, frozen imports, revision mismatches,

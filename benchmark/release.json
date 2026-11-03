@@ -358,7 +358,7 @@
     "mosaic": {
       "catalog": {
         "path": "benchmark/mosaic/catalog.json",
-        "sha256": "cc3e1e699818ac311d0daf673b841ce52bf7f410c1fbbcc80198e942b80bc2ce"
+        "sha256": "f38ac7f015831738ae2d0f8052686dd29fe15a0af7bf2da6896099374b5b5436"
       },
       "speedup": 30,
       "fps": 30,
@@ -367,10 +367,10 @@
           "id": "mosaic-a04-6x12-d1",
           "directory": "benchmark/mosaic/mosaic-a04-6x12-d1",
           "source_files": {
-            "scene.xml": "0794eb592888fac3b9250d55945c2dc8eff16f59c239cca19cc2061769962da6",
-            "task.json": "87d2c0d7a63649ed90984aa76a814aebbff42069faa04ce81c585f2c25a0651f",
-            "environment.json": "4a34965dd8d2c2a1c017caba35e3a9f12cdfc83edc3954a0952a5bc09c446301",
-            "workstation.json": "220736436118b5215f5185459004308c960f2c344e1e0777abcf412f71937b9b"
+            "scene.xml": "90f704300cd0e17c5514e38bf4d0a5463a4c44e733291bbc7fb87c7707c936ac",
+            "task.json": "33c42d9160d200a12d95ff26eab5c9cf9973ef8771dc6994721fe86f74d2d82e",
+            "environment.json": "9a9ebf00e276913c2bd76d9a5289a5ac4b1b7b09d8ebdde2ebc28f586d186810",
+            "workstation.json": "e121c728f7a357af7b981eefe4aae99736ad21cc9bf6ee06af127d488baadb85"
           },
           "public_files": {
             "family-guidance.md": {
@@ -382,20 +382,20 @@
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
-          "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
+          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/reviewed-task.json",
-            "sha256": "e15f241e437c478b3b9d2eab1b0e24a5cd0788ec1d4e43aa2f964d3c0a391244"
+            "sha256": "73b3e23290dbc3c328cf40126024f5466f273b742c8447deba094ce713b9e703"
           }
         },
         {
           "id": "mosaic-a04-6x12-d2",
           "directory": "benchmark/mosaic/mosaic-a04-6x12-d2",
           "source_files": {
-            "scene.xml": "605e6119b3a7f5b4e2cb5f148d74292ec79974e384740a5efaa6f261e46af4df",
-            "task.json": "76a094fe34eb2b39f211a94bdbd8e215e01908edc3ec3c2ece73b65fb6a9edd1",
-            "environment.json": "3f4f9b2a7ed6fe27a4c2b7d366544c8857bfa59b60f1aee6728b7d0dca42d63e",
-            "workstation.json": "ac7f243db685791179d3017522487ccc66464567718a2d55a5329ec4ba949cc5"
+            "scene.xml": "f333c41857356d46da3634595fda03b79969bee6eaf9f689bf7858993d61a437",
+            "task.json": "5a46e1382070e84b1c94b8497887f1864038dc13ad13e51b08f3f62c69a92b21",
+            "environment.json": "28e994e11b15333abf5e89483f5453868ec2096d28a2f52038b3548d20711cd7",
+            "workstation.json": "7e4f2aad65748757085b793d497b6a685c0f6359b300eaff5acc59a9b427f12d"
           },
           "public_files": {
             "family-guidance.md": {
@@ -407,10 +407,10 @@
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
-          "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
+          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/reviewed-task.json",
-            "sha256": "d850b6c886dd033028f7195ce503e7b452f917694663caffe912bde2e76d2f89"
+            "sha256": "4d36ea797bbe96834afa0eb479e9199233d17d1091e1c3361a1d2f706790dcd4"
           }
         },
         {
@@ -418,9 +418,9 @@
           "directory": "benchmark/mosaic/mosaic-a04-6x12-d3",
           "source_files": {
             "scene.xml": "c1ad7eeaa2e576a296f402db0235818c5e4cc0980561b692a1f04d9470dc9c95",
-            "task.json": "8ee9be9d19d7563b76343e55b8180e3aedcd485623aae59a85d58e13afa06121",
-            "environment.json": "f0383709f4cfce20687bdfcc4198930e604d1a03d7adc51e0370241ce3db1d1f",
-            "workstation.json": "39ed91fe4428bf508aba079c90154104cdbf7f964f23c61541552bcbfba5bf99"
+            "task.json": "253e8cce0fad0cdd9a8e758e9c8f33fc88dc32a0c552a2eeb82a9bd2c9ed8e3e",
+            "environment.json": "e7d2b5520c9d4771d1650af5e0335237daecd7af9a655d0d4317e103d20da76b",
+            "workstation.json": "dfc43310b84433c17843cd0bf1f6bad45c6ed059c64b4d066007fe7d02d0c1eb"
           },
           "public_files": {
             "family-guidance.md": {
@@ -432,20 +432,20 @@
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
-          "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
+          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/reviewed-task.json",
-            "sha256": "455bc497bbc077f6c5b5f7bc7135e0e056469e90b5b4bfa8c4a97f878ad79fe9"
+            "sha256": "52ebc4522fb6c32a7a9cf4a7ccb8e5714de673999bc6cc203b80d1234201c742"
           }
         },
         {
           "id": "mosaic-a06-9x18-d1",
           "directory": "benchmark/mosaic/mosaic-a06-9x18-d1",
           "source_files": {
-            "scene.xml": "abfe3afdacb721c5714c9b1a1ecf5bca0f72a5bf77f094827a616195554e0c13",
-            "task.json": "7786466da23b976983ce5c1a74663140e0fc06b55f9cd35c64d74089b3273490",
-            "environment.json": "8ca5203dce5abffe4f64ace8e58ca8a5b39e26827a00df075943a8937d7f2fe8",
-            "workstation.json": "84c889971cb691abd6749033c3d2a239deb5f30c86ca1236a929fab5333d305d"
+            "scene.xml": "7457f6863624d6efd135e5fadd20d29f6b201f1cbec4261a695443e5068934c6",
+            "task.json": "e0f1d0138819fc721747a8eac4b7324646b972ee2ac24b8417b02f47efcb3073",
+            "environment.json": "5db4b601c48c8071fdd0133625d519367ff8461101c00413c14059943931d484",
+            "workstation.json": "e3d9912b2af7b527d2b488a40320038788bd1e2f470f35a6a2501d972e77c5d6"
           },
           "public_files": {
             "family-guidance.md": {
@@ -457,20 +457,20 @@
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
-          "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
+          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/reviewed-task.json",
-            "sha256": "74430765ad5e68ed29d80fcaae5ac12ee8c0da21778b7d14b455dcf36a7f7551"
+            "sha256": "9ec643def966088a448e53c31cc59c04bc61db430e42cbf02d72261e31772cb8"
           }
         },
         {
           "id": "mosaic-a06-9x18-d2",
           "directory": "benchmark/mosaic/mosaic-a06-9x18-d2",
           "source_files": {
-            "scene.xml": "13d23b31df7c961208b09b31b02562b9aa39b31e51b002161c0dbe1dea597d95",
-            "task.json": "2730b62c95ea8acdc63de36e271dd8f73ac33a92edd9b5223dcab78b17363d43",
-            "environment.json": "b48aca88a42f3a9b4edd7074fedb565d28a82379d796a34bb26a1a5e88b8b471",
-            "workstation.json": "c9d21bc7e78232549538f103499f034c192a796f18298adefa53c0d1e0bfd294"
+            "scene.xml": "94b19ec0d1448f9e0ce011dc0de2fe98473397743f793f83f28929018c644349",
+            "task.json": "f4bcb8b1fed09a89a8f2b9a8e7f2858c7326e67cefea81bcdc4021daa1d0024f",
+            "environment.json": "f677c43657363c6280efbba3cea6da6f5f2b11697283802081280150ba3cb1dc",
+            "workstation.json": "4511143f02fbca5776c0e1f60a53582cf3b88b1daabf7fc5622bf96660fb4bcc"
           },
           "public_files": {
             "family-guidance.md": {
@@ -482,10 +482,10 @@
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
-          "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
+          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/reviewed-task.json",
-            "sha256": "d323ccf1ebda6e24654bd65abfc5e05b802669aa8ce81e423693be8d3bf151bd"
+            "sha256": "d295d7756925d5e4d5ac56d8bee17692e51616f3db266734dfcd231599135ec0"
           }
         },
         {
@@ -493,9 +493,9 @@
           "directory": "benchmark/mosaic/mosaic-a06-9x18-d3",
           "source_files": {
             "scene.xml": "9a21a32dd14477a449f9a1a0f93bf4bfd6d8fcd304ca380538c8141d54cdf0f0",
-            "task.json": "3cb43a0781d20f414796dfb910233ae956750090cf81c58590366ef1e2096b99",
-            "environment.json": "dd763d7c17f56a228b1f9d611542caacb1371189931418dac02633c0013b082f",
-            "workstation.json": "783e16de169f2128ffdf18ac8e35e97ebc71f9a6f64d8fc7b154c2127dd791b8"
+            "task.json": "540e1f83113fef6b6f9005bf1b339abcfd20a61ecf8eb5e62afc2839d3f6db74",
+            "environment.json": "58cb72749ff038f1719f772e7c68dff1dafa2ed1aaa2b53d1bb0db453f40dfb0",
+            "workstation.json": "5976046b79aca41e17f9942874b2a39330e8b971f65b378c98cf9cc01e22c5eb"
           },
           "public_files": {
             "family-guidance.md": {
@@ -507,20 +507,20 @@
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
-          "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
+          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/reviewed-task.json",
-            "sha256": "9e1e536620db3a3896d1b1c6a4c4a6542d6f6039c89df35622a4e28394c4b9af"
+            "sha256": "ff3e07dc8dfde3ee345044cad077a9ba878c02a7481f75d98ec55fcd28fa9297"
           }
         },
         {
           "id": "mosaic-a08-12x24-d1",
           "directory": "benchmark/mosaic/mosaic-a08-12x24-d1",
           "source_files": {
-            "scene.xml": "7036c3ce49c07c9e0b6b31cc13324da7d3040f3826f77b05ead5498df2f8ac8b",
-            "task.json": "af51b2723aafcb8946dcdf1cd84aa8e7ac9e6c170253358f5d998919a9807270",
-            "environment.json": "dd57d090272ec7d9b317f6fb3a60c8df1619cf82b07601b9d046c71d1f453c76",
-            "workstation.json": "8b107d613d127add13481f833ebebf3e61e57d6882890e390262932b34c12e6c"
+            "scene.xml": "eaa59d848aeaa33a7ba0d5c900a836ef12de4088f88ddb19aed0a0995794f7d1",
+            "task.json": "fe06d611d1809ae1973a7761d2523b80ce328a9aa814ee736469c5bc27d845fc",
+            "environment.json": "b6e478c7d5c3a88f20cd0c4554816e9d51492c330d93e1af1147712a75e40b18",
+            "workstation.json": "d105d2dc3343a957a87fde132af0e3b662b250e7dc3549c04557728a0117baf0"
           },
           "public_files": {
             "family-guidance.md": {
@@ -532,20 +532,20 @@
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
-          "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
+          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/reviewed-task.json",
-            "sha256": "ab6ae947522378838f5beb4864dc86b8a88eb338f39aeadd7bad10e438d4e542"
+            "sha256": "b9767fef675d2fdecf4c1ba34e3297f23a7b856a264ac34e08a2213666a297c5"
           }
         },
         {
           "id": "mosaic-a08-12x24-d2",
           "directory": "benchmark/mosaic/mosaic-a08-12x24-d2",
           "source_files": {
-            "scene.xml": "e83d7bb17ee2a0849f00bb2c4c17ea817bffd908a76c33cb9e8e993a89284bd8",
-            "task.json": "e17f4cc4e8c1b5b08855954f2b214e47a4d6279ff1520e01f2e8ac0a7156f3f1",
-            "environment.json": "98cfb3a492baa18577f329757fd5ff698517d6f992211a0768b09825b3c89474",
-            "workstation.json": "463f9847d073da2bb205032d7266bb2584d5603593484d6e9224d82bc636fd79"
+            "scene.xml": "8b88a8808fcfa11cef4b90b9a3fc906964072d3443a5fc2822815dc8a687284f",
+            "task.json": "f7879ab6580aba9a233b09d3acc6f9ee46812ac53179583976c06589beafbc79",
+            "environment.json": "f8209cfaa64e679daea402a6f6c528f8eafe41e651c4411cf2d2101eba000e10",
+            "workstation.json": "fb84f8e3ff86169cb9ea01d72dcd6383214c4931c4e0aa97076afaf2f9edeedc"
           },
           "public_files": {
             "family-guidance.md": {
@@ -557,10 +557,10 @@
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
-          "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
+          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/reviewed-task.json",
-            "sha256": "203890f88d629ee8633b3f6a65b6204bbee24f52b4a677ba221229b9f8bed484"
+            "sha256": "df4033bd47889cc064cd4254113164e0839335cf24520edfd919bf8140b45d67"
           }
         },
         {
@@ -568,9 +568,9 @@
           "directory": "benchmark/mosaic/mosaic-a08-12x24-d3",
           "source_files": {
             "scene.xml": "3ef29947b51fe420b3e1bc516a8e3b512cc2e0f3568b3ec1f21c8169ed5c9547",
-            "task.json": "883c2267fce985c0f73ab2648b9bbc54d69402fd32765c84d2337de60892b235",
-            "environment.json": "37d514e52f1b34278aa66267eaebadade99804cb0379d59d08b692b851eaa2a3",
-            "workstation.json": "bef6829a98a39b6070d5fa4a51b3400714d53cb14bea473d49d37fa334586085"
+            "task.json": "afa6227f49f97f691836b86eea837db02d4be2ebdc92b5d4897c762b623dda14",
+            "environment.json": "26696ed0a87b47af85183671c594747dc3eaff8d6ca9f5603a932f051e284e0d",
+            "workstation.json": "e138424fca411c637fea9d635d81173eaa5af3d6f8415dbec4212540c1569672"
           },
           "public_files": {
             "family-guidance.md": {
@@ -582,10 +582,10 @@
               "sha256": "d10615cc407a613bf7a9f11fbfed8e04588c518267752274fa0f58012feabe67"
             }
           },
-          "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence",
+          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/reviewed-task.json",
-            "sha256": "420532adc61ecbf00d685485120abb09a68030b159b3bcd2ac55e18a24133c92"
+            "sha256": "fca4c8cfd425e5139a2612893df59bcb9b6c7eede8027a0543fccf2c607074ca"
           }
         }
       ],

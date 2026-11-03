@@ -1,14 +1,17 @@
 {
-  "status": "colour_only_design_geometry_equivalent_to_r13",
+  "status": "static_checks_passed",
   "oracle_verified": false,
   "policy_verified": false,
   "frozen_input": false,
   "physics_steps": 0,
   "robot_count": 6,
   "physics_sha256": "f4a72c01acde30883310bf4bdb4a100560e8abeadc346e8fca67cc99687f9e22",
-  "source_scene_sha256": "b10a0fe2b333a454b18644ee919663dc5310c30cdea9acb0a36c1f044cdbd4bc",
-  "source_revision": 13,
-  "certified_local_fraction_min": 0.7,
-  "old_oracle_applies_to": "Original R13 colours only; not an Oracle success of this R14 task",
-  "scope": "One-to-one colour design with same-robot sampled pickup and target approach/open/withdraw witnesses; no loaded connecting path, dynamic or parallel execution certification"
+  "source_scene_sha256": "9a21a32dd14477a449f9a1a0f93bf4bfd6d8fcd304ca380538c8141d54cdf0f0",
+  "source_revision": 14,
+  "initial_penetrations_over_1mm": [],
+  "min_cube_centre_spacing_m": 0.07499999999999662,
+  "min_cube_to_table_edge_m": 0.28249999999999775,
+  "cubes_over_board": 0,
+  "passed": true,
+  "scope": "Static compilation, initial contact and placement screen only; no reach coverage, manipulation, Oracle or policy run"
 }

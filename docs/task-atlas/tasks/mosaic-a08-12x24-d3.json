@@ -102,7 +102,7 @@
     "rows": 12,
     "columns": 24,
     "colors": 4,
-    "pitch_m": 0.081,
+    "pitch_m": 0.071,
     "cube_side_m": 0.06,
     "pattern": [
       [
@@ -616,8 +616,8 @@
   "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
   "source": {
     "scene_sha256": "3ef29947b51fe420b3e1bc516a8e3b512cc2e0f3568b3ec1f21c8169ed5c9547",
-    "task_sha256": "883c2267fce985c0f73ab2648b9bbc54d69402fd32765c84d2337de60892b235",
-    "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+    "task_sha256": "afa6227f49f97f691836b86eea837db02d4be2ebdc92b5d4897c762b623dda14",
+    "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
   },
   "views": {
     "top": "images/mosaic-a08-12x24-d3-top.jpg",

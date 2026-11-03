@@ -10,8 +10,8 @@ Four families each have three scales and three levels, giving 36 cases.
 | Relay | Each timber 70% over GOAL and released, stacking allowed | Each recording's own frozen source | 20x | [Relay](relay.md) |
 | Dial | R11 BEST5 | Original R11 recordings | 10x | [BEST5 Dial](dial-best5.md) |
 
-Transport/Mosaic R14 are new inputs; R13 full Oracle results do not qualify R14
-physics. Relay terminal-GOAL results and historical native acceptance are
+Transport R14 and Mosaic R15 are new inputs; R13 full Oracle results do not qualify
+them. Relay terminal-GOAL results and historical native acceptance are
 reported separately. Assisted and pure-program evidence retain their labels. The
 rolling-friction revision that changed Transport cylinders and Dial module
 disks/stems is described in

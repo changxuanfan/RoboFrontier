@@ -24,12 +24,12 @@
     "kind": "unmarked_table",
     "stock_packing": "Single layer; non-exclusive station allocation",
     "stock_count": 162,
-    "robot_to_grid_edge_m": 0.3046446609406726,
+    "robot_to_grid_edge_m": 0.34964466094067265,
     "stock_edge_clearance_m": 0.055,
     "row_spacing_scale_from_r3": 0.95,
     "table_side_scale_from_r3": 1.25,
     "table_vertical_scale_from_r4": 1.0,
-    "outer_base_axis_inset_from_grid_end_m": 0.11719999999999997,
+    "outer_base_axis_inset_from_grid_end_m": -0.13744466094067276,
     "layout_revision": {
       "name": "corner-facing-r12-inward50mm",
       "source_revision": 11,
@@ -160,25 +160,34 @@
       0.7764446609406727
     ],
     "robot_to_grid_edge_m_by_robot": {
-      "A": 0.3046446609406726,
-      "B": 0.34,
-      "C": 0.3046446609406726,
-      "D": 0.3046446609406726,
-      "E": 0.34,
-      "F": 0.3046446609406726
+      "A": 0.34964466094067265,
+      "B": 0.38500000000000006,
+      "C": 0.34964466094067265,
+      "D": 0.34964466094067265,
+      "E": 0.38500000000000006,
+      "F": 0.34964466094067265
     },
     "stock_layout_revision": {
       "name": "individually-graspable-r13",
       "source_revision": 12,
       "changed_stock_count": 14,
       "robot_poses_changed": false
+    },
+    "pitch_revision": {
+      "name": "pitch-71mm-r15",
+      "source_revision": 14,
+      "previous_pitch_m": 0.081,
+      "pitch_m": 0.071,
+      "cube_side_m": 0.06,
+      "pocket_opening_m": null,
+      "unchanged": "Robots, stock, table, cameras, initial keyframe, colours, pattern and physics"
     }
   },
   "grid": {
     "rows": 9,
     "columns": 18,
     "colors": 4,
-    "pitch_m": 0.081,
+    "pitch_m": 0.071,
     "cube_side_m": 0.06,
     "pattern": [
       [
@@ -401,5 +410,6 @@
       }
     },
     "printed_line_width_m": 0
-  }
+  },
+  "scope": "Declared geometry/material and engineering parameters; not a task success proof"
 }

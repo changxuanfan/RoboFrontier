@@ -1,6 +1,6 @@
 {
   "schema": "robofrontier.public-task-atlas.v1",
-  "release_sha256": "b432892f174f9394927905345fc860b68b3ebc64d7c276530635eda79a699d1c",
+  "release_sha256": "4b041d6b3a8c952f8639b4a9b8721d91305032dac603d13db7f2bddf02c43105",
   "cases": [
     {
       "id": "transport-a04-d1",
@@ -5663,7 +5663,7 @@
         "rows": 6,
         "columns": 12,
         "colors": 4,
-        "pitch_m": 0.081,
+        "pitch_m": 0.071,
         "cube_side_m": 0.06,
         "pattern": [
           [
@@ -5751,7 +5751,7 @@
             "navy"
           ]
         ],
-        "pocket_opening_m": 0.08,
+        "pocket_opening_m": 0.06999999999999999,
         "depth_m": 0.02,
         "palette": {
           "cream": "#FFF4DA",
@@ -5878,9 +5878,9 @@
       "arm_count": 4,
       "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
       "source": {
-        "scene_sha256": "0794eb592888fac3b9250d55945c2dc8eff16f59c239cca19cc2061769962da6",
-        "task_sha256": "87d2c0d7a63649ed90984aa76a814aebbff42069faa04ce81c585f2c25a0651f",
-        "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+        "scene_sha256": "90f704300cd0e17c5514e38bf4d0a5463a4c44e733291bbc7fb87c7707c936ac",
+        "task_sha256": "33c42d9160d200a12d95ff26eab5c9cf9973ef8771dc6994721fe86f74d2d82e",
+        "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
       },
       "views": {
         "top": "images/mosaic-a04-6x12-d1-top.jpg",
@@ -5959,7 +5959,7 @@
         "rows": 6,
         "columns": 12,
         "colors": 4,
-        "pitch_m": 0.081,
+        "pitch_m": 0.071,
         "cube_side_m": 0.06,
         "pattern": [
           [
@@ -6174,9 +6174,9 @@
       "arm_count": 4,
       "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
       "source": {
-        "scene_sha256": "605e6119b3a7f5b4e2cb5f148d74292ec79974e384740a5efaa6f261e46af4df",
-        "task_sha256": "76a094fe34eb2b39f211a94bdbd8e215e01908edc3ec3c2ece73b65fb6a9edd1",
-        "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+        "scene_sha256": "f333c41857356d46da3634595fda03b79969bee6eaf9f689bf7858993d61a437",
+        "task_sha256": "5a46e1382070e84b1c94b8497887f1864038dc13ad13e51b08f3f62c69a92b21",
+        "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
       },
       "views": {
         "top": "images/mosaic-a04-6x12-d2-top.jpg",
@@ -6255,7 +6255,7 @@
         "rows": 6,
         "columns": 12,
         "colors": 4,
-        "pitch_m": 0.081,
+        "pitch_m": 0.071,
         "cube_side_m": 0.06,
         "pattern": [
           [
@@ -6471,8 +6471,8 @@
       "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
       "source": {
         "scene_sha256": "c1ad7eeaa2e576a296f402db0235818c5e4cc0980561b692a1f04d9470dc9c95",
-        "task_sha256": "8ee9be9d19d7563b76343e55b8180e3aedcd485623aae59a85d58e13afa06121",
-        "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+        "task_sha256": "253e8cce0fad0cdd9a8e758e9c8f33fc88dc32a0c552a2eeb82a9bd2c9ed8e3e",
+        "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
       },
       "views": {
         "top": "images/mosaic-a04-6x12-d3-top.jpg",
@@ -6567,7 +6567,7 @@
         "rows": 9,
         "columns": 18,
         "colors": 4,
-        "pitch_m": 0.081,
+        "pitch_m": 0.071,
         "cube_side_m": 0.06,
         "pattern": [
           [
@@ -6751,7 +6751,7 @@
             "navy"
           ]
         ],
-        "pocket_opening_m": 0.08,
+        "pocket_opening_m": 0.06999999999999999,
         "depth_m": 0.02,
         "palette": {
           "cream": "#FFF4DA",
@@ -6908,9 +6908,9 @@
       "arm_count": 6,
       "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
       "source": {
-        "scene_sha256": "abfe3afdacb721c5714c9b1a1ecf5bca0f72a5bf77f094827a616195554e0c13",
-        "task_sha256": "7786466da23b976983ce5c1a74663140e0fc06b55f9cd35c64d74089b3273490",
-        "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+        "scene_sha256": "7457f6863624d6efd135e5fadd20d29f6b201f1cbec4261a695443e5068934c6",
+        "task_sha256": "e0f1d0138819fc721747a8eac4b7324646b972ee2ac24b8417b02f47efcb3073",
+        "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
       },
       "views": {
         "top": "images/mosaic-a06-9x18-d1-top.jpg",
@@ -7005,7 +7005,7 @@
         "rows": 9,
         "columns": 18,
         "colors": 4,
-        "pitch_m": 0.081,
+        "pitch_m": 0.071,
         "cube_side_m": 0.06,
         "pattern": [
           [
@@ -7346,9 +7346,9 @@
       "arm_count": 6,
       "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
       "source": {
-        "scene_sha256": "13d23b31df7c961208b09b31b02562b9aa39b31e51b002161c0dbe1dea597d95",
-        "task_sha256": "2730b62c95ea8acdc63de36e271dd8f73ac33a92edd9b5223dcab78b17363d43",
-        "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+        "scene_sha256": "94b19ec0d1448f9e0ce011dc0de2fe98473397743f793f83f28929018c644349",
+        "task_sha256": "f4bcb8b1fed09a89a8f2b9a8e7f2858c7326e67cefea81bcdc4021daa1d0024f",
+        "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
       },
       "views": {
         "top": "images/mosaic-a06-9x18-d2-top.jpg",
@@ -7443,7 +7443,7 @@
         "rows": 9,
         "columns": 18,
         "colors": 4,
-        "pitch_m": 0.081,
+        "pitch_m": 0.071,
         "cube_side_m": 0.06,
         "pattern": [
           [
@@ -7785,8 +7785,8 @@
       "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
       "source": {
         "scene_sha256": "9a21a32dd14477a449f9a1a0f93bf4bfd6d8fcd304ca380538c8141d54cdf0f0",
-        "task_sha256": "3cb43a0781d20f414796dfb910233ae956750090cf81c58590366ef1e2096b99",
-        "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+        "task_sha256": "540e1f83113fef6b6f9005bf1b339abcfd20a61ecf8eb5e62afc2839d3f6db74",
+        "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
       },
       "views": {
         "top": "images/mosaic-a06-9x18-d3-top.jpg",
@@ -7897,7 +7897,7 @@
         "rows": 12,
         "columns": 24,
         "colors": 4,
-        "pitch_m": 0.081,
+        "pitch_m": 0.071,
         "cube_side_m": 0.06,
         "pattern": [
           [
@@ -8213,7 +8213,7 @@
             "navy"
           ]
         ],
-        "pocket_opening_m": 0.08,
+        "pocket_opening_m": 0.06999999999999999,
         "depth_m": 0.02,
         "palette": {
           "cream": "#FFF4DA",
@@ -8410,9 +8410,9 @@
       "arm_count": 8,
       "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
       "source": {
-        "scene_sha256": "7036c3ce49c07c9e0b6b31cc13324da7d3040f3826f77b05ead5498df2f8ac8b",
-        "task_sha256": "af51b2723aafcb8946dcdf1cd84aa8e7ac9e6c170253358f5d998919a9807270",
-        "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+        "scene_sha256": "eaa59d848aeaa33a7ba0d5c900a836ef12de4088f88ddb19aed0a0995794f7d1",
+        "task_sha256": "fe06d611d1809ae1973a7761d2523b80ce328a9aa814ee736469c5bc27d845fc",
+        "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
       },
       "views": {
         "top": "images/mosaic-a08-12x24-d1-top.jpg",
@@ -8523,7 +8523,7 @@
         "rows": 12,
         "columns": 24,
         "colors": 4,
-        "pitch_m": 0.081,
+        "pitch_m": 0.071,
         "cube_side_m": 0.06,
         "pattern": [
           [
@@ -9036,9 +9036,9 @@
       "arm_count": 8,
       "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
       "source": {
-        "scene_sha256": "e83d7bb17ee2a0849f00bb2c4c17ea817bffd908a76c33cb9e8e993a89284bd8",
-        "task_sha256": "e17f4cc4e8c1b5b08855954f2b214e47a4d6279ff1520e01f2e8ac0a7156f3f1",
-        "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+        "scene_sha256": "8b88a8808fcfa11cef4b90b9a3fc906964072d3443a5fc2822815dc8a687284f",
+        "task_sha256": "f7879ab6580aba9a233b09d3acc6f9ee46812ac53179583976c06589beafbc79",
+        "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
       },
       "views": {
         "top": "images/mosaic-a08-12x24-d2-top.jpg",
@@ -9149,7 +9149,7 @@
         "rows": 12,
         "columns": 24,
         "colors": 4,
-        "pitch_m": 0.081,
+        "pitch_m": 0.071,
         "cube_side_m": 0.06,
         "pattern": [
           [
@@ -9663,8 +9663,8 @@
       "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
       "source": {
         "scene_sha256": "3ef29947b51fe420b3e1bc516a8e3b512cc2e0f3568b3ec1f21c8169ed5c9547",
-        "task_sha256": "883c2267fce985c0f73ab2648b9bbc54d69402fd32765c84d2337de60892b235",
-        "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+        "task_sha256": "afa6227f49f97f691836b86eea837db02d4be2ebdc92b5d4897c762b623dda14",
+        "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
       },
       "views": {
         "top": "images/mosaic-a08-12x24-d3-top.jpg",

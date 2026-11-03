@@ -141,10 +141,10 @@ fork history followed by tools. It does not establish the complete context windo
 automatic compaction threshold, provider's internal model identity, task ability,
 or long-term stability. A smoke-only receipt does not qualify a scored run.
 
-The current release selects policy Mosaic R14. Historical Oracle/Factory
+The current release selects policy Mosaic R15. Historical Oracle/Factory
 recordings retain their frozen R13 source colors. Unified new Oracle executions
-select current released scenes independently. Another worktree's R15 draft does
-not silently enter this registry or replace historical evidence.
+select current released scenes independently. A revision in another worktree
+does not silently enter this registry or replace historical evidence.
 
 ## Time, capacity recovery, and context
 

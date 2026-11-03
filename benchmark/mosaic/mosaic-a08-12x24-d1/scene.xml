@@ -2304,49 +2304,49 @@
       <freejoint name="H_stock36_free" />
       <geom name="H_stock36_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="1.0 0.9568627450980393 0.8549019607843137 1.0" friction="1 .005 .0001" condim="4" solref=".004 1" solimp=".95 .99 .001 .5 2" mass="0.16874999999999996" />
     </body>
-    <geom name="table_frame_south" type="box" pos="0.0 -1.078875 0.775" size="1.8399999999999999 0.592875 0.025" rgba="0.604 0.459 0.345 1.0" material="table_oak" mass="0" />
-    <geom name="table_frame_north" type="box" pos="0.0 1.078875 0.775" size="1.8399999999999999 0.592875 0.025" rgba="0.604 0.459 0.345 1.0" material="table_oak" mass="0" />
-    <geom name="table_frame_west" type="box" pos="-1.406 0.0 0.775" size="0.43399999999999994 0.486 0.025" rgba="0.604 0.459 0.345 1.0" material="table_oak" mass="0" />
-    <geom name="table_frame_east" type="box" pos="1.406 0.0 0.775" size="0.43399999999999994 0.486 0.025" rgba="0.604 0.459 0.345 1.0" material="table_oak" mass="0" />
-    <geom name="pocket_bottom" type="box" pos="0.0 0.0 0.774" size="0.9724999999999999 0.4865 0.006" rgba="0.93 0.93 0.89 1.0" mass="0" />
-    <geom name="pocket_column_0" type="box" pos="-0.972 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_1" type="box" pos="-0.891 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_2" type="box" pos="-0.81 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_3" type="box" pos="-0.729 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_4" type="box" pos="-0.648 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_5" type="box" pos="-0.5670000000000001 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_6" type="box" pos="-0.486 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_7" type="box" pos="-0.405 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_8" type="box" pos="-0.324 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_9" type="box" pos="-0.243 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_10" type="box" pos="-0.162 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_11" type="box" pos="-0.081 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_12" type="box" pos="0.0 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_13" type="box" pos="0.081 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_14" type="box" pos="0.162 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_15" type="box" pos="0.243 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_16" type="box" pos="0.324 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_17" type="box" pos="0.405 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_18" type="box" pos="0.486 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_19" type="box" pos="0.5670000000000001 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_20" type="box" pos="0.648 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_21" type="box" pos="0.729 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_22" type="box" pos="0.81 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_23" type="box" pos="0.891 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_column_24" type="box" pos="0.972 0.0 0.79" size="0.0005 0.4865 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_0" type="box" pos="0.0 -0.486 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_1" type="box" pos="0.0 -0.405 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_2" type="box" pos="0.0 -0.324 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_3" type="box" pos="0.0 -0.243 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_4" type="box" pos="0.0 -0.162 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_5" type="box" pos="0.0 -0.081 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_6" type="box" pos="0.0 0.0 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_7" type="box" pos="0.0 0.081 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_8" type="box" pos="0.0 0.162 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_9" type="box" pos="0.0 0.243 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_10" type="box" pos="0.0 0.324 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_11" type="box" pos="0.0 0.405 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
-    <geom name="pocket_row_12" type="box" pos="0.0 0.486 0.79" size="0.9724999999999999 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="table_frame_south" type="box" pos="0.0 -1.048875 0.775" size="1.8399999999999999 0.6228750000000001 0.025" rgba="0.604 0.459 0.345 1.0" material="table_oak" mass="0" />
+    <geom name="table_frame_north" type="box" pos="0.0 1.048875 0.775" size="1.8399999999999999 0.6228750000000001 0.025" rgba="0.604 0.459 0.345 1.0" material="table_oak" mass="0" />
+    <geom name="table_frame_west" type="box" pos="-1.3459999999999999 0.0 0.775" size="0.494 0.42599999999999993 0.025" rgba="0.604 0.459 0.345 1.0" material="table_oak" mass="0" />
+    <geom name="table_frame_east" type="box" pos="1.3459999999999999 0.0 0.775" size="0.494 0.42599999999999993 0.025" rgba="0.604 0.459 0.345 1.0" material="table_oak" mass="0" />
+    <geom name="pocket_bottom" type="box" pos="0.0 0.0 0.774" size="0.8524999999999998 0.42649999999999993 0.006" rgba="0.93 0.93 0.89 1.0" mass="0" />
+    <geom name="pocket_column_0" type="box" pos="-0.8519999999999999 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_1" type="box" pos="-0.7809999999999999 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_2" type="box" pos="-0.71 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_3" type="box" pos="-0.6389999999999999 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_4" type="box" pos="-0.568 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_5" type="box" pos="-0.49699999999999994 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_6" type="box" pos="-0.42599999999999993 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_7" type="box" pos="-0.355 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_8" type="box" pos="-0.284 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_9" type="box" pos="-0.21299999999999997 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_10" type="box" pos="-0.142 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_11" type="box" pos="-0.071 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_12" type="box" pos="0.0 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_13" type="box" pos="0.071 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_14" type="box" pos="0.142 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_15" type="box" pos="0.21299999999999997 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_16" type="box" pos="0.284 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_17" type="box" pos="0.355 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_18" type="box" pos="0.42599999999999993 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_19" type="box" pos="0.49699999999999994 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_20" type="box" pos="0.568 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_21" type="box" pos="0.6389999999999999 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_22" type="box" pos="0.71 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_23" type="box" pos="0.7809999999999999 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_column_24" type="box" pos="0.8519999999999999 0.0 0.79" size="0.0005 0.42649999999999993 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_0" type="box" pos="0.0 -0.42599999999999993 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_1" type="box" pos="0.0 -0.355 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_2" type="box" pos="0.0 -0.284 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_3" type="box" pos="0.0 -0.21299999999999997 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_4" type="box" pos="0.0 -0.142 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_5" type="box" pos="0.0 -0.071 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_6" type="box" pos="0.0 0.0 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_7" type="box" pos="0.0 0.071 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_8" type="box" pos="0.0 0.142 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_9" type="box" pos="0.0 0.21299999999999997 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_10" type="box" pos="0.0 0.284 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_11" type="box" pos="0.0 0.355 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
+    <geom name="pocket_row_12" type="box" pos="0.0 0.42599999999999993 0.79" size="0.8524999999999998 0.0005 0.010000000000000009" rgba="0.74 0.81 0.84 1.0" mass="0" />
     <camera name="assembly_01" pos="-0.8426499999999999 0.0 2.4499999999999997" xyaxes="1 0 0 0 1 0" fovy="40" />
     <camera name="assembly_02" pos="-0.2808833333333333 0.0 2.4499999999999997" xyaxes="1 0 0 0 1 0" fovy="40" />
     <camera name="assembly_03" pos="0.2808833333333333 0.0 2.4499999999999997" xyaxes="1 0 0 0 1 0" fovy="40" />

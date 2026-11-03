@@ -70,7 +70,7 @@
     "rows": 6,
     "columns": 12,
     "colors": 4,
-    "pitch_m": 0.081,
+    "pitch_m": 0.071,
     "cube_side_m": 0.06,
     "pattern": [
       [
@@ -158,7 +158,7 @@
         "navy"
       ]
     ],
-    "pocket_opening_m": 0.08,
+    "pocket_opening_m": 0.06999999999999999,
     "depth_m": 0.02,
     "palette": {
       "cream": "#FFF4DA",
@@ -285,9 +285,9 @@
   "arm_count": 4,
   "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. For flat\nplacement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
   "source": {
-    "scene_sha256": "0794eb592888fac3b9250d55945c2dc8eff16f59c239cca19cc2061769962da6",
-    "task_sha256": "87d2c0d7a63649ed90984aa76a814aebbff42069faa04ce81c585f2c25a0651f",
-    "qualification": "r14_colour_variant_with_r13_reference_and_design_evidence"
+    "scene_sha256": "90f704300cd0e17c5514e38bf4d0a5463a4c44e733291bbc7fb87c7707c936ac",
+    "task_sha256": "33c42d9160d200a12d95ff26eab5c9cf9973ef8771dc6994721fe86f74d2d82e",
+    "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
   },
   "views": {
     "top": "images/mosaic-a04-6x12-d1-top.jpg",
