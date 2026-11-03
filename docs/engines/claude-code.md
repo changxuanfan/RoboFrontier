@@ -281,6 +281,29 @@ understanding. Opt-in recheck:
 ROBOFRONTIER_MOSAIC_IMAGE=1 .venv/bin/python -m unittest discover -s tests -p 'test_claude_mosaic_image_integration.py' -v
 ```
 
+### Bash isolation
+
+Permission rules confine the file tools; a separate layer confines Bash. Both come
+from the run's frozen access table (`robofrontier/policy_access.py`). Preparation
+freezes the Bash layer in `private/inputs/claude.json` as `bash_isolation`, chosen
+on the host that will run it (`landlock_shell.choose`):
+
+- `claude-sandbox`: Claude Code's own sandbox, Seatbelt on macOS and bubblewrap on
+  Linux. Runs prepared before this field use it.
+- `landlock-v1`: for a Linux host where bubblewrap cannot create namespaces, such
+  as a container under Docker's default seccomp profile (RunPod pods). Claude
+  Code's sandbox is turned off and every Bash command runs through
+  `CLAUDE_CODE_SHELL_PREFIX`, which restricts itself with Landlock to what the
+  table grants and denies all TCP connections and binds, then runs the command
+  with bash. It needs Landlock ABI 4 (Linux 6.7) and refuses to run a command
+  without it. Landlock does not cover UDP, named Unix sockets or, before ABI 6,
+  signals.
+
+Preparation fails when neither is available. As with Claude Code's sandbox, only
+Bash is confined; the CLI and the robot MCP are harness processes.
+`tests/test_claude_landlock.py` checks the actual confinement on a Linux host
+with Landlock and is skipped elsewhere.
+
 ### Trusted internal Adaptive fork
 
 General Claude `delegate-bind` remains closed. Transcript-prefix equality by
