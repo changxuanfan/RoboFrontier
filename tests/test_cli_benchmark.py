@@ -74,7 +74,7 @@ class CliBenchmarkTests(unittest.TestCase):
     def test_context_and_native_vision_are_required(self):
         for name in ('astra', 'luna', 'deepseek', 'kimi', 'glm'):
             p=profile(name)
-            self.assertEqual((p['context_window'],p['auto_compact_token_limit']),(272000,258400))
+            self.assertEqual((p['context_window'],p['auto_compact_token_limit']),(300000,267000))
         with tempfile.TemporaryDirectory() as tmp:
             file=Path(tmp)/'models.json'
             file.write_text(json.dumps(dict(context_window=400000,auto_compact_token_limit=350000,

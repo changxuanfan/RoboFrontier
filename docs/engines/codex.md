@@ -166,11 +166,14 @@ automatic replay. For uncertain physical operations, query the original request
 ID; the request/query/retry rules are in
 [new requests, queries and delegation](README.md#new-requests-queries-and-delegation).
 
-The catalog requests a 272,000-token context window and 245,000-token automatic
-compaction threshold. Settings do not enlarge the provider's real context.
+`configs/models.json` sets a 300,000-token context window and a 267,000-token
+automatic compaction threshold for both engines; each run freezes them. Claude
+Code compacts at `CLAUDE_CODE_AUTO_COMPACT_WINDOW` minus its 33,000-token summary
+buffer, so its window is set to 300,000 to land on the same threshold. Earlier
+runs used 272,000 and 258,400. A changed catalog needs a new model preflight
+before Codex batches start. Settings do not enlarge the provider's real context.
 System/output reservations and the native catalog's effective-window allowance
-can change the displayed available size; the historical 95% example was about
-258,400 tokens. Preserve the actual requested/reported values, tokenizer,
+can change the displayed available size. Preserve the actual requested/reported values, tokenizer,
 compaction behavior, effort, response model identity, and date. Equal effort
 names do not establish equal computation across providers or engines.
 

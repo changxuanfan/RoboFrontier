@@ -1,36 +1,36 @@
 {
   "schema_version": 1,
   "checked_on": "2026-10-28",
-  "context_window": 272000,
-  "auto_compact_token_limit": 258400,
+  "context_window": 300000,
+  "auto_compact_token_limit": 267000,
   "profiles": {
     "luna_subscription": {
       "model": "gpt-6-luna",
       "provider": "openai",
       "effort": "high",
       "vision": true,
-      "context_capacity": 272000
+      "context_capacity": 300000
     },
     "sol61_subscription": {
       "model": "gpt-6.1-sol",
       "provider": "openai",
       "effort": "high",
       "vision": true,
-      "context_capacity": 272000
+      "context_capacity": 300000
     },
     "terra61_subscription": {
       "model": "gpt-6.1-terra",
       "provider": "openai",
       "effort": "high",
       "vision": true,
-      "context_capacity": 272000
+      "context_capacity": 300000
     },
     "astra": {
       "model": "gpt-6-astra",
       "provider": "openai",
       "effort": "high",
       "vision": true,
-      "context_capacity": 272000
+      "context_capacity": 300000
     },
     "luna": {
       "model": "gpt-6-luna",
@@ -39,7 +39,7 @@
       "env_key": "OPENAI_API_KEY",
       "effort": "high",
       "vision": true,
-      "context_capacity": 272000
+      "context_capacity": 300000
     },
     "openlux-luna": {
       "model": "gpt-6-luna",
@@ -48,7 +48,7 @@
       "env_key": "OPENLUX_API_KEY",
       "effort": "high",
       "vision": true,
-      "context_capacity": 272000,
+      "context_capacity": 300000,
       "compatibility": "OpenLux account and group Responses, vision, tools and compaction require live preflight"
     },
     "openlux-terra": {
@@ -58,7 +58,7 @@
       "env_key": "OPENLUX_API_KEY",
       "effort": "high",
       "vision": true,
-      "context_capacity": 272000,
+      "context_capacity": 300000,
       "compatibility": "OpenLux account and group Responses, vision, tools and compaction require live preflight"
     },
     "deepseek": {

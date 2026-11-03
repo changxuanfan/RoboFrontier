@@ -213,5 +213,5 @@ class EngineRenderingTests(unittest.TestCase):
             other = self.prepared(Path(tmp)/'other', 'codex')
             launch_config(profile('luna'), other/'private/inputs', other)
             self.assertEqual((other/'private/inputs/models.json').read_bytes(), (run/'private/inputs/models.json').read_bytes())
-            self.assertEqual(launch['context_window'], 272000)
-            self.assertEqual(launch['auto_compact_token_limit'], 258400)
+            self.assertEqual(launch['context_window'], 300000)
+            self.assertEqual(launch['auto_compact_token_limit'], 267000)
