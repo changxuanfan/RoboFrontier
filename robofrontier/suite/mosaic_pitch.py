@@ -4,7 +4,8 @@ Only the board changes: it shrinks about its centre, with the Level 1 pocket
 walls, floor and the table frame around the opening, or the Level 2 printed
 lines, redrawn for the new pitch, and the goals moved to the new cell centres.
 Robots, stock, table, cameras, the initial keyframe, colours, pattern, physics
-and completion rules are R14's; the task supplement is R14's text titled R15.
+and completion rules are R14's; the task rule that states the grid in words and
+the task supplement's title name R15.
 No physics is stepped.
 
 `build` writes the nine cases into benchmark/mosaic/, the catalog, and the Mosaic
@@ -35,6 +36,9 @@ REVISION = 15
 PITCH = .071
 WALL = .001
 POCKET = PITCH - WALL
+# The shared Mosaic rule (v2.RULES) states R14's grid in words.
+RULE_R14 = 'common cell-center pitch is 81 mm. L1 has 80 mm clear square pockets'
+RULE_R15 = f'common cell-center pitch is {PITCH*1000:.0f} mm. L1 has {POCKET*1000:.0f} mm clear square pockets'
 
 
 def checksum(path):
@@ -124,6 +128,9 @@ def derive(case, render=True):
     task = v2.task_for(new_case, env, target)
     # Completion rules reviewed after R14 was generated (the Level 2/3 centre tolerance).
     task['completion'] = json.loads((source/'task.json').read_text())['completion']
+    if sum(RULE_R14 in rule for rule in task['rules']) != 1:
+        raise ValueError('Mosaic grid rule not found')
+    task['rules'] = [rule.replace(RULE_R14, RULE_R15) for rule in task['rules']]
     write_json(target/'task.json', task); write_json(target/'public-task.json', v2.public_task(task))
     write_json(target/'parameters.json', dict(physics=env['physics'], mechanism=mechanism, grid=grid,
         scope='Declared geometry/material and engineering parameters; not a task success proof'))
@@ -156,11 +163,12 @@ def reviewed_projection(source, target):
                             read(target, 'workstation.json'), read(target, 'public-task.json'), completion)
     previous = read(source, 'public/reviewed-task.json')
     result.update(scene_revision=REVISION, completion=previous['completion'], package_status=STATUS,
-                  guidance=dict(previous['guidance'], task_prompt='../../guidance/'+Path(GUIDANCE).name))
+                  guidance=dict(task_prompt='../../guidance/'+Path(GUIDANCE).name))
     changed = {k for k in set(result) | set(previous) if result.get(k) != previous.get(k)}
     target_changed = {k for k in result['target'] if result['target'][k] != previous['target'].get(k)}
-    if changed - {'scene_revision', 'source_scene_sha256', 'target', 'package_status', 'guidance'} or \
-            target_changed - {'pitch_m', 'pocket_opening_m'}:
+    if changed - {'scene_revision', 'source_scene_sha256', 'target', 'package_status', 'guidance', 'rules'} or \
+            target_changed - {'pitch_m', 'pocket_opening_m'} or \
+            [rule.replace(RULE_R15, RULE_R14) for rule in result['rules']] != previous['rules']:
         raise ValueError('R15 public projection differs from R14 beyond the grid')
     return result
 
@@ -196,6 +204,8 @@ def build(render=True):
         entry['source_files'] = {name: checksum(folder/name) for name in entry['source_files']}
         entry['qualification'] = QUALIFICATION
         entry['public_files']['family-guidance.md'] = dict(path=GUIDANCE, sha256=checksum(ROOT/GUIDANCE))
+        # A policy run receives the current prompts/skills/mosaic/SKILL.md, never R13's.
+        entry['public_files'].pop('skill.md', None)
         entry['public_projection'] = dict(path=case['directory']+'/public/reviewed-task.json',
                                           sha256=checksum(folder/'public/reviewed-task.json'))
     write_json(path, release)

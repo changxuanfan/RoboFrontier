@@ -114,12 +114,15 @@ contains nine color diagrams and eighteen real initial screenshots. Colored
 cells in the diagrams are the target reference. The R13 review package is
 `outputs/policy-packages/mosaic-r13-20261027`.
 
-Public policy material contains the corresponding task, target image, task
-prompt, and Mosaic skill. R15 uses `prompts/archive/tasks/mosaic-r15.md`, R14's text
-(`mosaic-r14.md`) with its title changed; it states no geometry numbers. The shared
-`prompts/archive/skills/mosaic-r13/SKILL.md` keeps its historical filename and describes
-the common geometry. Its name does not select R13 for a new run. Old prompts
-and builders remain provenance for their review packages. Private pairings,
+A new policy run receives the public task, the target image and the current
+Mosaic skill, `prompts/skills/mosaic/SKILL.md`. The public task states the grid:
+its rules name the 71 mm pitch and 70 mm pockets, and its target gives the same
+numbers. The skill states no numbers; it says to work out the pocket clearance
+from the task. The release also lists `prompts/archive/tasks/mosaic-r15.md` (R14's
+supplement titled R15) as family guidance, which terminal runs do not deliver.
+R14 and R13 records keep their own supplements and the archived
+`prompts/archive/skills/mosaic-r13/SKILL.md`. Old prompts and builders remain
+provenance for their review packages. Private pairings,
 joint witnesses, Oracle truth/actions/recovery experience, and engineering
 manifests must not enter a new policy's context.
 

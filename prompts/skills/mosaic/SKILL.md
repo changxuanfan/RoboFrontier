@@ -9,8 +9,10 @@ description: Place, release and verify cubes densely on a Mosaic grid with sever
 
 Relate the cube's observed pose to the tool through the current grasp offset;
 slip or regrasping changes that relation. For recessed pockets the complete
-rotated cube footprint and bottom seating matter, not only center error. For flat
-placement use the task's center and orientation tolerances.
+rotated cube footprint and bottom seating matter, not only center error. Work out
+the side clearance from the task's pocket opening and cube side; when only a few
+millimetres remain, align the cube's yaw and position before it enters the pocket.
+For flat placement use the task's center and orientation tolerances.
 
 Plan opening and withdrawal with the placement. Dense neighbors can obstruct the
 fingertips even when the cube fits: compare grasp height, approach orientation,

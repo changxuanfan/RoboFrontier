@@ -59,7 +59,7 @@
   },
   "rules": [
     "Build the supplied Tulip reference, including background cells, one released cube per pixel. The 9x18 petal mask is mirrored from left to right. The portrait grid rotates clockwise 90 degrees as a whole on the horizontal workstation.",
-    "Cube side is 60 mm and common cell-center pitch is 81 mm. L1 has 80 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
+    "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
@@ -773,7 +773,6 @@
   "execution_readiness": "environment_preview_only",
   "package_status": "grid_pitch_review_only_no_r15_oracle_qualification",
   "guidance": {
-    "task_prompt": "../../guidance/mosaic-r15.md",
-    "skill": "../../guidance/mosaic-r13/SKILL.md"
+    "task_prompt": "../../guidance/mosaic-r15.md"
   }
 }
