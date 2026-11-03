@@ -22,7 +22,8 @@ SCHEMA = {
     'evidence': {'auto_collect': bool, 'auto_archive': bool, 'archive_format': str, 'delete_sources': bool},
     'slurm': {'partition': str, 'account': str, 'qos': str, 'gpus': int,
               'cpus_per_task': int, 'memory_gib': int, 'time_limit_s': int,
-              'stop_warning_s': int, 'scratch_root': str},
+              'stop_warning_s': int, 'scratch_root': str,
+              'auth_mode': str, 'credential_store': str},
     'container': {'image': str, 'workspace': str, 'memory_gib': int, 'cpus': float,
                   'seccomp_profile': str},
     'factory': {'data_root': str, 'asset_lock': str, 'source': str, 'device': str,
@@ -94,7 +95,7 @@ def load_configuration(path=None, overrides=None):
 
 
 def _configuration_shape(version):
-    if type(version) is not int or version not in (1, 2, 3, 4, 5):
+    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6):
         raise ValueError('Unsupported configuration schema_version')
     # Older frozen configurations remain exact. Do not append new Factory or
     # Oracle defaults to an already-hashed experiment configuration.
@@ -104,6 +105,9 @@ def _configuration_shape(version):
         shape['oracle'].pop('evaluation_mode')
     if version < 5:
         shape['runtime'].pop('codex_tool_backend')
+    if version < 6:
+        for field in ('auth_mode', 'credential_store'):
+            shape['slurm'].pop(field)
     return shape
 
 
@@ -140,7 +144,7 @@ def validate_configuration(config):
             raise ValueError('selection.' + field + ' must contain distinct nonempty strings')
     choice('render', 'device', ('nvidia', 'cpu', 'native'))
     choice('render', 'observation_profile', ('jpeg_896x560_q85', 'png_1280x800'))
-    choice('runtime', 'codex_home_scope', ('task', 'shared'))
+    choice('runtime', 'codex_home_scope', ('task', 'shared', 'job') if version >= 6 else ('task', 'shared'))
     if version >= 5:
         choice('runtime', 'codex_tool_backend', ('native', 'landlock-v1'))
         if config['policy']['engine'] != 'codex' and config['runtime']['codex_tool_backend'] != 'native':
@@ -152,6 +156,20 @@ def validate_configuration(config):
     if config['evidence']['delete_sources']:
         raise ValueError('Automatic source deletion is not supported; verify restored evidence before explicit cleanup')
     slurm = config['slurm']
+    if version >= 6:
+        choice('slurm', 'auth_mode', ('api', 'subscription'))
+        subscription = slurm['auth_mode'] == 'subscription'
+        if subscription:
+            if (config['policy']['engine'] != 'codex'
+                    or config['runtime']['codex_home_scope'] != 'job'
+                    or config['runtime']['codex_home']
+                    or config['runtime']['codex_tool_backend'] != 'landlock-v1'):
+                raise ValueError('Slurm subscription requires Codex job scope, an automatic home and landlock-v1')
+            path = Path(slurm['credential_store'])
+            if not path.is_absolute() or '..' in path.parts:
+                raise ValueError('slurm.credential_store must be an absolute private directory')
+        elif slurm['credential_store'] or config['runtime']['codex_home_scope'] == 'job':
+            raise ValueError('Job scope and credential_store require slurm.auth_mode=subscription')
     for field in ('gpus', 'cpus_per_task', 'memory_gib', 'time_limit_s', 'stop_warning_s'):
         if slurm[field] < (0 if field == 'gpus' else 1):
             raise ValueError('Invalid slurm.' + field)

@@ -1,5 +1,5 @@
 # Shared defaults for new runs. Secrets belong in the environment or .env.
-schema_version = 5
+schema_version = 6
 
 [policy]
 engine = "codex"                     # codex | claude
@@ -26,7 +26,7 @@ record_realtime_video = false
 
 [runtime]
 codex_tool_backend = "native"         # native | landlock-v1 (Linux namespace-restricted containers)
-codex_home_scope = "task"             # API: task isolation; shared retains legacy authentication behavior
+codex_home_scope = "task"             # task | shared | job (Slurm managed subscription only)
 codex_home = ""                      # Empty uses an automatically created private directory
 
 [evidence]
@@ -45,6 +45,8 @@ memory_gib = 128                      # A resource request, not a measured capac
 time_limit_s = 90000                  # Allocation lifetime, separate from the task clock
 stop_warning_s = 600                 # Stop and collect before allocation expiry
 scratch_root = ""                    # Empty requires the node's SLURM_TMPDIR
+auth_mode = "api"                    # api | subscription (explicit job-scoped native manager)
+credential_store = ""                # Subscription: private persistent directory, outside checkout/evidence
 
 [container]
 image = ""                           # Empty selects a tag from the committed source revision

@@ -30,6 +30,8 @@ def _catalog(config):
         # template, independent of another Desktop session's mutable cache.
         catalog['profiles'][policy['profile']]['use_cached_model_metadata'] = False
         catalog['profiles'][policy['profile']]['tool_backend'] = config['runtime'].get('codex_tool_backend', 'native')
+        if config['runtime']['codex_home_scope'] == 'job':
+            catalog['profiles'][policy['profile']]['runner_backend'] = 'slurm-managed-v1'
     return catalog
 
 
@@ -133,6 +135,23 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
                                 check_fork=not smoke_only, catalog=catalog)
         from robofrontier.codex.launch import profile, launch_config, initialize_codex_home
         selected = profile(policy['profile'], catalog)
+        if config['runtime']['codex_home_scope'] == 'job':
+            from .slurm_job import subscription_environment, _local_storage
+            # Explicitly authorized live preflight, inside an allocation, with
+            # its own local credential owner and no physical task START.
+            scratch = config['slurm']['scratch_root'] or os.environ.get('SLURM_TMPDIR')
+            if not scratch:
+                raise ValueError('Job preflight requires node-local Slurm scratch')
+            _local_storage(scratch)
+            with tempfile.TemporaryDirectory(prefix='rf-pf-', dir=scratch) as temporary:
+                with subscription_environment(config, temporary, on_failure=lambda: None):
+                    command = [sys.executable, '-m', 'robofrontier.codex.batch', 'preflight', '--models', policy['profile'],
+                               '--model-config', str(catalog)]
+                    if smoke_only:
+                        command.append('--smoke-only')
+                    subprocess.run(command, cwd=ROOT, check=True)
+            folder = ROOT/'runs/engineering'/('model-smoke' if smoke_only else 'model-compatibility')/policy['profile']
+            return json.loads((folder/'report.json').read_text())
         key = selected.get('env_key')
         if key and not os.environ.get(key):
             raise ValueError('Missing credential environment variable: ' + key)

@@ -1,7 +1,8 @@
 """Queue frozen source, execute on node-local storage, and return stopped evidence.
 
-The batch shell outlives its srun step. No function opens SQLite. Credentials
-travel in the job environment, never in a source snapshot or returned evidence.
+The batch shell outlives its srun step. No function opens SQLite. API credentials
+travel in the environment. Subscription caches are loaded late under a private
+stream lease, never in source snapshots or returned evidence.
 """
 import argparse
 from contextlib import contextmanager
@@ -85,6 +86,9 @@ def queue_command(slurm, folder):
                '--export=ALL', '--output='+str(Path(folder)/'slurm-%j.log')]
     if slurm['gpus']:
         command.append('--gpus='+str(slurm['gpus']))
+    if slurm.get('auth_mode') == 'subscription':
+        stream = hashlib.sha256(slurm['credential_store'].encode()).hexdigest()[:24]
+        command.extend(['--job-name=rf-auth-'+stream, '--dependency=singleton'])
     for field in ('partition', 'account', 'qos'):
         if slurm[field]:
             command.append('--'+field+'='+slurm[field])
@@ -139,7 +143,8 @@ def submit(config, output, *, queue=False, engineering=False, root=ROOT):
         raise ValueError('Slurm requires Linux nvidia or cpu rendering')
     if config['render']['device'] == 'nvidia' and config['slurm']['gpus'] < 1:
         raise ValueError('NVIDIA rendering requires a GPU allocation')
-    if config['runtime']['codex_home_scope'] != 'task' or config['runtime']['codex_home']:
+    subscription = config['slurm'].get('auth_mode') == 'subscription'
+    if not subscription and (config['runtime']['codex_home_scope'] != 'task' or config['runtime']['codex_home']):
         raise ValueError('Slurm assigns node-local task homes; leave runtime.codex_home empty and select task scope')
     if not config['evidence']['auto_collect'] or not config['evidence']['auto_archive']:
         raise ValueError('Slurm requires automatic collection and ZIP archiving')
@@ -147,7 +152,14 @@ def submit(config, output, *, queue=False, engineering=False, root=ROOT):
     if policy['engine'] == 'claude' and not engineering:
         raise ValueError('Claude Slurm execution requires --engineering')
     selected = _catalog(config)['profiles'][policy['profile']]
-    if not selected.get('env_key') or selected.get('auth_mode') == 'oauth_token':
+    if subscription:
+        if selected.get('provider') != 'openai' or selected.get('env_key'):
+            raise ValueError('Subscription Slurm requires an exact native ChatGPT profile without API keys')
+        store = Path(config['slurm']['credential_store']).resolve()
+        for excluded in (Path(root).resolve(), Path(output).resolve()):
+            if store.is_relative_to(excluded) or excluded.is_relative_to(store):
+                raise ValueError('Keep the credential store outside checkouts and submission/evidence directories')
+    elif not selected.get('env_key') or selected.get('auth_mode') == 'oauth_token':
         raise ValueError('The Slurm entry currently supports API credentials only')
     root, output = Path(root).resolve(), Path(output).resolve()
     if output.exists():
@@ -158,6 +170,10 @@ def submit(config, output, *, queue=False, engineering=False, root=ROOT):
     receipt = root/'runs/engineering/model-compatibility'/policy['profile']/'report.json'
     if policy['engine'] == 'codex' and (not receipt.is_file() or not json.loads(receipt.read_text()).get('passed')):
         raise ValueError('Run the matching explicit provider preflight before preparing a Slurm submission')
+    if subscription:
+        from .codex.job_engine import fingerprint
+        if json.loads(receipt.read_text()).get('job_gateway_sha256') != fingerprint():
+            raise ValueError('Run the matching job-gateway subscription preflight before submission')
     archive = ensure_asset_archive(root)
     python = Path(sys.executable).absolute()  # Preserve the venv symlink and site-packages.
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -185,7 +201,8 @@ def submit(config, output, *, queue=False, engineering=False, root=ROOT):
         files['job.sbatch'] = checksum(staged/'job.sbatch')
         write_json(staged/'submission.json', {'schema': 'robofrontier.slurm-submission.v1',
             'commit': commit, 'sha256': files, 'engine': policy['engine'], 'engineering': engineering,
-            'credential_env': selected['env_key'], 'model_calls_during_preparation': 0,
+            'credential_env': selected.get('env_key'), 'auth_mode': 'subscription' if subscription else 'api',
+            'model_calls_during_preparation': 0,
             'python': str(python), 'status': 'prepared_not_queued'})
         staged.rename(output)
     if queue:
@@ -237,13 +254,50 @@ def execute(local):
         raise ValueError('Execute must import the staged node-local source')
     document = json.loads((local/'local-job.json').read_text())
     config = json.loads((local/'config.json').read_text())
-    prepare(ROOT/'runs/policy/batch', config)
-    if (local/'STOP').exists():
-        request_stop(local)
-        return {'status': 'stopped_before_start'}
-    result = run(ROOT/'runs/policy/batch', engineering=document['engineering'])
+    with subscription_environment(config, local, on_failure=lambda: request_stop(local)):
+        prepare(ROOT/'runs/policy/batch', config)
+        if (local/'STOP').exists():
+            request_stop(local)
+            return {'status': 'stopped_before_start'}
+        result = run(ROOT/'runs/policy/batch', engineering=document['engineering'])
     write_json(local/'execution-result.json', result)
     return result
+
+
+@contextmanager
+def subscription_environment(config, local, *, on_failure):
+    """Seed only after allocation and hold custody until native writers close."""
+    if config['slurm'].get('auth_mode') != 'subscription':
+        yield
+        return
+    if platform.system() != 'Linux' or not os.environ.get('SLURM_JOB_ID'):
+        raise ValueError('Job-scoped subscription execution requires a Linux Slurm allocation')
+    from .slurm_auth import CredentialLease
+    local = Path(local).resolve()
+    store = Path(config['slurm']['credential_store']).absolute()
+    for excluded in (ROOT.resolve(), local):
+        if store.is_relative_to(excluded) or excluded.is_relative_to(store):
+            raise ValueError('Credential store must be separate from source, scratch and evidence')
+    private = local/'engine'
+    private.mkdir(mode=0o700, exist_ok=False)
+    original = dict(os.environ)
+    try:
+        # No fallback into API billing, personal login homes or CLI overrides.
+        for key in ('OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_BASE_URL',
+                    'CODEX_HOME', 'ROBOFRONTIER_CODEX_GATEWAY', 'ROBOFRONTIER_CODEX_TASK'):
+            os.environ.pop(key, None)
+        os.environ.update(CODEX_HOME=str(private/'codex'),
+                          ROBOFRONTIER_JOB_PRIVATE_ROOT=str(private),
+                          ROBOFRONTIER_CREDENTIAL_STORE=str(store))
+        with CredentialLease(store, private/'codex') as lease:
+            def failed():
+                (private/'CREDENTIAL_ERROR').touch(mode=0o600)
+                on_failure()
+            lease.watch(failed)
+            yield lease
+    finally:
+        os.environ.clear()
+        os.environ.update(original)
 
 
 def request_stop(local):

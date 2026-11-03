@@ -1,6 +1,7 @@
 """Prepare and supervise independent Codex CLI policy tasks; never infer on prepare."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import ExitStack
 import fcntl
 import json
 import os
@@ -120,16 +121,22 @@ def run_batch(folder, parallel, continuing=False):
         # Another supervisor may have changed the batch before the lock.
         batch=read(folder/'batch.json')
         if batch['status']!=expected:raise ValueError('Batch status changed before the lock')
-        return _run_batch_locked(folder, parallel, batch, continuing)
+        with ExitStack() as stack:
+            return _run_batch_locked(folder, parallel, batch, continuing, stack=stack)
 
 
-def _run_batch_locked(folder, parallel, batch, continuing=False):
+def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
     # Continuing picks up the jobs that never reached a final status.
     jobs=[j for j in batch['jobs'] if j['status']=='prepared'] if continuing else batch['jobs']
     execution=batch.get('execution',{})
     schedule=LaunchSchedule(execution.get('startup_interval_s',.3))
     scope=execution.get('codex_home_scope','shared')
-    if scope not in ('task','shared'):raise ValueError('Unknown Codex home scope')
+    if scope not in ('task','shared','job'):raise ValueError('Unknown Codex home scope')
+    if scope=='job':
+        if continuing:
+            raise ValueError('A shared-engine job cannot automatically reconnect or replay turns; inspect sealed evidence')
+        if stack is None or not os.environ.get('SLURM_JOB_ID') or not os.environ.get('ROBOFRONTIER_JOB_PRIVATE_ROOT'):
+            raise ValueError('Job scope requires an admitted Slurm credential lease')
     environments={}
     for job in jobs:
         run=Path(job['run_directory']);launch=read(run/'private/inputs/codex.json')
@@ -151,6 +158,11 @@ def _run_batch_locked(folder, parallel, batch, continuing=False):
             raise ValueError('Model catalog or Codex CLI changed; rerun preflight')
         from .tool_backend import selected, verify_receipt
         verify_receipt(launch, checked)
+        if scope=='job':
+            from .job_engine import BACKEND, fingerprint as gateway_fingerprint
+            if (launch['profile'].get('runner_backend') != BACKEND
+                    or checked.get('job_gateway_sha256') != gateway_fingerprint()):
+                raise ValueError('Shared job gateway changed or was not qualified; rerun job preflight')
         env=dict(os.environ)
         if selected(launch['profile']) == 'landlock-v1' and launch['profile']['provider'] == 'openai':
             for key in ('OPENAI_API_KEY', 'CODEX_API_KEY'):
@@ -173,15 +185,25 @@ def _run_batch_locked(folder, parallel, batch, continuing=False):
         environments[str(run)]=env
         write_json(run_layout.path(run,'codex_home_marker','codex'),{'schema':'robofrontier.codex-home.v1','codex_home':str(home),'scope':scope})
         # Validate configuration without inference before starting any task.
-        subprocess.run(['codex','app-server',*launch['args'],'--print-startup-config'],
-                       check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,env=env)
+        if scope!='job':
+            subprocess.run(['codex','app-server',*launch['args'],'--print-startup-config'],
+                           check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,env=env)
     # Handshake is local and occurs before any task process or model turn.
     initialized=set()
-    for job in jobs:
+    for job in ([] if scope=='job' else jobs):
         run=Path(job['run_directory']);env=environments[str(run)]
         if env['CODEX_HOME'] not in initialized:
             initialize_codex_home(read(run/'private/inputs/codex.json'),run_layout.path(run,'owner_log','codex').parent,env=env)
             initialized.add(env['CODEX_HOME'])
+    if scope=='job':
+        from .job_engine import engine, task_id
+        manifest, gateway = stack.enter_context(engine(jobs, env=dict(os.environ)))
+        for job in jobs:
+            run=Path(job['run_directory'])
+            environments[str(run)].update(ROBOFRONTIER_CODEX_GATEWAY=manifest['endpoint'],
+                                          ROBOFRONTIER_CODEX_TASK=task_id(run))
+        batch['job_gateway']={'backend':manifest['backend'],'sha256':manifest['fingerprint'],
+                              'task_channels':len(jobs)}
     resources=memory_snapshot()
     batch['resource_snapshot']=resources
     print('Resource snapshot (not a concurrency guarantee): '+json.dumps(resources),file=sys.stderr)
@@ -201,6 +223,9 @@ def _run_batch_locked(folder, parallel, batch, continuing=False):
         while True:
             result=launch(job)
             if result is None:return result
+            # A shared-server failure is a job fault. Never automatically create
+            # another shared manager or resend an uncertain turn/action.
+            if scope=='job':return result
             # Even a clean host exit can follow a world that died; the eligibility
             # check tells normal ends (finish, stop, wall limit, live seal) apart.
             continued,why=try_continue(run,'host exit code '+str(result))
@@ -292,7 +317,19 @@ def main():
             if selected_backend(selected) == 'landlock-v1' and selected['provider'] == 'openai':
                 for key in ('OPENAI_API_KEY', 'CODEX_API_KEY'):
                     environment.pop(key, None)
-            result=subprocess.run(command, env=environment)
+            job_scoped=selected.get('runner_backend')=='slurm-managed-v1'
+            if job_scoped:
+                from .job_engine import engine, task_id
+                if not os.environ.get('SLURM_JOB_ID') or not os.environ.get('ROBOFRONTIER_JOB_PRIVATE_ROOT'):
+                    raise ValueError('Job preflight requires an admitted Slurm credential lease')
+                launch=read(target/'launch.json')
+                jobs=[{'run_directory':launch['tool_probe']['run_dir'],'launch_file':str(target/'launch.json')}]
+                with engine(jobs,env=environment,preflight=True) as (manifest,gateway):
+                    environment.update(ROBOFRONTIER_CODEX_GATEWAY=manifest['endpoint'],
+                                       ROBOFRONTIER_CODEX_TASK=task_id(jobs[0]['run_directory']))
+                    result=subprocess.run(command,env=environment)
+            else:
+                result=subprocess.run(command, env=environment)
             receipt=read(target/'report.json');receipt['profile_sha256']=hashlib.sha256(json.dumps(selected,sort_keys=True).encode()).hexdigest()
             receipt['probe_version']=preflight_probe.VERSION
             if result.returncode:receipt['passed']=False
@@ -302,6 +339,9 @@ def main():
                 from .tool_backend import selected as selected_backend, fingerprint
                 receipt['tool_backend']=selected_backend(selected)
                 receipt['tool_backend_sha256']=fingerprint(selected)
+                if job_scoped and not args.smoke_only:
+                    from .job_engine import fingerprint as gateway_fingerprint
+                    receipt['job_gateway_sha256']=gateway_fingerprint()
             write_json(target/'report.json',receipt)
             if result.returncode:raise SystemExit(result.returncode)
     elif args.command=='prepare':print(prepare_batch(args.output,args.models,args.families,args.cases,args.model_config,args.level,args.min_arms,args.wall_limit_s))

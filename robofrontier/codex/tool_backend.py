@@ -27,6 +27,7 @@ def fingerprint(profile):
         return None
     files = ('tool_worker.py', 'tool_backend.py', 'tool_broker.js', 'launch.py',
              'codex_policy_host.js', 'codex_preflight.js', 'codex_rpc.js',
+             'job_engine.py', 'job_gateway.js', 'gateway_rpc.js',
              '../claude/landlock_shell.py', '../policy_access.py')
     digest = hashlib.sha256(b'landlock-v1\0')
     for name in files:
@@ -51,7 +52,7 @@ def prepare(run, profile):
     access = json.loads(path.read_text())
     if access.get('network') is not False:
         raise ValueError('The Landlock broker does not permit model networking')
-    access['filesystem'].update({'/proc': 'deny', '/tmp': 'deny'})
+    access['filesystem'].update({'/proc': 'deny', '/tmp': 'deny', '/dev': 'deny'})
     (run/'workspace/.tmp').mkdir(exist_ok=True)
     write_json(path, access)
     write_json(run/'private/inputs/codex-tools.json', {'schema': SCHEMA, 'backend': 'landlock-v1'})

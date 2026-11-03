@@ -5,6 +5,7 @@ const {execFile,execFileSync,exec:execShell,spawn} = require('node:child_process
 const {promisify} = require('node:util');
 const execFileAsync = promisify(execFile), execAsync = promisify(execShell);
 const {CodexRpc,STARTUP_ACK_MS,capacityFailure,requireNoMcpServers} = require('./codex_rpc');
+const {GatewayRpc} = require('./gateway_rpc');
 const fileTools = require('./tool_broker');
 const {runMetaDispatcher} = require('../../scripts/meta_dispatcher');
 const sleep = ms => new Promise(resolve=>setTimeout(resolve,ms));
@@ -124,7 +125,7 @@ class PolicyHost {
   async startServer() {
     const log=fs.openSync(this.hostPath('server_log'),'a');
     this.rpcLost=false;
-    this.rpc=new CodexRpc(this.launch.args,{stderr:log,onRequest:(m,p)=>this.toolRequest(m,p),
+    const callbacks={stderr:log,onRequest:(m,p)=>this.toolRequest(m,p),
       onExit:(code,signal)=>{this.rpcLost=true;this.event({event:'model_host_exited',exit_code:code,signal});},onEvent:m=>{
       const p=m.params||{};
       const turnId=p.turnId || p.turn?.id, turnKey=p.threadId+':'+turnId;
@@ -144,7 +145,13 @@ class PolicyHost {
           duration_s:m.method==='turn/completed' && began!==undefined?(Date.now()-began)/1000:undefined,
           token_usage:p.tokenUsage,error:p.error});
       if (m.method==='turn/completed') this.turnStarted.delete(turnKey);
-    }});
+    }};
+    this.jobScoped=this.launch.profile?.runner_backend==='slurm-managed-v1';
+    if(this.jobScoped){
+      if(!process.env.ROBOFRONTIER_CODEX_GATEWAY||!process.env.ROBOFRONTIER_CODEX_TASK)
+        throw new Error('Missing admitted job gateway channel');
+      this.rpc=new GatewayRpc(process.env.ROBOFRONTIER_CODEX_GATEWAY,process.env.ROBOFRONTIER_CODEX_TASK,callbacks);
+    }else this.rpc=new CodexRpc(this.launch.args,callbacks);
     fs.closeSync(log); await this.rpc.initialize();
     if(fileTools.subscription(this.launch)) await requireNoMcpServers(this.rpc);
     await fileTools.admit(this.rpc,this.launch);
@@ -371,6 +378,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
             stopRequested:()=>this.stopRequested()||this.rpcLost||this.ownerExited()});
         } catch (error) { if (!this.rpcLost) throw error; }
         if (!this.rpcLost || this.stopRequested()) return outcome;
+        if(this.jobScoped)throw new Error('Shared Codex engine stopped; automatic redispatch is disabled');
         const claim=restartable?await this.admin('model-restart',{actor:'Meta',engine:'codex'}):{allowed:false};
         if (!claim.allowed) throw new Error('Codex app-server stopped; model restarts unavailable or exhausted');
         this.event({event:'model_host_restart',attempt:claim.restart});

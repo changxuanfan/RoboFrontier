@@ -1,6 +1,7 @@
 // Explicitly invoked paid connectivity test, separate from scored robot trials.
 const fs=require('node:fs'),path=require('node:path');
 const {CodexRpc,STARTUP_ACK_MS,requireNoMcpServers}=require('./codex_rpc');
+const {GatewayRpc}=require('./gateway_rpc');
 const fileTools=require('./tool_broker');
 async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
   const launch=JSON.parse(fs.readFileSync(path.join(folder,'launch.json')));
@@ -100,6 +101,14 @@ async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
   }
   return report;
 }
-if(require.main===module)preflight(path.resolve(process.argv[2]),CodexRpc,{smokeOnly:process.argv.includes('--smoke-only')})
-  .then(r=>{console.log(JSON.stringify(r));process.exitCode=r.passed?0:1;});
+if(require.main===module){
+  const folder=path.resolve(process.argv[2]);
+  const jobScoped=JSON.parse(fs.readFileSync(path.join(folder,'launch.json'))).profile?.runner_backend==='slurm-managed-v1';
+  const Rpc=jobScoped?class extends GatewayRpc {constructor(args,callbacks){
+    if(!process.env.ROBOFRONTIER_CODEX_GATEWAY||!process.env.ROBOFRONTIER_CODEX_TASK)throw new Error('Missing admitted job preflight channel');
+    super(process.env.ROBOFRONTIER_CODEX_GATEWAY,process.env.ROBOFRONTIER_CODEX_TASK,callbacks);
+  }}:CodexRpc;
+  preflight(folder,Rpc,{smokeOnly:process.argv.includes('--smoke-only')})
+    .then(r=>{console.log(JSON.stringify(r));process.exitCode=r.passed?0:1;});
+}
 module.exports={preflight};

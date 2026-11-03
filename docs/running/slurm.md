@@ -27,6 +27,11 @@ The earlier job `428862` remains a minimal EGL/JPEG probe. See the
 
 ## Prerequisites
 
+For the new, locally tested job-scoped Codex subscription backend, see
+[Slurm subscriptions](slurm-subscription.md). It requires separate live
+qualification; the existing API and engineering qualification below does not
+qualify that backend.
+
 Use a Linux login node with a clone of this branch, a committed clean tracked
 checkout, the locked Python environment, the selected native CLI, and Slurm's
 sbatch/srun commands. The compute nodes must see the login node's Python

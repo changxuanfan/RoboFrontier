@@ -178,6 +178,42 @@ class SlurmJobTests(unittest.TestCase):
         self.assertIn('--gpus=1', command)
         self.assertEqual(self.config['batch']['task_wall_limit_s'], 86400)
 
+    def test_subscription_submission_is_one_allocation_serialized_by_credential_stream(self):
+        from robofrontier.codex.job_engine import fingerprint
+        self.config = load_configuration(overrides={
+            'policy': {'profile': 'luna_subscription'},
+            'runtime': {'codex_home_scope': 'job', 'codex_tool_backend': 'landlock-v1'},
+            'slurm': {'auth_mode': 'subscription', 'credential_store': str(self.root/'not-yet-provisioned')}})
+        report = self.repo/'runs/engineering/model-compatibility/luna_subscription/report.json'
+        report.parent.mkdir(parents=True)
+        report.write_text(json.dumps({'passed': True, 'job_gateway_sha256': fingerprint()}))
+        # Submission freezes a reference only. The credential directory does
+        # not exist and no native process, login or scheduler call is needed.
+        self.prepare()
+        manifest, _ = slurm._verify_submission(self.submission)
+        self.assertIsNone(manifest['credential_env'])
+        command = slurm.queue_command(self.config['slurm'], self.submission)
+        self.assertEqual(command.count('--nodes=1'), 1)
+        self.assertEqual(command.count('--ntasks=1'), 1)
+        self.assertEqual(command.count('--gpus=1'), 1)
+        self.assertIn('--dependency=singleton', command)
+        self.assertTrue(any(arg.startswith('--job-name=rf-auth-') for arg in command))
+        self.assertFalse((self.root/'not-yet-provisioned').exists())
+
+    def test_subscription_requires_fresh_gateway_qualification_and_private_store(self):
+        self.config = load_configuration(overrides={
+            'policy': {'profile': 'luna_subscription'},
+            'runtime': {'codex_home_scope': 'job', 'codex_tool_backend': 'landlock-v1'},
+            'slurm': {'auth_mode': 'subscription', 'credential_store': str(self.root/'credentials')}})
+        report = self.repo/'runs/engineering/model-compatibility/luna_subscription/report.json'
+        report.parent.mkdir(parents=True)
+        report.write_text(json.dumps({'passed': True, 'job_gateway_sha256': 'stale'}))
+        with self.assertRaisesRegex(ValueError, 'job-gateway subscription preflight'):
+            self.prepare()
+        self.config['slurm']['credential_store'] = str(self.repo/'private-auth')
+        with self.assertRaisesRegex(ValueError, 'outside checkouts'):
+            self.prepare()
+
     def test_source_archive_link_or_path_escape_is_rejected_before_extraction(self):
         archive = self.root/'bad.tar'
         for name, link in (('../outside', False), ('safe-link', True)):

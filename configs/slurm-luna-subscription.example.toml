@@ -1,0 +1,32 @@
+# Planning example only. No login or job is performed by reading this file.
+schema_version = 6
+
+[policy]
+engine = "codex"
+profile = "luna_subscription"
+effort = "high"
+topology = "adaptive"
+
+[batch]
+parallel = 36
+task_wall_limit_s = 86400.0
+
+[render]
+device = "nvidia"
+record_realtime_video = false
+
+[runtime]
+codex_home_scope = "job"
+codex_home = ""
+codex_tool_backend = "landlock-v1"
+
+[slurm]
+auth_mode = "subscription"
+# Replace with a canonical private directory on durable operator storage.
+# Only a reference is frozen at submission; no credentials are copied then.
+credential_store = "/ABSOLUTE/PRIVATE/robofrontier-luna"
+gpus = 1
+# Initial resource requests, not measured concurrency guarantees. Confirm the
+# site's definition of an allocated CPU and the node's available resources.
+cpus_per_task = 72
+memory_gib = 128
