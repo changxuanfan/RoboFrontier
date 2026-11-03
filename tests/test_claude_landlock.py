@@ -5,7 +5,9 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
+from unittest.mock import patch
 
 from robofrontier import run_layout
 from robofrontier.claude import landlock_shell
@@ -29,6 +31,29 @@ def tree(base):
 
 
 class AllowlistTests(unittest.TestCase):
+    def test_simultaneous_rules_writes_use_distinct_temporary_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'rules.json'
+            barrier = threading.Barrier(2)
+            replace = landlock_shell.os.replace
+            errors = []
+            def synchronized_replace(source, destination):
+                barrier.wait(timeout=5)
+                replace(source, destination)
+            def write():
+                try:
+                    landlock_shell.write_rules(path, [('/tmp', 'read')])
+                except Exception as error:
+                    errors.append(error)
+            with patch.object(landlock_shell.os, 'replace', synchronized_replace):
+                threads = [threading.Thread(target=write) for _ in range(2)]
+                for thread in threads: thread.start()
+                for thread in threads: thread.join(timeout=10)
+            self.assertFalse(any(thread.is_alive() for thread in threads))
+            self.assertEqual(errors, [])
+            self.assertEqual(json.loads(path.read_text())['rules'], [['/tmp', 'read']])
+            self.assertEqual(list(Path(tmp).iterdir()), [path])
+
     def test_the_most_specific_entry_wins(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp).resolve(); repo, run, table = tree(base)
@@ -57,6 +82,35 @@ class ConfineTests(unittest.TestCase):
         if isolation: launch['bash_isolation'] = isolation
         (run/'private/inputs/claude.json').write_text(json.dumps(launch))
         return run
+
+    def test_roles_can_prepare_isolation_concurrently(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = self.prepared(Path(tmp).resolve(), 'landlock-v1')
+            settings = {'sandbox': {'enabled': True}}
+            barrier = threading.Barrier(8)
+            replace = landlock_shell.os.replace
+            errors, prefixes = [], []
+            def synchronized_replace(source, destination):
+                barrier.wait(timeout=10)
+                replace(source, destination)
+            def prepare():
+                try:
+                    _, env = confine(run, settings, run/'private/engine/config')
+                    prefixes.append(Path(env['CLAUDE_CODE_SHELL_PREFIX']))
+                except Exception as error:
+                    errors.append(error)
+            with patch.object(landlock_shell.os, 'replace', synchronized_replace):
+                threads = [threading.Thread(target=prepare) for _ in range(8)]
+                for thread in threads: thread.start()
+                for thread in threads: thread.join(timeout=20)
+            self.assertFalse(any(thread.is_alive() for thread in threads))
+            self.assertEqual(errors, [])
+            self.assertEqual(len(prefixes), 8)
+            self.assertEqual(len(set(prefixes)), 1)
+            self.assertTrue(prefixes[0].stat().st_mode & 0o111)
+            self.assertIn('"$@"', prefixes[0].read_text())
+            self.assertEqual(json.loads((prefixes[0].parent/'rules.json').read_text())['schema'],
+                             landlock_shell.SCHEMA)
 
     def test_earlier_runs_and_claude_sandbox_runs_keep_claude_codes_sandbox(self):
         with tempfile.TemporaryDirectory() as tmp:

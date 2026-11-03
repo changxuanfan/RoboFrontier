@@ -25,6 +25,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 
 SCHEMA = 'robofrontier.landlock-rules.v1'
 CREATE_RULESET, ADD_RULE, RESTRICT_SELF = 444, 445, 446  # Same number on x86_64 and arm64.
@@ -108,6 +109,20 @@ def allowlist(table, read=(), write=()):
     return rules + [(str(p), 'read') for p in read] + [(str(p), 'write') for p in write]
 
 
+def write_atomic(path, text, mode=0o600):
+    """Publish a complete file using a unique temporary file in the same directory."""
+    path = Path(path)
+    fd, temporary = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as output:
+            os.fchmod(output.fileno(), mode)
+            output.write(text)
+        os.replace(temporary, path)
+    finally:
+        try: os.unlink(temporary)
+        except FileNotFoundError: pass
+
+
 def write_rules(path, rules, unconfined=()):
     """Write the rules atomically: roles of one run start turns, and rewrite them, concurrently.
 
@@ -115,11 +130,8 @@ def write_rules(path, rules, unconfined=()):
     shell-quoted string. `unconfined` lists those exact strings for the run's own robot
     MCP servers, which run unconfined like every other harness process. A Bash command
     never matches one: Claude Code wraps it in its shell snapshot and an eval."""
-    path = Path(path)
-    temporary = path.with_name(path.name + '.%d.tmp' % os.getpid())
-    temporary.write_text(json.dumps({'schema': SCHEMA, 'rules': rules, 'unconfined': sorted(unconfined)},
-                                    indent=1) + '\n')
-    os.replace(temporary, path)
+    write_atomic(path, json.dumps({'schema': SCHEMA, 'rules': rules, 'unconfined': sorted(unconfined)},
+                                  indent=1) + '\n')
 
 
 def restrict(rules):

@@ -128,9 +128,8 @@ def confine(run_dir, settings, config_dir):
     landlock_shell.write_rules(rules, landlock_shell.allowlist(
         table, read=[Path(config_dir).resolve()/'shell-snapshots'], write=landlock_shell.DEVICES), unconfined)
     prefix = folder/'bash-prefix'
-    prefix.write_text('#!/bin/sh\nexec ' + ' '.join(shlex.quote(str(part)) for part in (
-        sys.executable, '-I', Path(landlock_shell.__file__).resolve(), rules)) + ' "$@"\n')
-    prefix.chmod(0o755)
+    landlock_shell.write_atomic(prefix, '#!/bin/sh\nexec ' + ' '.join(shlex.quote(str(part)) for part in (
+        sys.executable, '-I', Path(landlock_shell.__file__).resolve(), rules)) + ' "$@"\n', mode=0o755)
     return {**settings, 'sandbox': {'enabled': False}}, {'CLAUDE_CODE_SHELL_PREFIX': str(prefix)}
 
 
