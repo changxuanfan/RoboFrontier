@@ -11,6 +11,7 @@ import queue
 import shlex
 import signal
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -97,6 +98,36 @@ def policy_settings(run_dir):
             'sandbox': {'enabled': True, 'allowUnsandboxedCommands': False,
                         'filesystem': {'allowWrite': writable, 'denyRead': hidden},
                         'network': {'allowedDomains': ['*'] if access.get('network') else []}}}
+
+
+def confine(run_dir, settings, config_dir):
+    """A policy turn's settings and extra environment for its frozen Bash isolation.
+
+    'claude-sandbox' (the default, and every earlier run) keeps Claude Code's sandbox.
+    'landlock-v1' turns it off and confines each Bash command instead through
+    CLAUDE_CODE_SHELL_PREFIX (robofrontier/claude/landlock_shell.py), with rules
+    rendered now from the same access table; the permission rules are unchanged.
+    """
+    run = Path(run_dir).resolve()
+    launch = run/'private/inputs/claude.json'
+    mode = (json.loads(launch.read_text()) if launch.is_file() else {}).get('bash_isolation', 'claude-sandbox')
+    if settings is None or mode == 'claude-sandbox':
+        return settings, {}
+    if mode != 'landlock-v1':
+        raise ValueError('Unknown Bash isolation: ' + str(mode))
+    from robofrontier.claude import landlock_shell
+    table = json.loads((run/'private/inputs/policy-access.json').read_text())['filesystem']
+    folder = run_layout.path(run, 'engine_mcp', 'claude').parent/'bash-isolation'
+    folder.mkdir(parents=True, exist_ok=True)
+    rules = folder/'rules.json'
+    # Claude Code sources a snapshot of its shell from its configuration directory first.
+    landlock_shell.write_rules(rules, landlock_shell.allowlist(
+        table, read=[Path(config_dir).resolve()/'shell-snapshots'], write=landlock_shell.DEVICES))
+    prefix = folder/'bash-prefix'
+    prefix.write_text('#!/bin/sh\nexec ' + ' '.join(shlex.quote(str(part)) for part in (
+        sys.executable, '-I', Path(landlock_shell.__file__).resolve(), rules)) + ' "$@"\n')
+    prefix.chmod(0o755)
+    return {**settings, 'sandbox': {'enabled': False}}, {'CLAUDE_CODE_SHELL_PREFIX': str(prefix)}
 
 
 def policy_system_prompt(run_dir):
@@ -360,12 +391,12 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
         # Native reports retain session history, but the CLI budget limits
         # this invocation. Adding historical cost here would enlarge the cap.
         native_limit = float(maximum)
-    settings = policy_settings(run_dir) if enable_robot else None
+    settings, confined = confine(run_dir, policy_settings(run_dir) if enable_robot else None, config_dir)
     cmd = build_command(model, effort, mcp_config, prompt, session_id, native_limit, binary, resume,
                         fork_from=fork_from, enable_robot=enable_robot, auth_mode=profile.get('auth_mode','api_key'),
                         prompt_via_stdin=True, settings=settings, system_prompt=policy_system_prompt(run_dir),
                         gate=gate)
-    env = build_env(profile, base_env, config_dir)
+    env = {**build_env(profile, base_env, config_dir), **confined}
     launch = run_dir/'private/inputs/claude.json'
     frozen = json.loads(launch.read_text()) if launch.is_file() else {}
     if frozen.get('auto_compact_token_limit'):
@@ -495,10 +526,11 @@ class PersistentSession:
         config_dir = config_directory(run_dir, profile)
         if profile.get('auth_mode') != 'native_login':
             config_dir.mkdir(parents=True, exist_ok=True)
+        settings, confined = confine(run_dir, policy_settings(run_dir), config_dir)
         cmd = build_command(model, effort, mcp_config, None, session_id, None, binary, resume, fork_from=fork_from,
-                            auth_mode=profile.get('auth_mode', 'api_key'), settings=policy_settings(run_dir),
+                            auth_mode=profile.get('auth_mode', 'api_key'), settings=settings,
                             system_prompt=policy_system_prompt(run_dir), stream_input=True, gate=gate)
-        env = build_env(profile, base_env, config_dir)
+        env = {**build_env(profile, base_env, config_dir), **confined}
         launch = Path(run_dir)/'private/inputs/claude.json'
         frozen = json.loads(launch.read_text()) if launch.is_file() else {}
         if frozen.get('auto_compact_token_limit'):

@@ -104,6 +104,9 @@ def prepare_draft(output, names, families=None, cases=None, level=None, min_arms
             raise ValueError('Missing or changed scene assets for ' + case)
     if not (ROOT / 'vendor/panda/SOURCE.json').is_file():
         raise ValueError('Missing Panda source assets; restore the published policy asset bundle')
+    # Prepared on the host that runs it: Claude Code's sandbox, or Landlock where it cannot run.
+    from robofrontier.claude.landlock_shell import choose
+    bash_isolation = choose()
     output = Path(output).absolute()
     output.mkdir(parents=True, exist_ok=False)
     for folder in run_layout.BATCH_FOLDERS: (output/folder).mkdir()
@@ -137,6 +140,7 @@ def prepare_draft(output, names, families=None, cases=None, level=None, min_arms
             write_json(launch, {'schema': 'robofrontier.claude-launch-draft.v1', 'profile': p,
                                 'context_window': context['context_window'],
                                 'auto_compact_token_limit': context['auto_compact_token_limit'],
+                                'bash_isolation': bash_isolation,
                                 'qualified': False, 'execution_available': False})
             manifest_path = inputs / 'manifest.json'
             manifest = read(manifest_path)
