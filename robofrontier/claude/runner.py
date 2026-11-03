@@ -120,9 +120,13 @@ def confine(run_dir, settings, config_dir):
     folder = run_layout.path(run, 'engine_mcp', 'claude').parent/'bash-isolation'
     folder.mkdir(parents=True, exist_ok=True)
     rules = folder/'rules.json'
+    # The exact strings Claude Code passes to the prefix to start this run's robot MCP servers.
+    servers = [json.loads(p.read_text())['mcpServers']['robot']
+               for p in sorted(run_layout.path(run, 'engine_mcp', 'claude').glob('*.json'))]
+    unconfined = [shlex.join([s['command'], *s['args']]) for s in servers]
     # Claude Code sources a snapshot of its shell from its configuration directory first.
     landlock_shell.write_rules(rules, landlock_shell.allowlist(
-        table, read=[Path(config_dir).resolve()/'shell-snapshots'], write=landlock_shell.DEVICES))
+        table, read=[Path(config_dir).resolve()/'shell-snapshots'], write=landlock_shell.DEVICES), unconfined)
     prefix = folder/'bash-prefix'
     prefix.write_text('#!/bin/sh\nexec ' + ' '.join(shlex.quote(str(part)) for part in (
         sys.executable, '-I', Path(landlock_shell.__file__).resolve(), rules)) + ' "$@"\n')

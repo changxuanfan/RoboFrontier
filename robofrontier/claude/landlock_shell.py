@@ -7,7 +7,8 @@ itself and everything it starts. Claude Code passes each Bash command to
 CLAUDE_CODE_SHELL_PREFIX as one string; this script, run as that prefix, restricts
 itself to the run's frozen access table and then runs the string with bash.
 
-As with Claude Code's sandbox only Bash is confined, not the CLI or the robot MCP.
+As with Claude Code's sandbox only Bash is confined, not the CLI or the robot MCP
+(which Claude Code also starts through the prefix; see write_rules).
 The rules allow reading and writing exactly what the table grants (Landlock grants by
 listed path, so a denied folder inside a readable one is listed around), deny every
 TCP connection and bind, and fail closed: without Landlock network rules (ABI 4,
@@ -107,8 +108,18 @@ def allowlist(table, read=(), write=()):
     return rules + [(str(p), 'read') for p in read] + [(str(p), 'write') for p in write]
 
 
-def write_rules(path, rules):
-    Path(path).write_text(json.dumps({'schema': SCHEMA, 'rules': rules}, indent=1) + '\n')
+def write_rules(path, rules, unconfined=()):
+    """Write the rules atomically: roles of one run start turns, and rewrite them, concurrently.
+
+    Claude Code also starts each stdio MCP server through the shell prefix, as one
+    shell-quoted string. `unconfined` lists those exact strings for the run's own robot
+    MCP servers, which run unconfined like every other harness process. A Bash command
+    never matches one: Claude Code wraps it in its shell snapshot and an eval."""
+    path = Path(path)
+    temporary = path.with_name(path.name + '.%d.tmp' % os.getpid())
+    temporary.write_text(json.dumps({'schema': SCHEMA, 'rules': rules, 'unconfined': sorted(unconfined)},
+                                    indent=1) + '\n')
+    os.replace(temporary, path)
 
 
 def restrict(rules):
@@ -160,6 +171,8 @@ def main(argv):
     if data.get('schema') != SCHEMA:
         sys.stderr.write('Unknown Landlock rules\n')
         return 126
+    if argv[2] in data.get('unconfined', []):
+        os.execv('/bin/bash', ['bash', '-c', argv[2]])
     try:
         restrict([tuple(rule) for rule in data['rules']])
     except OSError as error:

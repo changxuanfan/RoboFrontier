@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 
+from robofrontier import run_layout
 from robofrontier.claude import landlock_shell
 from robofrontier.claude.runner import confine
 
@@ -78,6 +79,18 @@ class ConfineTests(unittest.TestCase):
             rules = json.loads((prefix.parent/'rules.json').read_text())
             self.assertEqual(rules['schema'], landlock_shell.SCHEMA)
             self.assertIn([str(run/'private/engine/config/shell-snapshots'), 'read'], rules['rules'])
+            self.assertEqual(rules['unconfined'], [])
+            # Claude Code starts each robot MCP through the prefix too; its exact string runs unconfined.
+            servers = run_layout.path(run, 'engine_mcp', 'claude'); servers.mkdir(parents=True, exist_ok=True)
+            for actor in ('A', 'Controller'):
+                (servers/(actor+'.json')).write_text(json.dumps({'mcpServers': {'robot': {
+                    'command': '/v/bin/python', 'args': ['-m', 'robofrontier.claude.robot_mcp', '--connection',
+                                                         '/r un/%s.json' % actor], 'env': {}}}}))
+            confine(run, settings, run/'private/engine/config')
+            rules = json.loads((prefix.parent/'rules.json').read_text())
+            self.assertEqual(rules['unconfined'], [
+                "/v/bin/python -m robofrontier.claude.robot_mcp --connection '/r un/A.json'",
+                "/v/bin/python -m robofrontier.claude.robot_mcp --connection '/r un/Controller.json'"])
             with self.assertRaisesRegex(ValueError, 'Unknown Bash isolation'):
                 (run/'private/inputs/claude.json').write_text(json.dumps({'bash_isolation': 'none'}))
                 confine(run, settings, run/'private/engine/config')
@@ -116,6 +129,17 @@ class LandlockShellTests(unittest.TestCase):
                 port = server.getsockname()[1]
                 refused("exec 3<>/dev/tcp/127.0.0.1/%d" % port)
             self.assertFalse((run/'public/inputs/new.txt').exists())
+
+    def test_only_the_exact_robot_server_string_runs_unconfined(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp).resolve(); repo, run, table = tree(base)
+            table['/'] = 'read'
+            exact = 'cat %s' % (repo/'src/answer.py')
+            rules = base/'rules.json'
+            landlock_shell.write_rules(rules, landlock_shell.allowlist(table, write=landlock_shell.DEVICES), [exact])
+            self.assertEqual(self.run_shell(rules, exact).stdout, 'answer')
+            for near in (exact + ' ', ' ' + exact, exact + '; true', 'eval ' + repr(exact)):
+                self.assertNotEqual(self.run_shell(rules, near).returncode, 0, near)
 
     def test_it_refuses_rules_it_does_not_know(self):
         with tempfile.TemporaryDirectory() as tmp:

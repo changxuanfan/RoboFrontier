@@ -300,7 +300,11 @@ on the host that will run it (`landlock_shell.choose`):
   signals.
 
 Preparation fails when neither is available. As with Claude Code's sandbox, only
-Bash is confined; the CLI and the robot MCP are harness processes.
+Bash is confined; the CLI and the robot MCP are harness processes. Claude Code
+also starts each stdio MCP server through the prefix, as one shell-quoted string;
+the prefix runs exactly the run's own robot MCP strings unconfined and confines
+everything else. A Bash command never matches one, because Claude Code wraps it
+in its shell snapshot and an eval.
 `tests/test_claude_landlock.py` checks the actual confinement on a Linux host
 with Landlock and is skipped elsewhere.
 
