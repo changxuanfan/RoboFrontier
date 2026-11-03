@@ -94,6 +94,11 @@ other checkouts/tasks, `/proc` and `/dev`; the trusted worker adds only writable
 remains outside the policy worker. Same-UID mode 0600 files
 alone are not this isolation boundary.
 
+For a job-local Python environment under a denied temporary/source root, the
+frozen table grants read-only access to its interpreter configuration and package
+library directory. It does not grant the environment root or other temporary
+files. A runtime inside a credential/control directory is rejected.
+
 The Codex file worker supports filesystem Landlock ABI 1 or later, paired with
 mandatory seccomp. On ABI 1/2, seccomp additionally blocks path truncation,
 read-only/invalid-mode `O_TRUNC`, and `openat2` (ENOSYS for safe openat fallback).

@@ -9,12 +9,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from robofrontier.claude.landlock_shell import abi
 from robofrontier.codex import tool_backend
 from robofrontier.codex.launch import launch_config
 from robofrontier.configuration import load_configuration
-from robofrontier.policy_access import record
+from robofrontier.policy_access import record, mode
 from robofrontier.run_setup import write_json
 
 
@@ -30,6 +31,24 @@ def fixture(base, name):
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_job_local_python_gets_only_readonly_runtime_paths(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            run = fixture(base, 'runtime')
+            prefix = base/'python'
+            packages = prefix/'lib/python3.12/site-packages'
+            packages.mkdir(parents=True)
+            (prefix/'pyvenv.cfg').write_text('home = /usr/bin\n')
+            (prefix/'auth.json').write_text('RUNTIME_PRIVATE_CANARY')
+            with patch.object(tool_backend.sys, 'prefix', str(prefix)), \
+                    patch.object(tool_backend.sysconfig, 'get_path', return_value=str(packages)):
+                tool_backend.prepare(run, {'tool_backend': 'landlock-v1'})
+            access = json.loads((run/'private/inputs/policy-access.json').read_text())['filesystem']
+            self.assertEqual(mode(access, prefix/'pyvenv.cfg'), 'read')
+            self.assertEqual(mode(access, packages/'library.py'), 'read')
+            self.assertEqual(mode(access, prefix/'auth.json'), 'deny')
+            self.assertEqual(mode(access, prefix), 'deny')
+            self.assertEqual(mode(access, run/'private/secret'), 'deny')
     def test_receipt_cannot_qualify_a_different_backend_or_changed_source(self):
         profile = {'tool_backend': 'landlock-v1'}
         digest = tool_backend.fingerprint(profile)
