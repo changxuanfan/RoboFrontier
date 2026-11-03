@@ -12,6 +12,9 @@ import urllib.request
 
 SCHEMA = 'robofrontier.factory-data.v1'
 PATH_FIELDS = ('directory', 'recording', 'edit', 'derived_track')
+# Mosaic desks a Factory bundle may display: R14 (81 mm grid; the published Factory
+# data and its Oracle recordings) and R15 (71 mm grid; the current release).
+MOSAIC_DISPLAY_REVISIONS = (14, 15)
 
 
 def digest(path):
@@ -161,8 +164,9 @@ def verify(root, cases=None):
             source = Path(spec['directory'])
             if digest(source/'scene.xml') != read(source/'workstation.json')['scene_sha256']:
                 raise ValueError('Display source scene differs')
-            if read(source/'task.json').get('family') == 'mosaic' and read(source/'task.json')['scale']['scene_revision'] != 14:
-                raise ValueError('This release requires Mosaic R14 display sources')
+            task = read(source/'task.json')
+            if task.get('family') == 'mosaic' and task['scale']['scene_revision'] not in MOSAIC_DISPLAY_REVISIONS:
+                raise ValueError('Unsupported Mosaic display revision: '+str(task['scale']['scene_revision']))
             for name, checksum in edit.get('input_evidence_sha256', {}).items():
                 if name not in ('actions.json', 'process.jsonl') or digest(Path(spec['recording']).parent/name) != checksum:
                     raise ValueError('Station semantic evidence differs')
@@ -255,7 +259,9 @@ def export(output, scene, release, cameras, asset, source_root):
                      for p in sorted(folder.rglob('*')) if p.is_file()}
         write(folder/'bundle.json', dict(schema=SCHEMA, scene='scene/'+scene.name,
             asset='asset', cameras='cameras.json', release='release.json', files=inventory,
-            mosaic_revision=14, scope='Offline recorded-state presentation. Derived display tasks retain recorded_case_id; no new execution or score qualification.'))
+            mosaic_revisions=sorted({read(folder/spec['directory']/'task.json')['scale']['scene_revision']
+                                     for spec in release['families'].get('mosaic', {}).get('oracle', [])}),
+            scope='Offline recorded-state presentation. Derived display tasks retain recorded_case_id; no new execution or score qualification.'))
         result = verify(folder)
         folder.rename(output)
     return result
