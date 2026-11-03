@@ -139,7 +139,7 @@ class LandlockShellTests(unittest.TestCase):
             landlock_shell.write_rules(rules, landlock_shell.allowlist(table, write=landlock_shell.DEVICES), [exact])
             self.assertEqual(self.run_shell(rules, exact).stdout, 'answer')
             for near in (exact + ' ', ' ' + exact, exact + '; true', 'eval ' + repr(exact)):
-                self.assertNotEqual(self.run_shell(rules, near).returncode, 0, near)
+                self.assertNotIn('answer', self.run_shell(rules, near).stdout, near)
 
     def test_it_refuses_rules_it_does_not_know(self):
         with tempfile.TemporaryDirectory() as tmp:
