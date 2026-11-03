@@ -10,9 +10,11 @@ import json
 import os
 from pathlib import Path
 import resource
+import stat
 import sys
 
-from robofrontier.claude.landlock_shell import allowlist, restrict
+from robofrontier.claude.landlock_shell import allowlist
+from robofrontier.codex.file_sandbox import abi, restrict
 
 SCHEMA = 'robofrontier.codex-tools.v1'
 DENIED_SYSCALLS = (
@@ -23,10 +25,15 @@ DENIED_SYSCALLS = (
     'kill', 'tkill', 'tgkill', 'rt_sigqueueinfo', 'rt_tgsigqueueinfo',
     'mount', 'umount2', 'pivot_root', 'setns', 'unshare', 'setsid', 'setpgid', 'open_by_handle_at',
     'bpf', 'perf_event_open',
+    # Landlock does not mediate these metadata changes, including on newer ABIs.
+    'chmod', 'fchmod', 'fchmodat', 'fchmodat2', 'chown', 'fchown', 'lchown', 'fchownat',
+    'chown32', 'fchown32', 'lchown32', 'setxattr', 'lsetxattr', 'fsetxattr',
+    'removexattr', 'lremovexattr', 'fremovexattr', 'utime', 'utimes', 'futimesat',
+    'utimensat', 'utimensat_time64',
 )
 
 
-def seccomp_filter():
+def seccomp_filter(filesystem_abi=None):
     name = ctypes.util.find_library('seccomp')
     if not name:
         raise RuntimeError('libseccomp is required for the Codex Landlock backend')
@@ -37,6 +44,12 @@ def seccomp_filter():
     library.seccomp_syscall_resolve_name.restype = ctypes.c_int
     library.seccomp_rule_add.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_uint]
     library.seccomp_rule_add.restype = ctypes.c_int
+    class ArgCompare(ctypes.Structure):
+        _fields_ = [('arg', ctypes.c_uint), ('op', ctypes.c_uint),
+                    ('datum_a', ctypes.c_uint64), ('datum_b', ctypes.c_uint64)]
+    library.seccomp_rule_add_array.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int,
+                                              ctypes.c_uint, ctypes.POINTER(ArgCompare)]
+    library.seccomp_rule_add_array.restype = ctypes.c_int
     library.seccomp_load.argtypes = [ctypes.c_void_p]
     library.seccomp_load.restype = ctypes.c_int
     library.seccomp_release.argtypes = [ctypes.c_void_p]
@@ -46,8 +59,35 @@ def seccomp_filter():
     try:
         for name in DENIED_SYSCALLS:
             number = library.seccomp_syscall_resolve_name(name.encode())
+            if name == 'fchmodat2' and number < 0:
+                number = 452  # x86_64/aarch64: old libseccomp, newer kernel.
             if number >= 0 and library.seccomp_rule_add(context, 0x00050001, number, 0):
                 raise RuntimeError('Cannot enforce syscall restriction: ' + name)
+        version = abi() if filesystem_abi is None else filesystem_abi
+        if version < 3:
+            for name in ('truncate', 'truncate64'):
+                number = library.seccomp_syscall_resolve_name(name.encode())
+                if number >= 0 and library.seccomp_rule_add(context, 0x00050001, number, 0):
+                    raise RuntimeError('Cannot enforce legacy truncate restriction')
+            # openat2 keeps its flags in a pointer, which classic seccomp cannot
+            # inspect. ENOSYS allows safe libc/tool fallbacks to filtered openat.
+            number = library.seccomp_syscall_resolve_name(b'openat2')
+            if number < 0:
+                number = 437
+            if library.seccomp_rule_add(context, 0x00050026, number, 0):
+                raise RuntimeError('Cannot enforce legacy openat2 restriction')
+            for name, argument in (('open', 1), ('openat', 2)):
+                number = library.seccomp_syscall_resolve_name(name.encode())
+                if number < 0:
+                    if name == 'openat':
+                        raise RuntimeError('Cannot resolve legacy openat restriction')
+                    continue
+                # Normal O_WRONLY/O_RDWR writes remain governed by Landlock.
+                # Deny truncation through read-only and invalid access modes.
+                for access in (os.O_RDONLY, os.O_ACCMODE):
+                    compare = ArgCompare(argument, 7, os.O_TRUNC | os.O_ACCMODE, os.O_TRUNC | access)
+                    if library.seccomp_rule_add_array(context, 0x00050001, number, 1, ctypes.byref(compare)):
+                        raise RuntimeError('Cannot enforce legacy open flags restriction')
         if library.seccomp_load(context):
             raise RuntimeError('Cannot install seccomp restrictions')
     finally:
@@ -74,6 +114,11 @@ def main():
     access = json.loads((run/'private/inputs/policy-access.json').read_text())
     if backend != {'schema': SCHEMA, 'backend': 'landlock-v1'} or access.get('network') is not False:
         raise ValueError('Unsupported or network-enabled tool configuration')
+    if os.uname().machine not in ('x86_64', 'aarch64'):
+        raise ValueError('Unsupported worker syscall architecture')
+    # An inherited regular stdout/stderr could bypass filesystem-open checks.
+    if any(not stat.S_ISFIFO(os.fstat(fd).st_mode) for fd in (0, 1, 2)):
+        raise ValueError('Isolated tools require pipe-backed standard descriptors')
     rules = allowlist(access['filesystem'], write=['/dev/null'])
     temporary = run/'workspace/.tmp'
     if not temporary.is_dir():
@@ -84,7 +129,7 @@ def main():
     os.environ.update(PATH=str(Path(sys.executable).parent)+':/usr/local/bin:/usr/bin:/bin',
                       LANG='C.UTF-8', TMPDIR=str(temporary))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    seccomp_filter()
+    seccomp_filter(abi())
     restrict(rules)
     drop_capabilities()
     os.chdir(run/'workspace')

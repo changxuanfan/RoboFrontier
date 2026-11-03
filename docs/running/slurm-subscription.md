@@ -93,9 +93,18 @@ other checkouts/tasks, `/proc` and `/dev`; only `/dev/null` is added by the trus
 worker. Rendering remains outside the policy worker. Same-UID mode 0600 files
 alone are not this isolation boundary.
 
-The actual compute-node kernel must support Landlock ABI 4 or later and the
-seccomp worker. Failed isolation admission prevents START. CPU container
-qualification and Mac protocol tests do not qualify an H800 allocation.
+The Codex file worker supports filesystem Landlock ABI 1 or later, paired with
+mandatory seccomp. On ABI 1/2, seccomp additionally blocks path truncation,
+read-only/invalid-mode `O_TRUNC`, and `openat2` (ENOSYS for safe openat fallback).
+Ordinary workspace overwrites and descriptor truncation remain available under
+Landlock's write checks. Metadata-changing syscalls are restricted and inherited
+standard descriptors must be pipes. ABI 1 also denies cross-directory rename
+and hard-link operations; use a same-directory temporary file for replacement.
+The Claude Bash prefix keeps its separate ABI 4 requirement.
+
+No Landlock, missing seccomp or failed confinement is an admission failure.
+The actual compute-node worker must still pass doctor before START. Tests using
+old ABI masks on a newer local Linux kernel do not qualify an H800 allocation.
 
 A shared-engine failure stops dispatch, seals task worlds and requires review.
 This backend disables automatic host/segment redispatch; it does not recreate a
@@ -128,6 +137,13 @@ renewal without stale-refresh rejection. All HTTP endpoints and token values
 are fixtures, not a model or account login. Separate tests cover stream leases,
 partial writes, missing-generation rollback refusal, owner/fencing checks,
 cross-task denials, colliding client IDs and engine failure without redispatch.
+
+The ABI compatibility regression is `tests.test_codex_legacy_sandbox`. Local
+Linux checks exercise ABI 1/2 masks and the ordinary worker boundaries. A tiny
+synthetic syscall check on slogin-01 (Linux 5.19, actual ABI 2) also passed on
+2026-11-04, without models, simulation, assets or scheduler jobs. That login-node
+result does not qualify the Linux 5.15 compute nodes; their doctor gate remains
+mandatory. No authentication or active trial was used for these checks.
 
 Outstanding deployment checks: actual cluster kernel confinement, real account
 admission/renewal and account limits, EGL device identity, 36 renderer memory and

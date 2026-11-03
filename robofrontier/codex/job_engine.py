@@ -23,6 +23,7 @@ BACKEND = 'slurm-managed-v1'
 
 def fingerprint():
     names = ('codex/job_engine.py', 'codex/job_gateway.js', 'codex/gateway_rpc.js',
+             'codex/file_sandbox.py', 'codex/tool_worker.py', 'codex/tool_backend.py',
              'codex/codex_rpc.js', 'codex/codex_policy_host.js', 'codex/batch.py',
              'codex/tool_broker.js', 'codex/launch.py', 'slurm_auth.py', 'slurm_job.py',
              'policy_access.py')

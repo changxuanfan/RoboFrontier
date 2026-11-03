@@ -68,7 +68,7 @@ class ConfigurationTests(unittest.TestCase):
             self.assertEqual(launch['tool_backend_sha256'], tool_backend.fingerprint(profile))
 
 
-@unittest.skipUnless(sys.platform.startswith('linux') and abi() >= 4, 'Linux Landlock ABI 4 required')
+@unittest.skipUnless(sys.platform.startswith('linux') and abi() >= 1, 'Linux Landlock required')
 class KernelBoundaryTests(unittest.TestCase):
     def test_local_doctor_exercises_the_actual_worker(self):
         report = tool_backend.doctor()

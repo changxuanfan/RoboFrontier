@@ -25,7 +25,7 @@ def selected(profile):
 def fingerprint(profile):
     if selected(profile) == 'native':
         return None
-    files = ('tool_worker.py', 'tool_backend.py', 'tool_broker.js', 'launch.py',
+    files = ('tool_worker.py', 'file_sandbox.py', 'tool_backend.py', 'tool_broker.js', 'launch.py',
              'codex_policy_host.js', 'codex_preflight.js', 'codex_rpc.js',
              'job_engine.py', 'job_gateway.js', 'gateway_rpc.js',
              '../claude/landlock_shell.py', '../policy_access.py')
@@ -128,6 +128,10 @@ def denied(name,fn):
  checks[name]=False
 checks['public_read']=(r/'public/task.txt').read_text()=='public'
 (r/'workspace/note').write_text('ok');checks['workspace_write']=True
+(r/'workspace/note').write_text('updated');checks['workspace_overwrite']=True
+denied('readonly_truncate',lambda:os.open(r/'public/task.txt',os.O_RDONLY|os.O_TRUNC))
+denied('path_truncate',lambda:os.truncate(r/'public/task.txt',0))
+checks['public_intact']=(r/'public/task.txt').read_text()=='public'
 for key,p in [('private',r/'private/secret.txt'),('other_run',r.parent/'other.txt'),('proc',Path('/proc/self/environ'))]:
  denied(key,lambda p=p:p.read_bytes())
 denied('public_write',lambda:(r/'public/illegal').write_text('bad'))
@@ -145,7 +149,9 @@ print(json.dumps(checks));sys.exit(0 if all(checks.values()) else 1)
         checks = json.loads(result.stdout)
         if not checks or not all(value is True for value in checks.values()):
             raise RuntimeError('Confinement checks failed')
+        from .file_sandbox import abi
         return {'backend': 'landlock-v1', 'sandbox_checked': True, 'checks': checks,
+                'landlock_abi': abi(), 'network_isolation': 'seccomp',
                 'backend_sha256': fingerprint({'tool_backend': 'landlock-v1'})}
 
 
