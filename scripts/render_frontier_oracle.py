@@ -65,8 +65,10 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
     # Display only, as in the Factory: a letter label under a robot base slides out.
     from robofrontier.factory.labels import robot_label_moves
     if mujoco.mj_name2id(model,mujoco.mjtObj.mjOBJ_KEY,'initial')>=0:mujoco.mj_resetDataKeyframe(model,data,model.key('initial').id)
-    mujoco.mj_kinematics(model,data);label_moves=robot_label_moves(model,data)
-    for name,move in label_moves.items():model.geom_pos[model.geom(name).id][:2]=move['to_xy']
+    family=json.loads((scene.parent/'task.json').read_text()).get('family') if (scene.parent/'task.json').is_file() else None
+    mujoco.mj_kinematics(model,data);label_moves=robot_label_moves(model,data,avoid_objects=family!='mosaic')
+    for name,move in label_moves.items():
+        gid=model.geom(name).id;model.geom_pos[gid][:2]=move['to_xy'];model.geom_quat[gid]=move['quat_wxyz']
     shared=(directory/'motion/stream.json').exists();events=None;event=None
     if shared:
         reader=MotionReader(directory/'motion')

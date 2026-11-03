@@ -187,7 +187,7 @@ def compose(shell,catalog_path,output,table_opening_scale=None,source_overrides=
             mujoco.mj_kinematics(m,d)
         # Display only: a letter label under a robot base slides out towards the table edge.
         from .labels import robot_label_moves
-        label_moves=robot_label_moves(m,d)
+        label_moves=robot_label_moves(m,d,avoid_objects=place['family']!='mosaic')
         t=np.asarray(place['translation_m']);yaw=place['yaw_rad'];c,s=math.cos(yaw),math.sin(yaw);rotation=np.array([[c,-s,0],[s,c,0],[0,0,1.]])
         prefix=place['case_id']+'__';bodymap={};geommap={};animated=set(source.manifest['motion_recording_contract']['dynamic_bodies'])
         for bid in range(m.nbody):
@@ -201,7 +201,8 @@ def compose(shell,catalog_path,output,table_opening_scale=None,source_overrides=
             bodymap[name]=body.get('name')
             for g in ids:
                 entry=source.manifest['geometries'][g];local_r=quat_matrix(m.geom_quat[g]);local_p=m.geom_pos[g].copy();typ=int(m.geom_type[g])
-                if not bid and entry['id'] in label_moves:local_p[:2]=label_moves[entry['id']]['to_xy']
+                if not bid and entry['id'] in label_moves:
+                    local_p[:2]=label_moves[entry['id']]['to_xy'];local_r=quat_matrix(label_moves[entry['id']]['quat_wxyz'])
                 kwargs=dict(name=prefix+entry['id'],type=types[typ],size=vec(m.geom_size[g]),pos=vec(local_p),quat=vec(matrix_quat(local_r)),
                     rgba=vec(m.geom_rgba[g]),contype='0',conaffinity='0',mass='0',group='0')
                 if typ==mujoco.mjtGeom.mjGEOM_MESH:

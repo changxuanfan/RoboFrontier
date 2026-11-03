@@ -29,16 +29,17 @@ def place_label(candidates,half,occupied,margin=.10):
 
 
 # A robot's letter is printed on the tabletop next to its base and partly reaches
-# under it. The display (never the source scene) places every letter label with its
-# near edge 5 cm beyond the robot's whole outline seen from above, arm included, so
-# a top view shows it: along its own direction
+# under it. The display (never the source scene) places every letter label, upright
+# for the front camera, with its near edge 2 cm beyond the robot's whole outline
+# seen from above, arm included, so a top view shows it: along its own direction
 # from the base, away from the arm; where that spot leaves the table (a robot at
-# the table edge) or lies under objects (Mosaic stock), on the base's right or left
-# side instead, else in front of it; failing all, the least covered of them. Footprints use each
+# the table edge) or, where objects matter, lies under them (a Dial module), on the
+# base's right or left side instead, else in front of it; failing all, the least
+# covered of them. Mosaic stock may cover a label: its cubes surround every base. Footprints use each
 # geometry's projected outline at the current pose.
 ROBOT_LABEL = re.compile(r'([A-Z]{1,2})_label')
 ROBOT_LINK = re.compile(r'([A-Z]{1,2})_link\d+')  # robot geometry is often unnamed; its body is not
-LABEL_GAP_M = .05
+LABEL_GAP_M = .02
 LABEL_SIDES_DEG = (0, -90, 90, 180)
 OBJECT_COVER = .10  # largest share of a label that objects may cover
 STANDING_M = .05  # robot geometry whose bottom is this close to the tabletop is its base
@@ -88,7 +89,7 @@ def _inside(hull, points):
     return np.all(edges[None, :, 0]*offsets[..., 1]-edges[None, :, 1]*offsets[..., 0] >= 0, axis=1)
 
 
-def robot_label_moves(model, data):
+def robot_label_moves(model, data, avoid_objects=True):
     """New source-frame XY for every robot letter label, LABEL_GAP_M outside its base.
 
     Returns {geom name: dict(robot, from_xy, to_xy, distance_from_base_m, side_deg,
@@ -119,6 +120,12 @@ def robot_label_moves(model, data):
         match = ROBOT_LINK.fullmatch(model.body(model.geom_bodyid[g]).name)
         if match and model.geom_group[g] <= 2:
             outlines.setdefault(match.group(1), []).append(_outline(model, data, g)[:, :2])
+    # Letters read upright in the front view: a label's local +y is the letter's top,
+    # so it points along the front camera's horizontal viewing direction.
+    front = None
+    if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, 'global') >= 0:
+        view = -data.cam_xmat[model.camera('global').id].reshape(3, 3)[:, 2]
+        front = math.atan2(view[1], view[0])-math.pi/2
     moves = {}
     for g in labels:
         robot = ROBOT_LABEL.fullmatch(names[g]).group(1)
@@ -127,6 +134,8 @@ def robot_label_moves(model, data):
         away = current-base; away /= max(np.linalg.norm(away), 1e-9)
         footprint = np.vstack(outlines[robot])
         rotation = data.geom_xmat[g].reshape(3, 3)[:2, :2]
+        if front is not None:
+            rotation = np.array([[math.cos(front), -math.sin(front)], [math.sin(front), math.cos(front)]])
         corners = np.array([[x, y] for x in (-1, 1) for y in (-1, 1)])*model.geom_size[g][:2]@rotation.T
         points = samples*model.geom_size[g][:2]@rotation.T
         options = []
@@ -145,11 +154,13 @@ def robot_label_moves(model, data):
             for outline in objects:
                 inside |= _inside(outline, points+centre)
             options.append((float(inside.mean()), side, centre))
-            if options[-1][0] <= OBJECT_COVER:
+            if not avoid_objects or options[-1][0] <= OBJECT_COVER:
                 break
         if not options:
             raise ValueError('No side of the base keeps robot label '+names[g]+' on the table')
-        cover, side, centre = options[-1] if options[-1][0] <= OBJECT_COVER else min(options, key=lambda o: o[0])
+        cover, side, centre = options[-1] if not avoid_objects or options[-1][0] <= OBJECT_COVER else min(options, key=lambda o: o[0])
+        yaw = math.atan2(rotation[1, 0], rotation[0, 0])
         moves[names[g]] = dict(robot=robot, from_xy=current.tolist(), to_xy=centre.tolist(), side_deg=side,
+                               quat_wxyz=[math.cos(yaw/2), 0., 0., math.sin(yaw/2)],
                                object_cover=cover, distance_from_base_m=float(np.linalg.norm(centre-base)))
     return moves

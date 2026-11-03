@@ -131,12 +131,15 @@ class MotionEditTests(unittest.TestCase):
                 geometry = play.model.geom(target).id
                 pose = expected['geometries'][name]
                 if name in moved:
-                    # A letter label under a base is displayed beside it; only its XY differs.
+                    # A letter label is displayed beside its robot, upright for the front
+                    # camera; only its XY and its turn about the vertical differ.
                     np.testing.assert_allclose(play.data.geom_xpos[geometry][:2],rotation@moved[name]['to_xy']+np.asarray(place['translation_m'][:2]),atol=1e-6)
                     np.testing.assert_allclose(play.data.geom_xpos[geometry][2],pose['position_m'][2],atol=1e-6)
+                    turn = np.eye(3); turn[:2, :2] = rotation
+                    np.testing.assert_allclose(play.data.geom_xmat[geometry].reshape(3,3),turn@quat_matrix(moved[name]['quat_wxyz']),atol=1e-6)
                 else:
                     np.testing.assert_allclose(play.data.geom_xpos[geometry],pose['position_m'],atol=1e-6)
-                np.testing.assert_allclose(play.data.geom_xmat[geometry].reshape(3,3),quat_matrix(pose['quaternion_wxyz']),atol=1e-6)
+                    np.testing.assert_allclose(play.data.geom_xmat[geometry].reshape(3,3),quat_matrix(pose['quaternion_wxyz']),atol=1e-6)
             self.assertEqual(play.model.nv,0)
             # Playback verification ignores the display-only label moves.
             play.apply_arrays(case['id'],source,source.data.qpos.copy(),3.,verify=True)
