@@ -418,7 +418,7 @@
         "navy"
       ]
     ],
-    "pocket_opening_m": 0.06999999999999999,
+    "pocket_opening_m": 0.07,
     "depth_m": 0.02,
     "palette": {
       "cream": "#FFF4DA",
@@ -616,7 +616,7 @@
   "family_guidance": "---\nname: mosaic\ndescription: Place, release and verify cubes densely on a Mosaic grid with several arms, including handovers and staging.\n---\n\n# Mosaic\n\n## Placement and release\n\nRelate the cube's observed pose to the tool through the current grasp offset;\nslip or regrasping changes that relation. For recessed pockets the complete\nrotated cube footprint and bottom seating matter, not only center error. Work out\nthe side clearance from the task's pocket opening and cube side; when only a few\nmillimetres remain, align the cube's yaw and position before it enters the pocket.\nFor flat placement use the task's center and orientation tolerances.\n\nPlan opening and withdrawal with the placement. Dense neighbors can obstruct the\nfingertips even when the cube fits: compare grasp height, approach orientation,\nplacement order, and release near the support surface. Account for the remaining\nfall and any movement caused by jaw opening or withdrawal; choose release height\nfrom geometry and evidence, not a fixed drop distance. Placement, release and\nwithdrawal are separate events. Verify the cube after clearing it.\n\n## Order and rework\n\nThe current order and pose affect later grasp access, placement, jaw opening and\nwithdrawal. Later contact can disturb completed cells: reverify affected results\nwhen evidence changes rather than treating progress as permanent. For correction,\ncompare regrasping, controlled single or group pushes, temporary removal and\nanother allocation by contact geometry, observability and total rework cost.\nPushes are ordinary finite moves, not guaranteed alignment; inspect their effect\non neighbors.\n\n## Collaboration\n\nSupply labels establish availability, not ownership. Compare local placement,\ndirect delivery, handovers and stable staging by reach, congestion, grasp\ncompatibility, extra handling and concurrent work. For a handover, plan receiver\naccess and support together with sender release and retreat. Preserve verified\nwork while enabling independent work with full-arm, payload and opening-finger\nclearance.\n",
   "source": {
     "scene_sha256": "eaa59d848aeaa33a7ba0d5c900a836ef12de4088f88ddb19aed0a0995794f7d1",
-    "task_sha256": "b6b8346e6aef090fedc47a02d2c10362a7c336843b535a35577311e6af8c2690",
+    "task_sha256": "e69a22785786c3a0bb1775e6196233f50273f60b2f18bc3f69e1efecd2ac2ca4",
     "qualification": "r15_grid_pitch_71mm_from_r14_static_checks"
   },
   "views": {

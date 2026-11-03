@@ -35,7 +35,7 @@ GUIDANCE = 'prompts/archive/tasks/mosaic-r15.md'
 REVISION = 15
 PITCH = .071
 WALL = .001
-POCKET = PITCH - WALL
+POCKET = round(PITCH - WALL, 6)
 # The shared Mosaic rule (v2.RULES) states R14's grid in words.
 RULE_R14 = 'common cell-center pitch is 81 mm. L1 has 80 mm clear square pockets'
 RULE_R15 = f'common cell-center pitch is {PITCH*1000:.0f} mm. L1 has {POCKET*1000:.0f} mm clear square pockets'

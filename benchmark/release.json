@@ -368,8 +368,8 @@
           "directory": "benchmark/mosaic/mosaic-a04-6x12-d1",
           "source_files": {
             "scene.xml": "90f704300cd0e17c5514e38bf4d0a5463a4c44e733291bbc7fb87c7707c936ac",
-            "task.json": "9677d7ece5fe3557fd32526afe60f8098d4ca2931179093c9fc932143fb22209",
-            "environment.json": "9a9ebf00e276913c2bd76d9a5289a5ac4b1b7b09d8ebdde2ebc28f586d186810",
+            "task.json": "c66f87bd04836495d617b4a05768d97e0fad77b2a9c085208fe3e0251db454e7",
+            "environment.json": "cb3cfdab87297226c12b89e4f496820dfb22491dad93ade9cde16dc8e9520b72",
             "workstation.json": "e121c728f7a357af7b981eefe4aae99736ad21cc9bf6ee06af127d488baadb85"
           },
           "public_files": {
@@ -381,7 +381,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/reviewed-task.json",
-            "sha256": "4d0a9e09c05295ebb24980fbb658f0b40b228eaffa0f0fe3c243ad7418be8432"
+            "sha256": "1e30cea9192a72aa099215968019c0aadf60dbafc9eaf8aebfed2694d03b8ba6"
           }
         },
         {
@@ -431,8 +431,8 @@
           "directory": "benchmark/mosaic/mosaic-a06-9x18-d1",
           "source_files": {
             "scene.xml": "7457f6863624d6efd135e5fadd20d29f6b201f1cbec4261a695443e5068934c6",
-            "task.json": "8a4068714dacf26cd0bc5c8f21486b2fd5a6aa3fc4cad5e72ece69712d8a9daf",
-            "environment.json": "5db4b601c48c8071fdd0133625d519367ff8461101c00413c14059943931d484",
+            "task.json": "0dd76d90197bb3ad8259f0f541416a585c9be9b47cc4e3e0b92e7b883f6a019e",
+            "environment.json": "e3dbf2b55204238fbd84d60f5c1627860eb4af6dd0b34b8e0a555f5d1f59079c",
             "workstation.json": "e3d9912b2af7b527d2b488a40320038788bd1e2f470f35a6a2501d972e77c5d6"
           },
           "public_files": {
@@ -444,7 +444,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/reviewed-task.json",
-            "sha256": "08509f7bea9de54a97c05b9a639cd6457f636099da5cbf005b41f38b7839e09e"
+            "sha256": "c8a0b0aad26d00ace05f5614f40776e389968b81fdf7b4ed25efacdd231bc98c"
           }
         },
         {
@@ -494,8 +494,8 @@
           "directory": "benchmark/mosaic/mosaic-a08-12x24-d1",
           "source_files": {
             "scene.xml": "eaa59d848aeaa33a7ba0d5c900a836ef12de4088f88ddb19aed0a0995794f7d1",
-            "task.json": "b6b8346e6aef090fedc47a02d2c10362a7c336843b535a35577311e6af8c2690",
-            "environment.json": "b6e478c7d5c3a88f20cd0c4554816e9d51492c330d93e1af1147712a75e40b18",
+            "task.json": "e69a22785786c3a0bb1775e6196233f50273f60b2f18bc3f69e1efecd2ac2ca4",
+            "environment.json": "dda26fe56288213455f690d417635324f9f2bfa26439a541933cbba769816d57",
             "workstation.json": "d105d2dc3343a957a87fde132af0e3b662b250e7dc3549c04557728a0117baf0"
           },
           "public_files": {
@@ -507,7 +507,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/reviewed-task.json",
-            "sha256": "5bb65a3002fcc953160ebf1af00b246ae6170d67f9a7c0d9588338d9158e83b4"
+            "sha256": "b196230e0d8f41e0e9533a6de4de059763b30d05ce4d765d46de7f87cef81e34"
           }
         },
         {

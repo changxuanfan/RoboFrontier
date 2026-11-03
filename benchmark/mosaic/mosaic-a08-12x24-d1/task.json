@@ -4920,7 +4920,7 @@
       "previous_pitch_m": 0.081,
       "pitch_m": 0.071,
       "cube_side_m": 0.06,
-      "pocket_opening_m": 0.06999999999999999,
+      "pocket_opening_m": 0.07,
       "unchanged": "Robots, stock, table, cameras, initial keyframe, colours, pattern and physics"
     }
   },
@@ -8990,7 +8990,7 @@
         "navy"
       ]
     ],
-    "pocket_opening_m": 0.06999999999999999,
+    "pocket_opening_m": 0.07,
     "depth_m": 0.02,
     "floor_z_m": 0.78,
     "rim_z_m": 0.8,
