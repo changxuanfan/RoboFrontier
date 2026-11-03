@@ -104,7 +104,9 @@ mandatory seccomp. On ABI 1/2, seccomp additionally blocks path truncation,
 read-only/invalid-mode `O_TRUNC`, and `openat2` (ENOSYS for safe openat fallback).
 Ordinary workspace overwrites and descriptor truncation remain available under
 Landlock's write checks. Metadata-changing syscalls are restricted and inherited
-standard descriptors must be pipes. ABI 1 also denies cross-directory rename
+standard descriptors must be pipes or connected anonymous Unix streams (the
+Node/libuv implementation of piped stdio). Regular files, named Unix endpoints
+and network sockets are rejected. ABI 1 also denies cross-directory rename
 and hard-link operations; use a same-directory temporary file for replacement.
 The Claude Bash prefix keeps its separate ABI 4 requirement.
 

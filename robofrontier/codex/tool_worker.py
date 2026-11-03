@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import resource
+import socket
 import stat
 import sys
 
@@ -106,6 +107,26 @@ def drop_capabilities():
         raise RuntimeError('Cannot drop worker capabilities')
 
 
+def standard_stream(fd):
+    kind = os.fstat(fd).st_mode
+    if stat.S_ISFIFO(kind):
+        return True
+    if not stat.S_ISSOCK(kind):
+        return False
+    # libuv implements Node's stdio='pipe' using anonymous socketpairs on
+    # Linux. Accept only those connected Unix streams, never a named IPC
+    # endpoint, network socket, listening socket or inherited regular file.
+    try:
+        with socket.socket(fileno=os.dup(fd)) as stream:
+            return (stream.family == socket.AF_UNIX
+                    and stream.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE) == socket.SOCK_STREAM
+                    and not stream.getsockopt(socket.SOL_SOCKET, socket.SO_ACCEPTCONN)
+                    and stream.getsockname() in ('', b'')
+                    and stream.getpeername() in ('', b''))
+    except OSError:
+        return False
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] != '--run-dir' or not sys.platform.startswith('linux'):
         raise ValueError('The Landlock tool worker requires a bound Linux run')
@@ -117,8 +138,8 @@ def main():
     if os.uname().machine not in ('x86_64', 'aarch64'):
         raise ValueError('Unsupported worker syscall architecture')
     # An inherited regular stdout/stderr could bypass filesystem-open checks.
-    if any(not stat.S_ISFIFO(os.fstat(fd).st_mode) for fd in (0, 1, 2)):
-        raise ValueError('Isolated tools require pipe-backed standard descriptors')
+    if any(not standard_stream(fd) for fd in (0, 1, 2)):
+        raise ValueError('Isolated tools require pipe-backed or anonymous Unix stream standard descriptors')
     # Some Python builds fall back from getrandom() to this read-only entropy
     # source. No other device becomes readable through the /dev deny table.
     rules = allowlist(access['filesystem'], read=['/dev/urandom'], write=['/dev/null'])

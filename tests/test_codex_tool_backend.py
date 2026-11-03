@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -89,6 +90,44 @@ class ConfigurationTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform.startswith('linux') and abi() >= 1, 'Linux Landlock required')
 class KernelBoundaryTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('node'), 'Node required')
+    def test_native_node_broker_exec_and_image_preserve_isolation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            run = fixture(Path(temporary).resolve(), 'node')
+            (run/'public/image.png').write_bytes(b'\x89PNG\r\n\x1a\nimage-canary')
+            broker = Path(tool_backend.__file__).with_name('tool_broker.js')
+            script = r'''
+const assert=require('node:assert/strict');
+const broker=require(process.argv[1]),run=process.argv[2],python=process.argv[3];
+(async()=>{
+ const result=await broker.call(run,python,'policy_exec',{command:
+  'cat ../public/input && printf note > node-note && ! cat ../private/secret'});
+ assert.equal(result.success,true,JSON.stringify(result));
+ const output=JSON.parse(result.contentItems[0].text);
+ assert.equal(output.exit_code,0);assert.equal(output.stdout,'PUBLIC_CANARY');
+ assert.ok(!JSON.stringify(result).includes('PRIVATE_CANARY'));
+ const image=await broker.call(run,python,'policy_image',{path:run+'/public/image.png'});
+ assert.equal(image.success,true,JSON.stringify(image));
+ assert.equal(image.contentItems[0].type,'inputImage');
+ const denied=await broker.call(run,python,'policy_image',{path:run+'/private/secret'});
+ assert.equal(denied.success,false);assert.ok(!JSON.stringify(denied).includes('PRIVATE_CANARY'));
+})().catch(error=>{console.error(error.message);process.exitCode=1;});
+'''
+            result = subprocess.run(['node', '-e', script, str(broker), str(run), sys.executable],
+                                    capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((run/'workspace/node-note').read_text(), 'note')
+
+    def test_regular_standard_output_is_rejected_before_command(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            run = fixture(Path(temporary).resolve(), 'regular-output')
+            with (run/'private/secret').open('a') as output:
+                result = subprocess.run([sys.executable, '-I', '-m', 'robofrontier.codex.tool_worker',
+                    '--run-dir', str(run)], input=json.dumps({'tool':'policy_exec','command':'printf BAD'}),
+                    stdout=output, stderr=subprocess.PIPE, text=True, timeout=15)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual((run/'private/secret').read_text(), 'PRIVATE_CANARY')
+
     def test_local_doctor_exercises_the_actual_worker(self):
         report = tool_backend.doctor()
         self.assertTrue(all(report['checks'].values()))
