@@ -1,5 +1,10 @@
 """Render stored physical configurations, including the shared chunked format.
 
+The directory is an Oracle trial (report.json, scene.xml, motion/) or a policy
+run's private/outputs (evaluation.json, motion/ with its frozen source scene).
+A policy run renders at its family's release speedup with stationary intervals
+removed, unless --keep-idle or an explicit --speed/--timeline is given.
+
 Only kinematics and appearance events are restored. No commands, IK, contact
 solve or new physical integration are executed to manufacture a video.
 New renders halve an existing rectangular central table opening by default;
@@ -16,13 +21,70 @@ from robofrontier.motion_recording import MotionReader,digest
 from robofrontier.replay_edit import ReplayEdit
 
 
-def render(directory,views=('global','global_rear'),speed=20,every=None,output=None,table_opening_scale=.5,timeline=None,fps=30.,keep_idle=False,encoder_threads=1,edit_timeline=None):
+def trial_report(directory):
+    """An Oracle trial's report, or the same fields for a policy run's outputs."""
+    if (directory/'report.json').exists():return json.loads((directory/'report.json').read_text()),directory/'scene.xml'
+    stream=json.loads((directory/'motion/stream.json').read_text())
+    evaluation=json.loads((directory/'evaluation.json').read_text())
+    report=dict(case_id=stream['case_id'],scene_sha256=stream['source_scene_sha256'],passed=evaluation.get('task_success'),
+        policy_run=True,matched_goals=evaluation.get('matched_goals'),total_goals=evaluation.get('total_goals'))
+    # The run's saved scene.xml has portable asset paths; the frozen source is the exact scene.
+    return report,directory/'motion/source/scene.xml'
+
+
+def policy_speedup(directory):
+    """The family speedup of the release frozen with a policy run."""
+    task=json.loads((directory.parent/'inputs/task.json').read_text())
+    release=json.loads((directory.parent/'inputs/family-release.json').read_text())
+    return float(release['families'][task['family']]['speedup'])
+
+
+def stationary_cut(directory,output,context_s=.5):
+    """Write a motion-edit timeline that keeps only intervals where the scene moves.
+
+    Each detected movement keeps context_s of recorded states before and after it,
+    and the first and last states are always kept. Appearance changes count as
+    movement. The recording itself is unchanged."""
+    from robofrontier.motion_timeline import ranges,sample_timeline
+    from scripts.mosaic_motion_mask import SceneMotionDetector
+    reader=MotionReader(directory/'motion');registry=json.loads((reader.path/'source/workstation.json').read_text())
+    detector=SceneMotionDetector(registry['joints'],reader.meta['sample_hz'])
+    times=[];active=[]
+    for chunk in reader.meta['chunks']:
+        with np.load(reader.path/chunk['file'],allow_pickle=False) as z:
+            q=np.bitwise_xor(np.bitwise_xor.accumulate(z['xor'],axis=0),z['base']).view('<f4');t=z['time_s']
+        times.append(t);active.append(detector.process(t,q))
+    times=np.concatenate(times);active=np.concatenate(active)
+    for event in reader.events():
+        if event['event']=='rgba':active[min(len(times)-1,int(np.searchsorted(times,event['sim_time_s'])))]=True
+    pad=max(1,round(context_s*reader.meta['sample_hz']));keep=np.zeros(len(times),dtype=bool)
+    for a,b in ranges(active):keep[max(0,a-pad):min(len(times),b+pad)]=True
+    keep[0]=keep[-1]=True
+    output=Path(output);output.mkdir(parents=True,exist_ok=True);arrays=output/'stationary-cut.npz'
+    np.savez_compressed(arrays,source_time_s=times,keep=keep,active=active)
+    path=output/'stationary-cut.json'
+    write_json(path,dict(schema='robofrontier.motion-edit.v1',case_id=reader.meta['case_id'],recording=str(reader.path),
+        source_stream_sha256=digest(reader.path/'stream.json'),source_scene_sha256=reader.meta['source_scene_sha256'],
+        source_frames=len(times),source_hz=reader.meta['sample_hz'],arrays=arrays.name,arrays_sha256=digest(arrays),
+        kept_source_frames=int(keep.sum()),removed_source_frames=int((~keep).sum()),moving_source_frames=int(active.sum()),
+        context_s=context_s,thresholds=detector.thresholds,
+        keep_intervals=[dict(start_sim_s=float(times[a]),last_sim_s=float(times[b-1])) for a,b in ranges(keep)],
+        scope='Presentation cuts of stationary intervals only; no resimulation, interpolation or modified recording'))
+    return path
+
+
+def render(directory,views=('global','global_rear'),speed=None,every=None,output=None,table_opening_scale=.5,timeline=None,fps=30.,keep_idle=False,encoder_threads=1,edit_timeline=None):
     if timeline is not None and edit_timeline is not None:raise ValueError("Choose one edit reference")
     timeline=timeline or edit_timeline
     if encoder_threads<1:raise ValueError("Positive encoder thread count required")
-    directory=Path(directory).resolve();report=json.loads((directory/'report.json').read_text())
-    if digest(directory/'scene.xml')!=report['scene_sha256']:raise ValueError('Trial scene checksum differs from physical report')
-    model=mujoco.MjModel.from_xml_path(str(directory/'scene.xml'));data=mujoco.MjData(model)
+    directory=Path(directory).resolve();report,scene=trial_report(directory)
+    target=Path(output) if output else directory/'video'
+    if report.get('policy_run'):
+        if speed is None:speed=policy_speedup(directory)
+        if timeline is None and not keep_idle:timeline=stationary_cut(directory,target)
+    if speed is None:speed=20.
+    if digest(scene)!=report['scene_sha256']:raise ValueError('Trial scene checksum differs from physical report')
+    model=mujoco.MjModel.from_xml_path(str(scene));data=mujoco.MjData(model)
     from robofrontier.suite.table_presentation import scale_rectangular_opening_for_render
     presentation=scale_rectangular_opening_for_render(model,table_opening_scale)
     shared=(directory/'motion/stream.json').exists();events=None;event=None
@@ -54,7 +116,7 @@ def render(directory,views=('global','global_rear'),speed=20,every=None,output=N
     every=max(1,round(speed*source_hz/fps)) if every is None else every
     if speed<=0 or every<1:raise ValueError('Positive playback speed and sampling stride required')
     if edit is None:fps=speed*source_hz/every
-    target=Path(output) if output else directory/'video';target.mkdir(parents=True,exist_ok=True)
+    target.mkdir(parents=True,exist_ok=True)
     processes={};started=time.monotonic();font=_font(22);rendered=0;source_frames=0;last=None;last_rendered=None
     for view in views:
         path=target/(view+'.mp4')
@@ -63,6 +125,8 @@ def render(directory,views=('global','global_rear'),speed=20,every=None,output=N
     commissioning=report.get('commissioning_only') or report.get('full_task_attempt') is False
     outcome=('MECHANICAL PASS' if report.get('passed') or report.get('local_passed') else 'MECHANICAL PARTIAL / FAILED') if commissioning else 'PASS' if report.get('passed') else 'UNIT PASS' if report.get('local_passed') else 'INTERRUPTED' if report.get('interrupted') else 'PARTIAL / FAILED'
     if report.get('engineering_assisted'):outcome+=' (engineering assisted)'
+    if report.get('policy_run'):outcome=f"{report['matched_goals']}/{report['total_goals']} goals"
+    producer='Policy' if report.get('policy_run') else 'Oracle'
     if presentation:outcome='SOURCE '+outcome
     try:
         with mujoco.Renderer(model,height=800,width=1280) as renderer:
@@ -72,7 +136,7 @@ def render(directory,views=('global','global_rear'),speed=20,every=None,output=N
                 for view,process in processes.items():
                     renderer.update_scene(data,camera=view);image=Image.fromarray(renderer.render());draw=ImageDraw.Draw(image)
                     draw.rectangle((12,12,1000,73),fill=(245,242,235))
-                    draw.text((23,18),f'{report["case_id"]} | Oracle {outcome} | recorded-state replay',font=font,fill=(23,32,43))
+                    draw.text((23,18),f'{report["case_id"]} | {producer} {outcome} | recorded-state replay',font=font,fill=(23,32,43))
                     variant=f' | opening {table_opening_scale:g}x; render only' if presentation else ''
                     draw.text((23,43),f'{view} | sim {stamp:.1f} s | {speed:g}x | {source_hz:.1f} Hz source'+variant+(' | idle cut' if edit else ''),font=font,fill=(23,32,43))
                     process.stdin.write(image.tobytes())
@@ -114,5 +178,5 @@ def render(directory,views=('global','global_rear'),speed=20,every=None,output=N
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('trial');p.add_argument('--speed',type=float,default=20);p.add_argument('--fps',type=float,default=30);p.add_argument('--timeline','--edit-timeline',type=Path);p.add_argument('--keep-idle',action='store_true',help='Explicitly render the complete original clock');p.add_argument('--encoder-threads',type=int,default=1);p.add_argument('--every',type=int);p.add_argument('--output',type=Path);p.add_argument('--views',nargs='+',default=['global','global_rear']);p.add_argument('--table-opening-scale',type=float,default=.5,help='Offline presentation only; 1 preserves the original table');a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('trial');p.add_argument('--speed',type=float,help='Default: 20, or a policy run family release speedup');p.add_argument('--fps',type=float,default=30);p.add_argument('--timeline','--edit-timeline',type=Path);p.add_argument('--keep-idle',action='store_true',help='Explicitly render the complete original clock');p.add_argument('--encoder-threads',type=int,default=1);p.add_argument('--every',type=int);p.add_argument('--output',type=Path);p.add_argument('--views',nargs='+',default=['global','global_rear']);p.add_argument('--table-opening-scale',type=float,default=.5,help='Offline presentation only; 1 preserves the original table');a=p.parse_args()
     render(a.trial,a.views,a.speed,a.every,a.output,a.table_opening_scale,a.timeline,a.fps,a.keep_idle,a.encoder_threads)
