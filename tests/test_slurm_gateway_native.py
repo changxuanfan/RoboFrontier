@@ -186,6 +186,29 @@ class NativeGatewayTests(unittest.TestCase):
                     self.assertEqual(sum(len(row['threads']) for row in exported), 109)
                     self.assertTrue(all(t.get('verified') for row in exported for t in row['threads']))
                     self.assertFalse(any(p.name == 'auth.json' for p in (root/'runs').rglob('*')))
+                    # The original native writer is now stopped. Only owned
+                    # transcripts enter a new private home; no auth cache copy.
+                    owned=json.loads((private/'control/ownership.json').read_text())[:2]
+                    cold=root/'cold';cold.mkdir(mode=0o700)
+                    cold_env={**environment,'CODEX_HOME':str(cold/'codex'),
+                              'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(cold),
+                              'ROBOFRONTIER_BORROWED_AUTH':str(store/'current.json')}
+                    with BorrowedAccess(store,cold/'codex'):
+                        cold_jobs=[]
+                        for job,row in zip(jobs[:2],owned):
+                            cold_jobs.append({**job,'resume_threads':row['threads']})
+                            for thread in row['threads']:
+                                matches=list((private/'codex/sessions').rglob('*'+thread+'.jsonl'))
+                                self.assertEqual(len(matches),1)
+                                target=cold/'codex/sessions'/matches[0].relative_to(private/'codex/sessions')
+                                target.parent.mkdir(parents=True,exist_ok=True)
+                                shutil.copy2(matches[0],target)
+                        with engine(cold_jobs,env=cold_env,timeout_s=35):
+                            continued=subprocess.run(['node',str(ROOT/'tests/slurm_cold_resume_client.js'),
+                                                      str(cold/'control/manifest.json')],
+                                                     capture_output=True,text=True,env=cold_env,timeout=65)
+                            self.assertEqual(continued.returncode,0,continued.stderr[-2000:])
+                            self.assertTrue(json.loads(continued.stdout)['original_thread_ids_preserved'])
                 except Exception:
                     # Only a synthetic, isolated log; no operator credentials.
                     log = private/'control/native.log'
@@ -194,7 +217,7 @@ class NativeGatewayTests(unittest.TestCase):
                     raise
             self.assertGreaterEqual(state['refreshes'], 1)
             self.assertEqual(state['stale'], 0)
-            self.assertEqual(state['requests'], 236)
+            self.assertEqual(state['requests'], 240)
             self.assertEqual(json.loads((store/'current.json').read_text())['auth']['tokens']['refresh_token'],
                              'fixture-refresh-'+str(state['generation']))
 

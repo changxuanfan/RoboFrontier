@@ -22,6 +22,13 @@ class JobGateway {
     this.owners=new Map();this.turns=new Map();this.serverRequests=new Map();this.nextRequest=0;
     this.persist=persist;this.rpcFactory=rpcFactory;this.clients=new Set();
     this.recoveryDirectory=recoveryDirectory;
+    // A stopped engine can hand its exact persisted thread inventory to a new
+    // engine. Only the trusted manifest supplies this list; task RPC cannot.
+    for(const task of this.tasks.values())for(const id of task.resumeThreads||[]){
+      if(typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id)||this.owners.has(id))
+        throw new Error('Invalid cold-continuation ownership');
+      this.owners.set(id,task);task.threads.add(id);
+    }
   }
   async start(args,launch,{stderr='ignore',borrowedCredentials}={}) {
     const auth=borrowedCredentials?require('./borrowed_auth').borrowedAuth(borrowedCredentials):null;
@@ -243,6 +250,7 @@ async function main(file){
       const temporary=manifest.ownership+'.tmp';fs.writeFileSync(temporary,JSON.stringify(rows),{mode:0o600});fs.renameSync(temporary,manifest.ownership);
     }});
     try{await gateway.start(manifest.args,manifest.launch,{stderr:log,borrowedCredentials:manifest.borrowed_credentials});}finally{fs.closeSync(log);}
+    gateway.persist(gateway.ownership());
     await gateway.listen(manifest.endpoint);
     gateway.server.on('close',()=>{if(gateway.unexpectedExit)process.exitCode=1;});
     fs.writeFileSync(manifest.ready,JSON.stringify({backend:'slurm-managed-v1',tasks:manifest.tasks.length}),{mode:0o600});
