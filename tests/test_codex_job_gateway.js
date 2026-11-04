@@ -80,6 +80,16 @@ test('a retired client cannot answer a recovered task tool request',async t=>{
   assert.equal(await response,'original owner, new channel');
 });
 
+test('cold continuation does not unsubscribe a persisted but unloaded snapshot',async()=>{
+  const f=fixture(),parent=await f.start(f.clients[0]);
+  const call=f.native.call;
+  f.native.call=async(m,p)=>m==='thread/read'&&p.threadId===parent.thread.id?
+    {thread:{id:p.threadId,status:{type:'notLoaded'}}}:call(m,p);
+  await f.gateway.release(f.clients[0].task);
+  assert.equal(f.calls.some(c=>c.method==='thread/unsubscribe'),false);
+  assert.equal(f.clients[1].task.state,'bound');
+});
+
 test('36 simultaneous task channels retain distinct profiles, parents, forks and handback',async()=>{
   const f=fixture(36);
   const parents=await Promise.all(f.clients.map(f.start));

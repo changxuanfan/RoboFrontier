@@ -125,6 +125,7 @@ class JobGateway {
       throw new Error('Unbound native input denied');
     if(['thread/start','thread/fork','thread/resume'].includes(method))
       p={...p,cwd:task.cwd,model:task.model,modelProvider:task.provider,permissions:task.permissions};
+    if(method==='thread/resume')p={...p,excludeTurns:true};
     // Native transport generates globally unique request IDs. Caller IDs never
     // reach it, so 36 clients may all issue local request 1 concurrently.
     const pending=(async()=>{
@@ -183,6 +184,7 @@ class JobGateway {
     for(const id of task.threads){
       if(task.archived.has(id))continue;
       let state=await this.native.call('thread/read',{threadId:id});
+      if(state.thread.status.type==='notLoaded')continue;
       const turn=this.turns.get(id);
       if(state.thread.status.type==='active'){
         if(!turn?.id)throw new Error('Cannot settle unknown active turn');
