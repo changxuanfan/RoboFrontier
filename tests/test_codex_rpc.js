@@ -1,7 +1,11 @@
 const test=require('node:test'),assert=require('node:assert/strict');
-const {CodexRpc,STARTUP_ACK_MS,capacityFailure,requireNoMcpServers}=require('../robofrontier/codex/codex_rpc');
+const {CodexRpc,STARTUP_ACK_MS,capacityFailure,networkFailure,requireNoMcpServers}=require('../robofrontier/codex/codex_rpc');
 const {PolicyHost,robotTool}=require('../robofrontier/codex/codex_policy_host');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const failedNetworkState={
+  thread:{status:{type:'systemError'}},
+  latestTurn:{id:'failed',status:'failed',error:{codexErrorInfo:{responseStreamDisconnected:{httpStatusCode:null}}}}
+};
 test('native subscription tool admission rejects inherited MCP before a model turn',async()=>{
   for(const config of [{mcp_servers:{personal:{command:'unused'}}},
                        {mcp_servers:{personal:{enabled:true}}}]) {
@@ -19,6 +23,36 @@ test('native subscription tool admission accepts empty or disabled MCP configura
 test('capacity retry distinguishes quota/auth/permanent errors',()=>{
   for(const message of ['model_capacity_limit','429 Too Many Requests','server_overloaded'])assert.equal(capacityFailure({message}),true);
   for(const message of ['insufficient_quota 429','invalid_api_key','Bad Request 400',"429 You've hit your usage limit"])assert.equal(capacityFailure({message}),false);
+});
+test('network recovery accepts only structured transport failures without HTTP status',()=>{
+  assert.equal(networkFailure({codexErrorInfo:{responseStreamDisconnected:{httpStatusCode:null}}}),true);
+  assert.equal(networkFailure({message:'network error'}),false);
+  for(const httpStatusCode of [401,403,429,500])assert.equal(networkFailure({codexErrorInfo:{httpConnectionFailed:{httpStatusCode}}}),false);
+});
+test('network continuation is one fresh notice after a durable claim, never an old turn replay',async t=>{
+  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-network-host-'));t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
+  fs.mkdirSync(path.join(folder,'private/inputs/bootstrap'),{recursive:true});
+  fs.writeFileSync(path.join(folder,'private/inputs/bootstrap/network-resume.md'),'Frozen network continuation notice');
+  const sent=[],operations=[];
+  const host={run:folder,stopped:false,actors:new Map([['thread','Controller']]),retries:new Set(),
+    networkFailures:new Map([['thread:failed',Date.now()/1000]]),
+    admin:async(op)=>{operations.push(op);return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:{claim:'one'}}:{allowed:true};},
+    observe:async()=>structuredClone(failedNetworkState),
+    send:async(id,notice)=>{sent.push({id,notice});},event:()=>{}};
+  await PolicyHost.prototype.retryCapacity.call(host);await PolicyHost.prototype.retryCapacity.call(host);
+  assert.deepEqual(sent,[{id:'thread',notice:'Frozen network continuation notice'}]);
+  assert.equal(operations.filter(v=>v==='network-recovery').length,1);
+});
+test('unknown network continuation acknowledgement holds review and is never repeated',async t=>{
+  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-network-host-'));t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
+  fs.mkdirSync(path.join(folder,'private/inputs/bootstrap'),{recursive:true});fs.writeFileSync(path.join(folder,'private/inputs/bootstrap/network-resume.md'),'notice');
+  let sends=0,reviews=0;
+  const host={run:folder,stopped:false,actors:new Map([['thread','Controller']]),retries:new Set(),networkFailures:new Map([['thread:failed',Date.now()/1000]]),
+    admin:async(op)=>{if(op==='network-recovery-uncertain')reviews++;return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:{claim:'one'}}:{allowed:true};},
+    observe:async()=>structuredClone(failedNetworkState),
+    send:async()=>{sends++;throw new Error('unknown acknowledgement');},event:()=>{}};
+  await PolicyHost.prototype.retryCapacity.call(host);await PolicyHost.prototype.retryCapacity.call(host);
+  assert.equal(sends,1);assert.equal(reviews,1);
 });
 test('an active turn cannot be steered by the scheduler',async()=>{
   let called=false;

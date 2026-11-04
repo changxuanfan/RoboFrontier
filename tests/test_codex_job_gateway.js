@@ -33,6 +33,43 @@ function grant(f,task,nonce='recovery-fixture'){
   return {folder,file,value,nonce};
 }
 
+test('network pause holds new turns and forks, then sends each original request once',async()=>{
+  const f=fixture(),parent=await f.start(f.clients[0]);let paused=true;
+  f.gateway.isPaused=()=>paused;
+  const turn=f.gateway.request(f.clients[0],'turn/start',{threadId:parent.thread.id,input:[{type:'text',text:'fixture'}]});
+  const fork=f.gateway.request(f.clients[0],'thread/fork',{threadId:parent.thread.id});
+  await new Promise(r=>setTimeout(r,60));
+  assert.equal(f.calls.filter(c=>['turn/start','thread/fork'].includes(c.method)).length,0);
+  await f.gateway.request(f.clients[0],'thread/read',{threadId:parent.thread.id});
+  paused=false;await Promise.all([turn,fork]);
+  assert.equal(f.calls.filter(c=>c.method==='turn/start').length,1);
+  assert.equal(f.calls.filter(c=>c.method==='thread/fork').length,1);
+});
+
+test('a fenced task never dispatches a turn that was waiting for the network',async()=>{
+  const f=fixture(),parent=await f.start(f.clients[0]);f.gateway.isPaused=()=>true;
+  const turn=f.gateway.request(f.clients[0],'turn/start',{threadId:parent.thread.id,input:[{type:'text',text:'fixture'}]});
+  const checked=assert.rejects(turn);
+  await new Promise(r=>setTimeout(r,40));f.gateway.fail();await checked;
+  assert.equal(f.calls.filter(c=>c.method==='turn/start').length,0);
+});
+
+test('bound transport gives queued model mutations the configured pause grace',async t=>{
+  const f=fixture(),folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-pause-rpc-'));
+  t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
+  await f.gateway.listen(path.join(folder,'engine.sock'));
+  const rpc=new GatewayRpc(path.join(folder,'engine.sock'),'task-0',{pauseGraceMs:300});
+  // fixture already bound this task to its synthetic client.
+  f.gateway.tasks.get('task-0').state='new';delete f.gateway.tasks.get('task-0').client;
+  await rpc.initialize();
+  const p=await rpc.call('thread/start',{dynamicTools:['robot','policy_exec','policy_image'].map(name=>({name}))});
+  let paused=true;f.gateway.isPaused=()=>paused;
+  const turn=rpc.call('turn/start',{threadId:p.thread.id,input:[{type:'text',text:'fixture'}]},20);
+  await new Promise(r=>setTimeout(r,70));paused=false;
+  await turn;assert.equal(f.calls.filter(c=>c.method==='turn/start').length,1);
+  await rpc.close();await f.gateway.close();
+});
+
 test('recovery reuses original owned threads and retires the old socket without touching peers',async t=>{
   const f=fixture();const parent=await f.start(f.clients[0]),peer=await f.start(f.clients[1]);
   await f.gateway.release(f.clients[0].task);

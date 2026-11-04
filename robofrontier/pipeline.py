@@ -582,7 +582,9 @@ class Service(RuntimeService):
                 with self.lock:
                     tick=time.perf_counter();self.pump();self.perf['pump_wall_s']+=time.perf_counter()-tick
                     while acc>=.02 and not self.ended:
-                        tick=time.perf_counter();self.world.step();self.perf['world_step_wall_s']+=time.perf_counter()-tick
+                        tick=time.perf_counter()
+                        if not self.step_physics():acc=0.;break
+                        self.perf['world_step_wall_s']+=time.perf_counter()-tick
                         self.perf['world_steps']+=1;acc-=.02
                     if now>=next_state:self.periodic();next_state=now+1
                     if now>=next_perf:

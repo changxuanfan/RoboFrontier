@@ -99,6 +99,8 @@ class RuntimeService:
         self.store.put('execution_owner_attached', True)
         self.owns_world = True
         self.world = world_factory(self.directory, self.task)
+        from .egress_pause import WorldPause
+        self.egress_pause = WorldPause(self)
         self.store.event('EXECUTION_OWNER_ATTACHED', 'Meta', {'segment': self.store.get('segment', 0)})
         if resuming:
             # The trial's recorders start now; the run itself resumes on the host's `resume`.
@@ -118,6 +120,7 @@ class RuntimeService:
             if self.store:
                 try:
                     if self.owns_world:
+                        if getattr(self,'egress_pause',None) is not None:self.egress_pause.close()
                         if getattr(self,'motion_check',None) is not None:
                             job,_ = self.motion_check
                             self.respond(job, {'motion_check':{'assessment':'unknown','reason':'Execution owner closed during screening','advisory_only':True}})
@@ -576,7 +579,25 @@ class RuntimeService:
         if job['result'] is not None:
             job['done'].set()
 
+    def step_physics(self):
+        """Advance the original world only while its route is admitted."""
+        if self.egress_pause.sync() or self.store.get('egress_review_hold',False):return False
+        self.world.step()
+        return True
+
     def pump(self):
+        if self.egress_pause.sync() or self.store.get('egress_review_hold',False):
+            # Keep engineering observation/shutdown reachable. Every policy
+            # request retains its original call ID and waits, without reissue.
+            held=[]
+            while True:
+                try:job=self.queue.get_nowait()
+                except queue.Empty:break
+                if self.store.agent(job['actor'])['kind']=='manager' and job['op'] in ('state','observe','shutdown'):
+                    self.handle(job)
+                else:held.append(job)
+            for job in held:self.queue.put(job)
+            return
         if self.policy_budget is not None:
             self.policy_budget.tick(self)
         while True:

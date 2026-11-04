@@ -16,12 +16,13 @@ const fields={
 };
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 class JobGateway {
-  constructor(tasks,{rpcFactory=options=>new CodexRpc(options.args,options.callbacks),persist=()=>{},recoveryDirectory}={}) {
+  constructor(tasks,{rpcFactory=options=>new CodexRpc(options.args,options.callbacks),persist=()=>{},recoveryDirectory,isPaused=()=>false}={}) {
     if(!tasks.length||new Set(tasks.map(t=>t.id)).size!==tasks.length)throw new Error('Distinct gateway tasks required');
     this.tasks=new Map(tasks.map(t=>[t.id,{...t,threads:new Set(),archived:new Set(),inflight:new Set(),state:'new'}]));
     this.owners=new Map();this.turns=new Map();this.serverRequests=new Map();this.nextRequest=0;
     this.persist=persist;this.rpcFactory=rpcFactory;this.clients=new Set();
     this.recoveryDirectory=recoveryDirectory;
+    this.isPaused=isPaused;
     // A stopped engine can hand its exact persisted thread inventory to a new
     // engine. Only the trusted manifest supplies this list; task RPC cannot.
     for(const task of this.tasks.values())for(const id of task.resumeThreads||[]){
@@ -129,6 +130,13 @@ class JobGateway {
     // Native transport generates globally unique request IDs. Caller IDs never
     // reach it, so 36 clients may all issue local request 1 concurrently.
     const pending=(async()=>{
+      if(['thread/start','thread/fork','thread/resume','turn/start','thread/compact/start'].includes(method)){
+        while(this.isPaused()){
+          if(this.failed||task.state!=='bound'||task.client!==client)throw new Error('Paused request lost its original owner');
+          await delay(25);
+        }
+        if(this.failed||task.state!=='bound'||task.client!==client)throw new Error('Paused request lost its original owner');
+      }
       const result=await this.native.call(method,p,180000);
       if(['thread/start','thread/fork'].includes(method)){
         const id=result.thread?.id;
@@ -248,7 +256,8 @@ async function main(file){
   let gateway;
   try{
     const log=fs.openSync(manifest.log,'a',0o600);
-    gateway=new JobGateway(manifest.tasks,{recoveryDirectory:manifest.recovery_directory,persist:rows=>{
+    gateway=new JobGateway(manifest.tasks,{recoveryDirectory:manifest.recovery_directory,
+      isPaused:()=>Boolean(manifest.pause_file&&fs.existsSync(manifest.pause_file)),persist:rows=>{
       const temporary=manifest.ownership+'.tmp';fs.writeFileSync(temporary,JSON.stringify(rows),{mode:0o600});fs.renameSync(temporary,manifest.ownership);
     }});
     try{await gateway.start(manifest.args,manifest.launch,{stderr:log,borrowedCredentials:manifest.borrowed_credentials});}finally{fs.closeSync(log);}

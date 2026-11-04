@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import shutil
 import tempfile
 import threading
 import time
@@ -95,6 +96,61 @@ def _atomic_private(path, value):
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
+
+
+def migrate_store(source, destination):
+    """Move a stopped, initialized stream under both exclusive refresh locks.
+
+    The old initialized marker remains, so even older runners refuse to reload
+    its obsolete bootstrap. Only the latest generation crosses to the new store.
+    No native cache, login, refresh or account request is performed here.
+    """
+    source = _private_directory(source)
+    destination = Path(destination).absolute()
+    if destination.resolve() != destination or destination.exists():
+        raise CredentialError('Migration destination must be a new canonical directory')
+    _private_directory(destination.parent)
+    retired = False
+    created = False
+    fd = os.open(source/'lease.lock', os.O_RDWR | os.O_NOFOLLOW)
+    with os.fdopen(fd, 'rb') as old_lock:
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                or info.st_mode & 0o077 or info.st_nlink != 1):
+            raise CredentialError('Unsafe credential migration lease')
+        try:
+            fcntl.flock(old_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise CredentialError('Credential stream is already leased; migration refused') from None
+        current = _decode(_read_private(source/'current.json'))
+        if (current.get('schema') != 'robofrontier.codex-auth.v1'
+                or type(current.get('generation')) is not int or current['generation'] < 1
+                or credential_owner(current.get('auth')) != current.get('owner')
+                or not (source/'initialized.json').exists()):
+            raise CredentialError('Migration requires a valid initialized canonical generation')
+        try:
+            destination.mkdir(mode=0o700); created = True
+            with (destination/'lease.lock').open('xb') as new_lock:
+                os.chmod(new_lock.name, 0o600)
+                fcntl.flock(new_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                _atomic_private(destination/'initialized.json', {'schema':'robofrontier.codex-auth-initialized.v1'})
+                _atomic_private(destination/'current.json', current)
+                if (_decode(_read_private(destination/'current.json')) != current
+                        or _decode(_read_private(source/'current.json')) != current):
+                    raise CredentialError('Credential generation changed during migration')
+                (source/'current.json').unlink(); retired = True
+                (source/'auth.json').unlink(missing_ok=True)
+                fd = os.open(source, os.O_RDONLY | os.O_DIRECTORY)
+                try: os.fsync(fd)
+                finally: os.close(fd)
+        except BaseException:
+            # After retirement, retain the verified durable generation. Never
+            # restore the old source or create two future refresh authorities.
+            if created and not retired: shutil.rmtree(destination)
+            raise
+    return {'source':str(source), 'destination':str(destination),
+            'generation':current['generation'], 'source_retired':retired,
+            'native_refreshes':0}
 
 
 class CredentialLease:

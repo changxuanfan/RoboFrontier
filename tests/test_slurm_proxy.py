@@ -19,6 +19,47 @@ from robofrontier.policy_access import record, mode
 
 
 class EnvironmentTests(unittest.TestCase):
+    def test_quota_error_publishing_pause_fences_without_clearing_authority(self):
+        import errno
+        private=self.root/'engine';private.mkdir(mode=0o700)
+        self.config['slurm']['egress_pause_s']=2;self.value.update(state='ready',grace_s=2)
+        proxy.atomic(self.path,self.value);write=proxy.atomic
+        def quota(path,value):
+            if path.name=='EGRESS_PAUSED':raise OSError(errno.EDQUOT,'fixture quota')
+            return write(path,value)
+        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}),patch.object(proxy,'atomic',quota):
+            with self.assertRaises(proxy.EgressError):
+                with proxy.environment(self.config,on_failure=self.failure.set):
+                    write(self.path,{**self.value,'state':'paused'})
+                    self.assertTrue(self.failure.wait(2))
+        self.assertFalse((private/'EGRESS_PAUSED').exists())
+
+    def test_short_outage_publishes_pause_and_same_instance_health_clears_only_its_marker(self):
+        private=self.root/'engine';private.mkdir(mode=0o700)
+        self.config['slurm']['egress_pause_s']=2
+        self.value.update(state='ready',grace_s=2)
+        proxy.atomic(self.path,self.value)
+        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}):
+            with proxy.environment(self.config,on_failure=self.failure.set):
+                marker=Path(os.environ['ROBOFRONTIER_EGRESS_PAUSE_FILE'])
+                proxy.atomic(self.path,{**self.value,'state':'paused'})
+                until=time.monotonic()+2
+                while not marker.exists() and time.monotonic()<until:time.sleep(.01)
+                self.assertTrue(marker.exists());self.assertFalse(self.failure.is_set())
+                proxy.atomic(self.path,{**self.value,'heartbeat':time.time()})
+                until=time.monotonic()+2
+                while marker.exists() and time.monotonic()<until:time.sleep(.01)
+                self.assertFalse(marker.exists());self.assertFalse(self.failure.is_set())
+
+    def test_replaced_instance_fences_even_during_short_outage_grace(self):
+        private=self.root/'engine';private.mkdir(mode=0o700)
+        self.config['slurm']['egress_pause_s']=2;self.value.update(state='ready',grace_s=2)
+        proxy.atomic(self.path,self.value)
+        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}):
+            with self.assertRaises(proxy.EgressError):
+                with proxy.environment(self.config,on_failure=self.failure.set):
+                    proxy.atomic(self.path,{**self.value,'instance':'f'*32,'state':'paused'})
+                    self.assertTrue(self.failure.wait(2))
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -122,6 +163,75 @@ class EnvironmentTests(unittest.TestCase):
 
 
 class SchedulingTests(unittest.IsolatedAsyncioTestCase):
+    async def test_credit_writer_failure_closes_channel_and_surfaces_to_receiver(self):
+        reader = asyncio.StreamReader()
+        class Writer:
+            closed = False
+            def write(self, data): raise BrokenPipeError('fixture')
+            async def drain(self): pass
+            def close(self): self.closed = True
+        writer = Writer(); frames = proxy.Frames(reader, writer)
+        reader.feed_data(b'{"type":"data","id":1,"data":"fixture"}\n')
+        self.assertEqual((await frames.receive())['type'], 'data')
+        await asyncio.sleep(0)
+        self.assertTrue(writer.closed)
+        with self.assertRaises(BrokenPipeError): await frames.receive()
+        await frames.close()
+
+    async def test_close_reaps_a_credit_writer_blocked_in_drain(self):
+        reader = asyncio.StreamReader(); entered = asyncio.Event()
+        class Writer:
+            def write(self, data): pass
+            async def drain(self): entered.set(); await asyncio.Event().wait()
+        frames = proxy.Frames(reader, Writer())
+        reader.feed_data(b'{"type":"data","id":1,"data":"fixture"}\n')
+        await frames.receive(); await entered.wait()
+        credit = frames.credit_task
+        self.assertGreaterEqual(frames.stats()['active_write_wait_s'], 0)
+        await asyncio.wait_for(frames.close(), .2)
+        self.assertTrue(credit.done())
+        self.assertIsNone(frames.credit_task)
+
+    async def test_full_duplex_backpressure_keeps_receivers_and_heartbeats_live(self):
+        # SSH/Slurm pipes have high/low water marks. Both writers can pause
+        # while several complete incoming frames are already available.
+        class Pipe:
+            def __init__(self):
+                self.queue = asyncio.Queue(); self.buffered = 0
+                self.writable = asyncio.Event(); self.writable.set()
+                self.paused = asyncio.Event()
+            def write(self, data):
+                self.queue.put_nowait(data); self.buffered += len(data)
+                if self.buffered > 32768:
+                    self.writable.clear(); self.paused.set()
+            async def drain(self):
+                await self.writable.wait()
+            async def readline(self):
+                data = await self.queue.get(); self.buffered -= len(data)
+                if self.buffered <= 8192: self.writable.set()
+                return data
+        outgoing, incoming = Pipe(), Pipe()
+        left = proxy.Frames(incoming, outgoing)
+        right = proxy.Frames(outgoing, incoming)
+        tasks = []
+        observed = [asyncio.Event(), asyncio.Event()]
+        async def receive(frames, done):
+            while True:
+                value = await frames.receive()
+                if value['type'] == 'ping': done.set()
+        try:
+            for frames in (left, right):
+                tasks += [asyncio.create_task(frames.send({'type':'data','id':i,'data':'x'*11000})) for i in range(20)]
+            await asyncio.wait_for(asyncio.gather(outgoing.paused.wait(), incoming.paused.wait()), 1)
+            tasks += [asyncio.create_task(receive(left, observed[0])), asyncio.create_task(receive(right, observed[1]))]
+            sends = [asyncio.create_task(frames.send({'type':'ping'})) for frames in (left, right)]
+            tasks += sends
+            await asyncio.wait_for(asyncio.gather(*sends, *(event.wait() for event in observed)), 1)
+            await asyncio.wait_for(asyncio.gather(*tasks[:-4]), 1)
+        finally:
+            for task in tasks: task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+
     async def test_shared_channel_bounds_bytes_buffered_below_the_frame_scheduler(self):
         sent=[]
         class Writer:
@@ -158,7 +268,8 @@ class SchedulingTests(unittest.IsolatedAsyncioTestCase):
             await asyncio.gather(*bulk,heartbeat,return_exceptions=True)
 
 
-class TransportTests(unittest.IsolatedAsyncioTestCase):
+class RelayFixture:
+    grace_s=0
     async def asyncSetUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.directory = Path(self.temporary.name).resolve(); self.directory.chmod(0o700)
@@ -176,8 +287,9 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         self.echo_server = await asyncio.start_server(echo, '127.0.0.1', 0)
         async def dial(host, port):
             return await asyncio.open_connection('127.0.0.1', self.echo_server.sockets[0].getsockname()[1])
-        self.compute = proxy.ComputeRelay(self.compute_frames, self.directory, '123')
-        self.mac = proxy.MacRelay(proxy.Frames(self.mac_reader, self.mac_writer), dial=dial)
+        async def probe():return True
+        self.compute = proxy.ComputeRelay(self.compute_frames, self.directory, '123',grace_s=self.grace_s)
+        self.mac = proxy.MacRelay(proxy.Frames(self.mac_reader, self.mac_writer), dial=dial,grace_s=self.grace_s,probe=probe)
         self.compute_task = asyncio.create_task(self.compute.run())
         self.mac_task = asyncio.create_task(self.mac.run())
         for _ in range(50):
@@ -202,6 +314,7 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         reply = await asyncio.wait_for(reader.readuntil(b'\r\n\r\n'),2)
         return reader,writer,reply
 
+class TransportTests(RelayFixture,unittest.IsolatedAsyncioTestCase):
     async def test_actual_authenticated_connect_multiplexes_opaque_bytes(self):
         async def stream(index):
             reader,writer,reply = await self.request('auth.openai.com:443')
@@ -333,5 +446,57 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
                 fast.close();slow.close()
             finally:release.set()
 
+
+class RecoverableTransportTests(RelayFixture,unittest.IsolatedAsyncioTestCase):
+    grace_s=1.2
+    async def asyncSetUp(self):
+        self.clocks=[patch.object(proxy,'HEARTBEAT_S',.02),patch.object(proxy,'STALE_S',.15)]
+        for item in self.clocks:item.start()
+        try:await RelayFixture.asyncSetUp(self)
+        except BaseException:
+            for item in self.clocks:item.stop()
+            raise
+    async def asyncTearDown(self):
+        try:await RelayFixture.asyncTearDown(self)
+        finally:
+            for item in self.clocks:item.stop()
+    async def test_short_blackhole_keeps_instance_listener_and_original_stream(self):
+        reader,writer,_=await self.request('auth.openai.com:443')
+        writer.write(b'before');await writer.drain();self.assertEqual(await reader.readexactly(6),b'before')
+        release=asyncio.Event();original=self.mac.frames.reader
+        class PausedReader:
+            async def readline(self):await release.wait();return await original.readline()
+        self.mac.frames.reader=PausedReader()
+        await asyncio.sleep(.4)
+        paused=proxy.read_record(self.directory/'ready.json')
+        self.assertEqual(paused['state'],'paused')
+        self.assertFalse(self.mac_task.done());self.assertFalse(self.compute_task.done())
+        release.set();await asyncio.sleep(.2)
+        recovered=proxy.read_record(self.directory/'ready.json')
+        self.assertEqual(recovered['state'],'ready');self.assertEqual(recovered['instance'],self.value['instance'])
+        self.assertEqual(recovered['proxy_url'],self.value['proxy_url'])
+        writer.write(b'after');await writer.drain();self.assertEqual(await reader.readexactly(5),b'after');writer.close()
+    async def test_long_blackhole_fences_and_never_recreates_listener(self):
+        original=self.mac.frames.reader
+        class PausedReader:
+            async def readline(self):await asyncio.Event().wait();return await original.readline()
+        self.mac.frames.reader=PausedReader()
+        await asyncio.sleep(1.7)
+        self.assertTrue(self.mac_task.done())
+        self.assertFalse((self.directory/'ready.json').exists())
+
+    async def test_upstream_outage_holds_new_tunnel_until_probe_recovers(self):
+        self.mac.upstream_failed=True
+        available=False
+        async def probe():return available
+        self.mac.probe=probe
+        await asyncio.sleep(.08)
+        self.assertEqual(proxy.read_record(self.directory/'ready.json')['state'],'paused')
+        request=asyncio.create_task(self.request('auth.openai.com:443'))
+        await asyncio.sleep(.12);self.assertFalse(request.done())
+        available=True
+        reader,writer,reply=await asyncio.wait_for(request,.6)
+        self.assertIn(b'200 Connection Established',reply)
+        writer.write(b'unique');await writer.drain();self.assertEqual(await reader.readexactly(6),b'unique');writer.close()
 
 if __name__=='__main__':unittest.main()

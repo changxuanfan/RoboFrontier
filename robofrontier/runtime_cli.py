@@ -65,6 +65,9 @@ def execute(store, op, data, owner, now):
         return seal_run(store,data.get('timeout_s',30))
     if op=='snapshot':
         return {'lifecycle':store.get('lifecycle'),'paused':store.get('dispatch_paused',False),
+                'egress_paused':store.get('physics_state')=='paused_by_egress' or store.get('egress_review_hold',False),
+                'egress_recovery':store.get('egress_recovery'),
+                'egress_review_hold':store.get('egress_review_hold',False),
                 'dispatcher_health':store.get('dispatcher_health',{}),
                 'config':{**{k:cfg[k] for k in ('poll_interval_s','session_observation_ttl_s','model','effort')},
                           'engine':cfg.get('engine','codex')},
@@ -175,6 +178,30 @@ def execute(store, op, data, owner, now):
         from .policy_bootstrap import MAX_MODEL_RESTARTS
         count=store.claim_model_restart(data.get('actor',cfg['manager']),data.get('engine','codex'),MAX_MODEL_RESTARTS)
         return {'allowed':count is not None,'restart':count}
+    if op=='network-recovery':
+        from .scheduling import blocks_model_recovery
+        with store.transaction():
+            recovery=store.get('egress_recovery');actor=data['actor'];agent=store.agent(actor)
+            if (not recovery or store.get('lifecycle')!='running' or store.get('dispatch_paused',False)
+                    or store.get('integrity_valid') is not True or agent.get('thread_id')!=data['thread_id']
+                    or agent.get('kind')=='delegate' and agent.get('delegation_state')!='active'):
+                return {'allowed':False}
+            observed=data.get('error_observed_at',0)
+            if not recovery['paused_at']-30<=observed<=recovery['resumed_at']+30:return {'allowed':False,'review_required':True}
+            if (any(blocks_model_recovery(v) for v in store.actions(actor).values())
+                    or store.db.execute("SELECT 1 FROM calls WHERE actor=? AND status IN ('accepted','running','uncertain') AND op IN ('move','gripper','action_batch','delegate') LIMIT 1",(actor,)).fetchone()):
+                return {'allowed':False}
+            claims=store.get('network_recovery_claims') or {};key=recovery['claim']+':'+actor
+            if key in claims:return {'allowed':False,'review_required':True}
+            claims[key]={'thread_id':data['thread_id'],'failed_turn_id':data['failed_turn_id'],'claimed_at':now}
+            store.put('network_recovery_claims',claims);store.event('NETWORK_CONTINUATION_CLAIMED',cfg['manager'],claims[key])
+            return {'allowed':True}
+    if op=='network-recovery-uncertain':
+        with store.transaction():
+            if store.agent(data['actor']).get('thread_id')!=data['thread_id']:raise ValueError('Network review has wrong role binding')
+            store.put('egress_review_hold',True);store.put('dispatch_paused',True);store.put('physics_state','paused_for_review')
+            store.event('NETWORK_CONTINUATION_UNCERTAIN',cfg['manager'],{'actor':data['actor'],'thread_id':data['thread_id'],'automatic_replays':0})
+        return {'paused':True}
     if op=='pause':
         store.put('dispatch_paused',True);store.event('DISPATCH_PAUSED',cfg['manager'],data)
         return {'paused':True}
@@ -193,7 +220,8 @@ def main():
     p.add_argument('--run-dir',type=Path,required=True)
     p.add_argument('--owner',default='Meta')
     p.add_argument('op',choices=['snapshot','observe-sessions','request-start','request-resume','plan','claim','dispatch-result','pause','resume-dispatch','export','model-restart',
-                               'delegate-claim','delegate-snapshot-bind','delegate-bind','delegate-activate','delegate-started','delegate-uncertain','session-unavailable','seal'])
+                               'delegate-claim','delegate-snapshot-bind','delegate-bind','delegate-activate','delegate-started','delegate-uncertain','session-unavailable','seal',
+                               'network-recovery','network-recovery-uncertain'])
     p.add_argument('--data',default='{}')
     args=p.parse_args()
     path=args.run_dir.resolve()/'private/state/runtime.sqlite'

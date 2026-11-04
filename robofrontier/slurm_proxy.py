@@ -42,6 +42,13 @@ class EgressError(RuntimeError):
     pass
 
 
+def require_local_storage(root):
+    if sys.platform=='linux':
+        kind=subprocess.check_output(['stat','-f','-c','%T',str(root)],text=True).strip()
+        if kind not in ('ext2/ext3','xfs','btrfs','tmpfs','overlayfs','zfs'):
+            raise EgressError('Short-outage control state requires node-local storage')
+
+
 def private_directory(path, *, create=False):
     path = Path(path).absolute()
     if path.resolve() != path:
@@ -95,12 +102,13 @@ def target_allowed(host, port):
                     for domain in ('openai.com', 'chatgpt.com')))
 
 
-def validate_record(record, identity, node):
+def validate_record(record, identity, node, *, allow_paused=False):
     try:
         url = urlsplit(record['proxy_url'])
         good = (record['schema'] == SCHEMA and record['job_id'] == identity and record['node'] == node
                 and isinstance(record['instance'], str) and len(record['instance']) == 32
                 and -2 <= time.time()-record['heartbeat'] < STALE_S
+                and record.get('state','ready') in (('ready','paused') if allow_paused else ('ready',))
                 and url.scheme == 'http' and url.hostname == '127.0.0.1'
                 and url.port and url.username == 'rf' and url.password and len(url.password) == 64
                 and not url.path and not url.query and not url.fragment)
@@ -134,7 +142,9 @@ def environment(config, *, on_failure):
         yield
         return
     identity = job_id(os.environ.get('SLURM_JOB_ID', ''))
+    grace_s = slurm.get('egress_pause_s',0)
     root = private_directory(slurm['egress_root'], create=True)
+    if grace_s:require_local_storage(root)
     directory = root/identity
     deadline = time.monotonic()+slurm['egress_wait_s']
     while True:
@@ -142,29 +152,59 @@ def environment(config, *, on_failure):
             private_directory(directory)
             record = read_record(directory/'ready.json')
             url = validate_record(record, identity, socket.gethostname())
+            if record.get('grace_s',0) != grace_s:
+                raise EgressError('Managed egress recovery settings do not match the job')
             health(record, url)
             break
         except (OSError, ValueError, EgressError):
             if time.monotonic() >= deadline:
                 raise EgressError('Managed Mac egress did not become ready before admission') from None
             time.sleep(.2)
+    pause_path = None
+    if grace_s:
+        private = private_directory(os.environ['ROBOFRONTIER_JOB_PRIVATE_ROOT'])
+        pause_path = private/'EGRESS_PAUSED'
+        if os.path.lexists(pause_path):raise EgressError('A previous pause requires explicit review')
     keys = ('HTTPS_PROXY', 'HTTP_PROXY', 'ALL_PROXY', 'NO_PROXY', 'https_proxy', 'http_proxy',
-            'all_proxy', 'no_proxy', 'ROBOFRONTIER_EGRESS_ROOT', 'ROBOFRONTIER_EGRESS_INSTANCE')
+            'all_proxy', 'no_proxy', 'ROBOFRONTIER_EGRESS_ROOT', 'ROBOFRONTIER_EGRESS_INSTANCE',
+            'ROBOFRONTIER_EGRESS_PAUSE_FILE','ROBOFRONTIER_EGRESS_PAUSE_S')
     saved = {k: os.environ.get(k) for k in keys}
     for key in keys:
         os.environ.pop(key, None)
     os.environ.update(HTTPS_PROXY=record['proxy_url'], HTTP_PROXY=record['proxy_url'],
                       ALL_PROXY=record['proxy_url'], NO_PROXY='127.0.0.1,localhost',
                       ROBOFRONTIER_EGRESS_ROOT=str(root), ROBOFRONTIER_EGRESS_INSTANCE=record['instance'])
+    if pause_path:
+        os.environ['ROBOFRONTIER_EGRESS_PAUSE_FILE']=str(pause_path)
+        os.environ['ROBOFRONTIER_EGRESS_PAUSE_S']=str(grace_s)
     stopped = threading.Event()
     failed = threading.Event()
     def watch():
+        paused_at = None
+        claim = None
         while not stopped.wait(.5):
             try:
                 current = read_record(directory/'ready.json')
-                validate_record(current, identity, socket.gethostname())
+                validate_record(current, identity, socket.gethostname(), allow_paused=bool(grace_s))
                 if current['instance'] != record['instance'] or current['proxy_url'] != record['proxy_url']:
                     raise EgressError('Egress identity changed')
+                if current.get('grace_s',0) != grace_s:raise EgressError('Egress recovery settings changed')
+                if current.get('state','ready')=='paused':
+                    if paused_at is None:
+                        paused_at=time.monotonic()
+                        claim=secrets.token_hex(16)
+                        atomic(pause_path,{'schema':'robofrontier.egress-pause.v1','job_id':identity,
+                                          'instance':record['instance'],'claim':claim,'at':time.time()})
+                    if time.monotonic()-paused_at>grace_s:raise EgressError('Short outage grace expired')
+                elif paused_at is not None:
+                    marker=read_record(pause_path)
+                    if marker.get('claim')!=claim or marker.get('instance')!=record['instance']:
+                        raise EgressError('Pause ownership changed')
+                    try:health(current,url)
+                    except EgressError:
+                        if time.monotonic()-paused_at>grace_s:raise
+                        continue
+                    pause_path.unlink();paused_at=None
             except Exception as error:
                 reason = ('unsafe_record' if isinstance(error, EgressError) and str(error) == 'Unsafe egress readiness record'
                           else 'binding_or_freshness' if isinstance(error, EgressError) and str(error).startswith('Managed egress is absent')
@@ -202,15 +242,43 @@ class Frames:
         self.reader, self.writer = reader, writer
         self.condition = asyncio.Condition()
         self.waiting = {}; self.sequence = 0; self.writing = False
+        self.write_started = None
         self.tx_bytes = 0; self.rx_bytes = 0
         self.max_control_wait_s = 0; self.max_write_wait_s = 0
         self.outbound = SendWindow(CHANNEL_WINDOW)
+        self.pending_credit = 0; self.credit_task = None; self.credit_error = None
+
+    async def return_credit(self):
+        """Coalesce acknowledgements without waiting in the receive loop.
+
+        Both SSH directions can be at their write high-water mark together.
+        Waiting for drain here would stop both readers: neither writer could
+        ever drain, so even priority heartbeats would time out.
+        """
+        try:
+            while self.pending_credit:
+                size = self.pending_credit; self.pending_credit = 0
+                await self.send({'type': 'channel_credit', 'bytes': size})
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            self.credit_error = error
+            self.writer.close()
+        finally:
+            self.credit_task = None
+
+    async def close(self):
+        if self.credit_task:
+            self.credit_task.cancel()
+            await asyncio.gather(self.credit_task, return_exceptions=True)
 
     def stats(self):
         return {'tx_bytes': self.tx_bytes, 'rx_bytes': self.rx_bytes,
                 'queued_frames': len(self.waiting),
                 'max_control_wait_s': round(self.max_control_wait_s, 3),
                 'max_write_wait_s': round(self.max_write_wait_s, 3),
+                'active_write_wait_s': None if self.write_started is None else round(time.monotonic()-self.write_started, 3),
+                'pending_credit_bytes': self.pending_credit,
                 'unacked_wire_bytes': CHANNEL_WINDOW-self.outbound.available}
 
     async def send(self, value):
@@ -234,6 +302,7 @@ class Frames:
             if priority == 0:
                 self.max_control_wait_s = max(self.max_control_wait_s, time.monotonic()-started)
             write_started = time.monotonic()
+            self.write_started = write_started
             self.writer.write(data)
             written = True
             await self.writer.drain()
@@ -244,12 +313,15 @@ class Frames:
                 self.waiting.pop(ticket, None)
                 if admitted:
                     self.writing = False
+                    self.write_started = None
                 self.condition.notify_all()
             if reserved and not written:
                 self.outbound.credit(len(data))
 
     async def receive(self):
         while True:
+            if self.credit_error:
+                raise self.credit_error
             line = await self.reader.readline()
             if not line:
                 raise EOFError()
@@ -266,7 +338,11 @@ class Frames:
                 # Credit at decode, independently of destination draining. This
                 # bounds bytes hidden in SSH/Slurm's own buffering without
                 # letting a slow destination exhaust the whole route's credit.
-                await self.send({'type': 'channel_credit', 'bytes': len(line)})
+                self.pending_credit += len(line)
+                if self.pending_credit > CHANNEL_WINDOW:
+                    raise EgressError('Relay acknowledgement window exceeded')
+                if self.credit_task is None:
+                    self.credit_task = asyncio.create_task(self.return_credit())
             return value
 
 
@@ -371,13 +447,32 @@ async def close_stream(frames, identity):
 
 
 class ComputeRelay:
-    def __init__(self, frames, directory, identity):
+    def __init__(self, frames, directory, identity, *, grace_s=0):
         self.frames, self.directory, self.identity = frames, directory, identity
         self.instance = secrets.token_hex(16)
         self.password = secrets.token_hex(32)
         self.authorization = 'Basic '+base64.b64encode(('rf:'+self.password).encode()).decode()
         self.streams = {}; self.next_id = 0; self.last_ping = time.monotonic()
         self.clients = set()
+        self.grace_s=grace_s;self.paused_since=None;self.upstream_ready=True
+        self.available=asyncio.Event();self.available.set()
+
+    def publish_lease(self):
+        now=time.monotonic()
+        paused=now-self.last_ping>STALE_S or not self.upstream_ready
+        if paused:
+            if self.paused_since is None:self.paused_since=now
+            if not self.grace_s or now-self.paused_since>self.grace_s:
+                raise EgressError('Short outage grace expired')
+            self.available.clear()
+        else:self.paused_since=None;self.available.set()
+        self.record.update(state='paused' if paused else 'ready',heartbeat=time.time())
+        atomic(self.directory/'ready.json',self.record)
+
+    async def lease_monitor(self):
+        while True:
+            self.publish_lease()
+            await asyncio.sleep(HEARTBEAT_S)
 
     async def client(self, reader, writer):
         identity = None
@@ -401,13 +496,19 @@ class ComputeRelay:
                 writer.write(b'HTTP/1.1 407 Proxy Authentication Required\r\nContent-Length: 0\r\n\r\n')
                 await writer.drain(); return
             if method == 'GET' and target == '/health':
-                writer.write(('HTTP/1.1 200 OK\r\nContent-Length: 0\r\nX-RF-Instance: '+self.instance+'\r\n\r\n').encode())
+                status='200 OK' if self.available.is_set() else '503 Service Unavailable'
+                writer.write(('HTTP/1.1 '+status+'\r\nContent-Length: 0\r\nX-RF-Instance: '+self.instance+'\r\n\r\n').encode())
                 await writer.drain(); return
             host, port = target.rsplit(':', 1)
             if (method != 'CONNECT' or version != 'HTTP/1.1' or not target_allowed(host, int(port))
                     or len(self.streams) >= MAX_STREAMS):
                 writer.write(b'HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n')
                 await writer.drain(); return
+            if self.grace_s:
+                if len(self.clients)>MAX_STREAMS:
+                    writer.write(b'HTTP/1.1 503 Service Unavailable\r\n\r\n');await writer.drain();return
+                await self.available.wait()
+                if reader.at_eof():return
             self.next_id += 1; identity = self.next_id
             opened = asyncio.get_running_loop().create_future()
             window = SendWindow()
@@ -441,14 +542,18 @@ class ComputeRelay:
 
     async def messages(self):
         while True:
-            if time.monotonic()-self.last_ping > STALE_S:
+            if not self.grace_s and time.monotonic()-self.last_ping > STALE_S:
                 raise EgressError('Mac heartbeat was lost')
-            async with asyncio.timeout(STALE_S):
+            async with asyncio.timeout(None if self.grace_s else STALE_S):
                 message = await self.frames.receive()
             kind = message.get('type')
             if kind == 'ping':
                 self.last_ping = time.monotonic()
-                atomic(self.directory/'ready.json', {**self.record, 'heartbeat': time.time()})
+                ready=message.get('network_available',True)
+                if type(ready) is not bool:raise EgressError('Invalid route availability')
+                self.upstream_ready=ready
+                if self.grace_s:self.publish_lease()
+                else:atomic(self.directory/'ready.json', {**self.record, 'heartbeat': time.time()})
                 await self.frames.send({'type': 'pong'})
                 continue
             stream = self.streams.get(message.get('id'))
@@ -479,15 +584,28 @@ class ComputeRelay:
         port = server.sockets[0].getsockname()[1]
         self.record = {'schema': SCHEMA, 'job_id': self.identity, 'node': socket.gethostname(),
                        'instance': self.instance, 'proxy_url': 'http://rf:'+self.password+'@127.0.0.1:'+str(port),
-                       'heartbeat': time.time()}
+                       'heartbeat': time.time(),'state':'ready','grace_s':self.grace_s}
         atomic(self.directory/'ready.json', self.record)
+        failure = None
+        monitors=[]
         try:
-            await self.frames.send({'type': 'ready', 'job_id': self.identity, 'node': self.record['node']})
-            await self.messages()
+            await self.frames.send({'type': 'ready', 'job_id': self.identity, 'node': self.record['node'],
+                                    'instance':self.instance,'grace_s':self.grace_s})
+            if self.grace_s:
+                monitors=[asyncio.create_task(self.messages()),asyncio.create_task(self.lease_monitor())]
+                done,_=await asyncio.wait(monitors,return_when=asyncio.FIRST_COMPLETED)
+                for task in done:await task
+            else:await self.messages()
+        except BaseException as error:
+            failure = {'type': type(error).__name__, 'transport': self.frames.stats()}
+            raise
         finally:
             # Server.__aexit__/wait_closed waits for active clients on Python
             # 3.12. Close those clients before awaiting listener shutdown.
             server.close()
+            for task in monitors:task.cancel()
+            await asyncio.gather(*monitors,return_exceptions=True)
+            await self.frames.close()
             current = self.directory/'ready.json'
             if current.exists() and read_record(current).get('instance') == self.instance:
                 current.unlink()
@@ -500,16 +618,18 @@ class ComputeRelay:
             await server.wait_closed()
             atomic(self.directory/'closed.json', {'schema': SCHEMA, 'instance': self.instance,
                    'closed_at': time.time(), 'last_ping_age_s': time.monotonic()-self.last_ping,
+                   'failure': failure,
                    'transport': self.frames.stats()})
 
 
-async def serve(root, identity):
+async def serve(root, identity, *, grace_s=0):
     if sys.platform != 'linux' or os.environ.get('SLURM_JOB_ID') != identity:
         raise EgressError('Compute egress must run inside the selected Slurm allocation')
     current = asyncio.current_task()
     for number in (signal.SIGTERM, signal.SIGINT):
         asyncio.get_running_loop().add_signal_handler(number, current.cancel)
     root = private_directory(root, create=True)
+    if grace_s:require_local_storage(root)
     directory = private_directory(root/job_id(identity), create=True)
     fd = os.open(directory/'owner.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
@@ -518,7 +638,7 @@ async def serve(root, identity):
             raise EgressError('Unsafe egress ownership lock')
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
-            await ComputeRelay(await stdio_frames(), directory, identity).run()
+            await ComputeRelay(await stdio_frames(), directory, identity,grace_s=grace_s).run()
         except EOFError:
             pass  # Channel closure is terminal; never restart or replay it.
     finally:
@@ -526,16 +646,48 @@ async def serve(root, identity):
 
 
 class MacRelay:
-    def __init__(self, frames, *, status=None, dial=None):
+    def __init__(self, frames, *, status=None, dial=None, grace_s=0, probe=None):
         self.frames, self.status = frames, status
         self.dial = dial or asyncio.open_connection
         self.streams = {}; self.tasks = {}; self.last_pong = None; self.ready = None
         self.failure_code = None; self.peak_streams = 0
+        self.failure_transport = None
+        self.grace_s=grace_s;self.paused_since=None;self.upstream_failed=False
+        self.probe=probe or self.probe_upstream
+
+    async def probe_upstream(self):
+        reader,writer=await asyncio.wait_for(asyncio.open_connection('auth.openai.com',443,ssl=True),3)
+        writer.close();await writer.wait_closed()
+        return True
+
+    async def liveness(self):
+        while True:
+            if self.last_pong is not None:
+                paused=self.upstream_failed or time.monotonic()-self.last_pong>STALE_S
+                if paused:
+                    if self.paused_since is None:self.paused_since=time.monotonic()
+                    self.publish('paused')
+                    if time.monotonic()-self.paused_since>self.grace_s:
+                        raise EgressError('Compute heartbeat was lost')
+                else:self.paused_since=None
+            await asyncio.sleep(HEARTBEAT_S)
+
+    async def upstream_monitor(self):
+        failures=0
+        while True:
+            try:ready=bool(await self.probe())
+            except (OSError,asyncio.TimeoutError):ready=False
+            if ready:failures=0;self.upstream_failed=False
+            else:
+                failures+=1
+                if failures>=2:self.upstream_failed=True
+            await asyncio.sleep(HEARTBEAT_S*2)
 
     def publish(self, state):
         if self.status:
             atomic(self.status, {'status': state, 'updated_at': time.time(),
                                  'failure_code': self.failure_code, 'streams': len(self.tasks),
+                                 'failure_transport': self.failure_transport,
                                  'peak_streams': self.peak_streams,
                                  'transport': self.frames.stats(),
                                  'last_pong_age_s': None if self.last_pong is None else round(time.monotonic()-self.last_pong, 3),
@@ -552,7 +704,8 @@ class MacRelay:
             self.streams[identity] = {'writer': writer, 'sink': sink, 'window': window}
             await self.frames.send({'type': 'opened', 'id': identity, 'ok': True})
             await copy_to_frames(reader, self.frames, identity, window)
-        except (OSError, asyncio.TimeoutError, EgressError):
+        except (OSError, asyncio.TimeoutError, EgressError) as error:
+            if self.grace_s and isinstance(error,(OSError,asyncio.TimeoutError)):self.upstream_failed=True
             await self.frames.send({'type': 'opened', 'id': identity, 'ok': False})
         finally:
             self.streams.pop(identity, None); self.tasks.pop(identity, None)
@@ -564,9 +717,10 @@ class MacRelay:
 
     async def heartbeat(self):
         while True:
-            if self.last_pong is not None and time.monotonic()-self.last_pong > STALE_S:
+            if not self.grace_s and self.last_pong is not None and time.monotonic()-self.last_pong > STALE_S:
                 raise EgressError('Compute heartbeat was lost')
-            await self.frames.send({'type': 'ping'})
+            available=not self.upstream_failed and (self.last_pong is None or time.monotonic()-self.last_pong<=STALE_S)
+            await self.frames.send({'type': 'ping','network_available':available})
             await asyncio.sleep(HEARTBEAT_S)
 
     async def messages(self):
@@ -574,10 +728,13 @@ class MacRelay:
             message = await self.frames.receive()
             kind, identity = message.get('type'), message.get('id')
             if kind == 'ready':
-                self.ready = {'job_id': job_id(message['job_id']), 'node': message['node']}
+                if message.get('grace_s',0)!=self.grace_s:raise EgressError('Recovery settings mismatch')
+                ready={'job_id':job_id(message['job_id']),'node':message['node'],'instance':message.get('instance')}
+                if self.ready is not None and ready!=self.ready:raise EgressError('Relay instance changed')
+                self.ready = ready
                 self.last_pong = time.monotonic(); self.publish('ready')
             elif kind == 'pong':
-                self.last_pong = time.monotonic(); self.publish('ready')
+                self.last_pong = time.monotonic(); self.publish('paused' if self.upstream_failed else 'ready')
             elif kind == 'open':
                 if type(identity) is not int or identity in self.tasks:
                     raise EgressError('Relay stream ownership violated')
@@ -601,11 +758,13 @@ class MacRelay:
 
     async def run(self):
         control = [asyncio.create_task(self.messages()), asyncio.create_task(self.heartbeat())]
+        if self.grace_s:control.extend([asyncio.create_task(self.liveness()),asyncio.create_task(self.upstream_monitor())])
         try:
             done, _ = await asyncio.wait(control, return_when=asyncio.FIRST_COMPLETED)
             for task in done:
                 await task
         except Exception as error:
+            self.failure_transport = self.frames.stats()
             if isinstance(error, EgressError) and str(error) == 'Compute heartbeat was lost':
                 self.failure_code = 'heartbeat_timeout'
             elif isinstance(error, EOFError):
@@ -619,6 +778,7 @@ class MacRelay:
             for task in [*control, *self.tasks.values()]:
                 task.cancel()
             await asyncio.gather(*control, *list(self.tasks.values()), return_exceptions=True)
+            await self.frames.close()
             for stream in self.streams.values():
                 stream['writer'].close()
             self.publish('closed')
@@ -638,10 +798,12 @@ def ssh_command(args):
     bootstrap = ('import hashlib,os,sys;'
                  'assert hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest()==sys.argv[2],"Proxy source mismatch";'
                  'os.execvp(sys.argv[3],sys.argv[3:])')
-    command = [args.remote_python, '-I', '-c', bootstrap, str(script), digest,
+    command = [args.remote_python, '-I', '-B', '-c', bootstrap, str(script), digest,
                args.srun, '--jobid='+identity, '--nodes=1', '--ntasks=1', '--cpus-per-task=1',
                '--mem=1G', '--overlap', '--exact', '--kill-on-bad-exit=1',
-               args.remote_python, '-I', str(script), 'serve', '--state-root', str(root), '--job-id', identity]
+               args.remote_python, '-I', '-B', str(script), 'serve', '--state-root', str(root), '--job-id', identity]
+    grace_s=getattr(args,'pause_grace_s',0)
+    if grace_s:command.extend(['--pause-grace-s',str(grace_s)])
     if args.slurm_conf:
         command = ['env', 'SLURM_CONF='+args.slurm_conf, *command]
     config = getattr(args, 'ssh_config', '')
@@ -655,7 +817,7 @@ def ssh_command(args):
             raise EgressError('SSH configuration must be private and operator-owned')
         prefix.extend(['-F', str(path)])
     return [*prefix, '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20',
-            '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=3',
+            '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax='+str(max(3,(grace_s+STALE_S+4)//5+2) if grace_s else 3),
             args.ssh_host, shlex.join(command)]
 
 
@@ -699,7 +861,7 @@ async def connect(args):
         atomic(status, {'status': 'connecting', 'job_id': args.job_id, 'updated_at': time.time()})
         process = await asyncio.create_subprocess_exec(*ssh_command(args),
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=log, limit=MAX_FRAME)
-        relay = MacRelay(Frames(process.stdout, process.stdin), status=status)
+        relay = MacRelay(Frames(process.stdout, process.stdin), status=status,grace_s=args.pause_grace_s)
         await relay.run()
     finally:
         if process:
@@ -730,10 +892,12 @@ def main(argv=None):
     compute = commands.add_parser('serve', help='Internal compute-side entry inside the selected allocation')
     compute.add_argument('--state-root', required=True)
     compute.add_argument('--job-id', required=True)
+    compute.add_argument('--pause-grace-s',type=int,default=0)
     mac = commands.add_parser('connect', help='Keep a Mac exit connected to an existing Slurm allocation')
     mac.add_argument('--ssh-host', required=True)
     mac.add_argument('--ssh-config', default='', help='Optional private operator SSH config for this route only')
     mac.add_argument('--job-id', required=True)
+    mac.add_argument('--pause-grace-s',type=int,default=0)
     mac.add_argument('--state-root', required=True, help='Private durable path on the cluster, outside checkouts')
     mac.add_argument('--remote-script', required=True, help='Published matching robofrontier/slurm_proxy.py on the cluster')
     mac.add_argument('--remote-python', default='python3')
@@ -745,11 +909,13 @@ def main(argv=None):
     pipe.add_argument('--port', required=True, type=int)
     pipe.add_argument('--interface', required=True)
     args = parser.parse_args(argv)
+    if hasattr(args,'pause_grace_s') and not 0<=args.pause_grace_s<=600:
+        parser.error('pause-grace-s must be between 0 and 600')
     try:
         if args.command == 'tcp-pipe':
             tcp_pipe(args.host, args.port, args.interface)
             return 0
-        asyncio.run(serve(args.state_root, job_id(args.job_id)) if args.command == 'serve' else connect(args))
+        asyncio.run(serve(args.state_root, job_id(args.job_id),grace_s=args.pause_grace_s) if args.command == 'serve' else connect(args))
     except (KeyboardInterrupt, asyncio.CancelledError):
         return 0
     except Exception as error:

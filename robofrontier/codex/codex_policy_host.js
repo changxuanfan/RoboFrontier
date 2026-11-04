@@ -4,7 +4,7 @@ const path = require('node:path');
 const {execFile,execFileSync,exec:execShell,spawn} = require('node:child_process');
 const {promisify} = require('node:util');
 const execFileAsync = promisify(execFile), execAsync = promisify(execShell);
-const {CodexRpc,STARTUP_ACK_MS,capacityFailure,requireNoMcpServers} = require('./codex_rpc');
+const {CodexRpc,STARTUP_ACK_MS,capacityFailure,networkFailure,requireNoMcpServers} = require('./codex_rpc');
 const {GatewayRpc} = require('./gateway_rpc');
 const fileTools = require('./tool_broker');
 const {runMetaDispatcher} = require('../../scripts/meta_dispatcher');
@@ -57,6 +57,7 @@ class PolicyHost {
     this.actors=new Map(); this.turns=new Map(); this.failures=new Map(); this.retries=new Set();
     this.stopped=false;
     this.turnStarted=new Map();
+    this.networkFailures=new Map();
   }
   // Host file locations come from robofrontier/run_layout.py, the one source for both engines.
   hostPath(key) {
@@ -133,6 +134,7 @@ class PolicyHost {
       const began=this.turnStarted.get(turnKey);
       if (m.method==='turn/completed') {
         this.turns.set(p.threadId,p.turn);
+        if(p.turn.status==='failed'&&networkFailure(p.turn.error))this.networkFailures.set(turnKey,Date.now()/1000);
         if (p.turn.status==='completed') this.capacityAttempts?.delete(p.threadId);
         if (p.turn.status==='failed' && capacityFailure(p.turn.error)) {
           const key=p.threadId+':'+p.turn.id;
@@ -186,6 +188,30 @@ class PolicyHost {
     if (snapshot.paused || ['ended','interrupted','recovery_required'].includes(snapshot.lifecycle)) return;
     for (const [id,actor] of this.actors) {
       const state=await this.observe(id),t=state.latestTurn;
+      const role=snapshot.agents?.[actor];
+      if(role?.kind==='delegate'&&role.delegation_state!=='active')continue;
+      if(state.thread.status.type==='systemError'&&t?.status==='failed'&&snapshot.egress_recovery
+          && !capacityFailure(t.error) && (!networkFailure(t.error)||this.networkFailures?.get(id+':'+t.id)===undefined||!frozenText(this.run,'network-resume.md'))){
+        await this.admin('network-recovery-uncertain',{actor,thread_id:id});return;
+      }
+      if(state.thread.status.type==='systemError'&&t?.status==='failed'&&networkFailure(t.error)){
+        const key=id+':'+t.id,observed=this.networkFailures?.get(key);
+        const notice=frozenText(this.run,'network-resume.md');
+        if(!snapshot.egress_recovery||observed===undefined||!notice||this.retries.has(key))continue;
+        const claim=await this.admin('network-recovery',{actor,thread_id:id,failed_turn_id:t.id,error_observed_at:observed});
+        if(claim.review_required){await this.admin('network-recovery-uncertain',{actor,thread_id:id});return;}
+        if(!claim.allowed)continue;
+        this.retries.add(key);
+        try{
+          await this.send(id,notice);
+          this.event({event:'network_continuation',actor,thread_id:id,failed_turn_id:t.id});
+        }catch{
+          await this.admin('network-recovery-uncertain',{actor,thread_id:id});
+          this.event({event:'network_continuation_uncertain',actor,thread_id:id});
+          return;
+        }
+        continue;
+      }
       if (state.thread.status.type!=='systemError' || t?.status!=='failed' || !capacityFailure(t.error)) continue;
       const key=id+':'+t.id;
       if (this.retries.has(key)) continue;

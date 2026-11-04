@@ -24,6 +24,40 @@ def private_json(path, value):
 
 
 class CredentialCustodyTests(unittest.TestCase):
+    def test_migration_preserves_latest_generation_and_retires_old_refresh_store(self):
+        from robofrontier.slurm_auth import migrate_store
+        with CredentialLease(self.store,self.root/'first-home') as lease:
+            private_json(lease.home/'auth.json',auth(7));lease.reconcile()
+        current=(self.store/'current.json').read_bytes()
+        destination=self.root/'durable-store'
+        report=migrate_store(self.store,destination)
+        self.assertTrue(report['source_retired'])
+        self.assertEqual(json.loads(current),json.loads((destination/'current.json').read_bytes()))
+        self.assertFalse((self.store/'auth.json').exists())
+        self.assertFalse((self.store/'current.json').exists())
+        self.assertFalse((destination/'auth.json').exists())
+        with self.assertRaises(CredentialError):
+            with CredentialLease(self.store,self.root/'old-home'):pass
+        with CredentialLease(destination,self.root/'next-home') as lease:
+            self.assertEqual(json.loads(current)['auth'],json.loads((lease.home/'auth.json').read_text()))
+
+    def test_migration_refuses_a_live_refresh_owner_without_copying_credentials(self):
+        from robofrontier.slurm_auth import migrate_store
+        destination=self.root/'durable-store'
+        with CredentialLease(self.store,self.root/'owner'):
+            with self.assertRaisesRegex(CredentialError,'leased'):
+                migrate_store(self.store,destination)
+        self.assertFalse(destination.exists())
+
+    def test_migration_does_not_replace_an_existing_destination(self):
+        from robofrontier.slurm_auth import migrate_store
+        with CredentialLease(self.store,self.root/'owner'):pass
+        before=(self.store/'current.json').read_bytes()
+        destination=self.root/'durable-store';destination.mkdir(mode=0o700)
+        with self.assertRaises((CredentialError,FileExistsError)):
+            migrate_store(self.store,destination)
+        self.assertEqual((self.store/'current.json').read_bytes(),before)
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)

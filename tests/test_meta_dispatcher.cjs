@@ -231,9 +231,22 @@ async function setupDeadline(expired) {
   if (expired) {assert.equal(forks.length,0);}
   else {assert.equal(forks.length,1);assert(forks[0].timeoutMs>0&&forks[0].timeoutMs<=60000);}
 }
+async function networkPause(){
+ let reads=0,plans=0;
+ const tools={exec_command:async({cmd})=>{
+  let value={recorded:true};
+  if(cmd.includes(' snapshot ')){
+   reads++;const paused=reads<3;
+   value={lifecycle:'running',paused,egress_paused:paused,config:{poll_interval_s:0},agents:{},delegations:[]};
+  }else if(cmd.includes(' plan ')){plans++;value={commands:[]};}
+  return {exit_code:0,output:JSON.stringify(value)};
+ }};
+ await runMetaDispatcher({runDir:'/fake',python:'/fake/python',cwd:'/fake',tools,maxCycles:3});
+ assert.equal(reads,3);assert.equal(plans,1,'Network pause waits rather than ending the host or issuing work');
+}
 (async()=>{
  const cases=[
-  neutralAdapter,()=>setupDeadline(false),()=>setupDeadline(true),
+  networkPause,neutralAdapter,()=>setupDeadline(false),()=>setupDeadline(true),
   ()=>scenario(), ()=>scenario({busy:true}), ()=>scenario({failSend:true}), ()=>scenario({wrongThread:true}),
   interrupted, ()=>startup(false,true), ()=>startup(true,false), ()=>startup(true,true),
   ()=>delegation(), ()=>delegation({count:4}), ()=>delegation({failFork:true}), ()=>delegation({failBind:true}),

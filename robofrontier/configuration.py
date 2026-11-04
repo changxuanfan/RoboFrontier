@@ -24,7 +24,7 @@ SCHEMA = {
               'cpus_per_task': int, 'memory_gib': int, 'time_limit_s': int,
               'stop_warning_s': int, 'scratch_root': str,
               'auth_mode': str, 'credential_store': str,
-              'egress_mode': str, 'egress_root': str, 'egress_wait_s': int},
+              'egress_mode': str, 'egress_root': str, 'egress_wait_s': int, 'egress_pause_s': int},
     'container': {'image': str, 'workspace': str, 'memory_gib': int, 'cpus': float,
                   'seccomp_profile': str},
     'factory': {'data_root': str, 'asset_lock': str, 'source': str, 'device': str,
@@ -96,7 +96,7 @@ def load_configuration(path=None, overrides=None):
 
 
 def _configuration_shape(version):
-    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7):
+    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7, 8):
         raise ValueError('Unsupported configuration schema_version')
     # Older frozen configurations remain exact. Do not append new Factory or
     # Oracle defaults to an already-hashed experiment configuration.
@@ -112,6 +112,8 @@ def _configuration_shape(version):
     if version < 7:
         for field in ('egress_mode', 'egress_root', 'egress_wait_s'):
             shape['slurm'].pop(field)
+    if version < 8:
+        shape['slurm'].pop('egress_pause_s')
     return shape
 
 
@@ -176,6 +178,11 @@ def validate_configuration(config):
             raise ValueError('Job scope and credential_store require slurm.auth_mode=subscription')
     if version >= 7:
         choice('slurm', 'egress_mode', ('direct', 'mac-ssh'))
+        if version >= 8:
+            if not 0 <= slurm['egress_pause_s'] <= 600:
+                raise ValueError('slurm.egress_pause_s must be between 0 and 600')
+            if slurm['egress_pause_s'] and slurm['egress_mode'] != 'mac-ssh':
+                raise ValueError('Short network pause requires mac-ssh egress')
         if not 1 <= slurm['egress_wait_s'] <= 3600:
             raise ValueError('slurm.egress_wait_s must be between 1 and 3600')
         if slurm['egress_mode'] == 'mac-ssh':

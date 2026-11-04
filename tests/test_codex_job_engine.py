@@ -13,6 +13,10 @@ from robofrontier.run_setup import write_json
 
 
 class JobManifestTests(unittest.TestCase):
+    def test_pause_admission_refuses_historical_runtimes_without_physics_freeze(self):
+        with patch.dict(os.environ,{'ROBOFRONTIER_EGRESS_PAUSE_FILE':str(self.root/'engine/EGRESS_PAUSED')}):
+            with self.assertRaisesRegex(ValueError,'newly frozen supported runtime'):
+                self.build()
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix='rfe-', dir='/tmp')
         self.addCleanup(self.temporary.cleanup)

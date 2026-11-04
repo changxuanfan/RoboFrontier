@@ -2,7 +2,10 @@
 const net=require('node:net'),readline=require('node:readline');
 const {RpcError,STARTUP_ACK_MS}=require('./codex_rpc');
 class GatewayRpc {
-  constructor(endpoint,taskId,{onEvent=()=>{},onRequest,onExit=()=>{},recoveryNonce=process.env.ROBOFRONTIER_CODEX_RECOVERY_NONCE}={}) {
+  constructor(endpoint,taskId,{onEvent=()=>{},onRequest,onExit=()=>{},recoveryNonce=process.env.ROBOFRONTIER_CODEX_RECOVERY_NONCE,
+    pauseGraceMs=Number(process.env.ROBOFRONTIER_EGRESS_PAUSE_S||0)*1000}={}) {
+    if(!Number.isFinite(pauseGraceMs)||pauseGraceMs<0||pauseGraceMs>600000)throw new Error('Invalid network pause grace');
+    this.pauseGraceMs=pauseGraceMs;
     this.taskId=taskId;this.next=0;this.pending=new Map();this.onEvent=onEvent;this.recoveryNonce=recoveryNonce;
     this.socket=net.createConnection(endpoint);
     this.ready=new Promise((resolve,reject)=>{
@@ -30,6 +33,7 @@ class GatewayRpc {
   }
   write(value){if(!this.closed)this.socket.write(JSON.stringify(value)+'\n');}
   call(method,params={},timeoutMs=30000){
+    if(['thread/start','thread/fork','thread/resume','turn/start','thread/compact/start'].includes(method))timeoutMs+=this.pauseGraceMs;
     if(this.closed)return Promise.reject(new Error('Shared Codex connection closed'));
     const id=++this.next;
     return new Promise((resolve,reject)=>{

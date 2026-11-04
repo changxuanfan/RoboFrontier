@@ -27,7 +27,7 @@ def fingerprint():
              'codex/file_sandbox.py', 'codex/tool_worker.py', 'codex/tool_backend.py',
              'codex/codex_rpc.js', 'codex/codex_policy_host.js', 'codex/batch.py',
              'codex/tool_broker.js', 'codex/launch.py', 'slurm_auth.py', 'slurm_job.py',
-             'policy_access.py', 'slurm_proxy.py', 'codex/borrowed_auth.js')
+             'policy_access.py', 'slurm_proxy.py', 'egress_pause.py', 'runtime_service.py', 'codex/borrowed_auth.js')
     digest = hashlib.sha256(BACKEND.encode())
     for name in names:
         digest.update(name.encode() + b'\0' + (ROOT/'robofrontier'/name).read_bytes() + b'\0')
@@ -50,11 +50,23 @@ def _common_args(launch):
     return common
 
 
-def build_manifest(jobs, control, private_root, credential_store, *, preflight=False):
+def build_manifest(jobs, control, private_root, credential_store, *, preflight=False, pause_file=None):
     control, private_root = Path(control).resolve(), Path(private_root).resolve()
     tasks, args, launch, catalog = [], None, None, None
     for job in jobs:
         run = Path(job['run_directory']).resolve()
+        if (pause_file or os.environ.get('ROBOFRONTIER_EGRESS_PAUSE_FILE')) and not preflight:
+            try:
+                frozen=json.loads((run/'private/inputs/manifest.json').read_text())['source_sha256']
+                required=('robofrontier/egress_pause.py','robofrontier/runtime_service.py','robofrontier/pipeline.py',
+                          'robofrontier/runtime_cli.py','scripts/meta_dispatcher.js','robofrontier/codex/gateway_rpc.js',
+                          'robofrontier/codex/codex_policy_host.js','robofrontier/policy_bootstrap.py')
+                supported=all(frozen.get(name)==hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
+                              and frozen[name]==hashlib.sha256((run/'private/inputs/frozen-source'/name).read_bytes()).hexdigest()
+                              for name in required)
+            except (OSError,ValueError,KeyError):supported=False
+            if not supported:
+                raise ValueError('Short-outage pause requires a newly frozen supported runtime; historical task left untouched')
         current = json.loads(Path(job.get('launch_file', run/'private/inputs/codex.json')).read_text())
         if (current.get('tool_backend') != 'landlock-v1' or current['profile']['provider'] != 'openai'
                 or current['profile'].get('runner_backend') != BACKEND):
@@ -160,7 +172,13 @@ def engine(jobs, *, env, preflight=False, timeout_s=180):
     control = private/'control'
     control.mkdir(mode=0o700, exist_ok=False)
     (control/'recovery').mkdir(mode=0o700)
-    manifest = build_manifest(jobs, control, private, env['ROBOFRONTIER_CREDENTIAL_STORE'], preflight=preflight)
+    manifest = build_manifest(jobs, control, private, env['ROBOFRONTIER_CREDENTIAL_STORE'], preflight=preflight,
+                              pause_file=env.get('ROBOFRONTIER_EGRESS_PAUSE_FILE'))
+    if env.get('ROBOFRONTIER_EGRESS_PAUSE_FILE'):
+        expected = str(private/'EGRESS_PAUSED')
+        if env['ROBOFRONTIER_EGRESS_PAUSE_FILE'] != expected:
+            raise ValueError('Egress pause marker must belong to the original engine private root')
+        manifest['pause_file'] = expected
     if env.get('ROBOFRONTIER_BORROWED_AUTH'):
         expected = str(Path(env['ROBOFRONTIER_CREDENTIAL_STORE'])/'current.json')
         if env['ROBOFRONTIER_BORROWED_AUTH'] != expected:

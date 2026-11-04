@@ -174,6 +174,11 @@ async function runMetaDispatcher({runDir, python, cwd, tools, adapter = codexAda
   let cycle = 0;
   while (cycle++ < maxCycles && !stopRequested()) {
     const snapshot = await runtime('snapshot');
+    if(snapshot.egress_paused && !['ended','interrupted','recovery_required'].includes(snapshot.lifecycle)){
+      onEvent({event:snapshot.egress_review_hold?'dispatcher_held_for_network_review':'dispatcher_waiting_for_network'});
+      await new Promise(resolve=>setTimeout(resolve,snapshot.config.poll_interval_s*1000));
+      continue;
+    }
     if (['ended','interrupted','recovery_required'].includes(snapshot.lifecycle) || snapshot.paused) {
       onEvent({event:'dispatcher_stopped',lifecycle:snapshot.lifecycle,paused:snapshot.paused});
       return {lifecycle:snapshot.lifecycle,paused:!!snapshot.paused,cycles:cycle-1};

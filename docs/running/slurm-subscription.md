@@ -42,6 +42,17 @@ not update a running or already prepared experiment to this backend.
 
 ## Provisioning and renewal
 
+An initialized stopped stream can move with
+`robofrontier.slurm_auth.migrate_store(source, destination)`. Both refresh leases
+are exclusive during the transfer. The destination parent must already be private;
+the destination must be new. The latest generation is fsynced and verified before
+the source's current cache and obsolete bootstrap are removed. The old initialized
+marker remains, so an older runner refuses that retired reference instead of
+recreating a second refresh authority. Stop all native/access-only consumers first,
+qualify cross-node flock and rename on the destination, then update the operator
+configuration to the new reference. No native login or refresh is performed by
+the migration. Keep durable caches and logs off quota-constrained shared homes.
+
 The operator may authenticate once in a dedicated, file-backed `CODEX_HOME` on
 Mac and securely transfer only `auth.json` to the private credential directory,
 or later use a short queued device-login job. Neither operation is performed by
@@ -116,7 +127,9 @@ old ABI masks on a newer local Linux kernel do not qualify an H800 allocation.
 
 ## Managed Mac egress
 
-Schema 7 adds an explicit job-scoped `mac-ssh` route. Older frozen schemas keep
+Schema 7 adds an explicit job-scoped `mac-ssh` route. Schema 8 additionally permits
+an explicit `slurm.egress_pause_s` from 0 to 600; 0 retains immediate fencing.
+The Mac connector's `--pause-grace-s` must match that setting. Older frozen schemas keep
 their exact configuration shape and do not acquire a new proxy automatically.
 Configure a private canonical reference outside source, scratch, submissions and
 credential stores:
@@ -177,11 +190,29 @@ retaining payloads.
 A separate 512 KiB channel-wide wire-credit window bounds payloads buffered
 inside SSH and Slurm, beyond the Python writer. Channel credit returns at frame
 decode, independently of destination draining; per-stream credit still returns
-after socket delivery. Control frames bypass both payload windows. This bounds
+after socket delivery. A bounded, coalescing credit writer sends channel receipts
+outside the receive loop. Awaiting their delivery inside that loop can deadlock
+both readers when both SSH/Slurm pipes reach their write high-water marks:
+neither reader consumes the bytes needed for either writer to drain. Heartbeat
+priority alone cannot break that cycle. Closing the relay cancels and reaps the
+credit writer; a writer failure closes its channel and propagates to the reader.
+Control frames bypass both payload windows. This bounds
 control latency without reducing every stream to the speed of a stalled peer.
 Stream admission limits reject the individual connection without closing the
 shared route. Private Mac status includes a sanitized failure code and peak
-stream count; it never includes proxy passwords or TLS payloads.
+stream count; it never includes proxy passwords or TLS payloads. Failure snapshots
+retain the active write wait and pending receipt bytes before cancellation; a
+maximum of completed writes alone cannot reveal a write that never drained.
+
+Readiness is an ephemeral allocation lease. Place its private root on canonical
+node-local scratch, and configure the connector and trusted job supervisor with
+that same root. Each heartbeat currently performs a synchronous atomic write and
+fsync: a shared home quota error can terminate the route, and a shared-filesystem
+stall can block its event loop. Node-local placement removes that shared-home
+dependency; it is not a substitute for fixing transport backpressure. Keep native
+credential generations and collected evidence on separately qualified durable
+storage. Changing this placement is an explicit operator deployment, never an
+automatic change to a frozen running experiment.
 Readiness readers reopen an inode unlinked by atomic heartbeat replacement and
 validate the replacement normally. They still reject hardlinks, unsafe modes,
 missing records, stale heartbeats and changed identities. A fenced job saves a
@@ -203,6 +234,43 @@ of an interrupted experiment.
 Relay shutdown closes active clients before awaiting listener shutdown and bounds
 best-effort close frames. A broken pipe cannot indefinitely retain the private
 compute ownership lock after the route has been fenced.
+
+### Temporary outage recovery
+
+With a positive grace, the compute relay stays on the original listener and
+publishes fresh `ready`/`paused` lease state on node-local scratch. A stale Mac
+round trip or a failed upstream dial pauses admission. The Mac probes upstream
+TLS connectivity before declaring an upstream recovery; it never reissues an
+HTTP request body. New CONNECT requests wait within the existing bounded route.
+SSH server-alive tolerances cover the configured grace rather than terminating
+the TCP connection after fifteen seconds.
+
+The trusted job watcher creates an instance-bound `EGRESS_PAUSED` claim. The
+gateway holds new turns/forks while status reads remain available, and bound RPC
+deadlines include the explicit pause grace. The dispatcher waits instead of
+exiting on this infrastructure pause. Each new runtime retains its one live world,
+qpos/qvel/controllers and action IDs, stops stepping physics and holds queued
+policy calls. It discards elapsed simulation accumulator time rather than stepping
+to catch up. A pause after START is recorded as infrastructure downtime; trial,
+wait and setup clocks account for that pause. No delegate-scope deadline is added.
+
+Same-instance recovery requires authenticated local health, original endpoint,
+unchanged scene/input integrity, world/robot/thread ownership and existing action
+receipts. A fork already acknowledged before pause may finish binding only under
+its original trusted gateway ownership. Operator pauses remain held for review.
+Unknown ownership, a changed listener/instance, stream EOF, credential failure or
+grace expiry fences execution; no new engine or world is created automatically,
+and no old turn input or physical request is replayed. A confirmed failed native
+network turn correlated with the recorded pause may receive one fresh, frozen
+continuation notice in its original session after its action receipts settle.
+That claim is durable per role/outage; an unknown continuation acknowledgement
+freezes that world for review rather than sending it again. Returned delegates
+are never reanimated. In particular, this recovers a temporarily stalled
+existing SSH/TCP channel, not a newly established SSH session after its old process
+has exited. Mac logout, process death and unrecoverable connection loss still
+require explicit review. New pause behavior is opt-in and must not be hot-patched
+into already frozen historical trials. Admission explicitly rejects historical
+tasks whose frozen runtime lacks the pause/dispatcher/RPC support.
 
 On macOS, inspect the route to the cluster jump host before treating a small
 transfer benchmark as a bandwidth limit. A system VPN can send cluster SSH over
