@@ -169,6 +169,11 @@ SSH uses server-alive checks; both relay ends exchange two-second heartbeats.
 Each stream has independent socket draining and a 128 KiB byte-credit window in
 each direction. A slow native consumer or remote endpoint therefore cannot block
 the control decoder, starve other streams or create an unbounded payload queue.
+The shared writer prioritizes ping/pong over queued uploads and uses 8 KiB
+payload chunks. FIFO writer locks can otherwise place heartbeat replies behind
+many image uploads even when each destination drains independently. Private
+transport counters record byte totals and maximum control/write waits without
+retaining payloads.
 Stream admission limits reject the individual connection without closing the
 shared route. Private Mac status includes a sanitized failure code and peak
 stream count; it never includes proxy passwords or TLS payloads.

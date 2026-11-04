@@ -33,8 +33,8 @@ HEARTBEAT_S = 2
 STALE_S = 12
 MAX_STREAMS = 256
 MAX_FRAME = 100000
-CHUNK = 32768
-WINDOW = 4 * CHUNK
+CHUNK = 8192
+WINDOW = 131072
 
 
 class EgressError(RuntimeError):
@@ -199,20 +199,49 @@ class Frames:
     """Bounded private stdio messages; payloads are never logged or retained."""
     def __init__(self, reader, writer):
         self.reader, self.writer = reader, writer
-        self.lock = asyncio.Lock()
+        self.condition = asyncio.Condition()
+        self.waiting = {}; self.sequence = 0; self.writing = False
+        self.tx_bytes = 0; self.rx_bytes = 0
+        self.max_control_wait_s = 0; self.max_write_wait_s = 0
+
+    def stats(self):
+        return {'tx_bytes': self.tx_bytes, 'rx_bytes': self.rx_bytes,
+                'queued_frames': len(self.waiting),
+                'max_control_wait_s': round(self.max_control_wait_s, 3),
+                'max_write_wait_s': round(self.max_write_wait_s, 3)}
 
     async def send(self, value):
         data = json.dumps(value, separators=(',', ':')).encode()+b'\n'
         if len(data) > MAX_FRAME:
             raise EgressError('Relay frame limit exceeded')
-        async with self.lock:
+        # asyncio.Lock is FIFO: dozens of bulk senders can put a heartbeat
+        # behind seconds of uploads. Admit control before queued payloads.
+        priority = 2 if value.get('type') == 'data' else 0 if value.get('type') in ('ping','pong') else 1
+        self.sequence += 1; ticket = (priority, self.sequence)
+        started = time.monotonic(); self.waiting[ticket] = started; admitted = False
+        try:
+            async with self.condition:
+                await self.condition.wait_for(lambda: not self.writing and ticket == min(self.waiting))
+                self.waiting.pop(ticket); self.writing = True; admitted = True
+            if priority == 0:
+                self.max_control_wait_s = max(self.max_control_wait_s, time.monotonic()-started)
+            write_started = time.monotonic()
             self.writer.write(data)
             await self.writer.drain()
+            self.tx_bytes += len(data)
+            self.max_write_wait_s = max(self.max_write_wait_s, time.monotonic()-write_started)
+        finally:
+            async with self.condition:
+                self.waiting.pop(ticket, None)
+                if admitted:
+                    self.writing = False
+                self.condition.notify_all()
 
     async def receive(self):
         line = await self.reader.readline()
         if not line:
             raise EOFError()
+        self.rx_bytes += len(line)
         if len(line) > MAX_FRAME:
             raise EgressError('Relay frame limit exceeded')
         value = json.loads(line)
@@ -438,7 +467,9 @@ class ComputeRelay:
             current = self.directory/'ready.json'
             if current.exists() and read_record(current).get('instance') == self.instance:
                 current.unlink()
-            atomic(self.directory/'closed.json', {'schema': SCHEMA, 'instance': self.instance, 'closed_at': time.time()})
+            atomic(self.directory/'closed.json', {'schema': SCHEMA, 'instance': self.instance,
+                   'closed_at': time.time(), 'last_ping_age_s': time.monotonic()-self.last_ping,
+                   'transport': self.frames.stats()})
 
 
 async def serve(root, identity):
@@ -475,6 +506,8 @@ class MacRelay:
             atomic(self.status, {'status': state, 'updated_at': time.time(),
                                  'failure_code': self.failure_code, 'streams': len(self.tasks),
                                  'peak_streams': self.peak_streams,
+                                 'transport': self.frames.stats(),
+                                 'last_pong_age_s': None if self.last_pong is None else round(time.monotonic()-self.last_pong, 3),
                                  **(self.ready or {})})
 
     async def open_stream(self, identity, host, port):

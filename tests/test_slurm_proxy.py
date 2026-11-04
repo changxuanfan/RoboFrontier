@@ -113,6 +113,25 @@ class EnvironmentTests(unittest.TestCase):
         self.assertNotIn('password', command[-1])
 
 
+class SchedulingTests(unittest.IsolatedAsyncioTestCase):
+    async def test_heartbeat_overtakes_queued_bulk_frames_on_a_slow_channel(self):
+        release=asyncio.Event();entered=asyncio.Event();sent=[]
+        class Writer:
+            def write(self,data):sent.append(json.loads(data)['type']);entered.set()
+            async def drain(self):await release.wait();await asyncio.sleep(.01)
+        frames=proxy.Frames(None,Writer())
+        bulk=[asyncio.create_task(frames.send({'type':'data','id':i,'data':'fixture'})) for i in range(36)]
+        await entered.wait();await asyncio.sleep(0)
+        heartbeat=asyncio.create_task(frames.send({'type':'pong'}))
+        await asyncio.sleep(0);release.set()
+        try:
+            await asyncio.wait_for(heartbeat,.15)
+            self.assertEqual(sent[:2],['data','pong'])
+        finally:
+            for task in [*bulk,heartbeat]:task.cancel()
+            await asyncio.gather(*bulk,heartbeat,return_exceptions=True)
+
+
 class TransportTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -174,6 +193,30 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
             reader,writer,reply=await self.request(target,auth)
             self.assertIn(status,reply);writer.close()
         self.assertEqual(self.mac.tasks,{})
+
+    async def test_36_uploads_keep_heartbeat_alive_on_a_throttled_shared_channel(self):
+        self.mac_task.cancel();await asyncio.gather(self.mac_task,return_exceptions=True)
+        self.mac.last_pong=None
+        class SlowChannel:
+            def __init__(self,writer):self.writer=writer
+            def write(self,data):self.writer.write(data)
+            async def drain(self):await asyncio.sleep(.015);await self.writer.drain()
+            def close(self):self.writer.close()
+        for frames in (self.mac.frames,self.compute_frames):frames.writer=SlowChannel(frames.writer)
+        async def stream(i):
+            reader,writer,reply=await self.request('auth.openai.com:443')
+            self.assertIn(b'200 Connection Established',reply)
+            data=bytes([i])*(proxy.CHUNK*4)
+            writer.write(data);await writer.drain()
+            self.assertEqual(await asyncio.wait_for(reader.readexactly(len(data)),15),data)
+            writer.close()
+        with patch.object(proxy,'HEARTBEAT_S',.03),patch.object(proxy,'STALE_S',.35):
+            self.mac_task=asyncio.create_task(self.mac.run())
+            await asyncio.gather(*(stream(i) for i in range(36)))
+            await asyncio.sleep(.4)
+            self.assertFalse(self.mac_task.done());self.assertFalse(self.compute_task.done())
+            self.assertLess(self.mac.frames.max_control_wait_s,.25)
+            self.assertLess(self.compute_frames.max_control_wait_s,.25)
 
     async def test_channel_eof_removes_readiness_and_closes_listener(self):
         self.mac_task.cancel();await asyncio.gather(self.mac_task,return_exceptions=True)
