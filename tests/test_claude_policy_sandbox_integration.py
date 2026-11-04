@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -127,7 +128,9 @@ class PolicySandboxTests(unittest.TestCase):
                 for index in range(1, 6): self.assertNotIn(secret, text(index))
             self.assertIn('PUBLIC-TASK', shell)
             self.assertIn('BASH-WROTE-SCRATCH', shell)
-            self.assertNotIn('BASH-WROTE-PRIVATE', shell)
+            # Claude Code's Linux sandbox (bubblewrap) masks a denied folder with an empty tmpfs:
+            # a Bash write there lands in that throwaway mount, never in the run (checked below).
+            if sys.platform != 'linux': self.assertNotIn('BASH-WROTE-PRIVATE', shell)
             self.assertNotIn('BASH-WROTE-FROZEN', shell)
             for refused in ('BASH-WROTE-EVIDENCE', 'BASH-WROTE-ROOT'): self.assertNotIn(refused, shell)
             self.assertIn('BASH-WROTE-SKILL', shell)

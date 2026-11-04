@@ -78,7 +78,10 @@ crashed host leaves no orphan holding the world lock.
    in the runtime database every second (`arm_holds`); a grasp is restored only
    from a record at most 5 s older than the frame and only where the gripper
    opening in the pose still matches. The old world's address is removed from the
-   connection files; hosts wait for the new world to publish one.
+   connection files; hosts wait for the new world to publish one. For Dial,
+   `restore-pose.json` also carries the game record at the frame (`evaluator`:
+   valid trials, BEST, success, and whether a scored input was being held),
+   read from the shared process log.
 3. **Start the world.** Seeing `resuming`, the world process builds the world
    from `restore-pose`; the simulation clock continues from the frame, and
    motion and video go to the segment's folder.
@@ -132,8 +135,15 @@ only.
 - Velocities, contact history and controller state are not kept.
 - Process monitoring (collisions, violations) restarts its counts in the new
   segment; reports combine each segment's last snapshot
-  (`run_segments.process_summary`). Dial puzzle progress such as the query
-  count is not carried across; dial angles are restored with the pose.
+  (`run_segments.process_summary`).
+- The Dial game is episode history, so it continues: the new evaluator starts
+  from the carried trial count, BEST and success, and the display shows that
+  BEST at once. An input already scored and still held at the restore frame
+  stays the same trial while it is held on. Trials scored after the restore
+  frame were never physically kept and are not carried. Process logs mark the
+  carried part (`carried_valid_trials`); `run_segments.dial_record` combines
+  segments, including runs continued before this existed (their later segment
+  counted from zero, so its trials are added and BEST is the maximum).
 - The two CLIs describe the cut-off tool call differently (Claude: outcome
   unknown; Codex: cancelled); the resume message is authoritative.
 

@@ -235,6 +235,9 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
             'held_grasps': holds,
             'missing': ['velocity', 'actuator and controller state', 'contact history', 'unfinished actions'],
             'scope': 'Approximate physical restore of the same trial; the run, its sessions and records continue'}
+    # The Dial game is episode history: the new world's evaluator continues its trials and BEST.
+    record = dial_record(run, sim_s)
+    if record is not None: note['evaluator'] = record
     write_json(folder / 'restore-pose.json', note)
     import hashlib
     manifest_path = run / 'private/inputs/manifest.json'; manifest = json.loads(manifest_path.read_text())
@@ -351,5 +354,41 @@ def process_summary(run):
     total['process_compliant'] = all(p.get('process_compliant', True) for p in seen) and len(seen) == len(parts)
     total['robot_contact_episodes'] = {k: sum((p.get('robot_contact_episodes') or {}).get(k) or 0 for p in seen)
                                        for k in EPISODE_SUM}
+    record = dial_record(run)
+    if record is not None: total['dial'] = record
     return {'segments': segments, 'total': total, 'missing_segments': [i for i, p in enumerate(parts) if not p],
             'scope': 'Earlier segments from their last 1 s snapshot before they ended'}
+
+
+def dial_record(run, cutoff=None):
+    """The Dial game's episode record over all segments: valid trials, BEST and success.
+
+    Each segment counts up to the restore frame of the next (later rows were never
+    physically kept); `cutoff` ends the last one. A segment whose evaluator continued
+    the record reports cumulative counts with the carried part beside them; one started
+    before that existed counted from zero, so its trials are added. Rows are the Dial
+    results of the shared process log; None for other families or an empty log.
+    """
+    log = Path(run) / 'private/outputs/suite-process.jsonl'
+    if not log.is_file(): return None
+    blocks = [[]]
+    for line in log.read_text(errors='replace').splitlines():
+        try: row = json.loads(line)
+        except ValueError: continue
+        if not isinstance(row, dict): continue
+        if 'schema' in row and 'type' not in row: blocks.append([])
+        elif isinstance(row.get('result'), dict) and 'valid_trials' in row['result']: blocks[-1].append(row)
+    blocks = [b for b in blocks if b]
+    trials, best, solved, last = 0, None, False, None
+    for i, block in enumerate(blocks):
+        end = blocks[i + 1][0]['sim_time_s'] if i + 1 < len(blocks) else cutoff
+        kept = [r for r in block if end is None or r['sim_time_s'] <= end + 1e-9]
+        if not kept: continue
+        last = kept[-1]; result = last['result']
+        trials += result['valid_trials'] - result.get('carried_valid_trials', 0)
+        if result.get('feedback_mode') == 'best_so_far' and isinstance(result.get('display'), int):
+            best = max(best or 0, result['display'])
+        solved = solved or bool(result.get('solved'))
+    if last is None: return None
+    return {'valid_trials': trials, 'best': best, 'solved': solved,
+            'input_ready': bool(last['result'].get('input_ready')), 'sim_time_s': last['sim_time_s']}

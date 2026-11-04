@@ -164,8 +164,13 @@ def submit(config, output, *, queue=False, engineering=False, root=ROOT):
             for excluded in (Path(root).resolve(), Path(output).resolve(), store):
                 if relay.is_relative_to(excluded) or excluded.is_relative_to(relay):
                     raise ValueError('Keep egress state outside checkouts, submissions and credential directories')
-    elif not selected.get('env_key') or selected.get('auth_mode') == 'oauth_token':
-        raise ValueError('The Slurm entry currently supports API credentials only')
+    elif not selected.get('env_key') or (selected.get('auth_mode') == 'oauth_token' and policy['engine'] != 'claude'):
+        raise ValueError('The Slurm entry supports API credentials and the Claude subscription token only')
+    if not subscription and config['slurm'].get('egress_mode') == 'mac-ssh':
+        relay = Path(config['slurm']['egress_root']).resolve()
+        for excluded in (Path(root).resolve(), Path(output).resolve()):
+            if relay.is_relative_to(excluded) or excluded.is_relative_to(relay):
+                raise ValueError('Keep egress state outside checkouts and submission/evidence directories')
     root, output = Path(root).resolve(), Path(output).resolve()
     if output.exists():
         raise ValueError('Choose a new submission directory')
@@ -271,9 +276,17 @@ def execute(local):
 
 @contextmanager
 def subscription_environment(config, local, *, on_failure):
-    """Seed only after allocation and hold custody until native writers close."""
+    """Seed only after allocation and hold custody until native writers close.
+
+    Without a subscription store (Claude's token travels in the job environment) only a
+    configured Mac route is admitted, with the same pause, fencing and environment.
+    """
     if config['slurm'].get('auth_mode') != 'subscription':
-        yield
+        if config['slurm'].get('egress_mode', 'direct') != 'mac-ssh':
+            yield
+            return
+        with routed_environment(config, local, on_failure=on_failure):
+            yield
         return
     if platform.system() != 'Linux' or not os.environ.get('SLURM_JOB_ID'):
         raise ValueError('Job-scoped subscription execution requires a Linux Slurm allocation')
@@ -313,6 +326,32 @@ def subscription_environment(config, local, *, on_failure):
                     on_failure()
                 lease.watch(failed)
                 yield lease
+    finally:
+        os.environ.clear()
+        os.environ.update(original)
+
+
+@contextmanager
+def routed_environment(config, local, *, on_failure):
+    """Admit the allocation's Mac route for a credential carried in the environment."""
+    if platform.system() != 'Linux' or not os.environ.get('SLURM_JOB_ID'):
+        raise ValueError('Managed egress requires a Linux Slurm allocation')
+    from .slurm_proxy import environment as egress_environment
+    local = Path(local).resolve()
+    relay = Path(config['slurm']['egress_root']).absolute()
+    for excluded in (ROOT.resolve(), local):
+        if relay.is_relative_to(excluded) or excluded.is_relative_to(relay):
+            raise ValueError('Keep egress state separate from source and scratch')
+    private = local/'engine'
+    private.mkdir(mode=0o700, exist_ok=False)
+    original = dict(os.environ)
+    try:
+        os.environ['ROBOFRONTIER_JOB_PRIVATE_ROOT'] = str(private)
+        def egress_failed():
+            (private/'EGRESS_ERROR').touch(mode=0o600)
+            on_failure()
+        with egress_environment(config, on_failure=egress_failed):
+            yield
     finally:
         os.environ.clear()
         os.environ.update(original)

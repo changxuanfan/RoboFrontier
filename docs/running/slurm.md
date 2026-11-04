@@ -100,8 +100,16 @@ written into the job script, source snapshot, configuration, or returned ZIP.
 The site's normal Slurm environment/spool protections still apply. Do not share
 .env, authentication directories, or a raw dump of your job environment.
 
-Subscription/OAuth credentials are not staged by this entry. Claude API runs
-remain explicitly unqualified engineering drafts and require --engineering.
+Subscription caches are not staged by this entry. The Claude subscription token
+(`CLAUDE_CODE_OAUTH_TOKEN`, profile `haiku_subscription_token`) is long-lived and
+travels in the environment like an API key. Claude runs remain explicitly
+unqualified engineering drafts and require --engineering. Where the cluster cannot
+reach Anthropic, Claude may use the managed Mac route (`slurm.egress_mode = "mac-ssh"`,
+see [Slurm subscriptions](slurm-subscription.md#managed-mac-egress)) without a
+credential store; the CLI then receives only that route's `HTTPS_PROXY`/`NO_PROXY`.
+Claude's own Bash sandbox needs `bwrap` and `socat` on the compute-node PATH. On Linux
+it masks a denied folder with an empty tmpfs, so a Bash write there appears to succeed
+but is discarded with the sandbox; reads stay denied and nothing reaches the run.
 All four native Claude modes have engineering entries; see
 [standing teams](../engines/claude-code.md#standing-teams). Their local lifecycle checks do not
 establish real-cluster or provider qualification.

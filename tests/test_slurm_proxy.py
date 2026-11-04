@@ -18,6 +18,15 @@ from robofrontier.configuration import load_configuration
 from robofrontier.policy_access import record, mode
 
 
+class DestinationTests(unittest.TestCase):
+    def test_only_model_provider_https_destinations_are_relayed(self):
+        for host in ('api.openai.com', 'chatgpt.com', 'api.anthropic.com', 'anthropic.com'):
+            self.assertTrue(proxy.target_allowed(host, 443), host)
+        for host, port in (('api.anthropic.com', 80), ('evilanthropic.com', 443), ('anthropic.com.example', 443),
+                           ('claude.ai', 443), ('API.ANTHROPIC.COM', 443), ('example.com', 443)):
+            self.assertFalse(proxy.target_allowed(host, port), host)
+
+
 class EnvironmentTests(unittest.TestCase):
     def test_quota_error_publishing_pause_fences_without_clearing_authority(self):
         import errno

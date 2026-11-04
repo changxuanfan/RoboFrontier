@@ -214,6 +214,49 @@ class SlurmJobTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'outside checkouts'):
             self.prepare()
 
+    def test_claude_token_runs_through_the_mac_route_without_a_credential_store(self):
+        relay = self.root/'egress'
+        self.config = load_configuration(overrides={
+            'schema_version': 8, 'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
+            'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay), 'egress_pause_s': 120}})
+        with self.assertRaisesRegex(ValueError, '--engineering'):
+            self.prepare()
+        with patch('scripts.benchmark_handoff.ensure_asset_archive', return_value=self.asset):
+            slurm.submit(self.config, self.submission, root=self.repo, engineering=True)
+        manifest, _ = slurm._verify_submission(self.submission)
+        self.assertEqual((manifest['credential_env'], manifest['auth_mode']), ('CLAUDE_CODE_OAUTH_TOKEN', 'api'))
+        self.assertNotIn('--dependency=singleton', slurm.queue_command(self.config['slurm'], self.submission))
+        self.config['slurm']['egress_root'] = str(self.repo/'egress')
+        with self.assertRaisesRegex(ValueError, 'egress state outside'):
+            with patch('scripts.benchmark_handoff.ensure_asset_archive', return_value=self.asset):
+                slurm.submit(self.config, self.root/'second', root=self.repo, engineering=True)
+        # Only Claude carries a token this way; Codex keeps the job-scoped subscription store.
+        with self.assertRaisesRegex(ValueError, 'Mac egress requires'):
+            load_configuration(overrides={'schema_version': 8, 'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay)}})
+
+    def test_claude_route_admits_egress_and_restores_the_environment(self):
+        config = load_configuration(overrides={
+            'schema_version': 8, 'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
+            'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(self.root/'egress')}})
+        self.local.mkdir()
+        seen = {}
+        from contextlib import contextmanager
+        @contextmanager
+        def route(cfg, *, on_failure):
+            seen['private'] = os.environ['ROBOFRONTIER_JOB_PRIVATE_ROOT']; seen['failure'] = on_failure
+            os.environ['HTTPS_PROXY'] = 'http://rf:x@127.0.0.1:1'
+            yield
+        stops = []
+        with patch.object(slurm.platform, 'system', return_value='Linux'), \
+                patch.dict(os.environ, {'SLURM_JOB_ID': '123'}), patch('robofrontier.slurm_proxy.environment', route):
+            before = dict(os.environ)
+            with slurm.subscription_environment(config, self.local, on_failure=lambda: stops.append(1)):
+                self.assertEqual(Path(seen['private']), (self.local/'engine').resolve())
+                self.assertNotIn('CODEX_HOME', os.environ)
+            self.assertEqual(dict(os.environ), before)
+        seen['failure']()
+        self.assertTrue((self.local/'engine/EGRESS_ERROR').exists()); self.assertEqual(stops, [1])
+
     def test_source_archive_link_or_path_escape_is_rejected_before_extraction(self):
         archive = self.root/'bad.tar'
         for name, link in (('../outside', False), ('safe-link', True)):

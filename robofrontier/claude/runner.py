@@ -287,6 +287,9 @@ def build_env(profile, base_env, config_dir):
         env.pop('CLAUDE_CONFIG_DIR', None)
     if profile.get('base_url'):
         env['ANTHROPIC_BASE_URL'] = profile['base_url']
+    if base_env.get('ROBOFRONTIER_EGRESS_INSTANCE'):
+        # A managed allocation route (robofrontier/slurm_proxy.py) is the CLI's only way out.
+        env.update({name: base_env[name] for name in ('HTTPS_PROXY', 'NO_PROXY') if name in base_env})
     return env
 
 

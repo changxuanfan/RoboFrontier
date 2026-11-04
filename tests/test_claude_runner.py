@@ -156,6 +156,13 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
         with self.assertRaisesRegex(ValueError, 'KIMI_API_KEY'):
             build_env(PROFILE, {'PATH': '/bin'}, '/run/config')
 
+    def test_only_a_managed_allocation_route_reaches_the_cli(self):
+        base = {'PATH': '/bin', 'KIMI_API_KEY': SECRET, 'HTTPS_PROXY': 'http://user-proxy', 'NO_PROXY': 'x'}
+        self.assertNotIn('HTTPS_PROXY', build_env(PROFILE, base, '/run/config'))
+        env = build_env(PROFILE, {**base, 'ROBOFRONTIER_EGRESS_INSTANCE': 'a'*32, 'ALL_PROXY': 'http://other'}, '/run/config')
+        self.assertEqual((env['HTTPS_PROXY'], env['NO_PROXY']), ('http://user-proxy', 'x'))
+        self.assertNotIn('ALL_PROXY', env); self.assertNotIn('ROBOFRONTIER_EGRESS_INSTANCE', env)
+
     def test_unconfigured_third_party_endpoint_never_launches_cli(self):
         from scripts.claude_benchmark import profile
         with patch.dict('os.environ', {}, clear=True):
