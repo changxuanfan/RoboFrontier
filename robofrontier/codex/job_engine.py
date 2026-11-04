@@ -82,7 +82,7 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
                       'permissions': 'rf_' + identity, 'model': current['model'],
                       'provider': current['provider'], 'effort': current['effort'],
                       'kind': 'preflight' if preflight else 'policy',
-                      **({'image': str(Path(job['launch_file']).parent/'colors.png')} if preflight else {})})
+                      **({'image': current.get('tool_probe', {}).get('image', str(Path(job['launch_file']).parent/'colors.png'))} if preflight else {})})
     if not tasks:
         raise ValueError('No tasks for job engine')
     args = [*args, '-c', 'model_catalog_json=' + json.dumps(launch['model_catalog']),

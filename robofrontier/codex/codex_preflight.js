@@ -7,16 +7,18 @@ async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
   const launch=JSON.parse(fs.readFileSync(path.join(folder,'launch.json')));
   const cwd=launch.profile?.runner_backend==='slurm-managed-v1'
     ?path.join(launch.tool_probe.run_dir,'workspace'):folder;
+  const image=launch.tool_probe?.image??path.join(folder,'colors.png');
   // Written with colors.png by robofrontier/preflight_probe.py: random left/right colours.
   const probe=JSON.parse(fs.readFileSync(path.join(folder,'probe.json')));
   const waits=new Map();
   let resolveCompact;
   const compacted=new Promise(r=>resolveCompact=r);
   const tools=new Map(),calls=new Map(),brokerExec=new Set(),brokerImage=new Set(),bound=new Set();
-  let compact=false,id,childId;
+  let compact=false,id,childId,lastMessage='';
   const serverLog=fs.openSync(path.join(folder,'server.log'),'a');
   const rpc=new Rpc(launch.args,{stderr:serverLog,
     onEvent:m=>{
+      if(m.method==='item/completed'&&m.params?.item?.type==='agentMessage')lastMessage=m.params.item.text??'';
       if(m.method==='turn/completed') waits.get(m.params.threadId)?.(m.params.turn);
       if(m.method==='thread/compacted' || m.method==='item/completed' && m.params?.item?.type==='contextCompaction') {compact=true;resolveCompact(true);}
       if(m.method==='error' && !m.params?.willRetry)resolveCompact(false);
@@ -59,6 +61,7 @@ async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
       report.scope=report.scope.replace('real API','native subscription');
     }
     const a=await rpc.call('thread/start',{cwd,model:launch.model,modelProvider:launch.provider,
+      baseInstructions:'This is a non-physical integration preflight. No robot task or role assignment is needed. Use the supplied policy_exec, policy_image and protocol_check tools as requested, then finish the turn. The public checker verifies sandbox boundaries using canary files; it does not inspect benchmark evaluation data.',
       approvalPolicy:'never',sandbox:'read-only',dynamicTools:[{type:'function',name:'protocol_check',
         description:'Submit the color of the left half and of the right half of the image.',inputSchema:{type:'object',
                    properties:{left:{type:'string',enum:probe.colors},right:{type:'string',enum:probe.colors}},required:['left','right']}},
@@ -70,11 +73,11 @@ async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
       ', require BROKER_ISOLATION_OK, then call policy_image with path '+JSON.stringify(launch.tool_probe.image)+'. ':'';
     await rpc.call('turn/start',{threadId:id,model:launch.model,effort:launch.effort,input:[
       {type:'text',text:probe.prompt+brokerPrompt+' Call protocol_check with those two colors. Then reply with the tool result.'},
-      {type:'localImage',path:path.join(folder,'colors.png')} ]});
+      {type:'localImage',path:image} ]});
     const turn=await deadline(finished,180000);
     // Say which check failed: the turn itself, a missing tool call, or wrong colors.
     if(turn.status!=='completed' || !tools.get(id))throw new Error('Parent image/tool turn failed: '+JSON.stringify(
-      {status:turn.status,error:turn.error,tool_called:calls.has(id),arguments:calls.get(id)??null}));
+      {status:turn.status,error:turn.error,tool_called:calls.has(id),arguments:calls.get(id)??null,last_message:lastMessage.slice(0,1000)}));
     if(fileTools.enabled(launch)&&(!brokerExec.has(id)||!brokerImage.has(id)))throw new Error('Parent broker tools were not verified');
     if(smokeOnly) {
       report={...report,passed:true,vision_and_function:true,thread_id:id};
