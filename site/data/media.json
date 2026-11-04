@@ -3,7 +3,7 @@
  "sets": [
   {
    "key": "oracle",
-   "base": "_media/oracle/",
+   "base": "https://changxuanfan.github.io/RoboFrontier-media-oracle/oracle/",
    "tasks": {
     "dial-best5-n04-d1": {
      "front": {
@@ -585,7 +585,7 @@
   }
  ],
  "film": {
-  "video": "_media/film/robofrontier-film-1080p.mp4",
+  "video": "https://changxuanfan.github.io/RoboFrontier-media-oracle/film/robofrontier-film-1080p.mp4",
   "poster": "assets/img/film.jpg",
   "note": "The Factory tour: every family and scale, 3 min 30 s, 1080p."
  }

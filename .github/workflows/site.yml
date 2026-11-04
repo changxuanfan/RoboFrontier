@@ -1,0 +1,53 @@
+name: Project page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check the page's data files
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          tasks = json.loads(Path('site/data/tasks.json').read_text())
+          media = json.loads(Path('site/data/media.json').read_text())
+          results = json.loads(Path('site/data/results.json').read_text())
+          assert len(tasks['tasks']) == 36, 'expected the 36 released tasks'
+          assert all(s['base'].startswith('https://') for s in media['sets']), 'media must point at published URLs'
+          assert results['schema'] == 'robofrontier.site-results.v1'
+          assert 'SYNTHETIC' not in json.dumps(results), 'never publish a test fixture'
+          PY
+      - uses: actions/configure-pages@v5
+      - name: Upload the page only (local media, fixtures and explorations are ignored)
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -20,13 +20,9 @@ on:
       - 'uv.lock'
       - 'pyproject.toml'
   workflow_dispatch:
-    inputs:
-      publish:
-        description: 'Publish the verified public task atlas to GitHub Pages'
-        type: boolean
-        required: true
-        default: false
 
+# The project page (site/, deployed by site.yml) replaced the atlas on GitHub Pages;
+# this workflow only verifies the atlas and its offline ZIP.
 permissions:
   contents: read
 
@@ -48,25 +44,3 @@ jobs:
         run: |
           .venv/bin/python -m scripts.build_task_atlas verify
           PYTHONPATH=tests:scripts .venv/bin/python -m unittest test_task_atlas
-      - name: Configure Pages for an explicit publication
-        if: github.event_name == 'workflow_dispatch' && inputs.publish
-        uses: actions/configure-pages@v5
-      - name: Upload only the verified public site
-        if: github.event_name == 'workflow_dispatch' && inputs.publish
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: docs/task-atlas
-  deploy:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish
-    needs: validate
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Publish verified artifact
-        id: deployment
-        uses: actions/deploy-pages@v4
