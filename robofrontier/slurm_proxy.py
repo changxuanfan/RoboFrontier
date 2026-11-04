@@ -66,14 +66,19 @@ def atomic(path, value):
 
 
 def read_record(path):
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
-    with os.fdopen(fd, 'rb') as stream:
-        info = os.fstat(stream.fileno())
-        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
-                or info.st_mode & 0o077 or info.st_nlink != 1 or info.st_size > 16384):
-            raise EgressError('Unsafe egress readiness record')
-        value = json.loads(stream.read(16385))
-    return value
+    for _ in range(4):
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(fd, 'rb') as stream:
+            info = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                    or info.st_mode & 0o077 or info.st_size > 16384 or info.st_nlink > 1):
+                raise EgressError('Unsafe egress readiness record')
+            if info.st_nlink == 0:
+                # Atomic heartbeat publication can unlink the inode after open
+                # but before fstat. Reopen the path; never admit that old inode.
+                continue
+            return json.loads(stream.read(16385))
+    raise EgressError('Egress readiness record kept changing during read')
 
 
 def job_id(value):
@@ -159,7 +164,19 @@ def environment(config, *, on_failure):
                 validate_record(current, identity, socket.gethostname())
                 if current['instance'] != record['instance'] or current['proxy_url'] != record['proxy_url']:
                     raise EgressError('Egress identity changed')
-            except Exception:
+            except Exception as error:
+                reason = ('unsafe_record' if isinstance(error, EgressError) and str(error) == 'Unsafe egress readiness record'
+                          else 'binding_or_freshness' if isinstance(error, EgressError) and str(error).startswith('Managed egress is absent')
+                          else 'instance_changed' if isinstance(error, EgressError) and str(error) == 'Egress identity changed'
+                          else type(error).__name__)
+                # Only fixed metadata enters diagnostics, never the private URL.
+                private = os.environ.get('ROBOFRONTIER_JOB_PRIVATE_ROOT')
+                if private:
+                    try:
+                        atomic(private_directory(private)/'EGRESS_DIAGNOSTIC.json',
+                               {'reason': reason, 'at': time.time(), 'job_id': identity})
+                    except Exception:
+                        pass  # Failure to save a diagnostic cannot suppress fencing.
                 failed.set()
                 on_failure()
                 return

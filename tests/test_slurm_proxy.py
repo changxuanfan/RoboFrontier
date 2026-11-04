@@ -56,13 +56,17 @@ class EnvironmentTests(unittest.TestCase):
         self.assertFalse(self.failure.is_set())
 
     def test_lost_or_replaced_route_is_latched_without_replay(self):
-        with patch.dict(os.environ, {'SLURM_JOB_ID':'123'}):
+        private=self.root/'engine';private.mkdir(mode=0o700)
+        with patch.dict(os.environ, {'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}):
             with self.assertRaisesRegex(proxy.EgressError, 'must not be automatically replayed'):
                 with proxy.environment(self.config, on_failure=self.failure.set):
                     proxy.atomic(self.path, {**self.value, 'instance':'c'*32})
                     self.assertTrue(self.failure.wait(2))
                     # A later apparently good record cannot un-fence this owner.
                     proxy.atomic(self.path, self.value)
+        diagnostic=json.loads((private/'EGRESS_DIAGNOSTIC.json').read_text())
+        self.assertEqual(diagnostic['reason'],'instance_changed')
+        self.assertNotIn('proxy_url',diagnostic)
 
     def test_stale_wrong_node_and_unsafe_record_fail_before_yield(self):
         for key, value in [('heartbeat',time.time()-30),('node','another-node'),('job_id','999')]:
@@ -73,6 +77,24 @@ class EnvironmentTests(unittest.TestCase):
                         self.fail('Unhealthy route admitted')
         proxy.atomic(self.path, self.value); self.path.chmod(0o644)
         with self.assertRaises(proxy.EgressError): proxy.read_record(self.path)
+
+    def test_atomic_heartbeat_replacement_during_read_is_not_route_loss(self):
+        original = os.fstat
+        replaced = False
+        def race(fd):
+            nonlocal replaced
+            if not replaced:
+                replaced = True
+                proxy.atomic(self.path, {**self.value, 'heartbeat':time.time()})
+            return original(fd)
+        with patch.object(proxy.os, 'fstat', race):
+            current = proxy.read_record(self.path)
+        self.assertEqual(current['instance'], self.value['instance'])
+        self.assertGreaterEqual(current['heartbeat'], self.value['heartbeat'])
+
+    def test_hardlinked_record_is_still_rejected(self):
+        os.link(self.path, self.directory/'another-link')
+        with self.assertRaises(proxy.EgressError):proxy.read_record(self.path)
 
     def test_old_configuration_shape_and_explicit_subscription_requirement(self):
         old = load_configuration(overrides={'schema_version':6})

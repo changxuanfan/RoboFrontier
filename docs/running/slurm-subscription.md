@@ -172,6 +172,10 @@ the control decoder, starve other streams or create an unbounded payload queue.
 Stream admission limits reject the individual connection without closing the
 shared route. Private Mac status includes a sanitized failure code and peak
 stream count; it never includes proxy passwords or TLS payloads.
+Readiness readers reopen an inode unlinked by atomic heartbeat replacement and
+validate the replacement normally. They still reject hardlinks, unsafe modes,
+missing records, stale heartbeats and changed identities. A fenced job saves a
+fixed-reason diagnostic in its private engine directory.
 The Mac controller holds an idle/system-sleep assertion while connected. A
 missing/stale heartbeat, listener mismatch or changed relay instance fences the
 current owner, sets `EGRESS_ERROR`, stops its native engine and requests ordinary
