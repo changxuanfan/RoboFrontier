@@ -1,0 +1,5 @@
+{
+ "schema": "robofrontier.site-results.v1",
+ "note": "Generated from collected benchmark runs. Empty until the 24-hour runs are complete.",
+ "runs": []
+}

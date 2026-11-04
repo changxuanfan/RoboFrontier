@@ -1,0 +1,592 @@
+{
+ "schema": "robofrontier.site-media-index.v1",
+ "sets": [
+  {
+   "key": "oracle",
+   "base": "_media/oracle/",
+   "tasks": {
+    "dial-best5-n04-d1": {
+     "front": {
+      "video": "dial-best5-n04-d1-front.mp4",
+      "poster": "dial-best5-n04-d1-front.jpg",
+      "size": 310428,
+      "duration_s": 23.2,
+      "sha256": "b63094c97daf1df092c1131cc022dc862c9fc578820021ffbd8873fe2ffe16fb"
+     },
+     "side": {
+      "video": "dial-best5-n04-d1-side.mp4",
+      "poster": "dial-best5-n04-d1-side.jpg",
+      "size": 420781,
+      "duration_s": 23.2,
+      "sha256": "4094b2dce82eade34ca24a90c9909f3ae8f3a322bfab55a756d528e7efef2439"
+     }
+    },
+    "dial-best5-n04-d2": {
+     "front": {
+      "video": "dial-best5-n04-d2-front.mp4",
+      "poster": "dial-best5-n04-d2-front.jpg",
+      "size": 254173,
+      "duration_s": 11.467,
+      "sha256": "022fc5c56724e9fefce6bccad8f566d2f5a4c69185bc8379d74e40a13b93ce86"
+     },
+     "side": {
+      "video": "dial-best5-n04-d2-side.mp4",
+      "poster": "dial-best5-n04-d2-side.jpg",
+      "size": 295750,
+      "duration_s": 11.467,
+      "sha256": "e2fc871724e1cb8ff45d58579a0ec0a1f66132645e4c5acc75c96eee87c506a1"
+     }
+    },
+    "dial-best5-n04-d3": {
+     "front": {
+      "video": "dial-best5-n04-d3-front.mp4",
+      "poster": "dial-best5-n04-d3-front.jpg",
+      "size": 849518,
+      "duration_s": 49.533,
+      "sha256": "7f111d0a2dad7aac0902eff03006662c093fb8f1cea6ed726596f7eeaf1d54e7"
+     },
+     "side": {
+      "video": "dial-best5-n04-d3-side.mp4",
+      "poster": "dial-best5-n04-d3-side.jpg",
+      "size": 943136,
+      "duration_s": 49.533,
+      "sha256": "5ee209fcc3897618e19be95dff9c8ad8d4e8896b67c829a9139cbd243c781759"
+     }
+    },
+    "dial-best5-n06-d1": {
+     "front": {
+      "video": "dial-best5-n06-d1-front.mp4",
+      "poster": "dial-best5-n06-d1-front.jpg",
+      "size": 484775,
+      "duration_s": 30.467,
+      "sha256": "39e4efe4acbf49ca6947d33294b22d0a2ca6324af9f87fc684bc2ee1f14d0ea8"
+     },
+     "side": {
+      "video": "dial-best5-n06-d1-side.mp4",
+      "poster": "dial-best5-n06-d1-side.jpg",
+      "size": 602051,
+      "duration_s": 30.467,
+      "sha256": "b295180889046099d9e58102f28733bc87918afa37a313187d7bd3c29abfba40"
+     }
+    },
+    "dial-best5-n06-d2": {
+     "front": {
+      "video": "dial-best5-n06-d2-front.mp4",
+      "poster": "dial-best5-n06-d2-front.jpg",
+      "size": 378781,
+      "duration_s": 24.367,
+      "sha256": "0fb595b10f101eaea25996682ae24714356d8bf74b637ac9b7f3834cdea63787"
+     },
+     "side": {
+      "video": "dial-best5-n06-d2-side.mp4",
+      "poster": "dial-best5-n06-d2-side.jpg",
+      "size": 516287,
+      "duration_s": 24.367,
+      "sha256": "da82b6f8082076c51ba4dd155007a458d48d4a2aa4e4ce448fd7635a69574f77"
+     }
+    },
+    "dial-best5-n06-d3": {
+     "front": {
+      "video": "dial-best5-n06-d3-front.mp4",
+      "poster": "dial-best5-n06-d3-front.jpg",
+      "size": 1390338,
+      "duration_s": 83.7,
+      "sha256": "c53dfe2ce85d3869f712e60ca4c9cc1f73a7853f50739528f44c7f52da70b765"
+     },
+     "side": {
+      "video": "dial-best5-n06-d3-side.mp4",
+      "poster": "dial-best5-n06-d3-side.jpg",
+      "size": 1753996,
+      "duration_s": 83.7,
+      "sha256": "7ee1287d5beb07ed647257e893b0d6c60510ec648c6409dab7a1c3b84738697c"
+     }
+    },
+    "dial-best5-n08-d1": {
+     "front": {
+      "video": "dial-best5-n08-d1-front.mp4",
+      "poster": "dial-best5-n08-d1-front.jpg",
+      "size": 669456,
+      "duration_s": 34.9,
+      "sha256": "f2830e57a5726407c7392b9203427ee0ad56b6fe118940323eb398da1e0ac986"
+     },
+     "side": {
+      "video": "dial-best5-n08-d1-side.mp4",
+      "poster": "dial-best5-n08-d1-side.jpg",
+      "size": 803145,
+      "duration_s": 34.9,
+      "sha256": "59bdb7b691d6cf15ffa090ea268d3caae85ffd9cdc5144bdcb3b95fe581e40ad"
+     }
+    },
+    "dial-best5-n08-d2": {
+     "front": {
+      "video": "dial-best5-n08-d2-front.mp4",
+      "poster": "dial-best5-n08-d2-front.jpg",
+      "size": 424407,
+      "duration_s": 23.667,
+      "sha256": "2c9d482951dca2626146b41206d7e0c81a092a86fbaee3c9d0f24a7f7989f423"
+     },
+     "side": {
+      "video": "dial-best5-n08-d2-side.mp4",
+      "poster": "dial-best5-n08-d2-side.jpg",
+      "size": 558269,
+      "duration_s": 23.667,
+      "sha256": "7e87ee06a0420789c7f8ad9c2c79e52c7714bbfdb7b82ebad04f820bdeb063cd"
+     }
+    },
+    "dial-best5-n08-d3": {
+     "front": {
+      "video": "dial-best5-n08-d3-front.mp4",
+      "poster": "dial-best5-n08-d3-front.jpg",
+      "size": 2543184,
+      "duration_s": 161.467,
+      "sha256": "bf26f651732ebfee7ccd1d3518078432b60f4f4ea30eda088896334117d36c8d"
+     },
+     "side": {
+      "video": "dial-best5-n08-d3-side.mp4",
+      "poster": "dial-best5-n08-d3-side.jpg",
+      "size": 3317815,
+      "duration_s": 161.467,
+      "sha256": "e261083105e7ec1e2788943b9228f9e42e85998e253fd564130f3149160e1ecc"
+     }
+    },
+    "mosaic-a04-6x12-d1": {
+     "front": {
+      "video": "mosaic-a04-6x12-d1-front.mp4",
+      "poster": "mosaic-a04-6x12-d1-front.jpg",
+      "size": 1251629,
+      "duration_s": 43.567,
+      "sha256": "f62059a0f6b3487f93d7e0f6ce05802cc7231ef3d8813e86973da99741df8750"
+     },
+     "side": {
+      "video": "mosaic-a04-6x12-d1-side.mp4",
+      "poster": "mosaic-a04-6x12-d1-side.jpg",
+      "size": 1689018,
+      "duration_s": 43.567,
+      "sha256": "53f75ea2245eadda0820aa8810959016846af4f00737721b9d853f9dccfa2f88"
+     }
+    },
+    "mosaic-a04-6x12-d2": {
+     "front": {
+      "video": "mosaic-a04-6x12-d2-front.mp4",
+      "poster": "mosaic-a04-6x12-d2-front.jpg",
+      "size": 1162062,
+      "duration_s": 41.033,
+      "sha256": "354f9cd5c0244b442ae71b584aa781479c58c3861edbd7809a91cb75ff1d902f"
+     },
+     "side": {
+      "video": "mosaic-a04-6x12-d2-side.mp4",
+      "poster": "mosaic-a04-6x12-d2-side.jpg",
+      "size": 1524051,
+      "duration_s": 41.033,
+      "sha256": "c88ae84791bd8761b3a2e1f419793dfe52cbedac1b79bc799d94913af42b5814"
+     }
+    },
+    "mosaic-a04-6x12-d3": {
+     "front": {
+      "video": "mosaic-a04-6x12-d3-front.mp4",
+      "poster": "mosaic-a04-6x12-d3-front.jpg",
+      "size": 1151837,
+      "duration_s": 41.033,
+      "sha256": "d381a7b0eed31c37d012aafc2470facd5a3bdc2798b5702092840605ccef49cb"
+     },
+     "side": {
+      "video": "mosaic-a04-6x12-d3-side.mp4",
+      "poster": "mosaic-a04-6x12-d3-side.jpg",
+      "size": 1451277,
+      "duration_s": 41.033,
+      "sha256": "e5002c345f475744c6e86665e31cacd49487cdff467e7cebb5e0183e3d38649c"
+     }
+    },
+    "mosaic-a06-9x18-d1": {
+     "front": {
+      "video": "mosaic-a06-9x18-d1-front.mp4",
+      "poster": "mosaic-a06-9x18-d1-front.jpg",
+      "size": 2805739,
+      "duration_s": 76.867,
+      "sha256": "a32346a2c838b1bf1135651331050e3263b5ad7286932dbcf25b48bf25131700"
+     },
+     "side": {
+      "video": "mosaic-a06-9x18-d1-side.mp4",
+      "poster": "mosaic-a06-9x18-d1-side.jpg",
+      "size": 3795378,
+      "duration_s": 76.867,
+      "sha256": "59558f6da74ba7253f16a4dd434c60011675e22aa53eac87b18f1dd5bb145029"
+     }
+    },
+    "mosaic-a06-9x18-d2": {
+     "front": {
+      "video": "mosaic-a06-9x18-d2-front.mp4",
+      "poster": "mosaic-a06-9x18-d2-front.jpg",
+      "size": 2734134,
+      "duration_s": 72.967,
+      "sha256": "ce570d67ddd8d5da5e718d1a816e989a292a67c072d1820d408039d00acdcaa7"
+     },
+     "side": {
+      "video": "mosaic-a06-9x18-d2-side.mp4",
+      "poster": "mosaic-a06-9x18-d2-side.jpg",
+      "size": 3748405,
+      "duration_s": 72.967,
+      "sha256": "5fb1d806b63b83bc48040c7dea4f77f7b983bfc3267b831945daa8554cfe01ec"
+     }
+    },
+    "mosaic-a06-9x18-d3": {
+     "front": {
+      "video": "mosaic-a06-9x18-d3-front.mp4",
+      "poster": "mosaic-a06-9x18-d3-front.jpg",
+      "size": 2700912,
+      "duration_s": 72.967,
+      "sha256": "cc702565365be14224b59507e14c746fb17631ddb8f061c538a6e6cd7ad1094e"
+     },
+     "side": {
+      "video": "mosaic-a06-9x18-d3-side.mp4",
+      "poster": "mosaic-a06-9x18-d3-side.jpg",
+      "size": 3499868,
+      "duration_s": 72.967,
+      "sha256": "dcd6be135bbe00aeaf0356cabcb145a43696c6afa8d7d7acb6ba234576ec1013"
+     }
+    },
+    "mosaic-a08-12x24-d1": {
+     "front": {
+      "video": "mosaic-a08-12x24-d1-front.mp4",
+      "poster": "mosaic-a08-12x24-d1-front.jpg",
+      "size": 6121052,
+      "duration_s": 168.367,
+      "sha256": "b04000fa24fba0953dbdc862e84fff9904d9e4a78f4867b078dba9d205b02972"
+     },
+     "side": {
+      "video": "mosaic-a08-12x24-d1-side.mp4",
+      "poster": "mosaic-a08-12x24-d1-side.jpg",
+      "size": 7379162,
+      "duration_s": 168.367,
+      "sha256": "54093c35d6b7ca8d011ce3f2af51dc583a648f3a884fb46a11599f411dd19119"
+     }
+    },
+    "mosaic-a08-12x24-d2": {
+     "front": {
+      "video": "mosaic-a08-12x24-d2-front.mp4",
+      "poster": "mosaic-a08-12x24-d2-front.jpg",
+      "size": 6244388,
+      "duration_s": 173.767,
+      "sha256": "95dc8106b018e647d164c2aec768b9d95445b95763681954134f51b227e90e87"
+     },
+     "side": {
+      "video": "mosaic-a08-12x24-d2-side.mp4",
+      "poster": "mosaic-a08-12x24-d2-side.jpg",
+      "size": 7320281,
+      "duration_s": 173.767,
+      "sha256": "0684d177779c02acafe4a224b090a0e207a64502262f673a5ed0cbb93cab2287"
+     }
+    },
+    "mosaic-a08-12x24-d3": {
+     "front": {
+      "video": "mosaic-a08-12x24-d3-front.mp4",
+      "poster": "mosaic-a08-12x24-d3-front.jpg",
+      "size": 6158001,
+      "duration_s": 173.767,
+      "sha256": "52ca31003e2f1e369bacac84b3f97e1b7874fae16e84222559efa9ec7d1941b5"
+     },
+     "side": {
+      "video": "mosaic-a08-12x24-d3-side.mp4",
+      "poster": "mosaic-a08-12x24-d3-side.jpg",
+      "size": 7162187,
+      "duration_s": 173.767,
+      "sha256": "551b0a6bbaab2600e67fa1545abddb5ec1efa1d3437ef91ea9b02158edc16719"
+     }
+    },
+    "relay-a08-d1": {
+     "front": {
+      "video": "relay-a08-d1-front.mp4",
+      "poster": "relay-a08-d1-front.jpg",
+      "size": 447734,
+      "duration_s": 18.267,
+      "sha256": "b85e88bf8e25e746936389ce260ed179ef17f14a3b27d6b8c51d1f8fce141569"
+     },
+     "side": {
+      "video": "relay-a08-d1-side.mp4",
+      "poster": "relay-a08-d1-side.jpg",
+      "size": 399441,
+      "duration_s": 18.267,
+      "sha256": "b271e022ebec2732d57fd0a70fb51542d0f2feef81a2778c94747367d6d09f4f"
+     }
+    },
+    "relay-a08-d2": {
+     "front": {
+      "video": "relay-a08-d2-front.mp4",
+      "poster": "relay-a08-d2-front.jpg",
+      "size": 606753,
+      "duration_s": 26.467,
+      "sha256": "c0395d45ca6d40b5609795d0b89eeed1328dd32cafc83ef39372e17f5de334ac"
+     },
+     "side": {
+      "video": "relay-a08-d2-side.mp4",
+      "poster": "relay-a08-d2-side.jpg",
+      "size": 522311,
+      "duration_s": 26.467,
+      "sha256": "c39fe4b3ace5b021ec90307a6ab25591be48c4e0813daab18603d1ec2ddc0972"
+     }
+    },
+    "relay-a08-d3": {
+     "front": {
+      "video": "relay-a08-d3-front.mp4",
+      "poster": "relay-a08-d3-front.jpg",
+      "size": 626291,
+      "duration_s": 25.067,
+      "sha256": "7332fd62cafd12cb2cea3d163c78028be2bc29a21ccca5e587ccfe45a1c4813b"
+     },
+     "side": {
+      "video": "relay-a08-d3-side.mp4",
+      "poster": "relay-a08-d3-side.jpg",
+      "size": 504417,
+      "duration_s": 25.067,
+      "sha256": "0f2604ee4d9f6e9b5c827397f945ff1b9a7c23b2ab41ee785ff3711277f79248"
+     }
+    },
+    "relay-a12-d1": {
+     "front": {
+      "video": "relay-a12-d1-front.mp4",
+      "poster": "relay-a12-d1-front.jpg",
+      "size": 826643,
+      "duration_s": 55.2,
+      "sha256": "51c86b5117238cc18d81eecccbe0802a531c129e2b42bb61e5d93524eb437cbf"
+     },
+     "side": {
+      "video": "relay-a12-d1-side.mp4",
+      "poster": "relay-a12-d1-side.jpg",
+      "size": 1403204,
+      "duration_s": 55.2,
+      "sha256": "0c874f80c716c5d92373f51c22336943ca48f50002b1a2286539e8248840ebdf"
+     }
+    },
+    "relay-a12-d2": {
+     "front": {
+      "video": "relay-a12-d2-front.mp4",
+      "poster": "relay-a12-d2-front.jpg",
+      "size": 969555,
+      "duration_s": 49.733,
+      "sha256": "e9f8e90bea92bf01f6ad18d631952533f602e0f7b57267628688d2c40c7d7479"
+     },
+     "side": {
+      "video": "relay-a12-d2-side.mp4",
+      "poster": "relay-a12-d2-side.jpg",
+      "size": 1185170,
+      "duration_s": 49.733,
+      "sha256": "97fd12e7904c4ed8fcabfa54467b69f01aff6a5bd098eb6b6d8c3ed41170bd88"
+     }
+    },
+    "relay-a12-d3": {
+     "front": {
+      "video": "relay-a12-d3-front.mp4",
+      "poster": "relay-a12-d3-front.jpg",
+      "size": 1083517,
+      "duration_s": 63.7,
+      "sha256": "25e88209ebb53a90ac018b12cecda16739e0da5e9f52ce1972a250d6e6622fab"
+     },
+     "side": {
+      "video": "relay-a12-d3-side.mp4",
+      "poster": "relay-a12-d3-side.jpg",
+      "size": 1313499,
+      "duration_s": 63.7,
+      "sha256": "7b0ab501d5e8c08a8378d3a76db39cdc8b66fedfb541d2713f972b76453aeb0a"
+     }
+    },
+    "relay-a16-d1": {
+     "front": {
+      "video": "relay-a16-d1-front.mp4",
+      "poster": "relay-a16-d1-front.jpg",
+      "size": 1721017,
+      "duration_s": 98.1,
+      "sha256": "3c0af655b496286f45cb63f9cf730a425ea1e4c813c016ac997390e5ba25f6e9"
+     },
+     "side": {
+      "video": "relay-a16-d1-side.mp4",
+      "poster": "relay-a16-d1-side.jpg",
+      "size": 2043561,
+      "duration_s": 98.1,
+      "sha256": "5e4075637b88a95dd47580173b80d10b93d6723da30a05a7ae3633957bd600dc"
+     }
+    },
+    "relay-a16-d2": {
+     "front": {
+      "video": "relay-a16-d2-front.mp4",
+      "poster": "relay-a16-d2-front.jpg",
+      "size": 1801496,
+      "duration_s": 86.3,
+      "sha256": "5032da22f3079fa9873570d6e33ea1bcdc32486735fb0118eb9f00bfa00fad60"
+     },
+     "side": {
+      "video": "relay-a16-d2-side.mp4",
+      "poster": "relay-a16-d2-side.jpg",
+      "size": 1808700,
+      "duration_s": 86.3,
+      "sha256": "518ef3303cfa8888f99c0d586513eded9255fac2a3571c8257772fabd3d93abc"
+     }
+    },
+    "relay-a16-d3": {
+     "front": {
+      "video": "relay-a16-d3-front.mp4",
+      "poster": "relay-a16-d3-front.jpg",
+      "size": 2036008,
+      "duration_s": 97.4,
+      "sha256": "ceec0892473ba18c04c3bc02faf685ff66b1f04b8f28e1c8ff64011b9a70a43f"
+     },
+     "side": {
+      "video": "relay-a16-d3-side.mp4",
+      "poster": "relay-a16-d3-side.jpg",
+      "size": 1852035,
+      "duration_s": 97.4,
+      "sha256": "d2c815eb77b2b24cc76cf350f41c8401c7380ee072aef48b426641e07debe3aa"
+     }
+    },
+    "transport-a04-d1": {
+     "front": {
+      "video": "transport-a04-d1-front.mp4",
+      "poster": "transport-a04-d1-front.jpg",
+      "size": 471698,
+      "duration_s": 22.7,
+      "sha256": "56e7cafbc1a244484356df5f86438335ef578dbf9bcc6f1f0a5b75e012225008"
+     },
+     "side": {
+      "video": "transport-a04-d1-side.mp4",
+      "poster": "transport-a04-d1-side.jpg",
+      "size": 566510,
+      "duration_s": 22.7,
+      "sha256": "ab164d07ae2d8ef6e21f58532d4b30b52933e99ffc88749f830ad8f38289194f"
+     }
+    },
+    "transport-a04-d2": {
+     "front": {
+      "video": "transport-a04-d2-front.mp4",
+      "poster": "transport-a04-d2-front.jpg",
+      "size": 661696,
+      "duration_s": 33.1,
+      "sha256": "fdb24e12a9bf7563f33f2db754ec607fde627937b165207784073f3de38cd37b"
+     },
+     "side": {
+      "video": "transport-a04-d2-side.mp4",
+      "poster": "transport-a04-d2-side.jpg",
+      "size": 768506,
+      "duration_s": 33.1,
+      "sha256": "25f1d167010b3dbb9c270287bc094341f43f5688f533c4139f4ac11be765a5b6"
+     }
+    },
+    "transport-a04-d3": {
+     "front": {
+      "video": "transport-a04-d3-front.mp4",
+      "poster": "transport-a04-d3-front.jpg",
+      "size": 675559,
+      "duration_s": 36.0,
+      "sha256": "a5e481739136c3217f3716d5b7ad4b6b15c0f7f00938c123a96a7f962525b836"
+     },
+     "side": {
+      "video": "transport-a04-d3-side.mp4",
+      "poster": "transport-a04-d3-side.jpg",
+      "size": 786725,
+      "duration_s": 36.0,
+      "sha256": "b1e57e14641e307b176126d8ff6c02e35b589df9ab4c89464ed99fc2a3f7117b"
+     }
+    },
+    "transport-a08-d1": {
+     "front": {
+      "video": "transport-a08-d1-front.mp4",
+      "poster": "transport-a08-d1-front.jpg",
+      "size": 1374636,
+      "duration_s": 54.0,
+      "sha256": "442ab4a7064a55b756ee4828b46fa40a7caa9c75da45e56868124b0b4e69c1af"
+     },
+     "side": {
+      "video": "transport-a08-d1-side.mp4",
+      "poster": "transport-a08-d1-side.jpg",
+      "size": 1872298,
+      "duration_s": 54.0,
+      "sha256": "9ef2b5278b3d0760681a4f3db906144f31d6e66e77163255e11fe8c79180c3e7"
+     }
+    },
+    "transport-a08-d2": {
+     "front": {
+      "video": "transport-a08-d2-front.mp4",
+      "poster": "transport-a08-d2-front.jpg",
+      "size": 2016872,
+      "duration_s": 121.233,
+      "sha256": "b0c3edf841feb17369268e64c3b41b08475b5faca04fdf8ea0719a10006375b6"
+     },
+     "side": {
+      "video": "transport-a08-d2-side.mp4",
+      "poster": "transport-a08-d2-side.jpg",
+      "size": 2809019,
+      "duration_s": 121.233,
+      "sha256": "3bcc9a18535b98334aa24b68a2149b5f669e339155e879f90998848cd7c08190"
+     }
+    },
+    "transport-a08-d3": {
+     "front": {
+      "video": "transport-a08-d3-front.mp4",
+      "poster": "transport-a08-d3-front.jpg",
+      "size": 3385016,
+      "duration_s": 255.7,
+      "sha256": "3fcf0d8a1f541d96d55d5ce62dc5dbcb28d3498d6519396fd72aceed4ddaf18f"
+     },
+     "side": {
+      "video": "transport-a08-d3-side.mp4",
+      "poster": "transport-a08-d3-side.jpg",
+      "size": 4583321,
+      "duration_s": 255.7,
+      "sha256": "82f3230786a3e8cc86d71f6245f6e07070f5772fa6a1534f0a2f12c57ab3a61d"
+     }
+    },
+    "transport-a12-d1": {
+     "front": {
+      "video": "transport-a12-d1-front.mp4",
+      "poster": "transport-a12-d1-front.jpg",
+      "size": 2786542,
+      "duration_s": 116.433,
+      "sha256": "1eb50ee3deabff621566ec1c9ebf9a7532b9359088f7999537e50694486b132c"
+     },
+     "side": {
+      "video": "transport-a12-d1-side.mp4",
+      "poster": "transport-a12-d1-side.jpg",
+      "size": 3339414,
+      "duration_s": 116.433,
+      "sha256": "10e3452f299dedf3f10cc42e31e95850bc703c3041394f04040e0c8f3357726c"
+     }
+    },
+    "transport-a12-d2": {
+     "front": {
+      "video": "transport-a12-d2-front.mp4",
+      "poster": "transport-a12-d2-front.jpg",
+      "size": 2784090,
+      "duration_s": 127.767,
+      "sha256": "ecd041def583369ec715ee510792938e426d9c8e232eb634eddc78af527c54db"
+     },
+     "side": {
+      "video": "transport-a12-d2-side.mp4",
+      "poster": "transport-a12-d2-side.jpg",
+      "size": 3189290,
+      "duration_s": 127.767,
+      "sha256": "3aa440f1d5894413dadd9f9d78b61004c42d9e0cae884c26520f44280ac7e216"
+     }
+    },
+    "transport-a12-d3": {
+     "front": {
+      "video": "transport-a12-d3-front.mp4",
+      "poster": "transport-a12-d3-front.jpg",
+      "size": 2879704,
+      "duration_s": 139.667,
+      "sha256": "2a78321ed0c753b0fc62bef201ed9925ae6b7b8e272e0379e7dcf6d8264723f6"
+     },
+     "side": {
+      "video": "transport-a12-d3-side.mp4",
+      "poster": "transport-a12-d3-side.jpg",
+      "size": 3299672,
+      "duration_s": 139.667,
+      "sha256": "237fc66e4114629ae96ada7f337a0f6fe845ac7a01dad3a54b5c9783bfd44e57"
+     }
+    }
+   }
+  }
+ ],
+ "film": {
+  "video": "_media/film/robofrontier-film-1080p.mp4",
+  "poster": "assets/img/film.jpg",
+  "note": "The Factory tour: every family and scale, 3 min 30 s, 1080p."
+ }
+}

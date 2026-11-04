@@ -1,334 +1,173 @@
+<div align="center">
+
+<img src="docs/media/readme/banner.jpg" alt="Sixteen robot arms at a curved table in the RoboFrontier factory" width="100%">
+
 # RoboFrontier
 
-**Benchmarking How LLM Agents Organize, Communicate, and Collaborate in a
-Multi-Robot World**
+**Can language models run a robot factory?**
 
-RoboFrontier studies language-model policies controlling multiple robot arms in
-MuJoCo. Four task families—Transport, Mosaic, Relay and Dial—provide 36 released
-cases across three difficulty levels and three scales. Native Codex and Claude
-Code hosts share task, physics, role, scoring and evidence contracts. A separate
-LLM supervisor is optional: preparation, execution, monitoring, stopping and data
-collection have explicit command-line entries.
+Language-model agents in charge of up to sixteen robot arms in one physical world:
+36 tasks, four families, 24-hour runs.
 
-**Integration status:** the reviewed engineering integration and unified commands
-are published on `main`. Read the [acceptance ledger](docs/archive/unified-main.md)
-for source-pinned verification, follow-up repairs and open gates. Claude scored
-execution remains closed; all four
-Claude topologies have engineering entries. Full historical checks require legacy
-assets and closed recordings beyond the policy asset bundle; see the
-[testing guide](docs/development/testing.md). Model profiles are configuration choices, not universal provider
-compatibility certificates.
+[**Project page**](https://changxuanfan.github.io/RoboFrontier/) ·
+[**Watch the film**](https://changxuanfan.github.io/RoboFrontier/#film) ·
+[**Tasks**](docs/tasks/README.md) ·
+[**Getting started**](docs/getting-started.md)
 
-## Factory tour
+[![License: MIT](https://img.shields.io/badge/code-MIT-d4ff3a?style=flat-square&labelColor=06080b)](LICENSE)
+[![Data: CC BY 4.0](https://img.shields.io/badge/data%20%26%20media-CC%20BY%204.0-8fc1ec?style=flat-square&labelColor=06080b)](LICENSE-DATA.md)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-9fdc8c?style=flat-square&labelColor=06080b)](pyproject.toml)
 
-[![Original Factory tour, 1080p](docs/factory/media/factory-tour-original.jpg)](https://github.com/changxuanfan/RoboFrontier/releases/tag/factory-tour-media-20261102)
+</div>
 
-[Watch or download the original full video](https://github.com/changxuanfan/RoboFrontier/releases/download/factory-tour-media-20261102/robofrontier-factory-tour-original.mp4)
-(210.5 seconds, 1920 × 1080, 30 fps). The original MP4 is unchanged;
-[media identity](docs/factory/media/factory-tour-original.json) and
-[release checksums](https://github.com/changxuanfan/RoboFrontier/releases/download/factory-tour-media-20261102/SHA256SUMS)
-are available. This historical offline presentation is not a new current-scene
-render or evidence of model/task success. A new full render is deferred at the
-user's request; the editable English project remains available.
+<!-- media:film -->
+[![The RoboFrontier film: a three-and-a-half-minute tour of the factory and its 36 tasks](docs/media/readme/film.jpg)](https://github.com/changxuanfan/RoboFrontier/releases/download/factory-tour-media-20261102/robofrontier-factory-tour-original.mp4)
+<!-- /media:film -->
 
-## Start here
+## What it is
 
-| Goal | Guide |
+RoboFrontier asks language-model agents to **organize, communicate and collaborate**
+across many robot arms. Every model drives the same simulated Franka arms through the
+same robot tool, sees the same cameras and follows the same rules. Nothing is scripted:
+who does what, when to wait, how to talk and how to recover are the agent's choices.
+
+| | |
 | --- | --- |
-| Configure, prepare and run a benchmark | [Unified CLI and TOML](docs/unified-cli.md) |
-| Run on Linux Docker or macOS Docker Desktop | [Docker execution](docs/running/docker.md) |
-| Queue a job with node-local runtime state | [Slurm submission](docs/running/slurm.md) |
-| Replay motion and render Factory backgrounds | [Factory workflow](docs/factory/replay.md) |
-| Edit the full Factory camera plan and English video titles/subtitles | [Editable video project](docs/factory/editorial.md) |
-| Browse the 36 current tasks and initial scenes | [Download the offline atlas](https://github.com/changxuanfan/RoboFrontier/releases/download/development-fixtures-20261102/robofrontier-task-atlas-20261102.zip) · [Atlas guide](docs/tasks/atlas.md) |
-| See which integration gates have passed | [Acceptance and source provenance](docs/archive/unified-main.md) |
-| Read the policy's role and tool contract | [Robot collaboration skill](prompts/skills/robot-collaboration/SKILL.md) |
-| Read completion and recovery rules | [Shared policy rules](prompts/rules.md) |
-| Run privileged references and interpret recovery checks | [Oracle execution](docs/oracle/README.md) and [recovery boundaries](docs/oracle/recovery.md) |
+| **Agents** | Native Codex and Claude Code sessions. A Controller owns the task and, in the adaptive protocol, forks delegates for bounded jobs and takes their arms back. |
+| **One robot tool** | Move, grasp, release, observe from named cameras, wait for events, message teammates, delegate. Every call and its outcome is recorded. |
+| **A physical world** | MuJoCo dynamics with real contacts. Grasps slip, timbers swing, springs push back; no teleporting, state writes or resets. |
+| **Scoring** | Success is judged on the final world state; failures, retries, time, tokens, collisions and parallelism are reported beside it. |
 
-Current source, documentation and historical prose use English. Frozen legacy
-inputs retain their original filenames, language, protocol and source;
-current documentation must not reinterpret an old result as a new-protocol run.
+## Four task families
 
-## Install and verify assets
+Each family has nine tasks: three team sizes crossed with three difficulty levels.
+The videos below are the privileged **Oracle** reference solutions, rendered in the
+Factory scene. Each montage plays all nine tasks of a family at once: rows are
+difficulty levels 1–3, columns are team sizes.
 
-Use a repository checkout and Python 3.12. Install uv, Node.js and the native CLI
-for the selected policy engine. The integration checks use Codex 0.165.0 and
-Claude Code 2.1.312; these are observed reproducibility pins, not claims about the
-latest upstream releases. The Docker image installs both pinned CLIs itself.
+### 🟦 Transport — deliver ordered items to their boards
+
+4, 8 and 12 arms · 12–36 targets · L1 release on the board · L2 blades into fixed blind
+slots · L3 a spring-mounted moving board.
+
+<!-- media:montage-transport -->
+[![Transport: nine Oracle runs](docs/media/readme/montage-transport.jpg)](https://changxuanfan.github.io/RoboFrontier/#watch)
+<!-- /media:montage-transport -->
+
+### 🟩 Mosaic — fill a color pattern with distinct cubes
+
+4, 6 and 8 arms · 72–288 cells · L1 pockets guide each cube · L2 printed grid lines
+· L3 no visible grid.
+
+<!-- media:montage-mosaic -->
+[![Mosaic: nine Oracle runs](docs/media/readme/montage-mosaic.jpg)](https://changxuanfan.github.io/RoboFrontier/#watch)
+<!-- /media:montage-mosaic -->
+
+### 🟧 Relay — carry long timbers arm to arm
+
+8, 12 and 16 arms · 2–4 timbers · L1 straight timber · L2 a 63-degree arc with a pendant
+· L3 a deflected timber on passive springs.
+
+<!-- media:montage-relay -->
+[![Relay: nine Oracle runs](docs/media/readme/montage-relay.jpg)](https://changxuanfan.github.io/RoboFrontier/#watch)
+<!-- /media:montage-relay -->
+
+### 🟨 Dial — crack a hidden code with spring dials
+
+4, 6 and 8 dials on 4–16 arms · L1 fixed modules · L2 lift each module with support and
+grasp · L3 lifted modules with an eccentric crank. A BEST display shows only the best
+match count so far.
+
+<!-- media:montage-dial -->
+[![Dial: nine Oracle runs](docs/media/readme/montage-dial.jpg)](https://changxuanfan.github.io/RoboFrontier/#watch)
+<!-- /media:montage-dial -->
+
+<details>
+<summary><b>All 36 tasks, one by one</b> — select a task to watch its full run, front and side</summary>
+
+<!-- gallery -->
+<b>Transport</b>
+
+<table><tr><th></th><th>4 arms</th><th>8 arms</th><th>12 arms</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a04-d1"><img src="docs/media/readme/tasks/transport-a04-d1.jpg" width="240" alt="transport-a04-d1"></a><br><sub>transport-a04-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a08-d1"><img src="docs/media/readme/tasks/transport-a08-d1.jpg" width="240" alt="transport-a08-d1"></a><br><sub>transport-a08-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a12-d1"><img src="docs/media/readme/tasks/transport-a12-d1.jpg" width="240" alt="transport-a12-d1"></a><br><sub>transport-a12-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a04-d2"><img src="docs/media/readme/tasks/transport-a04-d2.jpg" width="240" alt="transport-a04-d2"></a><br><sub>transport-a04-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a08-d2"><img src="docs/media/readme/tasks/transport-a08-d2.jpg" width="240" alt="transport-a08-d2"></a><br><sub>transport-a08-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a12-d2"><img src="docs/media/readme/tasks/transport-a12-d2.jpg" width="240" alt="transport-a12-d2"></a><br><sub>transport-a12-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a04-d3"><img src="docs/media/readme/tasks/transport-a04-d3.jpg" width="240" alt="transport-a04-d3"></a><br><sub>transport-a04-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a08-d3"><img src="docs/media/readme/tasks/transport-a08-d3.jpg" width="240" alt="transport-a08-d3"></a><br><sub>transport-a08-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a12-d3"><img src="docs/media/readme/tasks/transport-a12-d3.jpg" width="240" alt="transport-a12-d3"></a><br><sub>transport-a12-d3</sub></td></tr></table>
+
+<b>Mosaic</b>
+
+<table><tr><th></th><th>4 arms</th><th>6 arms</th><th>8 arms</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a04-6x12-d1"><img src="docs/media/readme/tasks/mosaic-a04-6x12-d1.jpg" width="240" alt="mosaic-a04-6x12-d1"></a><br><sub>mosaic-a04-6x12-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a06-9x18-d1"><img src="docs/media/readme/tasks/mosaic-a06-9x18-d1.jpg" width="240" alt="mosaic-a06-9x18-d1"></a><br><sub>mosaic-a06-9x18-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a08-12x24-d1"><img src="docs/media/readme/tasks/mosaic-a08-12x24-d1.jpg" width="240" alt="mosaic-a08-12x24-d1"></a><br><sub>mosaic-a08-12x24-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a04-6x12-d2"><img src="docs/media/readme/tasks/mosaic-a04-6x12-d2.jpg" width="240" alt="mosaic-a04-6x12-d2"></a><br><sub>mosaic-a04-6x12-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a06-9x18-d2"><img src="docs/media/readme/tasks/mosaic-a06-9x18-d2.jpg" width="240" alt="mosaic-a06-9x18-d2"></a><br><sub>mosaic-a06-9x18-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a08-12x24-d2"><img src="docs/media/readme/tasks/mosaic-a08-12x24-d2.jpg" width="240" alt="mosaic-a08-12x24-d2"></a><br><sub>mosaic-a08-12x24-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a04-6x12-d3"><img src="docs/media/readme/tasks/mosaic-a04-6x12-d3.jpg" width="240" alt="mosaic-a04-6x12-d3"></a><br><sub>mosaic-a04-6x12-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a06-9x18-d3"><img src="docs/media/readme/tasks/mosaic-a06-9x18-d3.jpg" width="240" alt="mosaic-a06-9x18-d3"></a><br><sub>mosaic-a06-9x18-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a08-12x24-d3"><img src="docs/media/readme/tasks/mosaic-a08-12x24-d3.jpg" width="240" alt="mosaic-a08-12x24-d3"></a><br><sub>mosaic-a08-12x24-d3</sub></td></tr></table>
+
+<b>Relay</b>
+
+<table><tr><th></th><th>8 arms</th><th>12 arms</th><th>16 arms</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a08-d1"><img src="docs/media/readme/tasks/relay-a08-d1.jpg" width="240" alt="relay-a08-d1"></a><br><sub>relay-a08-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a12-d1"><img src="docs/media/readme/tasks/relay-a12-d1.jpg" width="240" alt="relay-a12-d1"></a><br><sub>relay-a12-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a16-d1"><img src="docs/media/readme/tasks/relay-a16-d1.jpg" width="240" alt="relay-a16-d1"></a><br><sub>relay-a16-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a08-d2"><img src="docs/media/readme/tasks/relay-a08-d2.jpg" width="240" alt="relay-a08-d2"></a><br><sub>relay-a08-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a12-d2"><img src="docs/media/readme/tasks/relay-a12-d2.jpg" width="240" alt="relay-a12-d2"></a><br><sub>relay-a12-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a16-d2"><img src="docs/media/readme/tasks/relay-a16-d2.jpg" width="240" alt="relay-a16-d2"></a><br><sub>relay-a16-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a08-d3"><img src="docs/media/readme/tasks/relay-a08-d3.jpg" width="240" alt="relay-a08-d3"></a><br><sub>relay-a08-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a12-d3"><img src="docs/media/readme/tasks/relay-a12-d3.jpg" width="240" alt="relay-a12-d3"></a><br><sub>relay-a12-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a16-d3"><img src="docs/media/readme/tasks/relay-a16-d3.jpg" width="240" alt="relay-a16-d3"></a><br><sub>relay-a16-d3</sub></td></tr></table>
+
+<b>Dial</b>
+
+<table><tr><th></th><th>4 dials</th><th>6 dials</th><th>8 dials</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n04-d1"><img src="docs/media/readme/tasks/dial-best5-n04-d1.jpg" width="240" alt="dial-best5-n04-d1"></a><br><sub>dial-best5-n04-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n06-d1"><img src="docs/media/readme/tasks/dial-best5-n06-d1.jpg" width="240" alt="dial-best5-n06-d1"></a><br><sub>dial-best5-n06-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n08-d1"><img src="docs/media/readme/tasks/dial-best5-n08-d1.jpg" width="240" alt="dial-best5-n08-d1"></a><br><sub>dial-best5-n08-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n04-d2"><img src="docs/media/readme/tasks/dial-best5-n04-d2.jpg" width="240" alt="dial-best5-n04-d2"></a><br><sub>dial-best5-n04-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n06-d2"><img src="docs/media/readme/tasks/dial-best5-n06-d2.jpg" width="240" alt="dial-best5-n06-d2"></a><br><sub>dial-best5-n06-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n08-d2"><img src="docs/media/readme/tasks/dial-best5-n08-d2.jpg" width="240" alt="dial-best5-n08-d2"></a><br><sub>dial-best5-n08-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n04-d3"><img src="docs/media/readme/tasks/dial-best5-n04-d3.jpg" width="240" alt="dial-best5-n04-d3"></a><br><sub>dial-best5-n04-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n06-d3"><img src="docs/media/readme/tasks/dial-best5-n06-d3.jpg" width="240" alt="dial-best5-n06-d3"></a><br><sub>dial-best5-n06-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n08-d3"><img src="docs/media/readme/tasks/dial-best5-n08-d3.jpg" width="240" alt="dial-best5-n08-d3"></a><br><sub>dial-best5-n08-d3</sub></td></tr></table>
+<!-- /gallery -->
+
+</details>
+
+## How a run works
+
+<img src="docs/media/readme/protocol.svg" alt="The adaptive protocol: a Controller forks delegates that take arms for a bounded job and return them" width="100%">
+
+All benchmark runs use the **adaptive** protocol: one Controller reads the task, keeps
+the plan and either drives arms itself or forks a delegate for a bounded job, which hands
+its arms back with `return_task`. We compare it with three fixed organizations on the
+same tasks:
+
+| Mode | Organization |
+| --- | --- |
+| `single` | One Controller drives every arm. |
+| `controller-worker` | A coordinating Controller and one permanent Worker per arm. |
+| `worker-worker` | One Worker per arm; Workers coordinate as peers. |
+| `adaptive` | One Controller that creates and retires delegates as it sees fit. |
+
+Each run gets 24 hours from its START; reading, planning and waiting count. Benchmark
+results, the communication study and the skills study are on the
+[project page](https://changxuanfan.github.io/RoboFrontier/#results).
+
+## Quick start
+
+Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js and the native CLI of the engine
+you select.
 
 ```sh
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap
-.venv/bin/robofrontier plan
+.venv/bin/robofrontier bootstrap   # restore the pinned task assets, hash-verified
+.venv/bin/robofrontier doctor      # check the CLI, sandbox and renderer
+.venv/bin/robofrontier plan        # what would run; no model calls
 ```
 
-`bootstrap` downloads the policy archive pinned in `configs/policy-assets.json`,
-verifies its SHA-256 and restores every referenced asset with hash verification.
-It reuses already verified files. `prepare` performs the same required asset
-setup automatically. Cloning Git alone cannot execute an installation step.
-Neither bootstrap, planning nor preparation calls a language model.
+Preparing and running a batch make real, billable model calls only after an explicit
+preflight. [Getting started](docs/getting-started.md) covers configuration, running,
+monitoring, data handoff, Oracle and Factory; [docs/](docs/README.md) has every guide.
 
-The asset lock also records one reviewed metadata-compatible release: nine
-historical Mosaic edit references now use a pinned original video index. Every
-other release field and all asset bytes remain unchanged. Bootstrap authenticates
-both the exact revised release and its unchanged-field projection before reusing
-the original archive. The task atlas retains its original capture-release hash;
-this metadata change did not regenerate its images or alter task physics.
-
-For an offline machine, download the archive named by the checked-in asset lock
-on a connected machine, transfer it, and run:
-
-```sh
-.venv/bin/python -m scripts.benchmark_handoff setup-assets \
-  --archive /path/to/the-pinned-policy-assets.tar.gz
-.venv/bin/python -m scripts.tasks check --purpose gpt --assets
-```
-
-Do not substitute a similarly named asset package or rebuild missing labels
-approximately. A changed scene or asset hash identifies a different input. The
-larger optional Factory recording bundle has its own release lock and installer;
-ordinary policy preparation does not download it.
-
-## Defaults and configuration
-
-The single public settings file is [robofrontier.toml](robofrontier.toml). A
-partial user TOML overrides named defaults; explicit CLI options override those
-settings. Unknown options and invalid values fail before execution. Each prepared
-batch freezes its resolved configuration and input hashes. Editing TOML later
-does not change an existing batch.
-
-The new-run defaults are:
-
-- Native Codex, official OpenAI API, Luna, reasoning effort `high`.
-- Adaptive topology, all 36 current cases and 36 concurrent host slots.
-- A 0.3-second interval between initial host launches, after serialized native
-  initialization. This interval does not delay robot calls or model turns.
-- A separate 86,400-second task limit measured from each persisted START.
-- Linux NVIDIA EGL observations and CPU MuJoCo dynamics.
-- JPEG observations at 896 x 560, quality 85; realtime MP4 recording disabled.
-- Automatic stopped-evidence collection and a verified ZIP archive; originals
-  retained unless an operator explicitly performs a separate reviewed cleanup.
-
-The requested concurrency is not a hardware or provider capacity guarantee.
-Account for simulator/session/delegate memory, CPU, GPU contexts, local disk and
-provider rate limits. OOM or an unsealed tool outcome is an engineering issue,
-not an automatic model task failure.
-
-Store API keys in the ignored `.env` or process environment. Never put credentials
-in TOML or commit them. Existing keys and Desktop authentication are not copied
-into another user's checkout. The selected engine's catalog is
-`configs/models.json` or `configs/claude-models.json`. OpenLux and third-party
-profiles need their own compatibility checks; provider routing groups are not
-selected by changing a task's model prompt.
-
-## Run from commands
-
-On an equipped Linux NVIDIA host, first check local execution prerequisites:
-
-```sh
-.venv/bin/robofrontier doctor
-```
-
-Doctor checks the selected native CLI, the Codex workspace sandbox when selected,
-and a real RGB renderer. It does not authenticate or call a model. On macOS use
-`doctor --render native` and prepare with `--render native`. For Linux CPU
-rendering use `--render cpu`; on macOS the CPU path runs inside Linux Docker.
-Render backend mismatches fail instead of silently falling back.
-
-After setting `OPENAI_API_KEY`, explicitly authorize a provider compatibility
-preflight, then prepare and run the full default batch:
-
-```sh
-.venv/bin/robofrontier preflight --confirm-spend
-.venv/bin/robofrontier prepare --output runs/policy/example-36
-.venv/bin/robofrontier run runs/policy/example-36
-```
-
-Preflight and run make real, potentially billable model calls. A smoke-only
-provider receipt does not qualify a scored run. A provider/catalog/CLI mismatch
-requires another explicit preflight. Local sandbox prerequisites are checked
-before confirmed preflight; local sandbox and frozen rendering are checked before
-task hosts start.
-
-To prepare four minimum-arm Level 1 tasks instead, choose a new directory:
-
-```sh
-.venv/bin/robofrontier prepare --level 1 --min-arms --parallel 4 \
-  --output runs/policy/example-l1
-```
-
-Preparing does not launch this batch. Use the same `run` command when ready.
-Every task has its own START and clock; preparation and session setup precede
-START, while initial reading, observation and planning count as task time.
-
-Monitor or stop from another terminal:
-
-```sh
-.venv/bin/robofrontier status runs/policy/example-36
-.venv/bin/robofrontier stop runs/policy/example-36
-```
-
-Status reads an atomic supervisor snapshot. Stop requests orderly closure; inspect
-the final sealing/collection result before treating it as complete. A disconnected
-native session or uncertain physical request is not automatically restarted or
-replayed. Short engineering stops are separate from the published task deadline.
-
-## Four collaboration modes
-
-| Mode | Initial roles and authority |
+| Path | What is there |
 | --- | --- |
-| `single` | One Controller controls all arms and creates no delegates. |
-| `controller-worker` | One coordinating Controller and one permanent Worker per arm; each Worker controls its assigned arm. |
-| `worker-worker` | One permanent Worker per arm; Workers coordinate directly with peers. |
-| `adaptive` | One Controller controls all arms and dynamically chooses whether, when and how many bounded delegates to create or retire. |
+| [`benchmark/`](benchmark/README.md) | The 36 released tasks and `release.json` |
+| [`robofrontier/`](robofrontier) | Simulation, native hosts, runtime protocol, evidence |
+| [`prompts/`](prompts) | Every text a model reads: rules, roles, skills |
+| [`site/`](site/DESIGN.md) | The project page |
+| [`docs/`](docs/README.md) | Guides by topic and dated history |
 
-All new unified batches directly START after their required initial native
-sessions are bound. Each role receives an explicit started prompt. `ready` is an optional
-capability query; it is not a model-readiness gate. Old `ready_barrier_v1` inputs
-keep their frozen legacy behavior. Direct START does not change robot ownership.
+## Citation
 
-Claude exposes all four modes as explicit engineering drafts, including native
-standing Workers with independent sessions. See [Claude standing teams](docs/engines/claude-code.md#standing-teams)
-for commands, resource implications and measured coverage. Formal scored Claude
-lifecycle qualification remains an integration gate. Use the engine-specific guide rather than assuming that a
-Codex app-server tool/fork interface exists in Claude Code. API and native
-subscription authentication are separate paths. In particular, isolated Codex
-API homes do not imply qualified concurrent subscription-token refresh.
-
-## Completion, recovery and timing
-
-The independent scorer determines task completion from published conditions.
-Process events such as supported drop/collision detections are reported
-separately and do not automatically veto terminal completion. Dial retains its
-unlock latch: unlocking completes the puzzle. These rules do not grant an agent
-access to private evaluation state or Oracle solutions.
-
-A Controller should keep observing, acting and recovering while the task remains
-unfinished. `finish` is an end proposal accepted only after closure conditions;
-it is appropriate for completion or publicly supported unrecoverability. Accepting
-it does not imply a successful score. Ending a normal model turn or returning a
-delegate does not itself end the experiment. Hosts enforce deadline and stop
-requests independently of a supervising LLM.
-
-For a new robot request, omit the outer `call_id`; the host returns a generated
-identifier. Query an existing action with a new `job` request and its original ID
-in `data.call_id`. An uncertain result may be retried only under its original ID
-and identical payload. A rejected ID conflict and an uncertain transport result
-have different meanings; neither permits blind repetition of physical actions.
-
-## Runtime data and handoff
-
-A batch lives under the path supplied to `prepare`, with one run per profile/case.
-Each run contains frozen public/private inputs, observations, tool/host events,
-runtime state and motion under `private/outputs/motion/`. Live runtime SQLite and
-Codex state must be on a node-local filesystem. Never monitor an active Docker
-SQLite database from macOS or place active WAL databases on Lustre/NFS.
-
-For new API batches, each task uses a private Codex home beneath
-`.robofrontier/codex/`. Its `sessions/` directory contains the native Controller
-and delegate transcripts. The run's `codex-home.json` records its exact home.
-Legacy `.codex-luna/` and shared-home recordings remain separate legacy layouts.
-`codex-host.jsonl` is the harness event log; it does not replace native session
-JSONL files.
-
-After writers stop, automatic collection places portable evidence under
-`runs/exports/` and creates a sibling ZIP. Review collection completeness and
-sealing issues. The archive deduplicates identical payloads and replaces inline
-session image Base64 with reversible image-object references. Restoration verifies
-hashes and reconstructs original transcript bytes. Live native logs are not edited
-in place. Creating a ZIP alone does not reclaim the originals' disk space.
-
-Motion retains timestamps, appearance changes and the existing float32 states;
-XOR and ZIP compression add no further numeric loss. The original conversion to
-float32 is declared and is not lossless relative to float64 simulation state.
-Historical uncompressed motion remains a compatibility obligation. JPEG
-observation settings are separate from later video resolution.
-
-## Oracle, Factory and media
-
-See [contact physics and commissioning](docs/physics.md) for released parameters,
-candidate scope, reproducible zero-model checks and remaining physical gates.
-
-Mosaic R15 (71 mm grid pitch) is the default. Relay's independent revision
-identifiers are unrelated to Mosaic's. The current release still uses its pinned
-rolling-friction candidate; recommended new Transport/Dial physics are not a
-published replacement until their full operational gates pass. See the acceptance
-ledger before comparing results across revisions.
-
-Factory replay must use each recording's own frozen scene and assets. It reads
-saved states for visual reconstruction rather than rerunning recorded actions in
-new physics. Optional production rendering uses Blender Cycles with explicit CPU,
-Metal, CUDA or OPTIX selection; silent device fallback is not an acceptance path.
-
-Factory has a unified configuration/command entry:
-
-```sh
-.venv/bin/robofrontier factory setup
-.venv/bin/robofrontier factory doctor --device CPU
+```bibtex
+@misc{robofrontier2026,
+  title  = {RoboFrontier: Benchmarking How LLM Agents Organize,
+            Communicate, and Collaborate in a Multi-Robot World},
+  author = {Fan, Changxuan and others},
+  year   = {2026},
+  url    = {https://github.com/changxuanfan/RoboFrontier}
+}
 ```
 
-The `[factory]` section controls its independent video/device settings; prepared
-plans freeze the effective configuration. See the [Factory guide](docs/factory/replay.md)
-for closed-recording import, full tour, CPU/GPU rendering and queue submission.
-Native Oracle planning, frozen preparation and bounded supervision also have a
-unified entry:
-
-```sh
-.venv/bin/robofrontier oracle plan --level 1 --min-arms
-.venv/bin/robofrontier oracle prepare --cases mosaic-a04-6x12-d1 \
-  --output runs/oracle/my-r14-check --mosaic-max-goals 2
-.venv/bin/robofrontier oracle run runs/oracle/my-r14-check
-```
-
-Use `--render native` during preparation on macOS or `--render cpu` for Linux
-software rendering. Commit the executor before preparation. The `[oracle]`
-engineering clock includes planning/review time and is separate from a model
-benchmark's START clock. The [Oracle guide](docs/oracle/README.md) documents native
-recovery, evidence and the distinction between commissioning and full success.
-All four families have passed current compressed-motion Factory import and
-all-frame replay checks, with small CPU video previews. The editable
-[full-length English video project](docs/factory/editorial.md) is tracked and has
-passed CPU/Metal preview and media round trips. The original full movie is
-published above; a new current-source full render is deferred. New full physical
-Oracle qualification remains open. The tracked
-[English task atlas](docs/task-atlas/index.html) includes current
-public task contracts and 72 regenerated initial views; its [guide](docs/tasks/atlas.md)
-provides verification and offline ZIP commands. Existing Oracle intervention records and historical source identities must
-be preserved; assisted execution is not automatically an autonomous benchmark.
-
-## Repository map
-
-| Path | Purpose |
-| --- | --- |
-| `benchmark/` | The released tasks: four families, nine cases each, and `release.json` |
-| `robofrontier.toml` | Public defaults for newly prepared unified batches |
-| `robofrontier/` | Simulation, native hosts, runtime protocol and evidence interfaces |
-| `prompts/` | Every text a model reads: rules, roles, skills and the two manager prompts |
-| `configs/` | Model catalogs, harnesses, asset locks, and scene revisions not yet released |
-| `scripts/`, `tests/` | Engineering commands and regression checks |
-| `docs/` | Guides by topic, the tracked public task atlas and dated history |
-| `assets/`, `web/task-atlas/` | Shared art and the atlas page templates |
-| `docker/` | The container image |
-| `runs/`, `outputs/` | Ignored runtime evidence and media; back up separately from Git |
-| `.robofrontier/` | Ignored private native state and container command receipts |
-
-The full layout and where new files go: [repository layout](docs/repository-layout.md).
-
-The early single-arm application is available as `robofrontier demo` or
-`robofrontier-demo`; it is not the default benchmark entry. A standalone wheel,
-without the repository catalogs/assets, is not a qualified distribution.
-
-## Attribution and publication
-
-Confirmed first author: **Changxuan Fan, Hong Kong University of Science and
-Technology**. The remaining author list/order, copyright holder, publication
-status, DOI and paper URL are not finalized.
+First author: **Changxuan Fan**, Hong Kong University of Science and Technology. The
+remaining author list, publication status and paper URL are not finalized.
 
 ## License
 
-Code is under the [MIT License](LICENSE). Benchmark data and media (task and scene
-data, rendered images, Factory assets and published videos) are under
-[CC BY 4.0](LICENSE-DATA.md). Third-party material keeps its own license: the
-Franka Panda model from MuJoCo Menagerie (Apache 2.0), the Barlow Condensed font
-(OFL 1.1) and a Poly Haven texture (CC0); see [`LICENSE-DATA.md`](LICENSE-DATA.md).
+Code is under the [MIT License](LICENSE). Benchmark data and media (task and scene data,
+rendered images, Factory assets and published videos) are under
+[CC BY 4.0](LICENSE-DATA.md). Third-party material keeps its own license: the Franka Panda
+model from MuJoCo Menagerie (Apache 2.0), the Barlow Condensed font (OFL 1.1) and a Poly
+Haven texture (CC0); see [`LICENSE-DATA.md`](LICENSE-DATA.md).

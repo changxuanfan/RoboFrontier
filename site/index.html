@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoboFrontier — Language agents running a robot factory</title>
+<meta name="description" content="RoboFrontier: a benchmark where language-model agents organize, communicate and collaborate across up to sixteen robot arms in one physical world.">
+<meta property="og:title" content="RoboFrontier">
+<meta property="og:description" content="Language-model agents in charge of up to sixteen robot arms: 36 physical tasks, four families, one factory.">
+<meta property="og:image" content="assets/img/og.jpg">
+<meta name="theme-color" content="#06080b">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css">
+<script src="assets/js/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#overview">Skip to content</a>
+<header class="rail" id="rail">
+  <a class="brand" href="#top" aria-label="RoboFrontier home"><span class="brand-mark" aria-hidden="true"></span>RoboFrontier</a>
+  <nav aria-label="Chapters">
+    <a href="#overview" data-chapter="overview"><b>01</b>Overview</a>
+    <a href="#benchmark" data-chapter="benchmark"><b>02</b>Benchmark</a>
+    <a href="#watch" data-chapter="watch"><b>03</b>Watch</a>
+    <a href="#results" data-chapter="results"><b>04</b>Results</a>
+    <a href="#analysis" data-chapter="analysis"><b>05</b>Analysis</a>
+  </nav>
+  <div class="rail-links"><a href="https://github.com/changxuanfan/RoboFrontier">GitHub ↗</a></div>
+  <div class="progress" aria-hidden="true"><i id="progress"></i></div>
+</header>
+
+<main id="top">
+<section class="hero" aria-labelledby="hero-title">
+  <video class="hero-video" id="hero-video" muted loop playsinline autoplay preload="auto" poster="assets/img/hero.jpg">
+    <source src="assets/video/hero.mp4" type="video/mp4">
+  </video>
+  <div class="hero-shade" aria-hidden="true"></div>
+  <div class="hero-copy">
+    <p class="live"><span class="dot" aria-hidden="true"></span>One world · up to 16 arms · 24-hour runs</p>
+    <h1 id="hero-title">Can language models<br>run a <em>robot factory?</em></h1>
+    <p class="lede">RoboFrontier puts language-model agents in charge of up to sixteen robot arms in one physical simulation. They read the task, split the work, talk, recover from mistakes — and are measured on all of it.</p>
+    <div class="cta">
+      <button class="btn primary" type="button" data-film>▶ Watch the film <span>3:30</span></button>
+      <a class="btn" href="#results">Results</a>
+      <a class="btn" href="https://github.com/changxuanfan/RoboFrontier">Code</a>
+      <a class="btn" href="data/tasks.json" download>Task data</a>
+    </div>
+  </div>
+  <a class="scroll-cue" href="#overview" aria-label="Scroll to overview"><span></span></a>
+</section>
+
+<div class="ticker" aria-label="Benchmark at a glance">
+  <div><strong data-count="36">36</strong><small>physical tasks</small></div>
+  <div><strong data-count="4">4</strong><small>task families</small></div>
+  <div><strong><span data-count="4">4</span>–<span data-count="16">16</span></strong><small>arms per task</small></div>
+  <div><strong data-count="3">3</strong><small>difficulty levels</small></div>
+  <div><strong id="model-count">—</strong><small>models evaluated</small></div>
+</div>
+
+<section class="chapter" id="overview" aria-labelledby="overview-title">
+  <div class="chapter-head reveal">
+    <p class="kicker">01 / Overview</p>
+    <h2 id="overview-title">An agent, a robot tool and a world that pushes back.</h2>
+    <p class="sub">Every model drives the same arms through the same tool, sees the same cameras and obeys the same rules. Nothing is scripted: allocation, timing, communication and recovery are the agent's choices.</p>
+  </div>
+  <div class="loop reveal" aria-label="How a run works">
+    <article class="loop-step">
+      <span class="loop-index">A</span>
+      <h3>Language agents</h3>
+      <p>Native Codex and Claude Code sessions. One Controller owns the task; in adaptive mode it spawns delegates for bounded jobs and takes their arms back.</p>
+    </article>
+    <div class="loop-wire" aria-hidden="true"><i></i><span>tool calls</span></div>
+    <article class="loop-step">
+      <span class="loop-index">B</span>
+      <h3>One robot tool</h3>
+      <p>Move, grasp, release, observe from named cameras, wait for events, message teammates, delegate. Every call is logged with its outcome.</p>
+    </article>
+    <div class="loop-wire reverse" aria-hidden="true"><i></i><span>images · events</span></div>
+    <article class="loop-step">
+      <span class="loop-index">C</span>
+      <h3>A physical world</h3>
+      <p>MuJoCo dynamics with real contacts: grasps slip, timbers swing, springs push back. No teleporting, no state writes, no resets.</p>
+    </article>
+  </div>
+  <div class="principles reveal">
+    <div><h4>Same contract</h4><p>Identical tasks, physics, tools, prompts and limits for every model.</p></div>
+    <div><h4>Long horizon</h4><p>Each run gets 24 hours of wall time from its START. Planning and waiting count.</p></div>
+    <div><h4>Outcome first</h4><p>Success is judged on the final world state; collisions, retries and process events are reported beside it.</p></div>
+    <div><h4>Fully recorded</h4><p>Every action, message, image and motion frame is kept and can be replayed.</p></div>
+  </div>
+</section>
+
+<section class="chapter" id="benchmark" aria-labelledby="benchmark-title">
+  <div class="chapter-head reveal">
+    <p class="kicker">02 / Benchmark</p>
+    <h2 id="benchmark-title">Four ways to work together.</h2>
+    <p class="sub">Each family has nine tasks: three scales of arms crossed with three difficulty levels. Hover a family to watch the reference solution.</p>
+  </div>
+  <div class="families reveal" id="families"></div>
+
+  <div class="matrix-block reveal">
+    <div class="matrix-head">
+      <div>
+        <h3>The task matrix</h3>
+        <p class="sub small">Columns scale up the team, rows raise the difficulty. Select any cell to play its reference run.</p>
+      </div>
+      <div class="segmented" role="tablist" aria-label="Family" id="matrix-tabs"></div>
+    </div>
+    <div class="matrix" id="matrix" aria-live="polite"></div>
+  </div>
+
+  <div class="protocol reveal">
+    <div>
+      <p class="kicker">Protocol</p>
+      <h3 class="h3-big">The Controller decides who works.</h3>
+      <p class="sub">All benchmark runs use the adaptive protocol. A single Controller reads the task, keeps the plan and either drives arms itself or delegates a bounded job — "stack row 3 with arms C and D" — to a forked delegate, which hands the arms back when its job is done.</p>
+      <ul class="facts">
+        <li><b>Delegates</b> are forks of the Controller's own session: they inherit what it knows.</li>
+        <li><b>Arms</b> have exactly one owner at a time; ownership moves with delegation and return.</li>
+        <li><b>Messages</b> go through the robot tool, so every exchange is part of the record.</li>
+      </ul>
+    </div>
+    <figure class="protocol-figure" aria-label="Animated diagram: a Controller spawns three delegates that take arms and return them">
+      <svg viewBox="0 0 600 380" id="protocol-svg">
+        <defs><linearGradient id="wire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#d4ff3a"/><stop offset="1" stop-color="#d4ff3a" stop-opacity=".1"/></linearGradient></defs>
+        <g class="p-links">
+          <path d="M300 92 C300 150 110 150 110 214"/><path d="M300 92 L300 214"/><path d="M300 92 C300 150 490 150 490 214"/>
+        </g>
+        <g class="p-ctrl"><rect x="210" y="36" width="180" height="56" rx="6"/><text x="300" y="60">CONTROLLER</text><text class="t-dim" x="300" y="78">plan · allocate · verify</text></g>
+        <g class="p-del d1"><rect x="40" y="214" width="140" height="52" rx="6"/><text x="110" y="238">DELEGATE 1</text><text class="t-dim" x="110" y="255">arms A · B</text></g>
+        <g class="p-del d2"><rect x="230" y="214" width="140" height="52" rx="6"/><text x="300" y="238">DELEGATE 2</text><text class="t-dim" x="300" y="255">arms C · D · E</text></g>
+        <g class="p-del d3"><rect x="420" y="214" width="140" height="52" rx="6"/><text x="490" y="238">DELEGATE 3</text><text class="t-dim" x="490" y="255">arm F</text></g>
+        <g class="p-arms" id="p-arms"></g>
+        <text class="t-caption" x="300" y="360">fork → work → return_task → arms go back to the Controller</text>
+      </svg>
+    </figure>
+  </div>
+</section>
+
+<section class="chapter wide" id="watch" aria-labelledby="watch-title">
+  <div class="chapter-head reveal">
+    <p class="kicker">03 / Watch</p>
+    <h2 id="watch-title">Every task, on film.</h2>
+    <p class="sub">Factory renders of every run, front and side. Switch between the privileged Oracle reference and each model. Hover to preview; select to open.</p>
+  </div>
+  <div class="wall-controls reveal">
+    <div class="segmented" role="tablist" aria-label="Video source" id="source-tabs"></div>
+    <div class="segmented" role="tablist" aria-label="Family" id="wall-family"></div>
+    <div class="segmented" role="tablist" aria-label="Camera" id="wall-view">
+      <button type="button" role="tab" aria-selected="true" data-view="front">Front</button>
+      <button type="button" role="tab" aria-selected="false" data-view="side">Side</button>
+    </div>
+  </div>
+  <div class="wall" id="wall"></div>
+</section>
+
+<section class="chapter" id="results" aria-labelledby="results-title">
+  <div class="chapter-head reveal">
+    <p class="kicker">04 / Results</p>
+    <h2 id="results-title">Who gets the job done?</h2>
+    <p class="sub">All models run the adaptive protocol on all 36 tasks for up to 24 hours each. Completion is the headline; how they got there is the story.</p>
+  </div>
+  <div id="results-body" class="reveal"></div>
+</section>
+
+<section class="chapter" id="analysis" aria-labelledby="analysis-title">
+  <div class="chapter-head reveal">
+    <p class="kicker">05 / Analysis</p>
+    <h2 id="analysis-title">What makes a team work?</h2>
+    <p class="sub">Three questions behind the leaderboard: how agents should communicate, whether written skills help, and how much work really happens in parallel.</p>
+  </div>
+  <div class="segmented big reveal" role="tablist" aria-label="Analysis" id="analysis-tabs">
+    <button type="button" role="tab" aria-selected="true" data-panel="communication" id="communication">Communication</button>
+    <button type="button" role="tab" aria-selected="false" data-panel="skills">Skills</button>
+    <button type="button" role="tab" aria-selected="false" data-panel="parallel">Parallel work</button>
+  </div>
+  <div class="panel" data-panel="communication">
+    <p class="sub">Four organizations, one model family (GPT), the same tasks. Adaptive is the benchmark protocol because it was the best on time, tokens, parallelism, success and collisions in this comparison.</p>
+    <div class="topologies" id="topologies"></div>
+    <div id="communication-chart"></div>
+  </div>
+  <div class="panel" data-panel="skills" hidden>
+    <p class="sub">Agents may write lessons into a shared <code>skills.md</code> during a run. We compare runs with and without that skill file: progress over time, and how often they repeat failed attempts late in the run.</p>
+    <div id="skills-chart"></div>
+  </div>
+  <div class="panel" data-panel="parallel" hidden>
+    <p class="sub">How many arms are actually moving at once? Parallel efficiency is the share of arm-time spent in useful motion while work remains.</p>
+    <div id="parallel-chart"></div>
+  </div>
+</section>
+
+<section class="chapter cite" id="cite" aria-labelledby="cite-title">
+  <div class="chapter-head reveal">
+    <p class="kicker">Cite</p>
+    <h2 id="cite-title">Use RoboFrontier.</h2>
+  </div>
+  <div class="cite-grid reveal">
+    <div class="code-card">
+      <button class="copy" type="button" data-copy="bibtex">Copy</button>
+<pre id="bibtex">@misc{robofrontier2026,
+  title  = {RoboFrontier: Benchmarking How LLM Agents Organize,
+            Communicate, and Collaborate in a Multi-Robot World},
+  author = {Fan, Changxuan and others},
+  year   = {2026},
+  url    = {https://github.com/changxuanfan/RoboFrontier}
+}</pre>
+    </div>
+    <ul class="link-list">
+      <li><a href="https://github.com/changxuanfan/RoboFrontier">Source code <span>MIT</span></a></li>
+      <li><a href="data/tasks.json">Public task data <span>JSON</span></a></li>
+      <li><a href="data/media.json">Video index <span>JSON</span></a></li>
+      <li><a href="data/results.json">Benchmark results <span>JSON</span></a></li>
+      <li><a href="https://github.com/changxuanfan/RoboFrontier/blob/main/LICENSE-DATA.md">Data and media <span>CC BY 4.0</span></a></li>
+    </ul>
+  </div>
+</section>
+</main>
+
+<footer class="foot"><span>RoboFrontier · 2026</span><span>Simulation renders, not real hardware.</span></footer>
+
+<dialog class="player" id="player" aria-label="Video player">
+  <div class="player-top">
+    <div><p class="kicker" id="player-kicker"></p><h3 id="player-title"></h3></div>
+    <div class="player-actions">
+      <div class="segmented" id="player-view"><button type="button" data-view="front" aria-selected="true">Front</button><button type="button" data-view="side" aria-selected="false">Side</button></div>
+      <button class="icon" type="button" id="player-prev" aria-label="Previous task">←</button>
+      <button class="icon" type="button" id="player-next" aria-label="Next task">→</button>
+      <button class="icon" type="button" id="player-close" aria-label="Close">✕</button>
+    </div>
+  </div>
+  <video id="player-video" controls playsinline></video>
+  <p class="player-facts" id="player-facts"></p>
+</dialog>
+</body>
+</html>

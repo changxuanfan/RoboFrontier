@@ -1,11 +1,11 @@
 # Documentation
 
-Start with the [repository layout](repository-layout.md) and the
-[command-line guide](unified-cli.md).
+Start with [getting started](getting-started.md), the [repository layout](repository-layout.md) and the
+[command-line guide](unified-cli.md). The [project page source](../site/DESIGN.md) lives in `site/`.
 
 | Topic | Guides |
 | --- | --- |
-| Overview | [Architecture](architecture.md), [repository layout](repository-layout.md), [command line and configuration](unified-cli.md) |
+| Overview | [Getting started](getting-started.md), [architecture](architecture.md), [repository layout](repository-layout.md), [command line and configuration](unified-cli.md) |
 | Tasks | [The four families](tasks/README.md): [Transport](tasks/transport.md), [Relay](tasks/relay.md), [Mosaic](tasks/mosaic.md), [Dial](tasks/dial-best5.md); [task atlas](tasks/atlas.md) |
 | Rules of a run | [Runtime protocol](protocol.md), [contact physics](physics.md) |
 | Engines | [Overview](engines/README.md), [Codex](engines/codex.md), [Claude Code](engines/claude-code.md), [providers](engines/providers.md) |

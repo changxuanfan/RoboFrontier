@@ -30,6 +30,8 @@ repository root. Keep existing module names when reproducing historical evidence
 | `export_factory_blender`, `render_factory_blender` | Export and render Cycles scenes, reuse fixed-camera frames, and compare sampled source poses |
 | `check_factory_blender_instances` | Check actual Blender instance geometry, motion, and independent color changes |
 | `build_task_atlas` | Build, verify, or package the public 36-task visual atlas without policy inference |
+| `site_media encode/montage/stills` | Encode task videos to 720p with posters and a verified manifest, build the family montages and README images for the project page |
+| `site_data tasks/media/readme-gallery` | Generate the project page's task and video indexes and fill the README task gallery |
 
 ## Every script
 
@@ -77,6 +79,8 @@ Read finished runs; none starts a model or physics.
 | Script | Purpose |
 | --- | --- |
 | `build_task_atlas.py` | Build or verify an offline English atlas of current public policy tasks. |
+| `site_media.py` | Encode project page videos, family montages and README stills. |
+| `site_data.py` | Generate `site/data/` indexes and the README task gallery. |
 | `check_harness.py` | Offline checks: fake services, robot/contact physics and real encoder recovery. |
 | `check_oracle_preservation.py` | Verify protected historical bytes with inode-aware hashing. |
 | `curate_repository.py` | Plan/apply user-requested generated-data cleanup, with pinned-source guards. |

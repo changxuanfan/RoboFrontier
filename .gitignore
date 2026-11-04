@@ -32,3 +32,8 @@ __pycache__/
 /benchmark/*/*/assets/
 /benchmark/*/*/preview-*.png
 /benchmark/*/*/FROZEN
+
+# Project page: local encoded media and design explorations (media is published to its own repository)
+/site/_media/
+/site/_directions/
+/site/_dev/

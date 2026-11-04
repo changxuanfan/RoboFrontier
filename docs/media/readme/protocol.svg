@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">
+  <rect width="1200" height="420" rx="14" fill="#06080b"/>
+  <g fill="none" stroke="#d4ff3a" stroke-width="2" stroke-dasharray="6 8">
+    <path d="M600 112 C600 170 260 170 260 222"/>
+    <path d="M600 112 L600 222"/>
+    <path d="M600 112 C600 170 940 170 940 222"/>
+  </g>
+  <rect x="470" y="48" width="260" height="64" rx="8" fill="#1a2210" stroke="#d4ff3a" stroke-width="2"/>
+  <text x="600" y="78" fill="#e9eef3" font-size="17" font-weight="600" text-anchor="middle" letter-spacing="2">CONTROLLER</text>
+  <text x="600" y="99" fill="#7c8898" font-size="13" text-anchor="middle">plan · allocate · verify · finish</text>
+  <g font-size="15" text-anchor="middle">
+    <rect x="160" y="222" width="200" height="58" rx="8" fill="#111720" stroke="#283241" stroke-width="1.5"/>
+    <text x="260" y="248" fill="#e9eef3" letter-spacing="1">DELEGATE 1</text>
+    <text x="260" y="268" fill="#7c8898" font-size="12">fork · arms A B</text>
+    <rect x="500" y="222" width="200" height="58" rx="8" fill="#111720" stroke="#283241" stroke-width="1.5"/>
+    <text x="600" y="248" fill="#e9eef3" letter-spacing="1">DELEGATE 2</text>
+    <text x="600" y="268" fill="#7c8898" font-size="12">fork · arms C D E</text>
+    <rect x="840" y="222" width="200" height="58" rx="8" fill="#111720" stroke="#283241" stroke-width="1.5"/>
+    <text x="940" y="248" fill="#e9eef3" letter-spacing="1">DELEGATE 3</text>
+    <text x="940" y="268" fill="#7c8898" font-size="12">fork · arm F</text>
+  </g>
+  <g stroke="#283241" stroke-width="1.5">
+    <line x1="230" y1="280" x2="230" y2="326"/><line x1="290" y1="280" x2="290" y2="326"/>
+    <line x1="550" y1="280" x2="550" y2="326"/><line x1="600" y1="280" x2="600" y2="326"/><line x1="650" y1="280" x2="650" y2="326"/>
+    <line x1="940" y1="280" x2="940" y2="326"/>
+  </g>
+  <g fill="#d4ff3a">
+    <circle cx="230" cy="336" r="10"/><circle cx="290" cy="336" r="10"/>
+    <circle cx="550" cy="336" r="10"/><circle cx="600" cy="336" r="10"/><circle cx="650" cy="336" r="10"/>
+    <circle cx="940" cy="336" r="10"/>
+  </g>
+  <g fill="#06080b" font-size="12" font-weight="700" text-anchor="middle">
+    <text x="230" y="340">A</text><text x="290" y="340">B</text><text x="550" y="340">C</text><text x="600" y="340">D</text><text x="650" y="340">E</text><text x="940" y="340">F</text>
+  </g>
+  <text x="600" y="392" fill="#7c8898" font-size="13" text-anchor="middle" letter-spacing="1">fork → bounded job → return_task → arms go back to the Controller</text>
+</svg>
