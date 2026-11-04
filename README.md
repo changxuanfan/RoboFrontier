@@ -21,7 +21,9 @@ simulation: 36 tasks, four families, 24-hour runs.
 </div>
 
 <!-- media:film -->
-[![The RoboFrontier film: a three-and-a-half-minute tour of Robo World and its 36 tasks](docs/media/readme/film.jpg)](https://github.com/changxuanfan/RoboFrontier/releases/download/factory-tour-media-20261102/robofrontier-factory-tour-original.mp4)
+
+https://github.com/user-attachments/assets/f73e9736-0fe3-456d-a1c2-a753678abc4f
+
 <!-- /media:film -->
 
 ## What it is
@@ -55,7 +57,9 @@ rows are difficulty levels 1–3, columns are team sizes.
 slots · L3 a spring-mounted moving board.
 
 <!-- media:montage-transport -->
-[![Transport: nine Oracle runs](docs/media/readme/montage-transport.jpg)](https://changxuanfan.github.io/RoboFrontier/#watch)
+
+https://github.com/user-attachments/assets/6224985c-da54-4098-9066-18fc0c023712
+
 <!-- /media:montage-transport -->
 
 ### 🟩 Mosaic — fill a color pattern with distinct cubes
@@ -64,7 +68,9 @@ slots · L3 a spring-mounted moving board.
 · L3 no visible grid.
 
 <!-- media:montage-mosaic -->
-[![Mosaic: nine Oracle runs](docs/media/readme/montage-mosaic.jpg)](https://changxuanfan.github.io/RoboFrontier/#watch)
+
+https://github.com/user-attachments/assets/07e18688-2711-4835-a474-398f504023ea
+
 <!-- /media:montage-mosaic -->
 
 ### 🟧 Relay — carry long timbers arm to arm
@@ -73,7 +79,9 @@ slots · L3 a spring-mounted moving board.
 · L3 a deflected timber on passive springs.
 
 <!-- media:montage-relay -->
-[![Relay: nine Oracle runs](docs/media/readme/montage-relay.jpg)](https://changxuanfan.github.io/RoboFrontier/#watch)
+
+https://github.com/user-attachments/assets/d786c4b1-1cde-4034-b195-56546a41e8ee
+
 <!-- /media:montage-relay -->
 
 ### 🟨 Dial — crack a hidden code with spring dials
@@ -83,7 +91,9 @@ grasp · L3 lifted modules with an eccentric crank. A BEST display shows only th
 match count so far.
 
 <!-- media:montage-dial -->
-[![Dial: nine Oracle runs](docs/media/readme/montage-dial.jpg)](https://changxuanfan.github.io/RoboFrontier/#watch)
+
+https://github.com/user-attachments/assets/f4abfc06-8e7c-433a-bc16-aa3cb9df9641
+
 <!-- /media:montage-dial -->
 
 <details>
