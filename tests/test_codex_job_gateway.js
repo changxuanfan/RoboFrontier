@@ -99,3 +99,63 @@ test('real Unix transport supports identical client request IDs without crossing
     assert.equal(f.calls.some(c=>c.method==='close'),false);
   }finally{for(const c of clients)c.socket.destroy();await f.gateway.close();fs.rmSync(directory,{recursive:true,force:true});}
 });
+
+test('long robot waits retain response ownership beyond the startup RPC timeout',async t=>{
+  const f=fixture(),parent=await f.start(f.clients[0]);
+  t.mock.timers.enable({apis:['setTimeout']});
+  let settled=false;
+  const response=f.gateway.tool('item/tool/call',{threadId:parent.thread.id,tool:'robot',
+    callId:'original-wait-once',arguments:{op:'wait_events',data:{timeout_s:300}}});
+  const result=response.then(value=>{settled=true;return {value};},error=>{settled=true;return {error};});
+  const message=f.clients[0].events.at(-1);
+  try{
+    t.mock.timers.tick(190000);await Promise.resolve();
+    assert.equal(settled,false,'A live task may still be waiting for a delegate');
+    f.gateway.respond(f.clients[0],{id:message.id,result:{wait_status:'events'}});
+    assert.deepEqual((await result).value,{wait_status:'events'});
+    assert.equal(f.calls.filter(c=>c.method==='turn/start').length,0);
+  }finally{f.gateway.fail();await result;t.mock.timers.reset();}
+});
+
+test('closing one task settles its pending tools without stopping peer tasks',async()=>{
+  const f=fixture(),parent=await f.start(f.clients[0]);
+  const response=f.gateway.tool('item/tool/call',{threadId:parent.thread.id,tool:'robot',
+    callId:'wait-until-task-closes',arguments:{op:'wait_events',data:{timeout_s:300}}})
+    .then(value=>({value}),error=>({error:error.message}));
+  await f.gateway.release(f.clients[0].task);
+  assert.match((await response).error,/Task channel closed/);
+  assert.equal(f.gateway.serverRequests.size,0);
+  assert.equal(f.clients[1].task.state,'bound');
+  await f.gateway.request(f.clients[1],'config/read');
+  assert.equal(f.calls.some(c=>c.method==='close'),false);
+});
+
+test('a delayed tool response keeps its Unix task channel and leaves peers usable',async t=>{
+  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'rf-gw-long-')),f=fixture();
+  for(const task of f.gateway.tasks.values()){task.state='new';delete task.client;}
+  f.gateway.clients.clear();let reply,received;
+  const requestArrived=new Promise(resolve=>{received=resolve;});
+  const deferred=new Promise(resolve=>{reply=resolve;});let clients=[],response;
+  try{
+    await f.gateway.listen(path.join(directory,'s'));
+    clients=[new GatewayRpc(path.join(directory,'s'),'task-0',{onRequest:()=>{received();return deferred;}}),
+             new GatewayRpc(path.join(directory,'s'),'task-1')];
+    await Promise.all(clients.map(c=>c.initialize()));
+    const parent=await clients[0].call('thread/start',{dynamicTools:['robot','policy_exec','policy_image'].map(name=>({name}))});
+    t.mock.timers.enable({apis:['setTimeout']});
+    response=f.gateway.tool('item/tool/call',{threadId:parent.thread.id,tool:'robot',callId:'wait-no-replay',
+      arguments:{op:'wait_events',data:{timeout_s:300}}}).then(value=>({value}),error=>({error}));
+    await requestArrived;t.mock.timers.tick(190000);await Promise.resolve();t.mock.timers.reset();
+    reply({wait_status:'events'});
+    await new Promise(resolve=>setTimeout(resolve,30));
+    assert.equal(Boolean(clients[0].closed),false,'Late owned result must not disconnect its task');
+    assert.equal(Boolean(clients[1].closed),false);
+    assert.deepEqual((await response).value,{wait_status:'events'});
+    await clients[1].call('config/read');
+    assert.equal(f.calls.some(c=>c.method==='close'),false);
+  }finally{
+    t.mock.timers.reset();reply?.({wait_status:'events'});
+    for(const c of clients)c.socket.destroy();
+    await f.gateway.close();if(response)await response;fs.rmSync(directory,{recursive:true,force:true});
+  }
+});

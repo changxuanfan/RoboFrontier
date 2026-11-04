@@ -102,14 +102,16 @@ class JobGateway {
       return Promise.reject(new Error('Unbound or forbidden native tool request'));
     const id='tool-'+ ++this.nextRequest;
     return new Promise((resolve,reject)=>{
-      const timer=setTimeout(()=>{this.serverRequests.delete(id);reject(new Error('Bound tool acknowledgement unknown; do not repeat'));},180000);
-      this.serverRequests.set(id,{task,resolve,reject,timer});task.client.send({id,method,params:p});
+      // A dispatched tool is owned by this task until its result or channel
+      // closure. Robot waits/actions have their own runtime deadlines; the
+      // startup RPC timeout cannot discard ownership of a legitimate long wait.
+      this.serverRequests.set(id,{task,resolve,reject});task.client.send({id,method,params:p});
     });
   }
   respond(client,m){
     const pending=this.serverRequests.get(m.id);
     if(!pending||pending.task!==client.task)throw new Error('Tool response ownership mismatch');
-    this.serverRequests.delete(m.id);clearTimeout(pending.timer);
+    this.serverRequests.delete(m.id);
     if(m.error)pending.reject(new Error('Bound task tool failed'));else pending.resolve(m.result);
   }
   async release(task){
@@ -122,7 +124,7 @@ class JobGateway {
         timer=setTimeout(()=>reject(new Error('Native mutation still uncertain at task closure')),30000);
       })]);
     }finally{clearTimeout(timer);}
-    for(const [id,p]of this.serverRequests)if(p.task===task){clearTimeout(p.timer);p.reject(new Error('Task channel closed'));this.serverRequests.delete(id);}
+    for(const [id,p]of this.serverRequests)if(p.task===task){p.reject(new Error('Task channel closed'));this.serverRequests.delete(id);}
     for(const id of task.threads){
       if(task.archived.has(id))continue;
       let state=await this.native.call('thread/read',{threadId:id});
@@ -146,7 +148,7 @@ class JobGateway {
   }
   fail(){
     if(this.failed)return;this.failed=true;
-    for(const p of this.serverRequests.values()){clearTimeout(p.timer);p.reject(new Error('Shared engine stopped'));}
+    for(const p of this.serverRequests.values())p.reject(new Error('Shared engine stopped'));
     this.serverRequests.clear();for(const client of this.clients)client.destroy();
     if(this.server?.listening)this.server.close();
   }
