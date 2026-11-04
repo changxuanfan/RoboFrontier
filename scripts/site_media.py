@@ -5,15 +5,16 @@ encode:  each source MP4 becomes a 720p H.264 file (CRF 28, preset slow, faststa
          of every output and the SHA-256 of its source. Existing verified outputs are kept.
 montage: one 1920 x 1080 video per family, a 3 x 3 grid of its nine tasks (rows are
          difficulty levels, columns scales), each tile sped up to a common length.
-stills:  README images: a banner and film poster from the film, montage posters (both with
-         a play badge) and a 400-px thumbnail of every task.
+stills:  README images: the animated banner (the film's opening hall orbit, from the raw
+         render without titles), montage posters with a play badge and a 400-px thumbnail
+         of every task.
 
 Sources is a JSON file: {"set": "oracle", "tasks": {"<case>": {"front": path, "side": path}}}.
 Run from the repository root:
 
     .venv/bin/python -m scripts.site_media encode SOURCES OUT
     .venv/bin/python -m scripts.site_media montage OUT/manifest.json FAMILY OUT_MP4
-    .venv/bin/python -m scripts.site_media stills OUT/manifest.json FILM MONTAGE_DIR docs/media/readme
+    .venv/bin/python -m scripts.site_media stills OUT/manifest.json RAW_FILM_RENDER MONTAGE_DIR docs/media/readme
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -137,56 +138,48 @@ def play_badge(path, size=0.16):
 
 
 FONTS = Path(__file__).resolve().parents[1]/'assets/robo_factory/fonts'
-FAMILY_COLORS = [('Transport', (143, 193, 236)), ('Mosaic', (159, 220, 140)), ('Relay', (255, 159, 135)), ('Dial', (242, 212, 107))]
 
 
-def banner(film, path, width=1600, height=560, at_s=12):
-    """The README banner in the project page's style: the wordmark and family colors on the
-    left, the film's overhead view of all four Robo World zones on the right."""
+def hero(render, path, end_s=9.0, blend_s=0.6, width=1280, height=448, fps=15, quality=58):
+    """The README banner: the film's opening orbit of the Robo World hall as a looping
+    animated WebP (GitHub autoplays images, not videos) under a dark left gradient and the
+    RoboFrontier wordmark. `render` is the raw film render without titles or subtitles; the
+    last `blend_s` seconds dissolve into the first so the loop does not jump."""
     from PIL import Image, ImageDraw, ImageFont
-    bg, ink, lime = (6, 8, 11), (233, 238, 243), (212, 255, 58)
-    frame = Path(path).with_suffix('.frame.jpg')
-    grab(film, at_s, frame, 1920)
-    top = Image.open(frame).convert('RGB'); frame.unlink()
-    floor = top.crop((int(top.width*.12), 0, int(top.width*.88), top.height))
-    w = 720; scale = max(w/floor.width, height/floor.height)
-    floor = floor.resize((round(floor.width*scale), round(floor.height*scale)), Image.LANCZOS)
-    x0, y0 = (floor.width-w)//2, (floor.height-height)//2
-    image = Image.new('RGB', (width, height), bg)
-    image.paste(floor.crop((x0, y0, x0+w, y0+height)), (width-w, 0))
-    # Fade the map's left edge into the panel.
-    ramp = Image.linear_gradient('L').rotate(90).resize((int(width*.14), height))
-    edge = width-w
-    image.paste(Image.composite(image.crop((edge, 0, edge+ramp.width, height)), Image.new('RGB', ramp.size, bg), ramp), (edge, 0))
-    draw = ImageDraw.Draw(image)
-    display = ImageFont.truetype(str(FONTS/'SpaceGrotesk-Bold.ttf'), 96)
-    mono = lambda size: ImageFont.truetype(str(FONTS/'JetBrainsMono-Medium.ttf'), size)
-    # Only the wordmark and the family colors: the README text below carries the tagline.
-    x, y = 72, 178
-    draw.rectangle([x, y+21, x+21, y+42], fill=lime)
-    draw.text((x+35, y), 'RoboFrontier', font=display, fill=ink)
-    x = 76
-    for name, color in FAMILY_COLORS:
-        label = name.upper()
-        draw.rectangle([x, 338, x+14, 352], fill=color); draw.text((x+24, 330), label, font=mono(22), fill=ink)
-        x += 24 + mono(22).getlength(label) + 40
-    image.save(path, quality=88, optimize=True)
+    overlay = Path(path).with_suffix('.overlay.png')
+    ramp = Image.new('L', (width, 1))
+    for x in range(width):
+        ramp.putpixel((x, 0), int(70 + 175 * (1 - min(1, x / (width * 0.72))) ** 1.2))
+    layer = Image.new('RGBA', (width, height), (6, 8, 11, 255)); layer.putalpha(ramp.resize((width, height)))
+    draw = ImageDraw.Draw(layer)
+    x, y = 58, 170
+    draw.rectangle([x, y + 18, x + 17, y + 35], fill=(212, 255, 58, 255))
+    draw.text((x + 29, y), 'RoboFrontier', font=ImageFont.truetype(str(FONTS / 'SpaceGrotesk-Bold.ttf'), 82), fill=(233, 238, 243, 255))
+    layer.save(overlay)
+    graph = (f'[0:v]trim=end={end_s},setpts=PTS-STARTPTS,crop=1920:672:0:200,scale={width}:{height}:flags=lanczos,split[a][b];'
+             f'[a]trim=start={blend_s},setpts=PTS-STARTPTS,fps={fps}[body];[b]trim=end={blend_s},setpts=PTS-STARTPTS,fps={fps}[head];'
+             f'[body][head]xfade=transition=fade:duration={blend_s}:offset={end_s - 2 * blend_s}[loop];[loop][1:v]overlay=0:0')
+    try:
+        subprocess.run([FFMPEG, '-v', 'error', '-y', '-t', str(end_s + 0.2), '-i', str(render), '-i', str(overlay),
+                        '-filter_complex', graph, '-an', '-c:v', 'libwebp_anim', '-lossless', '0', '-q:v', str(quality),
+                        '-compression_level', '6', '-loop', '0', str(path)], check=True)
+    finally:
+        overlay.unlink(missing_ok=True)
 
 
-def stills(manifest_path, film, montages, out):
-    """README images: banner, film and montage posters (with play badges), 36 task thumbnails."""
+def stills(manifest_path, render, montages, out):
+    """README images: the animated banner, montage posters (with play badges), 36 task thumbnails."""
     from PIL import Image
     manifest_path, out = Path(manifest_path), Path(out)
     (out / 'tasks').mkdir(parents=True, exist_ok=True)
-    banner(film, out / 'banner.jpg')
-    grab(film, 12, out / 'film.jpg', 1600); play_badge(out / 'film.jpg')
+    hero(render, out / 'hero.webp')
     for montage in sorted(Path(montages).glob('montage-*.mp4')):
         poster = out / (montage.stem + '.jpg'); grab(montage, 45, poster, 1600); play_badge(poster, 0.12)
     manifest = json.loads(manifest_path.read_text())
     for case, views in manifest['tasks'].items():
         thumb = out / 'tasks' / f'{case}.jpg'
         Image.open(manifest_path.parent / views['front']['poster']).convert('RGB').resize((400, 225)).save(thumb, quality=78, optimize=True)
-    return sorted(str(p.relative_to(out)) for p in out.rglob('*.jpg'))
+    return sorted(str(p.relative_to(out)) for p in out.rglob('*') if p.suffix in ('.jpg', '.webp'))
 
 
 def main(argv=None):
@@ -195,12 +188,12 @@ def main(argv=None):
     e = sub.add_parser('encode'); e.add_argument('sources'); e.add_argument('out'); e.add_argument('--workers', type=int, default=2)
     m = sub.add_parser('montage'); m.add_argument('manifest'); m.add_argument('family'); m.add_argument('output')
     m.add_argument('--length-s', type=float, default=60); m.add_argument('--view', default='front')
-    s = sub.add_parser('stills'); s.add_argument('manifest'); s.add_argument('film'); s.add_argument('montages'); s.add_argument('out')
+    s = sub.add_parser('stills'); s.add_argument('manifest'); s.add_argument('render'); s.add_argument('montages'); s.add_argument('out')
     args = parser.parse_args(argv)
     if args.command == 'encode':
         encode(args.sources, args.out, args.workers)
     elif args.command == 'stills':
-        print('\n'.join(stills(args.manifest, args.film, args.montages, args.out)))
+        print('\n'.join(stills(args.manifest, args.render, args.montages, args.out)))
     else:
         print(json.dumps(montage(args.manifest, args.family, args.output, args.length_s, args.view), indent=1))
 

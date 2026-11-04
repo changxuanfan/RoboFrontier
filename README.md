@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="docs/media/readme/banner.jpg" alt="RoboFrontier. Robo World from above: the Transport, Mosaic, Relay and Dial zones" width="100%">
+<a href="https://changxuanfan.github.io/RoboFrontier/#film"><img src="docs/media/readme/hero.webp" alt="RoboFrontier. A camera orbit through Robo World, where robot arms work on the 36 tasks" width="100%"></a>
 
-**Can language models run a robot world?**
+### Can language models run a robot world?
 
 Language-model agents in charge of up to sixteen robot arms in Robo World, a physical
 simulation: 36 tasks, four families, 24-hour runs.
@@ -17,12 +17,6 @@ simulation: 36 tasks, four families, 24-hour runs.
 [![Python 3.12](https://img.shields.io/badge/python-3.12-9fdc8c?style=flat-square&labelColor=06080b)](pyproject.toml)
 
 </div>
-
-<!-- media:film -->
-
-https://github.com/user-attachments/assets/7fd041b2-ef2a-4363-a917-4a955bc3e8c9
-
-<!-- /media:film -->
 
 ## What it is
 
