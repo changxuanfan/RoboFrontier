@@ -202,3 +202,34 @@ class EditorialTests(unittest.TestCase):
                     bundle.write(job/'complete.json',marker)
                     with self.assertRaisesRegex(ValueError,'missing its required editorial'):
                         server.status(plan)
+
+
+class FilmStyleTests(unittest.TestCase):
+    """The page-matched v2 style of the shipped film project (no Factory data needed)."""
+    PROJECT = Path(__file__).resolve().parents[1]/'assets/robo_factory/film-project.json'
+
+    def test_film_project_names_both_fonts_by_full_name(self):
+        loaded = editorial.load(self.PROJECT)
+        self.assertEqual(loaded['font_family'], {'display': 'Space Grotesk Bold', 'mono': 'JetBrains Mono Medium'})
+        self.assertEqual(len(loaded['files']), 8)  # project, cameras, two tracks, two fonts, two licenses
+        self.assertEqual((len(loaded['titles']), len(loaded['subtitles'])), (6, 16))
+
+    def test_cards_labels_and_captions_use_the_palette_and_fonts(self):
+        loaded = editorial.load(self.PROJECT)
+        loaded['subtitles'] = loaded['subtitles'][:1] + [(200., 201., 'A plain caption.')]
+        ass = editorial._ass_v2(loaded, 1920, 1080)
+        self.assertIn(r'\fnSpace Grotesk Bold', ass)
+        self.assertIn(r'\fnJetBrains Mono Medium', ass)
+        self.assertIn(editorial._ass_color('#FF9F87'), ass)   # the Relay card bar and label square
+        self.assertIn(editorial._ass_color('#D4FF3A'), ass)   # the accent bar of a plain caption
+        self.assertIn('A plain caption.', ass)
+        # Title cards sit top-left, clear of each scene's floor label at the bottom.
+        card = next(l for l in ass.splitlines() if 'Relay' in l and r'\pos' in l)
+        self.assertLess(int(card.split(r'\pos(')[1].split(',')[1].split(')')[0]), 300)
+
+    def test_box_widths_follow_libass_win_metrics(self):
+        units, win = editorial._win_metrics(self.PROJECT.parent/'fonts/JetBrainsMono-Medium.ttf')
+        self.assertEqual((units, win), (1000, 1565))
+        measure = editorial._measurer(self.PROJECT.parent/'fonts/JetBrainsMono-Medium.ttf')
+        # A monospace advance of 0.6 em at the size libass actually sets.
+        self.assertAlmostEqual(measure('x'*10, 30)/10, 0.6*30*units/win, delta=0.5)

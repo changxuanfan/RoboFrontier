@@ -169,6 +169,25 @@ both movie hashes, the correct frozen project and complete video decoding. A
 caption encoder failure cannot leave the raw render marked as a completed new
 tour. Attempts without a completion seal remain available for diagnosis.
 
+## The page-matched film style (v2)
+
+[`assets/robo_factory/film-project.json`](../../assets/robo_factory/film-project.json) is the
+published film's project. Its schema `robofrontier.factory-editorial.v2` replaces `font` and
+`font_license` with `fonts` (`display`, `mono`) and `font_licenses`, and uses a palette style:
+sizes (`display_size`, `deck_size`, `label_size`, `caption_size`), margins, `panel_alpha`
+(percent opacity), `ink`, `dim`, `accent`, `panel` and one color per family. Cue meaning:
+
+- A **title** cue is a heading line and optional deck lines: a top-left card on a translucent
+  panel. A heading that names a family takes that family's color bar.
+- A **subtitle** cue that starts with a task identifier (`relay-a16-d1  ·  Level 1  ·  16 arms`)
+  is a bottom-left label chip with the family's color square; any other subtitle is a caption.
+- Panels are sized from the fonts' real advance widths. libass, like GDI, maps the font size
+  to `usWinAscent + usWinDescent`, and matches `\fn` against the full name (such as
+  `JetBrains Mono Medium`), so both are read from the font files.
+
+Version 1 projects keep their exact rendering. Render a quick draft by downscaling the raw
+movie first; the timeline and every check are unchanged.
+
 ## Revise text without rerendering Cycles
 
 For a title, subtitle or style change, reuse the original uncaptioned movie:

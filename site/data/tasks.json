@@ -60,7 +60,12 @@
     "L1: release stably at the final board targets. L2 and L3: both flat blades must enter the real blind slots and the item must be released, seated and stable. L2 has a fixed board; L3 has the same three inline sockets on a passive spring-supported z/roll/pitch board. Preserve prior placements and allow gripper opening and withdrawal clearance.",
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 20
+   }
   },
   {
    "id": "transport-a04-d2",
@@ -78,7 +83,12 @@
     "L1: release stably at the final board targets. L2 and L3: both flat blades must enter the real blind slots and the item must be released, seated and stable. L2 has a fixed board; L3 has the same three inline sockets on a passive spring-supported z/roll/pitch board. Preserve prior placements and allow gripper opening and withdrawal clearance.",
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 20
+   }
   },
   {
    "id": "transport-a04-d3",
@@ -96,7 +106,12 @@
     "L1: release stably at the final board targets. L2 and L3: both flat blades must enter the real blind slots and the item must be released, seated and stable. L2 has a fixed board; L3 has the same three inline sockets on a passive spring-supported z/roll/pitch board. Preserve prior placements and allow gripper opening and withdrawal clearance.",
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 20
+   }
   },
   {
    "id": "transport-a08-d1",
@@ -114,7 +129,12 @@
     "L1: release stably at the final board targets. L2 and L3: both flat blades must enter the real blind slots and the item must be released, seated and stable. L2 has a fixed board; L3 has the same three inline sockets on a passive spring-supported z/roll/pitch board. Preserve prior placements and allow gripper opening and withdrawal clearance.",
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 20
+   }
   },
   {
    "id": "transport-a08-d2",
@@ -132,7 +152,12 @@
     "L1: release stably at the final board targets. L2 and L3: both flat blades must enter the real blind slots and the item must be released, seated and stable. L2 has a fixed board; L3 has the same three inline sockets on a passive spring-supported z/roll/pitch board. Preserve prior placements and allow gripper opening and withdrawal clearance.",
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 20
+   }
   },
   {
    "id": "transport-a08-d3",
@@ -150,7 +175,12 @@
     "L1: release stably at the final board targets. L2 and L3: both flat blades must enter the real blind slots and the item must be released, seated and stable. L2 has a fixed board; L3 has the same three inline sockets on a passive spring-supported z/roll/pitch board. Preserve prior placements and allow gripper opening and withdrawal clearance.",
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 20
+   }
   },
   {
    "id": "transport-a12-d1",
@@ -168,7 +198,12 @@
     "L1: release stably at the final board targets. L2 and L3: both flat blades must enter the real blind slots and the item must be released, seated and stable. L2 has a fixed board; L3 has the same three inline sockets on a passive spring-supported z/roll/pitch board. Preserve prior placements and allow gripper opening and withdrawal clearance.",
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 20
+   }
   },
   {
    "id": "transport-a12-d2",
@@ -186,7 +221,12 @@
     "L1: release stably at the final board targets. L2 and L3: both flat blades must enter the real blind slots and the item must be released, seated and stable. L2 has a fixed board; L3 has the same three inline sockets on a passive spring-supported z/roll/pitch board. Preserve prior placements and allow gripper opening and withdrawal clearance.",
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 20
+   }
   },
   {
    "id": "transport-a12-d3",
@@ -204,7 +244,12 @@
     "L1: release stably at the final board targets. L2 and L3: both flat blades must enter the real blind slots and the item must be released, seated and stable. L2 has a fixed board; L3 has the same three inline sockets on a passive spring-supported z/roll/pitch board. Preserve prior placements and allow gripper opening and withdrawal clearance.",
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 20
+   }
   },
   {
    "id": "mosaic-a04-6x12-d1",
@@ -221,7 +266,12 @@
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 30
+   }
   },
   {
    "id": "mosaic-a04-6x12-d2",
@@ -238,7 +288,12 @@
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 30
+   }
   },
   {
    "id": "mosaic-a04-6x12-d3",
@@ -255,7 +310,12 @@
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R13",
+    "speedup": 30
+   }
   },
   {
    "id": "mosaic-a06-9x18-d1",
@@ -272,7 +332,12 @@
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
-   ]
+   ],
+   "oracle": {
+    "kind": "assisted",
+    "revision": "R13",
+    "speedup": 30
+   }
   },
   {
    "id": "mosaic-a06-9x18-d2",
@@ -289,7 +354,12 @@
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
-   ]
+   ],
+   "oracle": {
+    "kind": "assisted",
+    "revision": "R13",
+    "speedup": 30
+   }
   },
   {
    "id": "mosaic-a06-9x18-d3",
@@ -306,7 +376,12 @@
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
-   ]
+   ],
+   "oracle": {
+    "kind": "assisted",
+    "revision": "R13",
+    "speedup": 30
+   }
   },
   {
    "id": "mosaic-a08-12x24-d1",
@@ -323,7 +398,12 @@
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
-   ]
+   ],
+   "oracle": {
+    "kind": "assisted",
+    "revision": "R13",
+    "speedup": 30
+   }
   },
   {
    "id": "mosaic-a08-12x24-d2",
@@ -340,7 +420,12 @@
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
-   ]
+   ],
+   "oracle": {
+    "kind": "assisted",
+    "revision": "R13",
+    "speedup": 30
+   }
   },
   {
    "id": "mosaic-a08-12x24-d3",
@@ -357,7 +442,12 @@
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
     "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
-   ]
+   ],
+   "oracle": {
+    "kind": "assisted",
+    "revision": "R13",
+    "speedup": 30
+   }
   },
   {
    "id": "relay-a08-d1",
@@ -376,7 +466,12 @@
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
-   ]
+   ],
+   "oracle": {
+    "kind": "reviewed",
+    "revision": "historical",
+    "speedup": 20
+   }
   },
   {
    "id": "relay-a08-d2",
@@ -397,7 +492,12 @@
     "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The rigid circular-arc timber subtends 63 degrees.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
-   ]
+   ],
+   "oracle": {
+    "kind": "reviewed",
+    "revision": "historical",
+    "speedup": 20
+   }
   },
   {
    "id": "relay-a08-d3",
@@ -418,7 +518,12 @@
     "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
-   ]
+   ],
+   "oracle": {
+    "kind": "reviewed",
+    "revision": "historical",
+    "speedup": 20
+   }
   },
   {
    "id": "relay-a12-d1",
@@ -437,7 +542,12 @@
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
-   ]
+   ],
+   "oracle": {
+    "kind": "reviewed",
+    "revision": "historical",
+    "speedup": 20
+   }
   },
   {
    "id": "relay-a12-d2",
@@ -458,7 +568,12 @@
     "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The rigid circular-arc timber subtends 63 degrees.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
-   ]
+   ],
+   "oracle": {
+    "kind": "reviewed",
+    "revision": "historical",
+    "speedup": 20
+   }
   },
   {
    "id": "relay-a12-d3",
@@ -479,7 +594,12 @@
     "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
-   ]
+   ],
+   "oracle": {
+    "kind": "reviewed",
+    "revision": "historical",
+    "speedup": 20
+   }
   },
   {
    "id": "relay-a16-d1",
@@ -498,7 +618,12 @@
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
-   ]
+   ],
+   "oracle": {
+    "kind": "reviewed",
+    "revision": "historical",
+    "speedup": 20
+   }
   },
   {
    "id": "relay-a16-d2",
@@ -519,7 +644,12 @@
     "The initial endpoint chord is 1.20m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The rigid circular-arc timber subtends 63 degrees.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
-   ]
+   ],
+   "oracle": {
+    "kind": "reviewed",
+    "revision": "historical",
+    "speedup": 20
+   }
   },
   {
    "id": "relay-a16-d3",
@@ -540,7 +670,12 @@
     "The initial endpoint chord is 1.20m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
-   ]
+   ],
+   "oracle": {
+    "kind": "reviewed",
+    "revision": "historical",
+    "speedup": 20
+   }
   },
   {
    "id": "dial-best5-n04-d1",
@@ -560,7 +695,12 @@
     "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R11",
+    "speedup": 10
+   }
   },
   {
    "id": "dial-best5-n06-d1",
@@ -580,7 +720,12 @@
     "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R11",
+    "speedup": 10
+   }
   },
   {
    "id": "dial-best5-n04-d2",
@@ -600,7 +745,12 @@
     "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R11",
+    "speedup": 10
+   }
   },
   {
    "id": "dial-best5-n04-d3",
@@ -620,7 +770,12 @@
     "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R11",
+    "speedup": 10
+   }
   },
   {
    "id": "dial-best5-n08-d1",
@@ -640,7 +795,12 @@
     "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R11",
+    "speedup": 10
+   }
   },
   {
    "id": "dial-best5-n06-d2",
@@ -660,7 +820,12 @@
     "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R11",
+    "speedup": 10
+   }
   },
   {
    "id": "dial-best5-n06-d3",
@@ -680,7 +845,12 @@
     "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R11",
+    "speedup": 10
+   }
   },
   {
    "id": "dial-best5-n08-d2",
@@ -700,7 +870,12 @@
     "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
-   ]
+   ],
+   "oracle": {
+    "kind": "program",
+    "revision": "R11",
+    "speedup": 10
+   }
   },
   {
    "id": "dial-best5-n08-d3",
@@ -720,7 +895,12 @@
     "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
-   ]
+   ],
+   "oracle": {
+    "kind": "assisted",
+    "revision": "R11",
+    "speedup": 10
+   }
   }
  ]
 }

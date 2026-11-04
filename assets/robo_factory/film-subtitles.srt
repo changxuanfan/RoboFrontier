@@ -1,0 +1,64 @@
+1
+00:00:21,500 --> 00:00:25,500
+relay-a12-d1  ·  Level 1  ·  12 arms
+
+2
+00:00:25,500 --> 00:00:37,500
+relay-a16-d1  ·  Level 1  ·  16 arms
+
+3
+00:00:37,500 --> 00:00:44,500
+relay-a16-d2  ·  Level 2  ·  16 arms
+
+4
+00:00:44,500 --> 00:00:57,357
+relay-a16-d3  ·  Level 3  ·  16 arms
+
+5
+00:01:08,929 --> 00:01:12,929
+transport-a08-d1  ·  Level 1  ·  8 arms
+
+6
+00:01:12,929 --> 00:01:24,929
+transport-a12-d1  ·  Level 1  ·  12 arms
+
+7
+00:01:24,929 --> 00:01:31,929
+transport-a12-d2  ·  Level 2  ·  12 arms
+
+8
+00:01:31,929 --> 00:01:44,786
+transport-a12-d3  ·  Level 3  ·  12 arms
+
+9
+00:01:56,357 --> 00:02:00,357
+mosaic-a06-9x18-d1  ·  Level 1  ·  6 arms
+
+10
+00:02:00,357 --> 00:02:12,357
+mosaic-a08-12x24-d1  ·  Level 1  ·  8 arms
+
+11
+00:02:12,357 --> 00:02:19,357
+mosaic-a08-12x24-d2  ·  Level 2  ·  8 arms
+
+12
+00:02:19,357 --> 00:02:32,214
+mosaic-a08-12x24-d3  ·  Level 3  ·  8 arms
+
+13
+00:02:43,786 --> 00:02:47,786
+dial-best5-n06-d1  ·  Level 1  ·  6 dials · 6 arms
+
+14
+00:02:47,786 --> 00:02:59,786
+dial-best5-n08-d1  ·  Level 1  ·  8 dials · 8 arms
+
+15
+00:02:59,786 --> 00:03:06,786
+dial-best5-n08-d2  ·  Level 2  ·  8 dials · 16 arms
+
+16
+00:03:06,786 --> 00:03:19,643
+dial-best5-n08-d3  ·  Level 3  ·  8 dials · 16 arms
+

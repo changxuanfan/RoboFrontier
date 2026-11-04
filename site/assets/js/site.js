@@ -107,7 +107,7 @@ function families() {
     const card = h('button', {class: 'fam', type: 'button', style: `--c:${famColor(key)}`, 'aria-label': `${f.name}: play ${id}`,
       onclick: () => openPlayer('oracle', id, all.map(x => x.id))},
       h('div', {class: 'bar'}),
-      frame(clip('oracle', id, 'front'), `ORACLE · ${t.arms} ARMS · L${t.level}`),
+      frame(clip('oracle', id, 'front'), `ORACLE${t.oracle?.kind === 'assisted' ? ' (ASSISTED)' : ''} · ${t.arms} ARMS · L${t.level}`),
       h('div', {class: 'meta'}, h('h3', {}, f.name, h('small', {}, `${arms[0]}–${arms.at(-1)} arms`)),
         h('p', {}, `${f.verb}. ${work[0]}–${work.at(-1)} ${f.unit} per task.`)));
     box.append(hoverPlay(card));
@@ -127,8 +127,11 @@ function drawMatrix() {
   const scales = [...new Set(rows.map(t => t.id.replace(/-d\d$/, '')))];
   const scaleOf = id => id.replace(/-d\d$/, '');
   box.append(h('div', {class: 'axis col'}, 'Level ↓ Scale →'));
-  for (const s of scales) { const t = rows.find(r => scaleOf(r.id) === s);
-    box.append(h('div', {class: 'axis col'}, h('b', {}, `${t.arms} arms`), `${t.workload} ${t.unit}`)); }
+  for (const s of scales) { const col = rows.filter(r => scaleOf(r.id) === s), t = col[0];
+    const arms = [...new Set(col.map(r => r.arms))].sort((a, b) => a - b);
+    // Dial columns are dial counts; their arm count doubles from Level 2.
+    box.append(h('div', {class: 'axis col'}, h('b', {}, key === 'dial' ? `${t.workload} dials` : `${t.arms} arms`),
+      key === 'dial' ? `${arms.join(' / ')} arms` : `${t.workload} ${t.unit}`)); }
   for (const level of [1, 2, 3]) {
     const note = state.tasks.families[key].levels[level - 1];
     box.append(h('div', {class: 'axis'}, h('b', {}, `L${level}`), h('span', {}, note)));
@@ -188,7 +191,14 @@ function drawWall() {
     if (c) { shown++; hoverPlay(tile); }
     box.append(tile);
   }
-  if (!shown) box.append(h('p', {class: 'wall-note'}, 'These runs are still being rendered in the Factory scene. They will appear here when published.'));
+  if (!shown) box.append(h('p', {class: 'wall-note'}, 'These runs are still being rendered in Robo World. They will appear here when published.'));
+}
+const ORACLE_KIND = {program: 'Reference program', assisted: 'Operator-assisted reference program',
+  reviewed: 'Historical run; completion confirmed by review, not by the current scorer'};
+function oracleNote(o) {
+  if (!o) return '';
+  const revision = o.revision === 'historical' ? '' : `, recorded on revision ${o.revision}`;
+  return `${ORACLE_KIND[o.kind]}${revision}. Idle time removed, ${o.speedup}× speed.`;
 }
 const fmtDuration = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
@@ -203,7 +213,8 @@ function showPlayer() {
   const fam = state.tasks.families[t.family];
   $('#player-kicker').textContent = `${sources().find(s => s.key === player.key)?.label || player.key} · ${fam.name} · Level ${t.level}`;
   $('#player-title').textContent = t.id;
-  $('#player-facts').textContent = `${t.arms} arms · ${t.workload} ${t.unit} · ${t.level_note}.` + (c ? ` ${fmtDuration(c.duration)} at playback speed.` : '');
+  $('#player-facts').textContent = `${t.arms} arms · ${t.workload} ${t.unit} · ${t.level_note}.` +
+    (player.key === 'oracle' ? ' ' + oracleNote(t.oracle) : '') + (c ? ` ${fmtDuration(c.duration)} as edited.` : '');
   const v = $('#player-video'); v.hidden = !c;
   if (c) { v.poster = c.poster; v.src = c.video; v.play().catch(() => {}); }
   else { v.removeAttribute('src'); $('#player-facts').textContent += ' This video is not published yet.'; }
@@ -224,7 +235,7 @@ function playerControls() {
   d.addEventListener('keydown', e => { if (e.key === 'ArrowRight') step(1); if (e.key === 'ArrowLeft') step(-1); });
   $$('[data-film]').forEach(b => b.addEventListener('click', () => {
     const film = state.media?.film; if (!film) return;
-    $('#player-kicker').textContent = 'RoboFrontier · film'; $('#player-title').textContent = 'The factory, 36 tasks';
+    $('#player-kicker').textContent = 'RoboFrontier · film'; $('#player-title').textContent = 'Robo World: four families, 36 tasks';
     $('#player-facts').textContent = film.note || ''; $('#player-view').hidden = true; $('#player-prev').hidden = $('#player-next').hidden = true;
     v.poster = film.poster || ''; v.src = film.video; d.showModal(); v.play().catch(() => {});
     d.addEventListener('close', () => { $('#player-view').hidden = false; $('#player-prev').hidden = $('#player-next').hidden = false; }, {once: true});

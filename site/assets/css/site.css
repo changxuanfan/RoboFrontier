@@ -175,6 +175,15 @@ h3{font-size:22px;letter-spacing:-.01em;margin:0}
 .wall-note{grid-column:1/-1;font:500 12px var(--mono);color:var(--dim);margin:6px 0 0}
 
 /* Results & analysis */
+.note{margin-top:14px;max-width:880px}
+.note b{color:var(--ink);font-weight:600}
+.definitions{margin-top:28px;border-top:1px solid var(--line);padding-top:18px}
+.definitions summary{cursor:pointer;font:500 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.definitions summary:hover{color:var(--accent)}
+.definitions dl{display:grid;grid-template-columns:220px 1fr;gap:10px 28px;margin:20px 0 0}
+.definitions dt{font:500 13px var(--mono);color:var(--ink)}
+.definitions dd{margin:0;color:var(--dim);font-size:15px}
+@media (max-width:720px){.definitions dl{grid-template-columns:1fr}.definitions dd{margin-bottom:8px}}
 .pending{border:1px dashed var(--line2);padding:clamp(24px,4vw,44px);position:relative;overflow:hidden}
 .pending::before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffff07 50%,transparent 70%);background-size:220% 100%;animation:scan 3.2s linear infinite}
 @keyframes scan{to{background-position:-220% 0}}

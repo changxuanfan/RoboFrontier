@@ -1,0 +1,42 @@
+{
+  "schema": "robofrontier.factory-editorial.v2",
+  "language": "en",
+  "duration_s": 210.5,
+  "fps": 30,
+  "source": {
+    "bundle_sha256": "2d88810bc69b1104e128b72d9c1fc217a0dd0aeb195e49100ec909bfc10bda7e",
+    "scene_sha256": "fb4947fe44963ebe83097a4fdd993c619c38d3356a9b08540c197759367f2b2f",
+    "cameras_sha256": "e05789f575ff1223c6046dfde58ccf9d87172d17bd7303128c3f49e6ddd64536",
+    "release_sha256": "cd5dd803fec80f450e0b26c49b5cae93b96b750a56d659b57efe0b6fc4c024b8"
+  },
+  "camera_plan": "tour-camera-plan.json",
+  "titles": "film-titles.srt",
+  "subtitles": "film-subtitles.srt",
+  "fonts": {
+    "display": "fonts/SpaceGrotesk-Bold.ttf",
+    "mono": "fonts/JetBrainsMono-Medium.ttf"
+  },
+  "font_licenses": [
+    "fonts/OFL-SpaceGrotesk.txt",
+    "fonts/OFL-JetBrainsMono.txt"
+  ],
+  "style": {
+    "display_size": 84,
+    "deck_size": 30,
+    "label_size": 30,
+    "caption_size": 34,
+    "margin_x": 90,
+    "margin_y": 72,
+    "panel_alpha": 80,
+    "ink": "#E9EEF3",
+    "dim": "#9AA6B4",
+    "accent": "#D4FF3A",
+    "panel": "#06080B",
+    "families": {
+      "transport": "#8FC1EC",
+      "mosaic": "#9FDC8C",
+      "relay": "#FF9F87",
+      "dial": "#F2D46B"
+    }
+  }
+}

@@ -24,6 +24,16 @@ FIELDS = {'schema', 'language', 'duration_s', 'fps', 'source', 'camera_plan',
 STYLE = {'title_size': 64, 'subtitle_size': 40, 'title_margin': 60,
          'subtitle_margin': 64, 'horizontal_margin': 90, 'color': '#FFFFFF'}
 STAMP = re.compile(r'(\d{2,}):([0-5]\d):([0-5]\d),(\d{3})\Z')
+# Version 2 matches the project page: a display and a monospace font, the page palette,
+# title cards and task labels on translucent panels. Version 1 projects render unchanged.
+SCHEMA_V2 = 'robofrontier.factory-editorial.v2'
+FIELDS_V2 = FIELDS - {'font', 'font_license'} | {'fonts', 'font_licenses'}
+STYLE_V2 = {'display_size': 84, 'deck_size': 26, 'label_size': 30, 'caption_size': 34,
+            'margin_x': 90, 'margin_y': 84, 'panel_alpha': 62,
+            'ink': '#E9EEF3', 'dim': '#9AA6B4', 'accent': '#D4FF3A', 'panel': '#06080B',
+            'families': {'transport': '#8FC1EC', 'mosaic': '#9FDC8C', 'relay': '#FF9F87', 'dial': '#F2D46B'}}
+COLORS_V2 = ('ink', 'dim', 'accent', 'panel')
+TASK_LABEL = re.compile(r'(transport|mosaic|relay|dial)-[a-z0-9-]+')
 
 
 def _number(value, name, minimum=0, maximum=86400):
@@ -127,7 +137,9 @@ def load(path, data_root=None):
         raise ValueError('Invalid editorial project file')
     path = path.resolve()
     project = bundle.read(path)
-    if not isinstance(project, dict) or set(project) != FIELDS or project.get('schema') != SCHEMA or project.get('language') != 'en':
+    v2 = isinstance(project, dict) and project.get('schema') == SCHEMA_V2
+    if (not isinstance(project, dict) or set(project) != (FIELDS_V2 if v2 else FIELDS)
+            or project.get('schema') not in (SCHEMA, SCHEMA_V2) or project.get('language') != 'en'):
         raise ValueError('Unknown editorial project fields, schema or language')
     duration = _number(project['duration_s'], 'duration', .001)
     if type(project['fps']) is not int or project['fps'] != 30:
@@ -142,17 +154,36 @@ def load(path, data_root=None):
     if data_root is not None and project['source'] != _source(data_root):
         raise ValueError('Editorial project belongs to a different Factory source')
     style = project['style']
-    if not isinstance(style, dict) or set(style) != set(STYLE):
-        raise ValueError('Unknown editorial style fields')
-    for name in set(STYLE)-{'color'}:
-        if type(style[name]) is not int:
-            raise ValueError('Editorial style dimensions must be integers')
-        _number(style[name], name, 1, 1000)
-    if not isinstance(style['color'], str) or not re.fullmatch('#[a-fA-F0-9]{6}', style['color']):
-        raise ValueError('Expected an editorial RGB color')
+    rgb = lambda v: isinstance(v, str) and re.fullmatch('#[a-fA-F0-9]{6}', v)
+    if v2:
+        if not isinstance(style, dict) or set(style) != set(STYLE_V2):
+            raise ValueError('Unknown editorial style fields')
+        for name in set(STYLE_V2)-set(COLORS_V2)-{'families'}:
+            if type(style[name]) is not int:
+                raise ValueError('Editorial style dimensions must be integers')
+            _number(style[name], name, 1, 100 if name == 'panel_alpha' else 1000)
+        families = style['families']
+        if (not all(rgb(style[c]) for c in COLORS_V2) or not isinstance(families, dict)
+                or set(families) != set(STYLE_V2['families']) or not all(rgb(v) for v in families.values())):
+            raise ValueError('Expected editorial RGB colors for the palette and every family')
+        fonts, licenses = project['fonts'], project['font_licenses']
+        if (not isinstance(fonts, dict) or set(fonts) != {'display', 'mono'}
+                or not isinstance(licenses, list) or not 1 <= len(licenses) <= 4):
+            raise ValueError('Expected display and mono fonts with their licenses')
+        inputs = [('camera_plan', project['camera_plan']), ('titles', project['titles']), ('subtitles', project['subtitles'])]
+        inputs += [('font', fonts['display']), ('font', fonts['mono'])] + [('font_license', l) for l in licenses]
+    else:
+        if not isinstance(style, dict) or set(style) != set(STYLE):
+            raise ValueError('Unknown editorial style fields')
+        for name in set(STYLE)-{'color'}:
+            if type(style[name]) is not int:
+                raise ValueError('Editorial style dimensions must be integers')
+            _number(style[name], name, 1, 1000)
+        if not rgb(style['color']):
+            raise ValueError('Expected an editorial RGB color')
+        inputs = [(field, project[field]) for field in ('camera_plan', 'titles', 'subtitles', 'font', 'font_license')]
     files = {path.name: bundle.digest(path)}
-    for field in ('camera_plan', 'titles', 'subtitles', 'font', 'font_license'):
-        name = project[field]
+    for field, name in inputs:
         if not isinstance(name, str) or name == path.name or name in files:
             raise ValueError('Expected distinct project-relative editorial files')
         file = bundle.inside(path.parent, name)
@@ -163,9 +194,15 @@ def load(path, data_root=None):
     titles = captions(path.parent/project['titles'], duration)
     subtitles = captions(path.parent/project['subtitles'], duration)
     from PIL import ImageFont
-    font_family = ImageFont.truetype(str(path.parent/project['font']), 24).getname()[0]
+    if v2:
+        font_files = {role: path.parent/name for role, name in project['fonts'].items()}
+        # libass matches \fn against full names; a weight such as Medium is not in the bare family.
+        font_family = {role: ' '.join(ImageFont.truetype(str(f), 24).getname()) for role, f in font_files.items()}
+    else:
+        font_files = {'display': path.parent/project['font']}
+        font_family = ImageFont.truetype(str(path.parent/project['font']), 24).getname()[0]
     return {'path': path, 'project': project, 'files': files, 'camera_plan': keys,
-            'titles': titles, 'subtitles': subtitles, 'font_family': font_family}
+            'titles': titles, 'subtitles': subtitles, 'font_family': font_family, 'font_files': font_files}
 
 
 def _create_verified(data_root, output):
@@ -286,6 +323,104 @@ def _ass(loaded, width, height):
     return header
 
 
+def _escape(text):
+    return text.replace('\\', '\\\\').replace('{', '\\{').replace('}', '\\}')
+
+
+def _ass_color(rgb):
+    return '&H'+rgb[5:7]+rgb[3:5]+rgb[1:3]+'&'
+
+
+def _win_metrics(font_file):
+    """unitsPerEm and usWinAscent+usWinDescent from a TrueType/OpenType file."""
+    import struct
+    data = Path(font_file).read_bytes()
+    tables = {data[12+16*i:16+16*i]: struct.unpack('>II', data[20+16*i:28+16*i])
+              for i in range(struct.unpack('>H', data[4:6])[0])}
+    head, os2 = tables[b'head'][0], tables[b'OS/2'][0]
+    return struct.unpack('>H', data[head+18:head+20])[0], sum(struct.unpack('>HH', data[os2+74:os2+78]))
+
+
+def _measurer(font_file):
+    """Width of text set at an ASS font size. Like GDI, libass maps the size to the font's
+    usWinAscent+usWinDescent, so the em is smaller than the size."""
+    from PIL import ImageFont
+    units, win = _win_metrics(font_file)
+    em = units/win
+    return lambda text, size: ImageFont.truetype(str(font_file), max(1, round(size*em))).getlength(text)
+
+
+def _ass_v2(loaded, width, height):
+    """Title cards and task labels on translucent panels, in the project page's style.
+
+    A title cue is a heading line plus optional deck lines, set top-left so it never covers a
+    scene's own floor label; a family heading takes that family's color bar. A subtitle cue that
+    starts with a task identifier is a label chip; any other subtitle is a caption. Chips and
+    captions sit bottom-left; keep them apart in time.
+    """
+    style, fonts = loaded['project']['style'], loaded['font_family']
+    measure = {role: _measurer(f) for role, f in loaded['font_files'].items()}
+    s, sx = height/1080, width/1920
+    left, bottom, ceiling = style['margin_x']*sx, height-style['margin_y']*s, style['margin_y']*s
+    panel, alpha = _ass_color(style['panel']), f"&H{round((100-style['panel_alpha'])*255/100):02X}&"
+    ink, dim, accent = (_ass_color(style[c]) for c in ('ink', 'dim', 'accent'))
+    out = (f'[Script Info]\nScriptType: v4.00+\nPlayResX: {width}\nPlayResY: {height}\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n'
+           '[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, '
+           'Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n'
+           f"Style: Base,{fonts['display'].replace(',', ' ')},{round(40*s)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n\n"
+           '[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n')
+
+    def event(layer, start, end, text):
+        return f'Dialogue: {layer},{_timestamp(start, True)},{_timestamp(end, True)},Base,,0,0,0,,{text}\n'
+
+    def rect(x0, y0, x1, y1, color, a='&H00&', fade=''):
+        return (f'{{\\an7\\pos(0,0)\\p1\\bord0\\shad0\\1c{color}\\1a{a}{fade}}}'
+                f'm {x0:.0f} {y0:.0f} l {x1:.0f} {y0:.0f} l {x1:.0f} {y1:.0f} l {x0:.0f} {y1:.0f}{{\\p0}}')
+
+    for start, end, text in loaded['titles']:
+        lines = text.split('\n'); heading, deck = lines[0], lines[1:]
+        family = heading.strip().lower()
+        bar_color = _ass_color(style['families'][family]) if family in style['families'] else accent
+        hs, ds, pad, bar, gap = style['display_size']*s, style['deck_size']*s, 30*s, 8*s, 12*s
+        text_w = max([measure['display'](heading, hs)] + [measure['mono'](d, ds) for d in deck])
+        height_text = hs + (gap + ds*1.4*len(deck) if deck else 0)
+        top, right = ceiling, left+bar+2*pad+text_w
+        foot = top+height_text+2*pad
+        fade = '\\fad(350,350)'
+        out += event(0, start, end, rect(left, top, right, foot, panel, alpha, fade))
+        out += event(1, start, end, rect(left, top, left+bar, foot, bar_color, fade=fade))
+        x = left+bar+pad
+        out += event(2, start, end, f"{{\\an7\\pos({x:.0f},{top+pad:.0f})\\fn{fonts['display']}\\fs{hs:.0f}\\1c{ink}{fade}}}{_escape(heading)}")
+        if deck:
+            out += event(2, start, end, f"{{\\an7\\pos({x:.0f},{top+pad+hs+gap:.0f})\\fn{fonts['mono']}\\fs{ds:.0f}\\1c{dim}{fade}}}"
+                         + '\\N'.join(_escape(d) for d in deck))
+    for start, end, text in loaded['subtitles']:
+        fade = '\\fad(220,220)'
+        match = TASK_LABEL.match(text)
+        if match:
+            ident, rest = match.group(0), text[match.end():].replace('\n', ' ')
+            ls, pad, square = style['label_size']*s, 16*s, 14*s
+            text_w = measure['mono'](ident, ls) + measure['mono'](rest, ls)
+            chip_h = ls + 2*pad
+            top, right = bottom-chip_h, left+pad+square+pad*.9+text_w+pad
+            cy = top+chip_h/2
+            out += event(0, start, end, rect(left, top, right, bottom, panel, alpha, fade))
+            out += event(1, start, end, rect(left+pad, cy-square/2, left+pad+square, cy+square/2,
+                                             _ass_color(style['families'][match.group(1)]), fade=fade))
+            out += event(2, start, end, f"{{\\an4\\pos({left+pad+square+pad*.9:.0f},{cy:.0f})\\fn{fonts['mono']}\\fs{ls:.0f}\\1c{ink}{fade}}}"
+                         f"{_escape(ident)}{{\\1c{dim}}}{_escape(rest)}")
+        else:
+            lines = text.split('\n')
+            cs, pad, bar = style['caption_size']*s, 22*s, 6*s
+            text_w = max(measure['display'](l, cs) for l in lines)
+            top, right = bottom-cs*1.3*len(lines)-2*pad, left+bar+2*pad+text_w
+            out += event(0, start, end, rect(left, top, right, bottom, panel, alpha, fade))
+            out += event(1, start, end, rect(left, top, left+bar, bottom, accent, fade=fade))
+            out += event(2, start, end, f"{{\\an7\\pos({left+bar+pad:.0f},{top+pad:.0f})\\fn{fonts['display']}\\fs{cs:.0f}\\1c{ink}{fade}}}"
+                         + '\\N'.join(_escape(l) for l in lines))
+    return out
+
+
 def render(project, video, output, *, run_command=None):
     """Composite text onto media; only the caller can establish scene identity."""
     loaded = load(project)
@@ -304,8 +439,13 @@ def render(project, video, output, *, run_command=None):
         raise ValueError('Editorial input changed before rendering')
     (output/'fonts').mkdir()
     # Render-local copies share bytes with the retained editable project.
-    (output/'fonts/font.ttf').hardlink_to(output/'project'/loaded['project']['font'])
-    (output/'editorial.ass').write_text(_ass(loaded, source['width'], source['height']))
+    if loaded['project']['schema'] == SCHEMA_V2:
+        for name in loaded['project']['fonts'].values():
+            (output/'fonts'/Path(name).name).hardlink_to(output/'project'/name)
+        (output/'editorial.ass').write_text(_ass_v2(loaded, source['width'], source['height']))
+    else:
+        (output/'fonts/font.ttf').hardlink_to(output/'project'/loaded['project']['font'])
+        (output/'editorial.ass').write_text(_ass(loaded, source['width'], source['height']))
     if run_command is None:
         def run_command(command, *, cwd):
             subprocess.run(command, cwd=cwd, check=True)

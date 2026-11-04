@@ -1,0 +1,40 @@
+1
+00:00:00,800 --> 00:00:08,500
+RoboFrontier
+Language agents in a robot world
+36 tasks · 4 families · up to 16 arms
+
+2
+00:00:13,500 --> 00:00:19,500
+Relay
+Carry long timbers arm to arm
+and land them over the goal.
+8–16 arms · 2–4 timbers · 3 levels
+
+3
+00:01:00,929 --> 00:01:06,929
+Transport
+Deliver ordered items to their boards,
+by handover or staging.
+4–12 arms · 12–36 targets · 3 levels
+
+4
+00:01:48,357 --> 00:01:54,357
+Mosaic
+Fill every cell of a color pattern
+with distinct cubes.
+4–8 arms · 72–288 cells · 3 levels
+
+5
+00:02:35,786 --> 00:02:41,786
+Dial
+Turn spring dials and read BEST feedback
+to crack a hidden code.
+4–8 dials · up to 16 arms · 3 levels
+
+6
+00:03:23,500 --> 00:03:30,500
+One world per task
+Every action, message and frame is recorded.
+Oracle reference runs, not model results.
+

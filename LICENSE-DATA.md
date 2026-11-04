@@ -28,6 +28,8 @@ These keep their own licenses and are not relicensed here:
 | --- | --- | --- |
 | Franka Emika Panda model from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie), fetched into `vendor/` and embedded in scene files | `configs/environments/**/scene.xml`, `vendor/` | Apache License 2.0 |
 | Barlow Condensed font | `assets/robo_factory/fonts/` | SIL Open Font License 1.1 ([`OFL.txt`](assets/robo_factory/fonts/OFL.txt)) |
+| Space Grotesk Bold (film titles) | `assets/robo_factory/fonts/` | SIL Open Font License 1.1 ([`OFL-SpaceGrotesk.txt`](assets/robo_factory/fonts/OFL-SpaceGrotesk.txt)) |
+| JetBrains Mono Medium (film labels) | `assets/robo_factory/fonts/` | SIL Open Font License 1.1 ([`OFL-JetBrainsMono.txt`](assets/robo_factory/fonts/OFL-JetBrainsMono.txt)) |
 | Poly Haven `concrete_floor_02` texture | `assets/robo_factory/source/polyhaven/` | CC0 1.0 ([`LICENSE.txt`](assets/robo_factory/source/polyhaven/LICENSE.txt)) |
 
 ## Attribution

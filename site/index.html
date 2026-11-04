@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RoboFrontier — Language agents running a robot factory</title>
+<title>RoboFrontier — Language agents in a multi-robot world</title>
 <meta name="description" content="RoboFrontier: a benchmark where language-model agents organize, communicate and collaborate across up to sixteen robot arms in one physical world.">
 <meta property="og:title" content="RoboFrontier">
-<meta property="og:description" content="Language-model agents in charge of up to sixteen robot arms: 36 physical tasks, four families, one factory.">
+<meta property="og:description" content="Language-model agents in charge of up to sixteen robot arms: 36 physical tasks in four families, in one simulated robot world.">
 <meta property="og:image" content="assets/img/og.jpg">
 <meta name="theme-color" content="#06080b">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
@@ -39,8 +39,8 @@
   <div class="hero-shade" aria-hidden="true"></div>
   <div class="hero-copy">
     <p class="live"><span class="dot" aria-hidden="true"></span>One world · up to 16 arms · 24-hour runs</p>
-    <h1 id="hero-title">Can language models<br>run a <em>robot factory?</em></h1>
-    <p class="lede">RoboFrontier puts language-model agents in charge of up to sixteen robot arms in one physical simulation. They read the task, split the work, talk, recover from mistakes — and are measured on all of it.</p>
+    <h1 id="hero-title">Can language models<br>run a <em>robot world?</em></h1>
+    <p class="lede">RoboFrontier puts language-model agents in charge of up to sixteen robot arms in Robo World, a physical simulation. They read the task, split the work, talk, recover from mistakes — and are measured on all of it.</p>
     <div class="cta">
       <button class="btn primary" type="button" data-film>▶ Watch the film <span>3:30</span></button>
       <a class="btn" href="#results">Results</a>
@@ -75,20 +75,20 @@
     <article class="loop-step">
       <span class="loop-index">B</span>
       <h3>One robot tool</h3>
-      <p>Move, grasp, release, observe from named cameras, wait for events, message teammates, delegate. Every call is logged with its outcome.</p>
+      <p>Move arms and grippers, batch and pre-check motions, observe from named cameras, wait for events, message teammates, delegate and hand work back. Every call is logged with its outcome.</p>
     </article>
     <div class="loop-wire reverse" aria-hidden="true"><i></i><span>images · events</span></div>
     <article class="loop-step">
       <span class="loop-index">C</span>
-      <h3>A physical world</h3>
-      <p>MuJoCo dynamics with real contacts: grasps slip, timbers swing, springs push back. No teleporting, no state writes, no resets.</p>
+      <h3>Robo World</h3>
+      <p>Robo World runs MuJoCo dynamics with real contacts and simulated Franka Panda arms: grasps slip, timbers swing, springs push back. No teleporting, no state writes, no resets.</p>
     </article>
   </div>
   <div class="principles reveal">
     <div><h4>Same contract</h4><p>Identical tasks, physics, tools, prompts and limits for every model.</p></div>
     <div><h4>Long horizon</h4><p>Each run gets 24 hours of wall time from its START. Planning and waiting count.</p></div>
     <div><h4>Outcome first</h4><p>Success is judged on the final world state; collisions, retries and process events are reported beside it.</p></div>
-    <div><h4>Fully recorded</h4><p>Every action, message, image and motion frame is kept and can be replayed.</p></div>
+    <div><h4>Fully recorded</h4><p>Every action, message, camera image and motion frame is kept; motion can be replayed and re-rendered.</p></div>
   </div>
 </section>
 
@@ -96,7 +96,7 @@
   <div class="chapter-head reveal">
     <p class="kicker">02 / Benchmark</p>
     <h2 id="benchmark-title">Four ways to work together.</h2>
-    <p class="sub">Each family has nine tasks: three scales of arms crossed with three difficulty levels. Hover a family to watch the reference solution.</p>
+    <p class="sub">Each family has nine tasks: three team sizes crossed with three difficulty levels. Hover a family to watch an Oracle reference run.</p>
   </div>
   <div class="families reveal" id="families"></div>
 
@@ -104,7 +104,7 @@
     <div class="matrix-head">
       <div>
         <h3>The task matrix</h3>
-        <p class="sub small">Columns scale up the team, rows raise the difficulty. Select any cell to play its reference run.</p>
+        <p class="sub small">Columns scale up the team, rows raise the difficulty. Select any cell to play its Oracle reference run.</p>
       </div>
       <div class="segmented" role="tablist" aria-label="Family" id="matrix-tabs"></div>
     </div>
@@ -143,7 +143,8 @@
   <div class="chapter-head reveal">
     <p class="kicker">03 / Watch</p>
     <h2 id="watch-title">Every task, on film.</h2>
-    <p class="sub">Factory renders of every run, front and side. Switch between the privileged Oracle reference and each model. Hover to preview; select to open.</p>
+    <p class="sub">Every run rendered in Robo World, front and side. Hover to preview; select to open.</p>
+    <p class="sub small note"><b>Oracle</b> runs are privileged reference programs that read hidden task state; they show that each task can be done and are not model results. Some were operator-assisted, and some predate the released physics revision; each video says which. Videos are edited for viewing: idle time removed, played at 10–30×.</p>
   </div>
   <div class="wall-controls reveal">
     <div class="segmented" role="tablist" aria-label="Video source" id="source-tabs"></div>
@@ -160,9 +161,23 @@
   <div class="chapter-head reveal">
     <p class="kicker">04 / Results</p>
     <h2 id="results-title">Who gets the job done?</h2>
-    <p class="sub">All models run the adaptive protocol on all 36 tasks for up to 24 hours each. Completion is the headline; how they got there is the story.</p>
+    <p class="sub">Every model runs the adaptive protocol on all 36 tasks, for up to 24 hours each. Completion is the headline; how they got there is the story.</p>
   </div>
   <div id="results-body" class="reveal"></div>
+  <details class="definitions reveal">
+    <summary>How each metric is defined</summary>
+    <dl>
+      <dt>Completion rate</dt><dd>Share of runs whose final world state meets the task's completion conditions, judged by the independent scorer.</dd>
+      <dt>Mean progress</dt><dd>Share of the task's goals met at the end: targets, cells or timbers placed; for Dial, an unlock counts as complete.</dd>
+      <dt>Failed actions, failure rate</dt><dd>Robot actions that ended in failure (for example a grasp outside tolerance or a timeout), per run and as a share of all actions.</dd>
+      <dt>Retries, retry rate</dt><dd>Actions that repeat the same operation on the same arm right after that arm's failed action.</dd>
+      <dt>Time to finish</dt><dd>Wall time from START to completion, over completed runs only.</dd>
+      <dt>Input, output tokens</dt><dd>Provider-reported tokens over every session of a run: Controller and all delegates.</dd>
+      <dt>Arm collisions</dt><dd>Contact episodes between two different robots.</dd>
+      <dt>Parallel efficiency</dt><dd>Mean number of moving arms divided by the number of arms, while any arm is moving. An arm moves when a joint turns faster than 0.02 rad/s.</dd>
+      <dt>Messages</dt><dd>Messages sent between roles through the robot tool.</dd>
+    </dl>
+  </details>
 </section>
 
 <section class="chapter" id="analysis" aria-labelledby="analysis-title">
@@ -177,7 +192,7 @@
     <button type="button" role="tab" aria-selected="false" data-panel="parallel">Parallel work</button>
   </div>
   <div class="panel" data-panel="communication">
-    <p class="sub">Four organizations, one model family (GPT), the same tasks. Adaptive is the benchmark protocol because it was the best on time, tokens, parallelism, success and collisions in this comparison.</p>
+    <p class="sub">The benchmark uses Adaptive. This study compares it with three fixed organizations: the same GPT model on the four largest Level 3 tasks, one per family.</p>
     <div class="topologies" id="topologies"></div>
     <div id="communication-chart"></div>
   </div>
@@ -186,7 +201,7 @@
     <div id="skills-chart"></div>
   </div>
   <div class="panel" data-panel="parallel" hidden>
-    <p class="sub">How many arms are actually moving at once? Parallel efficiency is the share of arm-time spent in useful motion while work remains.</p>
+    <p class="sub">How many arms actually move at once? Parallel efficiency is the mean number of moving arms divided by the number of arms, measured while any arm is moving.</p>
     <div id="parallel-chart"></div>
   </div>
 </section>

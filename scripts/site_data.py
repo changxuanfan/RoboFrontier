@@ -38,6 +38,27 @@ FAMILIES = {
 }
 
 
+# How each released Oracle recording was qualified (benchmark/release.json), in plain words.
+ORACLE_KINDS = {
+    'r13_frozen_oracle': ('program', 'R13'),
+    'r13_pure_program': ('program', 'R13'),
+    'r13_privileged_assisted': ('assisted', 'R13'),
+    'pure_program': ('program', 'R11'),
+    'privileged_assisted': ('assisted', 'R11'),
+    'historical_user_goal_completion_not_relabelled_native': ('reviewed', 'historical'),
+}
+
+
+def oracle(release):
+    """Per case: how its Oracle video was made, its revision and its playback speed."""
+    out = {}
+    for family in release['families'].values():
+        for record in family['oracle']:
+            kind, revision = ORACLE_KINDS[record['qualification']]
+            out[record['id']] = {'kind': kind, 'revision': revision, 'speedup': family['speedup']}
+    return out
+
+
 def workload(case):
     """The family's unit of work for one case, from its released identity."""
     family, arms = case['family'], case['arm_count']
@@ -51,13 +72,14 @@ def workload(case):
 
 def tasks():
     atlas = json.loads(ATLAS.read_text())
+    references = oracle(json.loads((ROOT / 'benchmark/release.json').read_text()))
     rows = []
     for case in atlas['cases']:
         family = case['family']
         rows.append({'id': case['id'], 'family': family, 'level': case['level'], 'arms': case['arm_count'],
                      'workload': workload(case), 'unit': FAMILIES[family]['unit'],
                      'level_note': FAMILIES[family]['levels'][case['level'] - 1],
-                     'objective': case['objective'], 'rules': case['rules']})
+                     'objective': case['objective'], 'rules': case['rules'], 'oracle': references[case['id']]})
     rows.sort(key=lambda r: (list(FAMILIES).index(r['family']), r['arms'], r['workload'], r['level']))
     document = {'schema': 'robofrontier.site-tasks.v1', 'release_sha256': atlas['release_sha256'],
                 'families': FAMILIES, 'tasks': rows}
@@ -77,7 +99,7 @@ def media(specs, film=None):
     document = {'schema': 'robofrontier.site-media-index.v1', 'sets': sets}
     if film:
         document['film'] = {'video': film[0], 'poster': film[1],
-                            'note': 'The Factory tour: every family and scale, 3 min 30 s, 1080p.'}
+                            'note': 'A tour of Robo World: every family and scale, 3 min 30 s, 1080p. Oracle reference runs, not model results.'}
     return write(SITE / 'media.json', document)
 
 

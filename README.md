@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="docs/media/readme/banner.jpg" alt="Sixteen robot arms at a curved table in the RoboFrontier factory" width="100%">
+<img src="docs/media/readme/banner.jpg" alt="Sixteen robot arms at a curved table in Robo World" width="100%">
 
 # RoboFrontier
 
-**Can language models run a robot factory?**
+**Can language models run a robot world?**
 
-Language-model agents in charge of up to sixteen robot arms in one physical world:
-36 tasks, four families, 24-hour runs.
+Language-model agents in charge of up to sixteen robot arms in Robo World, a physical
+simulation: 36 tasks, four families, 24-hour runs.
 
 [**Project page**](https://changxuanfan.github.io/RoboFrontier/) ·
 [**Watch the film**](https://changxuanfan.github.io/RoboFrontier/#film) ·
@@ -21,7 +21,7 @@ Language-model agents in charge of up to sixteen robot arms in one physical worl
 </div>
 
 <!-- media:film -->
-[![The RoboFrontier film: a three-and-a-half-minute tour of the factory and its 36 tasks](docs/media/readme/film.jpg)](https://github.com/changxuanfan/RoboFrontier/releases/download/factory-tour-media-20261102/robofrontier-factory-tour-original.mp4)
+[![The RoboFrontier film: a three-and-a-half-minute tour of Robo World and its 36 tasks](docs/media/readme/film.jpg)](https://github.com/changxuanfan/RoboFrontier/releases/download/factory-tour-media-20261102/robofrontier-factory-tour-original.mp4)
 <!-- /media:film -->
 
 ## What it is
@@ -34,16 +34,20 @@ who does what, when to wait, how to talk and how to recover are the agent's choi
 | | |
 | --- | --- |
 | **Agents** | Native Codex and Claude Code sessions. A Controller owns the task and, in the adaptive protocol, forks delegates for bounded jobs and takes their arms back. |
-| **One robot tool** | Move, grasp, release, observe from named cameras, wait for events, message teammates, delegate. Every call and its outcome is recorded. |
-| **A physical world** | MuJoCo dynamics with real contacts. Grasps slip, timbers swing, springs push back; no teleporting, state writes or resets. |
+| **One robot tool** | Move arms and grippers, batch and pre-check motions, observe from named cameras, wait for events, message teammates, delegate and hand work back. Every call and its outcome is recorded. |
+| **Robo World** | MuJoCo dynamics with real contacts and simulated Franka Panda arms. Grasps slip, timbers swing, springs push back; no teleporting, state writes or resets. |
 | **Scoring** | Success is judged on the final world state; failures, retries, time, tokens, collisions and parallelism are reported beside it. |
 
 ## Four task families
 
 Each family has nine tasks: three team sizes crossed with three difficulty levels.
-The videos below are the privileged **Oracle** reference solutions, rendered in the
-Factory scene. Each montage plays all nine tasks of a family at once: rows are
-difficulty levels 1–3, columns are team sizes.
+The videos below are **Oracle** reference runs rendered in Robo World: privileged programs
+that read hidden task state. They show that each task can be done; they are not model
+results. The Mosaic 6- and 8-arm runs and `dial-best5-n08-d3` were operator-assisted;
+Transport and Mosaic were recorded on revision R13, before the released physics revision;
+the Relay runs are historical runs whose completion was confirmed by review. Idle time is
+removed and playback is sped up. Each montage plays all nine tasks of a family at once:
+rows are difficulty levels 1–3, columns are team sizes.
 
 ### 🟦 Transport — deliver ordered items to their boards
 
@@ -139,7 +143,8 @@ uv sync --locked --extra oracle
 
 Preparing and running a batch make real, billable model calls only after an explicit
 preflight. [Getting started](docs/getting-started.md) covers configuration, running,
-monitoring, data handoff, Oracle and Factory; [docs/](docs/README.md) has every guide.
+monitoring, data handoff, Oracle runs and Robo World rendering (the `factory` commands);
+[docs/](docs/README.md) has every guide.
 
 | Path | What is there |
 | --- | --- |
@@ -167,7 +172,7 @@ remaining author list, publication status and paper URL are not finalized.
 ## License
 
 Code is under the [MIT License](LICENSE). Benchmark data and media (task and scene data,
-rendered images, Factory assets and published videos) are under
+rendered images, Robo World scene assets and published videos) are under
 [CC BY 4.0](LICENSE-DATA.md). Third-party material keeps its own license: the Franka Panda
-model from MuJoCo Menagerie (Apache 2.0), the Barlow Condensed font (OFL 1.1) and a Poly
-Haven texture (CC0); see [`LICENSE-DATA.md`](LICENSE-DATA.md).
+model from MuJoCo Menagerie (Apache 2.0), the Barlow Condensed, Space Grotesk and JetBrains
+Mono fonts (OFL 1.1) and a Poly Haven texture (CC0); see [`LICENSE-DATA.md`](LICENSE-DATA.md).
