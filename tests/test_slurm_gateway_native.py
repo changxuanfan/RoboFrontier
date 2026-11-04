@@ -162,10 +162,12 @@ class NativeGatewayTests(unittest.TestCase):
                         report = json.loads(result.stdout)
                         self.assertEqual((report['parents'], report['children'], report['completed']), (36, 72, 108))
                         self.assertEqual(report['physical_actions'], 0)
+                        self.assertTrue(report['single_task_recovery'])
+                        self.assertEqual(report['recovery_tools'], 2)
                         self.assertTrue(lease.reconcile())
                     exported = [json.loads((Path(job['run_directory'])/'private/engine/gateway-transcripts/index.json').read_text())
                                 for job in jobs]
-                    self.assertEqual(sum(len(row['threads']) for row in exported), 108)
+                    self.assertEqual(sum(len(row['threads']) for row in exported), 109)
                     self.assertTrue(all(t.get('verified') for row in exported for t in row['threads']))
                     self.assertFalse(any(p.name == 'auth.json' for p in (root/'runs').rglob('*')))
                 except Exception:
@@ -176,7 +178,7 @@ class NativeGatewayTests(unittest.TestCase):
                     raise
             self.assertGreaterEqual(state['refreshes'], 1)
             self.assertEqual(state['stale'], 0)
-            self.assertEqual(state['requests'], 216)
+            self.assertEqual(state['requests'], 220)
             self.assertEqual(json.loads((store/'current.json').read_text())['auth']['tokens']['refresh_token'],
                              'fixture-refresh-'+str(state['generation']))
 

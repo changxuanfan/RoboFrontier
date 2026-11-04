@@ -15,11 +15,12 @@ const fields={
 };
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 class JobGateway {
-  constructor(tasks,{rpcFactory=options=>new CodexRpc(options.args,options.callbacks),persist=()=>{}}={}) {
+  constructor(tasks,{rpcFactory=options=>new CodexRpc(options.args,options.callbacks),persist=()=>{},recoveryDirectory}={}) {
     if(!tasks.length||new Set(tasks.map(t=>t.id)).size!==tasks.length)throw new Error('Distinct gateway tasks required');
     this.tasks=new Map(tasks.map(t=>[t.id,{...t,threads:new Set(),archived:new Set(),inflight:new Set(),state:'new'}]));
     this.owners=new Map();this.turns=new Map();this.serverRequests=new Map();this.nextRequest=0;
     this.persist=persist;this.rpcFactory=rpcFactory;this.clients=new Set();
+    this.recoveryDirectory=recoveryDirectory;
   }
   async start(args,launch,{stderr='ignore'}={}) {
     this.native=this.rpcFactory({args,callbacks:{stderr,
@@ -37,10 +38,49 @@ class JobGateway {
     task.state='bound';task.client=client;client.task=task;this.clients.add(client);
     return {backend:'slurm-managed-v1'};
   }
+  capabilities(){return {backend:'slurm-managed-v1',singleTaskRecovery:this.recoveryDirectory?1:0};}
+  async recoveryStatus(taskId){
+    const task=this.tasks.get(taskId);
+    if(!this.recoveryDirectory||this.failed||!task)throw new Error('Recovery is not available');
+    const pending=[...this.serverRequests.values()].filter(p=>p.task===task).length;
+    return {taskId,state:task.state,pendingTools:pending,inflight:task.inflight.size,
+      recoveryUsed:!!task.recoveryUsed,threads:[...task.threads].sort()};
+  }
+  async recover(client,{taskId,nonce}={}){
+    const task=this.tasks.get(taskId);
+    if(!this.recoveryDirectory||this.failed||client.task||!task||task.state!=='closed'||task.recoveryUsed||
+       task.inflight.size||[...this.serverRequests.values()].some(p=>p.task===task))throw new Error('Task is not recoverable');
+    if(!/^[A-Za-z0-9_-]{1,128}$/.test(taskId)||typeof nonce!=='string')throw new Error('Invalid recovery grant');
+    const folder=this.recoveryDirectory,dir=fs.lstatSync(folder);
+    if(!dir.isDirectory()||dir.isSymbolicLink()||dir.uid!==process.getuid()||(dir.mode&0o077))throw new Error('Unsafe recovery authority');
+    const file=require('node:path').join(folder,taskId+'.json');
+    const fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);
+    let grant;
+    try{
+      const info=fs.fstatSync(fd);
+      if(!info.isFile()||info.uid!==process.getuid()||(info.mode&0o077)||info.nlink!==1||info.size>65536)throw new Error('Unsafe recovery grant');
+      grant=JSON.parse(fs.readFileSync(fd,'utf8'));
+    }finally{fs.closeSync(fd);}
+    if(grant.schema!=='robofrontier.task-recovery-grant.v1'||grant.taskId!==task.id||grant.run!==task.run||
+       grant.nonce!==nonce||!Number.isFinite(grant.expiresAt)||grant.expiresAt<=Date.now()/1000||
+       grant.expiresAt>Date.now()/1000+300||JSON.stringify(grant.threads)!==JSON.stringify([...task.threads].sort()))
+      throw new Error('Recovery grant does not match the closed task');
+    // Consume before any native request. An uncertain admission is never repeated.
+    if(fs.existsSync(file+'.consumed'))throw new Error('Recovery authority was already consumed');
+    fs.renameSync(file,file+'.consumed');task.recoveryUsed=true;task.state='recovering';
+    try{
+      for(const id of task.threads){
+        const result=await this.native.call('thread/read',{threadId:id});
+        if(result.thread.status.type==='active')throw new Error('An original role is still active');
+      }
+      task.client=client;client.task=task;task.state='bound';this.clients.add(client);
+      return {backend:'slurm-managed-v1',recovered:true};
+    }catch{task.state='closed';throw new Error('Recovery admission uncertain; manual review required');}
+  }
   own(task,id){if(!id||this.owners.get(id)!==task)throw new Error('Thread is not owned by this task');}
   async request(client,method,p={}) {
     const task=client.task;
-    if(!task||task.state!=='bound'||this.failed)throw new Error('Task channel is not admitted');
+    if(!task||task.client!==client||task.state!=='bound'||this.failed)throw new Error('Task channel is not admitted');
     if(method==='gateway/release'){await this.release(task);return {released:true};}
     if(task.kind==='preflight'&&p.sandbox==='read-only') {p={...p};delete p.sandbox;}
     if(!fields[method]||!p||typeof p!=='object'||Array.isArray(p)||Object.keys(p).some(k=>!fields[method].includes(k)))
@@ -110,7 +150,7 @@ class JobGateway {
   }
   respond(client,m){
     const pending=this.serverRequests.get(m.id);
-    if(!pending||pending.task!==client.task)throw new Error('Tool response ownership mismatch');
+    if(!pending||pending.task!==client.task||pending.task.client!==client)throw new Error('Tool response ownership mismatch');
     this.serverRequests.delete(m.id);
     if(m.error)pending.reject(new Error('Bound task tool failed'));else pending.resolve(m.result);
   }
@@ -144,7 +184,7 @@ class JobGateway {
   disconnected(client){
     this.clients.delete(client);
     const task=client.task;
-    if(task?.state==='bound')this.release(task).catch(()=>this.fail());
+    if(task?.client===client&&task.state==='bound')this.release(task).catch(()=>this.fail());
   }
   fail(){
     if(this.failed)return;this.failed=true;
@@ -163,7 +203,11 @@ class JobGateway {
         try{
           m=JSON.parse(line);
           if(!m.method){this.respond(client,m);return;}
-          const result=m.method==='gateway/bind'?this.bind(client,m.params?.taskId):await this.request(client,m.method,m.params);
+          if(client.task&&['gateway/capabilities','gateway/recovery/status'].includes(m.method))throw new Error('Supervisor-only control query');
+          const result=m.method==='gateway/capabilities'?this.capabilities():
+            m.method==='gateway/recovery/status'?await this.recoveryStatus(m.params?.taskId):
+            m.method==='gateway/recover'?await this.recover(client,m.params):
+            m.method==='gateway/bind'?this.bind(client,m.params?.taskId):await this.request(client,m.method,m.params);
           client.send({id:m.id,result});
         }catch{
           // Raw provider exceptions may contain auth context; never forward them.
@@ -187,7 +231,7 @@ async function main(file){
   let gateway;
   try{
     const log=fs.openSync(manifest.log,'a',0o600);
-    gateway=new JobGateway(manifest.tasks,{persist:rows=>{
+    gateway=new JobGateway(manifest.tasks,{recoveryDirectory:manifest.recovery_directory,persist:rows=>{
       const temporary=manifest.ownership+'.tmp';fs.writeFileSync(temporary,JSON.stringify(rows),{mode:0o600});fs.renameSync(temporary,manifest.ownership);
     }});
     try{await gateway.start(manifest.args,manifest.launch,{stderr:log});}finally{fs.closeSync(log);}

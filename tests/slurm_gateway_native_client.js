@@ -46,9 +46,48 @@ async function main(manifest){
     await assert.rejects(clients[0].rpc.call('thread/read',{threadId:parents[1].thread.id}));
     assert.equal(new Set(childIds).size,childIds.length);
     assert.equal(completed,clients.length*3);assert.equal(toolCalls,clients.length*3);
-    await Promise.all(clients.map(c=>c.rpc.close()));
+    await clients[0].rpc.close();
+    const nonce='fixture-recovery-authority',task=clients[0].task;
+    const control=new GatewayRpc(manifest.endpoint,task.id);
+    await control.ready;
+    assert.equal((await control.call('gateway/capabilities')).singleTaskRecovery,1);
+    const status=await control.call('gateway/recovery/status',{taskId:task.id});
+    assert.equal(status.state,'closed');assert.equal(status.pendingTools,0);
+    control.socket.destroy();
+    fs.writeFileSync(manifest.recovery_directory+'/'+task.id+'.json',JSON.stringify({
+      schema:'robofrontier.task-recovery-grant.v1',taskId:task.id,run:task.run,
+      threads:status.threads,nonce,expiresAt:Date.now()/1000+120}),{mode:0o600});
+    let recoveryTools=0,finished;
+    const recovered=new GatewayRpc(manifest.endpoint,task.id,{recoveryNonce:nonce,
+      onRequest:async(method,p)=>{
+        recoveryTools++;assert.equal((typeof p.arguments==='string'?JSON.parse(p.arguments):p.arguments).op,'inbox');
+        return {success:true,contentItems:[{type:'inputText',text:'RECOVERY_FIXTURE_OK'}]};},
+      onEvent:m=>{if(m.method==='turn/completed')finished?.(m.params.turn);}
+    });
+    try{
+      assert.equal((await recovered.initialize()).recovered,true);
+      const resumed=await recovered.call('thread/resume',{threadId:parents[0].thread.id});
+      assert.equal(resumed.thread.id,parents[0].thread.id);
+      assert.equal(recoveryTools,0,'history must not redispatch a recorded tool');
+      assert.ok(JSON.stringify(resumed.activePermissionProfile).includes(task.permissions));
+      await assert.rejects(recovered.call('thread/read',{threadId:parents[1].thread.id}));
+      for(let round=0;round<2;round++){
+        const id=round===0?resumed.thread.id:(await recovered.call('thread/fork',{
+          threadId:resumed.thread.id,excludeTurns:true,ephemeral:false})).thread.id;
+        let timer;
+        const done=new Promise((resolve,reject)=>{finished=resolve;timer=setTimeout(()=>reject(Error('Recovery fixture deadline')),20000);});
+        try{
+          await recovered.call('turn/start',{threadId:id,input:[{type:'text',text:'Recovery fixture, inbox only.'}]});
+          assert.equal((await done).status,'completed');
+        }finally{clearTimeout(timer);finished=null;}
+        await clients[1].rpc.call('thread/read',{threadId:parents[1].thread.id});
+      }
+      assert.equal(recoveryTools,2);
+      await recovered.close();
+    }finally{recovered.socket.destroy();}
+    await Promise.all(clients.slice(1).map(c=>c.rpc.close()));
     console.log(JSON.stringify({passed:true,parents:parents.length,children:childIds.length,completed,tool_calls:toolCalls,
-      model_provider:'loopback fixture only',physical_actions:0}));
+      single_task_recovery:true,recovery_tools:recoveryTools,model_provider:'loopback fixture only',physical_actions:0}));
   }finally{for(const c of clients)c.rpc.socket.destroy();}
 }
 main(JSON.parse(fs.readFileSync(process.argv[2]))).catch(error=>{console.error(error.stack);process.exitCode=1;});

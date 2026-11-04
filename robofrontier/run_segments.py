@@ -92,7 +92,7 @@ def deadline(store, wall_limit_s):
 # Written after the segment had already ended; they do not show it was alive.
 POSTMORTEM_EVENTS = ('RUN_INTERRUPTED', 'RUN_SEALED', 'RUN_SEAL_INCOMPLETE', 'DISPATCH_PAUSED',
                      'EXECUTION_RECOVERY_REQUIRED', 'INTERRUPTION_EVALUATION_UNAVAILABLE', 'HOST_LOST',
-                     'ACTIONS_INTERRUPTED_BY_SEGMENT', 'DELEGATION_FAILED', 'SEGMENT_PREPARED')
+                     'ACTIONS_INTERRUPTED_BY_SEGMENT', 'DELEGATION_FAILED', 'SEGMENT_PREPARED', 'MANUAL_TASK_RECOVERY')
 
 
 def last_activity(run, store):
@@ -139,12 +139,15 @@ def _last_frame(run, segment):
 NORMAL_END_EVENTS = ('POLICY_WALL_LIMIT', 'POLICY_BUDGET_CLOSED', 'TEAM_FINISH_PROPOSED')
 
 
-def retry_eligibility(run, store):
+def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None):
     """(True, None) when this run may continue in a new segment, else (False, reason).
 
     Only a world that really died, with time left, continues: a finish, the wall limit,
     a budget close, STOP or a seal of a live world is a normal end. A preparation that
-    stopped part way may be completed again (see prepare_retry)."""
+    stopped part way may be completed again (see prepare_retry). The explicit
+    sealed_host_failure exception is reserved for the validated manual job-task
+    recovery entrypoint; automatic continuation never enables it. source_root
+    verifies the original immutable runtime rather than a development checkout."""
     run = Path(run)
     if not supported(run): return False, 'run layout has no segments'
     journal = store.get('segment_journal')
@@ -163,12 +166,12 @@ def retry_eligibility(run, store):
     for (value,) in store.db.execute("SELECT value FROM events WHERE kind='RUN_SEALED'"):
         sealed = json.loads(value)
         report = sealed.get('report_ref') or ''
-        if sealed.get('owner_was_live', True) and Path(report).resolve().parent == output_dir(run, segment).resolve():
+        if not sealed_host_failure and sealed.get('owner_was_live', True) and Path(report).resolve().parent == output_dir(run, segment).resolve():
             return False, 'run was sealed with its world alive'
     if run_path(run, 'stop').exists(): return False, 'stop requested'
     # A preparation that stopped part way may have left its own restore files unverified.
     partial = 'input:'+input_dir(run, journal['segment']).relative_to(run).as_posix()+'/' if journal else None
-    changed = [c for c in verify_inputs(run) if not (partial and c.startswith(partial))]
+    changed = [c for c in verify_inputs(run, source_root=source_root) if not (partial and c.startswith(partial))]
     if changed: return False, 'frozen inputs changed: ' + ', '.join(changed[:3])
     if not owner_released(run): return False, 'a process still owns the physical world'
     if store.get('start_at') is None: return False, 'never started'
@@ -186,7 +189,7 @@ def _write_atomic(path, data):
     temporary.write_bytes(data); temporary.replace(path)
 
 
-def prepare_retry(run, store, reason):
+def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=None):
     """Turn an unexpectedly ended run into one that continues in the next segment.
 
     `reason` names what ended the previous segment (for example the host exit code).
@@ -196,7 +199,7 @@ def prepare_retry(run, store, reason):
     the same restore frame and end time, and uses no further continuation.
     """
     run = Path(run)
-    ok, why = retry_eligibility(run, store)
+    ok, why = retry_eligibility(run, store, sealed_host_failure=sealed_host_failure, source_root=source_root)
     if not ok: raise ValueError('Run cannot continue: ' + why)
     previous = store.get('segment', 0)
     journal = store.get('segment_journal')
@@ -232,7 +235,7 @@ def prepare_retry(run, store, reason):
         path = folder / name
         manifest['input_sha256'][str(path.relative_to(run))] = hashlib.sha256(path.read_bytes()).hexdigest()
     write_json(manifest_path, manifest)
-    if verify_inputs(run): raise ValueError('Segment restore inputs did not verify')
+    if verify_inputs(run, source_root=source_root): raise ValueError('Segment restore inputs did not verify')
     # The previous world's address is dead; hosts wait for the new world to publish one.
     for connection in (run / 'private/state/connections').glob('*.json'):
         value = json.loads(connection.read_text())

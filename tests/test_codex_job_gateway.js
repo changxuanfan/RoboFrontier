@@ -24,6 +24,62 @@ function fixture(count=2){
   return {gateway,native,calls,tasks,clients,start};
 }
 
+function grant(f,task,nonce='recovery-fixture'){
+  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-recover-'));fs.chmodSync(folder,0o700);
+  f.gateway.recoveryDirectory=folder;
+  const value={schema:'robofrontier.task-recovery-grant.v1',taskId:task.id,run:task.run,
+    threads:[...task.threads].sort(),nonce,expiresAt:Date.now()/1000+120};
+  const file=path.join(folder,task.id+'.json');fs.writeFileSync(file,JSON.stringify(value),{mode:0o600});
+  return {folder,file,value,nonce};
+}
+
+test('recovery reuses original owned threads and retires the old socket without touching peers',async t=>{
+  const f=fixture();const parent=await f.start(f.clients[0]),peer=await f.start(f.clients[1]);
+  await f.gateway.release(f.clients[0].task);
+  const g=grant(f,f.clients[0].task);t.after(()=>fs.rmSync(g.folder,{recursive:true,force:true}));
+  const client={events:[],send(m){this.events.push(m);},destroy(){}};
+  assert.equal((await f.gateway.recover(client,{taskId:f.tasks[0].id,nonce:g.nonce})).recovered,true);
+  assert.ok(fs.existsSync(g.file+'.consumed'));
+  f.gateway.disconnected(f.clients[0]);
+  assert.equal(client.task.state,'bound');
+  await assert.rejects(f.gateway.request(f.clients[0],'thread/read',{threadId:parent.thread.id}));
+  await f.gateway.request(client,'thread/resume',{threadId:parent.thread.id});
+  await f.gateway.request(f.clients[1],'thread/read',{threadId:peer.thread.id});
+  assert.equal(f.calls.filter(c=>c.method==='thread/start').length,2);
+  assert.equal(f.calls.some(c=>c.method==='turn/start'),false,'admission cannot replay model turns or tools');
+  await f.gateway.release(client.task);
+  await assert.rejects(f.gateway.recover({},{taskId:f.tasks[0].id,nonce:g.nonce}));
+  assert.equal(f.gateway.failed,undefined);
+});
+
+test('recovery refuses live tasks, wrong authority and active original roles without disturbing a peer',async t=>{
+  const f=fixture();const parent=await f.start(f.clients[0]),peer=await f.start(f.clients[1]);
+  const task=f.clients[0].task,g=grant(f,task);t.after(()=>fs.rmSync(g.folder,{recursive:true,force:true}));
+  await assert.rejects(f.gateway.recover({},{taskId:task.id,nonce:g.nonce}));
+  await f.gateway.release(task);
+  await assert.rejects(f.gateway.recover({},{taskId:task.id,nonce:'wrong'}));
+  assert.equal(task.recoveryUsed,undefined);assert.ok(fs.existsSync(g.file));
+  const call=f.native.call;
+  f.native.call=async(m,p)=>m==='thread/read'&&p.threadId===parent.thread.id?
+    {thread:{id:p.threadId,status:{type:'active'}}}:call(m,p);
+  await assert.rejects(f.gateway.recover({},{taskId:task.id,nonce:g.nonce}));
+  assert.equal(task.state,'closed');assert.equal(task.recoveryUsed,true);
+  await f.gateway.request(f.clients[1],'thread/read',{threadId:peer.thread.id});
+  assert.equal(f.gateway.failed,undefined);
+});
+
+test('a retired client cannot answer a recovered task tool request',async t=>{
+  const f=fixture();const parent=await f.start(f.clients[0]);await f.gateway.release(f.clients[0].task);
+  const g=grant(f,f.clients[0].task);t.after(()=>fs.rmSync(g.folder,{recursive:true,force:true}));
+  const client={events:[],send(m){this.events.push(m);},destroy(){}};
+  await f.gateway.recover(client,{taskId:f.tasks[0].id,nonce:g.nonce});
+  const response=f.gateway.tool('item/tool/call',{threadId:parent.thread.id,tool:'robot'});
+  const message=client.events[0];
+  assert.throws(()=>f.gateway.respond(f.clients[0],{id:message.id,result:'stale'}));
+  f.gateway.respond(client,{id:message.id,result:'original owner, new channel'});
+  assert.equal(await response,'original owner, new channel');
+});
+
 test('36 simultaneous task channels retain distinct profiles, parents, forks and handback',async()=>{
   const f=fixture(36);
   const parents=await Promise.all(f.clients.map(f.start));

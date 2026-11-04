@@ -255,6 +255,8 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
                 if result is not None:job['host_exit_code']=result
             except Exception as error:job.update(status='needs_review',error=str(error))
             write_json(folder/'batch.json',batch)
+    from .recover_task import wait_for_recoveries
+    wait_for_recoveries(batch['jobs'])
     batch.update(status='needs_review' if any(j['status']=='needs_review' for j in batch['jobs']) else 'closed',
                  finished_at=time.time());write_json(folder/'batch.json',batch)
 

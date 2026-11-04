@@ -99,6 +99,7 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
         raise ValueError('Job gateway socket path is too long; use a shorter node-local scratch path')
     return {'backend': BACKEND, 'fingerprint': fingerprint(), 'tasks': tasks, 'args': args,
             'launch': launch, 'endpoint': endpoint, 'ready': str(control/'ready.json'),
+            'recovery_directory': str(control/'recovery'),
             'ownership': str(control/'ownership.json'), 'log': str(control/'native.log')}
 
 
@@ -156,6 +157,7 @@ def engine(jobs, *, env, preflight=False, timeout_s=180):
     private = Path(env['ROBOFRONTIER_JOB_PRIVATE_ROOT']).resolve()
     control = private/'control'
     control.mkdir(mode=0o700, exist_ok=False)
+    (control/'recovery').mkdir(mode=0o700)
     manifest = build_manifest(jobs, control, private, env['ROBOFRONTIER_CREDENTIAL_STORE'], preflight=preflight)
     write_json(control/'manifest.json', manifest)
     log = (control/'gateway.log').open('a')

@@ -2,8 +2,8 @@
 const net=require('node:net'),readline=require('node:readline');
 const {RpcError,STARTUP_ACK_MS}=require('./codex_rpc');
 class GatewayRpc {
-  constructor(endpoint,taskId,{onEvent=()=>{},onRequest,onExit=()=>{}}={}) {
-    this.taskId=taskId;this.next=0;this.pending=new Map();this.onEvent=onEvent;
+  constructor(endpoint,taskId,{onEvent=()=>{},onRequest,onExit=()=>{},recoveryNonce=process.env.ROBOFRONTIER_CODEX_RECOVERY_NONCE}={}) {
+    this.taskId=taskId;this.next=0;this.pending=new Map();this.onEvent=onEvent;this.recoveryNonce=recoveryNonce;
     this.socket=net.createConnection(endpoint);
     this.ready=new Promise((resolve,reject)=>{
       this.socket.once('connect',resolve);this.socket.once('error',reject);
@@ -38,7 +38,8 @@ class GatewayRpc {
     });
   }
   async initialize(timeoutMs=STARTUP_ACK_MS){
-    await this.ready;return this.call('gateway/bind',{taskId:this.taskId},timeoutMs);
+    await this.ready;return this.call(this.recoveryNonce?'gateway/recover':'gateway/bind',
+      {taskId:this.taskId,...(this.recoveryNonce?{nonce:this.recoveryNonce}:{})},timeoutMs);
   }
   async close(){
     this.closing=true;

@@ -217,7 +217,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     return directory
 
 
-def verify_inputs(directory):
+def verify_inputs(directory, *, source_root=None):
     directory = Path(directory)
     try:
         manifest = json.loads((directory/'private/inputs/manifest.json').read_text())
@@ -237,7 +237,7 @@ def verify_inputs(directory):
             actual=None
         if actual!=manifest[key]:changed.append('private:'+filename)
     for relative,digest in manifest['source_sha256'].items():
-        p = ROOT/relative
+        p = (Path(source_root) if source_root is not None else ROOT)/relative
         if not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest()!=digest:
             changed.append('source:'+relative)
         frozen=directory/'private/inputs/frozen-source'/relative
