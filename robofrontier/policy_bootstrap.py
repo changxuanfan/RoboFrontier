@@ -58,6 +58,7 @@ MODEL_RESTART = ('Your model session was restarted after the model host stopped 
 # How many such restarts one run allows in total, across all roles and segments,
 # before it is sealed for review.
 MAX_MODEL_RESTARTS = 3
+NETWORK_RESUME = ('Network connectivity recovered after a recorded infrastructure pause. Your previous native turn is confirmed failed; this is a new continuation in the same session and the original live world. Read your saved work and inbox, inspect pending requests and original action IDs, and obtain fresh observations before choosing further work. Preserve completed results and submitted actions. Never replay an old request or infer that a failed model turn means its robot actions did not execute. Continue within your existing role and delegated scope; explicitly return when its agreed completion or documented failure boundary is reached.\n')
 # What workspace/skills.md holds when a run is prepared.
 SKILLS_HEADER = ('# Run skills\nShared by all roles in this run. Rules and format: the "Run skills" section '
                  'of your Skill.\n')
@@ -147,7 +148,7 @@ def write_bootstraps(run):
     (folder / 'resume.md').write_text(RESUME)
     (folder / 'model-restart.md').write_text(MODEL_RESTART)
     notice=folder/'network-resume.md'
-    notice.write_text('Network connectivity recovered after a recorded infrastructure pause. Your previous native turn is confirmed failed; this is a new continuation in the same session and the original live world. Read your saved work and inbox, inspect pending requests and original action IDs, and obtain fresh observations before choosing further work. Preserve completed results and submitted actions. Never replay an old request or infer that a failed model turn means its robot actions did not execute. Continue within your existing role and delegated scope; explicitly return when its agreed completion or documented failure boundary is reached.\n')
+    notice.write_text(NETWORK_RESUME)
     written += [folder / 'resume.md', folder / 'model-restart.md',notice]
     return written
 

@@ -59,6 +59,22 @@ test('an active turn cannot be steered by the scheduler',async()=>{
   await assert.rejects(PolicyHost.prototype.send.call({observe:async()=>({thread:{status:{type:'active'}}}),rpc:{call:()=>{called=true;}}},'t','wake'),/active/);
   assert.equal(called,false);
 });
+test('cold resume reopens only working roles and never returned delegates',async()=>{
+  const resumed=[],sent=[];
+  const host={run:'/tmp/stopped-run',launch:{model:'stub',provider:'openai'},actors:new Map(),
+    hostPath:()=>'/tmp/stopped-run/workspace',event:()=>{},
+    rpc:{call:async(method,p)=>{resumed.push(p.threadId);}},
+    send:async(id,message)=>sent.push([id,message]),
+    admin:async(op)=>op==='snapshot'?{agents:{
+      Controller:{kind:'controller',thread_id:'parent'},
+      Active:{kind:'delegate',thread_id:'active',delegation_state:'active'},
+      Returned:{kind:'delegate',thread_id:'returned',delegation_state:'finished'}
+    }}:{resumed:true,segment:2,messages:{Controller:'continue',Active:'finish scope'}}};
+  await PolicyHost.prototype.resumeSessions.call(host);
+  assert.deepEqual(resumed,['parent','active']);
+  assert.deepEqual(sent,[['parent','continue'],['active','finish scope']]);
+  assert.equal(host.actors.has('returned'),false);
+});
 test('robot transport cannot select another role connection',()=>{
   assert.equal(robotTool.name,'robot');
   assert.equal(robotTool.inputSchema.properties.connection,undefined);

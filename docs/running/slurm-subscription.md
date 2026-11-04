@@ -272,6 +272,25 @@ require explicit review. New pause behavior is opt-in and must not be hot-patche
 into already frozen historical trials. Admission explicitly rejects historical
 tasks whose frozen runtime lacks the pause/dispatcher/RPC support.
 
+A stopped historical run can acquire support only through an explicit operator
+runtime upgrade (`robofrontier.runtime_upgrade.upgrade`), after its clean seal,
+settled action ledger, native transcript custody and absence of live hosts have
+been checked. Hold its supervisor/recovery locks. The upgrade archives the parent
+manifest and frozen source under `private/inputs/runtime-upgrades/<next segment>`;
+both remain hashed in the new manifest. Public inputs, policy prompts, scene,
+model, workspace and settled calls are retained. A new network recovery notice is
+frozen, and changed runtime sources are recorded separately. No normal finish,
+unsettled call or integrity abort can be overridden.
+
+The returned manifest-bound authorization must be passed explicitly as
+`manual_authorization` to `run_segments.prepare_retry`. It binds the run, original
+segment, source version and exact call/action ledger to precisely the next
+segment. Consuming it does not raise the automatic retry limit; another outage
+requires another explicit review. A partially written migration or consumed grant
+fails closed. Validate private clones, file isolation and physical restore first.
+Restoring a stopped world remains approximate, unlike a short outage in a live
+world: missing velocity/controller/contact history cannot be reconstructed.
+
 On macOS, inspect the route to the cluster jump host before treating a small
 transfer benchmark as a bandwidth limit. A system VPN can send cluster SSH over
 a distant exit even when the cluster is local. `connect --ssh-config` accepts a

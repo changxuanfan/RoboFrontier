@@ -92,7 +92,8 @@ def deadline(store, wall_limit_s):
 # Written after the segment had already ended; they do not show it was alive.
 POSTMORTEM_EVENTS = ('RUN_INTERRUPTED', 'RUN_SEALED', 'RUN_SEAL_INCOMPLETE', 'DISPATCH_PAUSED',
                      'EXECUTION_RECOVERY_REQUIRED', 'INTERRUPTION_EVALUATION_UNAVAILABLE', 'HOST_LOST',
-                     'ACTIONS_INTERRUPTED_BY_SEGMENT', 'DELEGATION_FAILED', 'SEGMENT_PREPARED', 'MANUAL_TASK_RECOVERY')
+                     'ACTIONS_INTERRUPTED_BY_SEGMENT', 'DELEGATION_FAILED', 'SEGMENT_PREPARED', 'MANUAL_TASK_RECOVERY',
+                     'RUNTIME_UPGRADE_AUTHORIZED')
 
 
 def last_activity(run, store):
@@ -139,7 +140,7 @@ def _last_frame(run, segment):
 NORMAL_END_EVENTS = ('POLICY_WALL_LIMIT', 'POLICY_BUDGET_CLOSED', 'TEAM_FINISH_PROPOSED')
 
 
-def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None):
+def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None, manual_authorization=None):
     """(True, None) when this run may continue in a new segment, else (False, reason).
 
     Only a world that really died, with time left, continues: a finish, the wall limit,
@@ -151,7 +152,12 @@ def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None
     run = Path(run)
     if not supported(run): return False, 'run layout has no segments'
     journal = store.get('segment_journal')
-    if store.get('segment', 0) >= MAX_RETRIES and not journal: return False, 'already continued once'
+    if manual_authorization is not None:
+        from .runtime_upgrade import validate_authorization
+        try: validate_authorization(run, store, manual_authorization, source_root=source_root)
+        except (ValueError, OSError, KeyError, TypeError) as error: return False, str(error)
+    if store.get('segment', 0) >= MAX_RETRIES and not journal and manual_authorization is None:
+        return False, 'already continued once'
     lifecycle = store.get('lifecycle')
     if lifecycle not in ('running', 'interrupted', 'recovery_required'):
         return False, 'run ended normally or never started (' + str(lifecycle) + ')'
@@ -189,7 +195,7 @@ def _write_atomic(path, data):
     temporary.write_bytes(data); temporary.replace(path)
 
 
-def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=None):
+def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=None, manual_authorization=None):
     """Turn an unexpectedly ended run into one that continues in the next segment.
 
     `reason` names what ended the previous segment (for example the host exit code).
@@ -199,7 +205,8 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
     the same restore frame and end time, and uses no further continuation.
     """
     run = Path(run)
-    ok, why = retry_eligibility(run, store, sealed_host_failure=sealed_host_failure, source_root=source_root)
+    ok, why = retry_eligibility(run, store, sealed_host_failure=sealed_host_failure, source_root=source_root,
+                              manual_authorization=manual_authorization)
     if not ok: raise ValueError('Run cannot continue: ' + why)
     previous = store.get('segment', 0)
     journal = store.get('segment_journal')

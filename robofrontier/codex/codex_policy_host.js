@@ -332,6 +332,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
     const snapshot=await this.admin('snapshot');
     for (const [actor,agent] of Object.entries(snapshot.agents)) {
       if (agent.kind==='manager' || !agent.thread_id) continue;
+      if (agent.kind==='delegate' && agent.delegation_state==='finished') continue;
       await this.rpc.call('thread/resume',{threadId:agent.thread_id,cwd:this.hostPath('policy_cwd'),model:this.launch.model,
         modelProvider:this.launch.provider,approvalPolicy:'never',baseInstructions:frozenText(this.run,'system.md')??undefined,
         config:{web_search:'disabled','features.multi_agent':false}},STARTUP_ACK_MS);
