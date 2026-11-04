@@ -174,6 +174,11 @@ payload chunks. FIFO writer locks can otherwise place heartbeat replies behind
 many image uploads even when each destination drains independently. Private
 transport counters record byte totals and maximum control/write waits without
 retaining payloads.
+A separate 512 KiB channel-wide wire-credit window bounds payloads buffered
+inside SSH and Slurm, beyond the Python writer. Channel credit returns at frame
+decode, independently of destination draining; per-stream credit still returns
+after socket delivery. Control frames bypass both payload windows. This bounds
+control latency without reducing every stream to the speed of a stalled peer.
 Stream admission limits reject the individual connection without closing the
 shared route. Private Mac status includes a sanitized failure code and peak
 stream count; it never includes proxy passwords or TLS payloads.
@@ -198,6 +203,24 @@ of an interrupted experiment.
 Relay shutdown closes active clients before awaiting listener shutdown and bounds
 best-effort close frames. A broken pipe cannot indefinitely retain the private
 compute ownership lock after the route has been fenced.
+
+On macOS, inspect the route to the cluster jump host before treating a small
+transfer benchmark as a bandwidth limit. A system VPN can send cluster SSH over
+a distant exit even when the cluster is local. `connect --ssh-config` accepts a
+private operator-owned OpenSSH config scoped to this controller. Its jump host
+can use the immutable helper as a `ProxyCommand`:
+
+```sshconfig
+Host cluster-jump
+    ProxyCommand /path/to/python3 -I /private/immutable/slurm_proxy.py tcp-pipe --host %h --port %p --interface en0
+Host *
+    Include /path/to/operator/ssh/config
+```
+
+`tcp-pipe` binds only that SSH TCP socket to the selected macOS interface. It
+does not modify system routes, disable a VPN or change the Mac relay's OpenAI
+connections. Keep host-key verification enabled and compare memory-only upload
+and download benchmarks before deploying the scoped route.
 
 A shared-engine failure stops dispatch, seals task worlds and requires review.
 This backend disables automatic host/segment redispatch; it does not recreate a

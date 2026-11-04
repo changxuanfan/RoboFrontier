@@ -28,13 +28,14 @@ import threading
 import time
 from urllib.parse import urlsplit
 
-SCHEMA = 'robofrontier.slurm-egress.v2'
+SCHEMA = 'robofrontier.slurm-egress.v3'
 HEARTBEAT_S = 2
 STALE_S = 12
 MAX_STREAMS = 256
 MAX_FRAME = 100000
 CHUNK = 8192
 WINDOW = 131072
+CHANNEL_WINDOW = 524288
 
 
 class EgressError(RuntimeError):
@@ -203,22 +204,29 @@ class Frames:
         self.waiting = {}; self.sequence = 0; self.writing = False
         self.tx_bytes = 0; self.rx_bytes = 0
         self.max_control_wait_s = 0; self.max_write_wait_s = 0
+        self.outbound = SendWindow(CHANNEL_WINDOW)
 
     def stats(self):
         return {'tx_bytes': self.tx_bytes, 'rx_bytes': self.rx_bytes,
                 'queued_frames': len(self.waiting),
                 'max_control_wait_s': round(self.max_control_wait_s, 3),
-                'max_write_wait_s': round(self.max_write_wait_s, 3)}
+                'max_write_wait_s': round(self.max_write_wait_s, 3),
+                'unacked_wire_bytes': CHANNEL_WINDOW-self.outbound.available}
 
     async def send(self, value):
         data = json.dumps(value, separators=(',', ':')).encode()+b'\n'
         if len(data) > MAX_FRAME:
             raise EgressError('Relay frame limit exceeded')
+        reserved = value.get('type') == 'data'
+        if reserved and len(data) > CHANNEL_WINDOW:
+            raise EgressError('Relay data frame exceeds the channel window')
+        if reserved:
+            await self.outbound.take(len(data))
         # asyncio.Lock is FIFO: dozens of bulk senders can put a heartbeat
         # behind seconds of uploads. Admit control before queued payloads.
         priority = 2 if value.get('type') == 'data' else 0 if value.get('type') in ('ping','pong') else 1
         self.sequence += 1; ticket = (priority, self.sequence)
-        started = time.monotonic(); self.waiting[ticket] = started; admitted = False
+        started = time.monotonic(); self.waiting[ticket] = started; admitted = False; written = False
         try:
             async with self.condition:
                 await self.condition.wait_for(lambda: not self.writing and ticket == min(self.waiting))
@@ -227,6 +235,7 @@ class Frames:
                 self.max_control_wait_s = max(self.max_control_wait_s, time.monotonic()-started)
             write_started = time.monotonic()
             self.writer.write(data)
+            written = True
             await self.writer.drain()
             self.tx_bytes += len(data)
             self.max_write_wait_s = max(self.max_write_wait_s, time.monotonic()-write_started)
@@ -236,18 +245,29 @@ class Frames:
                 if admitted:
                     self.writing = False
                 self.condition.notify_all()
+            if reserved and not written:
+                self.outbound.credit(len(data))
 
     async def receive(self):
-        line = await self.reader.readline()
-        if not line:
-            raise EOFError()
-        self.rx_bytes += len(line)
-        if len(line) > MAX_FRAME:
-            raise EgressError('Relay frame limit exceeded')
-        value = json.loads(line)
-        if not isinstance(value, dict):
-            raise EgressError('Invalid relay frame')
-        return value
+        while True:
+            line = await self.reader.readline()
+            if not line:
+                raise EOFError()
+            self.rx_bytes += len(line)
+            if len(line) > MAX_FRAME:
+                raise EgressError('Relay frame limit exceeded')
+            value = json.loads(line)
+            if not isinstance(value, dict):
+                raise EgressError('Invalid relay frame')
+            if value.get('type') == 'channel_credit':
+                self.outbound.credit(value.get('bytes'))
+                continue
+            if value.get('type') == 'data':
+                # Credit at decode, independently of destination draining. This
+                # bounds bytes hidden in SSH/Slurm's own buffering without
+                # letting a slow destination exhaust the whole route's credit.
+                await self.send({'type': 'channel_credit', 'bytes': len(line)})
+            return value
 
 
 async def stdio_frames():
@@ -268,8 +288,9 @@ def decode_data(value):
 
 class SendWindow:
     """Per-stream byte credit; a slow socket cannot fill the shared channel."""
-    def __init__(self):
-        self.available = WINDOW
+    def __init__(self, limit=WINDOW):
+        self.limit = limit
+        self.available = limit
         self.changed = asyncio.Event()
 
     async def take(self, size):
@@ -279,7 +300,7 @@ class SendWindow:
         self.available -= size
 
     def credit(self, size):
-        if type(size) is not int or size <= 0 or self.available + size > WINDOW:
+        if type(size) is not int or size <= 0 or self.available + size > self.limit:
             raise EgressError('Invalid relay stream credit')
         self.available += size
         self.changed.set()
@@ -623,9 +644,42 @@ def ssh_command(args):
                args.remote_python, '-I', str(script), 'serve', '--state-root', str(root), '--job-id', identity]
     if args.slurm_conf:
         command = ['env', 'SLURM_CONF='+args.slurm_conf, *command]
-    return ['ssh', '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20',
+    config = getattr(args, 'ssh_config', '')
+    prefix = ['ssh']
+    if config:
+        path = Path(config).expanduser().absolute()
+        if path.resolve() != path:
+            raise EgressError('SSH configuration must be canonical')
+        info = path.stat()
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise EgressError('SSH configuration must be private and operator-owned')
+        prefix.extend(['-F', str(path)])
+    return [*prefix, '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20',
             '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=3',
             args.ssh_host, shlex.join(command)]
+
+
+def tcp_pipe(host, port, interface):
+    """Opaque SSH ProxyCommand transport; bind only this socket on macOS."""
+    if sys.platform != 'darwin' or not 0 < port < 65536:
+        raise EgressError('Interface-bound SSH transport requires macOS and a valid port')
+    connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        # IP_BOUND_IF from the macOS SDK netinet/in.h; no global route changes.
+        connection.setsockopt(socket.IPPROTO_IP, 25, socket.if_nametoindex(interface))
+        connection.settimeout(15); connection.connect((host, port)); connection.settimeout(None)
+        def upload():
+            try:
+                while data := os.read(0, 65536):
+                    connection.sendall(data)
+                connection.shutdown(socket.SHUT_WR)
+            except OSError:
+                pass
+        threading.Thread(target=upload, daemon=True).start()
+        while data := connection.recv(65536):
+            sys.stdout.buffer.write(data); sys.stdout.buffer.flush()
+    finally:
+        connection.close()
 
 
 async def connect(args):
@@ -678,6 +732,7 @@ def main(argv=None):
     compute.add_argument('--job-id', required=True)
     mac = commands.add_parser('connect', help='Keep a Mac exit connected to an existing Slurm allocation')
     mac.add_argument('--ssh-host', required=True)
+    mac.add_argument('--ssh-config', default='', help='Optional private operator SSH config for this route only')
     mac.add_argument('--job-id', required=True)
     mac.add_argument('--state-root', required=True, help='Private durable path on the cluster, outside checkouts')
     mac.add_argument('--remote-script', required=True, help='Published matching robofrontier/slurm_proxy.py on the cluster')
@@ -685,8 +740,15 @@ def main(argv=None):
     mac.add_argument('--srun', default='srun')
     mac.add_argument('--slurm-conf', default='')
     mac.add_argument('--status-file', default=str(Path.home()/'.robofrontier/slurm-egress/status.json'))
+    pipe = commands.add_parser('tcp-pipe', help='macOS SSH ProxyCommand bound to one network interface')
+    pipe.add_argument('--host', required=True)
+    pipe.add_argument('--port', required=True, type=int)
+    pipe.add_argument('--interface', required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == 'tcp-pipe':
+            tcp_pipe(args.host, args.port, args.interface)
+            return 0
         asyncio.run(serve(args.state_root, job_id(args.job_id)) if args.command == 'serve' else connect(args))
     except (KeyboardInterrupt, asyncio.CancelledError):
         return 0

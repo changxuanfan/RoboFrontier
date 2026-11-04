@@ -112,8 +112,34 @@ class EnvironmentTests(unittest.TestCase):
         self.assertNotIn('sbatch', command[-1])
         self.assertNotIn('password', command[-1])
 
+    def test_operator_ssh_configuration_is_scoped_and_private(self):
+        config=self.root/'ssh-config';config.write_text('Host cluster\n');config.chmod(0o600)
+        args=argparse.Namespace(job_id='123',ssh_host='cluster',ssh_config=str(config),state_root='/private/egress',
+            remote_script='/private/helper.py',remote_python='/usr/bin/python3',srun='/usr/bin/srun',slurm_conf='')
+        self.assertEqual(proxy.ssh_command(args)[:3],['ssh','-F',str(config)])
+        config.chmod(0o644)
+        with self.assertRaises(proxy.EgressError):proxy.ssh_command(args)
+
 
 class SchedulingTests(unittest.IsolatedAsyncioTestCase):
+    async def test_shared_channel_bounds_bytes_buffered_below_the_frame_scheduler(self):
+        sent=[]
+        class Writer:
+            def write(self,data):sent.append(data)
+            async def drain(self):pass  # SSH can accept bytes before network delivery.
+        frames=proxy.Frames(None,Writer())
+        bulk=[asyncio.create_task(frames.send({'type':'data','id':i,'data':'x'*11000})) for i in range(96)]
+        try:
+            await asyncio.sleep(.03)
+            await asyncio.wait_for(frames.send({'type':'ping'}),.1)
+            buffered=sum(len(data) for data in sent if json.loads(data)['type']=='data')
+            self.assertLessEqual(buffered,getattr(proxy,'CHANNEL_WINDOW',65536))
+            self.assertGreater(buffered,0)
+            self.assertEqual(json.loads(sent[-1])['type'],'ping')
+        finally:
+            for task in bulk:task.cancel()
+            await asyncio.gather(*bulk,return_exceptions=True)
+
     async def test_heartbeat_overtakes_queued_bulk_frames_on_a_slow_channel(self):
         release=asyncio.Event();entered=asyncio.Event();sent=[]
         class Writer:
