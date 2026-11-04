@@ -136,15 +136,49 @@ def play_badge(path, size=0.16):
     Image.alpha_composite(image.convert('RGBA'), layer).convert('RGB').save(path, quality=86, optimize=True)
 
 
+FONTS = Path(__file__).resolve().parents[1]/'assets/robo_factory/fonts'
+FAMILY_COLORS = [('Transport', (143, 193, 236)), ('Mosaic', (159, 220, 140)), ('Relay', (255, 159, 135)), ('Dial', (242, 212, 107))]
+
+
+def banner(film, path, width=1600, height=560, at_s=12):
+    """The README banner in the project page's style: the wordmark, tagline and family colors
+    on the left; the film's overhead view of all four Robo World zones on the right."""
+    from PIL import Image, ImageDraw, ImageFont
+    bg, ink, dim, lime = (6, 8, 11), (233, 238, 243), (154, 166, 180), (212, 255, 58)
+    frame = Path(path).with_suffix('.frame.jpg')
+    grab(film, at_s, frame, 1920)
+    top = Image.open(frame).convert('RGB'); frame.unlink()
+    floor = top.crop((int(top.width*.12), 0, int(top.width*.88), top.height))
+    w = 720; scale = max(w/floor.width, height/floor.height)
+    floor = floor.resize((round(floor.width*scale), round(floor.height*scale)), Image.LANCZOS)
+    x0, y0 = (floor.width-w)//2, (floor.height-height)//2
+    image = Image.new('RGB', (width, height), bg)
+    image.paste(floor.crop((x0, y0, x0+w, y0+height)), (width-w, 0))
+    # Fade the map's left edge into the panel.
+    ramp = Image.linear_gradient('L').rotate(90).resize((int(width*.14), height))
+    edge = width-w
+    image.paste(Image.composite(image.crop((edge, 0, edge+ramp.width, height)), Image.new('RGB', ramp.size, bg), ramp), (edge, 0))
+    draw = ImageDraw.Draw(image)
+    display = ImageFont.truetype(str(FONTS/'SpaceGrotesk-Bold.ttf'), 96)
+    mono = lambda size: ImageFont.truetype(str(FONTS/'JetBrainsMono-Medium.ttf'), size)
+    x, y = 72, 150
+    draw.rectangle([x, y+21, x+21, y+42], fill=lime)
+    draw.text((x+35, y), 'RoboFrontier', font=display, fill=ink)
+    draw.text((x+4, y+123), 'LANGUAGE AGENTS  ·  UP TO 16 ARMS  ·  ONE ROBOT WORLD', font=mono(23), fill=dim)
+    x = 76
+    for name, color in FAMILY_COLORS:
+        label = name.upper()
+        draw.rectangle([x, 372, x+14, 386], fill=color); draw.text((x+24, 364), label, font=mono(22), fill=ink)
+        x += 24 + mono(22).getlength(label) + 40
+    image.save(path, quality=88, optimize=True)
+
+
 def stills(manifest_path, film, montages, out):
     """README images: banner, film and montage posters (with play badges), 36 task thumbnails."""
     from PIL import Image
     manifest_path, out = Path(manifest_path), Path(out)
     (out / 'tasks').mkdir(parents=True, exist_ok=True)
-    banner = out / 'banner.jpg'
-    grab(film, 40, banner, 1920)
-    image = Image.open(banner); w, h = image.size
-    image.crop((0, int(h * 0.18), w, int(h * 0.18) + w * 5 // 16)).resize((1600, 500)).save(banner, quality=84, optimize=True)
+    banner(film, out / 'banner.jpg')
     grab(film, 12, out / 'film.jpg', 1600); play_badge(out / 'film.jpg')
     for montage in sorted(Path(montages).glob('montage-*.mp4')):
         poster = out / (montage.stem + '.jpg'); grab(montage, 45, poster, 1600); play_badge(poster, 0.12)

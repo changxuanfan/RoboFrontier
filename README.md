@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/media/readme/banner.jpg" alt="Sixteen robot arms at a curved table in Robo World" width="100%">
+<img src="docs/media/readme/banner.jpg" alt="RoboFrontier: language agents, up to 16 arms, one robot world. Robo World from above: the Transport, Mosaic, Relay and Dial zones" width="100%">
 
 # RoboFrontier
 
@@ -22,7 +22,7 @@ simulation: 36 tasks, four families, 24-hour runs.
 
 <!-- media:film -->
 
-https://github.com/user-attachments/assets/f73e9736-0fe3-456d-a1c2-a753678abc4f
+https://github.com/user-attachments/assets/7fd041b2-ef2a-4363-a917-4a955bc3e8c9
 
 <!-- /media:film -->
 
