@@ -309,7 +309,7 @@ def main():
             from .tool_backend import selected as selected_backend, preflight_probe as broker_probe
             if selected_backend(selected) == 'landlock-v1':
                 launch = read(target/'launch.json')
-                launch['tool_probe'] = broker_probe(target)
+                launch['tool_probe'] = broker_probe(target, selected)
                 write_json(target/'launch.json', launch)
             command=['node',str(ROOT/'robofrontier/codex/codex_preflight.js'),str(target)]
             if args.smoke_only:command.append('--smoke-only')

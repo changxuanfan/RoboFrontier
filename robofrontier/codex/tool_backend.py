@@ -95,7 +95,7 @@ def execute(run, request, *, timeout=15):
                           capture_output=True, text=True, timeout=timeout, close_fds=True)
 
 
-def preflight_probe(folder):
+def preflight_probe(folder, profile=None):
     """A fresh non-physical run for the live broker/image compatibility check."""
     import shlex
     import shutil
@@ -106,7 +106,7 @@ def preflight_probe(folder):
     write_json(run/'private/inputs/policy-access.json', policy_access.record(run))
     (run/'public/task.txt').write_text('broker-public-canary')
     (run/'private/secret.txt').write_text('broker-private-canary')
-    prepare(run, {'tool_backend': 'landlock-v1'})
+    prepare(run, profile or {'tool_backend': 'landlock-v1'})
     shutil.copyfile(Path(folder)/'colors.png', run/'public/colors.png')
     script = '''from pathlib import Path
 import json,socket
