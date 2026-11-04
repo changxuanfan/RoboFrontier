@@ -179,7 +179,8 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
         if home.is_relative_to(folder):
             raise ValueError('Keep credential/configuration directories outside collected batch evidence')
         home.mkdir(parents=True,exist_ok=True,mode=0o700)
-        if launch['profile'].get('provider')=='openai' and not (home/'auth.json').is_file() and not env.get('OPENAI_API_KEY'):
+        borrowed = scope=='job' and env.get('ROBOFRONTIER_BORROWED_AUTH') == str(Path(env.get('ROBOFRONTIER_CREDENTIAL_STORE', '/absent'))/'current.json')
+        if launch['profile'].get('provider')=='openai' and not (home/'auth.json').is_file() and not env.get('OPENAI_API_KEY') and not borrowed:
             raise ValueError('No Codex login in '+str(home)+'; run once: CODEX_HOME='+shlex.quote(str(home))+' codex login')
         env['CODEX_HOME']=str(home)
         environments[str(run)]=env

@@ -1,6 +1,7 @@
 """Trusted job-level native process lifecycle and task-channel manifest.
 
-No scheduler calls or credential reads. CredentialLease surrounds this owner.
+No scheduler calls or credential reads. Native refresh custody is external;
+an explicitly admitted access-only engine can follow its canonical generation.
 Each task keeps a distinct frozen filesystem profile and runtime database.
 """
 from contextlib import contextmanager
@@ -26,7 +27,7 @@ def fingerprint():
              'codex/file_sandbox.py', 'codex/tool_worker.py', 'codex/tool_backend.py',
              'codex/codex_rpc.js', 'codex/codex_policy_host.js', 'codex/batch.py',
              'codex/tool_broker.js', 'codex/launch.py', 'slurm_auth.py', 'slurm_job.py',
-             'policy_access.py', 'slurm_proxy.py')
+             'policy_access.py', 'slurm_proxy.py', 'codex/borrowed_auth.js')
     digest = hashlib.sha256(BACKEND.encode())
     for name in names:
         digest.update(name.encode() + b'\0' + (ROOT/'robofrontier'/name).read_bytes() + b'\0')
@@ -159,6 +160,11 @@ def engine(jobs, *, env, preflight=False, timeout_s=180):
     control.mkdir(mode=0o700, exist_ok=False)
     (control/'recovery').mkdir(mode=0o700)
     manifest = build_manifest(jobs, control, private, env['ROBOFRONTIER_CREDENTIAL_STORE'], preflight=preflight)
+    if env.get('ROBOFRONTIER_BORROWED_AUTH'):
+        expected = str(Path(env['ROBOFRONTIER_CREDENTIAL_STORE'])/'current.json')
+        if env['ROBOFRONTIER_BORROWED_AUTH'] != expected:
+            raise ValueError('Borrowed access must follow the configured canonical store')
+        manifest['borrowed_credentials'] = expected
     write_json(control/'manifest.json', manifest)
     log = (control/'gateway.log').open('a')
     proc = subprocess.Popen(['node', str(ROOT/'robofrontier/codex/job_gateway.js'), str(control/'manifest.json')],

@@ -14,6 +14,7 @@ from pathlib import Path
 import stat
 import tempfile
 import threading
+import time
 
 
 class CredentialError(RuntimeError):
@@ -199,3 +200,45 @@ class CredentialLease:
             self.reconcile(final=True)
         finally:
             self._unlock()
+
+
+class BorrowedAccess(CredentialLease):
+    """Read-only access stream; the existing native lease remains the refresh owner.
+
+    A separate native server uses ephemeral chatgptAuthTokens authentication.
+    It receives access/account/plan only, never this store's refresh token. The
+    original native owner publishes renewed generations into the canonical file.
+    """
+    def __enter__(self):
+        _private_directory(self.store)
+        self.current = None
+        self.reconcile()
+        self.home.mkdir(mode=0o700, parents=True, exist_ok=False)
+        _private_directory(self.home)
+        return self
+
+    def reconcile(self, *, final=False):
+        current = _decode(_read_private(self.store/'current.json'))
+        if (not isinstance(current, dict) or current.get('schema') != 'robofrontier.codex-auth.v1'
+                or type(current.get('generation')) is not int or current['generation'] < 1
+                or credential_owner(current.get('auth')) != current.get('owner')):
+            raise CredentialError('Invalid canonical access generation')
+        if self.current and current['owner'] != self.current['owner']:
+            raise CredentialError('Borrowed credential owner changed')
+        try:
+            encoded = current['auth']['tokens']['access_token'].split('.')[1]
+            claims = json.loads(base64.urlsafe_b64decode(encoded+'='*(-len(encoded)%4)))
+            if claims['exp'] <= time.time()+30: raise ValueError()
+        except (ValueError, KeyError, TypeError, IndexError):
+            raise CredentialError('Canonical access expired or malformed') from None
+        if (self.home/'auth.json').exists():
+            raise CredentialError('An access-only native server unexpectedly wrote credentials')
+        changed = current != self.current
+        self.current = current
+        return changed
+
+    def __exit__(self, kind, value, traceback):
+        self.stop.set()
+        if self.watcher: self.watcher.join()
+        if self.error: raise self.error
+        self.reconcile(final=True)

@@ -4,9 +4,10 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import time
 import unittest
 
-from robofrontier.slurm_auth import CredentialError, CredentialLease
+from robofrontier.slurm_auth import CredentialError, CredentialLease, BorrowedAccess
 
 
 def auth(generation=0, account='fixture-account', subject='fixture-user'):
@@ -30,6 +31,41 @@ class CredentialCustodyTests(unittest.TestCase):
         self.store = self.root/'private-store'
         self.store.mkdir(mode=0o700)
         private_json(self.store/'auth.json', auth())
+
+    def access_auth(self, generation=0, *, expires=None):
+        value=auth(generation)
+        claims={'sub':'fixture-user','exp':expires if expires is not None else time.time()+3600,
+                'generation':generation,'https://api.openai.com/auth':{'chatgpt_account_id':'fixture-account'}}
+        value['tokens']['access_token']='fixture.'+base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip('=')+'.fixture'
+        return value
+
+    def test_access_only_attachment_follows_rotation_without_a_second_refresh_lease(self):
+        private_json(self.store/'auth.json',self.access_auth())
+        with CredentialLease(self.store,self.root/'owner') as owner:
+            before=(self.store/'current.json').read_bytes()
+            with BorrowedAccess(self.store,self.root/'borrower') as reader:
+                self.assertEqual((self.store/'current.json').read_bytes(),before)
+                self.assertFalse((reader.home/'auth.json').exists())
+                with self.assertRaisesRegex(CredentialError,'already leased'):
+                    with CredentialLease(self.store,self.root/'forbidden'):pass
+                private_json(owner.home/'auth.json',self.access_auth(1));owner.reconcile()
+                self.assertTrue(reader.reconcile())
+                self.assertEqual(reader.current['generation'],2)
+            self.assertFalse((self.root/'borrower/auth.json').exists())
+
+    def test_expired_borrowed_access_is_refused_without_creating_a_cache(self):
+        private_json(self.store/'auth.json',self.access_auth(expires=time.time()-10))
+        with CredentialLease(self.store,self.root/'owner'):
+            with self.assertRaisesRegex(CredentialError,'expired'):
+                with BorrowedAccess(self.store,self.root/'borrower'):pass
+            self.assertFalse((self.root/'borrower').exists())
+
+    def test_access_only_engine_cannot_write_its_own_refresh_cache(self):
+        private_json(self.store/'auth.json',self.access_auth())
+        with CredentialLease(self.store,self.root/'owner'):
+            with self.assertRaisesRegex(CredentialError,'unexpectedly wrote'):
+                with BorrowedAccess(self.store,self.root/'borrower') as reader:
+                    private_json(reader.home/'auth.json',self.access_auth())
 
     def test_native_rotation_is_durable_and_next_job_ignores_old_seed(self):
         with CredentialLease(self.store, self.root/'job-one') as lease:

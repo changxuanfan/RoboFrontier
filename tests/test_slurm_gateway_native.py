@@ -23,7 +23,7 @@ from robofrontier.codex.job_engine import build_manifest, engine
 from robofrontier.codex.launch import launch_config, profile
 from robofrontier.codex.tool_backend import prepare as prepare_tools
 from robofrontier.run_setup import write_json
-from robofrontier.slurm_auth import CredentialLease
+from robofrontier.slurm_auth import CredentialLease, BorrowedAccess
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -138,7 +138,7 @@ class NativeGatewayTests(unittest.TestCase):
             with CredentialLease(store, private/'codex') as lease, patch.dict(os.environ, environment, clear=True):
                 selected = profile('luna_subscription')
                 selected.update(tool_backend='landlock-v1', runner_backend='slurm-managed-v1', use_cached_model_metadata=False)
-                for index in range(36):
+                for index in range(38):
                     run = root/'runs'/str(index)
                     for name in ('private/inputs', 'workspace', 'public'):
                         (run/name).mkdir(parents=True)
@@ -154,7 +154,7 @@ class NativeGatewayTests(unittest.TestCase):
                     write_json(run/'private/inputs/codex.json', launch)
                     jobs.append({'run_directory': str(run)})
                 try:
-                    with engine(jobs, env=environment, timeout_s=35) as (manifest, process):
+                    with engine(jobs[:36], env=environment, timeout_s=35) as (manifest, process):
                         result = subprocess.run(['node', str(ROOT/'tests/slurm_gateway_native_client.js'),
                                                  str(private/'control/manifest.json')],
                                                 capture_output=True, text=True, env=environment, timeout=65)
@@ -165,8 +165,24 @@ class NativeGatewayTests(unittest.TestCase):
                         self.assertTrue(report['single_task_recovery'])
                         self.assertEqual(report['recovery_tools'], 2)
                         self.assertTrue(lease.reconcile())
+                        before=(private/'codex/auth.json').read_bytes()
+                        borrower=root/'borrower';borrower.mkdir(mode=0o700)
+                        borrowed_env={**environment,'CODEX_HOME':str(borrower/'codex'),
+                                      'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(borrower),
+                                      'ROBOFRONTIER_BORROWED_AUTH':str(store/'current.json')}
+                        with BorrowedAccess(store,borrower/'codex') as reader:
+                            with engine(jobs[36:],env=borrowed_env,timeout_s=35):
+                                attached=subprocess.run(['node',str(ROOT/'tests/slurm_gateway_native_client.js'),
+                                                         str(borrower/'control/manifest.json')],
+                                                        capture_output=True,text=True,env=borrowed_env,timeout=65)
+                                self.assertEqual(attached.returncode,0,attached.stderr[-2000:])
+                                self.assertEqual(json.loads(attached.stdout)['parents'],2)
+                                self.assertIsNone(process.poll())
+                                self.assertFalse(reader.reconcile())
+                            self.assertFalse((borrower/'codex/auth.json').exists())
+                        self.assertEqual((private/'codex/auth.json').read_bytes(),before)
                     exported = [json.loads((Path(job['run_directory'])/'private/engine/gateway-transcripts/index.json').read_text())
-                                for job in jobs]
+                                for job in jobs[:36]]
                     self.assertEqual(sum(len(row['threads']) for row in exported), 109)
                     self.assertTrue(all(t.get('verified') for row in exported for t in row['threads']))
                     self.assertFalse(any(p.name == 'auth.json' for p in (root/'runs').rglob('*')))
@@ -178,7 +194,7 @@ class NativeGatewayTests(unittest.TestCase):
                     raise
             self.assertGreaterEqual(state['refreshes'], 1)
             self.assertEqual(state['stale'], 0)
-            self.assertEqual(state['requests'], 220)
+            self.assertEqual(state['requests'], 236)
             self.assertEqual(json.loads((store/'current.json').read_text())['auth']['tokens']['refresh_token'],
                              'fixture-refresh-'+str(state['generation']))
 

@@ -28,7 +28,7 @@ def fingerprint(profile):
         return None
     files = ('tool_worker.py', 'file_sandbox.py', 'tool_backend.py', 'tool_broker.js', 'launch.py',
              'codex_policy_host.js', 'codex_preflight.js', 'codex_rpc.js',
-             'job_engine.py', 'job_gateway.js', 'gateway_rpc.js',
+             'job_engine.py', 'job_gateway.js', 'gateway_rpc.js', 'borrowed_auth.js',
              '../claude/landlock_shell.py', '../policy_access.py')
     digest = hashlib.sha256(b'landlock-v1\0')
     for name in files:

@@ -1,4 +1,5 @@
-// One native AuthManager per allocation. No login, custom OAuth or RPC replay.
+// One native refresh owner. Access-only attachments never rotate credentials.
+// No interactive login, custom OAuth or RPC replay.
 const fs=require('node:fs'),net=require('node:net'),readline=require('node:readline');
 const {CodexRpc}=require('./codex_rpc');
 const fileTools=require('./tool_broker');
@@ -22,10 +23,17 @@ class JobGateway {
     this.persist=persist;this.rpcFactory=rpcFactory;this.clients=new Set();
     this.recoveryDirectory=recoveryDirectory;
   }
-  async start(args,launch,{stderr='ignore'}={}) {
+  async start(args,launch,{stderr='ignore',borrowedCredentials}={}) {
+    const auth=borrowedCredentials?require('./borrowed_auth').borrowedAuth(borrowedCredentials):null;
+    if(auth)args=[...args,'-c','cli_auth_credentials_store="ephemeral"'];
     this.native=this.rpcFactory({args,callbacks:{stderr,
-      onEvent:m=>this.event(m),onRequest:(m,p)=>this.tool(m,p),onExit:()=>{this.unexpectedExit=true;this.fail();}}});
+      onEvent:m=>this.event(m),onRequest:(m,p)=>m==='account/chatgptAuthTokens/refresh'&&auth?
+        auth.refresh(p):this.tool(m,p),onExit:()=>{this.unexpectedExit=true;this.fail();}}});
     await this.native.initialize();
+    if(auth){
+      const result=await this.native.call('account/login/start',{type:'chatgptAuthTokens',...auth.initial()});
+      if(result.type!=='chatgptAuthTokens')throw new Error('Borrowed subscription admission failed');
+    }
     await fileTools.admit(this.native,launch);
     // A local cached account/read success is not authenticated reachability.
     // This native endpoint performs the provider request and native renewal.
@@ -234,7 +242,7 @@ async function main(file){
     gateway=new JobGateway(manifest.tasks,{recoveryDirectory:manifest.recovery_directory,persist:rows=>{
       const temporary=manifest.ownership+'.tmp';fs.writeFileSync(temporary,JSON.stringify(rows),{mode:0o600});fs.renameSync(temporary,manifest.ownership);
     }});
-    try{await gateway.start(manifest.args,manifest.launch,{stderr:log});}finally{fs.closeSync(log);}
+    try{await gateway.start(manifest.args,manifest.launch,{stderr:log,borrowedCredentials:manifest.borrowed_credentials});}finally{fs.closeSync(log);}
     await gateway.listen(manifest.endpoint);
     gateway.server.on('close',()=>{if(gateway.unexpectedExit)process.exitCode=1;});
     fs.writeFileSync(manifest.ready,JSON.stringify({backend:'slurm-managed-v1',tasks:manifest.tasks.length}),{mode:0o600});

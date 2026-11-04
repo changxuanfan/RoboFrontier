@@ -277,10 +277,13 @@ def subscription_environment(config, local, *, on_failure):
         return
     if platform.system() != 'Linux' or not os.environ.get('SLURM_JOB_ID'):
         raise ValueError('Job-scoped subscription execution requires a Linux Slurm allocation')
-    from .slurm_auth import CredentialLease
+    from .slurm_auth import CredentialLease, BorrowedAccess
     from .slurm_proxy import environment as egress_environment
     local = Path(local).resolve()
     store = Path(config['slurm']['credential_store']).absolute()
+    borrowed = os.environ.get('ROBOFRONTIER_BORROWED_AUTH')
+    if borrowed and borrowed != str(store/'current.json'):
+        raise ValueError('Borrowed access must follow the configured canonical store')
     for excluded in (ROOT.resolve(), local):
         if store.is_relative_to(excluded) or excluded.is_relative_to(store):
             raise ValueError('Credential store must be separate from source, scratch and evidence')
@@ -304,7 +307,7 @@ def subscription_environment(config, local, *, on_failure):
             (private/'EGRESS_ERROR').touch(mode=0o600)
             on_failure()
         with egress_environment(config, on_failure=egress_failed):
-            with CredentialLease(store, private/'codex') as lease:
+            with (BorrowedAccess if borrowed else CredentialLease)(store, private/'codex') as lease:
                 def failed():
                     (private/'CREDENTIAL_ERROR').touch(mode=0o600)
                     on_failure()
