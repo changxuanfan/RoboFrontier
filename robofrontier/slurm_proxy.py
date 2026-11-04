@@ -28,11 +28,13 @@ import threading
 import time
 from urllib.parse import urlsplit
 
-SCHEMA = 'robofrontier.slurm-egress.v1'
+SCHEMA = 'robofrontier.slurm-egress.v2'
 HEARTBEAT_S = 2
 STALE_S = 12
 MAX_STREAMS = 256
 MAX_FRAME = 100000
+CHUNK = 32768
+WINDOW = 4 * CHUNK
 
 
 class EgressError(RuntimeError):
@@ -218,9 +220,77 @@ def decode_data(value):
     return base64.b64decode(value, validate=True)
 
 
-async def copy_to_frames(reader, frames, identity):
-    while data := await reader.read(32768):
+class SendWindow:
+    """Per-stream byte credit; a slow socket cannot fill the shared channel."""
+    def __init__(self):
+        self.available = WINDOW
+        self.changed = asyncio.Event()
+
+    async def take(self, size):
+        while self.available < size:
+            self.changed.clear()
+            await self.changed.wait()
+        self.available -= size
+
+    def credit(self, size):
+        if type(size) is not int or size <= 0 or self.available + size > WINDOW:
+            raise EgressError('Invalid relay stream credit')
+        self.available += size
+        self.changed.set()
+
+
+class StreamSink:
+    """Drain one socket independently, returning credit only after delivery."""
+    def __init__(self, writer, frames, identity, owner):
+        self.writer, self.frames, self.identity, self.owner = writer, frames, identity, owner
+        self.queue = asyncio.Queue()
+        self.pending = 0
+        self.ending = False
+        self.stopping = False
+        self.task = asyncio.create_task(self.run())
+
+    def feed(self, data):
+        if self.ending:
+            return
+        if not data or len(data) > CHUNK or self.pending + len(data) > WINDOW:
+            raise EgressError('Relay receive window exceeded')
+        self.pending += len(data)
+        self.queue.put_nowait(data)
+
+    def finish(self):
+        if not self.ending:
+            self.ending = True
+            self.queue.put_nowait(None)
+
+    async def run(self):
+        try:
+            while (data := await self.queue.get()) is not None:
+                self.writer.write(data)
+                await self.writer.drain()
+                self.pending -= len(data)
+                await self.frames.send({'type': 'credit', 'id': self.identity, 'bytes': len(data)})
+        except (OSError, EgressError):
+            pass
+        finally:
+            self.writer.close()
+            if not self.stopping:
+                self.owner.cancel()
+
+    async def close(self):
+        self.stopping = True
+        self.task.cancel()
+        await asyncio.gather(self.task, return_exceptions=True)
+
+
+async def copy_to_frames(reader, frames, identity, window):
+    while data := await reader.read(CHUNK):
+        await window.take(len(data))
         await frames.send({'type': 'data', 'id': identity, 'data': base64.b64encode(data).decode()})
+
+
+async def discard_remaining(reader):
+    while await reader.read(CHUNK):
+        pass
 
 
 class ComputeRelay:
@@ -230,9 +300,12 @@ class ComputeRelay:
         self.password = secrets.token_hex(32)
         self.authorization = 'Basic '+base64.b64encode(('rf:'+self.password).encode()).decode()
         self.streams = {}; self.next_id = 0; self.last_ping = time.monotonic()
+        self.clients = set()
 
     async def client(self, reader, writer):
         identity = None
+        owner = asyncio.current_task(); self.clients.add(owner)
+        sink = None
         try:
             header = await asyncio.wait_for(reader.readuntil(b'\r\n\r\n'), 10)
             if len(header) > 8192:
@@ -259,18 +332,32 @@ class ComputeRelay:
                 await writer.drain(); return
             self.next_id += 1; identity = self.next_id
             opened = asyncio.get_running_loop().create_future()
-            self.streams[identity] = {'writer': writer, 'opened': opened}
+            window = SendWindow()
+            self.streams[identity] = {'writer': writer, 'opened': opened, 'window': window}
             await self.frames.send({'type': 'open', 'id': identity, 'host': host, 'port': int(port)})
-            if not await asyncio.wait_for(opened, 20):
+            async with asyncio.timeout(20):
+                accepted = await opened
+            if not accepted:
                 return
             writer.write(b'HTTP/1.1 200 Connection Established\r\n\r\n'); await writer.drain()
-            await copy_to_frames(reader, self.frames, identity)
+            sink = StreamSink(writer, self.frames, identity, owner)
+            stream = self.streams[identity]
+            stream['sink'] = sink
+            # Data may follow the opened frame before this client is scheduled.
+            for data in stream.pop('pending', []):
+                sink.feed(data)
+            if stream.get('closed'):
+                sink.finish()
+            await copy_to_frames(reader, self.frames, identity, window)
         except (OSError, ValueError, EOFError, asyncio.TimeoutError, asyncio.IncompleteReadError,
                 asyncio.LimitOverrunError, EgressError):
             pass
         finally:
+            self.clients.discard(owner)
             if identity is not None:
                 self.streams.pop(identity, None)
+                if sink:
+                    await sink.close()
                 try:
                     await self.frames.send({'type': 'close', 'id': identity})
                 except (OSError, EgressError):
@@ -281,7 +368,8 @@ class ComputeRelay:
         while True:
             if time.monotonic()-self.last_ping > STALE_S:
                 raise EgressError('Mac heartbeat was lost')
-            message = await asyncio.wait_for(self.frames.receive(), STALE_S)
+            async with asyncio.timeout(STALE_S):
+                message = await self.frames.receive()
             kind = message.get('type')
             if kind == 'ping':
                 self.last_ping = time.monotonic()
@@ -294,16 +382,22 @@ class ComputeRelay:
             if kind == 'opened' and not stream['opened'].done():
                 stream['opened'].set_result(message.get('ok') is True)
             elif kind == 'data':
-                try:
-                    stream['writer'].write(decode_data(message.get('data')))
-                    await stream['writer'].drain()
-                except OSError:
-                    stream['writer'].close()
-                    await self.frames.send({'type': 'close', 'id': message['id']})
+                data = decode_data(message.get('data'))
+                if 'sink' in stream:
+                    stream['sink'].feed(data)
+                else:
+                    pending = stream.setdefault('pending', [])
+                    if not data or len(data) > CHUNK or sum(map(len, pending)) + len(data) > WINDOW:
+                        raise EgressError('Relay receive window exceeded')
+                    pending.append(data)
+            elif kind == 'credit':
+                stream['window'].credit(message.get('bytes'))
             elif kind == 'close':
+                stream['closed'] = True
                 if not stream['opened'].done():
                     stream['opened'].set_result(False)
-                stream['writer'].close()
+                if 'sink' in stream:
+                    stream['sink'].finish()
 
     async def run(self):
         server = await asyncio.start_server(self.client, '127.0.0.1', 0, limit=8193)
@@ -320,6 +414,10 @@ class ComputeRelay:
             server.close(); await server.wait_closed()
             for stream in list(self.streams.values()):
                 stream['writer'].close()
+            clients = list(self.clients)
+            for task in clients:
+                task.cancel()
+            await asyncio.gather(*clients, return_exceptions=True)
             current = self.directory/'ready.json'
             if current.exists() and read_record(current).get('instance') == self.instance:
                 current.unlink()
@@ -353,25 +451,32 @@ class MacRelay:
         self.frames, self.status = frames, status
         self.dial = dial or asyncio.open_connection
         self.streams = {}; self.tasks = {}; self.last_pong = None; self.ready = None
+        self.failure_code = None; self.peak_streams = 0
 
     def publish(self, state):
         if self.status:
             atomic(self.status, {'status': state, 'updated_at': time.time(),
+                                 'failure_code': self.failure_code, 'streams': len(self.tasks),
+                                 'peak_streams': self.peak_streams,
                                  **(self.ready or {})})
 
     async def open_stream(self, identity, host, port):
-        writer = None
+        writer = None; sink = None
         try:
             if not target_allowed(host, port):
                 raise EgressError('Relay destination denied')
             reader, writer = await asyncio.wait_for(self.dial(host, port), 15)
-            self.streams[identity] = writer
+            window = SendWindow()
+            sink = StreamSink(writer, self.frames, identity, asyncio.current_task())
+            self.streams[identity] = {'writer': writer, 'sink': sink, 'window': window}
             await self.frames.send({'type': 'opened', 'id': identity, 'ok': True})
-            await copy_to_frames(reader, self.frames, identity)
+            await copy_to_frames(reader, self.frames, identity, window)
         except (OSError, asyncio.TimeoutError, EgressError):
             await self.frames.send({'type': 'opened', 'id': identity, 'ok': False})
         finally:
             self.streams.pop(identity, None); self.tasks.pop(identity, None)
+            if sink:
+                await sink.close()
             if writer:
                 writer.close()
             await self.frames.send({'type': 'close', 'id': identity})
@@ -393,21 +498,22 @@ class MacRelay:
             elif kind == 'pong':
                 self.last_pong = time.monotonic(); self.publish('ready')
             elif kind == 'open':
-                if type(identity) is not int or identity in self.tasks or len(self.tasks) >= MAX_STREAMS:
-                    raise EgressError('Relay stream ownership/limit violated')
+                if type(identity) is not int or identity in self.tasks:
+                    raise EgressError('Relay stream ownership violated')
+                if len(self.tasks) >= MAX_STREAMS:
+                    await self.frames.send({'type': 'opened', 'id': identity, 'ok': False})
+                    continue
                 self.tasks[identity] = asyncio.create_task(self.open_stream(identity, message.get('host'), message.get('port')))
+                self.peak_streams = max(self.peak_streams, len(self.tasks))
             elif kind == 'data':
-                writer = self.streams.get(identity)
-                if writer:
-                    try:
-                        writer.write(decode_data(message.get('data'))); await writer.drain()
-                    except OSError:
-                        writer.close()
-                        await self.frames.send({'type': 'close', 'id': identity})
+                stream = self.streams.get(identity)
+                if stream:
+                    stream['sink'].feed(decode_data(message.get('data')))
+            elif kind == 'credit':
+                stream = self.streams.get(identity)
+                if stream:
+                    stream['window'].credit(message.get('bytes'))
             elif kind == 'close':
-                writer = self.streams.get(identity)
-                if writer:
-                    writer.close()
                 task = self.tasks.get(identity)
                 if task:
                     task.cancel()
@@ -418,12 +524,22 @@ class MacRelay:
             done, _ = await asyncio.wait(control, return_when=asyncio.FIRST_COMPLETED)
             for task in done:
                 await task
+        except Exception as error:
+            if isinstance(error, EgressError) and str(error) == 'Compute heartbeat was lost':
+                self.failure_code = 'heartbeat_timeout'
+            elif isinstance(error, EOFError):
+                self.failure_code = 'channel_eof'
+            elif isinstance(error, EgressError):
+                self.failure_code = 'protocol_error'
+            else:
+                self.failure_code = type(error).__name__
+            raise
         finally:
             for task in [*control, *self.tasks.values()]:
                 task.cancel()
             await asyncio.gather(*control, *list(self.tasks.values()), return_exceptions=True)
-            for writer in self.streams.values():
-                writer.close()
+            for stream in self.streams.values():
+                stream['writer'].close()
             self.publish('closed')
 
 
@@ -473,6 +589,9 @@ async def connect(args):
         await relay.run()
     finally:
         if process:
+            # Drain remaining control frames while reaping SSH; otherwise a full
+            # stdout pipe can prevent subprocess.wait() from completing.
+            drain = asyncio.create_task(discard_remaining(process.stdout))
             process.stdin.close()
             try:
                 await asyncio.wait_for(process.wait(), 5)
@@ -482,6 +601,7 @@ async def connect(args):
                     await asyncio.wait_for(process.wait(), 3)
                 except asyncio.TimeoutError:
                     process.kill(); await process.wait()
+            await drain
         if awake and awake.poll() is None:
             awake.terminate(); awake.wait()
         log.close()

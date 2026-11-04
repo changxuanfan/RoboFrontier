@@ -139,11 +139,11 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         async def stream(index):
             reader,writer,reply = await self.request('auth.openai.com:443')
             self.assertIn(b'200 Connection Established',reply)
-            data=b'\x16\x03\x01OPAQUE_TLS_FIXTURE_'+bytes([index])*32768
+            data=b'\x16\x03\x01OPAQUE_TLS_FIXTURE_'+bytes([index])*(proxy.WINDOW*4)
             writer.write(data);await writer.drain()
-            self.assertEqual(await asyncio.wait_for(reader.readexactly(len(data)),3),data)
+            self.assertEqual(await asyncio.wait_for(reader.readexactly(len(data)),15),data)
             writer.close()
-        await asyncio.gather(*(stream(i) for i in range(4)))
+        await asyncio.gather(*(stream(i) for i in range(36)))
         self.assertEqual((self.directory/'ready.json').stat().st_mode&0o777,0o600)
 
     async def test_missing_auth_and_non_openai_destination_never_dial(self):
@@ -171,6 +171,59 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         writer.write(b'still-connected');await writer.drain()
         self.assertEqual(await asyncio.wait_for(reader.readexactly(15),2),b'still-connected')
         self.assertFalse(self.compute_task.done());self.assertFalse(self.mac_task.done());writer.close()
+
+    async def test_slow_destination_does_not_block_other_streams_or_heartbeat(self):
+        self.mac_task.cancel();await asyncio.gather(self.mac_task,return_exceptions=True)
+        release=asyncio.Event()
+        class SlowWriter:
+            def __init__(self,writer):self.writer=writer
+            def write(self,data):self.writer.write(data)
+            async def drain(self):await release.wait();await self.writer.drain()
+            def close(self):self.writer.close()
+        async def dial(host,port):
+            reader,writer=await asyncio.open_connection('127.0.0.1',self.echo_server.sockets[0].getsockname()[1])
+            return reader,SlowWriter(writer) if host=='slow.openai.com' else writer
+        self.mac.dial=dial;self.mac.last_pong=None
+        with patch.object(proxy,'HEARTBEAT_S',.03),patch.object(proxy,'STALE_S',.35):
+            self.mac_task=asyncio.create_task(self.mac.run())
+            try:
+                _,slow,_=await self.request('slow.openai.com:443')
+                slow.write(b'blocked');await slow.drain();await asyncio.sleep(.05)
+                reader,fast,reply=await self.request('auth.openai.com:443')
+                self.assertIn(b'200 Connection Established',reply)
+                fast.write(b'fast');await fast.drain()
+                self.assertEqual(await asyncio.wait_for(reader.readexactly(4),.3),b'fast')
+                await asyncio.sleep(.5)
+                self.assertFalse(self.mac_task.done());self.assertFalse(self.compute_task.done())
+                fast.close();slow.close()
+            finally:release.set()
+
+    async def test_slow_native_consumer_does_not_block_other_streams_or_heartbeat(self):
+        self.mac_task.cancel();await asyncio.gather(self.mac_task,return_exceptions=True)
+        self.mac.last_pong=None
+        release=asyncio.Event()
+        class SlowWriter:
+            def __init__(self,writer):self.writer=writer
+            def write(self,data):self.writer.write(data)
+            async def drain(self):await release.wait();await self.writer.drain()
+            def close(self):self.writer.close()
+        with patch.object(proxy,'HEARTBEAT_S',.03),patch.object(proxy,'STALE_S',.35):
+            self.mac_task=asyncio.create_task(self.mac.run())
+            try:
+                _,slow,_=await self.request('auth.openai.com:443')
+                stream=next(iter(self.compute.streams.values()))
+                sink=stream['sink'];sink.writer=SlowWriter(sink.writer)
+                slow.write(b'x'*(proxy.WINDOW*4));await slow.drain()
+                await asyncio.sleep(.05)
+                reader,fast,reply=await self.request('api.openai.com:443')
+                self.assertIn(b'200 Connection Established',reply)
+                fast.write(b'fast');await fast.drain()
+                self.assertEqual(await asyncio.wait_for(reader.readexactly(4),.3),b'fast')
+                await asyncio.sleep(.5)
+                self.assertFalse(self.mac_task.done());self.assertFalse(self.compute_task.done())
+                self.assertLessEqual(sink.pending,proxy.WINDOW)
+                fast.close();slow.close()
+            finally:release.set()
 
 
 if __name__=='__main__':unittest.main()

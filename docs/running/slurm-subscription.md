@@ -166,6 +166,12 @@ environment variables, deny network socket creation and retain Landlock/seccomp.
 [Native-client proxy scope](https://learn.chatgpt.com/docs/enterprise/managed-configuration).
 
 SSH uses server-alive checks; both relay ends exchange two-second heartbeats.
+Each stream has independent socket draining and a 128 KiB byte-credit window in
+each direction. A slow native consumer or remote endpoint therefore cannot block
+the control decoder, starve other streams or create an unbounded payload queue.
+Stream admission limits reject the individual connection without closing the
+shared route. Private Mac status includes a sanitized failure code and peak
+stream count; it never includes proxy passwords or TLS payloads.
 The Mac controller holds an idle/system-sleep assertion while connected. A
 missing/stale heartbeat, listener mismatch or changed relay instance fences the
 current owner, sets `EGRESS_ERROR`, stops its native engine and requests ordinary
