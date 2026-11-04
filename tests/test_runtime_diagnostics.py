@@ -49,11 +49,13 @@ class RuntimeDiagnosticTests(unittest.TestCase):
 
     def test_renderer_probe_preserves_allocation_visibility_but_not_credentials(self):
         with patch.object(diagnostics.platform, 'system', return_value='Linux'), \
-                patch.dict(os.environ, {'CUDA_VISIBLE_DEVICES': '3', 'OPENAI_API_KEY': 'secret'}), \
+                patch.dict(os.environ, {'CUDA_VISIBLE_DEVICES': '3', 'OPENAI_API_KEY': 'secret',
+                    '__EGL_VENDOR_LIBRARY_FILENAMES':'/usr/share/glvnd/egl_vendor.d/10_nvidia.json'}), \
                 patch.object(diagnostics, '_checked', return_value='{}') as check:
             diagnostics._render_probe('nvidia')
             env = check.call_args.kwargs['env']
             self.assertEqual(env['CUDA_VISIBLE_DEVICES'], '3')
+            self.assertEqual(env['__EGL_VENDOR_LIBRARY_FILENAMES'], '/usr/share/glvnd/egl_vendor.d/10_nvidia.json')
             self.assertNotIn('OPENAI_API_KEY', env)
             diagnostics._render_probe('cpu')
             self.assertEqual(check.call_args.kwargs['env']['CUDA_VISIBLE_DEVICES'], '')

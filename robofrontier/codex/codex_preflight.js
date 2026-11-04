@@ -5,6 +5,8 @@ const {GatewayRpc}=require('./gateway_rpc');
 const fileTools=require('./tool_broker');
 async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
   const launch=JSON.parse(fs.readFileSync(path.join(folder,'launch.json')));
+  const cwd=launch.profile?.runner_backend==='slurm-managed-v1'
+    ?path.join(launch.tool_probe.run_dir,'workspace'):folder;
   // Written with colors.png by robofrontier/preflight_probe.py: random left/right colours.
   const probe=JSON.parse(fs.readFileSync(path.join(folder,'probe.json')));
   const waits=new Map();
@@ -56,7 +58,7 @@ async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
       report.auth_mode='native_managed_subscription';
       report.scope=report.scope.replace('real API','native subscription');
     }
-    const a=await rpc.call('thread/start',{cwd:folder,model:launch.model,modelProvider:launch.provider,
+    const a=await rpc.call('thread/start',{cwd,model:launch.model,modelProvider:launch.provider,
       approvalPolicy:'never',sandbox:'read-only',dynamicTools:[{type:'function',name:'protocol_check',
         description:'Submit the color of the left half and of the right half of the image.',inputSchema:{type:'object',
                    properties:{left:{type:'string',enum:probe.colors},right:{type:'string',enum:probe.colors}},required:['left','right']}},
@@ -80,7 +82,7 @@ async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
     }
     await rpc.call('thread/compact/start',{threadId:id});
     if(!await deadline(compacted,180000))throw new Error('Compaction failed');
-    const fork=await rpc.call('thread/fork',{threadId:id,cwd:folder,model:launch.model,
+    const fork=await rpc.call('thread/fork',{threadId:id,cwd,model:launch.model,
       modelProvider:launch.provider,excludeTurns:true,ephemeral:false});
     childId=fork.thread.id;bound.add(childId);
     if(fork.thread.forkedFromId!==id)throw new Error('Fork parent mismatch');

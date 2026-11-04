@@ -62,6 +62,12 @@ def prepare(run, profile):
     # its parent. These grants are frozen before a policy turn can run.
     runtime_paths = {Path(sys.prefix)/'pyvenv.cfg',
                      Path(sysconfig.get_path('purelib')), Path(sysconfig.get_path('platlib'))}
+    if profile.get('runner_backend') == 'slurm-managed-v1' and os.environ.get('ROBOFRONTIER_SHARED_DENY_ROOTS'):
+        runtime_paths.update(Path(p) for p in sys.path if p and Path(p).name in ('site-packages', 'dist-packages'))
+        runtime_paths.update((Path(sysconfig.get_path('stdlib')), Path(sys.executable).resolve()))
+        libdir, library = sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')
+        if libdir and library:
+            runtime_paths.add(Path(libdir)/library)
     private_roots = [run/'private', *policy_access._auth_homes(Path.home())]
     for runtime_path in runtime_paths:
         if runtime_path.exists():

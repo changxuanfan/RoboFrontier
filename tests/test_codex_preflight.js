@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {preflight}=require('../robofrontier/codex/codex_preflight');
-function fakeRpc({badParent=false,badChild=false,badImage=false,noFork=false,inheritedMcp=false,onThreadStart=()=>{}}={}) {
+function fakeRpc({badParent=false,badChild=false,badImage=false,noFork=false,inheritedMcp=false,onThreadStart=()=>{},onFork=()=>{}}={}) {
   return class {
     constructor(args,handlers){this.handlers=handlers;}
     async initialize(){}
@@ -10,7 +10,7 @@ function fakeRpc({badParent=false,badChild=false,badImage=false,noFork=false,inh
       if(method==='config/read')return {config:{mcp_servers:inheritedMcp?{personal:{enabled:true}}:{}}};
       if(method==='thread/start'){onThreadStart(p);return {thread:{id:'parent'}};}
       if(noFork && ['thread/fork','thread/compact/start'].includes(method))throw new Error('Smoke must not fork/compact');
-      if(method==='thread/fork')return {thread:{id:'child',forkedFromId:badParent?'other':'parent'}};
+      if(method==='thread/fork'){onFork(p);return {thread:{id:'child',forkedFromId:badParent?'other':'parent'}};}
       if(method==='thread/compact/start') {
         this.handlers.onEvent({method:'thread/compacted',params:{threadId:'parent'}});return {};
       }
@@ -28,7 +28,8 @@ function fakeRpc({badParent=false,badChild=false,badImage=false,noFork=false,inh
 async function run(opts,mode={},provider='sample') {
   const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-preflight-'));
   try {
-    fs.writeFileSync(path.join(folder,'launch.json'),JSON.stringify({args:[],model:'sample',provider,effort:'high',context_window:272000,auto_compact_token_limit:245000}));
+    fs.writeFileSync(path.join(folder,'launch.json'),JSON.stringify({args:[],model:'sample',provider,effort:'high',context_window:272000,auto_compact_token_limit:245000,
+      ...(opts?.jobScoped?{profile:{runner_backend:'slurm-managed-v1'},tool_probe:{run_dir:path.join(folder,'bound-run')}}:{})}));
     fs.writeFileSync(path.join(folder,'probe.json'),JSON.stringify({version:'test',left:'red',right:'blue',
       colors:['blue','green','red','yellow'],prompt:'Name the left and right colors.'}));
     return await preflight(folder,fakeRpc(opts),mode);
@@ -70,4 +71,9 @@ test('the colour check offers a fixed list and reports what the model answered',
   assert.deepEqual(schema.left.enum,['blue','green','red','yellow']);assert.deepEqual(schema.right.enum,schema.left.enum);
   const bad=await run({badImage:true},{smokeOnly:true});
   assert.equal(bad.passed,false);assert.match(bad.error,/"tool_called":true/);assert.match(bad.error,/"left":"green"/);
+});
+test('job preflight starts and forks in the gateway-bound workspace',async()=>{
+  const calls=[];const result=await run({jobScoped:true,onThreadStart:p=>calls.push(p.cwd),onFork:p=>calls.push(p.cwd)});
+  assert.equal(result.passed,true);assert.equal(calls.length,2);assert.equal(calls[0],calls[1]);
+  assert.ok(calls[0].endsWith(path.join('bound-run','workspace')));
 });

@@ -32,6 +32,14 @@ def fixture(base, name):
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_shared_volume_clones_and_archives_are_denied_without_blocking_own_workspace(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base=Path(temporary).resolve();shared=base/'shared';run=base/'staged/run'
+            with patch.dict(os.environ, {'ROBOFRONTIER_SHARED_DENY_ROOTS':json.dumps([str(shared)])}):
+                access=record(run,checkouts=[base/'staged'])
+            self.assertEqual(mode(access['filesystem'],shared/'another-clone/answers.json'),'deny')
+            self.assertEqual(mode(access['filesystem'],shared/'source.tar'),'deny')
+            self.assertEqual(mode(access['filesystem'],run/'workspace/note'),'write')
     def test_job_local_python_gets_only_readonly_runtime_paths(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()

@@ -44,7 +44,8 @@ def _render_probe(device):
     env = rendering_environment(device, platform.system(), {})
     # Keep the dynamic loader/runtime environment, but no model credentials.
     for key in ('PATH', 'HOME', 'TMPDIR', 'LANG', 'LC_ALL', 'SYSTEMROOT',
-                'LD_LIBRARY_PATH', 'NVIDIA_VISIBLE_DEVICES', 'NVIDIA_DRIVER_CAPABILITIES'):
+                'LD_LIBRARY_PATH', 'NVIDIA_VISIBLE_DEVICES', 'NVIDIA_DRIVER_CAPABILITIES',
+                '__EGL_VENDOR_LIBRARY_FILENAMES'):
         if key in os.environ:
             env[key] = os.environ[key]
     if device != 'cpu' and 'CUDA_VISIBLE_DEVICES' in os.environ:

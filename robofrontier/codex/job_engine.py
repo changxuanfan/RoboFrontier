@@ -70,6 +70,7 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
         forbidden_roots = [private_root, credential_store, '/proc', '/dev']
         if os.environ.get('ROBOFRONTIER_EGRESS_ROOT'):
             forbidden_roots.append(os.environ['ROBOFRONTIER_EGRESS_ROOT'])
+        forbidden_roots.extend(json.loads(os.environ.get('ROBOFRONTIER_SHARED_DENY_ROOTS', '[]')))
         for forbidden in forbidden_roots:
             if mode(access['filesystem'], forbidden) != 'deny':
                 raise ValueError('Job credential/control paths are absent from the frozen deny table')

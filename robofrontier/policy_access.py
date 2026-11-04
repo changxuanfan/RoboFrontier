@@ -12,6 +12,7 @@ engines: the repository is public, so the network could reach reference
 solutions, and results would depend on what the web returned that day.
 """
 import os
+import json
 from pathlib import Path
 import subprocess
 
@@ -50,6 +51,14 @@ def table(run, repo=ROOT, home=None, tmp_dirs=None, checkouts=None):
     for checkout in (checkouts if checkouts is not None else _checkouts(Path(repo))):
         access[str(Path(checkout).resolve())] = 'deny'
     for path in _auth_homes(home):
+        access[str(Path(path).resolve())] = 'deny'
+    # Shared Slurm storage can contain independent clones and source archives
+    # that git worktree discovery cannot enumerate. The trusted launcher names
+    # these roots; the resulting concrete table is frozen and hashed per run.
+    roots = json.loads(os.environ.get('ROBOFRONTIER_SHARED_DENY_ROOTS', '[]'))
+    if not isinstance(roots, list) or any(not isinstance(p, str) or not Path(p).is_absolute() or p == '/' for p in roots):
+        raise ValueError('Shared deny roots must be absolute operator-storage paths')
+    for path in roots:
         access[str(Path(path).resolve())] = 'deny'
     for tmp in (tmp_dirs if tmp_dirs is not None else ('/tmp', os.environ.get('TMPDIR'))):
         if tmp: access[str(Path(tmp).resolve())] = 'write'
