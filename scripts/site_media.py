@@ -141,10 +141,10 @@ FAMILY_COLORS = [('Transport', (143, 193, 236)), ('Mosaic', (159, 220, 140)), ('
 
 
 def banner(film, path, width=1600, height=560, at_s=12):
-    """The README banner in the project page's style: the wordmark, tagline and family colors
-    on the left; the film's overhead view of all four Robo World zones on the right."""
+    """The README banner in the project page's style: the wordmark and family colors on the
+    left, the film's overhead view of all four Robo World zones on the right."""
     from PIL import Image, ImageDraw, ImageFont
-    bg, ink, dim, lime = (6, 8, 11), (233, 238, 243), (154, 166, 180), (212, 255, 58)
+    bg, ink, lime = (6, 8, 11), (233, 238, 243), (212, 255, 58)
     frame = Path(path).with_suffix('.frame.jpg')
     grab(film, at_s, frame, 1920)
     top = Image.open(frame).convert('RGB'); frame.unlink()
@@ -161,14 +161,14 @@ def banner(film, path, width=1600, height=560, at_s=12):
     draw = ImageDraw.Draw(image)
     display = ImageFont.truetype(str(FONTS/'SpaceGrotesk-Bold.ttf'), 96)
     mono = lambda size: ImageFont.truetype(str(FONTS/'JetBrainsMono-Medium.ttf'), size)
-    x, y = 72, 150
+    # Only the wordmark and the family colors: the README text below carries the tagline.
+    x, y = 72, 178
     draw.rectangle([x, y+21, x+21, y+42], fill=lime)
     draw.text((x+35, y), 'RoboFrontier', font=display, fill=ink)
-    draw.text((x+4, y+123), 'LANGUAGE AGENTS  ·  UP TO 16 ARMS  ·  ONE ROBOT WORLD', font=mono(23), fill=dim)
     x = 76
     for name, color in FAMILY_COLORS:
         label = name.upper()
-        draw.rectangle([x, 372, x+14, 386], fill=color); draw.text((x+24, 364), label, font=mono(22), fill=ink)
+        draw.rectangle([x, 338, x+14, 352], fill=color); draw.text((x+24, 330), label, font=mono(22), fill=ink)
         x += 24 + mono(22).getlength(label) + 40
     image.save(path, quality=88, optimize=True)
 

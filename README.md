@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="docs/media/readme/banner.jpg" alt="RoboFrontier: language agents, up to 16 arms, one robot world. Robo World from above: the Transport, Mosaic, Relay and Dial zones" width="100%">
-
-# RoboFrontier
+<img src="docs/media/readme/banner.jpg" alt="RoboFrontier. Robo World from above: the Transport, Mosaic, Relay and Dial zones" width="100%">
 
 **Can language models run a robot world?**
 
