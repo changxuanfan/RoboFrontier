@@ -226,6 +226,23 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue((self.directory/'closed.json').exists())
         with self.assertRaises(OSError):await asyncio.open_connection('127.0.0.1',self.port)
 
+    async def test_shutdown_does_not_hold_route_ownership_on_a_blocked_channel(self):
+        _,client,reply=await self.request('auth.openai.com:443')
+        self.assertIn(b'200 Connection Established',reply)
+        blocked=asyncio.Event()
+        class BlockedWriter:
+            def __init__(self,writer):self.writer=writer
+            def write(self,data):self.writer.write(data)
+            async def drain(self):await blocked.wait()
+            def close(self):self.writer.close()
+        self.compute_frames.writer=BlockedWriter(self.compute_frames.writer)
+        self.compute_task.cancel()
+        try:
+            await asyncio.wait_for(asyncio.shield(asyncio.gather(self.compute_task,return_exceptions=True)),3)
+            self.assertFalse((self.directory/'ready.json').exists())
+            self.assertEqual(len(self.compute.clients),0)
+        finally:blocked.set();client.close()
+
     async def test_an_abandoned_stream_does_not_close_other_connections(self):
         _,writer,reply=await self.request('auth.openai.com:443')
         self.assertIn(b'200 Connection Established',reply)

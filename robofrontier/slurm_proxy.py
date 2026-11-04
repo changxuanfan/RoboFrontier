@@ -339,6 +339,16 @@ async def discard_remaining(reader):
         pass
 
 
+async def close_stream(frames, identity):
+    # A dead SSH pipe must not keep cleanup (and the compute ownership lock)
+    # alive indefinitely. This never retries data or recreates a connection.
+    try:
+        async with asyncio.timeout(1):
+            await frames.send({'type': 'close', 'id': identity})
+    except (OSError, EgressError, asyncio.TimeoutError):
+        pass
+
+
 class ComputeRelay:
     def __init__(self, frames, directory, identity):
         self.frames, self.directory, self.identity = frames, directory, identity
@@ -353,7 +363,8 @@ class ComputeRelay:
         owner = asyncio.current_task(); self.clients.add(owner)
         sink = None
         try:
-            header = await asyncio.wait_for(reader.readuntil(b'\r\n\r\n'), 10)
+            async with asyncio.timeout(10):
+                header = await reader.readuntil(b'\r\n\r\n')
             if len(header) > 8192:
                 return
             lines = header.decode('ascii').split('\r\n')
@@ -404,10 +415,7 @@ class ComputeRelay:
                 self.streams.pop(identity, None)
                 if sink:
                     await sink.close()
-                try:
-                    await self.frames.send({'type': 'close', 'id': identity})
-                except (OSError, EgressError):
-                    pass
+                await close_stream(self.frames, identity)
             writer.close()
 
     async def messages(self):
@@ -454,19 +462,21 @@ class ComputeRelay:
         atomic(self.directory/'ready.json', self.record)
         try:
             await self.frames.send({'type': 'ready', 'job_id': self.identity, 'node': self.record['node']})
-            async with server:
-                await self.messages()
+            await self.messages()
         finally:
-            server.close(); await server.wait_closed()
+            # Server.__aexit__/wait_closed waits for active clients on Python
+            # 3.12. Close those clients before awaiting listener shutdown.
+            server.close()
+            current = self.directory/'ready.json'
+            if current.exists() and read_record(current).get('instance') == self.instance:
+                current.unlink()
             for stream in list(self.streams.values()):
                 stream['writer'].close()
             clients = list(self.clients)
             for task in clients:
                 task.cancel()
             await asyncio.gather(*clients, return_exceptions=True)
-            current = self.directory/'ready.json'
-            if current.exists() and read_record(current).get('instance') == self.instance:
-                current.unlink()
+            await server.wait_closed()
             atomic(self.directory/'closed.json', {'schema': SCHEMA, 'instance': self.instance,
                    'closed_at': time.time(), 'last_ping_age_s': time.monotonic()-self.last_ping,
                    'transport': self.frames.stats()})
@@ -529,7 +539,7 @@ class MacRelay:
                 await sink.close()
             if writer:
                 writer.close()
-            await self.frames.send({'type': 'close', 'id': identity})
+            await close_stream(self.frames, identity)
 
     async def heartbeat(self):
         while True:

@@ -195,6 +195,9 @@ Readiness is removed on normal closure; abrupt loss becomes stale within twelve
 seconds. Keep the published helper immutable while connected. A private launchd
 job may own the Mac command independently of a terminal; avoid automatic restart
 of an interrupted experiment.
+Relay shutdown closes active clients before awaiting listener shutdown and bounds
+best-effort close frames. A broken pipe cannot indefinitely retain the private
+compute ownership lock after the route has been fenced.
 
 A shared-engine failure stops dispatch, seals task worlds and requires review.
 This backend disables automatic host/segment redispatch; it does not recreate a
