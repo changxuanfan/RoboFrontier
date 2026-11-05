@@ -24,7 +24,8 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canHover = matchMedia('(hover: hover)').matches;
 const FAMILY_ORDER = ['transport', 'mosaic', 'relay', 'dial'];
 const SHOWCASE = {transport: 'transport-a12-d3', mosaic: 'mosaic-a08-12x24-d3', relay: 'relay-a16-d3', dial: 'dial-best5-n08-d3'};
-const MODEL_COLORS = ['#d4ff3a', '#8fc1ec', '#ff9f87', '#f2d46b', '#9fdc8c', '#c9a7ff', '#7fe0d6', '#ff7ab8'];
+// Theme tokens (site.css), so every chart follows the light or dark theme.
+const MODEL_COLORS = Array.from({length: 8}, (_, i) => `var(--m${i + 1})`);
 
 const state = {tasks: null, media: null, results: null, source: 'oracle', family: 'all', view: 'front', matrixFamily: 'transport'};
 
@@ -32,20 +33,28 @@ async function load(path) {
   try { const r = await fetch(path, {cache: 'no-cache'}); return r.ok ? r.json() : null; } catch { return null; }
 }
 
-// ---------- chrome: rail, progress, reveal, counters ----------
+// ---------- chrome: top bar, theme, reveal, counters ----------
+// Light by default; the Theme button switches to dark and the choice is remembered per browser.
+function theme() {
+  const root = document.documentElement, button = $('#theme');
+  const show = () => { const dark = root.dataset.theme === 'dark';
+    button.setAttribute('aria-pressed', dark); button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme'); };
+  button.addEventListener('click', () => {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; show();
+    try { localStorage.setItem('rf-theme', root.dataset.theme); } catch { /* storage may be blocked */ }
+  });
+  show();
+}
 function chrome() {
-  const rail = $('#rail'), bar = $('#progress');
+  const rail = $('#rail');
   const links = $$('.rail nav a');
-  const onScroll = () => {
-    rail.classList.toggle('solid', scrollY > 40);
-    const max = document.documentElement.scrollHeight - innerHeight;
-    bar.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
-  };
+  const onScroll = () => rail.classList.toggle('solid', scrollY > 8);
   addEventListener('scroll', onScroll, {passive: true}); onScroll();
   const chapters = new IntersectionObserver(entries => entries.forEach(e => {
     if (e.isIntersecting) links.forEach(a => a.classList.toggle('on', a.dataset.chapter === e.target.id));
   }), {rootMargin: '-45% 0px -50% 0px'});
   $$('section.chapter[id]').forEach(s => chapters.observe(s));
+  theme();
   const reveal = new IntersectionObserver(entries => entries.forEach(e => {
     if (e.isIntersecting) { e.target.classList.add('in'); reveal.unobserve(e.target); }
   }), {threshold: .12});
@@ -96,6 +105,62 @@ function hoverPlay(host) {
   return host;
 }
 
+// ---------- hero map ----------
+// A schematic of the Robo World hall: the four zones in their floor colors, nine tables each.
+// Columns are team sizes and rows are levels; a table widens with its team, one dot per arm.
+const ZONES = {transport: [0, 0], mosaic: [1, 0], relay: [0, 1], dial: [1, 1]};
+const scaleOf = id => id.replace(/-d\d$/, '');
+const scaleNumber = id => +(id.match(/-[an](\d+)/) || [0, 0])[1];
+function perimeter(x, y, w, hgt, n) {
+  const total = 2 * (w + hgt), pts = [];
+  for (let k = 0; k < n; k++) {
+    let d = (k + .5) * total / n;
+    if (d < w) { pts.push([x + d, y]); continue; } d -= w;
+    if (d < hgt) { pts.push([x + w, y + d]); continue; } d -= hgt;
+    if (d < w) { pts.push([x + w - d, y + hgt]); continue; } d -= w;
+    pts.push([x, y + hgt - d]);
+  }
+  return pts;
+}
+function plan() {
+  const box = $('#plan'), cap = $('#plan-caption'), idle = cap.textContent;
+  const ZW = 300, ZH = 214, GAP = 18, P = 10, W = 2 * ZW + GAP + 2 * P, H = 2 * ZH + GAP + 2 * P;
+  const map = svg('svg', {viewBox: `0 0 ${W} ${H}`, role: 'group', 'aria-label': 'Robo World: four zones, nine tasks each'});
+  // The hall floor and its two aisles, dashed down the middle as on the rendered floor.
+  map.append(svg('rect', {class: 'hall', x: .5, y: .5, width: W - 1, height: H - 1, rx: 6}),
+    svg('path', {class: 'aisle', d: `M${W / 2} ${P / 2}V${H - P / 2}M${P / 2} ${H / 2}H${W - P / 2}`}));
+  for (const key of FAMILY_ORDER) {
+    const [zx, zy] = ZONES[key], x0 = P + zx * (ZW + GAP), y0 = P + zy * (ZH + GAP), fam = state.tasks.families[key];
+    const zone = svg('g', {class: 'zone', style: `--fc:var(--${key})`});
+    const name = fam.name.toUpperCase(), sign = name.length * 7.4 + 22;
+    zone.append(svg('rect', {class: 'floor', x: x0, y: y0, width: ZW, height: ZH, rx: 4, style: `fill:color-mix(in srgb,var(--${key}) 15%,var(--card))`}),
+      svg('rect', {class: 'sign', x: x0 + ZW / 2 - sign / 2, y: y0 + 10, width: sign, height: 17, rx: 2}),
+      svg('text', {x: x0 + ZW / 2, y: y0 + 21.5}, name));
+    const rows = state.tasks.tasks.filter(t => t.family === key);
+    const scales = [...new Set(rows.map(t => scaleOf(t.id)))].sort((a, b) => scaleNumber(a) - scaleNumber(b));
+    const ids = rows.map(t => t.id), rh = (ZH - 44) / 3;
+    for (const t of rows) {
+      const col = scales.indexOf(scaleOf(t.id)), row = t.level - 1;
+      const w = 30 + t.arms * 2.6, hgt = 22 + t.arms * .9;
+      const cx = x0 + ZW / 6 * (2 * col + 1), cy = y0 + 38 + rh * (row + .5);
+      const label = `${t.id} · ${fam.name}, Level ${t.level} (${t.level_note}) · ${t.arms} arms · ${t.workload} ${t.unit}`;
+      const desk = svg('g', {class: 'desk', tabindex: 0, role: 'button', 'aria-label': `${label}. Play its Oracle run.`},
+        svg('rect', {x: cx - w / 2, y: cy - hgt / 2, width: w, height: hgt, rx: 2.5}),
+        ...perimeter(cx - w / 2, cy - hgt / 2, w, hgt, t.arms).map(([px, py]) => svg('circle', {cx: px, cy: py, r: 2.1})));
+      const show = () => { cap.textContent = `${label}. Select to play its Oracle run.`; };
+      const hide = () => { cap.textContent = idle; };
+      const play = () => openPlayer('oracle', t.id, ids);
+      desk.addEventListener('mouseenter', show); desk.addEventListener('focus', show);
+      desk.addEventListener('mouseleave', hide); desk.addEventListener('blur', hide);
+      desk.addEventListener('click', play);
+      desk.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(); } });
+      zone.append(desk);
+    }
+    map.append(zone);
+  }
+  box.append(map);
+}
+
 // ---------- benchmark ----------
 function families() {
   const box = $('#families'), fams = state.tasks.families;
@@ -124,8 +189,7 @@ function matrix() {
 function drawMatrix() {
   const key = state.matrixFamily, box = $('#matrix'); box.replaceChildren();
   const rows = state.tasks.tasks.filter(t => t.family === key);
-  const scales = [...new Set(rows.map(t => t.id.replace(/-d\d$/, '')))];
-  const scaleOf = id => id.replace(/-d\d$/, '');
+  const scales = [...new Set(rows.map(t => scaleOf(t.id)))].sort((a, b) => scaleNumber(a) - scaleNumber(b));
   box.append(h('div', {class: 'axis col'}, 'Level ↓ Scale →'));
   for (const s of scales) { const col = rows.filter(r => scaleOf(r.id) === s), t = col[0];
     const arms = [...new Set(col.map(r => r.arms))].sort((a, b) => a - b);
@@ -283,7 +347,6 @@ function pendingPanel(title, text, metrics) {
 
 function results() {
   const box = $('#results-body'), ms = models();
-  $('#model-count').textContent = ms.length || '—';
   if (!ms.length) {
     box.append(pendingPanel('Runs in progress', 'The 24-hour benchmark runs are still being collected. This board fills in automatically from data/results.json; no number appears before the runs behind it are complete.',
       METRICS.map(m => m.label)));
@@ -307,7 +370,7 @@ function rankChart(ms, metric) {
   rows.forEach((r, i) => {
     const y = i * row + 6, w = (W - left - 90) * r.v / max;
     s.append(svg('text', {x: 0, y: y + 21, class: 'label'}, r.m.label),
-      svg('rect', {x: left, y: y + 6, height: 22, width: reduced ? w : 0, fill: r.m.color, class: 'bar-rect', 'data-w': w}),
+      svg('rect', {x: left, y: y + 6, height: 22, rx: 3, width: reduced ? w : 0, style: `fill:${r.m.color}`, class: 'bar-rect', 'data-w': w}),
       svg('text', {x: left + w + 10, y: y + 22}, metric.fmt(r.v)));
   });
   requestAnimationFrame(() => requestAnimationFrame(() => $$('rect[data-w]', s).forEach(rect => rect.setAttribute('width', rect.dataset.w))));
@@ -323,7 +386,7 @@ function heatmap(ms) {
     cols.forEach((c, j) => {
       const v = mean(bench({model: m.key, family: c.f, level: c.l}).map(r => +!!r.success));
       s.append(svg('rect', {x: left + j * cw + 2, y: top + i * ch + 2, width: cw - 4, height: ch - 4,
-        fill: v == null ? '#111720' : `color-mix(in oklab, var(--${c.f}) ${Math.round(15 + 85 * v)}%, #0d1117)`}),
+        rx: 4, style: `fill:${v == null ? 'var(--card2)' : `color-mix(in oklab, var(--${c.f}) ${Math.round(15 + 85 * v)}%, var(--card))`}`}),
         svg('text', {x: left + j * cw + cw / 2, y: top + i * ch + 22, 'text-anchor': 'middle', class: 'label'}, v == null ? '·' : pct(v)));
     });
   });
@@ -360,12 +423,12 @@ function topoGlyph(key) {
   const arms = [[30, 88], [75, 88], [125, 88], [170, 88]];
   if (key === 'single') s.append(...arms.map(a => line([100, 24], a)), node(100, 24, true), ...arms.map(a => node(...a)));
   if (key === 'controller-worker') { const w = [[30, 60], [75, 60], [125, 60], [170, 60]];
-    s.append(...w.map(p => line([100, 18], p, true)), ...w.map((p, i) => line(p, arms[i])), node(100, 18, true), ...w.map(p => node(...p)), ...arms.map(a => svg('rect', {x: a[0] - 4, y: a[1] - 4, width: 8, height: 8, fill: '#283241'}))); }
+    s.append(...w.map(p => line([100, 18], p, true)), ...w.map((p, i) => line(p, arms[i])), node(100, 18, true), ...w.map(p => node(...p)), ...arms.map(a => svg('rect', {x: a[0] - 4, y: a[1] - 4, width: 8, height: 8, class: 'arm'}))); }
   if (key === 'worker-worker') { const w = [[30, 40], [75, 70], [125, 40], [170, 70]];
     s.append(line(w[0], w[1], true), line(w[1], w[2], true), line(w[2], w[3], true), line(w[0], w[2], true), line(w[1], w[3], true), ...w.map(p => node(...p))); }
   if (key === 'adaptive') { const d = [[55, 72], [145, 72]];
     s.append(...d.map(p => line([100, 20], p, true)), node(100, 20, true), ...d.map(p => node(...p)), line(d[0], arms[0]), line(d[0], arms[1]), line(d[1], arms[3]),
-      ...arms.map(a => svg('rect', {x: a[0] - 4, y: a[1] - 4, width: 8, height: 8, fill: '#283241'}))); }
+      ...arms.map(a => svg('rect', {x: a[0] - 4, y: a[1] - 4, width: 8, height: 8, class: 'arm'}))); }
   return s;
 }
 function analysis() {
@@ -387,7 +450,7 @@ function groupedBars(groups, series, metrics) {
     const vals = series.map(se => m.of(se.runs)), max = Math.max(...vals.filter(v => v != null), 1e-9), y0 = i * rowH;
     s.append(svg('text', {x: 0, y: y0 + 18, class: 'label'}, m.label));
     series.forEach((se, j) => { const v = vals[j], w = v == null ? 0 : (W - left - 90) * v / max, y = y0 + 4 + j * 30;
-      s.append(svg('rect', {x: left, y, width: reduced ? w : 0, 'data-w': w, height: 20, fill: se.color, class: 'bar-rect'}),
+      s.append(svg('rect', {x: left, y, width: reduced ? w : 0, 'data-w': w, height: 20, rx: 3, style: `fill:${se.color}`, class: 'bar-rect'}),
         svg('text', {x: left + w + 8, y: y + 15}, v == null ? 'pending' : m.fmt(v))); });
   });
   requestAnimationFrame(() => requestAnimationFrame(() => $$('rect[data-w]', s).forEach(r => r.setAttribute('width', r.dataset.w))));
@@ -397,7 +460,7 @@ function groupedBars(groups, series, metrics) {
 function communication() {
   const box = $('#communication-chart');
   const gpt = runs().filter(r => /gpt/i.test(r.model));
-  const series = TOPOLOGIES.map((t, i) => ({key: t.key, label: t.label, color: ['#7c8898', '#8fc1ec', '#ff9f87', '#d4ff3a'][i], runs: gpt.filter(r => r.topology === t.key)}));
+  const series = TOPOLOGIES.map((t, i) => ({key: t.key, label: t.label, color: ['var(--dim)', 'var(--transport)', 'var(--relay)', 'var(--accent)'][i], runs: gpt.filter(r => r.topology === t.key)}));
   if (series.filter(s => s.runs.length).length < 2) {
     box.append(pendingPanel('Comparison pending', 'Single, Controller–Worker, Worker–Worker and Adaptive runs of the same GPT model are being collected on the four hardest tasks.',
       ['Completion', 'Time to finish', 'Tokens', 'Parallel efficiency', 'Arm collisions', 'Messages', 'Delegations']));
@@ -413,11 +476,11 @@ function lineChart(series, {x = 'hours', y = 'progress'} = {}) {
   const maxX = Math.max(...series.flatMap(s => s.points.map(p => p[0])), 1);
   const sx = v => L + (W - L - 10) * v / maxX, sy = v => T + (H - T - B) * (1 - v);
   const s = svg('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img'});
-  for (const v of [0, .25, .5, .75, 1]) s.append(svg('line', {x1: L, x2: W - 10, y1: sy(v), y2: sy(v), stroke: '#1c2430'}), svg('text', {x: 0, y: sy(v) + 4}, pct(v)));
+  for (const v of [0, .25, .5, .75, 1]) s.append(svg('line', {x1: L, x2: W - 10, y1: sy(v), y2: sy(v), class: 'grid'}), svg('text', {x: 0, y: sy(v) + 4}, pct(v)));
   for (let hr = 0; hr <= maxX / 3600; hr += 6) s.append(svg('text', {x: sx(hr * 3600), y: H - 8, 'text-anchor': 'middle'}, `${hr}h`));
   for (const se of series) {
     const d = se.points.map((p, i) => `${i ? 'L' : 'M'}${sx(p[0]).toFixed(1)},${sy(p[1]).toFixed(1)}`).join('');
-    const path = svg('path', {d, fill: 'none', stroke: se.color, 'stroke-width': 2.5});
+    const path = svg('path', {d, fill: 'none', style: `stroke:${se.color}`, 'stroke-width': 2.5});
     s.append(path);
     if (!reduced) requestAnimationFrame(() => { const len = path.getTotalLength(); path.style.strokeDasharray = len; path.style.strokeDashoffset = len;
       path.getBoundingClientRect(); path.style.transition = 'stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1)'; path.style.strokeDashoffset = 0; });
@@ -437,7 +500,7 @@ function skills() {
     box.append(pendingPanel('Comparison pending', 'Paired runs with and without the shared skill file are being collected.',
       ['Progress over time', 'Late-run retries', 'Time to finish', 'Skill file growth'])); return;
   }
-  const series = [{label: 'With skills', color: '#d4ff3a', points: meanCurve(withS)}, {label: 'Without skills', color: '#7c8898', points: meanCurve(without)}];
+  const series = [{label: 'With skills', color: 'var(--accent)', points: meanCurve(withS)}, {label: 'Without skills', color: 'var(--dim)', points: meanCurve(without)}];
   box.append(h('div', {class: 'chart'}, h('div', {class: 'chart-head'}, h('h4', {}, 'Mean task progress over time'),
     h('span', {class: 'legend'}, series.map(s => h('span', {style: `--c:${s.color}`}, h('i'), s.label)))), lineChart(series)));
 }
@@ -456,7 +519,7 @@ async function main() {
   [state.tasks, state.media, state.results] = await Promise.all([load('data/tasks.json'), load('data/media.json'),
     load(fixture ? `_dev/${fixture.replace(/[^\w.-]/g, '')}` : 'data/results.json')]);
   if (!state.tasks) { $('#families').append(pendingPanel('Data unavailable', 'data/tasks.json could not be loaded.')); return; }
-  families(); matrix(); protocolArms(); wallControls(); playerControls(); results(); analysis();
+  plan(); families(); matrix(); protocolArms(); wallControls(); playerControls(); results(); analysis();
   deepLink(); addEventListener('hashchange', deepLink);
 }
 

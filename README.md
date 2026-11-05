@@ -1,26 +1,27 @@
 <div align="center">
 
-<a href="https://changxuanfan.github.io/RoboFrontier/#film"><img src="docs/media/readme/hero.webp" alt="RoboFrontier. A camera orbit through Robo World, where robot arms work on the 36 tasks" width="100%"></a>
+# RoboFrontier
 
-### Can language models run a robot world?
+**Benchmarking How LLM Agents Organize, Communicate, and Collaborate in a Multi-Robot World**
 
-Language-model agents in charge of up to sixteen robot arms in Robo World, a physical
-simulation: 36 tasks, four families, 24-hour runs.
+[Project page](https://changxuanfan.github.io/RoboFrontier/) ·
+[Film](https://changxuanfan.github.io/RoboFrontier/#film) ·
+[Tasks](docs/tasks/README.md) ·
+[Getting started](docs/getting-started.md)
 
-[**Project page**](https://changxuanfan.github.io/RoboFrontier/) ·
-[**Watch the film**](https://changxuanfan.github.io/RoboFrontier/#film) ·
-[**Tasks**](docs/tasks/README.md) ·
-[**Getting started**](docs/getting-started.md)
+[![License: MIT](https://img.shields.io/badge/code-MIT-3b7fc4?style=flat-square)](LICENSE)
+[![Data: CC BY 4.0](https://img.shields.io/badge/data%20%26%20media-CC%20BY%204.0-3f9440?style=flat-square)](LICENSE-DATA.md)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-d65b3c?style=flat-square)](pyproject.toml)
 
-[![License: MIT](https://img.shields.io/badge/code-MIT-d4ff3a?style=flat-square&labelColor=06080b)](LICENSE)
-[![Data: CC BY 4.0](https://img.shields.io/badge/data%20%26%20media-CC%20BY%204.0-8fc1ec?style=flat-square&labelColor=06080b)](LICENSE-DATA.md)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-9fdc8c?style=flat-square&labelColor=06080b)](pyproject.toml)
+<a href="https://changxuanfan.github.io/RoboFrontier/#film"><img src="docs/media/readme/hero.webp" alt="Inside Robo World: a camera orbit through the simulated hall where all 36 tasks run" width="100%"></a>
+
+<sub>Inside Robo World: one simulated hall holds all 36 tasks. Oracle reference runs, not model results. Select to watch the film.</sub>
 
 </div>
 
 ## What it is
 
-RoboFrontier asks language-model agents to **organize, communicate and collaborate**
+**Can language models run a robot world?** RoboFrontier asks language-model agents to **organize, communicate and collaborate**
 across many robot arms. Every model drives the same simulated Franka arms through the
 same robot tool, sees the same cameras and follows the same rules. Nothing is scripted:
 who does what, when to wait, how to talk and how to recover are the agent's choices.

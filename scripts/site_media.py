@@ -5,7 +5,7 @@ encode:  each source MP4 becomes a 720p H.264 file (CRF 28, preset slow, faststa
          of every output and the SHA-256 of its source. Existing verified outputs are kept.
 montage: one 1920 x 1080 video per family, a 3 x 3 grid of its nine tasks (rows are
          difficulty levels, columns scales), each tile sped up to a common length.
-stills:  README images: the animated banner (the film's opening hall orbit, from the raw
+stills:  README images: the animated teaser (the film's opening hall orbit, from the raw
          render without titles), montage posters with a play badge and a 400-px thumbnail
          of every task.
 
@@ -137,38 +137,23 @@ def play_badge(path, size=0.16):
     Image.alpha_composite(image.convert('RGBA'), layer).convert('RGB').save(path, quality=86, optimize=True)
 
 
-FONTS = Path(__file__).resolve().parents[1]/'assets/robo_factory/fonts'
-
-
-def hero(render, path, end_s=9.0, blend_s=0.6, width=1280, height=448, fps=15, quality=58):
-    """The README banner: the film's opening orbit of the Robo World hall as a looping
-    animated WebP (GitHub autoplays images, not videos) under a dark left gradient and the
-    RoboFrontier wordmark. `render` is the raw film render without titles or subtitles; the
+def hero(render, path, end_s=9.0, blend_s=0.6, width=960, height=408, fps=15, quality=60):
+    """The README teaser: the film's opening orbit of the Robo World hall as a looping
+    animated WebP (GitHub autoplays images, not videos), with no text on it; the README
+    title carries the name. `render` is the raw film render without titles or subtitles; the
     last `blend_s` seconds dissolve into the first so the loop does not jump."""
-    from PIL import Image, ImageDraw, ImageFont
-    overlay = Path(path).with_suffix('.overlay.png')
-    ramp = Image.new('L', (width, 1))
-    for x in range(width):
-        ramp.putpixel((x, 0), int(70 + 175 * (1 - min(1, x / (width * 0.72))) ** 1.2))
-    layer = Image.new('RGBA', (width, height), (6, 8, 11, 255)); layer.putalpha(ramp.resize((width, height)))
-    draw = ImageDraw.Draw(layer)
-    x, y = 58, 170
-    draw.rectangle([x, y + 18, x + 17, y + 35], fill=(212, 255, 58, 255))
-    draw.text((x + 29, y), 'RoboFrontier', font=ImageFont.truetype(str(FONTS / 'SpaceGrotesk-Bold.ttf'), 82), fill=(233, 238, 243, 255))
-    layer.save(overlay)
-    graph = (f'[0:v]trim=end={end_s},setpts=PTS-STARTPTS,crop=1920:672:0:200,scale={width}:{height}:flags=lanczos,split[a][b];'
+    crop_h = round(1920 * height / width)
+    graph = (f'[0:v]trim=end={end_s},setpts=PTS-STARTPTS,crop=1920:{crop_h}:0:{(1080 - crop_h) // 2},'
+             f'scale={width}:{height}:flags=lanczos,split[a][b];'
              f'[a]trim=start={blend_s},setpts=PTS-STARTPTS,fps={fps}[body];[b]trim=end={blend_s},setpts=PTS-STARTPTS,fps={fps}[head];'
-             f'[body][head]xfade=transition=fade:duration={blend_s}:offset={end_s - 2 * blend_s}[loop];[loop][1:v]overlay=0:0')
-    try:
-        subprocess.run([FFMPEG, '-v', 'error', '-y', '-t', str(end_s + 0.2), '-i', str(render), '-i', str(overlay),
-                        '-filter_complex', graph, '-an', '-c:v', 'libwebp_anim', '-lossless', '0', '-q:v', str(quality),
-                        '-compression_level', '6', '-loop', '0', str(path)], check=True)
-    finally:
-        overlay.unlink(missing_ok=True)
+             f'[body][head]xfade=transition=fade:duration={blend_s}:offset={end_s - 2 * blend_s}')
+    subprocess.run([FFMPEG, '-v', 'error', '-y', '-t', str(end_s + 0.2), '-i', str(render),
+                    '-filter_complex', graph, '-an', '-c:v', 'libwebp_anim', '-lossless', '0', '-q:v', str(quality),
+                    '-compression_level', '6', '-loop', '0', str(path)], check=True)
 
 
 def stills(manifest_path, render, montages, out):
-    """README images: the animated banner, montage posters (with play badges), 36 task thumbnails."""
+    """README images: the animated teaser, montage posters (with play badges), 36 task thumbnails."""
     from PIL import Image
     manifest_path, out = Path(manifest_path), Path(out)
     (out / 'tasks').mkdir(parents=True, exist_ok=True)

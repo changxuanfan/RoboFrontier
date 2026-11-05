@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,60 +8,72 @@
 <meta property="og:title" content="RoboFrontier">
 <meta property="og:description" content="Language-model agents in charge of up to sixteen robot arms: 36 physical tasks in four families, in one simulated robot world.">
 <meta property="og:image" content="assets/img/og.jpg">
-<meta name="theme-color" content="#06080b">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1013" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>try{var t=localStorage.getItem('rf-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="stylesheet" href="assets/css/site.css">
 <script src="assets/js/site.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#overview">Skip to content</a>
 <header class="rail" id="rail">
-  <a class="brand" href="#top" aria-label="RoboFrontier home"><span class="brand-mark" aria-hidden="true"></span>RoboFrontier</a>
-  <nav aria-label="Chapters">
-    <a href="#overview" data-chapter="overview"><b>01</b>Overview</a>
-    <a href="#benchmark" data-chapter="benchmark"><b>02</b>Benchmark</a>
-    <a href="#watch" data-chapter="watch"><b>03</b>Watch</a>
-    <a href="#results" data-chapter="results"><b>04</b>Results</a>
-    <a href="#analysis" data-chapter="analysis"><b>05</b>Analysis</a>
+  <a class="brand" href="#top" aria-label="RoboFrontier home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>RoboFrontier</a>
+  <nav aria-label="Sections">
+    <a href="#overview" data-chapter="overview">Overview</a>
+    <a href="#benchmark" data-chapter="benchmark">Benchmark</a>
+    <a href="#watch" data-chapter="watch">Videos</a>
+    <a href="#results" data-chapter="results">Results</a>
+    <a href="#analysis" data-chapter="analysis">Analysis</a>
+    <a href="#cite" data-chapter="cite">Cite</a>
   </nav>
-  <div class="rail-links"><a href="https://github.com/changxuanfan/RoboFrontier">GitHub ↗</a></div>
-  <div class="progress" aria-hidden="true"><i id="progress"></i></div>
+  <div class="rail-links">
+    <a href="https://github.com/changxuanfan/RoboFrontier">GitHub</a>
+    <button class="theme" type="button" id="theme" aria-label="Switch to dark theme" aria-pressed="false"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><span>Theme</span></button>
+  </div>
 </header>
 
 <main id="top">
 <section class="hero" aria-labelledby="hero-title">
+  <div class="hero-text">
+    <p class="plate"><i aria-hidden="true"></i>Multi-robot benchmark · LLM agents</p>
+    <h1 id="hero-title">RoboFrontier</h1>
+    <p class="title-line">Benchmarking How LLM Agents Organize, Communicate, and Collaborate in a Multi-Robot World</p>
+    <p class="lede"><b>Can language models run a robot world?</b> RoboFrontier puts language-model agents in charge of up to sixteen robot arms in Robo World, a physical simulation. They read the task, split the work, talk and recover from mistakes, and are measured on all of it.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/changxuanfan/RoboFrontier"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg>Code</a>
+      <button class="btn" type="button" data-film><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>Film <span>3:30</span></button>
+      <a class="btn" href="data/tasks.json" download>Task data</a>
+      <a class="btn" href="#cite">BibTeX</a>
+    </div>
+  </div>
+  <figure class="plan">
+    <div class="plan-map" id="plan" aria-label="Schematic map of Robo World: four zones of nine tasks"></div>
+    <figcaption id="plan-caption" aria-live="polite">Robo World as a map. Four zones, nine tables each, one task per table; a table grows with its team and every dot is an arm. Select a table to watch its Oracle run.</figcaption>
+  </figure>
+</section>
+
+<div class="spec" aria-label="Benchmark at a glance">
+  <div><strong data-count="36">36</strong><small>Tasks</small></div>
+  <div><strong data-count="4">4</strong><small>Families</small></div>
+  <div><strong><span data-count="4">4</span>–<span data-count="16">16</span></strong><small>Arms per task</small></div>
+  <div><strong data-count="3">3</strong><small>Levels</small></div>
+  <div><strong><span data-count="24">24</span>h</strong><small>Per run</small></div>
+</div>
+
+<figure class="teaser">
   <video class="hero-video" id="hero-video" muted loop playsinline autoplay preload="auto" poster="assets/img/hero.jpg">
     <source src="assets/video/hero.mp4" type="video/mp4">
   </video>
-  <div class="hero-shade" aria-hidden="true"></div>
-  <div class="hero-copy">
-    <p class="live"><span class="dot" aria-hidden="true"></span>One world · up to 16 arms · 24-hour runs</p>
-    <h1 id="hero-title">Can language models<br>run a <em>robot world?</em></h1>
-    <p class="lede">RoboFrontier puts language-model agents in charge of up to sixteen robot arms in Robo World, a physical simulation. They read the task, split the work, talk, recover from mistakes — and are measured on all of it.</p>
-    <div class="cta">
-      <button class="btn primary" type="button" data-film>▶ Watch the film <span>3:30</span></button>
-      <a class="btn" href="#results">Results</a>
-      <a class="btn" href="https://github.com/changxuanfan/RoboFrontier">Code</a>
-      <a class="btn" href="data/tasks.json" download>Task data</a>
-    </div>
-  </div>
-  <a class="scroll-cue" href="#overview" aria-label="Scroll to overview"><span></span></a>
-</section>
-
-<div class="ticker" aria-label="Benchmark at a glance">
-  <div><strong data-count="36">36</strong><small>physical tasks</small></div>
-  <div><strong data-count="4">4</strong><small>task families</small></div>
-  <div><strong><span data-count="4">4</span>–<span data-count="16">16</span></strong><small>arms per task</small></div>
-  <div><strong data-count="3">3</strong><small>difficulty levels</small></div>
-  <div><strong id="model-count">—</strong><small>models evaluated</small></div>
-</div>
+  <figcaption><b>Inside Robo World.</b> One simulated hall holds all 36 tasks; every arm is a simulated Franka Panda. These are Oracle reference runs, not model results. <button class="link" type="button" data-film>Watch the 3.5-minute film →</button></figcaption>
+</figure>
 
 <section class="chapter" id="overview" aria-labelledby="overview-title">
   <div class="chapter-head reveal">
-    <p class="kicker">01 / Overview</p>
+    <p class="kicker">01 · Overview</p>
     <h2 id="overview-title">An agent, a robot tool and a world that pushes back.</h2>
     <p class="sub">Every model drives the same arms through the same tool, sees the same cameras and obeys the same rules. Nothing is scripted: allocation, timing, communication and recovery are the agent's choices.</p>
   </div>
@@ -71,13 +83,13 @@
       <h3>Language agents</h3>
       <p>Native Codex and Claude Code sessions. One Controller owns the task; in adaptive mode it spawns delegates for bounded jobs and takes their arms back.</p>
     </article>
-    <div class="loop-wire" aria-hidden="true"><i></i><span>tool calls</span></div>
+    <div class="loop-wire" aria-hidden="true"><span>tool calls →</span></div>
     <article class="loop-step">
       <span class="loop-index">B</span>
       <h3>One robot tool</h3>
       <p>Move arms and grippers, batch and pre-check motions, observe from named cameras, wait for events, message teammates, delegate and hand work back. Every call is logged with its outcome.</p>
     </article>
-    <div class="loop-wire reverse" aria-hidden="true"><i></i><span>images · events</span></div>
+    <div class="loop-wire" aria-hidden="true"><span>← images · events</span></div>
     <article class="loop-step">
       <span class="loop-index">C</span>
       <h3>Robo World</h3>
@@ -94,7 +106,7 @@
 
 <section class="chapter" id="benchmark" aria-labelledby="benchmark-title">
   <div class="chapter-head reveal">
-    <p class="kicker">02 / Benchmark</p>
+    <p class="kicker">02 · Benchmark</p>
     <h2 id="benchmark-title">Four ways to work together.</h2>
     <p class="sub">Each family has nine tasks: three team sizes crossed with three difficulty levels. Hover a family to watch an Oracle reference run.</p>
   </div>
@@ -124,7 +136,6 @@
     </div>
     <figure class="protocol-figure" aria-label="Animated diagram: a Controller spawns three delegates that take arms and return them">
       <svg viewBox="0 0 600 380" id="protocol-svg">
-        <defs><linearGradient id="wire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#d4ff3a"/><stop offset="1" stop-color="#d4ff3a" stop-opacity=".1"/></linearGradient></defs>
         <g class="p-links">
           <path d="M300 92 C300 150 110 150 110 214"/><path d="M300 92 L300 214"/><path d="M300 92 C300 150 490 150 490 214"/>
         </g>
@@ -141,7 +152,7 @@
 
 <section class="chapter wide" id="watch" aria-labelledby="watch-title">
   <div class="chapter-head reveal">
-    <p class="kicker">03 / Watch</p>
+    <p class="kicker">03 · Videos</p>
     <h2 id="watch-title">Every task, on film.</h2>
     <p class="sub">Every run rendered in Robo World, front and side. Hover to preview; select to open.</p>
     <p class="sub small note"><b>Oracle</b> runs are privileged reference programs that read hidden task state; they show that each task can be done and are not model results. Some were operator-assisted, and some predate the released physics revision; each video says which. Videos are edited for viewing: idle time removed, played at 10–30×.</p>
@@ -159,7 +170,7 @@
 
 <section class="chapter" id="results" aria-labelledby="results-title">
   <div class="chapter-head reveal">
-    <p class="kicker">04 / Results</p>
+    <p class="kicker">04 · Results</p>
     <h2 id="results-title">Who gets the job done?</h2>
     <p class="sub">Every model runs the adaptive protocol on all 36 tasks, for up to 24 hours each. Completion is the headline; how they got there is the story.</p>
   </div>
@@ -182,7 +193,7 @@
 
 <section class="chapter" id="analysis" aria-labelledby="analysis-title">
   <div class="chapter-head reveal">
-    <p class="kicker">05 / Analysis</p>
+    <p class="kicker">05 · Analysis</p>
     <h2 id="analysis-title">What makes a team work?</h2>
     <p class="sub">Three questions behind the leaderboard: how agents should communicate, whether written skills help, and how much work really happens in parallel.</p>
   </div>
@@ -208,7 +219,7 @@
 
 <section class="chapter cite" id="cite" aria-labelledby="cite-title">
   <div class="chapter-head reveal">
-    <p class="kicker">Cite</p>
+    <p class="kicker">06 · Cite</p>
     <h2 id="cite-title">Use RoboFrontier.</h2>
   </div>
   <div class="cite-grid reveal">
@@ -233,7 +244,7 @@
 </section>
 </main>
 
-<footer class="foot"><span>RoboFrontier · 2026</span><span>Simulation renders, not real hardware.</span></footer>
+<footer class="foot"><span>RoboFrontier · 2026</span><span>All videos are simulation renders in Robo World, not real hardware.</span></footer>
 
 <dialog class="player" id="player" aria-label="Video player">
   <div class="player-top">
