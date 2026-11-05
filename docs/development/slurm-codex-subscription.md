@@ -123,7 +123,7 @@ The research probe used installed CLI 0.165.0 with an isolated temporary home, s
 
 An empty-parent fork was correctly rejected because no rollout existed; this no-model probe therefore does **not** qualify real fork lineage, the new gateway, kernel isolation, long-running concurrency, GPU rendering, actual provider refresh or Slurm execution. Early fixture failures were corrected locally (catalog instructions and account-routing metadata); no production module was changed.
 
-Reproduction and result: [probe script](../../runs/engineering/slurm-subscription-research-20261104/probe_native.py), [result](../../runs/engineering/slurm-subscription-research-20261104/native-probe-result.json). Run the probe locally; its identities and tokens are fixtures, not authentication inputs for a real job.
+Reproduction and result: probe script `runs/engineering/slurm-subscription-research-20261104/probe_native.py` and result `runs/engineering/slurm-subscription-research-20261104/native-probe-result.json`, kept with the local research evidence because `runs/` is not tracked in git. Run the probe locally; its identities and tokens are fixtures, not authentication inputs for a real job.
 
 ## Acceptance sequence before deployment
 

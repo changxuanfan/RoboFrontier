@@ -14,7 +14,7 @@ test('Codex bridge keeps original action result and emits the proper image MIME'
   const file=path.join(dir,'mismatched.png');fs.writeFileSync(file,jpg);
   const result={call_id:'call-1',execution:{status:'completed'},observation:{images:{top:file}}};
   const fake=path.join(root,'python');fs.writeFileSync(fake,'#!/usr/bin/env node\nprocess.stdout.write('+JSON.stringify(JSON.stringify(result))+');\n',{mode:0o755});
-  const host={actors:new Map([['thread','Controller']]),run:root,cwd:root,python:fake,event:()=>{}};
+  const host={launch:{},actors:new Map([['thread','Controller']]),run:root,cwd:root,python:fake,event:()=>{}};
   const req={threadId:'thread',tool:'robot',callId:'id',arguments:{op:'move',call_id:'call-1',data:{},views:['top']}};
   let reply=await PolicyHost.prototype.toolRequest.call(host,'item/tool/call',req);
   assert.equal(reply.success,true);assert.match(reply.contentItems[1].imageUrl,/^data:image\/jpeg;base64,/);
