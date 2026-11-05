@@ -163,6 +163,11 @@ def launch_config(p, folder, run_dir=None):
         args.extend(['-c','default_permissions='+json.dumps(POLICY_PROFILE),
                      '-c','permissions.'+POLICY_PROFILE+'.filesystem={'+table+'}',
                      '-c','permissions.'+POLICY_PROFILE+'.network.enabled='+json.dumps(bool(frozen['network']))])
+        if frozen.get('policy_env'):
+            # Shells get only the frozen variables. A login shell would reorder PATH.
+            args.extend(['-c','allow_login_shell=false','-c','shell_environment_policy.inherit="none"'])
+            for name,value in frozen['policy_env']['variables'].items():
+                args.extend(['-c','shell_environment_policy.set.'+name+'='+json.dumps(value)])
     return dict(model=p['model'],provider=provider,effort=p['effort'],args=args,
                 profile=p,context_window=p['context_window'],auto_compact_token_limit=p['auto_compact_token_limit'],
                 tool_backend=backend,tool_backend_sha256=fingerprint(p),model_catalog=str(target.resolve()))

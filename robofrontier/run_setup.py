@@ -158,6 +158,10 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     store = RuntimeStore(directory/'private/state/runtime.sqlite')
     store.initialize(directory.name, cfg, task['arms'])
     store.close()
+    # The Python its scripts use, named by the trusted launcher; earlier-style runs have none.
+    from . import policy_env
+    if policy_env.selected() is not None:
+        policy_env.prepare_run(directory, policy_env.selected())
     # One frozen first message per policy role, sent unchanged by either engine.
     write_bootstraps(directory)
     # What the policy may read and write, rendered by each engine's own sandbox.
@@ -210,8 +214,11 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         'observation_contract':task['observation_contract'],
         'manager':'Meta session executes deterministic dispatcher; no independent desktop takeover',
         'isolation':('Role authentication and protocol/integrity checks, plus each engine\'s file sandbox: '
-                     'policies write only inside workspace/ and temporary folders, and cannot read private/, '
-                     'other runs, source code, configuration or credentials'),
+                     + ('policies write only inside workspace/ and /tmp, and read only those, public/, the operating '
+                        'system and the frozen Python environment'
+                        if json.loads((directory/'private/inputs/policy-access.json').read_text()).get('policy_env') else
+                        'policies write only inside workspace/ and temporary folders, and cannot read private/, '
+                        'other runs, source code, configuration or credentials')),
         'physical_restart':'unsupported; interrupted worlds require a new run',
         'status':'prepared; no simulator or inference started'})
     return directory

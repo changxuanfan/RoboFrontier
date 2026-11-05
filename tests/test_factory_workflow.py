@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from robofrontier.cli import main, _frozen_configuration
+from older_configuration import without_later_options
 from robofrontier.configuration import load_configuration, validate_configuration
 from robofrontier.factory import bundle
 from robofrontier.factory import server
@@ -163,7 +164,7 @@ class FactoryWorkflowTests(unittest.TestCase):
     def test_version_one_frozen_policy_configuration_remains_exact(self):
         from robofrontier.run_setup import write_json
         import hashlib
-        config = deepcopy(load_configuration())
+        config = without_later_options(deepcopy(load_configuration()))
         del config['factory']
         del config['oracle']
         config['schema_version'] = 1

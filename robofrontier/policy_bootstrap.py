@@ -88,6 +88,7 @@ def bootstrap_text(run, actor):
              'skill/references/tools.md', 'skill/references/motion-check.md']
     if topology != 'centralized': paths.append('skill/references/communication.md')
     if topology == 'adaptive': paths.append('skill/references/adaptive.md')
+    if (public / 'environment.md').is_file(): paths.append('environment.md')
     for name in task.get('family_materials', []):
         if not isinstance(name, str): raise ValueError('Invalid public material reference')
         if name.endswith(('.md', '.json', '.txt')): paths.append(name)
@@ -107,7 +108,7 @@ def bootstrap_text(run, actor):
     text = ('This is a new, independent RoboFrontier trial in ' + str(run) + '. Your role is ' + actor + '.\n\n'
             'The run\'s rules are in your system prompt (also at ' + str(public / 'rules.md') + '). Your other '
             'public inputs follow in full, each under its path.\n\n' + '\n\n'.join(parts) + '\n\n--- end of inputs ---\n\n'
-            + READABLE + '\n\n' + lessons_line + startup + '\n\n'
+            + (READABLE_ENV if (public / 'environment.md').is_file() else READABLE) + '\n\n' + lessons_line + startup + '\n\n'
             + ENGINE_LINES[harness.get('engine', 'codex')] + '\n')
     if len(text.encode()) > MAX_BOOTSTRAP_BYTES:
         raise ValueError('Public inputs exceed the start message size limit')
@@ -119,6 +120,9 @@ def bootstrap_text(run, actor):
 READABLE = ('The same files stay readable on disk. Your filesystem permissions deny the repository '
             'that holds this run but allow this run\'s folder; the more specific entry wins. Only '
             'the run\'s private/ folder stays closed. Reread any of them with your file tools when needed.')
+READABLE_ENV = ('The same files stay readable on disk. Your filesystem permissions deny the folders that '
+                'hold this run but allow its public/ and workspace/ folders; the more specific entry wins. '
+                'Everything else in the run stays closed. Reread any of them with your file tools when needed.')
 MAX_BOOTSTRAP_BYTES = 400_000
 
 

@@ -23,7 +23,7 @@ from robofrontier.claude.recovery import capacity_code
 from robofrontier.claude.native_home import config_directory
 from robofrontier.claude.cost_state import amount, baseline, invocation_cost
 from robofrontier.run_metrics import host_event
-from robofrontier import run_layout
+from robofrontier import policy_env, run_layout
 
 ENV_PASSTHROUGH = ('PATH', 'LANG', 'LC_ALL', 'TMPDIR')
 ROBOT_TOOL = 'mcp__robot__robot'
@@ -88,6 +88,11 @@ def policy_settings(run_dir):
     access = json.loads(path.read_text())
     table = access['filesystem']
     hidden = [str(p) for p in _denied_paths(table)]
+    # A run with a policy environment renders its table as written: the sandbox lets a more
+    # specific allowRead win, so a folder created during the run is closed too.
+    sandbox_read = ({'denyRead': sorted(p for p, mode in table.items() if mode == 'deny'),
+                     'allowRead': sorted(p for p, mode in table.items() if mode != 'deny' and p != '/')}
+                    if access.get('policy_env') else {'denyRead': hidden})
     writable = sorted(p for p, mode in table.items() if mode == 'write')
     # Claude rules take absolute paths as //path. acceptEdits accepts edits only inside
     # the working folder and every other edit is refused; these rules also keep hidden
@@ -96,7 +101,7 @@ def policy_settings(run_dir):
     deny = [rule('Read', p) for p in hidden] + [rule('Edit', p) for p in hidden+[str(run/'public')]]
     return {'permissions': {'deny': deny},
             'sandbox': {'enabled': True, 'allowUnsandboxedCommands': False,
-                        'filesystem': {'allowWrite': writable, 'denyRead': hidden},
+                        'filesystem': {'allowWrite': writable, **sandbox_read},
                         'network': {'allowedDomains': ['*'] if access.get('network') else []}}}
 
 
@@ -111,8 +116,13 @@ def confine(run_dir, settings, config_dir):
     run = Path(run_dir).resolve()
     launch = run/'private/inputs/claude.json'
     mode = (json.loads(launch.read_text()) if launch.is_file() else {}).get('bash_isolation', 'claude-sandbox')
+    extra = {}
+    if settings is not None and json.loads((run/'private/inputs/policy-access.json').read_text()).get('policy_env'):
+        # Sourced before each Bash command, so only policy shells get the frozen variables;
+        # the CLI keeps its own environment.
+        extra['CLAUDE_ENV_FILE'] = str(run/'public/inputs'/policy_env.SHELL_FILE)
     if settings is None or mode == 'claude-sandbox':
-        return settings, {}
+        return settings, extra
     if mode != 'landlock-v1':
         raise ValueError('Unknown Bash isolation: ' + str(mode))
     from robofrontier.claude import landlock_shell
@@ -130,7 +140,7 @@ def confine(run_dir, settings, config_dir):
     prefix = folder/'bash-prefix'
     landlock_shell.write_atomic(prefix, '#!/bin/sh\nexec ' + ' '.join(shlex.quote(str(part)) for part in (
         sys.executable, '-I', Path(landlock_shell.__file__).resolve(), rules)) + ' "$@"\n', mode=0o755)
-    return {**settings, 'sandbox': {'enabled': False}}, {'CLAUDE_CODE_SHELL_PREFIX': str(prefix)}
+    return {**settings, 'sandbox': {'enabled': False}}, {**extra, 'CLAUDE_CODE_SHELL_PREFIX': str(prefix)}
 
 
 def policy_system_prompt(run_dir):

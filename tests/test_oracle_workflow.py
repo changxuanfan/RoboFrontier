@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import patch
 
 from robofrontier import oracle_workflow as workflow
+from older_configuration import without_later_options
 from robofrontier.configuration import load_configuration, validate_configuration
 
 
@@ -92,7 +93,7 @@ class OracleWorkflowTests(unittest.TestCase):
 
     def test_configuration_versions_one_and_two_are_not_rewritten(self):
         for version in (1, 2, 3):
-            config = deepcopy(load_configuration())
+            config = without_later_options(deepcopy(load_configuration()))
             if version < 3:
                 del config['oracle']
             else:
@@ -115,7 +116,7 @@ class OracleWorkflowTests(unittest.TestCase):
             workflow.prepare(self.root/'many', load_configuration())
 
     def test_legacy_preparation_does_not_inherit_a_new_execution_protocol(self):
-        config=self.config()
+        config=without_later_options(self.config())
         config['schema_version']=3
         del config['oracle']['evaluation_mode']
         root=self.root/'legacy'
