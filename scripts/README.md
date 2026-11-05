@@ -57,6 +57,8 @@ Native Codex and Claude hosts, preparation and provider checks. `robofrontier` c
 | `create_pipeline_run.py` | Prepare a run only: no GUI, model calls, session creation or robot actions. |
 | `luna_cpu.py` | Headless GPT-6 Luna benchmark entrypoint. |
 | `meta_dispatcher.js` | Loaded by Meta into functions.exec. |
+| `build_policy_env.py` | Build the read-only Python environment and offline package store for policy scripts, once per host. |
+| `check_policy_env.py` | Before a batch, check an environment and each engine's sandbox with stub models; no provider is contacted. |
 | `portable_benchmark.py` | Submit one benchmark batch without an LLM supervisor (macOS or Linux CPU). |
 | `role_tools.js` | Thin local adapter for a single Agent-selected operation. |
 | `tasks.py` | List released tasks, audit their inputs, or prepare isolated policy runs. |

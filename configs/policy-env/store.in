@@ -1,0 +1,15 @@
+# Installable offline with `pip install NAME`. General computing only: nothing here
+# simulates physics, plans robot motion, solves robot kinematics or ships trained models.
+cvxpy
+imageio
+joblib
+networkx
+numba
+pandas
+rtree
+scikit-image
+scikit-learn
+shapely
+sympy
+transforms3d
+trimesh

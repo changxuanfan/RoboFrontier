@@ -15,13 +15,21 @@ import os
 import json
 from pathlib import Path
 import subprocess
+import sys
 
-from . import run_layout
+from . import policy_env, run_layout
 from .task_config import ROOT
 
 NETWORK = False
 WEB_SEARCH = False
 HOME_SECRETS = ('.codex', '.claude', '.ssh', '.robofrontier', '.config/claude')
+# Hosts where a run with a policy environment has been tested through each engine's sandbox.
+QUALIFIED_SYSTEMS = ('darwin',)
+# Closed for a run with a policy environment: people's files, removable disks, other temporary
+# folders, other Python installations, and the system keychain files. /tmp stays open, since
+# shells and tools write there at fixed paths.
+CLOSED_ROOTS = {'darwin': ('/Users', '/Volumes', '/var/tmp', '/var/folders', '/opt', '/usr/local', '/Library/Keychains'),
+                'linux': ('/home', '/root', '/mnt', '/media', '/var/tmp', '/dev/shm', '/opt', '/usr/local')}
 
 
 def _checkouts(repo):
@@ -69,10 +77,42 @@ def table(run, repo=ROOT, home=None, tmp_dirs=None, checkouts=None):
     return access
 
 
-def record(run, **kwargs):
+def closed_table(run, environment, *, home=None, system=sys.platform, **kwargs):
+    """The table of a run with a policy environment: personal, shared and other software closed.
+
+    The root stays readable because a process cannot start on macOS without it (a table
+    without it aborts even /bin/sh), so this closes what holds other people's data, other
+    runs or other software rather than listing what stays open. Only this run's public/
+    and workspace/ folders and the environment are open beneath the closed folders; /tmp
+    stays writable and is shared with other runs.
+    """
+    run = Path(run).resolve()
+    home = Path(home).expanduser().resolve() if home else Path.home().resolve()
+    access = table(run, home=home, **{**kwargs, 'tmp_dirs': ('/tmp',)})
+    for path in CLOSED_ROOTS[system]:
+        access[str(Path(path).resolve())] = 'deny'
+    access[str(home)] = 'deny'
+    access[str(Path(environment).resolve())] = 'read'
+    access[str(run)] = 'deny'
+    access[str(run/'public')] = 'read'
+    access[str(run/'private')] = 'deny'
+    access[str(run/run_layout.LAYOUTS[run_layout.CURRENT]['policy_cwd'])] = 'write'
+    return access
+
+
+def record(run, environment=None, **kwargs):
     """What a prepared run freezes: the table, network and web search choices."""
-    return {'schema': 'robofrontier.policy-access.v1', 'filesystem': table(run, **kwargs),
-            'network': NETWORK, 'web_search': WEB_SEARCH}
+    environment = environment or policy_env.selected()
+    if environment is None:
+        return {'schema': 'robofrontier.policy-access.v1', 'filesystem': table(run, **kwargs),
+                'network': NETWORK, 'web_search': WEB_SEARCH}
+    if sys.platform not in QUALIFIED_SYSTEMS:
+        raise ValueError('The policy environment is not yet qualified on ' + sys.platform)
+    manifest = policy_env.verify(environment)
+    return {'schema': 'robofrontier.policy-access.v2', 'filesystem': closed_table(run, environment, **kwargs),
+            'network': NETWORK, 'web_search': WEB_SEARCH,
+            'policy_env': {'root': str(Path(environment).resolve()), 'id': manifest['id'], 'python': manifest['python'],
+                           'tree_sha256': manifest['tree_sha256'], 'variables': policy_env.variables(environment, run)}}
 
 
 def mode(access, path):

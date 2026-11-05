@@ -1,0 +1,277 @@
+"""Check a policy environment and each engine's sandbox before a batch uses them.
+
+Runs each real CLI against a local stub model in a throwaway run, with the access table and
+variables a real run freezes. No provider is contacted and no credential is used. Prints
+ok/denied per attempt and never prints file contents; exits nonzero on any difference.
+
+    .venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id>
+"""
+import argparse
+import http.server
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+
+from robofrontier import policy_access, policy_env, policy_env_probe
+from robofrontier.run_layout import manifest_record
+
+ROOT = Path(__file__).resolve().parents[1]
+MUST_WORK = ('python_is_environment', 'python_on_path_is_environment', 'tmpdir_in_workspace', 'home_in_workspace',
+             'threads_not_limited', 'host_variables_gone', 'libraries_and_plots', 'tempfile', 'shell_heredoc', 'shell_sort',
+             'subprocess_system_tool', 'read_public', 'write_workspace', 'read_environment', 'pip_install_store',
+             'import_installed', 'venv', 'shell_reports_success', 'read_shared_tmp', 'write_shared_tmp')
+MUST_FAIL = ('read_home', 'read_home_file', 'read_users', 'read_volumes', 'read_keychains', 'read_private', 'read_run_root',
+             'read_other_run', 'read_repository', 'tool_write_shared_tmp', 'write_public', 'write_run_root',
+             'write_environment', 'run_other_python', 'import_mujoco', 'pip_install_absent_package', 'network_tcp',
+             'network_external', 'unix_socket_shared', 'list_processes')
+HOST_ONLY = 'ROBOFRONTIER_PROBE_HOST_ONLY'
+OTHER_PYTHONS = ('/opt/homebrew/bin/python3', '/usr/local/bin/python3')
+OUTPUT_TYPES = ('function_call_output', 'custom_tool_call_output')
+PROBE_LIMIT_S = 280
+RUNNING = re.compile(r'Process running with session ID (\d+)')
+RESULT = 'probe-result.json'
+
+
+def _stream(self, data):
+    self.send_response(200)
+    self.send_header('Content-Type', 'text/event-stream')
+    self.send_header('Content-Length', str(len(data)))
+    self.end_headers()
+    self.wfile.write(data)
+
+
+def claude_stub(command, seen, shared):
+    """An Anthropic Messages stub: one Bash call, then Write on the shared folder."""
+    tools = [('Bash', {'command': command, 'description': 'probe', 'timeout': 600000}),
+             ('Write', {'file_path': str(shared/'tool-written.txt'), 'content': 'x'})]
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *args): pass
+
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            done = [item for message in body.get('messages', []) if isinstance(message.get('content'), list)
+                    for item in message['content'] if isinstance(item, dict) and item.get('type') == 'tool_result']
+            seen.extend(item for item in done if item not in seen)
+            if len(done) < len(tools):
+                tool, data = tools[len(done)]
+                block = {'type': 'tool_use', 'id': 'toolu_%d' % len(done), 'name': tool, 'input': {}}
+                delta, reason = {'type': 'input_json_delta', 'partial_json': json.dumps(data)}, 'tool_use'
+            else:
+                block, delta, reason = {'type': 'text', 'text': ''}, {'type': 'text_delta', 'text': 'done'}, 'end_turn'
+            message = {'id': 'msg_probe', 'type': 'message', 'role': 'assistant', 'model': 'claude-opus-5-5', 'content': [],
+                       'stop_reason': None, 'stop_sequence': None, 'usage': {'input_tokens': 1, 'output_tokens': 1}}
+            events = [('message_start', {'type': 'message_start', 'message': message}),
+                      ('content_block_start', {'type': 'content_block_start', 'index': 0, 'content_block': block}),
+                      ('content_block_delta', {'type': 'content_block_delta', 'index': 0, 'delta': delta}),
+                      ('content_block_stop', {'type': 'content_block_stop', 'index': 0}),
+                      ('message_delta', {'type': 'message_delta', 'delta': {'stop_reason': reason, 'stop_sequence': None},
+                                         'usage': {'output_tokens': 1}}),
+                      ('message_stop', {'type': 'message_stop'})]
+            _stream(self, ''.join('event: %s\ndata: %s\n\n' % (name, json.dumps(data)) for name, data in events).encode())
+    return Handler
+
+
+def codex_stub(command, seen):
+    """A Responses stub: one exec_command call, polled until it exits, then the end of the turn."""
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *args): pass
+
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            done = [item for item in body.get('input', []) if isinstance(item, dict) and item.get('type') in OUTPUT_TYPES]
+            seen.extend(item for item in done if item not in seen)
+            running = RUNNING.search(json.dumps(done[-1]['output'])) if done else None
+            if running:
+                item = dict(id='fc_%d' % len(done), type='function_call', call_id='call_%d' % len(done), name='write_stdin', status='completed',
+                            arguments=json.dumps({'session_id': int(running.group(1)), 'chars': '', 'yield_time_ms': 30000}))
+            elif done:
+                item = dict(id='msg_probe', type='message', role='assistant', status='completed',
+                            content=[dict(type='output_text', text='DONE', annotations=[])])
+            else:
+                item = dict(id='fc_probe', type='function_call', call_id='call_probe', name='exec_command', status='completed',
+                            arguments=json.dumps({'cmd': command, 'login': False, 'yield_time_ms': 30000}))
+            response = dict(id='resp_probe', object='response', created_at=int(time.time()), status='completed',
+                            model=body.get('model'), output=[item],
+                            usage=dict(input_tokens=1, output_tokens=1, total_tokens=2, input_tokens_details={'cached_tokens': 0},
+                                       output_tokens_details={'reasoning_tokens': 0}))
+            events = [('response.created', {'response': {**response, 'status': 'in_progress', 'output': []}}),
+                      ('response.output_item.added', {'output_index': 0, 'item': {**item, 'status': 'in_progress'}}),
+                      ('response.output_item.done', {'output_index': 0, 'item': item}),
+                      ('response.completed', {'response': response})]
+            _stream(self, ''.join('event: %s\ndata: %s\n\n' % (kind, json.dumps({'type': kind, 'sequence_number': i, **data}))
+                                  for i, (kind, data) in enumerate(events)).encode())
+    return Handler
+
+
+CODEX_DRIVER = r'''
+const fs=require('fs'),{CodexRpc}=require(process.argv[1]+'/robofrontier/codex/codex_rpc');
+const out=process.argv[2],launch=JSON.parse(fs.readFileSync(out+'/launch.json')),run=fs.readFileSync(out+'/cwd.txt','utf8');
+process.env.ROBOFRONTIER_OFFLINE_STUB_TOKEN='local-stub-no-credential';
+(async()=>{let done;
+const rpc=new CodexRpc(launch.args,{stderr:fs.openSync(out+'/server.log','w'),
+  onEvent:m=>{if(m.method==='turn/completed'&&done)done();},onRequest:async()=>{throw new Error('no host tools');}});
+await rpc.initialize();
+const thread=(await rpc.call('thread/start',{model:launch.model,modelProvider:launch.provider,cwd:run,approvalPolicy:'never',ephemeral:false})).thread.id;
+const finished=new Promise(r=>done=r);
+await rpc.call('turn/start',{threadId:thread,model:launch.model,effort:launch.effort,input:[{type:'text',text:'go'}]});
+await Promise.race([finished,new Promise((_,j)=>setTimeout(()=>j(new Error('turn timeout')),600000))]);
+await rpc.close();process.exit(0);})().catch(e=>{console.error(e.stack);process.exit(1);});'''
+
+
+def run_claude(run, command, scratch, seen, shared):
+    from robofrontier.claude.runner import build_command, confine, policy_settings
+    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), claude_stub(command, seen, shared))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    config = run/'private/engine/config'
+    config.mkdir(parents=True, exist_ok=True)
+    settings, extra = confine(run, policy_settings(run), config)
+    argv = build_command('claude-opus-5-5', 'high', '{"mcpServers":{}}', 'go', auth_mode='oauth_token', settings=settings)
+    env = {'PATH': os.environ.get('PATH', ''), 'HOME': str(scratch/'cli-home'), HOST_ONLY: '1',
+           'ANTHROPIC_BASE_URL': 'http://127.0.0.1:%d' % server.server_port, 'ANTHROPIC_API_KEY': 'local-fake-key',
+           'CLAUDE_CONFIG_DIR': str(config), 'DISABLE_TELEMETRY': '1', 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
+           'ENABLE_TOOL_SEARCH': 'false', 'ENABLE_CLAUDEAI_MCP_SERVERS': 'false', **extra}
+    try:
+        subprocess.run(argv, cwd=run/'workspace', env=env, capture_output=True, stdin=subprocess.DEVNULL, timeout=PROBE_LIMIT_S, check=True)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def run_codex(run, command, scratch, seen, shared):
+    from robofrontier.codex.launch import launch_config
+    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), codex_stub(command, seen))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    out = scratch/'codex-host'
+    out.mkdir()
+    (scratch/'codex-home').mkdir()
+    stub = dict(model='offline-protocol', provider='offline_protocol', effort='high', vision=True, context_window=272000,
+                auto_compact_token_limit=258400, env_key='ROBOFRONTIER_OFFLINE_STUB_TOKEN',
+                base_url='http://127.0.0.1:%d' % server.server_port)
+    env = {**os.environ, 'CODEX_HOME': str(scratch/'codex-home'), 'HOME': str(scratch/'cli-home'), HOST_ONLY: '1'}
+    previous = os.environ.get('CODEX_HOME')
+    os.environ['CODEX_HOME'] = str(scratch/'codex-home')
+    try:
+        launch = launch_config(stub, out, run_dir=run)
+    finally:
+        if previous is None:
+            del os.environ['CODEX_HOME']
+        else:
+            os.environ['CODEX_HOME'] = previous
+    (out/'launch.json').write_text(json.dumps(launch))
+    (out/'cwd.txt').write_text(str(run/'workspace'))
+    try:
+        subprocess.run(['node', '-e', CODEX_DRIVER, str(ROOT), str(out)], env=env, capture_output=True, timeout=PROBE_LIMIT_S, check=True)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+ENGINES = {'codex': run_codex, 'claude': run_claude}
+
+
+def throwaway_run(scratch, name, environment):
+    """A run laid out as preparation lays it out, with the table a real run would freeze."""
+    run = scratch/name/'run'
+    other = scratch/name/'other-run'
+    for folder in ('public/inputs', 'workspace', 'private/inputs'):
+        (run/folder).mkdir(parents=True)
+    (other/'private/inputs').mkdir(parents=True)
+    (other/'private/inputs/task.json').write_text('OTHER-RUN')
+    (run/'public/inputs/task.json').write_text('PUBLIC')
+    (run/'private/inputs/secret.txt').write_text('PRIVATE')
+    (run/'root.txt').write_text('ROOT')
+    (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record(name)))
+    policy_env.prepare_run(run, environment)
+    access = policy_access.record(run, environment=environment)
+    # The other run is beside this one, so close it as a repository's runs folder would be.
+    access['filesystem'][str(other)] = 'deny'
+    (run/'private/inputs/policy-access.json').write_text(json.dumps(access))
+    shutil.copy(policy_env_probe.__file__, run/'public/inputs/probe.py')
+    return run, other
+
+
+def shell_succeeded(seen):
+    """Whether the engine's own shell wrapper returned the command's output and exit code 0.
+
+    A script can succeed while the wrapper around it fails, as when the CLI cannot write
+    its working-directory record or capture standard output.
+    """
+    text = json.dumps(seen)
+    return (policy_env_probe.FINISHED in text and 'not permitted' not in text and 'exited with code 1' not in text
+            and not any(item.get('is_error') for item in seen))
+
+
+def check_engine(name, environment, scratch):
+    """Run the probe through one engine; returns its results, or raises when it did not report."""
+    run, other = throwaway_run(scratch, name, environment)
+    shared = Path('/tmp')/('robofrontier-probe-' + scratch.name)
+    shared.mkdir()
+    (shared/'canary.txt').write_text('SHARED')
+    listener = socket.socket()
+    listener.bind(('127.0.0.1', 0))
+    listener.listen()
+    other_python = next((path for path in OTHER_PYTHONS if Path(path).exists()), '/missing/python3')
+    fixtures = {'real_home': str(Path.home().resolve()), 'run': str(run), 'env': str(environment), 'host_only': [HOST_ONLY, 'ANTHROPIC_API_KEY', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'ROBOFRONTIER_OFFLINE_STUB_TOKEN'],
+                'home_file': next((str(p) for p in (Path.home()/'.zshrc', Path.home()/'.profile') if p.is_file()), '/missing'),
+                'other_run_file': str(other/'private/inputs/task.json'), 'repo_file': str(ROOT/'pyproject.toml'),
+                'shared_tmp': str(shared), 'other_python': other_python, 'listener_port': listener.getsockname()[1]}
+    (run/'public/inputs/probe.json').write_text(json.dumps(fixtures))
+    # A here-document in the engine's own shell, which may not take its temporary file from TMPDIR.
+    # Here-documents and the CLI's own records need /tmp, so a closed /tmp fails shell_reports_success.
+    command = ("cat > /dev/null <<'EOF'\nx\nEOF\npython %s %s %s"
+               % (run/'public/inputs/probe.py', run/'public/inputs/probe.json', run/'workspace'/RESULT))
+    (scratch/'cli-home').mkdir(exist_ok=True)
+    try:
+        seen = []
+        ENGINES[name](run, command, scratch, seen, shared)
+        if not (run/'workspace'/RESULT).is_file():
+            raise ValueError(name + ' did not finish the probe')
+        results = json.loads((run/'workspace'/RESULT).read_text())
+        # Claude's file tools follow permission rules, not the sandbox, so try writing with them too.
+        results['tool_write_shared_tmp'] = 'ok' if (shared/'tool-written.txt').exists() else 'denied'
+        results['shell_reports_success'] = 'ok' if shell_succeeded(seen[:1] if name == 'claude' else seen) else 'denied'
+        return results
+    finally:
+        listener.close()
+        shutil.rmtree(shared, ignore_errors=True)
+
+
+def differences(results):
+    wrong = [name + ' should work' for name in MUST_WORK if results.get(name) != 'ok']
+    wrong += [name + ' should be denied' for name in MUST_FAIL if results.get(name) != 'denied']
+    return wrong
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument('environment', type=Path)
+    parser.add_argument('--engine', choices=sorted(ENGINES), action='append')
+    args = parser.parse_args(argv)
+    environment = args.environment.resolve()
+    manifest = policy_env.verify(environment)
+    print('environment ok: Python', manifest['python'], manifest['packages'])
+    failed = False
+    # Beside the environment, so nothing here sits in a shared temporary folder.
+    scratch = Path(tempfile.mkdtemp(prefix='check-', dir=environment.parent))
+    try:
+        for name in args.engine or sorted(ENGINES):
+            results = check_engine(name, environment, scratch)
+            wrong = differences(results)
+            print(json.dumps({'engine': name, 'attempts': len(results), 'differences': wrong}))
+            failed = failed or bool(wrong)
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+    if failed:
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
