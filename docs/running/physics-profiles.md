@@ -12,10 +12,13 @@ not mix them.
 |---|---|---|
 | Mosaic | Always | Default |
 | Transport | When every arm has been idle for 2 s | 1e-12 |
-| Dial | When every arm has been idle for 2 s | 1e-12 |
+| Dial | When every arm has been idle for 2 s | 1e-12, and 10 iterations instead of 20 |
 | Relay | Same, and only 30 s after the world starts | Default |
 
 - Any action restores full physics before its first step.
+- In Dial, fingers take priority in their own contacts with `condim=4`. A grip then
+  drops rolling friction, which costs most of a heavy step, while modules keep
+  `condim=6` against the table so they still stop after release.
 - The extra forward at the end of each 20 ms step skips noslip. This does not change
   states or scores and saves about 2-7% of the time.
 - Forces and contact wake a sleeping object on the same step.

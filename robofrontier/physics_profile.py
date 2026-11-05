@@ -10,10 +10,13 @@ SLEEP = int(mujoco.mjtEnableBit.mjENBL_SLEEP)
 # Mosaic objects do not creep, and its motion is below real time without sleep. Elsewhere
 # motion stays full physics. Tighter noslip stops the solver's slow drift of resting objects;
 # Relay keeps the default because it does not help there, and settles before it may sleep.
+# A Dial grip makes about 130 contacts that module condim 6 makes expensive. Fingers therefore
+# set the terms of their own contacts; modules keep rolling friction against the table, which
+# they need to stop after release.
 PROFILES = {'realtime-v1': {
     'mosaic': {'sleep': 'always'},
     'transport': {'sleep': 'idle', 'noslip_tolerance': 1e-12},
-    'dial': {'sleep': 'idle', 'noslip_tolerance': 1e-12},
+    'dial': {'sleep': 'idle', 'noslip_tolerance': 1e-12, 'noslip_iterations': 10, 'finger_condim': 4},
     'relay': {'sleep': 'idle', 'settle_s': 30.},
 }}
 IDLE_BEFORE_SLEEP_S = 2.
@@ -55,6 +58,12 @@ def attach(world, harness):
     world.physics_profile_active = True
     settings = PROFILES[name][world.task['family']]
     if 'noslip_tolerance' in settings: world.model.opt.noslip_tolerance = settings['noslip_tolerance']
+    if 'noslip_iterations' in settings: world.model.opt.noslip_iterations = settings['noslip_iterations']
+    if 'finger_condim' in settings:
+        fingers = [g for g in range(world.model.ngeom)
+                   if 'finger' in (world.model.body(int(world.model.geom_bodyid[g])).name or '')]
+        world.model.geom_priority[fingers] = 1
+        world.model.geom_condim[fingers] = settings['finger_condim']
     if settings['sleep'] == 'always':
         world.model.opt.enableflags |= SLEEP
         return None

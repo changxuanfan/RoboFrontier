@@ -21,7 +21,32 @@ def world(family='transport'):
     return SimpleNamespace(model=model, data=mujoco.MjData(model), arms={'A': arm}, task={'family': family})
 
 
+FINGER_AND_MODULE = '''<mujoco><worldbody>
+<body name="A_left_finger"><freejoint/><geom name="pad" type="box" size=".01 .01 .01" condim="3" friction="1 .005 .0001"/></body>
+<body name="D01_module" pos="0 0 .1"><freejoint/><geom name="disk" type="box" size=".03 .03 .03" condim="6" friction=".8 .005 .03"/></body>
+</worldbody></mujoco>'''
+
+
 class ProfileTests(unittest.TestCase):
+    def test_dial_makes_only_finger_contacts_cheaper(self):
+        model = mujoco.MjModel.from_xml_string(FINGER_AND_MODULE)
+        w = SimpleNamespace(model=model, data=mujoco.MjData(model), arms={}, task={'family': 'dial'})
+        attach(w, {'physics_profile': 'realtime-v1'})
+        pad, disk = model.geom('pad').id, model.geom('disk').id
+        self.assertEqual((model.geom_priority[pad], model.geom_condim[pad]), (1, 4))
+        self.assertEqual((model.geom_priority[disk], model.geom_condim[disk]), (0, 6))
+        self.assertEqual(model.geom_friction[disk, 2], .03)
+        self.assertEqual(model.opt.noslip_iterations, 10)
+
+    def test_other_families_keep_their_fingers_and_noslip(self):
+        model = mujoco.MjModel.from_xml_string(FINGER_AND_MODULE)
+        before = model.opt.noslip_iterations
+        w = SimpleNamespace(model=model, data=mujoco.MjData(model), arms={}, task={'family': 'transport'})
+        attach(w, {'physics_profile': 'realtime-v1'})
+        self.assertEqual(model.geom_priority[model.geom('pad').id], 0)
+        self.assertEqual(model.opt.noslip_iterations, before)
+
+
     def test_no_profile_changes_nothing(self):
         w = world();before = w.model.opt.noslip_tolerance
         self.assertIsNone(attach(w, {}))
