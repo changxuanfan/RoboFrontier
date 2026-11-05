@@ -468,8 +468,12 @@ class World:
 
 
 class Service(RuntimeService):
+    @staticmethod
+    def image_save_options(profile):
+        return {'quality': profile['quality'], 'subsampling': 2, 'optimize': True} if profile['format']=='JPEG' else {}
+
     def __init__(self,directory,hidden=False):
-        self.hidden=hidden;self.obs=0
+        self.hidden=hidden;self.obs=0;self.render_worker=None
         self.perf={'world_step_wall_s':0.,'world_steps':0,'capture_wall_s':0.,'captures':0,'pump_wall_s':0.}
         cfg = json.loads((Path(directory)/'private/inputs/harness.json').read_text())
         self.observation_image = observation_profile(cfg)
@@ -482,8 +486,44 @@ class Service(RuntimeService):
         # unexpected host exit never leaves an orphan holding the world.
         self.parent_pid=os.getppid()
 
+    def capture_in_worker(self,cameras):
+        """Queue this capture's images; a response waits for the files, not the world."""
+        world=self.world;self.obs+=1;images=[];paths={}
+        for name in cameras:
+            path=self.directory/'public/observations'/f"obs-{uuid.uuid4().hex[:8]}-{self.obs:05d}-{name}{self.observation_image['extension']}"
+            images.append((world.model.camera(name).id,str(path)));paths[name]=str(path)
+        data,model=world.data,world.model
+        state={'qpos':data.qpos.copy(),'geom_rgba':model.geom_rgba.copy()}
+        if model.nmocap:state.update(mocap_pos=data.mocap_pos.copy(),mocap_quat=data.mocap_quat.copy())
+        request={'state':state,'images':images,'width':self.observation_image['width'],'height':self.observation_image['height'],
+                 'format':self.observation_image['format'],'save_options':Service.image_save_options(self.observation_image)}
+        if not self.render_worker.submit(request):self.render_here(request)
+        return {'sim_time_s':world.time,'captured_at':time.time(),'images':paths,
+                'robot':{a:r.observe() for a,r in world.arms.items()}}
+
+    def render_here(self,request):
+        """A capture the worker could not finish, drawn from its own recorded state."""
+        from .render_worker import apply_state,render_images
+        model=self.world.model;scratch=mujoco.MjData(model);colors=model.geom_rgba.copy()
+        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN,self.context)
+        try:
+            apply_state(mujoco,model,scratch,request['state'])
+            render_images(mujoco,Image,model,scratch,self.scene,self.options,self.context,request)
+        finally:
+            model.geom_rgba[:]=colors
+            if not getattr(self,'offscreen_context',None):mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_WINDOW,self.context)
+
+    def finish_failed_captures(self):
+        requests=self.render_worker.failed_captures()
+        for request in requests:self.render_here(request)
+        if requests:self.render_worker.rendered_locally()
+
     def capture(self,cameras):
         capture_start=time.perf_counter()
+        if getattr(self,'render_worker',None) is not None:
+            result=self.capture_in_worker(cameras)
+            self.perf['capture_wall_s']+=time.perf_counter()-capture_start;self.perf['captures']+=1
+            return result
         self.obs+=1;paths={}
         mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN,self.context)
         width, height = self.observation_image['width'], self.observation_image['height']
@@ -494,8 +534,7 @@ class Service(RuntimeService):
             mujoco.mjr_render(viewport,self.scene,self.context)
             rgb=np.empty((height,width,3),dtype=np.uint8);mujoco.mjr_readPixels(rgb,None,viewport,self.context)
             path=self.directory/'public/observations'/f"obs-{uuid.uuid4().hex[:8]}-{self.obs:05d}-{name}{self.observation_image['extension']}"
-            options = {'quality': self.observation_image['quality'], 'subsampling': 2, 'optimize': True} if self.observation_image['format']=='JPEG' else {}
-            Image.fromarray(rgb[::-1]).save(path, format=self.observation_image['format'], **options);paths[name]=str(path)
+            Image.fromarray(rgb[::-1]).save(path, format=self.observation_image['format'], **Service.image_save_options(self.observation_image));paths[name]=str(path)
         if not getattr(self,'offscreen_context',None):
             mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_WINDOW,self.context)
         result={'sim_time_s':self.world.time,'captured_at':time.time(),'images':paths,
@@ -532,7 +571,8 @@ class Service(RuntimeService):
                     if service.tokens.get(actor)!=self.headers.get('X-Token'):self.send_error(403);return
                     if body.get('run_id')!=service.directory.name or body.get('schema_version')!=3:raise ValueError('Wrong run/protocol')
                     job=service.accept(actor,body['op'],body.get('data',{}),body['call_id'],body.get('ack_delivery'))
-                    answer=job['result'] if job['done'].wait(40) else {'call_id':job['id'],'execution_status':'pending','note':'Query/retry original call ID; do not create duplicate motion'}
+                    worker=getattr(service,'render_worker',None);finished=job['done'].wait(40) and (worker is None or worker.wait(40))
+                    answer=job['result'] if finished else {'call_id':job['id'],'execution_status':'pending','note':'Query/retry original call ID; do not create duplicate motion'}
                     raw=json.dumps(answer,ensure_ascii=False).encode();self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(raw)
                 except CallIdConflict as error:
                     raw=json.dumps(conflict_error(error.call_id)).encode()
@@ -568,6 +608,11 @@ class Service(RuntimeService):
             self.cam.fixedcamid=self.world.model.camera(self.task.get('view_camera','global')).id
             self.record_cam=mujoco.MjvCamera();self.record_cam.type=mujoco.mjtCamera.mjCAMERA_FIXED
             self.record_cam.fixedcamid=self.world.model.camera(self.task.get('recording_camera','global')).id
+            # Only runs that froze a physics profile render apart; others keep their frozen behaviour.
+            lazy=bool(getattr(self.world,'physics_profile_active',False))
+            if lazy:
+                from .render_worker import RenderWorker
+                self.render_worker=RenderWorker(self.world.model)
             self.server=ThreadingHTTPServer(('127.0.0.1',0),Handler);self.server.daemon_threads=True
             threading.Thread(target=self.server.serve_forever,daemon=True).start()
             url=f'http://127.0.0.1:{self.server.server_port}'
@@ -584,9 +629,13 @@ class Service(RuntimeService):
                 if os.getppid()!=self.parent_pid:
                     self.store.event('HOST_LOST','Meta',{'parent_pid':self.parent_pid});break
                 now=time.monotonic();acc+=min(now-previous,.1);previous=now
-                if hasattr(self,'window'):glfw.poll_events()
+                # Between steps nothing changes unless a request arrived or a motion check runs.
+                due=not lazy or acc>=.02 or not self.queue.empty() or self.motion_check is not None or self.ended
+                if hasattr(self,'window') and due:glfw.poll_events()
                 with self.lock:
-                    tick=time.perf_counter();self.pump();self.perf['pump_wall_s']+=time.perf_counter()-tick
+                    if self.render_worker is not None:self.finish_failed_captures()
+                    if due:
+                        tick=time.perf_counter();self.pump();self.perf['pump_wall_s']+=time.perf_counter()-tick
                     while acc>=.02 and not self.ended:
                         tick=time.perf_counter()
                         if not self.step_physics():acc=0.;break
@@ -616,6 +665,8 @@ class Service(RuntimeService):
                 with (self.directory/'private/outputs/cpu-performance.jsonl').open('a') as stream:
                     stream.write(json.dumps({'at':time.time(),**self.perf})+'\n')
             if hasattr(self,'server'):self.server.shutdown()
+            if self.render_worker is not None:
+                self.render_worker.wait(60);self.finish_failed_captures();self.render_worker.close()
             if hasattr(self,'offscreen_context'):
                 if hasattr(self,'context'):self.context.free()
                 self.offscreen_context.free()
