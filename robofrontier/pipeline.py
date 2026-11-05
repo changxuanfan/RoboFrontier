@@ -218,6 +218,8 @@ class World:
         mujoco.mj_forward(self.model,self.data)
         hand_cfg=self.directory/'private/inputs/harness.json'
         frozen_cfg=json.loads(hand_cfg.read_text()) if hand_cfg.exists() else {}
+        from .physics_profile import attach
+        self.physics_profile=attach(self,frozen_cfg)
         self.observation_image=observation_profile(frozen_cfg)
         if self.task.get('scene_asset') and frozen_cfg.get('robot_labels')=='beside-robot-v1':
             from .factory.labels import place_robot_labels
@@ -324,6 +326,7 @@ class World:
         return state_id(self)
 
     def step(self):
+        if getattr(self,'physics_profile',None) is not None:self.physics_profile.before_step()
         substeps=max(1,round(.02/self.model.opt.timestep))
         control_dt=substeps*self.model.opt.timestep
         for arm in self.arms.values():arm.control(control_dt)

@@ -330,7 +330,7 @@ def process_summary(run):
     Each world process starts its own counts, so a continued run's final evaluation covers
     only its last segment. Earlier segments are read from their last cumulative snapshot
     in the shared process log (each segment starts with its own header row); a segment
-    whose world was killed loses at most its last snapshot interval. None for one segment.
+    whose world was killed loses what changed since its last logged row. None for one segment.
     """
     run = Path(run); log = run / 'private/outputs/suite-process.jsonl'
     if not log.is_file(): return None
@@ -339,7 +339,7 @@ def process_summary(run):
         try: row = json.loads(line)
         except ValueError: continue
         if 'schema' in row and 'type' not in row: parts.append(None)
-        elif row.get('type') == 'snapshot' and parts: parts[-1] = row['result']
+        elif row.get('type') in ('snapshot', 'event') and parts: parts[-1] = row['result']
     if len(parts) < 2: return None
     final = run / 'private/outputs/evaluation.json'
     if final.is_file():
@@ -357,7 +357,7 @@ def process_summary(run):
     record = dial_record(run)
     if record is not None: total['dial'] = record
     return {'segments': segments, 'total': total, 'missing_segments': [i for i, p in enumerate(parts) if not p],
-            'scope': 'Earlier segments from their last 1 s snapshot before they ended'}
+            'scope': 'Earlier segments from their last logged row before they ended'}
 
 
 def dial_record(run, cutoff=None):

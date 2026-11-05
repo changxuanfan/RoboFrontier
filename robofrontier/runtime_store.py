@@ -507,6 +507,24 @@ class RuntimeStore:
             rows = self.db.execute('SELECT * FROM actions' + (' WHERE actor=?' if actor else ''), (actor,) if actor else ()).fetchall()
             return {r['id']: json.loads(r['value']) for r in rows}
 
+    def unresolved_actions(self):
+        """Only the actions a live stop or an unknown outcome can still concern.
+
+        The main loop asks on every tick, so this stays small however long a run gets;
+        reading every action there grew the tick with the run (21.8 ms at 5063 actions)."""
+        with self.lock:
+            rows = self.db.execute("SELECT id,value FROM actions WHERE status IN ('running','uncertain')").fetchall()
+            return {r['id']: json.loads(r['value']) for r in rows}
+
+    def actions_for_calls(self, actor, call_ids):
+        """These calls of one actor, without reading the actor's other actions."""
+        with self.lock:
+            found = {}
+            for call_id in call_ids:
+                row = self.db.execute('SELECT value FROM actions WHERE id=? AND actor=?', (call_id, actor)).fetchone()
+                if row: found[call_id] = json.loads(row['value'])
+            return found
+
     def latest_execution(self, actor):
         """Executor facts only; no goal, grasp or clearance inference."""
         with self.lock:

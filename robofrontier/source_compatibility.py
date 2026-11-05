@@ -120,6 +120,13 @@ frozen=json.loads(harness.read_text()) if harness.exists() else {}
 self.suite_sampler=Monitor(self,secret=secret,log_path=self.directory/'private/outputs/suite-process.jsonl',
                            log_format=frozen.get('process_log','full'),append=self.segment>0)
 """, "self.suite_sampler=Monitor(self,secret=secret,log_path=self.directory/'private/outputs/suite-process.jsonl')"),
+    ('physics profile', """
+from .physics_profile import attach
+self.physics_profile=attach(self,frozen_cfg)
+""", None),
+    ('physics profile step', """
+if getattr(self,'physics_profile',None) is not None:self.physics_profile.before_step()
+""", None),
     ('motion rate and segment folder', """
 hz=frozen.get('motion_hz',60)
 from .run_segments import output_dir
@@ -200,7 +207,8 @@ out&=~(np.linalg.norm(delta[:,:,:2],axis=2)>tolerance)
 HARNESS_RUN_STORAGE = """
 if 'motion_hz' in c and (isinstance(c['motion_hz'],bool) or not math.isfinite(float(c['motion_hz'])) or c['motion_hz']<=0):
     raise ValueError('Invalid motion sampling rate')
-if c.get('process_log','full') not in ('full','events-1s'):raise ValueError('Unknown process log format')
+if c.get('process_log','full') not in ('full','events-1s','events-60s'):raise ValueError('Unknown process log format')
+if c.get('physics_profile') not in (None,'realtime-v1'):raise ValueError('Unknown physics profile')
 """
 
 

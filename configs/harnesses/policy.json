@@ -34,7 +34,7 @@
   ],
   "video_fps": 30,
   "motion_hz": 30,
-  "process_log": "events-1s",
+  "process_log": "events-60s",
   "motion_check": {
     "max_horizon_s": 15.0,
     "default_sample_dt_s": 0.1,

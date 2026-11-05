@@ -142,9 +142,9 @@ class FamilyReleaseTests(unittest.TestCase):
             try:
                 world.start_trial()
                 self.assertEqual(world.motion_recorder.meta['sample_hz'], 30)
-                self.assertEqual(world.suite_sampler.log_format, 'events-1s')
+                self.assertEqual(world.suite_sampler.log_format, 'events-60s')
                 header = json.loads((run/'private/outputs/suite-process.jsonl').read_text().splitlines()[0])
-                self.assertEqual((header['schema'], header['snapshot_interval_s']), ('robofrontier.suite-process.v2', 1.0))
+                self.assertEqual((header['schema'], header['snapshot_interval_s']), ('robofrontier.suite-process.v2', 60.0))
             finally:
                 world.close()
             # A harness frozen before motion_hz existed keeps the original 60 Hz.
