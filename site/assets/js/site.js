@@ -7,9 +7,11 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
-    if (v == null || v === false) continue;
+    // ARIA states are the strings "true"/"false"; other boolean attributes are present or absent.
+    const aria = k.startsWith('aria-');
+    if (v == null || (v === false && !aria)) continue;
     if (k === 'class') el.className = v; else if (k === 'style') el.style.cssText = v;
-    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? '' : v);
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v); else el.setAttribute(k, aria ? String(v) : v === true ? '' : v);
   }
   for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(kid));
   return el;
@@ -27,7 +29,7 @@ const SHOWCASE = {transport: 'transport-a12-d3', mosaic: 'mosaic-a08-12x24-d3', 
 // Theme tokens (site.css), so every chart follows the light or dark theme.
 const MODEL_COLORS = Array.from({length: 8}, (_, i) => `var(--m${i + 1})`);
 
-const state = {tasks: null, media: null, results: null, source: 'oracle', family: 'all', view: 'front', matrixFamily: 'transport'};
+const state = {tasks: null, media: null, results: null, source: 'oracle', family: 'all', view: 'front', explainFamily: 'transport'};
 
 async function load(path) {
   try { const r = await fetch(path, {cache: 'no-cache'}); return r.ok ? r.json() : null; } catch { return null; }
@@ -159,6 +161,15 @@ function plan() {
     map.append(zone);
   }
   box.append(map);
+  if (reduced) return;
+  let visible = false;
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(box);
+  const desks = $$('.desk', map);
+  setInterval(() => {
+    if (!visible || map.matches(':hover')) return;
+    const d = desks[Math.floor(Math.random() * desks.length)];
+    d.classList.add('on'); setTimeout(() => d.classList.remove('on'), 1100);
+  }, 700);
 }
 
 // ---------- benchmark ----------
@@ -179,35 +190,47 @@ function families() {
   }
 }
 
-function matrix() {
-  const tabs = $('#matrix-tabs');
-  for (const key of FAMILY_ORDER) tabs.append(h('button', {type: 'button', role: 'tab', 'aria-selected': key === state.matrixFamily, style: `--c:${famColor(key)}`,
-    onclick: e => { state.matrixFamily = key; $$('button', tabs).forEach(b => b.setAttribute('aria-selected', b === e.currentTarget)); drawMatrix(); }},
+// ---------- explainer: what changes across a family's nine tasks ----------
+// Initial-state renders from the task atlas (site/assets/atlas), one camera per family.
+const ATLAS_VIEW = {transport: 'global', mosaic: 'top', relay: 'global', dial: 'global'};
+const atlasImage = id => `assets/atlas/${id}-${ATLAS_VIEW[familyOf(id)]}.jpg`;
+const range = xs => { const v = [...new Set(xs)].sort((a, b) => a - b); return v.length > 1 ? `${v[0]}–${v.at(-1)}` : `${v[0]}`; };
+function explainer() {
+  const tabs = $('#explain-tabs');
+  for (const key of FAMILY_ORDER) tabs.append(h('button', {type: 'button', role: 'tab', 'aria-selected': key === state.explainFamily, style: `--c:${famColor(key)}`,
+    onclick: e => { state.explainFamily = key; $$('button', tabs).forEach(b => b.setAttribute('aria-selected', b === e.currentTarget)); drawExplainer(); }},
     h('i'), state.tasks.families[key].name));
-  drawMatrix();
+  drawExplainer();
 }
-function drawMatrix() {
-  const key = state.matrixFamily, box = $('#matrix'); box.replaceChildren();
+function drawExplainer() {
+  const key = state.explainFamily, fam = state.tasks.families[key];
   const rows = state.tasks.tasks.filter(t => t.family === key);
   const scales = [...new Set(rows.map(t => scaleOf(t.id)))].sort((a, b) => scaleNumber(a) - scaleNumber(b));
-  box.append(h('div', {class: 'axis col'}, 'Level ↓ Scale →'));
-  for (const s of scales) { const col = rows.filter(r => scaleOf(r.id) === s), t = col[0];
-    const arms = [...new Set(col.map(r => r.arms))].sort((a, b) => a - b);
+  const side = $('#explain-side'), grid = $('#explain-grid');
+  side.style.setProperty('--c', famColor(key)); grid.style.setProperty('--c', famColor(key));
+  const teams = scales.map(sc => { const col = rows.filter(r => scaleOf(r.id) === sc), t = col[0];
     // Dial columns are dial counts; their arm count doubles from Level 2.
-    box.append(h('div', {class: 'axis col'}, h('b', {}, key === 'dial' ? `${t.workload} dials` : `${t.arms} arms`),
-      key === 'dial' ? `${arms.join(' / ')} arms` : `${t.workload} ${t.unit}`)); }
+    return key === 'dial' ? {head: `${t.workload} dials`, sub: `${range(col.map(r => r.arms))} arms`} : {head: `${t.arms} arms`, sub: `${t.workload} ${t.unit}`}; });
+  side.replaceChildren(
+    h('h4', {}, fam.name), h('p', {class: 'verb'}, `${fam.verb}.`),
+    h('ul', {class: 'chips'}, h('li', {}, `${range(rows.map(t => t.arms))} arms`), h('li', {}, `${range(rows.map(t => t.workload))} ${fam.unit}`), h('li', {}, '3 levels')),
+    h('p', {class: 'side-label'}, 'Levels change the job'),
+    h('ol', {class: 'levels'}, fam.levels.map((note, i) => h('li', {}, h('b', {}, `L${i + 1}`), note))),
+    h('p', {class: 'side-label'}, 'Team sizes change the scale'),
+    h('ol', {class: 'levels teams'}, teams.map((tm, i) => h('li', {}, h('b', {}, ['S', 'M', 'L'][i]), `${tm.head} · ${tm.sub}`))));
+  grid.replaceChildren(h('div', {class: 'corner'}),
+    ...teams.map(tm => h('div', {class: 'col-head'}, h('b', {}, tm.head), tm.sub)));
   for (const level of [1, 2, 3]) {
-    const note = state.tasks.families[key].levels[level - 1];
-    box.append(h('div', {class: 'axis'}, h('b', {}, `L${level}`), h('span', {}, note)));
-    for (const s of scales) {
-      const t = rows.find(r => scaleOf(r.id) === s && r.level === level);
-      const cell = h('button', {class: 'cell', type: 'button', style: `--c:${famColor(key)}`, 'aria-label': `Play ${t.id}`,
+    grid.append(h('div', {class: 'row-head'}, h('b', {}, `L${level}`), h('span', {}, fam.levels[level - 1])));
+    for (const sc of scales) {
+      const t = rows.find(r => scaleOf(r.id) === sc && r.level === level), c = clip('oracle', t.id, 'front');
+      const cell = h('button', {class: 'shot', type: 'button', 'aria-label': `${t.id}: initial state. Play its Oracle run.`,
         onclick: () => openPlayer('oracle', t.id, rows.map(r => r.id))},
-        frame(clip('oracle', t.id, 'front')),
-        h('div', {class: 'cell-meta'}, h('b', {}, t.id), `${t.arms} arms`));
-      box.append(hoverPlay(cell));
+        frame(c ? {...c, poster: atlasImage(t.id)} : {poster: atlasImage(t.id), video: null}), h('span', {class: 'shot-id'}, t.id));
+      grid.append(c ? hoverPlay(cell) : cell);
     }
   }
+  grid.classList.remove('swap'); void grid.offsetWidth; grid.classList.add('swap');
 }
 
 function protocolArms() {
@@ -221,14 +244,19 @@ function protocolArms() {
 }
 
 // ---------- watch ----------
+// Model video sets planned for the wall. A planned set shows "soon" until media.json lists it;
+// the wall opens on the first published set and falls back to Oracle.
+const PLANNED_SOURCES = [{key: 'gpt-6.1', label: 'GPT-6.1'}];
 function sources() {
-  const list = [{key: 'oracle', label: 'Oracle'}];
-  for (const s of state.media?.sets || []) if (s.key !== 'oracle' && s.key !== 'film') list.push({key: s.key, label: s.label || s.key});
-  for (const m of models()) if (!list.some(x => x.key === m.key)) list.push({key: m.key, label: m.label, pending: true});
+  const list = PLANNED_SOURCES.map(p => ({...p, pending: !mediaSet(p.key)}));
+  for (const s of state.media?.sets || []) if (!['oracle', 'film'].includes(s.key) && !list.some(x => x.key === s.key)) list.push({key: s.key, label: s.label || s.key});
+  for (const m of models()) if (!list.some(x => x.key === m.key)) list.push({key: m.key, label: m.label, pending: !mediaSet(m.key)});
+  list.push({key: 'oracle', label: 'Oracle'});
   return list;
 }
 function wallControls() {
   const tabs = $('#source-tabs');
+  state.source = sources().find(x => !x.pending)?.key || 'oracle';
   for (const s of sources()) tabs.append(h('button', {type: 'button', role: 'tab', 'aria-selected': s.key === state.source, title: s.pending ? 'Videos are rendering' : null,
     onclick: e => { state.source = s.key; $$('button', tabs).forEach(b => b.setAttribute('aria-selected', b === e.currentTarget)); drawWall(); }},
     s.label, s.pending ? h('small', {}, '· soon') : null));
@@ -344,22 +372,59 @@ function pendingPanel(title, text, metrics) {
   return h('div', {class: 'pending'}, h('h4', {}, title), h('p', {}, text),
     metrics ? h('ul', {class: 'metric-list'}, metrics.map(m => h('li', {}, m))) : null);
 }
+// An empty chart frame for a study whose runs are not in data/results.json yet: axes, axis
+// titles and the series it will compare, never placeholder values.
+function skeleton({kind = 'bars', x, y, series = [], metrics = []}) {
+  const W = 640, H = 230, L = 46, B = 30, T = 12, s = svg('svg', {viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true'});
+  for (let k = 0; k <= 4; k++) { const yy = T + (H - T - B) * k / 4; s.append(svg('line', {x1: L, x2: W - 8, y1: yy, y2: yy, class: 'grid'})); }
+  if (kind === 'lines') for (let hr = 0; hr <= 24; hr += 6) s.append(svg('text', {x: L + (W - L - 8) * hr / 24, y: H - 8, 'text-anchor': hr === 24 ? 'end' : 'middle'}, `${hr}h`));
+  s.append(svg('line', {x1: L, x2: L, y1: T, y2: H - B, class: 'axis'}), svg('line', {x1: L, x2: W - 8, y1: H - B, y2: H - B, class: 'axis'}),
+    svg('text', {x: 12, y: (H - B + T) / 2, transform: `rotate(-90 12 ${(H - B + T) / 2})`, 'text-anchor': 'middle'}, y || ''),
+    svg('text', {x: (W + L) / 2, y: H - 8 - (kind === 'lines' ? 14 : 0), 'text-anchor': 'middle'}, kind === 'lines' ? '' : x || ''));
+  return h('div', {class: 'chart skeleton'},
+    h('div', {class: 'chart-head'}, h('span', {class: 'legend'}, series.map(se => h('span', {style: `--c:${se.color}`}, h('i'), se.label))),
+      h('span', {class: 'status'}, h('i'), 'Runs in progress')),
+    h('div', {class: 'frame-wrap'}, s, h('p', {}, kind === 'lines' && x ? `${x}. ` : '', 'Fills in from data/results.json when the runs behind it are complete.')),
+    metrics.length ? h('ul', {class: 'metric-list'}, metrics.map(m => h('li', {}, m))) : null);
+}
 
+// The board leads with failures: completion saturates for strong models.
+const BOARD = ['failures', 'failure_rate', 'retries', 'retry_rate', 'completion', 'progress', 'time', 'tokens_in', 'tokens_out', 'collisions', 'parallel', 'messages'];
 function results() {
   const box = $('#results-body'), ms = models();
   if (!ms.length) {
-    box.append(pendingPanel('Runs in progress', 'The 24-hour benchmark runs are still being collected. This board fills in automatically from data/results.json; no number appears before the runs behind it are complete.',
-      METRICS.map(m => m.label)));
-    return;
+    box.append(skeleton({kind: 'bars', x: 'Failed actions per run', y: 'Model', metrics: BOARD.map(k => METRICS.find(m => m.key === k).label)}));
+    timeCharts(ms); return;
   }
-  let metric = METRICS[0];
+  const order = BOARD.map(k => METRICS.find(m => m.key === k));
+  let metric = order[0];
   const chips = h('div', {class: 'segmented', role: 'tablist', 'aria-label': 'Metric'});
   const chart = h('div', {class: 'chart'});
   const draw = () => { chart.replaceChildren(rankChart(ms, metric)); };
-  for (const m of METRICS) chips.append(h('button', {type: 'button', role: 'tab', 'aria-selected': m === metric,
+  for (const m of order) chips.append(h('button', {type: 'button', role: 'tab', 'aria-selected': m === metric,
     onclick: e => { metric = m; $$('button', chips).forEach(b => b.setAttribute('aria-selected', b === e.currentTarget)); draw(); }}, m.label));
   draw();
   box.append(h('div', {class: 'board'}, chips, chart, heatmap(ms), table(ms)));
+  timeCharts(ms);
+}
+// Completion and tokens against hours since START, one line per model.
+function timeCharts(ms) {
+  const curve = (key, rs, step = 1800) => {
+    const end = Math.max(...rs.flatMap(r => (r[key] || []).map(p => p[0])), 0);
+    const at = (c, t) => { let v = 0; for (const [ct, cv] of c) { if (ct > t) break; v = cv; } return v; };
+    const pts = []; for (let t = 0; t <= end; t += step) pts.push([t, mean(rs.map(r => at(r[key] || [], t)))]); return pts;
+  };
+  const done = ms.filter(m => bench({model: m.key}).some(r => r.completion_curve?.length));
+  $('#time-chart').append(done.length
+    ? h('div', {class: 'chart'}, h('div', {class: 'chart-head'}, h('span', {class: 'legend'}, done.map(m => h('span', {style: `--c:${m.color}`}, h('i'), m.label)))),
+      lineChart(done.map(m => ({color: m.color, points: curve('completion_curve', bench({model: m.key}))}))))
+    : skeleton({kind: 'lines', x: 'Hours since START', y: 'Tasks complete'}));
+  const spent = ms.filter(m => bench({model: m.key}).some(r => r.token_curve?.length));
+  if (!spent.length) { $('#token-chart').append(skeleton({kind: 'lines', x: 'Hours since START', y: 'Tokens'})); return; }
+  const series = spent.map(m => ({color: m.color, points: curve('token_curve', bench({model: m.key}))}));
+  const top = Math.max(...series.flatMap(se => se.points.map(p => p[1])), 1);
+  $('#token-chart').append(h('div', {class: 'chart'}, h('div', {class: 'chart-head'}, h('span', {class: 'legend'}, spent.map(m => h('span', {style: `--c:${m.color}`}, h('i'), m.label)))),
+    lineChart(series, {yMax: top, fmt: big})));
 }
 
 function rankChart(ms, metric) {
@@ -432,14 +497,10 @@ function topoGlyph(key) {
   return s;
 }
 function analysis() {
-  const tabs = $$('#analysis-tabs button');
-  tabs.forEach(b => b.addEventListener('click', () => { tabs.forEach(x => x.setAttribute('aria-selected', x === b));
-    $$('.panel').forEach(p => p.hidden = p.dataset.panel !== b.dataset.panel); }));
-  if (location.hash === '#communication') tabs[0].click();
   const box = $('#topologies');
   for (const t of TOPOLOGIES) box.append(h('div', {class: 'topo' + (t.key === 'adaptive' ? ' best' : '')},
     h('h4', {}, t.label, t.key === 'adaptive' ? h('span', {class: 'badge'}, 'BENCHMARK') : null), h('p', {}, t.text), topoGlyph(t.key)));
-  communication(); skills(); parallel();
+  communication(); skills(); cameras();
 }
 
 function groupedBars(groups, series, metrics) {
@@ -462,8 +523,8 @@ function communication() {
   const gpt = runs().filter(r => /gpt/i.test(r.model));
   const series = TOPOLOGIES.map((t, i) => ({key: t.key, label: t.label, color: ['var(--dim)', 'var(--transport)', 'var(--relay)', 'var(--accent)'][i], runs: gpt.filter(r => r.topology === t.key)}));
   if (series.filter(s => s.runs.length).length < 2) {
-    box.append(pendingPanel('Comparison pending', 'Single, Controller–Worker, Worker–Worker and Adaptive runs of the same GPT model are being collected on the four hardest tasks.',
-      ['Completion', 'Time to finish', 'Tokens', 'Parallel efficiency', 'Arm collisions', 'Messages', 'Delegations']));
+    box.append(skeleton({x: 'Per organization', y: 'Value', series,
+      metrics: ['Completion', 'Failed actions', 'Time to finish', 'Tokens', 'Parallel efficiency', 'Arm collisions', 'Messages', 'Delegations']}));
     return;
   }
   const pick = ['completion', 'time', 'tokens_in', 'parallel', 'collisions', 'messages'].map(k => METRICS.find(m => m.key === k));
@@ -471,12 +532,12 @@ function communication() {
     h('span', {class: 'legend'}, series.map(s => h('span', {style: `--c:${s.color}`}, h('i'), s.label)))), groupedBars(null, series, pick)));
 }
 
-function lineChart(series, {x = 'hours', y = 'progress'} = {}) {
+function lineChart(series, {yMax = 1, fmt = pct} = {}) {
   const W = 1240, H = 380, L = 56, B = 30, T = 10;
   const maxX = Math.max(...series.flatMap(s => s.points.map(p => p[0])), 1);
-  const sx = v => L + (W - L - 10) * v / maxX, sy = v => T + (H - T - B) * (1 - v);
+  const sx = v => L + (W - L - 10) * v / maxX, sy = v => T + (H - T - B) * (1 - v / yMax);
   const s = svg('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img'});
-  for (const v of [0, .25, .5, .75, 1]) s.append(svg('line', {x1: L, x2: W - 10, y1: sy(v), y2: sy(v), class: 'grid'}), svg('text', {x: 0, y: sy(v) + 4}, pct(v)));
+  for (const k of [0, .25, .5, .75, 1]) s.append(svg('line', {x1: L, x2: W - 10, y1: sy(k * yMax), y2: sy(k * yMax), class: 'grid'}), svg('text', {x: 0, y: sy(k * yMax) + 4}, fmt(k * yMax)));
   for (let hr = 0; hr <= maxX / 3600; hr += 6) s.append(svg('text', {x: sx(hr * 3600), y: H - 8, 'text-anchor': 'middle'}, `${hr}h`));
   for (const se of series) {
     const d = se.points.map((p, i) => `${i ? 'L' : 'M'}${sx(p[0]).toFixed(1)},${sy(p[1]).toFixed(1)}`).join('');
@@ -497,19 +558,25 @@ function skills() {
   const box = $('#skills-chart'), all = runs({topology: 'adaptive'}).filter(r => r.progress_curve?.length);
   const withS = all.filter(r => r.skills === true), without = all.filter(r => r.skills === false);
   if (!withS.length || !without.length) {
-    box.append(pendingPanel('Comparison pending', 'Paired runs with and without the shared skill file are being collected.',
-      ['Progress over time', 'Late-run retries', 'Time to finish', 'Skill file growth'])); return;
+    box.append(skeleton({kind: 'lines', x: 'Hours since START', y: 'Mean progress',
+      series: [{label: 'With skills', color: 'var(--accent)'}, {label: 'Without skills', color: 'var(--dim)'}],
+      metrics: ['Progress over time', 'Late-run repeated failures', 'Time to finish', 'Skill file growth']})); return;
   }
   const series = [{label: 'With skills', color: 'var(--accent)', points: meanCurve(withS)}, {label: 'Without skills', color: 'var(--dim)', points: meanCurve(without)}];
   box.append(h('div', {class: 'chart'}, h('div', {class: 'chart-head'}, h('h4', {}, 'Mean task progress over time'),
     h('span', {class: 'legend'}, series.map(s => h('span', {style: `--c:${s.color}`}, h('i'), s.label)))), lineChart(series)));
 }
-function parallel() {
-  const box = $('#parallel-chart'), ms = models().filter(m => bench({model: m.key}).some(r => r.parallel_efficiency != null));
-  if (!ms.length) { box.append(pendingPanel('Measurements pending', 'Parallel efficiency comes from the motion record of every arm and is computed when runs are collected.',
-    ['Mean moving arms', 'Parallel efficiency', 'Idle arm-time', 'Peak concurrency'])); return; }
-  const metric = METRICS.find(m => m.key === 'parallel');
-  box.append(h('div', {class: 'chart'}, rankChart(ms, metric)));
+// Camera access: each role reads only its own arms' cameras (ego) or every camera (all).
+function cameras() {
+  const box = $('#camera-chart'), rs = runs({topology: 'adaptive'});
+  const series = [{key: 'ego', label: 'Own cameras', color: 'var(--relay)'}, {key: 'all', label: 'Every camera', color: 'var(--transport)'}]
+    .map(se => ({...se, runs: rs.filter(r => r.camera_access === se.key)}));
+  if (series.some(se => !se.runs.length)) {
+    box.append(skeleton({x: 'Per camera setting', y: 'Value', series, metrics: ['Completion', 'Failed actions', 'Camera reads', 'Time to finish', 'Tokens']})); return;
+  }
+  const pick = ['completion', 'failures', 'time', 'tokens_in'].map(k => METRICS.find(m => m.key === k));
+  box.append(h('div', {class: 'chart'}, h('div', {class: 'chart-head'}, h('span', {class: 'legend'}, series.map(se => h('span', {style: `--c:${se.color}`}, h('i'), se.label)))),
+    groupedBars(null, series, pick)));
 }
 
 // ---------- start ----------
@@ -519,7 +586,7 @@ async function main() {
   [state.tasks, state.media, state.results] = await Promise.all([load('data/tasks.json'), load('data/media.json'),
     load(fixture ? `_dev/${fixture.replace(/[^\w.-]/g, '')}` : 'data/results.json')]);
   if (!state.tasks) { $('#families').append(pendingPanel('Data unavailable', 'data/tasks.json could not be loaded.')); return; }
-  plan(); families(); matrix(); protocolArms(); wallControls(); playerControls(); results(); analysis();
+  plan(); families(); explainer(); protocolArms(); wallControls(); playerControls(); results(); analysis();
   deepLink(); addEventListener('hashchange', deepLink);
 }
 

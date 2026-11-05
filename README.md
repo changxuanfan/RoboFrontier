@@ -1,6 +1,6 @@
 <div align="center">
 
-# RoboFrontier
+<img src="docs/media/readme/banner.png" alt="RoboFrontier. Can language models run a robot world? 36 tasks, 4 families, up to 16 arms; a map of Robo World's four zones" width="100%">
 
 **Benchmarking How LLM Agents Organize, Communicate, and Collaborate in a Multi-Robot World**
 
@@ -13,15 +13,15 @@
 [![Data: CC BY 4.0](https://img.shields.io/badge/data%20%26%20media-CC%20BY%204.0-3f9440?style=flat-square)](LICENSE-DATA.md)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-d65b3c?style=flat-square)](pyproject.toml)
 
-<a href="https://changxuanfan.github.io/RoboFrontier/#film"><img src="docs/media/readme/hero.webp" alt="Inside Robo World: a camera orbit through the simulated hall where all 36 tasks run" width="100%"></a>
+<a href="https://changxuanfan.github.io/RoboFrontier/#film"><img src="docs/media/readme/teaser.webp" alt="One moment from each Robo World zone: Transport, Mosaic, Relay and Dial" width="100%"></a>
 
-<sub>Inside Robo World: one simulated hall holds all 36 tasks. Oracle reference runs, not model results. Select to watch the film.</sub>
+<sub>One moment from each zone of Robo World. Oracle reference runs, not model results. Select to watch the full film.</sub>
 
 </div>
 
 ## What it is
 
-**Can language models run a robot world?** RoboFrontier asks language-model agents to **organize, communicate and collaborate**
+RoboFrontier asks language-model agents to **organize, communicate and collaborate**
 across many robot arms. Every model drives the same simulated Franka arms through the
 same robot tool, sees the same cameras and follows the same rules. Nothing is scripted:
 who does what, when to wait, how to talk and how to recover are the agent's choices.
@@ -35,7 +35,13 @@ who does what, when to wait, how to talk and how to recover are the agent's choi
 
 ## Four task families
 
-Each family has nine tasks: three team sizes crossed with three difficulty levels.
+Each family has nine tasks: three team sizes crossed with three difficulty levels. A larger
+team brings more arms and more work; a higher level changes the physics of the job itself.
+
+<img src="docs/media/readme/benchmark.jpg" alt="The largest team of each family at Levels 1, 2 and 3, in their initial states, with what each level changes" width="100%">
+
+<sub>Initial states from the [task atlas](docs/tasks/atlas.md): the largest team of each family at Levels 1–3.</sub>
+
 The videos below are **Oracle** reference runs rendered in Robo World: privileged programs
 that read hidden task state. They show that each task can be done; they are not model
 results. The Mosaic 6- and 8-arm runs and `dial-best5-n08-d3` were operator-assisted;

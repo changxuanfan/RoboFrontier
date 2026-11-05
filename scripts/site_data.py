@@ -99,7 +99,7 @@ def media(specs, film=None):
     document = {'schema': 'robofrontier.site-media-index.v1', 'sets': sets}
     if film:
         document['film'] = {'video': film[0], 'poster': film[1],
-                            'note': 'A tour of Robo World: every family and scale, 3 min 30 s, 1080p. Oracle reference runs, not model results.'}
+                            'note': 'A tour of Robo World: one moment from each zone, then every family and scale; 3 min 41 s, 1080p. Oracle reference runs, not model results.'}
     return write(SITE / 'media.json', document)
 
 

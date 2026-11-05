@@ -27,7 +27,7 @@
     <a href="#benchmark" data-chapter="benchmark">Benchmark</a>
     <a href="#watch" data-chapter="watch">Videos</a>
     <a href="#results" data-chapter="results">Results</a>
-    <a href="#analysis" data-chapter="analysis">Analysis</a>
+    <a href="#analysis" data-chapter="analysis">Studies</a>
     <a href="#cite" data-chapter="cite">Cite</a>
   </nav>
   <div class="rail-links">
@@ -45,14 +45,19 @@
     <p class="lede"><b>Can language models run a robot world?</b> RoboFrontier puts language-model agents in charge of up to sixteen robot arms in Robo World, a physical simulation. They read the task, split the work, talk and recover from mistakes, and are measured on all of it.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/changxuanfan/RoboFrontier"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg>Code</a>
-      <button class="btn" type="button" data-film><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>Film <span>3:30</span></button>
+      <button class="btn" type="button" data-film><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>Film <span>3:41</span></button>
       <a class="btn" href="data/tasks.json" download>Task data</a>
       <a class="btn" href="#cite">BibTeX</a>
     </div>
   </div>
-  <figure class="plan">
-    <div class="plan-map" id="plan" aria-label="Schematic map of Robo World: four zones of nine tasks"></div>
-    <figcaption id="plan-caption" aria-live="polite">Robo World as a map. Four zones, nine tables each, one task per table; a table grows with its team and every dot is an arm. Select a table to watch its Oracle run.</figcaption>
+  <figure class="hero-media">
+    <div class="screen">
+      <video class="hero-video" id="hero-video" muted loop playsinline autoplay preload="auto" poster="assets/img/hero.jpg">
+        <source src="assets/video/hero.mp4" type="video/mp4">
+      </video>
+      <span class="live" aria-hidden="true"><i></i>Robo World</span>
+    </div>
+    <figcaption>One moment from each zone, then the whole hall. Oracle reference runs, not model results. <button class="link" type="button" data-film>Full film, 3:41 →</button></figcaption>
   </figure>
 </section>
 
@@ -63,13 +68,6 @@
   <div><strong data-count="3">3</strong><small>Levels</small></div>
   <div><strong><span data-count="24">24</span>h</strong><small>Per run</small></div>
 </div>
-
-<figure class="teaser">
-  <video class="hero-video" id="hero-video" muted loop playsinline autoplay preload="auto" poster="assets/img/hero.jpg">
-    <source src="assets/video/hero.mp4" type="video/mp4">
-  </video>
-  <figcaption><b>Inside Robo World.</b> One simulated hall holds all 36 tasks; every arm is a simulated Franka Panda. These are Oracle reference runs, not model results. <button class="link" type="button" data-film>Watch the 3.5-minute film →</button></figcaption>
-</figure>
 
 <section class="chapter" id="overview" aria-labelledby="overview-title">
   <div class="chapter-head reveal">
@@ -108,19 +106,33 @@
   <div class="chapter-head reveal">
     <p class="kicker">02 · Benchmark</p>
     <h2 id="benchmark-title">Four ways to work together.</h2>
-    <p class="sub">Each family has nine tasks: three team sizes crossed with three difficulty levels. Hover a family to watch an Oracle reference run.</p>
+    <p class="sub">Each family has nine tasks: three team sizes crossed with three difficulty levels. A larger team brings more arms and more work; a higher level changes the physics of the job itself.</p>
   </div>
   <div class="families reveal" id="families"></div>
 
-  <div class="matrix-block reveal">
-    <div class="matrix-head">
+  <div class="explainer reveal" id="explainer">
+    <div class="explainer-head">
       <div>
-        <h3>The task matrix</h3>
-        <p class="sub small">Columns scale up the team, rows raise the difficulty. Select any cell to play its Oracle reference run.</p>
+        <h3 class="h3-big">What changes from task to task</h3>
+        <p class="sub small">Pick a family. Columns add arms and work; rows raise the level. Each image is the task's real initial state; hover to watch its Oracle run, select to open it.</p>
       </div>
-      <div class="segmented" role="tablist" aria-label="Family" id="matrix-tabs"></div>
+      <div class="segmented" role="tablist" aria-label="Family" id="explain-tabs"></div>
     </div>
-    <div class="matrix" id="matrix" aria-live="polite"></div>
+    <div class="explainer-body">
+      <aside class="explain-side" id="explain-side" aria-live="polite"></aside>
+      <div class="explain-grid" id="explain-grid"></div>
+    </div>
+  </div>
+
+  <div class="map-block reveal">
+    <div>
+      <h3 class="h3-big">All 36 tasks share one floor.</h3>
+      <p class="sub small">Robo World as a map: the four zones in their floor colors, nine tables each. A table grows with its team; every dot is an arm.</p>
+    </div>
+    <figure class="plan">
+      <div class="plan-map" id="plan" aria-label="Schematic map of Robo World: four zones of nine tasks"></div>
+      <figcaption id="plan-caption" aria-live="polite">Hover a table to see its task; select it to watch the Oracle run.</figcaption>
+    </figure>
   </div>
 
   <div class="protocol reveal">
@@ -150,12 +162,12 @@
   </div>
 </section>
 
-<section class="chapter wide" id="watch" aria-labelledby="watch-title">
+<section class="chapter" id="watch" aria-labelledby="watch-title">
   <div class="chapter-head reveal">
     <p class="kicker">03 · Videos</p>
     <h2 id="watch-title">Every task, on film.</h2>
-    <p class="sub">Every run rendered in Robo World, front and side. Hover to preview; select to open.</p>
-    <p class="sub small note"><b>Oracle</b> runs are privileged reference programs that read hidden task state; they show that each task can be done and are not model results. Some were operator-assisted, and some predate the released physics revision; each video says which. Videos are edited for viewing: idle time removed, played at 10–30×.</p>
+    <p class="sub">Every run rendered in Robo World, front and side. Model runs appear here as they are rendered; the Oracle reference runs show that each task can be done.</p>
+    <p class="sub small note"><b>Oracle</b> runs are privileged reference programs that read hidden task state; they are not model results. Some were operator-assisted, and some predate the released physics revision; each video says which. Videos are edited for viewing: idle time removed, played at 10–30×.</p>
   </div>
   <div class="wall-controls reveal">
     <div class="segmented" role="tablist" aria-label="Video source" id="source-tabs"></div>
@@ -171,10 +183,23 @@
 <section class="chapter" id="results" aria-labelledby="results-title">
   <div class="chapter-head reveal">
     <p class="kicker">04 · Results</p>
-    <h2 id="results-title">Who gets the job done?</h2>
-    <p class="sub">Every model runs the adaptive protocol on all 36 tasks, for up to 24 hours each. Completion is the headline; how they got there is the story.</p>
+    <h2 id="results-title">Who gets the job done, and at what cost?</h2>
+    <p class="sub">Every model runs the adaptive protocol on all 36 tasks, for up to 24 hours each. Completion alone saturates for strong models, so the board leads with how often they fail along the way; completion, time and tokens sit beside it.</p>
   </div>
-  <div id="results-body" class="reveal"></div>
+  <div class="studies">
+    <article class="study wide reveal" id="study-main">
+      <header><span class="tag">Main benchmark · Adaptive</span><h3>Failures per model</h3><p>Failed robot actions per run and the failure rate, with retries and completion beside them.</p></header>
+      <div id="results-body"></div>
+    </article>
+    <article class="study reveal" id="study-time">
+      <header><span class="tag">Over time</span><h3>Completion over the run</h3><p>Share of tasks complete against hours since START, one line per model.</p></header>
+      <div id="time-chart"></div>
+    </article>
+    <article class="study reveal" id="study-tokens">
+      <header><span class="tag">Cost</span><h3>Tokens over the run</h3><p>Cumulative input and output tokens against hours, Controller and delegates together.</p></header>
+      <div id="token-chart"></div>
+    </article>
+  </div>
   <details class="definitions reveal">
     <summary>How each metric is defined</summary>
     <dl>
@@ -193,27 +218,24 @@
 
 <section class="chapter" id="analysis" aria-labelledby="analysis-title">
   <div class="chapter-head reveal">
-    <p class="kicker">05 · Analysis</p>
+    <p class="kicker">05 · Studies</p>
     <h2 id="analysis-title">What makes a team work?</h2>
-    <p class="sub">Three questions behind the leaderboard: how agents should communicate, whether written skills help, and how much work really happens in parallel.</p>
+    <p class="sub">Three controlled comparisons beside the benchmark: whether written skills help a team improve itself, how agents should communicate, and what each arm needs to see.</p>
   </div>
-  <div class="segmented big reveal" role="tablist" aria-label="Analysis" id="analysis-tabs">
-    <button type="button" role="tab" aria-selected="true" data-panel="communication" id="communication">Communication</button>
-    <button type="button" role="tab" aria-selected="false" data-panel="skills">Skills</button>
-    <button type="button" role="tab" aria-selected="false" data-panel="parallel">Parallel work</button>
-  </div>
-  <div class="panel" data-panel="communication">
-    <p class="sub">The benchmark uses Adaptive. This study compares it with three fixed organizations: the same GPT model on the four largest Level 3 tasks, one per family.</p>
-    <div class="topologies" id="topologies"></div>
-    <div id="communication-chart"></div>
-  </div>
-  <div class="panel" data-panel="skills" hidden>
-    <p class="sub">Agents may write lessons into a shared <code>skills.md</code> during a run. We compare runs with and without that skill file: progress over time, and how often they repeat failed attempts late in the run.</p>
-    <div id="skills-chart"></div>
-  </div>
-  <div class="panel" data-panel="parallel" hidden>
-    <p class="sub">How many arms actually move at once? Parallel efficiency is the mean number of moving arms divided by the number of arms, measured while any arm is moving.</p>
-    <div id="parallel-chart"></div>
+  <div class="studies">
+    <article class="study reveal" id="skills">
+      <header><span class="tag">Self-improvement</span><h3>With and without skills</h3><p>Agents may write lessons into a shared <code>skills.md</code> during a run. Paired runs with and without it: progress over time and late-run repeated failures.</p></header>
+      <div id="skills-chart"></div>
+    </article>
+    <article class="study reveal" id="communication">
+      <header><span class="tag">Communication</span><h3>Four ways to organize</h3><p>The same GPT model on the four largest Level 3 tasks under each organization; the benchmark uses Adaptive.</p></header>
+      <div class="topologies" id="topologies"></div>
+      <div id="communication-chart"></div>
+    </article>
+    <article class="study reveal" id="cameras">
+      <header><span class="tag">Perception</span><h3>Own cameras or every camera</h3><p>Every arm has front and side cameras, and the hall has global views. Ego-centric runs let each role read only its own arms' cameras; the full setting opens every camera to every role.</p></header>
+      <div id="camera-chart"></div>
+    </article>
   </div>
 </section>
 

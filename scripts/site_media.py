@@ -5,16 +5,18 @@ encode:  each source MP4 becomes a 720p H.264 file (CRF 28, preset slow, faststa
          of every output and the SHA-256 of its source. Existing verified outputs are kept.
 montage: one 1920 x 1080 video per family, a 3 x 3 grid of its nine tasks (rows are
          difficulty levels, columns scales), each tile sped up to a common length.
-stills:  README images: the animated teaser (the film's opening hall orbit, from the raw
-         render without titles), montage posters with a play badge and a 400-px thumbnail
-         of every task.
+explainer: the README benchmark figure: per family, its largest team at Levels 1-3 from the
+         task atlas, with what each level changes.
+stills:  README images: montage posters with a play badge and a 400-px thumbnail of every
+         task. The README banner and teaser come from scripts/site_film.py.
 
 Sources is a JSON file: {"set": "oracle", "tasks": {"<case>": {"front": path, "side": path}}}.
 Run from the repository root:
 
     .venv/bin/python -m scripts.site_media encode SOURCES OUT
     .venv/bin/python -m scripts.site_media montage OUT/manifest.json FAMILY OUT_MP4
-    .venv/bin/python -m scripts.site_media stills OUT/manifest.json RAW_FILM_RENDER MONTAGE_DIR docs/media/readme
+    .venv/bin/python -m scripts.site_media stills OUT/manifest.json MONTAGE_DIR docs/media/readme
+    .venv/bin/python -m scripts.site_media explainer docs/task-atlas/images docs/media/readme/benchmark.jpg
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -137,27 +139,68 @@ def play_badge(path, size=0.16):
     Image.alpha_composite(image.convert('RGBA'), layer).convert('RGB').save(path, quality=86, optimize=True)
 
 
-def hero(render, path, end_s=9.0, blend_s=0.6, width=960, height=408, fps=15, quality=60):
-    """The README teaser: the film's opening orbit of the Robo World hall as a looping
-    animated WebP (GitHub autoplays images, not videos), with no text on it; the README
-    title carries the name. `render` is the raw film render without titles or subtitles; the
-    last `blend_s` seconds dissolve into the first so the loop does not jump."""
-    crop_h = round(1920 * height / width)
-    graph = (f'[0:v]trim=end={end_s},setpts=PTS-STARTPTS,crop=1920:{crop_h}:0:{(1080 - crop_h) // 2},'
-             f'scale={width}:{height}:flags=lanczos,split[a][b];'
-             f'[a]trim=start={blend_s},setpts=PTS-STARTPTS,fps={fps}[body];[b]trim=end={blend_s},setpts=PTS-STARTPTS,fps={fps}[head];'
-             f'[body][head]xfade=transition=fade:duration={blend_s}:offset={end_s - 2 * blend_s}')
-    subprocess.run([FFMPEG, '-v', 'error', '-y', '-t', str(end_s + 0.2), '-i', str(render),
-                    '-filter_complex', graph, '-an', '-c:v', 'libwebp_anim', '-lossless', '0', '-q:v', str(quality),
-                    '-compression_level', '6', '-loop', '0', str(path)], check=True)
+def explainer(atlas, out, width=1800):
+    """The README benchmark figure: one row per family, its largest team at Levels 1-3, each
+    the task's real initial state from the task atlas, with what the level changes."""
+    from PIL import Image, ImageDraw, ImageFont
+    fonts = Path(__file__).resolve().parents[1] / 'assets/robo_factory/fonts'
+    display = lambda n: ImageFont.truetype(str(fonts / 'SpaceGrotesk-Bold.ttf'), n)
+    mono = lambda n: ImageFont.truetype(str(fonts / 'JetBrainsMono-Medium.ttf'), n)
+    data = json.loads((Path(__file__).resolve().parents[1] / 'site/data/tasks.json').read_text())
+    colors = {'transport': (59, 127, 196), 'mosaic': (63, 148, 64), 'relay': (214, 91, 60), 'dial': (185, 138, 18)}
+    view = {'transport': 'global', 'mosaic': 'top', 'relay': 'global', 'dial': 'global'}
+    ink, ink2, dim, line = (21, 24, 28), (59, 65, 72), (105, 113, 124), (211, 214, 219)
+    side, gap, pad = 330, 22, 36
+    cw = (width - 2 * pad - side - 2 * gap) // 3; ch = round(cw * 5 / 8); row = ch + 104
+    head = 64
+    img = Image.new('RGB', (width, pad + head + 4 * row + 3 * gap + pad), (255, 255, 255))
+    d = ImageDraw.Draw(img)
+    for i, label in enumerate(['LEVEL 1', 'LEVEL 2', 'LEVEL 3']):
+        x = pad + side + i * (cw + gap)
+        d.text((x, pad + 10), label, font=mono(22), fill=dim)
+    d.text((pad, pad + 10), 'LARGEST TEAM PER FAMILY', font=mono(22), fill=dim)
+    for r, key in enumerate(['transport', 'mosaic', 'relay', 'dial']):
+        fam, y = data['families'][key], pad + head + r * (row + gap)
+        tasks = [t for t in data['tasks'] if t['family'] == key]
+        top = max(tasks, key=lambda t: (t['workload'], t['arms']))
+        scale = re.sub(r'-d\d$', '', top['id'])
+        d.rounded_rectangle([pad, y, width - pad, y + row - 1], radius=12, outline=line, width=2,
+                            fill=tuple(round(255 + (c - 255) * .06) for c in colors[key]))
+        d.rounded_rectangle([pad + 24, y + 30, pad + 44, y + 50], radius=4, fill=colors[key])
+        d.text((pad + 58, y + 20), fam['name'], font=display(44), fill=ink)
+        words, lines, cur = fam['verb'].split(), [], ''
+        for w in words:
+            if display(24).getlength(f'{cur} {w}'.strip()) > side - 60: lines.append(cur); cur = w
+            else: cur = f'{cur} {w}'.strip()
+        lines.append(cur)
+        for k, text in enumerate(lines):
+            d.text((pad + 24, y + 92 + k * 32), text, font=display(24), fill=ink2)
+        arms = sorted({t['arms'] for t in tasks}); work = sorted({t['workload'] for t in tasks})
+        d.text((pad + 24, y + row - 76), f'{arms[0]}-{arms[-1]} ARMS', font=mono(20), fill=dim)
+        d.text((pad + 24, y + row - 46), f"{work[0]}-{work[-1]} {fam['unit'].upper()}", font=mono(20), fill=dim)
+        for level in (1, 2, 3):
+            t = next(t for t in tasks if t['id'] == f'{scale}-d{level}')
+            x = pad + side + (level - 1) * (cw + gap)
+            shot = Image.open(Path(atlas) / f"{t['id']}-{view[key]}.jpg").convert('RGB').resize((cw, ch), Image.LANCZOS)
+            mask = Image.new('L', (cw, ch), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, cw - 1, ch - 1], radius=10, fill=255)
+            img.paste(shot, (x, y + 16), mask)
+            d.text((x + 2, y + 16 + ch + 12), f'L{level}', font=mono(22), fill=colors[key])
+            note, out_lines, cur = t['level_note'].split(), [], ''
+            for w in note:
+                if display(23).getlength(f'{cur} {w}'.strip()) > cw - 52: out_lines.append(cur); cur = w
+                else: cur = f'{cur} {w}'.strip()
+            out_lines.append(cur)
+            for k, text in enumerate(out_lines[:2]):
+                d.text((x + 46, y + 16 + ch + 10 + k * 30), text, font=display(23), fill=ink)
+    img.save(out, quality=86, optimize=True, progressive=True)
+    return out
 
 
-def stills(manifest_path, render, montages, out):
-    """README images: the animated teaser, montage posters (with play badges), 36 task thumbnails."""
+def stills(manifest_path, montages, out):
+    """README images: montage posters (with play badges), 36 task thumbnails."""
     from PIL import Image
     manifest_path, out = Path(manifest_path), Path(out)
     (out / 'tasks').mkdir(parents=True, exist_ok=True)
-    hero(render, out / 'hero.webp')
     for montage in sorted(Path(montages).glob('montage-*.mp4')):
         poster = out / (montage.stem + '.jpg'); grab(montage, 45, poster, 1600); play_badge(poster, 0.12)
     manifest = json.loads(manifest_path.read_text())
@@ -173,12 +216,15 @@ def main(argv=None):
     e = sub.add_parser('encode'); e.add_argument('sources'); e.add_argument('out'); e.add_argument('--workers', type=int, default=2)
     m = sub.add_parser('montage'); m.add_argument('manifest'); m.add_argument('family'); m.add_argument('output')
     m.add_argument('--length-s', type=float, default=60); m.add_argument('--view', default='front')
-    s = sub.add_parser('stills'); s.add_argument('manifest'); s.add_argument('render'); s.add_argument('montages'); s.add_argument('out')
+    s = sub.add_parser('stills'); s.add_argument('manifest'); s.add_argument('montages'); s.add_argument('out')
+    x = sub.add_parser('explainer'); x.add_argument('atlas'); x.add_argument('out')
     args = parser.parse_args(argv)
     if args.command == 'encode':
         encode(args.sources, args.out, args.workers)
+    elif args.command == 'explainer':
+        print(explainer(args.atlas, args.out))
     elif args.command == 'stills':
-        print('\n'.join(stills(args.manifest, args.render, args.montages, args.out)))
+        print('\n'.join(stills(args.manifest, args.montages, args.out)))
     else:
         print(json.dumps(montage(args.manifest, args.family, args.output, args.length_s, args.view), indent=1))
 
