@@ -119,12 +119,32 @@ class Monitor:
                 self.game=from_task(self.task,secret)
             else:self.game=CountFeedback(secret)
             self.minimum_clearance=np.full(n,math.inf);self.blue_gaps=np.zeros(n);self.blue_max_gaps=np.zeros(n);self.last_dial_angles=None
+            self.carried_trials=0
+            if append:self.continue_dial_record()
         if self.family=='relay' and self.task.get('suite_version')==2:
             from .evaluate_v2 import Relay
             self.relay_v2=Relay(self)
         elif self.family=='relay':
             self.support_geoms=[self.m.geom('payload_beam').id]
             self.route=self.task['route'];self.pairs=self.task['pairs'];self.route_index=0;self.custody=set(self.pairs[0]['robots']);self.airborne=False;self.dropped=False;self.drop_count=0;self.overlap_since=None;self.overlap_qualified=False;self.support_gap_since=None;self.transitions=[];self.final_supported=False;self.landed=False;self.initial_z=float(self.d.body('payload').xpos[2]);self.minimum_payload_clearance=math.inf
+    def continue_dial_record(self):
+        """A continued segment's evaluator takes over the Dial record at its restore frame.
+
+        Trials, BEST and success are episode history, carried in the bound restore record
+        (docs/running/run-segments.md). A configuration already counted and held at that
+        frame stays the same trial while it is held on; leaving and re-entering counts again.
+        """
+        from ..run_segments import current_restore
+        found=current_restore(self.w.directory) if getattr(self.w,'directory',None) is not None else None
+        record=found[0].get('evaluator') if found else None
+        if not record:return
+        game=self.game;game.queries=self.carried_trials=int(record['valid_trials']);game.won=bool(record['solved'])
+        if getattr(game,'mode',None)=='best_so_far' and record.get('best') is not None:game.best=game.display=int(record['best'])
+        if record.get('input_ready'):
+            angles=self.d.qpos[self.qids]
+            if isinstance(game,CountFeedback):marks=tuple(int(x) for x in np.rint(np.degrees(angles)%360/90).astype(int)%4)
+            else:marks=tuple(round((math.degrees(float(x))%360)/game.step_deg)%(game.symbol_count+1) for x in angles)
+            game.candidate=marks;game.since=float(self.d.time);game.submitted=True
     def descendant_geoms(self,root):
         out=[]
         for g in range(self.m.ngeom):
@@ -342,6 +362,7 @@ class Monitor:
                                      strict_task_success=self.game.won and not self.violations,
                                      scoring_version='terminal_outcome_v2')
         if spec:self.result_cache.update(feedback_mode=self.game.mode,input_ready=self.game.ready,private_red_hold_ready=red_ready)
+        if self.carried_trials:self.result_cache['carried_valid_trials']=self.carried_trials
     def sample_relay(self):
         t=float(self.d.time);gs=self.geoms['payload'];support=self.bilateral(self.support_geoms,positive_force=True);position=self.d.body('payload').xpos.copy();contact_env=False;cradle=False
         for c in self.d.contact:

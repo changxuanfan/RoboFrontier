@@ -88,6 +88,27 @@ class EligibilityTests(unittest.TestCase):
         (out / 'suite-process.jsonl').write_text(json.dumps(header) + '\n' + json.dumps(snap(1, 5, 0, 1, [])) + '\n')
         self.assertIsNone(process_summary(self.run))
 
+    def test_dial_record_continues_over_segments_up_to_each_restore_frame(self):
+        out = self.run / 'private/outputs'; header = {'schema': 'x', 'format': 'events-1s'}
+        row = lambda t, trials, best, **extra: {'type': 'snapshot', 'sim_time_s': t, 'result': {
+            'valid_trials': trials, 'display': best, 'feedback_mode': 'best_so_far', 'solved': False, **extra}}
+        # Segment 0 reached BEST 6 after 65 trials; trial 66 came after the restore frame (t=40).
+        # Segment 1 started before carry-over existed and counted from zero.
+        rows = [header, row(10, 64, 5), row(30, 65, 6, input_ready=True), row(45, 66, 6),
+                header, row(40, 0, 0), row(50, 2, 3)]
+        (out / 'suite-process.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows))
+        self.assertEqual(run_segments.dial_record(self.run, 35.), {'valid_trials': 65, 'best': 6, 'solved': False,
+                                                                   'input_ready': True, 'sim_time_s': 30})
+        record = run_segments.dial_record(self.run)
+        self.assertEqual((record['valid_trials'], record['best']), (67, 6))
+        # A carried segment reports cumulative counts; only its own trials are added.
+        rows[-2:] = [row(40, 65, 6, carried_valid_trials=65), row(50, 67, 7, carried_valid_trials=65)]
+        (out / 'suite-process.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows))
+        self.assertEqual((run_segments.dial_record(self.run)['valid_trials'], run_segments.dial_record(self.run)['best']), (67, 7))
+        self.assertEqual(process_summary(self.run)['total']['dial']['valid_trials'], 67)
+        (out / 'suite-process.jsonl').write_text(json.dumps(header) + '\n' + json.dumps({'type': 'snapshot', 'sim_time_s': 1, 'result': {'samples': 1}}) + '\n')
+        self.assertIsNone(run_segments.dial_record(self.run))
+
     def test_deadline_excludes_downtime(self):
         self.store.put('start_at', 1000.); self.store.put('downtime_s', 25.)
         self.assertEqual(deadline(self.store, 600), 1625.)
@@ -151,6 +172,20 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual((self.store.get('segment'), self.store.get('segment_journal')), (1, None))
         self.assertEqual(self.store.get('pending_segment')['interrupted'], {'Controller': ['Controller-call_1']})
         self.assertEqual(len(self.store.get('segments')), 1)
+
+    def test_the_restore_record_carries_the_dial_record_at_the_restore_frame(self):
+        rows = [{'schema': 'x'}, {'type': 'event', 'sim_time_s': 12.0, 'result': {
+                    'valid_trials': 65, 'display': 6, 'feedback_mode': 'best_so_far', 'solved': False, 'input_ready': True}},
+                {'type': 'event', 'sim_time_s': 13.0, 'result': {
+                    'valid_trials': 66, 'display': 7, 'feedback_mode': 'best_so_far', 'solved': False}}]
+        (self.run/'private/outputs/suite-process.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows))
+        note = run_segments.prepare_retry(self.run, self.store, 'host exit code 1')
+        self.assertEqual(note['evaluator'], {'valid_trials': 65, 'best': 6, 'solved': False, 'input_ready': True, 'sim_time_s': 12.0})
+        self.assertEqual(run_segments.current_restore(self.run)[0]['evaluator']['valid_trials'], 65)
+        self.assertEqual(run_segments.verify_inputs(self.run), [])
+
+    def test_other_families_keep_their_restore_record(self):
+        self.assertNotIn('evaluator', run_segments.prepare_retry(self.run, self.store, 'host exit code 1'))
 
     def test_a_delegation_still_being_created_fails_and_returns_its_arms(self):
         child = {'actor': 'Delegate_x', 'robots': [self.robot], 'goal': 'g', 'done_when': 'd', 'thread_id': None,

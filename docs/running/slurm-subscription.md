@@ -168,7 +168,9 @@ The compute helper serves authenticated HTTP CONNECT on loopback. Native proxy
 passwords are generated inside the allocation and remain in 0600 readiness files
 under the 0700 state root, then in the trusted native process environment. They
 never enter source snapshots, configuration, command arguments or status output.
-Only OpenAI/ChatGPT HTTPS destinations are accepted. End-to-end TLS remains
+Only OpenAI/ChatGPT and Anthropic HTTPS destinations are accepted. A Claude job
+uses the same route, pause and fencing without a credential store: its token stays
+in the job environment and no lease is taken. End-to-end TLS remains
 between native Codex and OpenAI; the relay forwards encrypted bytes. Native
 ChatGPT authentication, renewal and the credential lease remain on Slurm.
 

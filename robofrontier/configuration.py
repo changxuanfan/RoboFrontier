@@ -187,8 +187,10 @@ def validate_configuration(config):
             raise ValueError('slurm.egress_wait_s must be between 1 and 3600')
         if slurm['egress_mode'] == 'mac-ssh':
             path = Path(slurm['egress_root'])
-            if slurm['auth_mode'] != 'subscription' or not path.is_absolute() or '..' in path.parts:
-                raise ValueError('Mac egress requires subscription mode and an absolute private egress_root')
+            # Claude carries its credential in the job environment and needs only the route.
+            routed = slurm['auth_mode'] == 'subscription' or config['policy']['engine'] == 'claude'
+            if not routed or not path.is_absolute() or '..' in path.parts:
+                raise ValueError('Mac egress requires subscription mode or Claude, and an absolute private egress_root')
         elif slurm['egress_root']:
             raise ValueError('egress_root requires slurm.egress_mode=mac-ssh')
     for field in ('gpus', 'cpus_per_task', 'memory_gib', 'time_limit_s', 'stop_warning_s'):

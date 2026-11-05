@@ -99,7 +99,7 @@ def target_allowed(host, port):
     return (port == 443 and isinstance(host, str) and len(host) <= 253
             and bool(re.fullmatch(r'[a-z0-9.-]+', host))
             and any(host == domain or host.endswith('.'+domain)
-                    for domain in ('openai.com', 'chatgpt.com')))
+                    for domain in ('openai.com', 'chatgpt.com', 'anthropic.com')))
 
 
 def validate_record(record, identity, node, *, allow_paused=False):
