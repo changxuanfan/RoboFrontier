@@ -36,7 +36,7 @@ jobs:
       - name: Engine parity, run layout, segments and evidence storage
         run: |
           PYTHONPATH=tests:scripts .venv/bin/python -m unittest \
-            test_engine_parity test_run_layout test_run_segments test_session_archive test_process_log \
+            test_policy_env test_engine_parity test_run_layout test_run_segments test_session_archive test_process_log \
             test_portable_scene test_durable test_claude_engineering_batch test_claude_standing_team
       - uses: actions/upload-artifact@v4
         if: always()

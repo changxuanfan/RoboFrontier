@@ -77,7 +77,7 @@ def table(run, repo=ROOT, home=None, tmp_dirs=None, checkouts=None):
     return access
 
 
-def closed_table(run, environment, *, home=None, system=sys.platform, **kwargs):
+def closed_table(run, environment, *, home=None, system=None, **kwargs):
     """The table of a run with a policy environment: personal, shared and other software closed.
 
     The root stays readable because a process cannot start on macOS without it (a table
@@ -89,7 +89,7 @@ def closed_table(run, environment, *, home=None, system=sys.platform, **kwargs):
     run = Path(run).resolve()
     home = Path(home).expanduser().resolve() if home else Path.home().resolve()
     access = table(run, home=home, **{**kwargs, 'tmp_dirs': ('/tmp',)})
-    for path in CLOSED_ROOTS[system]:
+    for path in CLOSED_ROOTS[system or sys.platform]:
         access[str(Path(path).resolve())] = 'deny'
     access[str(home)] = 'deny'
     access[str(Path(environment).resolve())] = 'read'

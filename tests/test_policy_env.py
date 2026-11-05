@@ -62,7 +62,7 @@ class AccessTableTests(Fixture):
                                (self.root/'python/bin/python3', 'read'), (self.run_dir/'private/inputs/x', 'deny'),
                                (self.run_dir/'root.txt', 'deny'), (self.run_dir.parent/'other/private/x', 'deny'),
                                (self.repo/'configs/x', 'deny'), (self.home/'Documents/x', 'deny'), ('/tmp/x', 'write'),
-                               ('/private/var/folders/x', 'deny'), ('/opt/homebrew/bin/python3', 'deny'), ('/usr/local/bin/x', 'deny'),
+                               ('/var/folders/x', 'deny'), ('/opt/homebrew/bin/python3', 'deny'), ('/usr/local/bin/x', 'deny'),
                                ('/Users/someone/x', 'deny'), ('/Volumes/x', 'deny'), ('/Library/Keychains/x', 'deny'),
                                ('/usr/bin/true', 'read'), ('/System/Library/x', 'read')):
             self.assertEqual(policy_access.mode(table, path), expected, path)
