@@ -340,7 +340,10 @@ class World:
             if getattr(self,'beam_sampler',None) is not None:self.beam_sampler.check_collisions()
             if getattr(self,'spring_sampler',None) is not None:self.spring_sampler.sample()
             if getattr(self,'motion_recorder',None) is not None and not self.motion_recorder.closed:self.motion_recorder.capture(self.data)
-        mujoco.mj_forward(self.model,self.data)
+        if getattr(self,'physics_profile_active',False):
+            from .physics_profile import forward_after_step
+            forward_after_step(self)
+        else:mujoco.mj_forward(self.model,self.data)
         if getattr(self,'beam_sampler',None) is not None:
             self.beam_sampler.sample()
         elif self.task.get('kind')=='shared_grid':

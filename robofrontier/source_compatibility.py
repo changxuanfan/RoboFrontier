@@ -127,6 +127,12 @@ self.physics_profile=attach(self,frozen_cfg)
     ('physics profile step', """
 if getattr(self,'physics_profile',None) is not None:self.physics_profile.before_step()
 """, None),
+    ('physics profile forward', """
+if getattr(self,'physics_profile_active',False):
+    from .physics_profile import forward_after_step
+    forward_after_step(self)
+else:mujoco.mj_forward(self.model,self.data)
+""", "mujoco.mj_forward(self.model,self.data)"),
     ('motion rate and segment folder', """
 hz=frozen.get('motion_hz',60)
 from .run_segments import output_dir

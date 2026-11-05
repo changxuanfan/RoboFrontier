@@ -51,6 +51,18 @@ class ProfileTests(unittest.TestCase):
         w.data.time = 29.;governor.before_step();self.assertFalse(w.model.opt.enableflags & SLEEP)
         w.data.time = 30.;governor.before_step();self.assertTrue(w.model.opt.enableflags & SLEEP)
 
+    def test_end_of_step_forward_restores_noslip(self):
+        from robofrontier.physics_profile import forward_after_step
+        w = world();w.model.opt.noslip_iterations = 10
+        forward_after_step(w)
+        self.assertEqual(w.model.opt.noslip_iterations, 10)
+
+    def test_attach_marks_only_profile_runs(self):
+        plain, chosen = world(), world()
+        attach(plain, {});attach(chosen, {'physics_profile': 'realtime-v1'})
+        self.assertFalse(getattr(plain, 'physics_profile_active', False))
+        self.assertTrue(chosen.physics_profile_active)
+
     def test_harness_rejects_an_unknown_profile(self):
         with tempfile.TemporaryDirectory() as folder:
             harness = json.loads(Path('configs/harnesses/policy.json').read_text())

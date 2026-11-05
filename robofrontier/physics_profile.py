@@ -36,10 +36,23 @@ class IdleSleep:
             model.opt.enableflags |= SLEEP
 
 
+def forward_after_step(world):
+    """The end-of-step forward without noslip: identical states and scores, less time.
+
+    The next mj_step solves its own constraints, and control reads no noslip result.
+    """
+    options = world.model.opt
+    iterations = options.noslip_iterations
+    options.noslip_iterations = 0
+    try: mujoco.mj_forward(world.model, world.data)
+    finally: options.noslip_iterations = iterations
+
+
 def attach(world, harness):
     """Apply the run's frozen profile; returns the per-step part, or None."""
     name = harness.get('physics_profile')
     if name is None: return None
+    world.physics_profile_active = True
     settings = PROFILES[name][world.task['family']]
     if 'noslip_tolerance' in settings: world.model.opt.noslip_tolerance = settings['noslip_tolerance']
     if settings['sleep'] == 'always':

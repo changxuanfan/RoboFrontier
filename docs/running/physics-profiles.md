@@ -1,7 +1,8 @@
 # Physics profiles
 
-A harness may set `physics_profile`. A run that sets none is untouched, and a run
-freezes its choice with its other inputs. A profile changes results compared with
+A harness may set `physics_profile`; `configs/harnesses/policy.json` sets
+`realtime-v1`. A run that sets none is untouched, and a run freezes its choice with its
+other inputs. A profile changes results compared with
 full physics, so results of different profiles are not comparable and one batch must
 not mix them.
 
@@ -15,6 +16,8 @@ not mix them.
 | Relay | Same, and only 30 s after the world starts | Default |
 
 - Any action restores full physics before its first step.
+- The extra forward at the end of each 20 ms step skips noslip. This does not change
+  states or scores and saves about 2-7% of the time.
 - Forces and contact wake a sleeping object on the same step.
 - The default `noslip_tolerance` of 1e-6 lets resting objects drift at 1-2 mm per
   simulated minute with no rotation. This is solver error, so a sleeping object does

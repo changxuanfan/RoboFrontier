@@ -35,6 +35,7 @@
   "video_fps": 30,
   "motion_hz": 30,
   "process_log": "events-60s",
+  "physics_profile": "realtime-v1",
   "motion_check": {
     "max_horizon_s": 15.0,
     "default_sample_dt_s": 0.1,
