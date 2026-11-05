@@ -42,7 +42,7 @@ These results establish the tested paths on this container. They do not establis
 
 ## Minimal real subscription experiment
 
-The live report was also read directly over SSH from `/workspace/RoboFrontier/runs/engineering/codex-landlock-research-20261103/live/report.json`. Local copies of the [offline report](../../../runs/engineering/codex-landlock-research-20261103/report.json) and [live report](../../../runs/engineering/codex-landlock-research-20261103/live/report.json) accompany the research evidence.
+The live report was also read directly over SSH from `/workspace/RoboFrontier/runs/engineering/codex-landlock-research-20261103/live/report.json`. Local copies of the offline report (`runs/engineering/codex-landlock-research-20261103/report.json`) and live report (`runs/engineering/codex-landlock-research-20261103/live/report.json`) accompany the research evidence; `runs/` is not tracked in git.
 
 - Requested model: **`gpt-6.1-sol`**, effort **`high`**; authentication mode: **`chatgpt_subscription`**. The report returned **`passed: true`**.
 - The parent native thread completed, correctly identified the red probe image, and requested `policy_shell` to execute the eighteen isolation assertions. Its command exited **0**, with every assertion **true**.

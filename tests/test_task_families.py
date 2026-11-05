@@ -100,7 +100,7 @@ class FamilyReleaseTests(unittest.TestCase):
                     self.assertFalse(any('50mm' in rule for rule in public['rules']))
                 rules=(run/'public/inputs/rules.md').read_text()
                 self.assertIn('`ready` is optional',rules)
-                self.assertIn('delegation is',rules)
+                self.assertIn('chooses direct control or bounded delegation',rules)
                 # The frozen scene is an independent file (a clone where supported), never a
                 # hard link: a write to one run must not reach the source or other runs.
                 self.assertEqual((run/'private/inputs/scene/task.json').stat().st_nlink, 1)

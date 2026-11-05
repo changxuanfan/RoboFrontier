@@ -46,6 +46,7 @@ Native Codex and Claude hosts, preparation and provider checks. `robofrontier` c
 | --- | --- |
 | `benchmark.py` | Entry point for `python -m scripts.benchmark`; the Codex engine lives in `robofrontier/codex/`. |
 | `benchmark_handoff.py` | Inspect a checkout and transfer only the runtime assets needed by policy tasks. |
+| `check_codex_broker.py` | Exercise the installed Codex tool inventory, denials and roles against a LOCAL stub. |
 | `check_codex_cli.py` | Exercise installed Codex RPC, images, dynamic tools and forks against a LOCAL stub. |
 | `check_codex_snapshot.py` | Exercise snapshot forks and per-child prompts with a local Responses stub. |
 | `claude_benchmark.py` | Claude planning, offline readiness, and unscored engineering runs. |
