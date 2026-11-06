@@ -4,6 +4,7 @@ scripts/check_policy_env.py copies this file into a throwaway run and has each e
 real CLI run it as an ordinary shell command. It writes ok/denied results to a file, once
 finished, and never records what a file contains.
 """
+from importlib import metadata
 import json
 import os
 from pathlib import Path
@@ -14,11 +15,23 @@ import sys
 import tempfile
 
 FINISHED = 'PROBE-FINISHED'
+PROCESS_POOL = ("import multiprocessing as m\n"
+                "with m.get_context('fork').Pool(2) as pool:\n"
+                "    assert pool.map(abs, [-1, -2]) == [1, 2]\n")
+PROCESS_EXECUTOR = ("import multiprocessing as m\n"
+                    "from concurrent.futures import ProcessPoolExecutor\n"
+                    "with ProcessPoolExecutor(2, mp_context=m.get_context('fork')) as pool:\n"
+                    "    assert list(pool.map(abs, [-1, -2])) == [1, 2]\n")
 
 
 def probe(fixtures):
     """Each named attempt's outcome: 'ok' if it succeeded, otherwise 'denied'."""
     results = {}
+
+    def expect(condition):
+        if not condition:
+            raise ValueError('unexpected')
+
     home, run, env = Path(fixtures['real_home']), Path(fixtures['run']), Path(fixtures['env'])
 
     def attempt(name, action):
@@ -33,6 +46,11 @@ def probe(fixtures):
 
     def importable(module):
         subprocess.run([sys.executable, '-c', 'import ' + module], check=True, capture_output=True, timeout=120)
+
+    def has_entries(path):
+        # A masked folder can be empty or show only the way to this run, which reveals nothing.
+        route = run.relative_to(path).parts[0] if run.is_relative_to(path) else None
+        expect(set(os.listdir(path)) - {route})
 
     def write(path):
         Path(path).write_text('x')
@@ -52,10 +70,6 @@ def probe(fixtures):
                   "import cv2,numpy,scipy,PIL;cv2.imwrite('array.png',numpy.zeros((4,4),'uint8'))")
         subprocess.run([sys.executable, '-c', script], check=True, capture_output=True, timeout=300)
 
-    def expect(condition):
-        if not condition:
-            raise ValueError('unexpected')
-
     # Ordinary work that must keep working.
     attempt('python_is_environment', lambda: expect(Path(sys.prefix).resolve().is_relative_to(env)))
     attempt('python_on_path_is_environment',
@@ -72,17 +86,21 @@ def probe(fixtures):
     attempt('read_public', lambda: (run/'public/inputs/task.json').read_bytes())
     attempt('write_workspace', lambda: write(run/'workspace/probe.txt'))
     attempt('read_environment', lambda: (env/'policy-env.json').read_bytes())
-    attempt('pip_install_store', lambda: shell(sys.executable + ' -m pip install -q networkx'))
-    attempt('import_installed', lambda: importable('networkx'))
+    attempt('pip_install_store', lambda: shell(sys.executable + ' -m pip install -q networkx shapely'))
+    attempt('import_installed', lambda: (importable('networkx'), importable('shapely')))
+    attempt('process_pool', lambda: subprocess.run([sys.executable, '-c', PROCESS_POOL], check=True, capture_output=True, timeout=60))
+    attempt('process_executor', lambda: subprocess.run([sys.executable, '-c', PROCESS_EXECUTOR], check=True, capture_output=True, timeout=60))
+    attempt('core_versions', lambda: expect(all(metadata.version(name) == version for name, version in fixtures['core_packages'].items())))
     attempt('venv', lambda: shell(sys.executable + ' -m venv --without-pip ' + str(run/'workspace/.tmp/venv')))
+    attempt('read_host_shared_memory', lambda: Path(fixtures['shared_memory_file']).read_bytes())
     attempt('read_shared_tmp', lambda: (Path(fixtures['shared_tmp'])/'canary.txt').read_bytes())
     attempt('write_shared_tmp', lambda: write(Path(fixtures['shared_tmp'])/'written.txt'))
+    attempt('create_in_tmp', lambda: (write(fixtures['tmp_file']), os.unlink(fixtures['tmp_file'])))
     # What must stay closed.
-    attempt('read_home', lambda: os.listdir(home))
+    attempt('read_home', lambda: has_entries(home))
     attempt('read_home_file', lambda: Path(fixtures['home_file']).read_bytes())
-    attempt('read_users', lambda: os.listdir('/Users'))
-    attempt('read_volumes', lambda: os.listdir('/Volumes'))
-    attempt('read_keychains', lambda: os.listdir('/Library/Keychains'))
+    for name, path in fixtures['closed_folders'].items():
+        attempt(name, lambda path=path: has_entries(path))
     attempt('read_private', lambda: (run/'private/inputs/secret.txt').read_bytes())
     attempt('read_run_root', lambda: (run/'root.txt').read_bytes())
     attempt('read_other_run', lambda: Path(fixtures['other_run_file']).read_bytes())
@@ -96,7 +114,9 @@ def probe(fixtures):
     attempt('network_tcp', lambda: connect(socket.SOCK_STREAM, ('127.0.0.1', fixtures['listener_port'])))
     attempt('network_external', lambda: connect(socket.SOCK_STREAM, ('1.1.1.1', 443)))
     attempt('unix_socket_shared', unix_socket)
-    attempt('list_processes', lambda: shell('/bin/ps ax'))
+    # A PID namespace can leave ps working while hiding the host's processes.
+    attempt('see_host_processes', lambda: expect(len(subprocess.run(['/bin/ps', 'ax'], check=True, capture_output=True,
+                                                                    timeout=20).stdout.splitlines()) > fixtures['few_processes']))
     return results
 
 
