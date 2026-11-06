@@ -144,6 +144,10 @@ only.
   carried part (`carried_valid_trials`); `run_segments.dial_record` combines
   segments, including runs continued before this existed (their later segment
   counted from zero, so its trials are added and BEST is the maximum).
+- A Relay timber's handovers and drops are episode history too, because completion
+  requires a qualified handover. The new evaluator keeps those made up to the restore
+  frame (`run_segments.relay_record`). A timber held at that frame becomes airborne
+  again through the ordinary lift check.
 - The two CLIs describe the cut-off tool call differently (Claude: outcome
   unknown; Codex: cancelled); the resume message is authoritative.
 

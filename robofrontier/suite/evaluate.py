@@ -124,6 +124,7 @@ class Monitor:
         if self.family=='relay' and self.task.get('suite_version')==2:
             from .evaluate_v2 import Relay
             self.relay_v2=Relay(self)
+            if append:self.relay_v2.continue_record()
         elif self.family=='relay':
             self.support_geoms=[self.m.geom('payload_beam').id]
             self.route=self.task['route'];self.pairs=self.task['pairs'];self.route_index=0;self.custody=set(self.pairs[0]['robots']);self.airborne=False;self.dropped=False;self.drop_count=0;self.overlap_since=None;self.overlap_qualified=False;self.support_gap_since=None;self.transitions=[];self.final_supported=False;self.landed=False;self.initial_z=float(self.d.body('payload').xpos[2]);self.minimum_payload_clearance=math.inf

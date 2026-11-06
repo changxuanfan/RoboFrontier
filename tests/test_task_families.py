@@ -78,8 +78,11 @@ class FamilyReleaseTests(unittest.TestCase):
                             else:
                                 self.assertEqual(public[key], review[key])
                     if case.startswith('relay-'):
-                        self.assertFalse(public['completion']['required_airborne_handover'])
-                        self.assertFalse(any('Airborne transport requires' in r or 'Only the last established' in r for r in public['rules']))
+                        self.assertTrue(public['completion']['required_airborne_handover'])
+                        self.assertEqual(public['completion']['relay_completion_rule'], 'relay-airborne-handover-v1')
+                        self.assertTrue(any('Every assembly must undergo a real qualified airborne handover' in r for r in public['rules']))
+                        self.assertTrue(any('Only the last established' in r for r in public['rules']))
+                        self.assertTrue(any('never counts as transport' in r for r in public['rules']))
                         self.assertIn('terminal outcome v2', (run/'public/inputs'/public['family_guidance']).read_text())
                 if case.startswith('transport-'):
                     self.assertFalse(public['completion']['acceptance']['process_compliance_required'])

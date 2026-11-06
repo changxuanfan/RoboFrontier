@@ -63,11 +63,13 @@ and original protocol.
 
 Policy runs declare `terminal_outcome_v2` in the frozen run protocol. Placement
 tasks require the existing geometric, release, stability and assignment
-predicates; Dial uses its solved state. Relay requires every timber to be
-released with at least 70 percent of its centreline above the GOAL outline
-(`relay-timber-goal-70pct-v1`; earlier tasks keep the 50 mm boundary rule with
-table support); earlier qualified handover, dropped flags and
-recorded violations do not independently veto terminal completion. Reports
+predicates; Dial uses its solved state. Relay requires every timber to have had
+a qualified airborne handover (`relay-airborne-handover-v1`, declared in the run
+protocol) and to be released with at least 70 percent of its centreline above the
+GOAL outline (`relay-timber-goal-70pct-v1`; earlier tasks keep the 50 mm boundary
+rule with table support). Runs prepared before that protocol field keep the same
+placement check without the handover requirement. Dropped flags and recorded
+violations do not independently veto terminal completion. Reports
 retain `strict_task_success`, process compliance and violations; Relay retains
 `legacy_process_goals_met`, `legacy_completed_payloads`, drops and handover
 records. A violation entry is deduplicated by kind and key, not a verified count

@@ -237,6 +237,9 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
             'scope': 'Approximate physical restore of the same trial; the run, its sessions and records continue'}
     # The Dial game is episode history: the new world's evaluator continues its trials and BEST.
     record = dial_record(run, sim_s)
+    if record is None:
+        payloads = relay_record(run, sim_s)
+        if payloads is not None: record = {'relay_payloads': payloads}
     if record is not None: note['evaluator'] = record
     write_json(folder / 'restore-pose.json', note)
     import hashlib
@@ -358,6 +361,35 @@ def process_summary(run):
     if record is not None: total['dial'] = record
     return {'segments': segments, 'total': total, 'missing_segments': [i for i, p in enumerate(parts) if not p],
             'scope': 'Earlier segments from their last logged row before they ended'}
+
+
+def relay_record(run, cutoff=None):
+    """Each Relay timber's handovers and drops over all segments, up to `cutoff`.
+
+    A segment's rows run to the restore frame of the next. Handovers are matched by their
+    content, so a carried record is not counted twice. None for other families or an empty log.
+    """
+    log = Path(run) / 'private/outputs/suite-process.jsonl'
+    if not log.is_file(): return None
+    blocks = [[]]
+    for line in log.read_text(errors='replace').splitlines():
+        try: row = json.loads(line)
+        except ValueError: continue
+        if not isinstance(row, dict): continue
+        if 'schema' in row and 'type' not in row: blocks.append([])
+        elif isinstance(row.get('result'), dict) and isinstance(row['result'].get('payloads'), dict): blocks[-1].append(row)
+    blocks = [b for b in blocks if b]
+    payloads = {}
+    for i, block in enumerate(blocks):
+        end = blocks[i + 1][0]['sim_time_s'] if i + 1 < len(blocks) else cutoff
+        kept = [r for r in block if end is None or r['sim_time_s'] <= end + 1e-9]
+        if not kept: continue
+        for ident, item in kept[-1]['result']['payloads'].items():
+            entry = payloads.setdefault(ident, {'handovers': [], 'drops': 0})
+            for handover in item.get('handovers') or []:
+                if handover not in entry['handovers']: entry['handovers'].append(handover)
+            entry['drops'] = max(entry['drops'], int(item.get('drops') or 0))
+    return payloads or None
 
 
 def dial_record(run, cutoff=None):
