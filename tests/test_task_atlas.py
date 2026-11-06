@@ -96,7 +96,7 @@ class TaskAtlasTests(unittest.TestCase):
         by_id = {row['id']: row for row in rows}
         self.assertFalse(by_id['transport-a04-d1']['completion']['acceptance']['process_compliance_required'])
         self.assertFalse(by_id['mosaic-a04-6x12-d1']['completion']['process_violations_clear_required'])
-        self.assertFalse(by_id['relay-a08-d1']['completion']['required_airborne_handover'])
+        self.assertTrue(by_id['relay-a08-d1']['completion']['required_airborne_handover'])
         self.assertIn('latched', by_id['dial-best5-n04-d1']['completion']['success_semantics'])
         text = atlas.encoded(data).decode()
         for forbidden in ('code_symbols', 'private/inputs', '/Users/', '/home/', 'oracle_solution'):

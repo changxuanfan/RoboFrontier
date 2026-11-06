@@ -9746,10 +9746,13 @@
       "rules": [
         "Move all 2 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
         "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
+        "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
         "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
         "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
         "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
+        "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
         "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
+        "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.",
         "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
       ],
       "completion": {
@@ -9761,13 +9764,14 @@
         "require_stationary": false,
         "allow_goal_payload_contact": true,
         "arbitrary_goal_placement": true,
-        "required_airborne_handover": false,
+        "required_airborne_handover": true,
         "support_via_goal_payload": true,
         "allow_goal_partial_support": true,
         "allow_near_goal_release": true,
         "max_release_gap_m": 0.03,
         "release_height_reference": "lowest_assembly_part",
-        "scope": "Every timber at least 70% above painted GOAL and released; process events are reported separately."
+        "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
+        "relay_completion_rule": "relay-airborne-handover-v1"
       },
       "mechanism": {
         "chord_m": 1.2,
@@ -9949,7 +9953,7 @@
       },
       "gripper_profile": "standard-panda",
       "arm_count": 8,
-      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
+      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\nEvery timber needs a qualified airborne handover before it can count as complete, so\nplan one for each timber even when a single team could reach GOAL. Keep at least two\ncurrent holders on the timber while the new arm takes hold, and hold that overlap for\nat least 0.2 seconds before a current holder lets go. Dragging or pushing a timber\nalong the table does not count, and neither does a handover made after a drop until\nthe last sending team has recovered the timber.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
       "source": {
         "scene_sha256": "ce01162529bcaaedda48bd2f5ced66fdfa42df7ca044ecd25372a0c610da6cef",
         "task_sha256": "bd41b831203d6b11520d5742c97c848407c812956bdb7cd3a80e117df44371ee",
@@ -10035,12 +10039,15 @@
       "rules": [
         "Move all 2 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
         "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
+        "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
         "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
         "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
         "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
+        "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
         "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
         "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
         "The rigid circular-arc timber subtends 63 degrees.",
+        "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.",
         "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
       ],
       "completion": {
@@ -10052,13 +10059,14 @@
         "require_stationary": false,
         "allow_goal_payload_contact": true,
         "arbitrary_goal_placement": true,
-        "required_airborne_handover": false,
+        "required_airborne_handover": true,
         "support_via_goal_payload": true,
         "allow_goal_partial_support": true,
         "allow_near_goal_release": true,
         "max_release_gap_m": 0.03,
         "release_height_reference": "lowest_assembly_part",
-        "scope": "Every timber at least 70% above painted GOAL and released; process events are reported separately."
+        "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
+        "relay_completion_rule": "relay-airborne-handover-v1"
       },
       "mechanism": {
         "chord_m": 1.15,
@@ -10345,7 +10353,7 @@
       },
       "gripper_profile": "standard-panda",
       "arm_count": 8,
-      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
+      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\nEvery timber needs a qualified airborne handover before it can count as complete, so\nplan one for each timber even when a single team could reach GOAL. Keep at least two\ncurrent holders on the timber while the new arm takes hold, and hold that overlap for\nat least 0.2 seconds before a current holder lets go. Dragging or pushing a timber\nalong the table does not count, and neither does a handover made after a drop until\nthe last sending team has recovered the timber.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
       "source": {
         "scene_sha256": "7412a55da139aa0c57278f1f1d6b68d0a9594ce407ad4c0b624aa0a9b766fdfa",
         "task_sha256": "6f854393eb3260345f6e98822f4a37bec0a4c8c04095eb3e3de094a86c02d859",
@@ -10431,12 +10439,15 @@
       "rules": [
         "Move all 2 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
         "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
+        "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
         "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
         "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
         "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
+        "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
         "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
         "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
         "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
+        "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.",
         "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
       ],
       "completion": {
@@ -10448,13 +10459,14 @@
         "require_stationary": false,
         "allow_goal_payload_contact": true,
         "arbitrary_goal_placement": true,
-        "required_airborne_handover": false,
+        "required_airborne_handover": true,
         "support_via_goal_payload": true,
         "allow_goal_partial_support": true,
         "allow_near_goal_release": true,
         "max_release_gap_m": 0.03,
         "release_height_reference": "lowest_assembly_part",
-        "scope": "Every timber at least 70% above painted GOAL and released; process events are reported separately."
+        "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
+        "relay_completion_rule": "relay-airborne-handover-v1"
       },
       "mechanism": {
         "kind": "underslung_transverse_spring_elbow",
@@ -10788,7 +10800,7 @@
       },
       "gripper_profile": "standard-panda",
       "arm_count": 8,
-      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
+      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\nEvery timber needs a qualified airborne handover before it can count as complete, so\nplan one for each timber even when a single team could reach GOAL. Keep at least two\ncurrent holders on the timber while the new arm takes hold, and hold that overlap for\nat least 0.2 seconds before a current holder lets go. Dragging or pushing a timber\nalong the table does not count, and neither does a handover made after a drop until\nthe last sending team has recovered the timber.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
       "source": {
         "scene_sha256": "0bf3386449482496d13ea597262c470fa5cbb5748840ecda7fb039bbef860a0e",
         "task_sha256": "a2d2796df105fc4bf09f53509682a5d1e83dec660be9b703c935c24a8effb35c",
@@ -10906,10 +10918,13 @@
       "rules": [
         "Move all 3 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
         "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
+        "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
         "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
         "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
         "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
+        "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
         "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
+        "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.",
         "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
       ],
       "completion": {
@@ -10921,13 +10936,14 @@
         "require_stationary": false,
         "allow_goal_payload_contact": true,
         "arbitrary_goal_placement": true,
-        "required_airborne_handover": false,
+        "required_airborne_handover": true,
         "support_via_goal_payload": true,
         "allow_goal_partial_support": true,
         "allow_near_goal_release": true,
         "max_release_gap_m": 0.03,
         "release_height_reference": "lowest_assembly_part",
-        "scope": "Every timber at least 70% above painted GOAL and released; process events are reported separately."
+        "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
+        "relay_completion_rule": "relay-airborne-handover-v1"
       },
       "mechanism": {
         "chord_m": 1.2,
@@ -11186,7 +11202,7 @@
       },
       "gripper_profile": "standard-panda",
       "arm_count": 12,
-      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
+      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\nEvery timber needs a qualified airborne handover before it can count as complete, so\nplan one for each timber even when a single team could reach GOAL. Keep at least two\ncurrent holders on the timber while the new arm takes hold, and hold that overlap for\nat least 0.2 seconds before a current holder lets go. Dragging or pushing a timber\nalong the table does not count, and neither does a handover made after a drop until\nthe last sending team has recovered the timber.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
       "source": {
         "scene_sha256": "09bec4bc56fae92f0e636965f88b4408c67c017f5fb95fd4df5a0182bba7f775",
         "task_sha256": "9ae75cc580d7afae9004e579ddb8914e57357c07e5cf1f1f323cc54feb5a1dad",
@@ -11304,12 +11320,15 @@
       "rules": [
         "Move all 3 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
         "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
+        "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
         "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
         "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
         "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
+        "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
         "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
         "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
         "The rigid circular-arc timber subtends 63 degrees.",
+        "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.",
         "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
       ],
       "completion": {
@@ -11321,13 +11340,14 @@
         "require_stationary": false,
         "allow_goal_payload_contact": true,
         "arbitrary_goal_placement": true,
-        "required_airborne_handover": false,
+        "required_airborne_handover": true,
         "support_via_goal_payload": true,
         "allow_goal_partial_support": true,
         "allow_near_goal_release": true,
         "max_release_gap_m": 0.03,
         "release_height_reference": "lowest_assembly_part",
-        "scope": "Every timber at least 70% above painted GOAL and released; process events are reported separately."
+        "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
+        "relay_completion_rule": "relay-airborne-handover-v1"
       },
       "mechanism": {
         "chord_m": 1.15,
@@ -11721,7 +11741,7 @@
       },
       "gripper_profile": "standard-panda",
       "arm_count": 12,
-      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
+      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\nEvery timber needs a qualified airborne handover before it can count as complete, so\nplan one for each timber even when a single team could reach GOAL. Keep at least two\ncurrent holders on the timber while the new arm takes hold, and hold that overlap for\nat least 0.2 seconds before a current holder lets go. Dragging or pushing a timber\nalong the table does not count, and neither does a handover made after a drop until\nthe last sending team has recovered the timber.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
       "source": {
         "scene_sha256": "22a8116ca86b205a2fb2d9e12e96d32764d96db0e3894d792497c00bdfce013f",
         "task_sha256": "316e319853fddb7e324047834f1806b58b39191e9d3cd4758a5bbee466a10635",
@@ -11839,12 +11859,15 @@
       "rules": [
         "Move all 3 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
         "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
+        "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
         "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
         "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
         "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
+        "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
         "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
         "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
         "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
+        "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.",
         "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
       ],
       "completion": {
@@ -11856,13 +11879,14 @@
         "require_stationary": false,
         "allow_goal_payload_contact": true,
         "arbitrary_goal_placement": true,
-        "required_airborne_handover": false,
+        "required_airborne_handover": true,
         "support_via_goal_payload": true,
         "allow_goal_partial_support": true,
         "allow_near_goal_release": true,
         "max_release_gap_m": 0.03,
         "release_height_reference": "lowest_assembly_part",
-        "scope": "Every timber at least 70% above painted GOAL and released; process events are reported separately."
+        "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
+        "relay_completion_rule": "relay-airborne-handover-v1"
       },
       "mechanism": {
         "kind": "underslung_transverse_spring_elbow",
@@ -12319,7 +12343,7 @@
       },
       "gripper_profile": "standard-panda",
       "arm_count": 12,
-      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
+      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\nEvery timber needs a qualified airborne handover before it can count as complete, so\nplan one for each timber even when a single team could reach GOAL. Keep at least two\ncurrent holders on the timber while the new arm takes hold, and hold that overlap for\nat least 0.2 seconds before a current holder lets go. Dragging or pushing a timber\nalong the table does not count, and neither does a handover made after a drop until\nthe last sending team has recovered the timber.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
       "source": {
         "scene_sha256": "30122d18736ad61e97c61a9cbea359b873e6a226aa0aacba7c60338d912153ae",
         "task_sha256": "534b9fe7c1884aad8bf84c146192d470e1abfad06035d09eca21ebb88a90e290",
@@ -12469,10 +12493,13 @@
       "rules": [
         "Move all 4 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
         "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
+        "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
         "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
         "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
         "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
+        "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
         "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
+        "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.",
         "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
       ],
       "completion": {
@@ -12484,13 +12511,14 @@
         "require_stationary": false,
         "allow_goal_payload_contact": true,
         "arbitrary_goal_placement": true,
-        "required_airborne_handover": false,
+        "required_airborne_handover": true,
         "support_via_goal_payload": true,
         "allow_goal_partial_support": true,
         "allow_near_goal_release": true,
         "max_release_gap_m": 0.03,
         "release_height_reference": "lowest_assembly_part",
-        "scope": "Every timber at least 70% above painted GOAL and released; process events are reported separately."
+        "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
+        "relay_completion_rule": "relay-airborne-handover-v1"
       },
       "mechanism": {
         "chord_m": 1.2,
@@ -12756,7 +12784,7 @@
       },
       "gripper_profile": "standard-panda",
       "arm_count": 16,
-      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
+      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\nEvery timber needs a qualified airborne handover before it can count as complete, so\nplan one for each timber even when a single team could reach GOAL. Keep at least two\ncurrent holders on the timber while the new arm takes hold, and hold that overlap for\nat least 0.2 seconds before a current holder lets go. Dragging or pushing a timber\nalong the table does not count, and neither does a handover made after a drop until\nthe last sending team has recovered the timber.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
       "source": {
         "scene_sha256": "8ac11391873bc813df94eb6a3718ed04c1701f6de15224fb68a45226fd158b61",
         "task_sha256": "188712601e3c9e532ff2177c5e3924b7258e5abb37592157639482c4df416313",
@@ -12906,12 +12934,15 @@
       "rules": [
         "Move all 4 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
         "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
+        "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
         "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
         "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
         "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
+        "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
         "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
         "The initial endpoint chord is 1.20m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
         "The rigid circular-arc timber subtends 63 degrees.",
+        "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.",
         "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
       ],
       "completion": {
@@ -12923,13 +12954,14 @@
         "require_stationary": false,
         "allow_goal_payload_contact": true,
         "arbitrary_goal_placement": true,
-        "required_airborne_handover": false,
+        "required_airborne_handover": true,
         "support_via_goal_payload": true,
         "allow_goal_partial_support": true,
         "allow_near_goal_release": true,
         "max_release_gap_m": 0.03,
         "release_height_reference": "lowest_assembly_part",
-        "scope": "Every timber at least 70% above painted GOAL and released; process events are reported separately."
+        "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
+        "relay_completion_rule": "relay-airborne-handover-v1"
       },
       "mechanism": {
         "chord_m": 1.2,
@@ -13360,7 +13392,7 @@
       },
       "gripper_profile": "standard-panda",
       "arm_count": 16,
-      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
+      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\nEvery timber needs a qualified airborne handover before it can count as complete, so\nplan one for each timber even when a single team could reach GOAL. Keep at least two\ncurrent holders on the timber while the new arm takes hold, and hold that overlap for\nat least 0.2 seconds before a current holder lets go. Dragging or pushing a timber\nalong the table does not count, and neither does a handover made after a drop until\nthe last sending team has recovered the timber.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
       "source": {
         "scene_sha256": "7ded10c6627dd13632332223dff2ec0c5e800d730a36dbdb0f2d3e0971ff3f13",
         "task_sha256": "c0e5aa483fc69c2b7756bd787b625f25428a8793ce639303a4bc13d61dd5e932",
@@ -13510,12 +13542,15 @@
       "rules": [
         "Move all 4 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
         "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
+        "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
         "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
         "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
         "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
+        "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
         "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
         "The initial endpoint chord is 1.20m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
         "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
+        "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.",
         "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
       ],
       "completion": {
@@ -13527,13 +13562,14 @@
         "require_stationary": false,
         "allow_goal_payload_contact": true,
         "arbitrary_goal_placement": true,
-        "required_airborne_handover": false,
+        "required_airborne_handover": true,
         "support_via_goal_payload": true,
         "allow_goal_partial_support": true,
         "allow_near_goal_release": true,
         "max_release_gap_m": 0.03,
         "release_height_reference": "lowest_assembly_part",
-        "scope": "Every timber at least 70% above painted GOAL and released; process events are reported separately."
+        "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
+        "relay_completion_rule": "relay-airborne-handover-v1"
       },
       "mechanism": {
         "kind": "underslung_transverse_spring_elbow",
@@ -14043,7 +14079,7 @@
       },
       "gripper_profile": "standard-panda",
       "arm_count": 16,
-      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
+      "family_guidance": "---\nname: relay\ndescription: Carry long assemblies with several arms in relay, plan supported handovers and verify release at the goal.\n---\n\n# Relay\n\n## Shared payloads\n\nPlan the relative motion of all supporting tools as well as their individual\npaths. A same-cycle start does not guarantee matched arrival or prevent internal\nloads. Choose support contacts and bearing direction for load moments, not jaw\naperture alone; if a lift changes the payload pose unexpectedly, reassess that\ngeometry before repeating the motion. Treat support and manipulation as coupled\nwork: control coupled robots directly together, or give them to one bounded\ndelegate, rather than splitting coupled support across independent scopes.\n\n## Handovers\n\nChoose teams, the route and handover points from reach, observations and the\ncost of each regrasp. Preserve receiver access and sender withdrawal when choosing\na grasp. Before releasing an existing hold, establish the receiver's support from\nallowed RGB and robot evidence; width-based grasp feedback alone is insufficient.\nUpdate the shared reference after slip or reorientation.\n\nEvery timber needs a qualified airborne handover before it can count as complete, so\nplan one for each timber even when a single team could reach GOAL. Keep at least two\ncurrent holders on the timber while the new arm takes hold, and hold that overlap for\nat least 0.2 seconds before a current holder lets go. Dragging or pushing a timber\nalong the table does not count, and neither does a handover made after a drop until\nthe last sending team has recovered the timber.\n\n## At the goal\n\nCheck each assembly separately against the completion rule from permitted views,\nand confirm that every robot has released it and the jaws have cleared it before\nproposing completion. After a drop or collision, reason from the actual scene and\nrecover with ordinary actions.\n",
       "source": {
         "scene_sha256": "54466c5c021d9def271ac4a78e82a30ff3084921118028db6da6d297ad8c10b2",
         "task_sha256": "0b7dd12cd98d0f72e6b029ddc55ef36f117dc7c1d32e78d36347278cbf4728c7",

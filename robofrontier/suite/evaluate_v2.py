@@ -134,6 +134,18 @@ class Relay:
             part=pending.pop()
             for neighbor in edges[part]-ground:ground.add(neighbor);pending.append(neighbor)
         return {name for name in eligible if (self.payload_components[name]<=ground if require_all else bool(self.payload_components[name]&ground))}
+    def continue_record(self):
+        """A continued segment keeps each timber's handovers and drops, which are episode history.
+
+        Only the record carries over: a timber held at the restore frame is re-established
+        as airborne by the ordinary lift check (docs/running/run-segments.md).
+        """
+        from ..run_segments import current_restore
+        directory=getattr(self.mon.w,'directory',None)
+        found=current_restore(directory) if directory is not None else None
+        record=found[0].get('evaluator',{}).get('relay_payloads') if found else None
+        for ident,item in (record or {}).items():
+            if ident in self.states:self.states[ident].update(transitions=list(item['handovers']),drops=int(item['drops']))
     def sample(self):
         mon=self.mon;t=float(mon.d.time);completed=0;terminal_completed=0;reports={}
         inside_flags={name:self.inside(state) for name,state in self.states.items()}
@@ -220,8 +232,12 @@ class Relay:
                 terminal=bool(fraction >= mon.task['completion']['timber_inside_fraction_min'] and mon.released(all_g))
             else:
                 terminal=inside and on_table and mon.released(all_g)
+            handover_met=any(set(item['receivers'])-set(item['senders']) for item in state['transitions'])
+            handover_required=mon.task.get('run_protocol',{}).get('relay_completion_rule') is not None
+            terminal=bool(terminal and (handover_met or not handover_required))
             terminal_completed+=int(terminal)
             completed+=int(qualified);reports[ident]=dict(completed=qualified,terminal_goal_met=terminal,airborne=state['airborne'],drops=state['drops'],custody=sorted(state['custody']),support=sorted(support),goal_table_support=on_table,handovers=state['transitions'],spill=state['spill'])
+            if handover_required:reports[ident].update(airborne_handover_met=handover_met)
             if fraction_contract:
                 reports[ident].update(timber_inside_fraction=fraction,
                     timber_inside_fraction_min=mon.task['completion']['timber_inside_fraction_min'])

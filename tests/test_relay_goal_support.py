@@ -18,7 +18,7 @@ class GoalSupportTests(unittest.TestCase):
         data=mujoco.MjData(model);mujoco.mj_forward(model,data)
         task=dict(table_height_m=.8,route=[dict(center_m=[0,0,.8],nominal_yaw_rad=0.,half_size_m=[.4,.4])],
             mechanism=dict(payload_assemblies=[dict(id='p1',weight_body='weight' if weight else None),dict(id='p2')]))
-        mon=SimpleNamespace(m=model,d=data,task=task,descendant_geoms=lambda bid:np.flatnonzero(model.geom_bodyid==bid).tolist())
+        mon=SimpleNamespace(m=model,d=data,task=task,scene_contacts=lambda:data.contact,descendant_geoms=lambda bid:np.flatnonzero(model.geom_bodyid==bid).tolist())
         return model,data,Relay(mon)
 
     def test_upper_rod_is_supported_through_lower_rod_in_goal(self):
