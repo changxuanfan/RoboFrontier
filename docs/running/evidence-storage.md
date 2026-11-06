@@ -248,6 +248,10 @@ keeps sources by default and never converts an uncertain action into a replay.
   reads. Converting finished Dial, Mosaic, Relay and Transport logs offline gave
   about 11% of the original size, with every event field recoverable at every
   original sample time.
+- `process_log: "events-60s"` (the policy harness default): the same events, with
+  snapshots every 60 simulated seconds. A scene that records motion leaves poses
+  out of its snapshots, except the last; `robofrontier.motion_query.object_poses`
+  reads them from the recording. Each Dial trial is written with its event.
 
 ## Session transcripts
 

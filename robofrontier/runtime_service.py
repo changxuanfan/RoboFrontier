@@ -650,10 +650,9 @@ class RuntimeService:
         if self.ended or self.store.get('physics_state') != 'running':
             return
         now = float(self.world.time)
-        actions = self.store.actions()
+        actions = self.store.unresolved_actions()
         active = {ident for ident, action in actions.items()
-                  if action.get('status') in ('running','uncertain') and
-                  (action.get('local_recovery') or action.get('status') == 'uncertain' and action.get('isolated'))}
+                  if action.get('local_recovery') or action.get('status') == 'uncertain' and action.get('isolated')}
         self.recovery_checks = {ident: due for ident, due in self.recovery_checks.items() if ident in active}
         for ident in active:
             action = actions[ident]
@@ -741,7 +740,7 @@ class RuntimeService:
         for call_id, waiter in list(self.waiters.items()):
             job = waiter['job']
             pending = self.store.pending(job['actor'])
-            own_actions = self.store.actions(job['actor'])
+            own_actions = self.store.actions_for_calls(job['actor'], waiter['call_ids'])
             executions = {i:own_actions[i] for i in waiter['call_ids']}
             terminal = any(v['status'] in ('completed','failed','uncertain') for v in executions.values())
             ended = self.ended

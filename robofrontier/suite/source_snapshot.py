@@ -27,7 +27,7 @@ def freeze_executor(root,destination,harness,catalog):
     for name,source in (('harness',harness),('catalog',catalog)):
         target=destination/'inputs'/f'{name}.json';payload=Path(source).read_bytes();json.loads(payload)
         target.write_bytes(payload);hashes[f'inputs/{name}.json']=hashlib.sha256(payload).hexdigest()
-    for name in ('configs','vendor','assets','runs','outputs','docs','.agents','config.json'):
+    for name in ('configs','vendor','assets','runs','outputs','docs','.agents','config.json','benchmark'):
         source=root/name
         if source.exists():(destination/name).symlink_to(source,target_is_directory=source.is_dir())
     manifest=dict(schema='robofrontier.oracle-source.v1',source_root=str(root),created_unix_s=time.time(),

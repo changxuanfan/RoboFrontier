@@ -12,6 +12,23 @@ class StoreTests(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.path=Path(self.tmp.name)/'runtime.sqlite'
         self.s=RuntimeStore(self.path);self.s.initialize('fake-run',load_harness(),['A','B','C'])
     def tearDown(self):self.s.close();self.tmp.cleanup()
+    def _action(self,call_id,actor,status,**fields):
+        value={'action_id':call_id,'arm':'A','type':'move','status':status,'parameters':{},**fields}
+        self.s.db.execute("INSERT INTO calls VALUES (?,?,'move','{}',?,NULL,0)",(call_id,actor,status))
+        self.s.db.execute('INSERT INTO actions VALUES (?,?,?,?)',(call_id,actor,status,packed(value)))
+        return value
+    def test_unresolved_actions_are_exactly_the_running_and_uncertain_ones(self):
+        kept={'r':self._action('r','A','running',local_recovery=True),'u':self._action('u','A','uncertain',isolated=True)}
+        for call_id,status in (('c','completed'),('f','failed'),('p','pending')):self._action(call_id,'A',status)
+        self.assertEqual(self.s.unresolved_actions(),kept)
+        # The narrowed read must select what the full read's status filter selected.
+        self.assertEqual({k:v for k,v in self.s.actions().items() if v['status'] in ('running','uncertain')},kept)
+    def test_actions_for_calls_returns_only_that_actors_named_calls(self):
+        mine=self._action('a1','A','running');self._action('a2','A','completed');self._action('b1','B','running')
+        self.assertEqual(self.s.actions_for_calls('A',['a1']),{'a1':mine})
+        # Another actor's call is absent, exactly as it is from actions(actor).
+        self.assertEqual(self.s.actions_for_calls('A',['b1']),{})
+        full=self.s.actions('A');self.assertEqual(self.s.actions_for_calls('A',['a1','a2']),{i:full[i] for i in ('a1','a2')})
     def test_concurrent_send_and_retry_deduplicate_without_loss(self):
         errors=[]
         def send(i):

@@ -103,7 +103,7 @@ class Relay:
                 for gid in geoms:self.geom_component[gid]=name
     def environment_contact(self,geoms):
         mon=self.mon;own=set(geoms)
-        return any(c.dist<=0 and any(int(a) in own and (mon.m.geom(int(b)).name or '').startswith(('table_','floor','pocket_')) for a,b in ((c.geom1,c.geom2),(c.geom2,c.geom1))) for c in mon.d.contact)
+        return any(c.dist<=0 and any(int(a) in own and (mon.m.geom(int(b)).name or '').startswith(('table_','floor','pocket_')) for a,b in ((c.geom1,c.geom2),(c.geom2,c.geom1))) for c in mon.scene_contacts())
     def inside(self,state):
         mon=self.mon;region=self.route[-1];yaw=region['nominal_yaw_rad'];c,s=math.cos(yaw),math.sin(yaw);r=np.array([[c,-s,0],[s,c,0],[0,0,1.]])
         center=np.asarray(region['center_m']);half=np.asarray(region.get('half_size_m',[.24,.65]))
@@ -122,7 +122,7 @@ class Relay:
             eligible&=set(inside_ids) if inside_ids is not None else {name for name,state in self.states.items() if self.inside(state)}
         components={part for name in eligible for part in self.payload_components[name]}
         edges={part:set() for part in components};ground=set();mon=self.mon
-        for contact in mon.d.contact:
+        for contact in mon.scene_contacts():
             if contact.dist>0:continue
             a,b=map(int,contact.geom);left=self.geom_component.get(a);right=self.geom_component.get(b)
             if left in components and right in components and left!=right:

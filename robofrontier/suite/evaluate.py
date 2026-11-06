@@ -9,7 +9,7 @@ DIGITS={0:'abcdef',1:'bc',2:'abged',3:'abgcd',4:'fgbc',5:'afgcd',6:'afgedc',7:'a
 # tooling reads this). 'events-1s': an event whenever a non-continuous result
 # field changes, checked at every 20 ms sample, plus a full snapshot every 1 s
 # and at the end. Detection itself is identical in both.
-PROCESS_LOG_FORMATS={'full':.10,'events-1s':1.0}
+PROCESS_LOG_FORMATS={'full':.10,'events-1s':1.0,'events-60s':60.0}
 # Fields that change with time alone; 'events-1s' keeps them in snapshots only.
 CONTINUOUS_FIELDS=frozenset({'sim_time_s','samples','private_angles_deg','private_angle_speeds_rad_s','private_clearance_m',
                              'timber_inside_fraction'})
@@ -96,7 +96,7 @@ class Monitor:
         # A continued segment appends to the same process log (docs/running/run-segments.md).
         self.log=Path(log_path).open('a' if append else 'w') if log_path else None;self.active=True
         if log_format not in PROCESS_LOG_FORMATS:raise ValueError('Unknown process log format')
-        self.log_format=log_format;self.snapshot_interval=PROCESS_LOG_FORMATS[log_format];self.last_event=None;self.final_logged=False
+        self.log_format=log_format;self.snapshot_interval=PROCESS_LOG_FORMATS[log_format];self.last_event=None;self.logged_trials=0;self.final_logged=False
         if self.log and log_format!='full':
             # Self-describing header; 'full' logs keep their original line-per-snapshot form.
             self.log.write(json.dumps(dict(schema='robofrontier.suite-process.v2',format=log_format,snapshot_interval_s=self.snapshot_interval,
@@ -160,6 +160,20 @@ class Monitor:
     def contacts(self):
         if not self.d.ncon:return np.empty((0,2),int),np.empty(0)
         return np.asarray(self.d.contact.geom),np.asarray(self.d.contact.dist)
+    def scene_contacts(self):
+        """Every current contact, including those a sleeping world no longer lists.
+
+        MuJoCo drops contacts between sleeping bodies from `data.contact`, though they
+        still touch. Scoring that asks what supports an object recomputes them here, from
+        a separate MjData that never sleeps. Physics is untouched: no force is read or
+        written, and a world without sleep returns its own list unchanged."""
+        if not self.m.opt.enableflags&int(mujoco.mjtEnableBit.mjENBL_SLEEP):return self.d.contact
+        scratch=getattr(self,'_contact_data',None)
+        if scratch is None:scratch=self._contact_data=mujoco.MjData(self.m);self._contact_time=None
+        if self._contact_time!=float(self.d.time):
+            scratch.qpos[:]=self.d.qpos;scratch.time=float(self.d.time)
+            mujoco.mj_kinematics(self.m,scratch);mujoco.mj_collision(self.m,scratch);self._contact_time=float(self.d.time)
+        return scratch.contact
     def bilateral(self,target_geoms,positive_force=False):
         """Opposed-jaw proximity with actual contact on at least one side.
 
@@ -244,11 +258,19 @@ class Monitor:
         else:
             events=json.dumps(event_fields(result),sort_keys=True,allow_nan=False)
             if final or t>=self.next_log:
-                self.next_log=t+self.snapshot_interval;record=dict(type='snapshot',sim_time_s=t,result=result,objects=self.object_poses())
+                self.next_log=t+self.snapshot_interval;record=dict(type='snapshot',sim_time_s=t,result=result)
+                if final or self.log_format!='events-60s' or not self.motion_recorded():record['objects']=self.object_poses()
             elif events!=self.last_event:record=dict(type='event',sim_time_s=t,result=result)
             else:return
             self.last_event=events
+            if self.log_format=='events-60s' and getattr(getattr(self,'game',None),'trials',None):
+                fresh=self.game.trials[self.logged_trials:]
+                if fresh:record['trials']=fresh;self.logged_trials=len(self.game.trials)
         self.log.write(json.dumps(record,allow_nan=False)+'\n');self.log.flush()
+    def motion_recorded(self):
+        """This scene records motion, so its poses need not be logged twice (motion_query)."""
+        asset=self.task.get('scene_asset')
+        return bool(asset) and (Path(self.w.directory)/Path(asset).parent/'workstation.json').exists()
     def object_poses(self):
         return {n:dict(position_m=self.d.body(n).xpos.tolist(),quaternion_wxyz=self.d.body(n).xquat.tolist()) for n in self.names}
     def sample_goals(self):
@@ -365,7 +387,7 @@ class Monitor:
         if self.carried_trials:self.result_cache['carried_valid_trials']=self.carried_trials
     def sample_relay(self):
         t=float(self.d.time);gs=self.geoms['payload'];support=self.bilateral(self.support_geoms,positive_force=True);position=self.d.body('payload').xpos.copy();contact_env=False;cradle=False
-        for c in self.d.contact:
+        for c in self.scene_contacts():
             if c.dist>0:continue
             for a,b in ((int(c.geom1),int(c.geom2)),(int(c.geom2),int(c.geom1))):
                 if a not in gs:continue
