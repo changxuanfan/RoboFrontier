@@ -1,5 +1,6 @@
 """Derived host metrics with explicit missing values; never evaluator feedback."""
 from collections import Counter
+from datetime import datetime
 import json
 import lzma
 import math
@@ -112,6 +113,9 @@ def host_event(run, event, **fields):
         return False
 
 
+AFTER_LAST_RESULT = 'after_last_result'
+
+
 def number(value):
     return value if type(value) in (int, float) and math.isfinite(value) and value >= 0 else None
 
@@ -119,8 +123,8 @@ def number(value):
 def usage(engine, raw, model_usage=None):
     raw = raw if isinstance(raw, dict) else {}
     if engine == 'claude':
-        # CLI modelUsage is cumulative over all requests in this CLI turn;
-        # usage may describe only its final request. Never add the two together.
+        # modelUsage is the session's running total, including requests the turn's
+        # usage leaves out. Never add the two; export_metrics takes per-turn differences.
         if isinstance(model_usage, dict) and model_usage:
             aliases = {'input_tokens':'inputTokens', 'cache_read_input_tokens':'cacheReadInputTokens',
                        'cache_creation_input_tokens':'cacheCreationInputTokens', 'output_tokens':'outputTokens'}
@@ -143,6 +147,74 @@ def usage(engine, raw, model_usage=None):
     return {'input_tokens': total, 'uncached_input_tokens': uncached, 'cache_miss_input_tokens': miss,
             'cached_input_tokens': cached, 'cache_write_input_tokens': written,
             'output_tokens': number(raw.get('output_tokens', raw.get('outputTokens')))}
+
+
+def _counter_delta(current, previous):
+    return {k: v-previous[k] if v is not None and previous.get(k) is not None and v >= previous[k] else None
+            for k, v in current.items()}
+
+
+def _claude_turn_usage(event, totals):
+    """One completed turn's share of a session's running modelUsage total.
+
+    A lower counter means a new CLI process began counting again from zero."""
+    current = usage('claude', event.get('usage'), event.get('model_usage'))
+    session = event.get('session_id')
+    if not event.get('model_usage') or not session: return current
+    previous = totals.get(session)
+    totals[session] = current
+    if previous is None or any(v is not None and previous.get(k) is not None and v < previous[k]
+                               for k, v in current.items()):
+        return current
+    return _counter_delta(current, previous)
+
+
+def _claude_usage_after_results(run, reported_until, actors):
+    """Requests no reported result covers, from the run's own transcripts, one row per session.
+
+    A background task can wake an idle CLI after the host stopped reading its results.
+    Fork copies keep their message ids and timestamps but take the child's session id, so
+    a copy is reported only if every session holding it with a known result ended later."""
+    try: folder = run_layout.path(run, 'engine_config', 'claude')/'projects'
+    except KeyError: folder = None
+    entries = {}
+    for path in session_glob(folder, '*.jsonl') if folder is not None and folder.is_dir() else []:
+        with open_session(path) as stream:
+            for line in stream:
+                if '"usage"' not in line and 'compact_boundary' not in line: continue
+                try: record = json.loads(line)
+                except ValueError: continue
+                try: at = datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00')).timestamp()
+                except (AttributeError, KeyError, ValueError): continue
+                message = record.get('message') if isinstance(record.get('message'), dict) else {}
+                if record.get('subtype') == 'compact_boundary':
+                    key, used = ('compaction', record['timestamp']), None
+                elif isinstance(message.get('usage'), dict) and message.get('id'):
+                    key, used = message['id'], message['usage']  # Repeated per content block; the last is final.
+                else: continue
+                entry = entries.setdefault(key, {'holders': set(), 'at': at, 'usage': used, 'record': record})
+                entry['holders'].add(record.get('sessionId') or session_stem(path).name)
+                entry['at'] = max(entry['at'], at); entry['usage'] = used; entry['record'] = record
+    fields = ('input_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens', 'output_tokens')
+    by_session, sessions = {}, set()
+    compactions = pre_tokens = 0
+    for entry in entries.values():
+        known = {h: reported_until[h] for h in entry['holders'] if h in reported_until}
+        late = [h for h, until in known.items() if entry['at'] > until]
+        if known and not late: continue
+        session = min(late or entry['holders'])
+        sessions.add(session)
+        if entry['usage'] is None:
+            compactions += 1
+            pre_tokens += number((entry['record'].get('compactMetadata') or {}).get('preTokens')) or 0
+        else:
+            totals = by_session.setdefault(session, Counter())
+            totals.update({k: number(entry['usage'].get(k)) or 0 for k in fields})
+    rows = [{'actor': actors.get(session), 'session_id': session, 'phase': AFTER_LAST_RESULT,
+             'usage': usage('claude', {k: totals[k] for k in fields}), 'usage_source': 'transcript',
+             'reported_cost_usd': None, 'duration_s': None, 'ended_at': None}
+            for session, totals in sorted(by_session.items())]
+    return rows, {'sessions': len(sessions), 'compactions': compactions, 'compaction_pre_tokens': pre_tokens}
 
 
 def _records(path):
@@ -219,7 +291,9 @@ def export_metrics(run, engine):
     events = _records(run_layout.path(run, 'host_log', engine))
     rows, seen = [], set()
     legacy = False
+    after_results = None
     if engine == 'claude':
+        session_totals, reported_until, actors = {}, {}, {}
         for e in events:
             if e.get('event') != 'cli_turn_completed': continue
             key = e.get('events_name')
@@ -227,10 +301,19 @@ def export_metrics(run, engine):
             seen.add(key)
             rows.append({'actor': e.get('actor'), 'session_id': e.get('session_id'),
                          'phase': e.get('phase', 'policy'),
-                         'usage': usage(engine, e.get('usage'), e.get('model_usage')),
+                         'usage': _claude_turn_usage(e, session_totals),
                          'usage_source': 'model_usage' if e.get('model_usage') else 'usage',
                          'reported_cost_usd': number(e.get('reported_cost_usd')),
                          'duration_s': number(e.get('duration_s')), 'ended_at': number(e.get('at'))})
+            session = e.get('session_id')
+            if session:
+                actors[session] = e.get('actor')
+                if e.get('model_usage') or e.get('usage'):  # A result arrived, so its session's counter is known.
+                    at = number(e.get('at'))
+                    reported_until[session] = max(reported_until.get(session, 0), math.inf if at is None else at)
+        if rows:
+            late, after_results = _claude_usage_after_results(run, reported_until, actors)
+            rows += late
         if not rows:
             legacy = True
             # Older runs remain readable. Setup usage may be absent, so this
@@ -253,9 +336,7 @@ def export_metrics(run, engine):
             normalized = usage(engine, total)
             old = previous.get(tid)
             if old == normalized: continue
-            delta = usage(engine, last) if old is None else {
-                k: v-old[k] if v is not None and old.get(k) is not None and v >= old[k] else None
-                for k, v in normalized.items()}
+            delta = usage(engine, last) if old is None else _counter_delta(normalized, old)
             previous[tid] = normalized
             rows.append({'actor': e.get('actor'), 'session_id': tid, 'phase': 'policy',
                          'usage': delta, 'reported_cost_usd': None, 'duration_s': None, 'ended_at': None})
@@ -273,7 +354,7 @@ def export_metrics(run, engine):
     setup_seconds += [number(e.get('duration_s')) for e in events if e.get('event') in ('snapshot_created', 'fork_created')]
     intervals = [(r['ended_at']-r['duration_s'], r['ended_at']) for r in rows
                  if r['ended_at'] is not None and r['duration_s'] is not None]
-    model_seconds = [r['duration_s'] for r in rows]
+    model_seconds = [r['duration_s'] for r in rows if r['phase'] != AFTER_LAST_RESULT]
     if engine == 'codex':
         completed = [e for e in events if e.get('event') == 'turn/completed']
         intervals = [(e['at']-e['duration_s'], e['at']) for e in completed
@@ -287,7 +368,8 @@ def export_metrics(run, engine):
     malformed = sum(e.get('event') == 'malformed_evidence' for e in events)
     started = {e.get('events_name') for e in events if e.get('event') == 'cli_turn_started'}
     unfinished = len(started-seen) if engine == 'claude' else None
-    complete = not legacy and not malformed and not unfinished
+    # A compaction's tokens appear only in a result's modelUsage, never in the transcript.
+    complete = not legacy and not malformed and not unfinished and not (after_results or {}).get('compactions')
     reported = sum(costs) if costs else None
     estimate = claude_transcript_cost(run) if engine == 'claude' else None
     cost_complete = bool(rows) and len(costs) == len(rows) and complete
@@ -304,6 +386,7 @@ def export_metrics(run, engine):
             'transcript_cost_estimate': estimate,
             'estimated_unreported_cost_usd': (max(0., round(estimate['estimated_cost_usd']-(reported or 0.), 6))
                                               if not cost_complete and estimate and estimate['estimated_cost_usd'] is not None else None),
+            'usage_after_last_result': after_results,
             'rows': rows, 'phase_counts': {p: sum(r['phase'] == p for r in rows) for p in sorted({r['phase'] for r in rows})},
             'row_unit': 'cli_turn' if engine == 'claude' else 'token_usage_update',
             'unfinished_cli_turns': unfinished,

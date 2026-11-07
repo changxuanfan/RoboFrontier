@@ -237,8 +237,14 @@ Collected mappings take priority over stale paths to the original server.
 | `tool_seconds_sum` | Host tool durations, which may overlap model-process time. |
 | `fork_setup_seconds_sum` | Codex native fork RPC time; for Claude, the time from starting a child's first turn until its copied history was verified. Claude runs from before fork-at-call setup report their tool-free snapshot/fork turns here instead. |
 
-Claude prefers final `modelUsage`, aggregated across the turn's models, and uses
-`usage` only as a fallback; the two are not added. Older summary-only records are
+Claude prefers `modelUsage`, aggregated across the turn's models, and uses `usage`
+only as a fallback; the two are not added. `modelUsage` is a running total for the
+session, so each turn counts its difference from the session's previous turn, and a
+lower counter starts again from zero. Requests after a session's last reported result,
+such as a background task waking an idle CLI, are added from the run's transcripts as
+`after_last_result` rows and summarized in `usage_after_last_result`. A compaction in
+that stretch leaves `usage_complete` false, because transcripts omit its tokens. Older
+summary-only records are
 labeled `legacy_policy_only` and may omit setup. For Codex, the first usage update
 uses `last` to exclude inherited parent usage; subsequent updates use cumulative
 differences, with duplicate updates removed. These are host observations, not a
