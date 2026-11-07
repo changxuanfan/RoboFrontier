@@ -53,9 +53,17 @@ def prepare(run, profile):
     access = json.loads(path.read_text())
     if access.get('network') is not False:
         raise ValueError('The Landlock broker does not permit model networking')
-    access['filesystem'].update({'/proc': 'deny', '/tmp': 'deny', '/dev': 'deny'})
+    access['filesystem'].update({'/proc': 'deny', '/dev': 'deny'})
+    # A run with a policy environment keeps /tmp open, on every engine (policy_access), and
+    # gets a private /dev/shm (tool_worker), where Python's multiprocessing keeps its locks.
+    if access.get('policy_env'):
+        access['filesystem']['/dev/shm'] = 'write'
+    else:
+        access['filesystem']['/tmp'] = 'deny'
     if os.environ.get('TMPDIR'):
-        access['filesystem'][str(Path(os.environ['TMPDIR']).resolve())] = 'deny'
+        temporary = Path(os.environ['TMPDIR']).resolve()
+        if not (access.get('policy_env') and temporary == Path('/tmp').resolve()):
+            access['filesystem'][str(temporary)] = 'deny'
     access['filesystem'][str(run/'workspace')] = 'write'
     # Job-local virtualenvs can live beneath denied /tmp or source roots. Allow
     # only interpreter metadata and libraries, never the entire environment or

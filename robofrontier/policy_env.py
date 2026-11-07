@@ -24,6 +24,7 @@ TEMPORARY = '.tmp'  # Under workspace/: this run's temporary files, so they stay
 USER_BASE = '.python'  # Under workspace/: packages this run installs from the wheel store.
 SHELL_FILE = 'policy-env.sh'
 GUIDE_FILE = 'environment.md'
+RECEIPT_SUFFIX = '.check.json'
 
 
 def _digest_file(path):
@@ -67,6 +68,31 @@ def verify(root):
     if actual != manifest['tree_sha256']:
         raise ValueError('Policy environment changed since it was built: ' + str(root))
     return manifest
+
+
+def receipt_path(root):
+    """Beside the read-only environment, one per build, so each host's own build needs its own check."""
+    root = Path(root).resolve()
+    return root.parent/(root.name + RECEIPT_SUFFIX)
+
+
+def require_checked(root, manifest):
+    """Refuse an environment that scripts/check_policy_env.py has not passed on this host's build."""
+    try:
+        receipt = json.loads(receipt_path(root).read_text())
+    except (OSError, ValueError):
+        raise ValueError('Run scripts/check_policy_env.py on this host first: ' + str(root)) from None
+    if not receipt.get('passed') or receipt.get('tree_sha256') != manifest['tree_sha256']:
+        raise ValueError('Run scripts/check_policy_env.py on this host first: ' + str(root))
+
+
+def require_private_route(config):
+    """Refuse a Mac route's state under /tmp for a run with an environment, where policies can reach it."""
+    slurm = config.get('slurm', {})
+    if selected() is None or slurm.get('egress_mode', 'direct') != 'mac-ssh':
+        return
+    if Path(slurm['egress_root']).resolve().is_relative_to(Path('/tmp').resolve()):
+        raise ValueError('Keep slurm.egress_root outside /tmp, which policies can read and write')
 
 
 def selected():

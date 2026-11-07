@@ -73,6 +73,7 @@ class JobManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'frozen deny table'):
                 self.build()
 
+    @patch('robofrontier.codex.job_engine.require_pinned_cli', lambda env=None: None)
     def test_proxy_loss_terminates_only_the_owned_native_process_group(self):
         from robofrontier.codex.job_engine import engine
         self.private.mkdir(mode=0o700)

@@ -163,9 +163,21 @@ def export_sessions(manifest, home):
                    {'backend': BACKEND, 'task_id': task['id'], 'threads': rows})
 
 
+def require_pinned_cli(env=None):
+    """Refuse any other Codex CLI, as a newer one can reject this backend's configuration."""
+    pinned = re.search(r'^ARG CODEX_VERSION=(\S+)$', (ROOT/'docker/Dockerfile').read_text(), re.M).group(1)
+    try:
+        actual = subprocess.run(['codex', '--version'], env=env, capture_output=True, text=True).stdout.strip()
+    except OSError:
+        actual = ''
+    if actual != 'codex-cli ' + pinned:
+        raise ValueError('Put Codex CLI %s first on PATH; found %s' % (pinned, actual or 'none'))
+
+
 @contextmanager
 def engine(jobs, *, env, preflight=False, timeout_s=180):
     env = dict(env)
+    require_pinned_cli(env)
     for key in ('OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_BASE_URL', 'OPENAI_API_BASE'):
         env.pop(key, None)
     private = Path(env['ROBOFRONTIER_JOB_PRIVATE_ROOT']).resolve()

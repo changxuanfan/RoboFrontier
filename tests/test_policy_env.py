@@ -6,6 +6,7 @@ tests use a small fake environment, so they need neither a build nor a CLI.
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import tempfile
@@ -31,6 +32,7 @@ def fake_environment(folder):
                 'core': ['numpy'], 'store': ['networkx'], 'packages': {'numpy': '2.5.4'}}
     manifest['tree_sha256'] = policy_env.tree_sha256(root)
     (root/policy_env.MANIFEST).write_text(json.dumps(manifest))
+    policy_env.receipt_path(root).write_text(json.dumps({'passed': True, 'tree_sha256': manifest['tree_sha256']}))
     return root
 
 
@@ -79,9 +81,36 @@ class AccessTableTests(Fixture):
         with self.assertRaisesRegex(ValueError, 'changed since'):
             self.freeze()
 
-    def test_a_host_not_yet_tested_refuses(self):
-        with self.assertRaisesRegex(ValueError, 'not yet qualified'):
-            self.freeze('linux')
+    def test_the_rest_of_the_batch_stays_closed_even_when_scratch_is_under_tmp(self):
+        scratch = Path(tempfile.mkdtemp(prefix='rf-', dir='/tmp')).resolve()
+        self.addCleanup(lambda: __import__('shutil').rmtree(scratch, ignore_errors=True))
+        run = scratch/'runs/profile/case-a'
+        with patch.object(policy_access.sys, 'platform', 'darwin'):
+            table = policy_access.record(run, environment=self.root, repo=self.repo, home=self.home, checkouts=[self.repo])['filesystem']
+        self.assertEqual(policy_access.mode(table, scratch/'runs/profile/case-b/private/x'), 'deny')
+        self.assertEqual(policy_access.mode(table, scratch/'runs/other-profile/case-a/x'), 'deny')
+        self.assertEqual(policy_access.mode(table, run/'workspace/x'), 'write')
+        self.assertEqual(policy_access.mode(table, '/tmp/x'), 'write')
+
+    def test_an_environment_without_a_passed_check_refuses(self):
+        receipt = policy_env.receipt_path(self.root)
+        passed = receipt.read_text()
+        for broken in ('{"passed": false}', '{"passed": true, "tree_sha256": "other"}', 'not json'):
+            receipt.write_text(broken)
+            with self.assertRaisesRegex(ValueError, 'check_policy_env'):
+                self.freeze()
+        receipt.unlink()
+        with self.assertRaisesRegex(ValueError, 'check_policy_env'):
+            self.freeze()
+        receipt.write_text(passed)
+        self.freeze()
+
+    def test_linux_closes_its_own_folders(self):
+        with patch.object(policy_access.sys, 'platform', 'linux'):
+            record = policy_access.record(self.run_dir, environment=self.root, repo=self.repo,
+                                          home=self.home, checkouts=[self.repo])
+        for path in ('/home/someone/x', '/raid/someone/x', '/var/tmp/x'):
+            self.assertEqual(policy_access.mode(record['filesystem'], path), 'deny', path)
 
     def test_without_the_flag_every_run_keeps_the_earlier_table(self):
         with patch.dict(os.environ):
@@ -159,6 +188,39 @@ class RunFilesTests(Fixture):
         self.assertNotEqual(policy_bootstrap.READABLE, policy_bootstrap.READABLE_ENV)
 
 
+class RouteTests(Fixture):
+    def config(self, root):
+        return {'slurm': {'egress_mode': 'mac-ssh', 'egress_root': root}}
+
+    def test_a_route_under_tmp_is_refused_only_for_a_run_with_an_environment(self):
+        with patch.dict(os.environ, {policy_env.ENV_VAR: str(self.root)}):
+            with self.assertRaisesRegex(ValueError, 'outside /tmp'):
+                policy_env.require_private_route(self.config('/tmp/route'))
+            policy_env.require_private_route(self.config('/var/tmp/route'))
+            policy_env.require_private_route({'slurm': {'egress_mode': 'direct', 'egress_root': '/tmp/route'}})
+        with patch.dict(os.environ):
+            os.environ.pop(policy_env.ENV_VAR, None)
+            policy_env.require_private_route(self.config('/tmp/route'))
+
+
+class PinnedCliTests(unittest.TestCase):
+    def cli(self, folder, output):
+        path = Path(folder)/'codex'
+        path.write_text('#!/bin/sh\necho %s\n' % shlex.quote(output))
+        path.chmod(0o755)
+        return {'PATH': folder + ':/usr/bin:/bin'}
+
+    def test_only_the_pinned_codex_cli_is_accepted(self):
+        from robofrontier.codex.job_engine import ROOT as source, require_pinned_cli
+        pinned = re.search(r'CODEX_VERSION=(\S+)', (Path(source)/'docker/Dockerfile').read_text()).group(1)
+        with tempfile.TemporaryDirectory() as folder:
+            require_pinned_cli(self.cli(folder, 'codex-cli ' + pinned))
+            with self.assertRaisesRegex(ValueError, pinned):
+                require_pinned_cli(self.cli(folder, 'codex-cli 999.0.0'))
+            with self.assertRaisesRegex(ValueError, pinned):
+                require_pinned_cli({'PATH': folder + '/absent'})
+
+
 class CheckTests(unittest.TestCase):
     def test_every_attempt_has_an_expected_outcome_and_a_difference_is_reported(self):
         self.assertFalse(set(check_policy_env.MUST_WORK) & set(check_policy_env.MUST_FAIL))
@@ -166,6 +228,7 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(check_policy_env.differences(good), [])
         self.assertEqual(check_policy_env.differences({**good, 'read_private': 'ok'}), ['read_private should be denied'])
         self.assertEqual(check_policy_env.differences({**good, 'tempfile': 'denied'}), ['tempfile should work'])
+        self.assertEqual(check_policy_env.differences({**good, 'tempfile': 'denied'}, ('tempfile',)), [])
         self.assertIn('venv should work', check_policy_env.differences({k: v for k, v in good.items() if k != 'venv'}))
 
     def test_a_wrapper_failure_counts_even_when_the_script_itself_succeeded(self):
