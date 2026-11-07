@@ -39,6 +39,7 @@ def place_label(candidates,half,occupied,margin=.10):
 # geometry's projected outline at the current pose.
 ROBOT_LABEL = re.compile(r'([A-Z]{1,2})_label')
 ROBOT_LINK = re.compile(r'([A-Z]{1,2})_link\d+')  # robot geometry is often unnamed; its body is not
+ITEM_PRINT = re.compile(r'[A-Z]{1,2}_item\d+_print\d+')
 LABEL_GAP_M = 0.
 LABEL_SIDES_DEG = (0, -90, 90, 180)
 OBJECT_COVER = .10  # largest share of a label that objects may cover
@@ -167,6 +168,41 @@ def robot_label_moves(model, data, avoid_objects=True):
                                quat_wxyz=[math.cos(yaw/2), 0., 0., math.sin(yaw/2)],
                                object_cover=cover, distance_from_base_m=float(np.linalg.norm(centre-base)))
     return moves
+
+
+def item_print_turns(model):
+    """Display quaternions for block letters printed upside down on their side faces.
+
+    The source scene prints a block's +y face with the letter's top pointing at the
+    plug blades. Only videos read the result; runs keep the frozen scene."""
+    turns = {}
+    half_turn = np.array([0., 0., 0., 1.])
+    for gid in range(model.ngeom):
+        name = model.geom(gid).name
+        if not ITEM_PRINT.fullmatch(name):
+            continue
+        matrix = np.zeros(9)
+        mujoco.mju_quat2Mat(matrix, model.geom_quat[gid])
+        matrix = matrix.reshape(3, 3)
+        if abs(matrix[2, 2]) < .5 and matrix[2, 1] < -.5:
+            turned = np.zeros(4)
+            mujoco.mju_mulQuat(turned, model.geom_quat[gid], half_turn)
+            turns[name] = turned.tolist()
+    return turns
+
+
+def apply_display_labels(model, data, avoid_objects=True):
+    """Place letter labels and block letters as every video shows them."""
+    moves = robot_label_moves(model, data, avoid_objects=avoid_objects)
+    for name, move in moves.items():
+        gid = model.geom(name).id
+        model.geom_pos[gid][:2] = move['to_xy']
+        model.geom_quat[gid] = move['quat_wxyz']
+    turns = item_print_turns(model)
+    for name, quaternion in turns.items():
+        model.geom_quat[model.geom(name).id] = quaternion
+    mujoco.mj_kinematics(model, data)
+    return moves, turns
 
 
 def place_robot_labels(model, data, task):

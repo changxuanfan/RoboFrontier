@@ -62,13 +62,12 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
     model=mujoco.MjModel.from_xml_path(str(scene));data=mujoco.MjData(model)
     from robofrontier.suite.table_presentation import scale_rectangular_opening_for_render
     presentation=scale_rectangular_opening_for_render(model,table_opening_scale)
-    # Display only, as in the Factory: a letter label under a robot base slides out.
-    from robofrontier.factory.labels import robot_label_moves
+    # Display only, as in the Factory: a letter label under a robot base slides out,
+    # and block letters read upright.
+    from robofrontier.factory.labels import apply_display_labels
     if mujoco.mj_name2id(model,mujoco.mjtObj.mjOBJ_KEY,'initial')>=0:mujoco.mj_resetDataKeyframe(model,data,model.key('initial').id)
     family=json.loads((scene.parent/'task.json').read_text()).get('family') if (scene.parent/'task.json').is_file() else None
-    mujoco.mj_kinematics(model,data);label_moves=robot_label_moves(model,data,avoid_objects=family!='mosaic')
-    for name,move in label_moves.items():
-        gid=model.geom(name).id;model.geom_pos[gid][:2]=move['to_xy'];model.geom_quat[gid]=move['quat_wxyz']
+    mujoco.mj_kinematics(model,data);label_moves,print_turns=apply_display_labels(model,data,avoid_objects=family!='mosaic')
     shared=(directory/'motion/stream.json').exists();events=None;event=None
     if shared:
         reader=MotionReader(directory/'motion')
