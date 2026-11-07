@@ -55,6 +55,9 @@ def resolve(spec, role=None, calibrated=True):
                       metallic=0., specular=.30)
     if role in ('print','painted_wood'):
         result.update(roughness=.95 if role=='print' else .58,metallic=0.,specular=0. if role=='print' else .25)
+    if role=='print':
+        # Emission has no texture input, so it would lift printed black to gray.
+        result['emission']=0.
     if role=='task_color' and max(result['rgba'][:3])-min(result['rgba'][:3]) < .06:
         result.update(roughness=.65,metallic=0.,specular=.18)
     if role in ('print','painted_wood','task_color'):

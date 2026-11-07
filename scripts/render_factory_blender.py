@@ -26,6 +26,7 @@ from factory_blender_materials import resolve as resolve_material, robot_role, t
 from factory_mesh_rotation import asset_frame_rotation
 from factory_primitive_uv import primitive_uv
 from factory_capsule import capsule_vertices
+from factory_mesh_detail import keeps_hard_edges,shares_shaft_surface,thicken_thin_axis
 
 SCRIPT_SHA256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
@@ -237,7 +238,8 @@ def main():
             spec=dict(material_specs[original['material']],rgba=list(rgba))
             appearance_materials[key]=make_material(spec,task_role(original))
         return appearance_materials[key]
-    beam_meshes={g['mesh'] for g in metadata['geoms'] if g['kind']==7 and '_beam_' in g['name']}
+    hard_edge_meshes={g['mesh'] for g in metadata['geoms'] if g['kind']==7 and keeps_hard_edges(g['name'])}
+    lifted_tips={g['mesh'] for g in metadata['geoms'] if g['kind']==7 and shares_shaft_surface(g['name'])}
     meshes={}
     flat_meshes={g['mesh']for g in metadata['geoms']if g['kind']==7 and
         g['material']>=0 and 'factory_bench_wood'in material_specs[g['material']]['name']}
@@ -250,8 +252,11 @@ def main():
                     if 0<=index<len(coords):uv.data[loop].uv=(float(coords[index][0]),1.-float(coords[index][1])) # MuJoCo-authored image origin is top-left.
         for polygon in mesh.polygons:
             polygon.use_smooth=not spec['textured'] and spec['id']not in flat_meshes and not spec['name'].startswith('factory_')
-        if i in beam_meshes:
-            # Keep the square timber section: smooth along an arc, sharp at its corners.
+        if i in lifted_tips:
+            vertices=np.empty(len(mesh.vertices)*3);mesh.vertices.foreach_get('co',vertices)
+            mesh.vertices.foreach_set('co',thicken_thin_axis(vertices.reshape(-1,3)).ravel());mesh.update()
+        if i in hard_edge_meshes:
+            # Smooth along an arc, sharp at the corners of a timber or an arrow tip.
             bm=bmesh.new();bm.from_mesh(mesh)
             bmesh.ops.split_edges(bm,edges=[e for e in bm.edges if e.is_manifold and e.calc_face_angle(0.)>math.radians(30)])
             bm.to_mesh(mesh);bm.free();mesh.update()
