@@ -28,7 +28,7 @@ def task_role(geom):
     name=geom.get('name','')
     if '__' not in name:return None
     if any(mark in name for mark in ('_label','_print','_mark','__score_title_geom')):return 'print'
-    if (name.startswith('relay-') and re.search(r'__payload_\d+_beam$',name)
+    if (name.startswith('relay-') and re.search(r'__payload_\d+_beam(?:_surface|_segment\d+)?$',name)
             or name.startswith('mosaic-') and re.search(r'__[A-Z]_stock\d+_geom$',name)):
         return 'painted_wood'
     if (name.startswith('transport-') and re.search(r'__(?:[A-Z]_item\d+_geom|[A-Z]_slot\d+_cue_color\d+|board_[A-Z]_plate)$',name)

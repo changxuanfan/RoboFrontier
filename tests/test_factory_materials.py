@@ -6,6 +6,11 @@ from scripts.factory_blender_materials import resolve, robot_role, task_role
 
 
 class MaterialChecks(unittest.TestCase):
+    def test_relay_timber_is_painted_wood_at_every_level(self):
+        for part in ('beam', 'beam_surface', 'beam_segment0', 'beam_segment1'):
+            self.assertEqual(task_role(dict(name=f'relay-a08-d2__payload_01_{part}')), 'painted_wood')
+        self.assertIsNone(task_role(dict(name='relay-a08-d3__payload_01_hinge_housing')))
+
     def test_recorded_pose_updates_each_changed_geom_independently(self):
         from types import SimpleNamespace
         from scripts.factory_blender_materials import apply_recorded_appearance

@@ -237,6 +237,7 @@ def main():
             spec=dict(material_specs[original['material']],rgba=list(rgba))
             appearance_materials[key]=make_material(spec,task_role(original))
         return appearance_materials[key]
+    beam_meshes={g['mesh'] for g in metadata['geoms'] if g['kind']==7 and '_beam_' in g['name']}
     meshes={}
     flat_meshes={g['mesh']for g in metadata['geoms']if g['kind']==7 and
         g['material']>=0 and 'factory_bench_wood'in material_specs[g['material']]['name']}
@@ -249,6 +250,11 @@ def main():
                     if 0<=index<len(coords):uv.data[loop].uv=(float(coords[index][0]),1.-float(coords[index][1])) # MuJoCo-authored image origin is top-left.
         for polygon in mesh.polygons:
             polygon.use_smooth=not spec['textured'] and spec['id']not in flat_meshes and not spec['name'].startswith('factory_')
+        if i in beam_meshes:
+            # Keep the square timber section: smooth along an arc, sharp at its corners.
+            bm=bmesh.new();bm.from_mesh(mesh)
+            bmesh.ops.split_edges(bm,edges=[e for e in bm.edges if e.is_manifold and e.calc_face_angle(0.)>math.radians(30)])
+            bm.to_mesh(mesh);bm.free();mesh.update()
         mesh.materials.append(next(iter(materials.values())));meshes[('mesh',i)]=mesh
     def primitive(kind):
         key=('primitive',kind)
