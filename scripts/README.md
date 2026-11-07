@@ -27,6 +27,7 @@ repository root. Keep existing module names when reproducing historical evidence
 | `restore_scene_assets` | Restore ignored historical scene assets by their original SHA; refuse to overwrite drifted files |
 | `check_harness` | Run the offline Python, JavaScript, documentation, and protocol regression inventory; historical fixtures may require separate assets |
 | `check_oracle_preservation` | Check the preservation manifest and frozen Oracle source bindings |
+| `run_analysis extract/compute/dial-turns/atomic-v2/session-archive` | Offline analysis of archived runs: timing, outcomes and atomic-step failure rates (version 2 step rules in `robofrontier/run_analysis/atomic_v2.py`); data root, run list and outputs are arguments, and no run data lives in the repository |
 | `export_factory_blender`, `render_factory_blender` | Export and render Cycles scenes, reuse fixed-camera frames, and compare sampled source poses |
 | `check_factory_blender_instances` | Check actual Blender instance geometry, motion, and independent color changes |
 | `build_task_atlas` | Build, verify, or package the public 36-task visual atlas without policy inference |
