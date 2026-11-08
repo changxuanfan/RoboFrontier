@@ -56,6 +56,8 @@ def add_arguments(subparsers):
             command.add_argument('--evaluation-mode', choices=('task-reference', 'strict-process'))
             command.add_argument('--mosaic-max-goals', type=int)
             command.add_argument('--mosaic-planning-workers', type=int)
+            command.add_argument('--physics-profile', choices=('realtime-v1',),
+                                 help='Frozen into the Oracle harness; default is full physics')
     for name in ('run', 'status', 'stop'):
         command = actions.add_parser(name)
         command.add_argument('execution', type=Path)
@@ -113,7 +115,7 @@ def _scene_inventory(scene, case):
     return inventory, task
 
 
-def prepare(output, config, *, codebook=None):
+def prepare(output, config, *, codebook=None, physics_profile=None):
     from .task_families import RELEASE, resolve_case
     from .task_config import load_harness
     from .suite.source_snapshot import freeze_executor
@@ -157,6 +159,8 @@ def prepare(output, config, *, codebook=None):
     private.mkdir(mode=0o700)
     harness = load_harness(ROOT/'configs/harness-frontier-v2-servo2.json')
     harness['observation_image_profile'] = config['render']['observation_profile']
+    if physics_profile is not None:
+        harness['physics_profile'] = physics_profile
     write_json(private/'harness.json', harness)
     catalog['cases'] = [{**native[0], 'directory': str(scene)}]
     write_json(private/'catalog.json', catalog)
@@ -453,4 +457,5 @@ def execute(args):
     config = load_configuration(args.config, overrides)
     if args.oracle_action == 'plan':
         return plan(config)
-    return prepare(args.output, config, codebook=args.codebook)
+    return prepare(args.output, config, codebook=args.codebook,
+                   physics_profile=getattr(args, 'physics_profile', None))

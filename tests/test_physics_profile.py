@@ -88,6 +88,19 @@ class ProfileTests(unittest.TestCase):
         self.assertFalse(getattr(plain, 'physics_profile_active', False))
         self.assertTrue(chosen.physics_profile_active)
 
+    def test_oracle_trial_takes_the_profile_its_harness_names(self):
+        from robofrontier.suite.oracle import Trial
+        from robofrontier.task_families import resolve_case
+        _, _, case = resolve_case('transport-a04-d1', purpose='gpt')
+        with tempfile.TemporaryDirectory() as folder:
+            for name, tolerance in ((None, 1e-6), ('realtime-v1', 1e-12)):
+                harness = load_harness(Path('configs/harness-frontier-v2-servo2.json'))
+                if name:harness['physics_profile'] = name
+                trial = Trial(Path(case['directory']), Path(folder)/str(name), frames=False, controller_cfg=harness)
+                self.assertEqual(trial.model.opt.noslip_tolerance, tolerance)
+                self.assertEqual(trial.physics_profile is None, name is None)
+                trial.step()
+
     def test_harness_rejects_an_unknown_profile(self):
         with tempfile.TemporaryDirectory() as folder:
             harness = json.loads(Path('configs/harnesses/policy.json').read_text())
