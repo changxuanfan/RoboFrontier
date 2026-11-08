@@ -21,8 +21,8 @@ Legacy native entries remain available with their original timing semantics.
 .venv/bin/robofrontier oracle run runs/oracle/r14-two-goals
 ```
 
-`--physics-profile realtime-v1` freezes that physics profile into the prepared harness;
-without it an Oracle runs full physics. Plan is read-only. Prepare installs the pinned policy assets when needed and
+`--physics-profile realtime-v2` (or `realtime-v1`) freezes that physics profile into the
+prepared harness; without it an Oracle runs full physics. Plan is read-only. Prepare installs the pinned policy assets when needed and
 verifies the selected task, workstation and every asset without advancing
 physics. It requires exactly one selected case and a clean committed checkout.
 Use another output directory for another attempt. Source is copied before native

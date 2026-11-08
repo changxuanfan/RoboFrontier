@@ -56,7 +56,7 @@ def add_arguments(subparsers):
             command.add_argument('--evaluation-mode', choices=('task-reference', 'strict-process'))
             command.add_argument('--mosaic-max-goals', type=int)
             command.add_argument('--mosaic-planning-workers', type=int)
-            command.add_argument('--physics-profile', choices=('realtime-v1',),
+            command.add_argument('--physics-profile', choices=('realtime-v1', 'realtime-v2'),
                                  help='Frozen into the Oracle harness; default is full physics')
     for name in ('run', 'status', 'stop'):
         command = actions.add_parser(name)
