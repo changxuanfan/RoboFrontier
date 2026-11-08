@@ -4,6 +4,8 @@ A run names a profile in its harness (`physics_profile`); a run that names none 
 untouched. A profile changes results compared with full physics, so one batch must not
 mix profiles. See docs/running/physics-profiles.md.
 """
+import re
+
 import mujoco
 
 SLEEP = int(mujoco.mjtEnableBit.mjENBL_SLEEP)
@@ -19,6 +21,16 @@ PROFILES = {'realtime-v1': {
     'dial': {'sleep': 'idle', 'noslip_tolerance': 1e-12, 'noslip_iterations': 10, 'finger_condim': 4},
     'relay': {'sleep': 'idle', 'settle_s': 30.},
 }}
+# realtime-v2 (the default for new policy runs): realtime-v1's sleep, plus in every family
+# elliptic friction cones, impratio 1, noslip 1e-9 with 10 iterations, finger-owned condim 4
+# contacts and one contact rule for the scene (unify_contacts). Pushed, released or resting
+# objects then stop and stay still, where realtime-v1 left Dial modules drifting by up to
+# about 12 mm/min. See docs/running/physics-profiles.md for the measurements.
+# noslip 1e-9 stops creep as well as 1e-12; at 1e-12 a Relay receiver's fingers could not
+# slide along a held beam on approach and lifted it out of the carriers' grip.
+_V2 = {'cone': 'elliptic', 'impratio': 1., 'noslip_tolerance': 1e-9, 'noslip_iterations': 10,
+       'finger_condim': 4, 'unify_contacts': True}
+PROFILES['realtime-v2'] = {family: {**settings, **_V2} for family, settings in PROFILES['realtime-v1'].items()}
 IDLE_BEFORE_SLEEP_S = 2.
 
 
@@ -51,12 +63,59 @@ def forward_after_step(world):
     finally: options.noslip_iterations = iterations
 
 
+HOOK = re.compile(r'_(hook|weight_eye)_\d+$')
+MODULE = re.compile(r'_module_(disk|stem)$')
+ROBOT_JOINT = re.compile(r'[A-Z]_(joint[1-7]|finger_joint[12])')
+
+
+def unify_contacts(model):
+    """One contact rule for every scene part that is not a robot.
+
+    Friction is 1, 0.005 and 0.0001. Static parts have condim 4 or more; moving parts have
+    condim 4. Cylinders and spheres of loose bodies have condim 6 and rolling friction 0.1 x
+    radius, so they roll a little and stop. Fingers own their contacts, so grasps do not see
+    this. Boxes stay at condim 4: rolling friction between packed Mosaic stock changed how
+    tiles settle and lift, and the Mosaic Oracle could no longer retract a lifted tile.
+    Two values are kept because they act:
+    Relay hooks and eyes (0.5 lets a hook slide into its eye), and Dial modules, whose disk
+    leans on its rim and needs rolling 0.03 to stop.
+    """
+    robot = set()  # bodies with a robot joint, and the mounts that carry them
+    for j in range(model.njnt):
+        if ROBOT_JOINT.fullmatch(model.joint(j).name or ''):
+            b = int(model.jnt_bodyid[j])
+            while b:robot.add(b);b = int(model.body_parentid[b])
+    free = {int(model.jnt_bodyid[j]) for j in range(model.njnt) if int(model.jnt_type[j]) == int(mujoco.mjtJoint.mjJNT_FREE)}
+    round_types = (int(mujoco.mjtGeom.mjGEOM_CYLINDER), int(mujoco.mjtGeom.mjGEOM_SPHERE))
+    for g in range(model.ngeom):
+        if not model.geom_contype[g] | model.geom_conaffinity[g]:continue
+        body, static, on_robot = int(model.geom_bodyid[g]), True, False
+        b = body
+        while b:
+            if b in robot:on_robot = True
+            if model.body_jntnum[b]:static = False
+            b = int(model.body_parentid[b])
+        name = model.geom(g).name or ''
+        if on_robot or HOOK.search(name):continue
+        model.geom_friction[g] = (1., .005, .0001)
+        if MODULE.search(name):
+            model.geom_condim[g] = 6;model.geom_friction[g, 2] = .03
+        elif static:
+            model.geom_condim[g] = max(int(model.geom_condim[g]), 4)
+        elif body in free and int(model.geom_type[g]) in round_types:
+            model.geom_condim[g] = 6;model.geom_friction[g, 2] = .1*float(model.geom_size[g, 0])
+        else:
+            model.geom_condim[g] = 4
+
+
 def attach(world, harness):
     """Apply the run's frozen profile; returns the per-step part, or None."""
     name = harness.get('physics_profile')
     if name is None: return None
     world.physics_profile_active = True
     settings = PROFILES[name][world.task['family']]
+    if settings.get('cone') == 'elliptic': world.model.opt.cone = mujoco.mjtCone.mjCONE_ELLIPTIC
+    if 'impratio' in settings: world.model.opt.impratio = settings['impratio']
     if 'noslip_tolerance' in settings: world.model.opt.noslip_tolerance = settings['noslip_tolerance']
     if 'noslip_iterations' in settings: world.model.opt.noslip_iterations = settings['noslip_iterations']
     if 'finger_condim' in settings:
@@ -64,6 +123,7 @@ def attach(world, harness):
                    if 'finger' in (world.model.body(int(world.model.geom_bodyid[g])).name or '')]
         world.model.geom_priority[fingers] = 1
         world.model.geom_condim[fingers] = settings['finger_condim']
+    if settings.get('unify_contacts'): unify_contacts(world.model)
     if settings['sleep'] == 'always':
         world.model.opt.enableflags |= SLEEP
         return None

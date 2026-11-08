@@ -88,6 +88,50 @@ class ProfileTests(unittest.TestCase):
         self.assertFalse(getattr(plain, 'physics_profile_active', False))
         self.assertTrue(chosen.physics_profile_active)
 
+    def test_realtime_v2_has_one_contact_rule_with_two_kept_values(self):
+        xml = '''<mujoco><worldbody><geom name="table" type="box" size="1 1 .02" condim="3"/>
+<body name="A_link0"><body name="A_link1"><joint name="A_joint1"/><geom name="link" type="box" size=".02 .02 .02" condim="3"/>
+<body name="A_left_finger"><joint name="A_finger_joint1" type="slide"/><geom name="pad" type="box" size=".01 .01 .01" condim="3"/></body></body></body>
+<body name="can" pos=".3 0 .1"><freejoint/><geom name="can" type="cylinder" size=".03 .03" condim="6" friction="1 .005 .03"/>
+<geom name="blade" type="box" size=".001 .006 .012" pos="0 0 -.04" friction=".45 .003 .0001" condim="4"/></body>
+<body name="payload_01" pos=".6 0 .1"><freejoint/><geom name="payload_01_hook_0" type="capsule" size=".003 .01" friction=".5 .002 .0001" condim="3"/></body>
+<body name="D01_module" pos="0 .5 .1"><freejoint/><geom name="D01_module_disk" type="cylinder" size=".15 .004" friction=".8 .005 .03" condim="6"/>
+<body name="D01_rotor"><joint name="D01_hinge"/><geom name="D01_hand_grip" type="cylinder" size=".014 .022" friction=".8 .005 .0001" condim="4"/></body></body>
+</worldbody></mujoco>'''
+        for family in ('transport', 'mosaic', 'relay', 'dial'):
+            model = mujoco.MjModel.from_xml_string(xml)
+            attach(SimpleNamespace(model=model, data=mujoco.MjData(model), arms={}, task={'family': family}), {'physics_profile': 'realtime-v2'})
+            got = lambda name: (int(model.geom_condim[model.geom(name).id]), *(round(float(x), 6) for x in model.geom_friction[model.geom(name).id]))
+            self.assertEqual(got('table'), (4, 1., .005, .0001))
+            self.assertEqual(got('can'), (6, 1., .005, .003))
+            self.assertEqual(got('blade'), (4, 1., .005, .0001))
+            self.assertEqual(got('payload_01_hook_0'), (3, .5, .002, .0001))
+            self.assertEqual(got('D01_module_disk'), (6, 1., .005, .03))
+            self.assertEqual(got('D01_hand_grip'), (4, 1., .005, .0001))
+            self.assertEqual(got('link'), (3, 1., .005, .0001))
+            self.assertEqual((model.geom_priority[model.geom('pad').id], got('pad')[0]), (1, 4))
+            self.assertEqual((model.opt.cone, model.opt.impratio, model.opt.noslip_tolerance, model.opt.noslip_iterations),
+                             (mujoco.mjtCone.mjCONE_ELLIPTIC, 1., 1e-9, 10))
+
+    def test_oracle_trial_takes_the_profile_its_harness_names(self):
+        from robofrontier.suite.oracle import Trial
+        from robofrontier.task_families import resolve_case
+        _, _, case = resolve_case('transport-a04-d1', purpose='gpt')
+        with tempfile.TemporaryDirectory() as folder:
+            for name, cone in ((None, mujoco.mjtCone.mjCONE_PYRAMIDAL), ('realtime-v2', mujoco.mjtCone.mjCONE_ELLIPTIC)):
+                harness = load_harness(Path('configs/harness-frontier-v2-servo2.json'))
+                if name:harness['physics_profile'] = name
+                trial = Trial(Path(case['directory']), Path(folder)/str(name), frames=False, controller_cfg=harness)
+                self.assertEqual(trial.model.opt.cone, cone)
+                self.assertEqual(trial.physics_profile is None, name is None)
+                trial.step()
+
+    def test_new_policy_runs_use_realtime_v2(self):
+        self.assertEqual(json.loads(Path('configs/harnesses/policy.json').read_text())['physics_profile'], 'realtime-v2')
+        self.assertEqual(set(PROFILES), {'realtime-v1', 'realtime-v2'})
+        for family, settings in PROFILES['realtime-v2'].items():
+            self.assertEqual(settings['sleep'], PROFILES['realtime-v1'][family]['sleep'])
+
     def test_harness_rejects_an_unknown_profile(self):
         with tempfile.TemporaryDirectory() as folder:
             harness = json.loads(Path('configs/harnesses/policy.json').read_text())
