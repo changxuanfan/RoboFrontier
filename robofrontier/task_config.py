@@ -176,7 +176,7 @@ def load_harness(path=None):
     # Keys of suite.evaluate.PROCESS_LOG_FORMATS (kept literal: no MuJoCo import here).
     if c.get('process_log','full') not in ('full','events-1s','events-60s'):raise ValueError('Unknown process log format')
     # Keys of physics_profile.PROFILES (kept literal for the same reason).
-    if c.get('physics_profile') not in (None,'realtime-v1'):raise ValueError('Unknown physics profile')
+    if c.get('physics_profile') not in (None,'realtime-v1','realtime-v2'):raise ValueError('Unknown physics profile')
     screening = c['motion_check']
     for key in ('max_horizon_s','default_sample_dt_s','max_sample_dt_s','clearance_m'):
         if not math.isfinite(float(screening[key])) or screening[key]<=0:

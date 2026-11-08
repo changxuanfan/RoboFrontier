@@ -85,6 +85,9 @@ class Trial:
             self.model.key_qpos[self.model.key('initial').id]=self.data.qpos.copy();root.find("keyframe/key[@name='initial']").set('qpos',' '.join(repr(float(x)) for x in self.data.qpos));ET.ElementTree(root).write(self.directory/'scene.xml',encoding='unicode');mujoco.mj_forward(self.model,self.data)
         self.arms={r:PandaArm(self.model,self.data,r) for r in self.task['arms']};self.cfg=deepcopy(controller_cfg) if controller_cfg is not None else load_harness();self.tick=0;self.stride=round(.02/self.model.opt.timestep)
         for arm in self.arms.values():arm.configure_hand_position_servo(self.cfg.get('gripper_position_servo','legacy'))
+        # A harness that names a physics profile gets it here too; one that names none is untouched.
+        from ..physics_profile import attach
+        self.physics_profile=attach(self,self.cfg)
         self.home={r:(self.data.site_xpos[a.site].copy(),self.data.site_xmat[a.site].reshape(3,3).copy()) for r,a in self.arms.items()}
         self.home_q={r:self.data.qpos[a.qids].copy() for r,a in self.arms.items()}
         self.screen_model=copy(self.model)
@@ -158,6 +161,7 @@ class Trial:
             for arm in self.arms.values():arm.control(.02)
         for arm in self.arms.values():
             if arm.grasp_force is not None:arm.physics_control()
+        if getattr(self,'physics_profile',None) is not None:self.physics_profile.before_step()
         before=self.time;mujoco.mj_step(self.model,self.data)
         from ..physics_health import require_valid_step
         try:require_valid_step(self.data,before)

@@ -35,9 +35,9 @@
         "mosaic"
       ],
       "historical_sha256": "88d0cd4d24cc298015c0f119b5d565b70451394cd73654b02e9bafd32d8380af",
-      "integrated_sha256": "edaf5bdc368bab756084ce7254e22906088f2c33b25e104fa0cdf4c8ef56d144",
+      "integrated_sha256": "3f42867d66ea65a461c40a2d396eb421a1dea84a1bf1525d4034b03c10014711",
       "unaffected_ast_sha256": "dd926c6b8cb16c3dfe4cee59495907fea98e55c4585c5e6983a5181b7f35c9fa",
-      "review": "Only the exact reviewed Controller/Coordinator label acceptance and engine/direct-START selection checks in load_harness are normalized. All remaining AST nodes match the pinned baseline, including action limits, controller settings and execution timing. This is historical control-source compatibility, not equal physics, policy observations or current-task qualification. Re-reviewed for the two new frozen harness checks in load_harness (motion_hz, process_log), which only validate new settings (source_compatibility.HARNESS_RUN_STORAGE); with them removed the AST equals the original unaffected digest."
+      "review": "Only the exact reviewed Controller/Coordinator label acceptance and engine/direct-START selection checks in load_harness are normalized. All remaining AST nodes match the pinned baseline, including action limits, controller settings and execution timing. This is historical control-source compatibility, not equal physics, policy observations or current-task qualification. Re-reviewed for the two new frozen harness checks in load_harness (motion_hz, process_log), which only validate new settings (source_compatibility.HARNESS_RUN_STORAGE); with them removed the AST equals the original unaffected digest. The accepted physics profile names now include realtime-v2; that check is part of the same removed block."
     },
     {
       "path": "scripts/preview_mosaic_local_colors.py",
