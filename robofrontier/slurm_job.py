@@ -450,21 +450,55 @@ def snapshot(local, submission):
     return state
 
 
+def _writer_locks(local):
+    """Every lock path a batch or run layout defines, for each layout version.
+
+    Only these fixed paths: a file a policy names world.lock in its workspace is not a lock."""
+    batch = (Path(local)/'source/runs/policy/batch').resolve()
+    locks = {batch/layout[key] for layout in run_layout.BATCH_LAYOUTS.values()
+             for key in ('supervisor_lock', 'engineering_lock')}
+    runs = set()
+    try:
+        jobs = json.loads((batch/'batch.json').read_text())['jobs'] if (batch/'batch.json').is_file() else []
+        runs |= {Path(job['run_directory']).resolve() for job in jobs}
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    # Runs live at <profile>/<case>/; also find them when batch.json is missing or unreadable.
+    if batch.is_dir() and not batch.is_symlink():
+        for profile in batch.iterdir():
+            if profile.is_dir() and not profile.is_symlink():
+                runs |= {case for case in profile.iterdir() if case.is_dir() and not case.is_symlink()}
+    for run in runs:
+        if not run.is_relative_to(batch) or run == batch:
+            continue
+        locks |= {run/layout[key] for layout in run_layout.LAYOUTS.values() for key in ('world_lock', 'engineering_lock')}
+    return sorted(locks)
+
+
 @contextmanager
 def _assert_no_writers(local):
+    """Refuse while any writer holds its lock; yield issues for lock paths that are not files."""
     import contextlib
+    issues = []
     with contextlib.ExitStack() as stack:
-        for pattern in ('source/runs/policy/**/world.lock', 'source/runs/policy/**/supervisor.lock',
-                        'source/runs/policy/**/engineering-supervisor.lock',
-                        'source/runs/policy/**/claude-engineering.lock',
-                        'source/runs/policy/**/engineering.lock'):
-            for path in Path(local).glob(pattern):
-                lock = stack.enter_context(path.open('r'))
-                try:
-                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except BlockingIOError:
-                    raise ValueError('Writer still live; refusing stage-out: ' + str(path)) from None
-        yield
+        for path in _writer_locks(local):
+            try:
+                # Never block on a FIFO or follow a link planted at a lock path.
+                descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+            except FileNotFoundError:
+                continue
+            except OSError as error:
+                issues.append({'path': str(path), 'issue': 'lock not opened', 'error': type(error).__name__})
+                continue
+            lock = stack.enter_context(os.fdopen(descriptor, 'r'))
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                issues.append({'path': str(path), 'issue': 'nonregular lock'})
+                continue
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise ValueError('Writer still live; refusing stage-out: ' + str(path)) from None
+        yield issues
 
 
 def stage_out(local, submission, step_exit_code):
@@ -473,11 +507,11 @@ def stage_out(local, submission, step_exit_code):
     srun must have returned. No source deletion, auth/config transfer, physical
     replay, or success certification is performed here.
     """
-    with _assert_no_writers(local):
-        return _stage_out_stopped(local, submission, step_exit_code)
+    with _assert_no_writers(local) as lock_issues:
+        return _stage_out_stopped(local, submission, step_exit_code, lock_issues)
 
 
-def _stage_out_stopped(local, submission, step_exit_code):
+def _stage_out_stopped(local, submission, step_exit_code, lock_issues=()):
     local, submission = Path(local).resolve(), Path(submission).resolve()
     _verify_submission(submission)
     output = submission/'results'
@@ -496,7 +530,7 @@ def _stage_out_stopped(local, submission, step_exit_code):
     with tempfile.TemporaryDirectory(prefix='.rf-stage-out-', dir=submission) as temporary:
         staged = Path(temporary)/'results'
         staged.mkdir(mode=0o700)
-        files, issues = {}, []
+        files, issues = {}, list(lock_issues)
         def copy(file, relative):
             files[relative] = _copy_verified(file, staged/relative)
         def keep(file, relative):

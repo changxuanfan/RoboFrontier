@@ -112,6 +112,25 @@ class SlurmJobTests(unittest.TestCase):
                 slurm.stage_out(self.local, self.submission, 0)
         self.assertFalse((self.submission/'results').exists())
 
+    def test_a_fifo_named_like_a_lock_does_not_block_stage_out(self):
+        import signal
+        self.stage()
+        run = self.local/'source/runs/policy/batch/luna/case'
+        (run/'workspace').mkdir(parents=True)
+        os.mkfifo(run/'workspace/world.lock')
+        (run/'private/state/control').mkdir(parents=True)
+        os.mkfifo(run/'private/state/control/world.lock')
+        def timeout(*_): raise TimeoutError('stage-out blocked on a FIFO')
+        previous = signal.signal(signal.SIGALRM, timeout)
+        signal.alarm(10)
+        try:
+            report = slurm.stage_out(self.local, self.submission, 1)
+        finally:
+            signal.alarm(0); signal.signal(signal.SIGALRM, previous)
+        self.assertTrue((self.submission/'results').is_dir())
+        self.assertIn({'path': str((run/'private/state/control/world.lock').resolve()), 'issue': 'nonregular lock'}, report['issues'])
+        self.assertIn('runs/policy/batch/luna/case/workspace/world.lock', [i['path'] for i in report['issues']])
+
     def test_failed_collection_returns_stopped_raw_motion_and_sessions_without_auth(self):
         self.stage()
         source = self.local/'source'
