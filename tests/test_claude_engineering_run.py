@@ -26,8 +26,10 @@ class Owner:
 class EngineeringRunTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.run = Path(self.tmp.name) / 'run'
-        for directory in ('private/inputs', 'private/outputs', 'private/state/connections'):
+        for directory in ('private/inputs', 'private/outputs', 'private/state/connections', 'public/inputs'):
             (self.run / directory).mkdir(parents=True)
+        (self.run / 'public/inputs/roles.json').write_text(json.dumps({'roles': {
+            'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2']}}}))
         (self.run / 'private/inputs/claude.json').write_text(json.dumps({
             'schema': 'robofrontier.claude-launch-draft.v1', 'qualified': False, 'execution_available': False,
             'profile': {'env_key': 'FAKE_KEY', 'model': 'fake', 'effort': 'high'}}))
@@ -214,6 +216,34 @@ class EngineeringRunTests(unittest.TestCase):
                 self.assertTrue(result['evaluation_required'])
                 self.assertEqual(result['evaluation_present'],expected)
                 self.assertEqual(result['status'],'finished' if expected else 'needs_review')
+
+
+    def test_a_task_cap_that_concurrent_roles_could_exhaust_is_refused_before_any_claim(self):
+        claim = self.run/'private/state/claude-engineering-claim.json'
+        (self.run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
+            'Meta': {'kind': 'manager'}, 'Coordinator': {'kind': 'team-controller'},
+            'A1': {'kind': 'worker', 'robot': 'A1'}, 'A2': {'kind': 'worker', 'robot': 'A2'}}}))
+        for topology, turn, total in (('hierarchical', None, 1), ('hierarchical', .5, 1), ('peer', .6, 1.7)):
+            with self.subTest(topology=topology, turn=turn, total=total):
+                (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine': 'claude', 'topology': topology}))
+                with self.assertRaisesRegex(ValueError, 'budget'):
+                    run_engineering(self.run, self.env, turn_budget_usd=turn, total_budget_usd=total,
+                                    standing_policy_factory=lambda *a, **k: self.fail('must not start'),
+                                    owner_factory=lambda *a, **k: self.fail('must not start'))
+                self.assertFalse(claim.exists())
+                self.assertFalse((self.run/'private/state/claude-budget.sqlite').exists())
+        # Adaptive: the Controller and one delegate per arm.
+        (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine': 'claude', 'topology': 'adaptive'}))
+        (self.run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
+            'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2', 'A3']}}}))
+        with self.assertRaisesRegex(ValueError, '4 concurrent roles'):
+            run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=1.9,
+                            adaptive_policy_factory=lambda *a, **k: self.fail('must not start'),
+                            owner_factory=lambda *a, **k: self.fail('must not start'))
+        self.assertFalse(claim.exists())
+        result = run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2,
+                                 adaptive_policy_factory=lambda *a, **k: Policy(), owner_factory=lambda *a, **k: Owner(1))
+        self.assertEqual(result['reason'], 'launch_error')
 
 
 if __name__ == '__main__': unittest.main()

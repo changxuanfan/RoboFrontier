@@ -12,6 +12,10 @@ from ..sqlite_busy import BUSY_TIMEOUT_SECONDS, begin_immediate
 UNLIMITED = 'unlimited'
 
 
+class BudgetExhausted(ValueError):
+    """The task cap has no allowance left: a turn was refused before anything launched."""
+
+
 def _money(value, *, positive=True):
     if isinstance(value, bool): raise ValueError('Invalid monetary amount')
     try: result = Decimal(str(value))
@@ -87,12 +91,16 @@ class BudgetLedger:
         """Before a run continues in a new segment (docs/running/run-segments.md): turns cut off by
         the unexpected exit have ended, with an unknown cost. Without a task cap that cost
         cannot breach anything, so they become settled with no reported cost; under a cap
-        they stay uncertain and keep blocking."""
+        they become uncertain and keep blocking, since the cut-off turn may have spent
+        more than its allowance."""
         with self.transaction():
             if self._snapshot()['limit_usd'] is None:
                 # A cut-off turn whose CLI still reported a cost keeps it; only an absent cost stays absent.
                 self.db.execute("UPDATE reservations SET status='settled', updated=? "
                                 "WHERE status IN ('reserved','uncertain')", (time.time(),))
+            else:
+                self.db.execute("UPDATE reservations SET status='uncertain', updated=? WHERE status='reserved'",
+                                (time.time(),))
             return self._snapshot()
 
     def reserve(self, reservation_id, actor, maximum_usd=None):
@@ -101,6 +109,7 @@ class BudgetLedger:
             raise ValueError('Reservation identity required')
         with self.transaction():
             state = self._snapshot()
+            if state['status'] == 'exhausted': raise BudgetExhausted('Budget is exhausted or uncertain')
             if state['status'] != 'tracking': raise ValueError('Budget is exhausted or uncertain')
             available = Decimal(state['available_usd']) if state['available_usd'] is not None else None
             allowance = maximum if maximum is not None else available

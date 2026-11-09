@@ -73,6 +73,18 @@ class AdaptiveDispatchTests(unittest.TestCase):
         self.assertEqual(dispatcher.cycle()['dispatched'],[])
         self.assertEqual(len(host.sent),1)
 
+    def test_a_wake_refused_by_an_exhausted_task_budget_is_not_sent_and_pauses(self):
+        from robofrontier.claude.budget import BudgetExhausted
+        host=self.setup.hosts[self.child]
+        def refused(prompt): raise BudgetExhausted('Budget is exhausted or uncertain')
+        host.send=refused
+        result=AdaptiveDispatcher(self.store,self.setup).cycle()
+        self.assertTrue(result['paused'])
+        statuses=[w['status'] for w in self.store.wake_rows()]
+        self.assertIn('cancelled',statuses); self.assertNotIn('uncertain',statuses)
+        paused=[e for e in self.store.events() if e['kind']=='DISPATCH_PAUSED']
+        self.assertEqual(paused[-1]['details']['reason'],'Claude task budget exhausted')
+
     def test_claimed_fork_is_not_recreated_on_supervisor_change(self):
         self.d.return_task(self.child,'completed','report')
         batch=self.d.create('Controller','second',[{'robots':['A'],'goal':'next','done_when':'d'}])
