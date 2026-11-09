@@ -163,6 +163,24 @@ class RelayPipelineTests(unittest.TestCase):
         self.assertIsNotNone(plan)
         np.testing.assert_array_equal(plan[0],t.data.body(f.ident).xpos)
 
+    def test_released_load_that_never_qualifies_becomes_a_blocked_scope(self):
+        t=recorded_world();t.actions=[];t.started=time.monotonic();t.step=Mock()
+        t.data.time=10.;t.relay_frontiers=[Frontier('payload_02',1,3,phase='verify',team=['G','H'],recheck_since=10.)]
+        calls=[]
+        def wait(seconds):
+            calls.append(seconds)
+            if len(calls)>400:raise LookupError('Unbounded verify wait')
+            t.data.time+=seconds
+        t.wait=wait
+        with tempfile.TemporaryDirectory() as folder:
+            t.directory=Path(folder)
+            with patch.object(t.monitor,'result',return_value={'payloads':{}}),patch.object(t.monitor.relay_v2,'inside',return_value=True):
+                with self.assertRaisesRegex(RuntimeError,'no admitted independent prefix.*did not satisfy final acceptance payload_02'):solve(t)
+        f=t.relay_frontiers[0]
+        self.assertIn('payload_02',f.blocked)
+        limit=t.task['completion'].get('stable_duration_sim_s',1.)
+        self.assertLessEqual(t.data.time-10.,limit+5.5)
+
     def test_task_reference_oracle_still_requires_an_airborne_handover(self):
         t=recorded_world();f=Frontier('payload_02',1,2,phase='plan',team=['G','H'])
         t.task.setdefault('run_protocol',{})['evaluation_semantics']='terminal_outcome_v2'
