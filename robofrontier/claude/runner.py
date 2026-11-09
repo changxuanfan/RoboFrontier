@@ -46,8 +46,10 @@ def _denied_paths(table):
     """Paths to deny for Claude, whose rules have no "most specific path wins".
 
     A denied folder that contains an allowed path (the repository holding this run)
-    becomes denies on everything beside the route to that path, level by level, read
-    when each turn starts so folders created later are covered too.
+    becomes denies on everything beside the route to that path, level by level, as the
+    folder stands when the settings are rendered: once per CLI process, which a
+    persistent session keeps for the whole run. A folder created later beside the route
+    is not on this list; `_private_globs` keeps every run's private/ closed regardless.
     """
     entries = {Path(p): mode for p, mode in table.items()}
     denied = []
@@ -74,6 +76,21 @@ def _denied_paths(table):
     return sorted(set(denied))
 
 
+def _private_globs(run, table):
+    """Patterns for every private/ folder below the denied folders that hold this run.
+
+    The rendered deny list is fixed for a CLI process, so a run folder prepared later
+    beside the route (another batch under the same runs folder) would be open. These
+    patterns cover each run's private/ there, now and later. They also cover a folder
+    or file named private inside this run's workspace/, which the policy then cannot
+    use; its own public/ and workspace/ stay open. A run that itself lies below a folder
+    named private gets no pattern for that root, which would close the whole run.
+    """
+    roots = [Path(p) for p, mode in table.items() if mode == 'deny' and Path(p) in run.parents]
+    return sorted(str(root) + suffix for root in roots if 'private' not in run.relative_to(root).parts
+                  for suffix in ('/**/private', '/**/private/**'))
+
+
 def policy_settings(run_dir):
     """Settings for a policy turn rendered from the run's frozen access table, or None
     for runs prepared before the table existed.
@@ -89,11 +106,14 @@ def policy_settings(run_dir):
     access = json.loads(path.read_text())
     table = access['filesystem']
     hidden = [str(p) for p in _denied_paths(table)]
+    private = _private_globs(run, table)
     # A run with a policy environment renders its table as written: the sandbox lets a more
-    # specific allowRead win, so a folder created during the run is closed too.
-    sandbox_read = ({'denyRead': sorted(p for p, mode in table.items() if mode == 'deny'),
+    # specific allowRead win, so a folder created during the run is closed too. The private/
+    # patterns are matched by the macOS sandbox; Claude Code's Linux sandbox ignores glob
+    # patterns, so there Bash keeps the literal list only.
+    sandbox_read = ({'denyRead': sorted(p for p, mode in table.items() if mode == 'deny') + private,
                      'allowRead': sorted(p for p, mode in table.items() if mode != 'deny' and p != '/')}
-                    if access.get('policy_env') else {'denyRead': hidden})
+                    if access.get('policy_env') else {'denyRead': hidden + private})
     writable = sorted(p for p, mode in table.items() if mode == 'write')
     # Claude rules take absolute paths as //path. acceptEdits accepts edits only inside
     # the working folder and every other edit is refused; these rules also keep hidden
@@ -103,6 +123,8 @@ def policy_settings(run_dir):
     def rules(tool, paths):
         return [tool+'(//'+p.lstrip('/')+suffix+')' for p in paths for suffix in ('', '/**')]
     deny = rules('Read', hidden) + rules('Edit', hidden+[str(run/'public')])
+    # Glob rules are matched when a tool runs, so they also cover run folders created later.
+    deny += ['%s(//%s)' % (tool, p.lstrip('/')) for tool in ('Read', 'Edit') for p in private]
     return {'permissions': {'deny': deny},
             'sandbox': {'enabled': True, 'allowUnsandboxedCommands': False,
                         'filesystem': {'allowWrite': writable, **sandbox_read},

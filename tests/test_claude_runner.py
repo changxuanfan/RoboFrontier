@@ -379,6 +379,33 @@ class PolicySettingsTests(unittest.TestCase):
             for folder in (repo, repo/'runs', run):
                 self.assertFalse(any(rule.startswith('Read(//'+str(folder).lstrip('/')+')') for rule in deny), folder)
 
+    def test_every_run_private_folder_under_the_denied_repository_is_closed_by_pattern(self):
+        # The deny list is rendered once per CLI process; a run prepared later beside this
+        # one must still have its private/ closed, so the denied folders holding the run get
+        # patterns the CLI matches when a tool runs.
+        from robofrontier import policy_access
+        from robofrontier.claude.runner import policy_settings
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
+                                                                      checkouts=[repo])})
+            settings = policy_settings(run)
+            deny = settings['permissions']['deny']
+            root = '//'+str(repo).lstrip('/')
+            for tool in ('Read', 'Edit'):
+                for pattern in ('/**/private', '/**/private/**'):
+                    self.assertIn('%s(%s%s)' % (tool, root, pattern), deny)
+            self.assertIn(str(repo)+'/**/private', settings['sandbox']['filesystem']['denyRead'])
+            self.assertIn(str(repo)+'/**/private/**', settings['sandbox']['filesystem']['denyRead'])
+            # Only folders that hold the run get patterns: the home folder is denied whole.
+            self.assertFalse(any(str(home).lstrip('/')+'/**' in rule and 'private' in rule for rule in deny))
+            # A run below a folder named private would be closed whole by such a pattern, so that root gets none.
+            nested = repo/'private/runs/b/case'
+            (nested/'private/inputs').mkdir(parents=True)
+            self.write_access(nested, {'filesystem': policy_access.table(nested, repo=repo, home=home, tmp_dirs=(),
+                                                                         checkouts=[repo])})
+            self.assertFalse(any('/**/private' in rule for rule in policy_settings(nested)['permissions']['deny']))
+
     def test_policy_env_table_renders_deny_and_allow_read(self):
         from robofrontier.claude.runner import policy_settings
         with tempfile.TemporaryDirectory() as tmp:
@@ -388,7 +415,8 @@ class PolicySettingsTests(unittest.TestCase):
             self.write_access(run, {'filesystem': table, 'policy_env': {'root': '/env'}})
             settings = policy_settings(run)
             sandbox = settings['sandbox']['filesystem']
-            self.assertEqual(sandbox['denyRead'], sorted([str(home), str(repo), str(run), str(run/'private')]))
+            self.assertEqual(sandbox['denyRead'], sorted([str(home), str(repo), str(run), str(run/'private')])
+                             + [str(repo)+'/**/private', str(repo)+'/**/private/**'])
             self.assertEqual(sandbox['allowRead'], sorted([str(run/'public'), str(run/'workspace'), '/tmp']))
             self.assertEqual(sandbox['allowWrite'], sorted([str(run/'workspace'), '/tmp']))
             self.assertIn('Read(//'+str(repo/'.env').lstrip('/')+')', settings['permissions']['deny'])
