@@ -47,7 +47,7 @@ uv sync --locked --extra oracle
 verifies its SHA-256 and restores every referenced asset with hash verification.
 It reuses already verified files. `prepare` performs the same required asset
 setup automatically. Cloning Git alone cannot execute an installation step.
-Neither bootstrap, planning nor preparation calls a language model.
+Neither bootstrap, planning nor preparation calls a model.
 
 The asset lock also records one reviewed metadata-compatible release: nine
 historical Mosaic edit references now use a pinned original video index. Every
@@ -189,7 +189,7 @@ unfinished. `finish` is an end proposal accepted only after closure conditions;
 it is appropriate for completion or publicly supported unrecoverability. Accepting
 it does not imply a successful score. Ending a normal model turn or returning a
 delegate does not itself end the experiment. Hosts enforce deadline and stop
-requests independently of a supervising LLM.
+requests independently of a supervising agent.
 
 For a new robot request, omit the outer `call_id`; the host returns a generated
 identifier. Query an existing action with a new `job` request and its original ID

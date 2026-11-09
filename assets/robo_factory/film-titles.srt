@@ -1,7 +1,7 @@
 1
 00:00:00,800 --> 00:00:08,500
 RoboFrontier
-Language agents in a robot world
+Multimodal agents in a robot world
 36 tasks · 4 families · up to 16 arms
 
 2

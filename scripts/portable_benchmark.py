@@ -1,4 +1,4 @@
-"""Submit one benchmark batch without an LLM supervisor (macOS or Linux CPU)."""
+"""Submit one benchmark batch without a supervising agent (macOS or Linux CPU)."""
 import argparse
 import json
 import os

@@ -1,4 +1,4 @@
-"""Headless GPT-6 Luna benchmark entrypoint; no LLM supervisor required."""
+"""Headless GPT-6 Luna benchmark entrypoint; no supervising agent required."""
 import argparse
 import hashlib
 from collections import deque

@@ -40,7 +40,7 @@ penetration, point IK / endpoint contacts and one-second settling at every
 size, with maximum settling displacement about 0.075 mm. This is not swept-path
 or multi-arm collision acceptance.
 
-Known-pose local checks used a program and robot IK, without an LLM: a three-arm
+Known-pose local checks used a program and robot IK, without a multimodal agent: a three-arm
 A cube, seven-arm G red cylinder and 12-arm L cyan cylinder. All three recorded
 passes. Cylinder final XY errors were about 3.08 mm and 0.14 mm, respectively,
 with bilateral grip, lift, release and stable upright placement. The original

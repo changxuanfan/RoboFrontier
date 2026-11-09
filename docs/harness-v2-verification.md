@@ -3,7 +3,7 @@
 This describes check coverage, not a claim that the whole current repository has
 a passing acceptance report. The harness checker exercises fake sessions/services,
 robot kinematics/geometry, and real headless MuJoCo single-arm contact regressions.
-The latter step physics and perform simulated grasps without new language-model
+The latter step physics and perform simulated grasps without new agent
 sessions, GUI windows or video recording. Historical three-arm/nine-cube physical
 references, resource searches and interactive changes were recorded at the retired
 `runs/autonomous-loop-engineering-20261020/report.md`; they are engineering evidence,

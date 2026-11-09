@@ -8,7 +8,7 @@ silently applied to an old recording.
 
 The unified entry is `robofrontier factory`. It calls the same checked Factory
 bundle, preparation, replay and Cycles implementation as the native engineering
-entry. It never calls a language model or uses policy API credentials.
+entry. It never calls a model or uses policy API credentials.
 
 ## Install software and data
 

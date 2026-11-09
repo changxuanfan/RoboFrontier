@@ -1,8 +1,8 @@
 1
 00:00:00,000 --> 00:00:10,000
 RoboFrontier
-Benchmarking How LLM Agents Organize, Communicate,
-and Collaborate in a Multi-Robot World
+Can Multimodal Agents Work Together
+on Long Physical Tasks?
 
 2
 00:00:13,500 --> 00:00:18,500

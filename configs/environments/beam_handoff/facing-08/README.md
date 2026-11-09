@@ -38,7 +38,7 @@ grouping, order, pose and concurrency are left to the policy.
 
 `validation.json` checks only loading, home IK, initial contacts and settled
 stability, rather than grasp/handoff success. Initial preview work used neither
-an LLM nor added policy tools; later integration is described below. Two-arm
+a multimodal agent nor added policy tools; later integration is described below. Two-arm
 support is a task rule; physical impossibility of single-arm carrying was not
 established.
 

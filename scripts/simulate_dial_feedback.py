@@ -121,7 +121,7 @@ def main():
         movement_metric='Number of dial digits changed between submitted configurations, including initial0->nonzero; not robot actions or trajectory time',
         entropy_policy='Same candidate-only pool<=96, entropy minus0.015changed digits; not an optimality proof',
         coordinate_policy='Known record-incumbent, one-position alternatives; return lower-score experiments to incumbent in the next submitted configuration',
-        excluded=['Robot dynamics','Intermediate automatic feedback during motion','Grasp/recovery','Mechanical timing','LLM reasoning/cognitive error'],
+        excluded=['Robot dynamics','Intermediate automatic feedback during motion','Grasp/recovery','Mechanical timing','Multimodal-agent reasoning/cognitive error'],
         algorithm_compute_note='Decision-tree walltime shares prefixes across all passwords; not a per-episode Oracle or GPT runtime')
     (OUT/'summary.json').write_text(json.dumps(dict(assumptions=assumptions,results=summary),indent=2)+'\n')
 
