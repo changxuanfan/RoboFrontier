@@ -163,4 +163,29 @@ class SettleCountingTests(unittest.TestCase):
             self.assertEqual(getattr(w.arms['A'], 'poll_stability', None), expected)
 
 
+class ControlFingerprintTests(unittest.TestCase):
+    NAMES = ('robot_control.py', 'sim.py', 'motion_check.py', 'task_config.py', 'pipeline.py', 'physics_profile.py')
+    HASHES = {'robofrontier/'+name: str(i)*64 for i, name in enumerate(NAMES)}
+    CONFIG = {'action_timeout_sim_s': 30., 'allowed_tcp_speed_m_s': [.01, .15], 'default_tcp_speed_m_s': .06}
+
+    def test_a_harness_without_profile_keeps_its_fingerprint(self):
+        from robofrontier.task_config import physical_control_fingerprint
+        # Values computed by the function before profiles entered the fingerprint.
+        self.assertEqual(physical_control_fingerprint(self.HASHES, self.CONFIG),
+                         '8a87768b3d75495438dc8078f67dd2a839eb45c0b25fe457cbf07b9b32e6b686')
+        self.assertEqual(physical_control_fingerprint(self.HASHES, {**self.CONFIG, 'gripper_position_servo': 'pd1000-v1'}),
+                         'f2bc459b8d219ae312c7077bb20e5104c91a9c63fe5a1cebb3a0d50b221e21d8')
+        self.assertEqual(physical_control_fingerprint(self.HASHES, {**self.CONFIG, 'physics_profile': None}),
+                         physical_control_fingerprint(self.HASHES, self.CONFIG))
+
+    def test_each_profile_and_its_source_has_its_own_fingerprint(self):
+        from robofrontier.task_config import physical_control_fingerprint
+        values = {name: physical_control_fingerprint(self.HASHES, {**self.CONFIG, 'physics_profile': name} if name else self.CONFIG)
+                  for name in (None, 'realtime-v1', 'realtime-v2')}
+        self.assertEqual(len(set(values.values())), 3)
+        edited = {**self.HASHES, 'robofrontier/physics_profile.py': 'f'*64}
+        self.assertNotEqual(physical_control_fingerprint(edited, {**self.CONFIG, 'physics_profile': 'realtime-v2'}), values['realtime-v2'])
+        self.assertEqual(physical_control_fingerprint(edited, self.CONFIG), values[None])
+
+
 if __name__ == '__main__': unittest.main()

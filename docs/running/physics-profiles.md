@@ -34,6 +34,10 @@ did when they ran: a world that polls several times per step can then report an 
 at the first in-tolerance instant while the arm still moves. Oracle worlds poll once per
 tick, so this changes nothing there.
 
+`physical_control_sha256` names the profile and the `physics_profile.py` source when a
+harness sets one, so runs and Oracle references of different profiles never share it. A
+harness without a profile keeps the value it had before.
+
 Two task values stay because they act in recorded contacts:
 
 - Relay hooks and weight eyes keep friction 0.5 and 0.002, which lets a hook slide into

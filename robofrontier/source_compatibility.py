@@ -213,6 +213,12 @@ if self.poll_stability=='per-tick':
     self.last_poll_sample=now
 """, None, 1),
 )
+# Reviewed physics profile in the control fingerprint: a harness without one hashes the
+# original value.
+FINGERPRINT_PROFILE = """
+if config.get('physics_profile') is not None:
+    value['physics_profile']=config['physics_profile'];code['physics_profile.py']=source_hashes.get('robofrontier/physics_profile.py')
+"""
 # Reviewed Mosaic Level 2/3 centre tolerance: read from the task with the original
 # 5 mm default, so a task that does not declare mosaic-center-6mm-v1 is unchanged.
 MOSAIC_CENTER_TOLERANCE = ("""
@@ -290,6 +296,8 @@ def normalized_digest(source, rule):
     elif rule == 'exclude_policy_harness_selection':
         method=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='load_harness')
         _revert(method, HARNESS_RUN_STORAGE, None, 'Run storage harness checks')
+        fingerprint=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='physical_control_fingerprint')
+        _revert(fingerprint, FINGERPRINT_PROFILE, None, 'Physics profile fingerprint')
         reviewed=ast.parse("if c['manager'] != 'Meta' or c['coordinator'] not in ('Controller', 'Coordinator'):\n"
                            " raise ValueError('Use Meta and Controller; legacy Coordinator is accepted for frozen runs')\n"
                            "if c.get('engine','codex') not in ('codex','claude'):\n"

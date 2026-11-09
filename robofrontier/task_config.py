@@ -35,6 +35,10 @@ def physical_control_fingerprint(source_hashes,config):
     names=('robot_control.py','sim.py','motion_check.py','task_config.py','pipeline.py')
     code={name:source_hashes['robofrontier/'+name] for name in names}
     value=dict(code=code,gripper_position_servo=config.get('gripper_position_servo','legacy'),action_limits=action_limits(config),timing=execution_timing(config),allowed_tcp_speed_m_s=config['allowed_tcp_speed_m_s'],default_tcp_speed_m_s=config['default_tcp_speed_m_s'])
+    # A frozen physics profile changes contacts and settle counting. Only a harness that
+    # names one adds it, so every fingerprint without a profile stays as it was.
+    if config.get('physics_profile') is not None:
+        value['physics_profile']=config['physics_profile'];code['physics_profile.py']=source_hashes.get('robofrontier/physics_profile.py')
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 
