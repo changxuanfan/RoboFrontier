@@ -612,4 +612,25 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(self.service.store.get('lifecycle'),'running')
         self.assertNotIn('error',self.call('Controller','observe',{'cameras':['global']})['result'])
 
+    def test_a_stopping_action_ended_outside_its_world_is_answered_from_its_record(self):
+        """After a new segment or an integrity abort, the original call still reads its failure."""
+        from types import SimpleNamespace
+        store=self.service.store
+        # A fresh world's arm: no live job and no stop (stop_diagnostics would refuse it).
+        self.service.world.arms={a:SimpleNamespace(job=None,stopping=False,data=object()) for a in ('A','B','C')}
+        self.start()
+        for ident,end in (('segment-move',lambda:store.interrupt_for_segment('Interrupted by an unexpected host exit',5.)),
+                          ('abort-move',lambda:store.finish_action('abort-move','failed',6.,'Engineering inputs changed'))):
+            parameters={'robot':'A','delta_m':[0,0,.01]}
+            store.begin_call(ident,'A','move',parameters)
+            store.start_action(ident,'A','move',parameters,0.)
+            store.isolate_stopping_action(ident,'Stop is still settling',{'recorded':True})
+            end()
+            self.assertEqual(store.actions()[ident]['status'],'failed')
+            result=self.call('A','job',{'call_id':ident})['result']
+            self.assertNotIn('error',result)
+            self.assertEqual(result['execution']['status'],'failed')
+            self.assertEqual(result['stop_diagnostics'],{'recorded':True})
+        self.assertTrue(self.call('A','job',{'call_id':'segment-move'})['result']['original_result']['interrupted_by_segment'])
+
 if __name__=='__main__':unittest.main()

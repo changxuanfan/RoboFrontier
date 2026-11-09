@@ -536,7 +536,13 @@ class RuntimeService:
                 action = self.store.actions().get(data['call_id'])
                 diagnostics=None
                 if action and action.get('phase')=='stopping':
-                    diagnostics=self.stopping_diagnostics(action)
+                    # Only a live stop has a controller to ask. A terminal action keeps its phase
+                    # (an integrity abort, a recovery or a new segment ended it); the world that
+                    # owned the stop may be gone, so its recorded diagnostics are the answer.
+                    diagnostics=action.get('stop_diagnostics')
+                    if action.get('status')=='running':
+                        try:diagnostics=self.stopping_diagnostics(action)
+                        except ValueError:pass
                 self.respond(job, {'execution': action or {'call_id':data['call_id'],'status':call['status']},
                                    'original_result':call['result'], **({'stop_diagnostics':diagnostics} if diagnostics is not None else {}),
                                    **({'execution_diagnostics':self.isolated_diagnostics(action)} if action and action.get('isolated') else {})})
