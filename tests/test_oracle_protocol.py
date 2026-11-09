@@ -48,6 +48,22 @@ class OracleProtocolTests(unittest.TestCase):
         self.assertEqual(actual['run_protocol'],dict(evaluation_semantics='terminal_outcome_v2',total_wall_limit_s=86400.))
         self.assertEqual(self.task['run_protocol']['evaluation_semantics'],'legacy')
 
+    def test_relay_oracle_task_requires_the_airborne_handover_rule(self):
+        from robofrontier.task_families import RELAY_HANDOVER_RULE
+        for family, required, expected in (('relay', True, RELAY_HANDOVER_RULE), ('relay', False, None),
+                                           ('transport', True, None), ('mosaic', None, None), ('dial', None, None)):
+            with self.subTest(family=family, required=required):
+                self.task.update(family=family)
+                self.task['completion'].pop('required_airborne_handover', None)
+                if required is not None:
+                    self.task['completion']['required_airborne_handover'] = required
+                (self.scene/'task.json').write_text(json.dumps(self.task))
+                self.protocol['source_task_sha256'] = hashlib.sha256((self.scene/'task.json').read_bytes()).hexdigest()
+                actual = protocol.effective_task(self.scene, self.task, self.protocol)
+                self.assertEqual(actual['run_protocol'].get('relay_completion_rule'), expected)
+                self.assertEqual(actual['completion'], self.task['completion'])
+                self.assertNotIn('run_protocol', self.task)
+
     def test_native_launch_without_protocol_keeps_original_step_default(self):
         trial = NS(scene=self.scene, task=deepcopy(self.task), abort_on_process_violation=False)
         with patch.dict(os.environ, {}, clear=True):

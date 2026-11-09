@@ -163,5 +163,20 @@ class RelayPipelineTests(unittest.TestCase):
         self.assertIsNotNone(plan)
         np.testing.assert_array_equal(plan[0],t.data.body(f.ident).xpos)
 
+    def test_task_reference_oracle_still_requires_an_airborne_handover(self):
+        t=recorded_world();f=Frontier('payload_02',1,2,phase='plan',team=['G','H'])
+        t.task.setdefault('run_protocol',{})['evaluation_semantics']='terminal_outcome_v2'
+        t.oracle_protocol=dict(mode='task-reference')
+        self.assertFalse(ref.process_blocks(t))
+        state=t.monitor.relay_v2.states[f.ident]
+        with patch.object(t.monitor,'bilateral',return_value={'G','H'}):
+            state['transitions']=[]
+            self.assertIsNone(direct_terminal_plan(t,f,[f]))
+            # Releasing a hand adds no receiver and is not a handover.
+            state['transitions']=[dict(senders=['F','G','H'],receivers=['G','H'])]
+            self.assertIsNone(direct_terminal_plan(t,f,[f]))
+            state['transitions']=[dict(senders=['E','F'],receivers=['G','H'])]
+            self.assertIsNotNone(direct_terminal_plan(t,f,[f]))
+
 
 if __name__=='__main__':unittest.main()

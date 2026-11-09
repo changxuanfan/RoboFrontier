@@ -137,6 +137,10 @@ def direct_terminal_plan(t,f,frontiers):
     if not ref.goal_contact_allowed(t):return None
     state=t.monitor.relay_v2.states[f.ident]
     if ref.process_blocks(t) and (state['dropped'] or not state['transitions']):return None
+    # Every Relay timber reaches GOAL only after a qualified airborne
+    # handover, in every Oracle mode. A transition that only released hands
+    # adds no new holder and is not a handover.
+    if not any(set(item['receivers'])-set(item['senders']) for item in state['transitions']):return None
     if not set(f.team)<=t.monitor.bilateral(state['rod_geoms'],positive_force=True):return None
     body=t.data.body(f.ident);actual=body.xpos.copy();r=body.xmat.reshape(3,3)
     if t.monitor.relay_v2.inside(state):return actual,math.atan2(r[1,0],r[0,0])
