@@ -246,4 +246,23 @@ class EngineeringRunTests(unittest.TestCase):
         self.assertEqual(result['reason'], 'launch_error')
 
 
+    def test_a_centralized_launch_failing_before_its_claim_can_be_retried(self):
+        attempts = []
+        def policy(*args, **kwargs):
+            attempts.append(kwargs)
+            if len(attempts) == 1: raise ValueError('transient input check')
+            return Policy()
+        with self.assertRaisesRegex(ValueError, 'transient'):
+            run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
+                            policy_factory=policy, owner_factory=lambda *a, **k: self.fail('must not start'))
+        self.assertFalse((self.run/'private/state/claude-engineering-claim.json').exists())
+        self.assertFalse(list((self.run/'private/state').glob('claude-budget.sqlite*')))
+        result = run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
+                                 policy_factory=policy, owner_factory=lambda *a, **k: Owner(1))
+        self.assertEqual(len(attempts), 2)
+        self.assertEqual(result['reason'], 'launch_error')
+        self.assertEqual(result['error_type'], 'RuntimeError')
+        self.assertTrue((self.run/'private/state/claude-budget.sqlite').is_file())
+
+
 if __name__ == '__main__': unittest.main()
