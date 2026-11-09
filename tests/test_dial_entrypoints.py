@@ -45,15 +45,5 @@ class DialEntrypointTests(unittest.TestCase):
         view=EditedMotion(json.loads(Path(report['edit_file']).read_text())['recording'],report['edit_file'])
         self.assertEqual(view.video_indices(30,10).tolist(),report['video_source_frame_indices'])
 
-    def test_batch_rejects_old_protocol_before_allocating_output(self):
-        from scripts.render_edited_dial_batch import run
-        with tempfile.TemporaryDirectory() as td:
-            folder=Path(td)
-            selection=folder/'old.json'
-            selection.write_text(json.dumps(dict(cases=[dict(case_id='dial-n04-d1')])))
-            with self.assertRaisesRegex(ValueError,'R11 BEST5'):
-                run(selection,folder/'unused-edits',folder/'unused-scene',folder/'unused-output')
-            self.assertFalse((folder/'unused-output').exists())
-
 
 if __name__=='__main__':unittest.main()

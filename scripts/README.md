@@ -126,7 +126,6 @@ Offline presentation of recorded motion; never steps task physics.
 | `prepare_factory_edits.py` | Produce a new audited presentation release without altering historical edits. |
 | `promo_preview.py` | Generate sampled factory-tour poses. |
 | `render_dial_oracle.py` | Render R11 BEST5 configurations from their source-bound 60 Hz record. |
-| `render_edited_dial_batch.py` | Render selected closed dial episodes in both backgrounds with shared edits. |
 | `render_factory_blender.py` | Run with Blender --background --python SCRIPT -- --asset DIR --output DIR. |
 | `render_frontier_oracle.py` | Render stored physical configurations, including the shared chunked format. |
 | `render_policy_videos.py` | Render policy runs at 720p with only meaningful motion, checked frame by frame; writes the motion-cut.json Factory import reads. |
