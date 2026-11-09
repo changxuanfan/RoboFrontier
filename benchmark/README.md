@@ -19,6 +19,7 @@ Task contracts and scoring are described in the [task guides](../docs/tasks/READ
 benchmark/
   release.json              the four families: cases, public files, Oracle references, hashes
   legacy-paths.json         where each released file lived before 2026-11-03
+  pruned-paths.json         history removed on 2026-11-03 that kept records still name
   source-compatibility.json reviewed shared-source changes for historical validation
   <family>/
     catalog.json            the family's generated case catalog
@@ -76,3 +77,6 @@ as its source stay in `configs/environments/` as provenance.
 Frozen runs, Oracle recordings, review packages and the asset archive name files
 by their earlier paths. `robofrontier.task_families.current_path` translates those names
 through `legacy-paths.json`, and `legacy_bytes` returns a moved file's original bytes.
+Suite manifests, parameter histories and provenance records also name earlier case
+folders that were removed from the tree; `pruned-paths.json` lists them, and each is
+kept at tag `archive/pre-prune-20261103` (`git checkout archive/pre-prune-20261103 -- <path>`).
