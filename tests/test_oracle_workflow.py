@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import subprocess
 import sys
 import tempfile
 import threading
@@ -248,6 +249,42 @@ class OracleWorkflowTests(unittest.TestCase):
         self.assertFalse(result['passed'])
         time.sleep(1.1)
         self.assertFalse((root/'late-child-write').exists())
+
+    def test_group_of_only_exited_members_is_not_an_error(self):
+        # Darwin reports EPERM, not ESRCH, for a group whose members are all
+        # unreaped zombies: the signalled descendant has exited.
+        terminated = [False]
+        def killpg(pid, number):
+            if number == signal.SIGTERM:
+                terminated[0] = True
+            elif number == 0 and terminated[0]:
+                raise PermissionError(1, 'Operation not permitted')
+        with patch.object(workflow.os, 'killpg', side_effect=killpg):
+            self.assertTrue(workflow._close_remaining_group(12345, .2))
+        with patch.object(workflow.os, 'killpg', side_effect=PermissionError(1, 'Operation not permitted')):
+            self.assertFalse(workflow._close_remaining_group(12345, .2))
+        process = subprocess.Popen([sys.executable, '-c', 'pass'], start_new_session=True)
+        try:
+            time.sleep(.3)
+            result = workflow._close_remaining_group(process.pid, .2)
+            if sys.platform == 'darwin':
+                self.assertFalse(result)
+        finally:
+            process.wait()
+
+    def test_exiting_spawn_pool_helpers_are_not_leaked_descendants(self):
+        program = ('import multiprocessing\n'
+                   'def square(x): return x*x\n'
+                   'if __name__ == "__main__":\n'
+                   ' pool = multiprocessing.get_context("spawn").Pool(2)\n'
+                   ' pool.map(square, range(4))\n'
+                   ' pool.terminate(); pool.join()\n')
+        script = self.root/'pool_owner.py'
+        script.write_text(program)
+        for _ in range(3):
+            process = subprocess.Popen([sys.executable, str(script)], start_new_session=True)
+            self.assertEqual(process.wait(), 0)
+            self.assertFalse(workflow._close_remaining_group(process.pid, 5.))
 
 
 if __name__ == '__main__':
