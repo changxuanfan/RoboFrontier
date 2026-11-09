@@ -162,8 +162,10 @@ class CliBenchmarkTests(unittest.TestCase):
                 start.assert_not_called()
 
     def test_released_policy_service_enforces_24h_without_host(self):
+        # A run frozen before the active-time clock counts 24 h of wall time from START.
+        from test_active_time import old_protocol_prepare
         with tempfile.TemporaryDirectory() as tmp:
-            run=prepare('transport-a04-d1',Path(tmp)/'run')
+            run=old_protocol_prepare('transport-a04-d1',Path(tmp)/'run')
             s=RuntimeService(run,BudgetWorld,fake_capture)
             try:
                 s.store.update_agent('Controller',ready=True,thread_id='engineering-only')
@@ -173,6 +175,24 @@ class CliBenchmarkTests(unittest.TestCase):
                 self.assertEqual(s.store.get('lifecycle'),'ended')
                 self.assertTrue(s.shutdown)
                 self.assertEqual(json.loads((run/'private/outputs/budget-cutoff.json').read_text())['protocol']['wall_limit_s'],86400)
+            finally:s.close()
+
+    def test_released_policy_service_enforces_24h_of_active_time_without_host(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run=prepare('transport-a04-d1',Path(tmp)/'run')
+            s=RuntimeService(run,BudgetWorld,fake_capture)
+            try:
+                s.store.update_agent('Controller',ready=True,thread_id='engineering-only')
+                s.store.start();s.store.put('start_at',time.time()-86401);s.store.put('physics_state','running')
+                s.pump()
+                self.assertEqual(s.store.get('lifecycle'),'running')
+                s.store.put('active_s',86400.);s.policy_budget.active=None  # read again, as a restarted owner would
+                s.pump()
+                self.assertEqual(s.store.get('termination_reason'),'wall_limit')
+                self.assertTrue(s.shutdown)
+                cutoff=json.loads((run/'private/outputs/budget-cutoff.json').read_text())
+                self.assertEqual((cutoff['protocol']['wall_limit_s'],cutoff['protocol']['clock']),(86400,'active_time_v1'))
+                self.assertAlmostEqual(cutoff['active_s'],86400.,delta=1.)
             finally:s.close()
 
     def test_paginated_fork_lineage_ignores_unrelated_matching_filenames(self):

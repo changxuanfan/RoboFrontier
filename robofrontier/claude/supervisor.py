@@ -7,10 +7,16 @@ import math
 import time
 
 
+# active_time_v1: the host ends a run on its own only this far past the world's limit, and
+# waits this long after the world's cutoff for it to brake and close.
+ACTIVE_BACKSTOP_S = 60.
+ACTIVE_CLOSE_WAIT_S = 120.
+
+
 class CentralizedSupervisor:
     def __init__(self, policy, owner_alive, *, stop_requested=lambda: False,
                  startup_timeout_s=300, wall_limit_s=86400, poll_s=1,
-                 seal_timeout_s=30, finish_turn_grace_s=30,
+                 seal_timeout_s=30, finish_turn_grace_s=30, time_rule='START_wall_time',
                  clock=time.monotonic, wall_clock=time.time, sleep=time.sleep):
         for name, value, maximum in (('startup_timeout_s', startup_timeout_s, 86400),
                                      ('wall_limit_s', wall_limit_s, 86400),
@@ -22,6 +28,8 @@ class CentralizedSupervisor:
         if (isinstance(finish_turn_grace_s, bool) or not isinstance(finish_turn_grace_s, (int, float))
                 or not math.isfinite(finish_turn_grace_s) or not 0 <= finish_turn_grace_s <= 120):
             raise ValueError('Invalid finished-turn grace period')
+        if time_rule not in ('START_wall_time', 'active_time_v1'):
+            raise ValueError('Unknown run clock')
         self.policy = policy
         self.owner_alive = owner_alive
         self.stop_requested = stop_requested
@@ -33,6 +41,10 @@ class CentralizedSupervisor:
         self.clock = clock
         self.wall_clock = wall_clock
         self.sleep = sleep
+        # active_time_v1 (the run's frozen protocol clock): the world counts only active running
+        # time and ends the run itself; this host never ends it on wall time.
+        self.active_time = time_rule == 'active_time_v1'
+        self.cutoff_seen = None
         self.used = False
 
     def _wall_limit_reached(self):
@@ -40,6 +52,18 @@ class CentralizedSupervisor:
         then ends the run, so a pause seen in between is that normal end, not a review stop."""
         db = getattr(self.policy.store, 'db', None)
         return bool(db and db.execute("SELECT 1 FROM events WHERE kind='POLICY_WALL_LIMIT' LIMIT 1").fetchone())
+
+    def _limit_reached(self, now, started_at):
+        if not self.active_time: return now - started_at >= self.wall_limit_s
+        # The world's own guard fires at the limit; this is only a backstop if it did not.
+        return float(self.policy.store.get('active_s', 0.) or 0.) >= self.wall_limit_s + ACTIVE_BACKSTOP_S
+
+    def _await_world_close(self, began):
+        """After the world's wall limit fired, wait for it to brake and end the run."""
+        if not self.active_time:
+            return self.clock()-began < self.startup_timeout_s+self.wall_limit_s+self.seal_timeout_s
+        if self.cutoff_seen is None: self.cutoff_seen = self.clock()
+        return self.clock()-self.cutoff_seen < ACTIVE_CLOSE_WAIT_S+self.seal_timeout_s
 
     def _turn_states(self):
         # Standing teams expose a team status; Adaptive also has child hosts
@@ -90,13 +114,13 @@ class CentralizedSupervisor:
                     if not self.owner_alive():
                         reason = 'owner_unavailable'; break
                     if self.policy.store.get('dispatch_paused', False):
-                        if self._wall_limit_reached() and self.clock()-began < self.startup_timeout_s+self.wall_limit_s+self.seal_timeout_s:
+                        if self._wall_limit_reached() and self._await_world_close(began):
                             self.sleep(self.poll_s); continue
                         reason = 'dispatch_paused'; break
                     observation = self.policy.host.observe()
                     state = observation['status']
                     now = self.clock()
-                    if started_at is not None and now-started_at >= self.wall_limit_s:
+                    if started_at is not None and self._limit_reached(now, started_at):
                         reason = 'wall_limit'; break
                     recovering = (state == 'error' and hasattr(self.policy.host, 'recover_capacity')
                                   and self.policy.host.recover_capacity(self.policy.store))
@@ -112,7 +136,7 @@ class CentralizedSupervisor:
                             self.policy.start_when_ready()
                             started_at = self._projected_start()
                     else:
-                        if now - started_at >= self.wall_limit_s:
+                        if self._limit_reached(now, started_at):
                             reason = 'wall_limit'; break
                         result = self.policy.cycle()
                         if result.get('paused') and not self._wall_limit_reached():

@@ -85,8 +85,28 @@ def restore_world(run, task, model, data):
 
 
 def deadline(store, wall_limit_s):
-    """Wall-clock end of the trial: downtime between segments is not counted."""
+    """Wall-clock end of a START_wall_time trial: downtime between segments is not counted.
+
+    An active_time_v1 trial has no wall-clock end; see used_s and remaining_s."""
     return store.get('start_at') + wall_limit_s + store.get('downtime_s', 0.)
+
+
+def used_s(run, store, ended_at=None):
+    """Seconds of the trial's limit used so far, by the clock its frozen protocol names.
+
+    START_wall_time: wall time from START to `ended_at` (default: the last activity), less
+    downtime. active_time_v1: the active running time the world saved (policy_probe.BudgetGuard)."""
+    from .policy_probe import WALL_CLOCK, run_clock
+    task = json.loads((Path(run) / 'private/inputs/task.json').read_text())
+    if run_clock(task['run_protocol']) != WALL_CLOCK: return float(store.get('active_s', 0.) or 0.)
+    ended_at = last_activity(run, store) if ended_at is None else ended_at
+    return ended_at - store.get('start_at') - store.get('downtime_s', 0.)
+
+
+def remaining_s(run, store, ended_at=None):
+    """Seconds of the trial's limit left (see used_s)."""
+    task = json.loads((Path(run) / 'private/inputs/task.json').read_text())
+    return task['run_protocol']['total_wall_limit_s'] - used_s(run, store, ended_at)
 
 
 # Written after the segment had already ended; they do not show it was alive.
@@ -181,11 +201,8 @@ def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None
     if changed: return False, 'frozen inputs changed: ' + ', '.join(changed[:3])
     if not owner_released(run): return False, 'a process still owns the physical world'
     if store.get('start_at') is None: return False, 'never started'
-    task = json.loads((run / 'private/inputs/task.json').read_text())
-    limit = task['run_protocol']['total_wall_limit_s']
-    ended_at = journal['ended_at'] if journal else last_activity(run, store)
-    used = ended_at - store.get('start_at') - store.get('downtime_s', 0.)
-    if limit - used < MIN_REMAINING_S: return False, 'less than %d s of the wall limit left' % MIN_REMAINING_S
+    ended_at = journal['ended_at'] if journal else None
+    if remaining_s(run, store, ended_at) < MIN_REMAINING_S: return False, 'less than %d s of the wall limit left' % MIN_REMAINING_S
     if _last_frame(run, segment) is None: return False, 'no recorded motion frame'
     return True, None
 
