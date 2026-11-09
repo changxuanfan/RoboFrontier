@@ -306,14 +306,19 @@ def execute(arguments, config, *, root=ROOT):
             code = process.wait()
         except KeyboardInterrupt:
             interrupted = True
-            if arguments[0] == 'run':
-                subprocess.run(['docker', 'exec', name, 'python', '-m', 'robofrontier.cli',
-                    'stop', _batch_argument(arguments)], check=False, timeout=30)
-            else:
-                subprocess.run(['docker', 'stop', '--time', '30', name], check=False, timeout=45)
+            # Whatever happens while stopping (a slow docker command, a second Ctrl-C), fall
+            # through to the record below so a live container is retained for review.
+            try:
+                if arguments[0] == 'run':
+                    subprocess.run(['docker', 'exec', name, 'python', '-m', 'robofrontier.cli',
+                        'stop', _batch_argument(arguments)], check=False, timeout=30)
+                else:
+                    subprocess.run(['docker', 'stop', '--time', '30', name], check=False, timeout=45)
+            except (subprocess.SubprocessError, OSError, KeyboardInterrupt):
+                pass
             try:
                 code = process.wait(timeout=180)
-            except subprocess.TimeoutExpired:
+            except (subprocess.TimeoutExpired, KeyboardInterrupt):
                 code = 130
         live = _running(name)
         if live is not False and code == 0:
