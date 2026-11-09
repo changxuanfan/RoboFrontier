@@ -5,6 +5,7 @@ one `claude -p` turn, and summarising its stream-json evidence. A process exit
 or a `result` event only means the model turn ended; task success is decided by
 the runtime and is never inferred here.
 """
+import hashlib
 import json
 import os
 import queue
@@ -183,16 +184,48 @@ def gate_settings(gate):
         {'type': 'command', 'command': script, 'timeout': timeout}]}]}}
 
 
+def settings_argument(settings, folder=None):
+    """The --settings value: the JSON itself, or with `folder` the path of a file holding it.
+
+    One argv string is limited to 128 KiB on Linux, and the deny list grows with every
+    folder beside the run route, so runners pass a file. Its name is the content's hash,
+    so turns with the same settings share one file and a file is never rewritten.
+    """
+    text = json.dumps(settings, sort_keys=True)
+    if folder is None:
+        return text
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder/('settings-' + hashlib.sha256(text.encode()).hexdigest()[:24] + '.json')
+    if not path.is_file():
+        fd, temporary = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=folder)
+        try:
+            with os.fdopen(fd, 'w') as output:
+                os.fchmod(output.fileno(), 0o600)
+                output.write(text)
+            os.replace(temporary, path)
+        finally:
+            try: os.unlink(temporary)
+            except FileNotFoundError: pass
+    return str(path)
+
+
+def settings_folder(run_dir):
+    """Where runners keep the settings files of a run's policy turns (private to the harness)."""
+    return run_layout.path(Path(run_dir).resolve(), 'engine_mcp', 'claude').parent/'policy-settings'
+
+
 def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget_usd=None, binary='claude', resume=None,
                   fork_from=None, enable_robot=True, auth_mode='api_key', prompt_via_stdin=False, settings=None,
-                  system_prompt=None, stream_input=False, gate=None):
+                  system_prompt=None, stream_input=False, gate=None, settings_dir=None):
     """Return argv for one headless turn.
 
     With `settings` (see `policy_settings`) a policy turn gets the bound robot tool plus
     file and shell tools confined by those settings; without it, only the robot tool.
     `resume` continues an existing session by its explicit ID; it never picks the most
     recent one. `fork_from` starts session `session_id` as a fork of that session;
-    a delegate fork passes `gate` (see `gate_settings`).
+    a delegate fork passes `gate` (see `gate_settings`). With `settings_dir` the
+    settings are passed as a file written there (see `settings_argument`).
     """
     if effort not in EFFORTS:
         raise ValueError('Unsupported effort: ' + str(effort))
@@ -217,12 +250,12 @@ def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget
            '--mcp-config', mcp_arg, '--strict-mcp-config']
     if enable_robot and settings is not None:
         cmd += ['--tools', ','.join(POLICY_TOOLS), '--permission-mode', 'acceptEdits', '--permission-prompts', 'none',
-                '--settings', json.dumps({**settings, **(hooks or {})}, sort_keys=True),
+                '--settings', settings_argument({**settings, **(hooks or {})}, settings_dir),
                 '--allowedTools', *ALLOWED_POLICY_TOOLS]
     else:
         cmd += ['--tools', '', '--permission-mode', 'dontAsk']
         if hooks is not None:
-            cmd += ['--settings', json.dumps(hooks, sort_keys=True)]
+            cmd += ['--settings', settings_argument(hooks, settings_dir)]
         if enable_robot:
             cmd += ['--allowedTools', ROBOT_TOOL]
     if system_prompt is not None:
@@ -414,7 +447,7 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
     cmd = build_command(model, effort, mcp_config, prompt, session_id, native_limit, binary, resume,
                         fork_from=fork_from, enable_robot=enable_robot, auth_mode=profile.get('auth_mode','api_key'),
                         prompt_via_stdin=True, settings=settings, system_prompt=policy_system_prompt(run_dir),
-                        gate=gate)
+                        gate=gate, settings_dir=settings_folder(run_dir))
     env = {**build_env(profile, base_env, config_dir), **confined}
     launch = run_dir/'private/inputs/claude.json'
     frozen = json.loads(launch.read_text()) if launch.is_file() else {}
@@ -548,7 +581,8 @@ class PersistentSession:
         settings, confined = confine(run_dir, policy_settings(run_dir), config_dir)
         cmd = build_command(model, effort, mcp_config, None, session_id, None, binary, resume, fork_from=fork_from,
                             auth_mode=profile.get('auth_mode', 'api_key'), settings=settings,
-                            system_prompt=policy_system_prompt(run_dir), stream_input=True, gate=gate)
+                            system_prompt=policy_system_prompt(run_dir), stream_input=True, gate=gate,
+                            settings_dir=settings_folder(run_dir))
         env = {**build_env(profile, base_env, config_dir), **confined}
         launch = Path(run_dir)/'private/inputs/claude.json'
         frozen = json.loads(launch.read_text()) if launch.is_file() else {}

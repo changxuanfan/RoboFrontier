@@ -121,8 +121,10 @@ class PolicySandboxTests(unittest.TestCase):
             server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), stub_model(steps, results))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
+                # Runners pass the settings as a file (the deny list can outgrow one argv string).
                 command = build_command('claude-opus-5-5', 'high', '{"mcpServers":{}}', 'go', auth_mode='oauth_token',
-                                        settings=frozen_settings(run, repo, home))
+                                        settings=frozen_settings(run, repo, home), settings_dir=run / 'private/settings')
+                self.assertTrue(Path(command[command.index('--settings') + 1]).is_file())
                 env = {'PATH': os.environ.get('PATH', ''), 'HOME': str(home),
                        'ANTHROPIC_BASE_URL': 'http://127.0.0.1:%d' % server.server_port,
                        'ANTHROPIC_API_KEY': 'local-fake-key', 'CLAUDE_CONFIG_DIR': str(t / 'config'),

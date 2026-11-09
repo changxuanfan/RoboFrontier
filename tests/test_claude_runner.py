@@ -370,5 +370,36 @@ class PolicySettingsTests(unittest.TestCase):
             self.assertEqual(sandbox['allowWrite'], sorted([str(run/'workspace'), '/tmp']))
             self.assertIn('Read(//'+str(repo/'.env').lstrip('/')+')', settings['permissions']['deny'])
 
+    def test_a_long_deny_list_reaches_the_cli_as_a_private_settings_file(self):
+        from robofrontier import policy_access
+        from robofrontier.run_layout import manifest_record
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
+            # Thousands of earlier runs beside this one: one argv string would pass Linux's 128 KiB.
+            for index in range(5000):
+                (run.parent/('earlier-run-with-a-long-descriptive-name-%05d' % index)).touch()
+            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
+                                                                      checkouts=[repo])})
+            binary = fake_claude(tmp, '''
+path = sys.argv[sys.argv.index('--settings') + 1]
+settings = json.load(open(path))
+print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 'result': json.dumps({
+    'longest': max(len(a) for a in sys.argv), 'rules': len(settings['permissions']['deny']),
+    'mode': oct(os.stat(path).st_mode & 0o777), 'path': path})}))
+''')
+            record = run_turn(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                              binary=str(binary), timeout=20)
+            self.assertEqual(record['process'], 'exited', record['stderr_tail'])
+            seen = json.loads(record['summary']['result_text'])
+            self.assertLess(seen['longest'], 4096)
+            self.assertGreater(seen['rules'], 4*5000)
+            self.assertEqual(seen['mode'], '0o600')
+            self.assertIn(run/'private', Path(seen['path']).parents)
+            # Settings with the same content share one file.
+            run_turn(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                     binary=str(binary), timeout=20)
+            self.assertEqual(len(list(Path(seen['path']).parent.glob('settings-*.json'))), 1)
+
 
 if __name__ == '__main__': unittest.main()
