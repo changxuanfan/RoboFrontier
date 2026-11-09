@@ -102,95 +102,123 @@ def validate(model, data, env):
     return report
 
 
-def generate(counts, render=True):
-    base = ROOT/'configs/suites'/COLLECTION
+FULL_COUNTS = list(range(3, 13))
+
+
+def check_robot_source(base, root=ROOT):
+    """The vendored Panda's SOURCE.json; refuse one other than the collection records."""
+    current = json.loads((root/'vendor/panda/SOURCE.json').read_text())
+    manifest = base/'manifest.json'
+    if manifest.is_file():
+        recorded = json.loads(manifest.read_text()).get('robot_source')
+        if recorded is not None and recorded != current:
+            raise ValueError(f'vendor/panda is {current.get("commit")}, but {manifest} records {recorded.get("commit")}; '
+                             'restore the pinned Panda with `.venv/bin/python -m robofrontier.cli bootstrap`')
+    return current
+
+
+def generate_environment(count, base, render, rows, manifest, summaries, task_overview):
+    env = layout(count)
+    print('Generating '+env['id'], flush=True)
+    directory = ROOT/'configs/environments'/COLLECTION/env['id']
+    directory.mkdir(parents=True, exist_ok=True)
+    env.update(scene='scene.xml', initial_keyframe='initial')
+    write_json(directory/'environment.json', env)
+    xml = build_xml(env, directory)
+    scene = directory/'scene.xml'
+    ET.indent(xml)
+    ET.ElementTree(xml).write(scene, encoding='unicode')
+    model = mujoco.MjModel.from_xml_path(str(scene))
+    data = initialize(model, env)
+    add_initial_keyframe(xml, model, data)
+    ET.indent(xml); ET.ElementTree(xml).write(scene, encoding='unicode')
+    # Check the final on-disk artifact, including the saved reset state.
+    model = mujoco.MjModel.from_xml_path(str(scene))
+    data = mujoco.MjData(model)
+    mujoco.mj_resetDataKeyframe(model, data, model.key('initial').id)
+    mujoco.mj_forward(model, data)
+    report = validate(model, data, env)
+    write_json(base/'validation'/f"{env['id']}.json", report)
+    summaries.append({k: report[k] for k in ('environment', 'arms', 'free_objects', 'cameras', 'passed')})
+    context = startup_context(env, model, data)
+    write_json(directory/'startup.json', context)
+    (directory/'startup.md').write_text(startup_markdown(env, context))
+    if render:
+        with mujoco.Renderer(model, height=900, width=1280) as renderer:
+            for view in ('global', 'top', 'A_front'):
+                renderer.update_scene(data, camera=view)
+                raw_image = Image.fromarray(renderer.render())
+                raw_image.save(base/'previews'/f"{env['id']}-{view}-raw.png")
+                image, metadata = annotate(raw_image, model, data, env, view)
+                image.save(base/'previews'/f"{env['id']}-{view}.png")
+                write_json(base/'previews'/f"{env['id']}-{view}.json", metadata)
+                if view in ('global', 'top'):
+                    if not (len(metadata['robot_labels']) == count):
+                        raise ValueError('Global camera misses a robot base')
+                    if not (not any(v['overlap_area_pixel2'] for v in metadata['robot_labels'])):
+                        raise ValueError('Overlapping robot labels')
+    for obsolete in (base/'references').glob(f"{env['id']}-seed*.json"):
+        obsolete.unlink()
+    for seed in (0, 1, 2):
+        task = make_task(env, seed)
+        task['environment_config'] = str((directory/'environment.json').relative_to(ROOT))
+        task_path = ROOT/'configs/tasks'/COLLECTION/env['id']/f'seed-{seed}.json'
+        write_json(task_path, task)
+        if seed == 0:
+            kinds = {(o['color'], o['shape']): o['type_code'] for o in env['objects']}
+            task_overview += [f"## {count} arms: {task['id']}", '', '```text']
+            task_overview += [a+' ← '+', '.join(kinds[(g['requires']['color'], g['requires']['shape'])] for g in goals)
+                              for a, goals in task['orders'].items()]
+            task_overview += ['```', '', 'Scene-wide minimum handovers → demand count: '+
+                              ', '.join(f'{h} → {v}' for h, v in task['distance_distribution']['hop_counts'].items())+'.', '']
+        result = reference(env, task)
+        replay_reference(env, task, result)
+        result['schedule_replay_passed'] = True
+        if seed == 0:
+            colors = {'red': 'red', 'blue': 'blue', 'green': 'green', 'orange': 'orange', 'purple': 'purple', 'cyan': 'cyan'}
+            task_overview += ['| Arm | Slot 1 | Slot 2 | Slot 3 | Reference phases for this arm |',
+                              '| --- | --- | --- | --- | ---: |']
+            for a, goals in task['orders'].items():
+                names = [colors[g['requires']['color']]+' '+g['requires']['shape'] for g in goals]
+                task_overview.append('| '+a+' | '+' | '.join(names)+' | '+str(result['arm_phase_load'][a])+' |')
+            task_overview += ['', 'Arm phase counts include relay work. Serial and parallel references perform the same total work; overlap and waiting differ.', '']
+        write_json(base/'references'/f"{task['id']}.json", result)
+        rows.append({'environment': env['id'], 'arms': count, 'seed': seed,
+                     'objects': 3*count, 'serial_phase_slots': result['serial_phase_slots'],
+                     'parallel_feasible_phase_slots': result['parallel_feasible_phase_slots'],
+                     'lower_bound_phase_slots': result['lower_bound_phase_slots_for_fixed_routes'],
+                     'optimality_proven': result['optimality_proven'],
+                     'reference_speedup': round(result['serial_phase_slots']/result['parallel_feasible_phase_slots'], 3),
+                     **{f'hop_{h}_count': result['hop_histogram'].get(h, 0) for h in range(7)}})
+    manifest.append({'environment': env['id'], 'config': str((directory/'environment.json').relative_to(ROOT)),
+                     'scene': str(scene.relative_to(ROOT)), 'scene_sha256': hashlib.sha256(scene.read_bytes()).hexdigest(),
+                     'seeds': [0, 1, 2], 'validation_passed': report['passed']})
+    failed_ik = [x for x in report['ik'] if not x['passed']]
+    print(f"  passed={report['passed']} IK failures={len(failed_ik)} checks={report['checks']}", flush=True)
+
+
+def generate(counts, render=True, base=None):
+    base = base or ROOT/'configs/suites'/COLLECTION
+    robot_source = check_robot_source(base)
     (base/'previews').mkdir(parents=True, exist_ok=True)
     rows, manifest, summaries, task_overview = [], [], [], []
     for count in counts:
-        env = layout(count)
-        print('Generating '+env['id'], flush=True)
-        directory = ROOT/'configs/environments'/COLLECTION/env['id']
-        directory.mkdir(parents=True, exist_ok=True)
-        env.update(scene='scene.xml', initial_keyframe='initial')
-        write_json(directory/'environment.json', env)
-        xml = build_xml(env, directory)
-        scene = directory/'scene.xml'
-        ET.indent(xml)
-        ET.ElementTree(xml).write(scene, encoding='unicode')
-        model = mujoco.MjModel.from_xml_path(str(scene))
-        data = initialize(model, env)
-        add_initial_keyframe(xml, model, data)
-        ET.indent(xml); ET.ElementTree(xml).write(scene, encoding='unicode')
-        # Check the final on-disk artifact, including the saved reset state.
-        model = mujoco.MjModel.from_xml_path(str(scene))
-        data = mujoco.MjData(model)
-        mujoco.mj_resetDataKeyframe(model, data, model.key('initial').id)
-        mujoco.mj_forward(model, data)
-        report = validate(model, data, env)
-        write_json(base/'validation'/f"{env['id']}.json", report)
-        summaries.append({k: report[k] for k in ('environment', 'arms', 'free_objects', 'cameras', 'passed')})
-        context = startup_context(env, model, data)
-        write_json(directory/'startup.json', context)
-        (directory/'startup.md').write_text(startup_markdown(env, context))
-        if render:
-            with mujoco.Renderer(model, height=900, width=1280) as renderer:
-                for view in ('global', 'top', 'A_front'):
-                    renderer.update_scene(data, camera=view)
-                    raw_image = Image.fromarray(renderer.render())
-                    raw_image.save(base/'previews'/f"{env['id']}-{view}-raw.png")
-                    image, metadata = annotate(raw_image, model, data, env, view)
-                    image.save(base/'previews'/f"{env['id']}-{view}.png")
-                    write_json(base/'previews'/f"{env['id']}-{view}.json", metadata)
-                    if view in ('global', 'top'):
-                        if not (len(metadata['robot_labels']) == count):
-                            raise ValueError('Global camera misses a robot base')
-                        if not (not any(v['overlap_area_pixel2'] for v in metadata['robot_labels'])):
-                            raise ValueError('Overlapping robot labels')
-        for obsolete in (base/'references').glob(f"{env['id']}-seed*.json"):
-            obsolete.unlink()
-        for seed in (0, 1, 2):
-            task = make_task(env, seed)
-            task['environment_config'] = str((directory/'environment.json').relative_to(ROOT))
-            task_path = ROOT/'configs/tasks'/COLLECTION/env['id']/f'seed-{seed}.json'
-            write_json(task_path, task)
-            if seed == 0:
-                kinds = {(o['color'], o['shape']): o['type_code'] for o in env['objects']}
-                task_overview += [f"## {count} arms: {task['id']}", '', '```text']
-                task_overview += [a+' ← '+', '.join(kinds[(g['requires']['color'], g['requires']['shape'])] for g in goals)
-                                  for a, goals in task['orders'].items()]
-                task_overview += ['```', '', 'Scene-wide minimum handovers → demand count: '+
-                                  ', '.join(f'{h} → {v}' for h, v in task['distance_distribution']['hop_counts'].items())+'.', '']
-            result = reference(env, task)
-            replay_reference(env, task, result)
-            result['schedule_replay_passed'] = True
-            if seed == 0:
-                colors = {'red': 'red', 'blue': 'blue', 'green': 'green', 'orange': 'orange', 'purple': 'purple', 'cyan': 'cyan'}
-                task_overview += ['| Arm | Slot 1 | Slot 2 | Slot 3 | Reference phases for this arm |',
-                                  '| --- | --- | --- | --- | ---: |']
-                for a, goals in task['orders'].items():
-                    names = [colors[g['requires']['color']]+' '+g['requires']['shape'] for g in goals]
-                    task_overview.append('| '+a+' | '+' | '.join(names)+' | '+str(result['arm_phase_load'][a])+' |')
-                task_overview += ['', 'Arm phase counts include relay work. Serial and parallel references perform the same total work; overlap and waiting differ.', '']
-            write_json(base/'references'/f"{task['id']}.json", result)
-            rows.append({'environment': env['id'], 'arms': count, 'seed': seed,
-                         'objects': 3*count, 'serial_phase_slots': result['serial_phase_slots'],
-                         'parallel_feasible_phase_slots': result['parallel_feasible_phase_slots'],
-                         'lower_bound_phase_slots': result['lower_bound_phase_slots_for_fixed_routes'],
-                         'optimality_proven': result['optimality_proven'],
-                         'reference_speedup': round(result['serial_phase_slots']/result['parallel_feasible_phase_slots'], 3),
-                         **{f'hop_{h}_count': result['hop_histogram'].get(h, 0) for h in range(7)}})
-        manifest.append({'environment': env['id'], 'config': str((directory/'environment.json').relative_to(ROOT)),
-                         'scene': str(scene.relative_to(ROOT)), 'scene_sha256': hashlib.sha256(scene.read_bytes()).hexdigest(),
-                         'seeds': [0, 1, 2], 'validation_passed': report['passed']})
-        failed_ik = [x for x in report['ik'] if not x['passed']]
-        print(f"  passed={report['passed']} IK failures={len(failed_ik)} checks={report['checks']}", flush=True)
+        generate_environment(count, base, render, rows, manifest, summaries, task_overview)
+    if sorted(counts) != FULL_COUNTS:
+        # The manifest, summary.csv, validation summary, catalog and overview cover the
+        # whole collection; a subset never rewrites them.
+        print('Partial --counts: collection-wide manifest, summary.csv, validation summary, tasks.md and overview '
+              'were left unchanged; rerun with every count to refresh them.', flush=True)
+        if not all(r['passed'] for r in summaries):
+            raise SystemExit('Some engineering checks failed; see validation files. No policy trial was run.')
+        return
     with (base/'references/summary.csv').open('w') as stream:
         writer = csv.DictWriter(stream, fieldnames=list(rows[0])); writer.writeheader(); writer.writerows(rows)
     sources = ['robofrontier/cube_transport.py', 'robofrontier/cube_transport_presentation.py',
                'scripts/generate_cube_transport.py', 'scripts/verify_transport_objects.py', 'robofrontier/sim.py']
     write_json(base/'manifest.json', {'schema': 4, 'rules_version': 4, 'environments': manifest,
         'source_sha256': {name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in sources},
-        'robot_source': json.loads((ROOT/'vendor/panda/SOURCE.json').read_text())})
+        'robot_source': robot_source})
     write_json(base/'validation/summary.json', summaries)
     comparison = ['| Arms | Serial phases | Parallel reference rounds | Fixed-route lower bound | Reference speedup |',
                   '| ---: | ---: | ---: | ---: | ---: |']
