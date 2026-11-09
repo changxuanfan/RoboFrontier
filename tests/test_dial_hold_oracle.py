@@ -51,6 +51,23 @@ class BlindHoldTests(unittest.TestCase):
                 self.assertIsNone(r['display']);self.assertFalse(r['won'])
             finally:c.close()
 
+    def test_worker_failure_keeps_its_traceback_and_the_error_in_flight(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp);worker=p/'worker.py'
+            worker.write_text('import sys\nsys.stderr.write("x"*200000)\nsys.stdin.readline()\n'
+                              'raise ValueError("Visible record contradicts posterior")\n')
+            c=Channel('solver',[1],p/'solver-io.jsonl',worker=worker,timeout_s=20.)
+            with self.assertRaisesRegex(RuntimeError,'stopped before returning') as caught:
+                try:c.call(dict(op='choose'))
+                finally:c.close()
+            self.assertIn('Visible record contradicts posterior',str(caught.exception))
+            self.assertIn('Isolated worker failed 1',' '.join(getattr(caught.exception,'__notes__',[])))
+            log=(p/'solver-io-stderr.log').read_text()
+            self.assertIn('Traceback',log);self.assertIn('Isolated worker failed 1',log)
+            c=Channel('solver',[1],p/'second-io.jsonl',worker=worker,timeout_s=20.)
+            c.process.stdin.write('\n');c.process.stdin.flush();c.process.wait(timeout=20)
+            with self.assertRaisesRegex(RuntimeError,'Isolated worker failed 1'):c.close()
+
     def test_normal_held_update_changes_target_without_release_or_regrasp(self):
         events=[];m=object.__new__(HoldingManipulator)
         arm=SimpleNamespace(grasp_force=30.,site=0,qref=np.zeros(7))
