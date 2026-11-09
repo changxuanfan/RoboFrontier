@@ -188,4 +188,56 @@ class ControlFingerprintTests(unittest.TestCase):
         self.assertEqual(physical_control_fingerprint(edited, self.CONFIG), values[None])
 
 
+# One released case per family that has every kind of part unify_contacts treats apart.
+RELEASED = {'transport': 'transport-a08-d1', 'mosaic': 'mosaic-a04-6x12-d1', 'relay': 'relay-a08-d2', 'dial': 'dial-best5-n04-d2'}
+
+
+@unittest.skipUnless(all((Path('benchmark')/family/case/'assets').is_dir() for family, case in RELEASED.items()),
+                     'Generated scene assets missing; run `python -m robofrontier.cli bootstrap`')
+class ReleasedSceneContactTests(unittest.TestCase):
+    """unify_contacts finds parts by name; these counts break if a released scene renames one."""
+    # family: (arms, hooks and eyes, module disks and stems, round geoms of loose bodies, round geoms on hinged module parts)
+    EXPECTED = {'transport': (8, 0, 0, 6, 0), 'mosaic': (4, 0, 0, 0, 0), 'relay': (8, 80, 0, 8, 0), 'dial': (8, 0, 8, 4, 4)}
+
+    def test_released_scene_names_match_the_contact_rule(self):
+        from robofrontier.physics_profile import HOOK, MODULE, ROBOT_JOINT, unify_contacts
+        for family, case in RELEASED.items():
+            with self.subTest(case=case):
+                folder = Path('benchmark')/family/case
+                task = json.loads((folder/'task.json').read_text())
+                model = mujoco.MjModel.from_xml_path(str(folder/'scene.xml'))
+                condim, friction = model.geom_condim.copy(), model.geom_friction.copy()
+                unify_contacts(model)
+                arms = {model.body(arm+'_link0').id for arm in task['arms']}
+                def under(body, roots):
+                    while body:
+                        if body in roots: return True
+                        body = int(model.body_parentid[body])
+                    return False
+                touching = [g for g in range(model.ngeom) if model.geom_contype[g] | model.geom_conaffinity[g]]
+                named = lambda pattern: [g for g in touching if pattern.search(model.geom(g).name or '')]
+                robot = [g for g in touching if under(int(model.geom_bodyid[g]), arms)]
+                free = {int(model.jnt_bodyid[j]) for j in range(model.njnt) if int(model.jnt_type[j]) == int(mujoco.mjtJoint.mjJNT_FREE)}
+                round_parts = [g for g in touching if g not in robot and int(model.geom_type[g]) in (int(mujoco.mjtGeom.mjGEOM_CYLINDER), int(mujoco.mjtGeom.mjGEOM_SPHERE))]
+                loose = [g for g in round_parts if int(model.geom_bodyid[g]) in free]
+                hinged = [g for g in round_parts if int(model.geom_bodyid[g]) not in free and under(int(model.geom_bodyid[g]), free)]
+                robot_joints = [j for j in range(model.njnt) if ROBOT_JOINT.fullmatch(model.joint(j).name or '')]
+                self.assertEqual((len(task['arms']), len(named(HOOK)), len(named(MODULE)), len(loose), len(hinged)), self.EXPECTED[family])
+                # Every arm joint is recognised, so no robot geom takes the scene's contact terms.
+                self.assertEqual(len(robot_joints), 9*len(task['arms']))
+                self.assertGreater(len(robot), 0)
+                np.testing.assert_array_equal(model.geom_condim[robot], condim[robot])
+                np.testing.assert_array_equal(model.geom_friction[robot], friction[robot])
+                for g in named(HOOK):
+                    self.assertEqual((int(model.geom_condim[g]), *model.geom_friction[g]), (int(condim[g]), *friction[g]))
+                    self.assertEqual(float(model.geom_friction[g, 0]), .5)
+                for g in named(MODULE):
+                    self.assertEqual((int(model.geom_condim[g]), float(model.geom_friction[g, 2])), (6, .03))
+                for g in loose:
+                    self.assertEqual(int(model.geom_condim[g]), 6)
+                # A round part on a hinged child body of a loose body (a Dial knob) is a moving part: condim 4.
+                for g in hinged:
+                    self.assertEqual(int(model.geom_condim[g]), 4)
+
+
 if __name__ == '__main__': unittest.main()
