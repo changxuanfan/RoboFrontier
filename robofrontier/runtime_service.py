@@ -572,9 +572,11 @@ class RuntimeService:
                 self.export_records()
             elif op == 'shutdown':
                 from .action_batch import cancel_collecting
-                cancel_collecting(self.store,'shutdown_before_group_start',float(self.world.time))
-                if any(v['status'] in ('pending','running') for v in self.store.actions().values()):
-                    raise ValueError('Resolve execution before shutdown')
+                # One transaction: a refused shutdown leaves every forming sync group intact.
+                with self.store.transaction():
+                    cancel_collecting(self.store,'shutdown_before_group_start',float(self.world.time))
+                    if any(v['status'] in ('pending','running') for v in self.store.actions().values()):
+                        raise ValueError('Resolve execution before shutdown')
                 self.respond(job, {'shutdown': True})
                 self.shutdown = True
             else:
