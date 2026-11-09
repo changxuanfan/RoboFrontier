@@ -53,6 +53,34 @@ def _coverage_report(case_id, plan, source, root=ROOT):
     return read(report)
 
 
+def _require(ok, message):
+    """Review checks must hold under python -O as well."""
+    if not ok:
+        raise ValueError(message)
+
+
+TASK_6MM_REVISION='mosaic-center-6mm-v1'
+TASK_6MM_KEYS=('xy_center_tolerance_m_inclusive','position_rule_revision')
+
+
+def _registered_source(path, name, sha):
+    """Match a frozen R14 source file, admitting only the reviewed 6 mm task edit.
+
+    Commit 1096c8d added the Mosaic L2/L3 6 mm centre rule to the R14 task
+    files after r14.json was frozen. That record stays untouched; the edited
+    task matches when removing exactly those two completion keys restores the
+    registered bytes.
+    """
+    if checksum(path)==sha:return True
+    if name!='task.json':return False
+    import hashlib,json
+    task=read(path);completion=task.get('completion',{})
+    if (completion.get('position_rule_revision')!=TASK_6MM_REVISION
+            or completion.get('xy_center_tolerance_m_inclusive')!=.006):return False
+    original=dict(task,completion={k:v for k,v in completion.items() if k not in TASK_6MM_KEYS})
+    return hashlib.sha256((json.dumps(original,indent=2)+'\n').encode()).hexdigest()==sha
+
+
 def check_gpt(engineering,package):
     engineering=Path(engineering);package=Path(package)
     if (package/'public').is_symlink() or any(p.is_symlink() for p in (package/'public').rglob('*')):
@@ -60,81 +88,81 @@ def check_gpt(engineering,package):
     baseline,_=verify_registry()
     registry=read(ROOT/'benchmark/mosaic/r14.json')
     selection=read(ROOT/'benchmark/mosaic/selection.json')
-    assert selection['future_gpt_registry']=='benchmark/mosaic/r14.json'
-    assert selection['oracle_and_factory_replay_registry']=='benchmark/mosaic/r13.json'
-    assert registry['readiness']['policy_launch_ready'] is False and registry['readiness']['oracle_verified'] is False
+    _require(selection['future_gpt_registry']=='benchmark/mosaic/r14.json','Selection future_gpt_registry is not R14')
+    _require(selection['oracle_and_factory_replay_registry']=='benchmark/mosaic/r13.json','Selection Oracle registry is not R13')
+    _require(registry['readiness']['policy_launch_ready'] is False and registry['readiness']['oracle_verified'] is False,'R14 registry claims readiness')
     # The frozen registry names files by the paths they had when it was written.
-    assert checksum(ROOT/current_path(registry['catalog']))==registry['catalog_sha256']
-    assert checksum(ROOT/current_path(registry['baseline_oracle_registry']))==registry['baseline_oracle_registry_sha256']
-    assert read(package/'engineering/registry.json')==registry
-    for file,sha in registry['design_evidence'].items():assert checksum(_design_file(file))==sha
-    catalog=read(ROOT/current_path(registry['catalog']))['cases'];assert len(catalog)==9 and len({c['id'] for c in catalog})==9
+    _require(checksum(ROOT/current_path(registry['catalog']))==registry['catalog_sha256'],'R14 catalog differs')
+    _require(checksum(ROOT/current_path(registry['baseline_oracle_registry']))==registry['baseline_oracle_registry_sha256'],'R14 baseline Oracle registry differs')
+    _require(read(package/'engineering/registry.json')==registry,'Package registry differs')
+    for file,sha in registry['design_evidence'].items():_require(checksum(_design_file(file))==sha,'Design evidence differs')
+    catalog=read(ROOT/current_path(registry['catalog']))['cases'];_require(len(catalog)==9 and len({c['id'] for c in catalog})==9,'R14 catalog must hold nine distinct cases')
     plans={n:read(engineering/f'a{n:02d}-plan.json') for n in (4,6,8)}
     rows=[]
     for case,entry in zip(catalog,registry['cases']):
-        assert entry['case_id']==case['id']
+        _require(entry['case_id']==case['id'],'Registry and catalog case order differ')
         folder=ROOT/case['directory'];source=ROOT/next(e['environment'] for e in baseline['cases'] if e['case_id']==case['id'])
-        for name,sha in entry['source_files'].items():assert checksum(folder/name)==sha
+        for name,sha in entry['source_files'].items():_require(_registered_source(folder/name,name,sha),'Registered R14 source differs: '+case['id']+'/'+name)
         task=read(folder/'task.json');old=read(source/'task.json');plan=plans[case['arms']]
         validate_plan(old,plan)
-        assert task['execution_readiness']=='environment_preview_only' and task['oracle_verified'] is False
-        assert old['goals']==task['goals'] and old['grid']==task['grid'] and old['arms']==task['arms']
-        assert old['rules']==task['rules'] and old['physics']==task['physics']
+        _require(task['execution_readiness']=='environment_preview_only' and task['oracle_verified'] is False,'R14 task claims readiness')
+        _require(old['goals']==task['goals'] and old['grid']==task['grid'] and old['arms']==task['arms'],'Goals, grid or arms changed')
+        _require(old['rules']==task['rules'] and old['physics']==task['physics'],'Rules or physics changed')
         a,b=ET.parse(source/'scene.xml').getroot(),ET.parse(folder/'scene.xml').getroot()
         for obj in old['objects']:
             for root in (a,b):root.find(f"worldbody/body[@name='{obj['id']}']/geom[@name='{obj['id']}_geom']").attrib.pop('rgba')
-        assert ET.tostring(a)==ET.tostring(b),'Non-colour XML change'
-        assert geometry_signature(source)==geometry_signature(folder)
-        assert read(source/'compiled-physics.json')==read(folder/'compiled-physics.json')
+        _require(ET.tostring(a)==ET.tostring(b),'Non-colour XML change')
+        _require(geometry_signature(source)==geometry_signature(folder),'Geometry changed')
+        _require(read(source/'compiled-physics.json')==read(folder/'compiled-physics.json'),'Compiled physics changed')
         actual={o['id']:o for o in task['objects']}
         for pairing in plan['assignments']:
             before=next(o for o in old['objects'] if o['id']==pairing['object_id']);after=actual[before['id']]
-            assert {k:v for k,v in before.items() if k not in ('color','rgb')}=={k:v for k,v in after.items() if k not in ('color','rgb')}
-            assert after['color']==pairing['colour']
+            _require({k:v for k,v in before.items() if k not in ('color','rgb')}=={k:v for k,v in after.items() if k not in ('color','rgb')},'Non-colour object change')
+            _require(after['color']==pairing['colour'],'Object colour differs from the plan')
             expected=[int(task['grid']['palette'][after['color']][i:i+2],16)/255 for i in (1,3,5)]
-            assert after['rgb']==expected
+            _require(after['rgb']==expected,'Object RGB differs from the palette')
         report=_coverage_report(case['id'],plan,source)
         extra=read(_design_file(plan['extra_geometry_file'])) if plan['extra_geometry_sha256'] else {'checks':{}}
-        if plan['extra_geometry_sha256']:assert checksum(_design_file(plan['extra_geometry_file']))==plan['extra_geometry_sha256']
+        if plan['extra_geometry_sha256']:_require(checksum(_design_file(plan['extra_geometry_file']))==plan['extra_geometry_sha256'],'Extra geometry evidence differs')
         for pair in plan['assignments']:
             if not pair['local']:continue
             pickup=next(r for r in report['sources'] if r['id']==pair['object_id'])
-            assert pickup['confirmed'] and pickup['witness']['robot']==pair['robot']
+            _require(pickup['confirmed'] and pickup['witness']['robot']==pair['robot'],'Local pickup is not certified')
             goal=next(r for r in report['goals'] if r['id']==pair['goal_id'])
             if goal['witness']['robot']!=pair['robot']:
                 goal=extra['checks'][f"{case['id']}/{pair['robot']}/{pair['goal_id']}"]
-            assert goal['confirmed'] and goal['witness']['robot']==pair['robot']
-            assert goal['position_m']==next(g['position_m'] for g in old['goals'] if g['goal_id']==pair['goal_id'])
+            _require(goal['confirmed'] and goal['witness']['robot']==pair['robot'],'Local goal is not certified')
+            _require(goal['position_m']==next(g['position_m'] for g in old['goals'] if g['goal_id']==pair['goal_id']),'Certified goal position differs')
         published=read(folder/'public-task.json');_check_target(task,published)
         dest=package/'public/cases'/case['id'];public=read(dest/'task.json');_public_boundary(public)
         expected=project_public(task,read(folder/'environment.json'),read(folder/'workstation.json'),published,baseline['completion'])
         expected['scene_revision']=14;expected['guidance']['task_prompt']='../../guidance/mosaic-r14.md'
         expected['package_status']='colour_design_review_only_no_r14_oracle_qualification'
-        assert public==expected
+        _require(public==expected,'Public task differs from its projection')
         # Reference images remain the same target (rendering the supplied matrix).
         from PIL import Image,ImageColor
         with Image.open(dest/'target-pattern.png') as image:
             for r,line in enumerate(task['grid']['pattern']):
-                for c,colour in enumerate(line):assert image.getpixel((c*40+20,r*40+20))==ImageColor.getrgb(task['grid']['palette'][colour])
+                for c,colour in enumerate(line):_require(image.getpixel((c*40+20,r*40+20))==ImageColor.getrgb(task['grid']['palette'][colour]),'Reference image differs from the target')
         validation=read(folder/'validation.json')
-        assert validation['oracle_verified'] is False and validation['policy_verified'] is False and validation['physics_steps']==0
+        _require(validation['oracle_verified'] is False and validation['policy_verified'] is False and validation['physics_steps']==0,'Validation claims verification or physics')
         rows.append(dict(case_id=case['id'],changed_colours=sum(a['colour']!=a['previous_colour'] for a in plan['assignments']),
             stock=len(plan['assignments']),certified_local_pairs=sum(a['local'] for a in plan['assignments']),
             per_robot=[{k:r[k] for k in ('robot','nearby_stock','certified_local_pairs','certified_local_fraction')} for r in plan['per_robot']]))
     manifest=read(package/'engineering/package-manifest.json')
-    assert manifest['policy_launch_ready'] is False
-    assert checksum(ROOT/'benchmark/mosaic/r14.json')==manifest['registry_sha256']
+    _require(manifest['policy_launch_ready'] is False,'Package claims launch readiness')
+    _require(checksum(ROOT/'benchmark/mosaic/r14.json')==manifest['registry_sha256'],'Package registry hash differs')
     from ..source_compatibility import historical_digest
-    for file,sha in manifest['builder_sources'].items():assert historical_digest(ROOT,file,'mosaic')==sha
-    for file,sha in manifest['plan_files'].items():assert checksum(_design_file(file))==sha
+    for file,sha in manifest['builder_sources'].items():_require(historical_digest(ROOT,file,'mosaic')==sha,'Builder source differs')
+    for file,sha in manifest['plan_files'].items():_require(checksum(_design_file(file))==sha,'Design evidence differs')
     actual={str(p.relative_to(package/'public')):checksum(p) for p in (package/'public').rglob('*') if p.is_file()}
-    assert not any(p.is_symlink() for p in (package/'public').rglob('*'))
-    assert actual==manifest['public_files'] and len(actual)==20
-    previews=read(package/'previews/preview-manifest.json');assert len(previews['cases'])==9
+    _require(not any(p.is_symlink() for p in (package/'public').rglob('*')),'Public symlink is outside the review artifact contract')
+    _require(actual==manifest['public_files'] and len(actual)==20,'Public file inventory differs')
+    previews=read(package/'previews/preview-manifest.json');_require(len(previews['cases'])==9,'Preview manifest must hold nine cases')
     for entry in previews['cases']:
-        for name,sha in entry['files'].items():assert checksum(package/'previews'/entry['case_id']/name)==sha
+        for name,sha in entry['files'].items():_require(checksum(package/'previews'/entry['case_id']/name)==sha,'Preview file differs')
     preserved=read(engineering/'preserved-inputs.json')
-    for file,sha in preserved.items():assert checksum(ROOT/file)==sha,'Historical file changed: '+file
+    for file,sha in preserved.items():_require(checksum(ROOT/file)==sha,'Historical file changed: '+file)
     result=dict(passed=True,cases=rows,historical_files_unchanged=len(preserved),physics_steps=0,
         policy_runs_started=0,new_oracle_runs=0,policy_launch_ready=False,
         scope='Colour-only XML, compiled physical identity, private/public inventory, distinct local pairing certificates, source pins, historical media and new preview integrity')
