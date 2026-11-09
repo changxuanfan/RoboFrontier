@@ -318,4 +318,57 @@ sys.stderr.write(secret + 'x' * 990)
             self.assertEqual(record['summary']['turn_status'], 'unknown')
 
 
+class PolicySettingsTests(unittest.TestCase):
+    """Rendering of the frozen access table into Claude permission and sandbox settings."""
+
+    def layout(self, tmp):
+        t = Path(tmp).resolve()
+        repo, home = t/'repo', t/'home'
+        run = repo/'runs/batch/profile/case'
+        for folder in (run/'workspace', run/'public/inputs', run/'private/inputs', repo/'configs', home):
+            folder.mkdir(parents=True, exist_ok=True)
+        (repo/'.env').write_text('test fixture')
+        return repo, home, run
+
+    def write_access(self, run, access):
+        (run/'private/inputs/policy-access.json').write_text(json.dumps(access))
+
+    def test_denied_repository_files_beside_the_run_get_rules_that_cover_the_file_itself(self):
+        from robofrontier import policy_access
+        from robofrontier.claude.runner import policy_settings
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
+                                                                      checkouts=[repo])})
+            settings = policy_settings(run)
+            deny = settings['permissions']['deny']
+            env = '//'+str(repo/'.env').lstrip('/')
+            # gitignore matching: 'path/**' never matches path itself, so a file needs the exact rule.
+            self.assertIn('Read(%s)' % env, deny)
+            self.assertIn('Edit(%s)' % env, deny)
+            configs = '//'+str(repo/'configs').lstrip('/')
+            for rule in ('Read(%s)', 'Read(%s/**)', 'Edit(%s)', 'Edit(%s/**)'):
+                self.assertIn(rule % configs, deny)
+            public = '//'+str(run/'public').lstrip('/')
+            self.assertIn('Edit(%s/**)' % public, deny)
+            self.assertIn(str(repo/'.env'), settings['sandbox']['filesystem']['denyRead'])
+            # The route to the run stays open.
+            for folder in (repo, repo/'runs', run):
+                self.assertFalse(any(rule.startswith('Read(//'+str(folder).lstrip('/')+')') for rule in deny), folder)
+
+    def test_policy_env_table_renders_deny_and_allow_read(self):
+        from robofrontier.claude.runner import policy_settings
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            table = {'/': 'read', str(home): 'deny', str(repo): 'deny', str(run): 'deny', str(run/'public'): 'read',
+                     str(run/'private'): 'deny', str(run/'workspace'): 'write', '/tmp': 'write'}
+            self.write_access(run, {'filesystem': table, 'policy_env': {'root': '/env'}})
+            settings = policy_settings(run)
+            sandbox = settings['sandbox']['filesystem']
+            self.assertEqual(sandbox['denyRead'], sorted([str(home), str(repo), str(run), str(run/'private')]))
+            self.assertEqual(sandbox['allowRead'], sorted([str(run/'public'), str(run/'workspace'), '/tmp']))
+            self.assertEqual(sandbox['allowWrite'], sorted([str(run/'workspace'), '/tmp']))
+            self.assertIn('Read(//'+str(repo/'.env').lstrip('/')+')', settings['permissions']['deny'])
+
+
 if __name__ == '__main__': unittest.main()

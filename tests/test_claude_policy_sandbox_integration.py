@@ -54,7 +54,6 @@ def stub_model(steps, results, before=None):
     return Handler
 
 
-@unittest.skipUnless(shutil.which('claude'), 'Claude Code CLI is not installed')
 def frozen_settings(run, repo, home):
     """Freeze this run's access table as preparation does, then render it for Claude."""
     path = Path(run) / 'private/inputs/policy-access.json'
@@ -63,7 +62,24 @@ def frozen_settings(run, repo, home):
     return policy_settings(run)
 
 
+def cli_version():
+    """The installed CLI's version, named in failures: the rule matching is the CLI's own."""
+    try:
+        return subprocess.run(['claude', '--version'], capture_output=True, text=True, timeout=30).stdout.strip()
+    except (OSError, subprocess.SubprocessError) as error:
+        return 'unknown (%s)' % error
+
+
+@unittest.skipUnless(shutil.which('claude'), 'Claude Code CLI is not installed')
 class PolicySandboxTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.version = cli_version()
+
+    def _formatMessage(self, msg, standardMsg):
+        # Every assertion failure names the CLI version, since matching rules are the CLI's own.
+        return 'claude %s: %s' % (self.version, super()._formatMessage(msg, standardMsg))
+
     def test_policy_tools_work_in_run_but_cannot_reach_answers_credentials_or_private(self):
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp).resolve()

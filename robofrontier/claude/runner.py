@@ -96,9 +96,12 @@ def policy_settings(run_dir):
     writable = sorted(p for p, mode in table.items() if mode == 'write')
     # Claude rules take absolute paths as //path. acceptEdits accepts edits only inside
     # the working folder and every other edit is refused; these rules also keep hidden
-    # paths and the frozen inputs out of reach.
-    rule = lambda tool, p: tool+'(//'+p.lstrip('/')+'/**)'
-    deny = [rule('Read', p) for p in hidden] + [rule('Edit', p) for p in hidden+[str(run/'public')]]
+    # paths and the frozen inputs out of reach. Rules follow gitignore matching, where
+    # 'path/**' covers only what lies inside path, so each path also gets an exact rule:
+    # a hidden file (the repository's .env beside the runs folder) is denied by that one.
+    def rules(tool, paths):
+        return [tool+'(//'+p.lstrip('/')+suffix+')' for p in paths for suffix in ('', '/**')]
+    deny = rules('Read', hidden) + rules('Edit', hidden+[str(run/'public')])
     return {'permissions': {'deny': deny},
             'sandbox': {'enabled': True, 'allowUnsandboxedCommands': False,
                         'filesystem': {'allowWrite': writable, **sandbox_read},
