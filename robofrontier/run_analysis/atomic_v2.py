@@ -17,19 +17,18 @@ import collections
 import json
 import math
 
+from . import extract
 from . import metrics as M
 
 DIAL_MARK_DEG = 60.0
 DIAL_BAND_DEG = 4.0
 DIAL_DWELL_S = 1.0
 HANDOFF_RADIUS_M = 0.08
-SUITE_LOGS = ('private/outputs/suite-process.jsonl', 'outputs/suite-process.jsonl')
 
 
 def dial_turns(lines, dwell_s=DIAL_DWELL_S):
     """[[sim_s, dial], ...] for each dial settling at a new mark, from suite-process lines."""
-    cur = settled = done = None
-    steps = []
+    rows = []
     for line in lines:
         if '"private_angles_deg"' not in line:
             continue
@@ -37,9 +36,17 @@ def dial_turns(lines, dwell_s=DIAL_DWELL_S):
             x = json.loads(line)
         except ValueError:
             continue
-        res = x.get('result') or {}
-        A = res.get('private_angles_deg')
-        t = res.get('sim_time_s')
+        rows.append(x)
+    return dial_turns_rows(rows, dwell_s)
+
+
+def dial_turns_rows(rows, dwell_s=DIAL_DWELL_S):
+    """As dial_turns, from parsed evaluator rows in trial order."""
+    cur = settled = done = None
+    steps = []
+    for x in rows:
+        A = (x.get('result') or {}).get('private_angles_deg')
+        t = extract.row_sim(x)
         if A is None or t is None:
             continue
         if cur is None:
@@ -61,9 +68,32 @@ def dial_turns(lines, dwell_s=DIAL_DWELL_S):
 
 
 def run_dial_turns(run, dwell_s=DIAL_DWELL_S):
-    """Dial turns of an `archive.Run`, or None when it has no evaluator log."""
-    n = next((f for f in SUITE_LOGS if f in run.files), None)
-    return dial_turns(run.lines(n), dwell_s) if n else None
+    """Dial turns of an `archive.Run` within the trial: {'turns': [...], 'unknown': None, ...}.
+
+    The evaluator log is found as extract.suite finds it; a run without one raises
+    FileNotFoundError. Rows are cut per segment and at the trial cutoff (extract.trial_rows).
+    A sparse log ('events-60s', angles only every 60 s) cannot show turns, so `turns` is None
+    and `unknown` says why."""
+    n = run.find(*extract.SUITE_LOGS)
+    if not n:
+        raise FileNotFoundError('No evaluator log (suite-process.jsonl) in run ' + run.k)
+    cut = extract.trial_cutoff(run)
+    sim = cut and cut['sim']
+    blocks = extract.log_blocks(run, n)
+    formats = sorted({b['format'] for b in blocks if b['format']})
+    low = [f for f in formats if f in extract.LOW_RESOLUTION]
+    out = dict(turns=None, unknown=None, formats=formats, cutoff_sim=sim)
+    if low:
+        out['unknown'] = 'process log %s records dial angles only every 60 s' % '/'.join(low)
+        return out
+    rows = (d for _, _, d in extract.trial_rows(run, n, sim, blocks))
+    out['turns'] = dial_turns_rows(rows, dwell_s)
+    return out
+
+
+def turn_list(turns):
+    """Turns from a run_dial_turns result (or an older plain list); None when unknown."""
+    return turns.get('turns') if isinstance(turns, dict) else turns
 
 
 def result(steps, extra, obj_extra):
@@ -122,7 +152,7 @@ def transport_atomic(d, clk):
     """
     S = d['suite']
     A = [x for x in d['actions'] if x['s'] and x['e']]
-    done = clk.wall(S['done_at']) if S.get('done_at') is not None else None
+    done = M.until(clk.wall(S['done_at']) if S.get('done_at') is not None else None, d)
     GA = goal_arms(S, A, clk)
     last = {}
     hold = {}
@@ -186,20 +216,21 @@ def transport_atomic(d, clk):
             if nxt - t >= M.REGRESS_MIN_S and g in byg:
                 byg[g]['failed'].add('object')
     item_goal = {v[2]: g for g, v in GA.items()}
-    for i in S['lost']:
+    for i in S['lost'] or ():  # None: unknown from this log (see extract.suite)
         if i in item_goal:
             byg[item_goal[i]]['failed'].add('object')
         else:
             extra['item:' + str(i)].add('object')
     r = result(steps, extra, 0)
     r['handoffs'] = len(steps) - len(deliveries)
+    r['objects_unknown'] = S.get('objects_unknown')
     return r
 
 
 def relay_atomic(d, clk):
     S = d['suite']
     A = [x for x in d['actions'] if x['s'] and x['e']]
-    done = clk.wall(S['done_at']) if S.get('done_at') is not None else None
+    done = M.until(clk.wall(S['done_at']) if S.get('done_at') is not None else None, d)
     recs = []
     steps = []
     for p, hs in S['handovers'].items():
@@ -266,7 +297,7 @@ def dial_atomic(d, clk, turns):
     """turns: [[sim_s, dial_index], ...] from dial_steps.json."""
     S = d['suite']
     A = [x for x in d['actions'] if x['s'] and x['e']]
-    done = clk.wall(S['solved_at']) if S.get('solved_at') is not None else None
+    done = M.until(clk.wall(S['solved_at']) if S.get('solved_at') is not None else None, d)
     steps = sorted(
         [dict(t=clk.wall(t), dial=k, failed=set()) for t, k in turns], key=lambda s: s['t']
     )
@@ -315,5 +346,6 @@ def compute(d, v1_atomic=None, turns=None):
     if fam == 'relay':
         return relay_atomic(d, clk)
     if fam == 'dial':
-        return None if turns is None else dial_atomic(d, clk, turns)
+        T = turn_list(turns)
+        return None if T is None else dial_atomic(d, clk, T)
     return None
