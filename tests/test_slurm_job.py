@@ -192,6 +192,42 @@ class SlurmJobTests(unittest.TestCase):
         self.assertEqual([i['issue'] for i in report['issues']], ['symlink'])
         self.assertEqual(report['status'], 'needs_review')
 
+    def test_a_fence_failing_on_exit_keeps_the_collected_archive(self):
+        from contextlib import contextmanager
+        from robofrontier.slurm_proxy import EgressError
+        self.stage()
+        source = (self.local/'source').resolve()
+        archive = source/'runs/exports/collected.zip'
+        archive.parent.mkdir(parents=True)
+        with zipfile.ZipFile(archive, 'w') as output:
+            output.writestr('manifest.json', '{}')
+        @contextmanager
+        def fenced(config, local, *, on_failure):
+            yield
+            raise EgressError('route lost after the run sealed')
+        result = {'archive': str(archive), 'status': 'closed', 'collection_complete': True}
+        with patch.object(slurm, 'ROOT', source), patch.object(slurm, 'subscription_environment', fenced), \
+                patch('robofrontier.cli.prepare'), patch('robofrontier.cli.run', return_value=result):
+            with self.assertRaises(EgressError):
+                slurm.execute(self.local)
+        written = json.loads((self.local/'execution-result.json').read_text())
+        self.assertEqual(written, {**result, 'context_failure': 'EgressError'})
+        report = slurm.stage_out(self.local, self.submission, 1)
+        self.assertFalse(report['raw_fallback'])
+        self.assertEqual(report['status'], 'needs_review')
+        self.assertEqual(report['context_failure'], 'EgressError')
+        self.assertEqual((self.submission/'results/evidence.zip').read_bytes(), archive.read_bytes())
+
+    def test_a_stop_before_start_is_recorded(self):
+        self.stage()
+        source = (self.local/'source').resolve()
+        (self.local/'STOP').touch()
+        with patch.object(slurm, 'ROOT', source), patch('robofrontier.cli.prepare'), \
+                patch('robofrontier.cli.run') as run:
+            self.assertEqual(slurm.execute(self.local), {'status': 'stopped_before_start'})
+            run.assert_not_called()
+        self.assertEqual(json.loads((self.local/'execution-result.json').read_text()), {'status': 'stopped_before_start'})
+
     def test_successful_collection_returns_only_one_evidence_zip(self):
         self.stage()
         archive = self.local/'source/runs/exports/collected.zip'

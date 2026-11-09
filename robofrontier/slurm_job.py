@@ -316,13 +316,24 @@ def execute(local):
         raise ValueError('Execute must import the staged node-local source')
     document = json.loads((local/'local-job.json').read_text())
     config = json.loads((local/'config.json').read_text())
-    with subscription_environment(config, local, on_failure=lambda: request_stop(local)):
-        prepare(ROOT/'runs/policy/batch', config)
-        if (local/'STOP').exists():
-            request_stop(local)
-            return {'status': 'stopped_before_start'}
-        result = run(ROOT/'runs/policy/batch', engineering=document['engineering'])
-    write_json(local/'execution-result.json', result)
+    path = local/'execution-result.json'
+    result = None
+    try:
+        with subscription_environment(config, local, on_failure=lambda: request_stop(local)):
+            prepare(ROOT/'runs/policy/batch', config)
+            if (local/'STOP').exists():
+                request_stop(local)
+                result = {'status': 'stopped_before_start'}
+            else:
+                result = run(ROOT/'runs/policy/batch', engineering=document['engineering'])
+            # Persist the result (naming any verified archive) before leaving the managed
+            # route/credential context, whose exit raises when its fence fired.
+            write_json(path, result)
+    except Exception as error:
+        if result is not None:
+            # The kind only; a message could carry route or credential details.
+            write_json(path, {**result, 'context_failure': type(error).__name__})
+        raise
     return result
 
 
@@ -522,7 +533,10 @@ def _stage_out_stopped(local, submission, step_exit_code):
                 keep(file, file.name)
         report = {'schema': 'robofrontier.slurm-stage-out.v1', 'sha256': files,
                   'step_exit_code': step_exit_code, 'returned_at': time.time(),
-                  'status': 'collected' if archive and step_exit_code == 0 and result.get('status') != 'needs_review' and result.get('collection_complete') and not issues else 'needs_review',
+                  'status': 'collected' if (archive and step_exit_code == 0 and result.get('status') != 'needs_review'
+                                            and result.get('collection_complete') and not issues
+                                            and not result.get('context_failure')) else 'needs_review',
+                  **({'context_failure': result['context_failure']} if result.get('context_failure') else {}),
                   'task_status': result.get('status'), 'raw_fallback': archive is None,
                   'issues': issues,
                   'node_local_source_retained': str(local),
