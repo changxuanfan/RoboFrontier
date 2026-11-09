@@ -177,7 +177,11 @@ def main(argv=None):
         bad = [r['id'] for r in rows if not r['ok']]
         for rid in bad:
             print('FAIL', rid, file=sys.stderr)
-        print(len(rows), 'runs,', len(bad), 'failed')
+        # Runs whose result is not counted (metrics.excluded), with the reason.
+        for r in rows:
+            if r.get('excluded'):
+                print('EXCLUDED', r['id'], r['excluded'], file=sys.stderr)
+        print(len(rows), 'runs,', len(bad), 'failed,', sum(1 for r in rows if r.get('excluded')), 'excluded')
         return 1 if bad else 0
     if a.cmd == 'atomic-v2':
         v1 = (

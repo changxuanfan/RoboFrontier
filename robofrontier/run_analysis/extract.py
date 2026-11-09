@@ -82,7 +82,11 @@ def trial_cutoff(run, db=_OPEN):
 
     The trial is scored at the wall-limit cutoff and nothing after it counts. The source is
     budget-cutoff.json (cutoff wall time, sim time and the evaluation at that moment); without
-    it, the first POLICY_WALL_LIMIT event of the runtime database (no evaluation)."""
+    it, the first POLICY_WALL_LIMIT event of the runtime database (no evaluation).
+
+    A run the 48 h wall backstop stopped (policy_probe.BudgetGuard) has `wall_backstop` true: it
+    needs review and is not counted (metrics.excluded). An operator-authorized continuation
+    after it (WALL_BACKSTOP_WAIVED) is scored normally again."""
     n = run.find(*CUTOFF_FILES)
     if n:
         c = json.loads(run.read(n))
@@ -95,6 +99,7 @@ def trial_cutoff(run, db=_OPEN):
             unix=unix,
             sim=sim,
             evaluation=compact_evaluation(ev) if isinstance(ev, dict) else None,
+            wall_backstop=c.get('wall_backstop') is True,
         )
     if db is _OPEN:
         with runtime_db(run) as opened:
@@ -108,6 +113,14 @@ def trial_cutoff_event(db):
     row = db.execute(
         "select created, value from events where kind='POLICY_WALL_LIMIT' order by seq limit 1"
     ).fetchone()
+    backstop = False
+    if not row:
+        # The last wall backstop not waived by an authorized continuation.
+        row = db.execute(
+            "select created, value from events e where kind='POLICY_WALL_BACKSTOP' and not exists "
+            "(select 1 from events w where w.kind='WALL_BACKSTOP_WAIVED' and w.seq>e.seq) order by seq desc limit 1"
+        ).fetchone()
+        backstop = bool(row)
     if not row:
         return None
     try:
@@ -115,10 +128,11 @@ def trial_cutoff_event(db):
     except ValueError:
         v = {}
     return dict(
-        source='POLICY_WALL_LIMIT event',
+        source='POLICY_WALL_BACKSTOP event' if backstop else 'POLICY_WALL_LIMIT event',
         unix=float(row[0]),
         sim=num(v.get('sim_time_s')) if isinstance(v, dict) else None,
         evaluation=None,
+        wall_backstop=backstop,
     )
 
 

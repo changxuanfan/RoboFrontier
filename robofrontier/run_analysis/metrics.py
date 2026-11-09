@@ -521,6 +521,16 @@ def outcome(d):
     )
 
 
+def excluded(d):
+    """Why a run's result is not counted, or None.
+
+    wall_backstop: the 48 h wall backstop stopped it before its 24 h active-time cutoff
+    (policy_probe.BudgetGuard); it needs review, whatever its outcome."""
+    if (d.get('cutoff') or {}).get('wall_backstop') or (d.get('evaluation.json') or {}).get('wall_backstop') is True:
+        return 'wall_backstop'
+    return None
+
+
 def compute(d):
     s = d['sel']
     T = timing(d)
@@ -539,7 +549,9 @@ def compute(d):
         meta=d.get('meta'),
         timing=T,
         outcome=outcome(d),
+        excluded=excluded(d),
     )
+    O['needs_review'] = O['excluded'] is not None
     H = d.get('host')
     O['tokens'] = H['tok'] if H else None
     O['engine'] = H['engine'] if H else None

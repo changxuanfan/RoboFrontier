@@ -59,9 +59,10 @@ class RuntimeService:
         self.task = json.loads((self.directory/'private/inputs/task.json').read_text())
         self.policy_budget = None
         if self.task.get('execution_readiness') == 'prepared_policy_trial':
-            from .policy_probe import BudgetGuard, protocol, run_clock
+            from .policy_probe import BudgetGuard, protocol, run_clock, wall_backstop_s
             self.policy_budget = BudgetGuard(protocol(self.task['run_protocol']['total_wall_limit_s'],
-                                                      run_clock(self.task['run_protocol'])))
+                                                      run_clock(self.task['run_protocol'])),
+                                             wall_backstop_s=wall_backstop_s(self.task['run_protocol']))
         self.roles = tuple(self.store.agents())
         self.policy_roles = tuple(a for a in self.roles if self.store.agent(a)['kind'] != 'manager')
         self.tokens = {}
@@ -637,6 +638,14 @@ class RuntimeService:
 
     def pump(self):
         if self.egress_pause.sync() or self.store.get('egress_review_hold',False):
+            budget=self.policy_budget
+            if budget is not None and budget.backstop_pending(self):
+                # The wall backstop ends a run even while a pause or review hold holds its world
+                # (policy_probe.BudgetGuard): the pause closes and the world stops as at a cutoff.
+                self.egress_pause.close()
+                budget.tick(self)
+                if self.ended:self.shutdown=True
+                return
             # Keep engineering observation/shutdown reachable. Every policy
             # request retains its original call ID and waits, without reissue.
             held=[]

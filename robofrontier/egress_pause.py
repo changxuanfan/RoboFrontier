@@ -82,6 +82,8 @@ class WorldPause:
         if budget is not None:budget.interrupt()
 
     def sync(self):
+        # A run stopped by the wall backstop is ending; no new pause holds its world (policy_probe).
+        if self.claim is None and self.store.get('wall_backstop'):return False
         if not self.path:
             return self.sync_outage() if self.outage is not None else False
         if self.failed:return True

@@ -56,7 +56,9 @@ really died with time left:
 - a motion frame was recorded;
 - more than 60 s of the wall limit remain, by the run's own clock (see
   [Time](#time)): remaining active time, or for a frozen START-wall-time run the
-  wall time since START not counting downtime.
+  wall time since START not counting downtime;
+- the run was not stopped by the [wall backstop](#wall-backstop), unless an
+  operator authorized the continuation explicitly.
 
 The Codex batch asks after every host exit, clean or not, because a host whose
 world died seals the run and exits normally; the checks above tell the cases
@@ -194,6 +196,43 @@ the limit.
 The Claude supervisor leaves the end to the world: it ends a run on its own only
 60 s of active time past the limit, and waits for an outage or egress pause
 instead of sealing the paused run. The Codex host never had its own limit.
+
+### Wall backstop
+
+Active time does not advance while a world is paused or its host is frozen, so it
+alone would never end a run held forever. New policy runs therefore also freeze
+`run_protocol.wall_backstop_s` (172,800 s, `task_families.WALL_BACKSTOP_S`;
+private, like the limit). If that much wall time has passed since START and the
+active-time cutoff has not fired, the world owner stops the run exactly like a
+cutoff (dispatch paused, arms braked, the run closed after the braking grace),
+even while an outage pause, egress pause or review hold holds the world: the
+pause is closed first and is not taken up again. The records differ, so the stop
+is not a normal end:
+
+- a `POLICY_WALL_BACKSTOP` event (not `POLICY_WALL_LIMIT`) and
+  `POLICY_BACKSTOP_CLOSED` (not `POLICY_BUDGET_CLOSED`); `wall_backstop` in the
+  runtime database;
+- `budget-cutoff.json` with `wall_backstop: true` and `needs_review: true`;
+  `evaluation.json` with `termination_reason: wall_backstop`,
+  `wall_backstop: true`, `needs_review: true` and `budget_exhausted: false`.
+
+Its result needs review and is not counted. The Claude supervisor reports
+`ended_by: wall_backstop` (or reason `wall_backstop` when it had to end a world
+that did not close itself 150 s after the backstop) and the run's status is
+`needs_review`; both batches mark the job `needs_review` with reason
+`wall_backstop`. Run analysis keeps the cutoff's `wall_backstop` flag and
+`metrics.compute` sets `excluded: wall_backstop` and `needs_review`; the
+`compute` command lists such runs as `EXCLUDED`.
+
+A backstopped run never continues automatically. It continues only with an
+explicit operator authorization from the stopped-runtime upgrade path
+(`runtime_upgrade`, the same `manual_authorization` as for a further segment),
+which accepts the backstop's ended world as a stopped segment. Its continuation
+moves the backstop's `budget-cutoff.json` and `evaluation.json` aside (with
+`-wall-backstop-N` in their names), records `WALL_BACKSTOP_WAIVED`, and the
+backstop then counts again from that moment. Runs frozen without the field
+(every START-wall-time run, and active-time runs frozen before it) have no
+backstop.
 
 ### Network-outage pause (local runs)
 

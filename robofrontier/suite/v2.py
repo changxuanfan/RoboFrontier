@@ -825,9 +825,10 @@ def public_task(task):
     keys=('kind','id','suite_version','family','level','arms','rules','objective','observation_contract','gripper_profile','cameras','coordinate_frame','execution_readiness')
     result={k:deepcopy(task[k]) for k in keys}
     # The host enforces the wall limit; policies plan as if time were unlimited, so it stays private,
-    # with the clock a released policy trial counts it by (task_families.ACTIVE_TIME_CLOCK).
+    # with the clock a released policy trial counts it by (task_families.ACTIVE_TIME_CLOCK) and its
+    # wall backstop (task_families.WALL_BACKSTOP_S).
     if 'run_protocol' in task:
-        private=('total_wall_limit_s','clock') if 'total_wall_limit_s' in task['run_protocol'] else ('total_wall_limit_s',)
+        private=('total_wall_limit_s','clock','wall_backstop_s') if 'total_wall_limit_s' in task['run_protocol'] else ('total_wall_limit_s',)
         result['run_protocol']={k:deepcopy(v) for k,v in task['run_protocol'].items() if k not in private}
     if task['family']!='dial':result['initial_supplies']=[dict(source=s,color=c,count=n) for (s,c),n in sorted(Counter((o.get('source'),o.get('color')) for o in task['objects']).items())]
     result['mechanism']=deepcopy(task['mechanism'])

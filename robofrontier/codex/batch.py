@@ -17,7 +17,7 @@ from robofrontier.benchmark_common import load_env, select_cases
 from robofrontier.codex.launch import codex_home, initialize_codex_home, launch_config, profile
 from robofrontier.task_families import ROOT, read, prepare
 from robofrontier.run_setup import write_json, verify_inputs
-from robofrontier.run_segments import try_continue
+from robofrontier.run_segments import try_continue, wall_backstopped
 
 
 def prepare_batch(output, names, families=None, cases=None, config=None, level=None, min_arms=False, wall_limit_s=86400, *, harness_overrides=None):
@@ -269,6 +269,9 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
                 else:
                     job.update(status='stopped_before_start' if result is None else 'closed' if result==0 else 'needs_review')
                     if result is not None:job['host_exit_code']=result
+                    # Stopped by the 48 h wall backstop, not the active-time limit: never counted.
+                    if result is not None and wall_backstopped(job['run_directory']):
+                        job.update(status='needs_review',reason='wall_backstop')
             except Exception as error:job.update(status='needs_review',error=str(error))
             write_json(folder/'batch.json',batch)
     from .recover_task import wait_for_recoveries

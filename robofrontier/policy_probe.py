@@ -28,6 +28,22 @@ def run_clock(run_protocol):
     return run_protocol.get('clock',WALL_CLOCK)
 
 
+def wall_backstop_s(run_protocol):
+    """The frozen wall backstop of an active-time run (task_families.WALL_BACKSTOP_S), or None."""
+    value=run_protocol.get('wall_backstop_s')
+    if run_clock(run_protocol)==WALL_CLOCK or value is None:return None
+    if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or value<=0:
+        raise ValueError('Invalid wall backstop')
+    return float(value)
+
+
+def backstop_since(store):
+    """Wall time the backstop counts from: START, or an operator's authorized continuation after
+    an earlier backstop stop (run_segments.prepare_retry)."""
+    waived=store.get('wall_backstop_waived') or {}
+    return max(store.get('start_at'),waived.get('at') or 0.)
+
+
 def protocol(seconds=1200.,clock=WALL_CLOCK):
     return validate_protocol(dict(kind='bounded_policy_trial',authorization='explicit_user_request',
         wall_limit_s=seconds,clock=clock,oracle_readiness_claimed=False))
@@ -61,13 +77,36 @@ class BudgetGuard:
     active_time_v1: the limit is active running time, accumulated by the owner tick by tick while
     the world runs unpaused (`counting`) and saved in the run store as `active_s`, so a continued
     segment or a restarted owner carries it on and never re-counts a gap. A gap of more than
-    `stall_s` between ticks (a frozen, suspended or sleeping host) adds nothing."""
-    def __init__(self,run_protocol,grace_s=10.,stall_s=STALL_S,persist_s=PERSIST_S):
+    `stall_s` between ticks (a frozen, suspended or sleeping host) adds nothing.
+
+    Wall backstop (active-time runs frozen with `wall_backstop_s`): a run whose active-time cutoff
+    has not fired once that much wall time has passed since START (`backstop_since`) stops the same
+    way, even while a pause holds the world, but is recorded as `wall_backstop`: needs review and
+    not counted. It keeps its own records (POLICY_WALL_BACKSTOP, POLICY_BACKSTOP_CLOSED), so it is
+    not a normal end and a continuation can be authorized explicitly (run_segments)."""
+    def __init__(self,run_protocol,grace_s=10.,stall_s=STALL_S,persist_s=PERSIST_S,wall_backstop_s=None):
         self.protocol=validate_protocol(run_protocol);self.deadline=None;self.cutoff=None
         self.cutoff_evaluation=None;self.completed=False;self.grace_s=grace_s
         self.active_clock=self.protocol['clock']!=WALL_CLOCK
         self.stall_s=stall_s;self.persist_s=persist_s
         self.active=None;self.saved=None;self.last_tick=None;self.stalls=0
+        self.wall_backstop_s=wall_backstop_s if self.active_clock else None;self.backstopped=False
+        self.backstop_checked=None
+
+    def backstop_due(self,store,wall_now):
+        if self.wall_backstop_s is None or self.cutoff is not None or self.completed:return False
+        if store.get('lifecycle')!='running' or store.get('start_at') is None:return False
+        return wall_now-backstop_since(store)>=self.wall_backstop_s
+
+    def backstop_pending(self,service,wall_now=None):
+        """The backstop is due or its stop is under way: it then runs even through a pause."""
+        if self.backstopped:return not self.completed
+        if self.wall_backstop_s is None:return False
+        wall_now=time.time() if wall_now is None else wall_now
+        # A held world's owner loops fast; the store is read at most once a second here.
+        if self.backstop_checked is not None and 0<=wall_now-self.backstop_checked<1.:return False
+        self.backstop_checked=wall_now
+        return self.backstop_due(service.store,wall_now)
 
     def interrupt(self):
         """The world was paused outside the tick (egress or outage pause): restart the interval."""
@@ -98,12 +137,18 @@ class BudgetGuard:
         self.last_tick=mono_now if running else None
         if self.active-self.saved>=self.persist_s:self.flush(store)
 
-    def begin_cutoff(self,service,wall_now,mono_now):
+    def begin_cutoff(self,service,wall_now,mono_now,backstop=False):
         """Score now, pause dispatch, stop the arms; the run closes after the braking grace."""
-        self.cutoff=mono_now;self.cutoff_evaluation=service.world.evaluate()
+        self.cutoff=mono_now;self.cutoff_evaluation=service.world.evaluate();self.backstopped=backstop
         service.store.put('dispatch_paused',True);service.store.put('physics_state','paused_by_user')
         clock=dict(active_s=self.active,clock=self.protocol['clock']) if self.active_clock else {}
-        service.store.event('POLICY_WALL_LIMIT','Meta',dict(wall_limit_s=self.protocol['wall_limit_s'],sim_time_s=float(service.world.time),**clock))
+        if backstop:
+            wall=dict(wall_backstop_s=self.wall_backstop_s,wall_since_start_s=wall_now-backstop_since(service.store))
+            service.store.put('wall_backstop',dict(wall,at=wall_now,segment=service.store.get('segment',0)))
+            service.store.event('POLICY_WALL_BACKSTOP','Meta',dict(wall_limit_s=self.protocol['wall_limit_s'],
+                sim_time_s=float(service.world.time),**clock,**wall))
+        else:
+            service.store.event('POLICY_WALL_LIMIT','Meta',dict(wall_limit_s=self.protocol['wall_limit_s'],sim_time_s=float(service.world.time),**clock))
         from .action_batch import cancel_collecting
         cancel_collecting(service.store,'policy_wall_limit',float(service.world.time))
         for actor in service.policy_roles:
@@ -113,6 +158,7 @@ class BudgetGuard:
         write_json(service.directory/'private/outputs/budget-cutoff.json',dict(
             protocol=self.protocol,cutoff_unix_s=wall_now,sim_time_s=float(service.world.time),
             **({'active_s':self.active,'active_time_stalls':self.stalls} if self.active_clock else {}),
+            **({'wall_backstop':True,'needs_review':True,'wall_backstop_s':self.wall_backstop_s} if backstop else {}),
             evaluation=self.cutoff_evaluation))
 
     def tick(self,service,wall_now=None,mono_now=None):
@@ -124,6 +170,8 @@ class BudgetGuard:
             if self.cutoff is None:
                 self.accumulate(service,mono_now)
                 if self.active>=self.protocol['wall_limit_s']:self.flush(service.store);self.begin_cutoff(service,wall_now,mono_now)
+                elif self.backstop_due(service.store,wall_now):
+                    self.flush(service.store);self.begin_cutoff(service,wall_now,mono_now,backstop=True)
         else:
             if self.deadline is None:
                 # Downtime between segments of a continued run does not count (run_segments.deadline).
@@ -152,13 +200,17 @@ class BudgetGuard:
         post_stop=service.world.evaluate()
         service.world.end_trial()
         service.store.put('lifecycle','ended');service.store.put('physics_state','finished')
-        service.store.put('termination_reason','wall_limit')
-        service.store.event('POLICY_BUDGET_CLOSED','Meta',dict(unresolved_action_ids=unknown,active_robots=active,stopping_overrun_wall_s=mono_now-self.cutoff))
+        reason='wall_backstop' if self.backstopped else 'wall_limit'
+        service.store.put('termination_reason',reason)
+        service.store.event('POLICY_BACKSTOP_CLOSED' if self.backstopped else 'POLICY_BUDGET_CLOSED','Meta',
+                            dict(unresolved_action_ids=unknown,active_robots=active,stopping_overrun_wall_s=mono_now-self.cutoff))
         service.stop_video()
-        result=dict(self.cutoff_evaluation,termination_reason='wall_limit',budget_exhausted=True,
+        result=dict(self.cutoff_evaluation,termination_reason=reason,budget_exhausted=not self.backstopped,
             task_success=bool(self.cutoff_evaluation.get('task_success') and not unknown),
             budget_wall_limit_s=self.protocol['wall_limit_s'],post_stop_evaluation=post_stop,
             **({'budget_clock':self.protocol['clock'],'budget_active_s':self.active} if self.active_clock else {}),
+            # Stopped by wall time, not the active-time limit: not a scored result.
+            **({'wall_backstop':True,'needs_review':True} if self.backstopped else {}),
             unresolved_action_ids=unknown,stopping_overrun_wall_s=mono_now-self.cutoff,
             final_observation=images,final_capture_error=capture_error)
         write_json(service.directory/'private/outputs/evaluation.json',result)

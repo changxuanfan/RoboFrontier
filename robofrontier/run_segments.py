@@ -160,6 +160,17 @@ def _last_frame(run, segment):
 NORMAL_END_EVENTS = ('POLICY_WALL_LIMIT', 'POLICY_BUDGET_CLOSED', 'TEAM_FINISH_PROPOSED')
 
 
+BACKSTOP_REFUSAL = ('stopped by the 48 h wall-time backstop; continuing needs an explicit operator authorization '
+                    '(runtime_upgrade)')
+
+
+def wall_backstopped(run):
+    """True when the run's last stop was the wall backstop (policy_probe.BudgetGuard): its
+    budget-cutoff.json says so. Such a run needs review and its result is not counted."""
+    try: return json.loads((Path(run) / 'private/outputs/budget-cutoff.json').read_text()).get('wall_backstop') is True
+    except (OSError, ValueError, AttributeError): return False
+
+
 def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None, manual_authorization=None):
     """(True, None) when this run may continue in a new segment, else (False, reason).
 
@@ -176,10 +187,14 @@ def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None
         from .runtime_upgrade import validate_authorization
         try: validate_authorization(run, store, manual_authorization, source_root=source_root)
         except (ValueError, OSError, KeyError, TypeError) as error: return False, str(error)
+    # A run stopped by the wall backstop continues only on an operator's explicit authorization;
+    # the backstop's own stop (an ended world, sealed live) is then not a normal end.
+    backstop = bool(store.get('wall_backstop'))
+    if backstop and manual_authorization is None: return False, BACKSTOP_REFUSAL
     if store.get('segment', 0) >= MAX_RETRIES and not journal and manual_authorization is None:
         return False, 'already continued once'
     lifecycle = store.get('lifecycle')
-    if lifecycle not in ('running', 'interrupted', 'recovery_required'):
+    if lifecycle not in ('running', 'interrupted', 'recovery_required') and not (backstop and lifecycle == 'ended'):
         return False, 'run ended normally or never started (' + str(lifecycle) + ')'
     marks = ','.join('?' * (len(NORMAL_END_EVENTS) + 1))
     events = {kind for (kind,) in store.db.execute(
@@ -192,7 +207,8 @@ def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None
     for (value,) in store.db.execute("SELECT value FROM events WHERE kind='RUN_SEALED'"):
         sealed = json.loads(value)
         report = sealed.get('report_ref') or ''
-        if not sealed_host_failure and sealed.get('owner_was_live', True) and Path(report).resolve().parent == output_dir(run, segment).resolve():
+        if (not sealed_host_failure and not backstop and sealed.get('owner_was_live', True)
+                and Path(report).resolve().parent == output_dir(run, segment).resolve()):
             return False, 'run was sealed with its world alive'
     if run_path(run, 'stop').exists(): return False, 'stop requested'
     # A preparation that stopped part way may have left its own restore files unverified.
@@ -271,6 +287,8 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
         value = json.loads(connection.read_text())
         if value.pop('url', None) is not None:
             write_json(connection, value); connection.chmod(0o600)
+    # Last, so a preparation that stopped part way still sees the backstop stop it continues.
+    if store.get('wall_backstop'): _waive_backstop(run, store, manual_authorization)
     with store.transaction():
         segments = store.get('segments') or [{'index': 0, 'started_at': store.get('start_at')}]
         segments[-1].update(ended_at=journal['ended_at'], end_reason=journal['reason'])
@@ -287,6 +305,24 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
                                                  'source_frame': journal['source_frame'], 'interrupted': journal['interrupted']})
     export(run, store)
     return note
+
+
+def _waive_backstop(run, store, authorization):
+    """An operator authorized continuing a run the wall backstop stopped: the backstop's stop
+    records are kept under their own names, so the trial is again scored at its active-time
+    cutoff, and the backstop counts again from now."""
+    outputs = Path(run) / 'private/outputs'
+    segment = store.get('segment', 0)
+    for name in ('budget-cutoff.json', 'evaluation.json'):
+        if (outputs / name).is_file():
+            (outputs / name).replace(outputs / name.replace('.json', '-wall-backstop-%d.json' % segment))
+    with store.transaction():
+        waived = {'at': time.time(), 'authorization': authorization, 'segment': segment,
+                  'backstop': store.get('wall_backstop')}
+        store.put('wall_backstop_waived', waived)
+        store.put('wall_backstop', None)
+        store.put('termination_reason', None)
+        store.event('WALL_BACKSTOP_WAIVED', 'Meta', waived)
 
 
 def begin_segment(store, now=None):

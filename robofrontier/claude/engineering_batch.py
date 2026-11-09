@@ -242,7 +242,7 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
                     try:
                         result = future.result()
                         state['jobs'][index]['status'] = 'closed' if result.get('status') == 'finished' else 'needs_review'
-                        state['jobs'][index]['reason'] = result.get('reason')
+                        state['jobs'][index]['reason'] = 'wall_backstop' if result.get('wall_backstop') else result.get('reason')
                         if result.get('segments'): state['jobs'][index]['segments'] = result['segments']
                     except Exception as error:
                         state['jobs'][index].update(status='needs_review', error_type=type(error).__name__)

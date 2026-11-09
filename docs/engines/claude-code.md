@@ -655,6 +655,13 @@ failure in the same pause, or a turn that failed for another reason within it
 resent turn reads its saved work and original call IDs. Runs frozen without the
 clock never resend.
 
+Such runs also have the 48-hour [wall backstop](../running/run-segments.md#wall-backstop).
+The world stops the run; the supervisor waits for it to close, reports
+`ended_by: wall_backstop` and leaves the run `needs_review` (its result is not
+counted). If the world has not ended the run 150 s after the backstop, even
+while a pause holds it, the supervisor ends it itself with reason
+`wall_backstop`.
+
 ## Normal finish and native reply completion
 
 A genuine protocol commissioning witness exercises real observation, delegation,

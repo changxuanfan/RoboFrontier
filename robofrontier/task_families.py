@@ -89,6 +89,10 @@ RELAY_HANDOVER_DEFINITION = ('A handover qualifies only while the timber is off 
 # only time the world is running unpaused counts; host stalls, pauses and network outages
 # do not. Runs frozen without this field keep the START wall-clock rule.
 ACTIVE_TIME_CLOCK = 'active_time_v1'
+# Active time no longer ends a hung run, so those runs also stop once this much wall time has
+# passed since START (policy_probe.BudgetGuard). A run stopped this way needs review and is not
+# counted. Runs frozen without this field have no backstop.
+WALL_BACKSTOP_S = 172800
 
 
 def protocol_for(case, release_sha256, wall_limit_s=86400):
@@ -100,7 +104,7 @@ def protocol_for(case, release_sha256, wall_limit_s=86400):
         source_task_sha256=case['source_files']['task.json'],
         source_scene_sha256=case['source_files']['scene.xml'],
         reference_evidence=case['qualification'], total_wall_limit_s=wall_limit_s,
-        clock=ACTIVE_TIME_CLOCK, evaluation_semantics='terminal_outcome_v2',
+        clock=ACTIVE_TIME_CLOCK, wall_backstop_s=WALL_BACKSTOP_S, evaluation_semantics='terminal_outcome_v2',
         experience='fresh_run_only', presentation_loop=False)
     if case['id'].startswith('relay-'):
         protocol['relay_completion_rule'] = RELAY_HANDOVER_RULE
@@ -108,13 +112,15 @@ def protocol_for(case, release_sha256, wall_limit_s=86400):
 
 
 def expected_protocol(case, protocol, release_sha256):
-    """The protocol a task should carry; runs frozen before the handover rule or the
-    active-time clock keep their own terms."""
+    """The protocol a task should carry; runs frozen before the handover rule, the
+    active-time clock or the wall backstop keep their own terms."""
     expected = protocol_for(case, release_sha256, protocol['total_wall_limit_s'])
     if 'relay_completion_rule' not in protocol:
         expected.pop('relay_completion_rule', None)
     if 'clock' not in protocol:
         expected.pop('clock', None)
+    if 'wall_backstop_s' not in protocol:
+        expected.pop('wall_backstop_s', None)
     return expected
 
 
