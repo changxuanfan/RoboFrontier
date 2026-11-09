@@ -63,7 +63,8 @@ its Bash sandbox.
 ## Slurm
 
 - Set `slurm.scratch_root` outside `/tmp`, such as `/var/tmp`, and name shared storage in
-  `ROBOFRONTIER_SHARED_DENY_ROOTS`.
+  `ROBOFRONTIER_SHARED_DENY_ROOTS`. An empty `scratch_root` uses `SLURM_TMPDIR`, which is often
+  under `/tmp`; preparation then refuses the run.
 - Keep the Mac route's `slurm.egress_root` outside `/tmp` too, since policies can read and write
   there. Preparing a run with an environment refuses it otherwise.
 - Put the pinned Codex CLI (see `docs/engines/codex.md`) first on `PATH`. A newer one can reject the
@@ -72,9 +73,10 @@ its Bash sandbox.
 
 ## Known limits
 
-- **Keep Slurm scratch outside `/tmp`, such as under `/var/tmp`.** Landlock cannot open a folder
-  and close something inside it, so with runs under `/tmp`, Codex could not list it or create files
-  directly in it. The check shows this when `--scratch` matches the batch's location.
+- **On Linux, runs and `TMPDIR` stay outside `/tmp`, such as under `/var/tmp`.** Landlock cannot
+  open a folder and close something inside it, so a closed run, batch or `TMPDIR` under `/tmp` would
+  leave nothing able to create files directly in `/tmp`. Preparation and the check refuse it;
+  `TMPDIR=/tmp` itself is fine. macOS allows runs under `/tmp`.
 - **`ProcessPoolExecutor` fails under Claude on macOS.** Its sandbox refuses a system limit that
   the executor reads first. `multiprocessing.Pool` works, and Linux has no such limit.
 - **Codex on Linux ignores `chmod`.** Landlock cannot limit which of the account's files a mode

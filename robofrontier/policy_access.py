@@ -85,12 +85,15 @@ def closed_table(run, environment, *, home=None, system=None, **kwargs):
     stays writable and is shared with other runs.
     """
     run = Path(run).resolve()
+    system = system or sys.platform
+    if system == 'linux':
+        require_outside_tmp(run)
     home = Path(home).expanduser().resolve() if home else Path.home().resolve()
     access = table(run, home=home, **{**kwargs, 'tmp_dirs': ('/tmp',)})
-    for path in CLOSED_ROOTS[system or sys.platform]:
+    for path in CLOSED_ROOTS[system]:
         access[str(Path(path).resolve())] = 'deny'
     access[str(home)] = 'deny'
-    # A run may sit in node-local scratch under /tmp, beside the rest of its batch.
+    # On macOS a run may sit in scratch under /tmp, beside the rest of its batch; Linux refuses it above.
     for folder in (run.parent, run.parent.parent):
         if folder not in (Path('/'), Path('/tmp').resolve()):
             access[str(folder)] = 'deny'
@@ -100,6 +103,21 @@ def closed_table(run, environment, *, home=None, system=None, **kwargs):
     access[str(run/'private')] = 'deny'
     access[str(run/run_layout.LAYOUTS[run_layout.CURRENT]['policy_cwd'])] = 'write'
     return access
+
+
+def require_outside_tmp(run):
+    """On Linux, refuse a run with a policy environment, or a TMPDIR, inside /tmp.
+
+    Landlock cannot open a folder and close something inside it: the folder itself gets no rule.
+    A closed run, batch or TMPDIR inside /tmp would leave /tmp unwritable, where shells and the
+    CLIs create files at fixed paths. TMPDIR=/tmp itself stays open.
+    """
+    tmp = Path('/tmp').resolve()
+    temporary = Path(os.environ['TMPDIR']).resolve() if os.environ.get('TMPDIR') else None
+    for name, path in (('the run folder', run), ('TMPDIR', temporary)):
+        if path is not None and path != tmp and path.is_relative_to(tmp):
+            raise ValueError('On Linux, keep %s outside /tmp for a run with a policy environment (set '
+                             'slurm.scratch_root and TMPDIR under /var/tmp, for example); found %s' % (name, path))
 
 
 def record(run, environment=None, unchecked=False, **kwargs):

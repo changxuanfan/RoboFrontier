@@ -40,9 +40,13 @@ def fake_environment(folder):
     return root
 
 
+# Outside /tmp, where Linux refuses a run with an environment (and where CI's temporary folder is).
+OUTSIDE_TMP = None if not Path(tempfile.gettempdir()).resolve().is_relative_to(Path('/tmp').resolve()) else '/var/tmp'
+
+
 class Fixture(unittest.TestCase):
     def setUp(self):
-        folder = tempfile.TemporaryDirectory()
+        folder = tempfile.TemporaryDirectory(dir=OUTSIDE_TMP)
         self.addCleanup(folder.cleanup)
         self.tmp = Path(folder.name).resolve()
         self.root = fake_environment(self.tmp)
@@ -149,6 +153,26 @@ class AccessTableTests(Fixture):
             hung.chmod(0o755)
             self.assertIsNone(policy_env.cli_version(str(hung), timeout_s=1))
             self.assertIsNone(policy_env.cli_version(str(Path(folder)/'absent')))
+
+    def test_linux_refuses_a_run_or_tmpdir_under_tmp(self):
+        scratch = Path(tempfile.mkdtemp(prefix='rf-', dir='/tmp')).resolve()
+        self.addCleanup(lambda: __import__('shutil').rmtree(scratch, ignore_errors=True))
+        run = scratch/'runs/profile/case-a'
+        record = lambda run: policy_access.record(run, environment=self.root, repo=self.repo, home=self.home,
+                                                  checkouts=[self.repo])
+        with patch.object(policy_access.sys, 'platform', 'linux'):
+            with patch.dict(os.environ, {'TMPDIR': str(self.tmp/'temporary')}):
+                with self.assertRaisesRegex(ValueError, 'keep the run folder outside /tmp'):
+                    record(run)
+                record(self.run_dir)
+            with patch.dict(os.environ, {'TMPDIR': str(scratch/'tmp')}), \
+                    self.assertRaisesRegex(ValueError, 'keep TMPDIR outside /tmp'):
+                record(self.run_dir)
+            with patch.dict(os.environ, {'TMPDIR': '/tmp/'}):
+                record(self.run_dir)
+        with patch.object(policy_access.sys, 'platform', 'darwin'):
+            with patch.dict(os.environ, {'TMPDIR': str(scratch/'tmp')}):
+                record(run)
 
     def test_linux_closes_its_own_folders(self):
         with patch.object(policy_access.sys, 'platform', 'linux'):
