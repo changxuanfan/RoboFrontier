@@ -20,7 +20,7 @@ See the [configuration and CLI guide](../docs/unified-cli.md).
 | `backgrounds/robo_factory.json` | Factory appearance, layout and shared visual resources |
 | `backgrounds/robo_factory_lookdev*.json` | Offline lighting and camera overrides for `render_factory_blender --lighting-config/--camera-config` |
 | `patterns/` | Tulip pattern parameters used by the Frontier V2 scene builder |
-| `retention.json` | What `scripts/curate_repository.py` keeps: Oracle sources, released inputs, final media and selected policy evidence |
+| `retention.json` | What `scripts/curate_repository.py` keeps: Oracle sources, released inputs, final media and selected policy evidence; `skip_runs` names the `runs/` data roots it never proposes (batches and policy runs are always kept) |
 | `noslip.json` | No-slip physics variant for the single-arm demo |
 | `examples/luna-l3-cpu.toml` | CPU Slurm example for the four maximum-arm Level 3 tasks |
 | `environments/` | Scene revisions before release, the earlier revisions released cases and Oracle recordings name as sources, and scenes the tests open |
