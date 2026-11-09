@@ -139,7 +139,8 @@ only.
 - The Dial game is episode history, so it continues: the new evaluator starts
   from the carried trial count, BEST and success, and the display shows that
   BEST at once. An input already scored and still held at the restore frame
-  stays the same trial while it is held on. Trials scored after the restore
+  stays the same trial while it is held on: blue support ready at that frame stays
+  qualified, and a red knob held there is not a new (premature) contact. Trials scored after the restore
   frame were never physically kept and are not carried. Process logs mark the
   carried part (`carried_valid_trials`); `run_segments.dial_record` combines
   segments, including runs continued before this existed (their later segment
@@ -147,7 +148,9 @@ only.
 - A Relay timber's handovers and drops are episode history too, because completion
   requires a qualified handover. The new evaluator keeps those made up to the restore
   frame (`run_segments.relay_record`). A timber held at that frame becomes airborne
-  again through the ordinary lift check.
+  again through the ordinary lift check, keeping the custody and dropped state it had
+  there: a receiver joining before the frame must qualify again, and a timber dropped
+  there may still only be lifted by its holders.
 - The two CLIs describe the cut-off tool call differently (Claude: outcome
   unknown; Codex: cancelled); the resume message is authoritative.
 

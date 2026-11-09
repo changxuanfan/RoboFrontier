@@ -23,9 +23,9 @@
         "dial"
       ],
       "historical_sha256": "ee2efac94d55253a63197adf4ddf364ec43a373a6959eba1bd5ef0886af7c035",
-      "integrated_sha256": "1392c59639e36486ebc6b2322ca0c5cecec8b493feff3556f42ca7a1a3849ae9",
+      "integrated_sha256": "ba6fd6c5ac9ad161a324e7f0b682efe26745aa0e82adf80467c423115467c548",
       "unaffected_ast_sha256": "0dcf394977e2c64e80fa46626905fc58ee85a52b50e0ede276d62aaec01b5dfe",
-      "review": "Re-reviewed for the Mosaic Level 2/3 centre tolerance: mosaic_candidates reads xy_center_tolerance_m_inclusive from the task with the original 5 mm default, so tasks without mosaic-center-6mm-v1 are unchanged (source_compatibility.MOSAIC_CENTER_TOLERANCE). The Relay class stays excluded; its 70 percent rule is a new scoring contract, not claimed equal to the old one."
+      "review": "Re-reviewed for the Mosaic Level 2/3 centre tolerance: mosaic_candidates reads xy_center_tolerance_m_inclusive from the task with the original 5 mm default, so tasks without mosaic-center-6mm-v1 are unchanged (source_compatibility.MOSAIC_CENTER_TOLERANCE). The Relay class stays excluded; its 70 percent rule is a new scoring contract, not claimed equal to the old one. 2026-11-09: Relay handovers now count only off the table (qualified-members-v3) and continued segments keep custody and drop state; all of it, including the protocol names and is_handover, is inside the excluded Relay class, and the unaffected AST digest still matches."
     },
     {
       "path": "robofrontier/task_config.py",

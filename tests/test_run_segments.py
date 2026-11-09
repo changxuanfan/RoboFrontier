@@ -109,6 +109,16 @@ class EligibilityTests(unittest.TestCase):
         (out / 'suite-process.jsonl').write_text(json.dumps(header) + '\n' + json.dumps({'type': 'snapshot', 'sim_time_s': 1, 'result': {'samples': 1}}) + '\n')
         self.assertIsNone(run_segments.dial_record(self.run))
 
+    def test_dial_record_carries_which_dials_had_ready_support_at_the_restore_frame(self):
+        out = self.run / 'private/outputs'; header = {'schema': 'x', 'format': 'events-1s'}
+        row = lambda t, ready: {'type': 'event', 'sim_time_s': t, 'result': {
+            'valid_trials': 3, 'display': 2, 'feedback_mode': 'best_so_far', 'solved': False,
+            'input_ready': all(ready), 'private_support_ready': ready}}
+        rows = [header, row(10, [True, False]), row(20, [True, True]), row(30, [False, True])]
+        (out / 'suite-process.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows))
+        self.assertEqual(run_segments.dial_record(self.run, 25.)['support_ready'], [True, True])
+        self.assertEqual(run_segments.dial_record(self.run)['support_ready'], [False, True])
+
     def test_deadline_excludes_downtime(self):
         self.store.put('start_at', 1000.); self.store.put('downtime_s', 25.)
         self.assertEqual(deadline(self.store, 600), 1625.)

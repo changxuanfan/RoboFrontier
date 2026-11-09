@@ -364,7 +364,8 @@ def process_summary(run):
 
 
 def relay_record(run, cutoff=None):
-    """Each Relay timber's handovers and drops over all segments, up to `cutoff`.
+    """Each Relay timber's handovers and drops over all segments, up to `cutoff`, with its
+    custody and dropped state as last logged.
 
     A segment's rows run to the restore frame of the next. Handovers are matched by their
     content, so a carried record is not counted twice. None for other families or an empty log.
@@ -389,6 +390,9 @@ def relay_record(run, cutoff=None):
             for handover in item.get('handovers') or []:
                 if handover not in entry['handovers']: entry['handovers'].append(handover)
             entry['drops'] = max(entry['drops'], int(item.get('drops') or 0))
+            # Who held it and whether it lay dropped, at the end of the latest segment.
+            for key in ('custody', 'dropped'):
+                if key in item: entry[key] = item[key]
     return payloads or None
 
 
@@ -422,5 +426,9 @@ def dial_record(run, cutoff=None):
             best = max(best or 0, result['display'])
         solved = solved or bool(result.get('solved'))
     if last is None: return None
-    return {'valid_trials': trials, 'best': best, 'solved': solved,
-            'input_ready': bool(last['result'].get('input_ready')), 'sim_time_s': last['sim_time_s']}
+    record = {'valid_trials': trials, 'best': best, 'solved': solved,
+              'input_ready': bool(last['result'].get('input_ready')), 'sim_time_s': last['sim_time_s']}
+    # Which dials had qualified blue support at the restore frame (Monitor.continue_dial_record).
+    if isinstance(last['result'].get('private_support_ready'), list):
+        record['support_ready'] = [bool(x) for x in last['result']['private_support_ready']]
+    return record

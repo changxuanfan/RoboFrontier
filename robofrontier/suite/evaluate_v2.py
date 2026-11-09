@@ -80,6 +80,18 @@ def placement_candidates(mon,positions,stable):
 
 
 class Relay:
+    # Kept inside the class: source_compatibility excludes only this class for Mosaic and Dial.
+    HANDOVER_PROTOCOL='qualified-members-v3'
+    GROUNDED_REGRASP_PROTOCOL='grounded-regrasp-v1'
+
+    @staticmethod
+    def is_handover(item):
+        """A recorded custody change that counts as a qualified airborne handover.
+
+        A new arm must have joined, and the change must have happened off the table.
+        Rows written before the airborne flag existed ('qualified-members-v2') read as airborne.
+        """
+        return bool(item.get('airborne',True) and set(item['receivers'])-set(item['senders']))
     def __init__(self,monitor):
         self.mon=monitor;self.table=monitor.task['table_height_m'];self.route=monitor.task['route'];self.states={}
         for item in monitor.task['mechanism']['payload_assemblies']:
@@ -137,15 +149,19 @@ class Relay:
     def continue_record(self):
         """A continued segment keeps each timber's handovers and drops, which are episode history.
 
-        Only the record carries over: a timber held at the restore frame is re-established
-        as airborne by the ordinary lift check (docs/running/run-segments.md).
+        A timber held at the restore frame is re-established as airborne by the ordinary
+        lift check, with the custody and drop state it had at that frame
+        (docs/running/run-segments.md).
         """
         from ..run_segments import current_restore
         directory=getattr(self.mon.w,'directory',None)
         found=current_restore(directory) if directory is not None else None
         record=found[0].get('evaluator',{}).get('relay_payloads') if found else None
         for ident,item in (record or {}).items():
-            if ident in self.states:self.states[ident].update(transitions=list(item['handovers']),drops=int(item['drops']))
+            if ident not in self.states:continue
+            self.states[ident].update(transitions=list(item['handovers']),drops=int(item['drops']))
+            if len(item.get('custody') or [])>=2:
+                self.states[ident].update(carried_custody=set(item['custody']),carried_dropped=bool(item.get('dropped')))
     def sample(self):
         mon=self.mon;t=float(mon.d.time);completed=0;terminal_completed=0;reports={}
         inside_flags={name:self.inside(state) for name,state in self.states.items()}
@@ -160,7 +176,14 @@ class Relay:
             clear=mon.bottom(all_g)>self.table+.002 and ident not in global_ground
             if not state['airborne'] and mon.bottom(state['rod_geoms'])>self.table+.025:
                 if len(support)<2:mon.violation('unsupported_initial_lift',key=ident)
-                elif clear:state.update(airborne=True,custody=set(support))
+                elif clear:
+                    # A continued segment re-establishes the carried team (continue_record):
+                    # a timber dropped at the restore frame stays dropped for its holders,
+                    # and a handover under way there still needs its receiver qualified.
+                    carried=state.get('carried_custody') or set()
+                    if state.get('carried_dropped'):state.update(airborne=True,custody=set(carried),dropped=True)
+                    elif len(carried&support)>=2:state.update(airborne=True,custody=carried&support)
+                    else:state.update(airborne=True,custody=set(support))
             if state['airborne']:
                 completion=mon.task['completion'];original_support=len(support&state['custody'])>=2
                 near_release=bool(completion.get('allow_near_goal_release'))
@@ -180,24 +203,36 @@ class Relay:
                 if len(support)<2 and not state['landed']:
                     if state['gap_since'] is None:state['gap_since']=t
                 else:state['gap_since']=None
+                # A handover happens in the air: the timber is clear of the table, held
+                # neither by it nor through other cargo (task_families.RELAY_HANDOVER_DEFINITION).
+                off_table=clear and not external
                 if not state['dropped']:
                     fresh=support-state['custody']
                     # Qualify each arriving hand while the established team
-                    # still supplies at least two supports. A contact loss
-                    # invalidates that receiver's earlier overlap evidence.
+                    # still supplies at least two supports off the table. A
+                    # contact loss or a touch of the table invalidates that
+                    # receiver's earlier overlap evidence.
                     state['qualified'].intersection_update(fresh)
                     state['candidate_since']={a:s for a,s in state['candidate_since'].items() if a in fresh}
-                    if len(support&state['custody'])>=2:
+                    if not off_table:state['qualified']=set();state['candidate_since']={}
+                    elif len(support&state['custody'])>=2:
                         for robot in fresh:
                             since=state['candidate_since'].setdefault(robot,t)
                             if t-since>=.20-1e-9:state['qualified'].add(robot)
                     state['candidate']=set(fresh)
                     state['overlap_since']=min(state['candidate_since'].values(),default=None)
                     if not state['custody']<=support and len(support)>=2:
-                        if fresh<=state['qualified']:
-                            old=set(state['custody'])
-                            state['transitions'].append(dict(sim_time_s=t,senders=sorted(old),receivers=sorted(support),
-                                retained=sorted(old&support),released=sorted(old-support),joined=sorted(fresh),protocol='qualified-members-v2'))
+                        old=set(state['custody'])
+                        change=dict(sim_time_s=t,senders=sorted(old),receivers=sorted(support),
+                            retained=sorted(old&support),released=sorted(old-support),joined=sorted(fresh))
+                        if not fresh or (off_table and fresh<=state['qualified']):
+                            # A pure release is recorded wherever it happens; it is never a handover.
+                            state['transitions'].append(dict(change,protocol=self.HANDOVER_PROTOCOL,airborne=off_table))
+                            state['custody']=set(support);state['qualified']=set();state['candidate']=set();state['candidate_since']={};state['overlap_since']=None
+                        elif not off_table and inside:
+                            # A regrasp of a timber resting in GOAL changes who holds it,
+                            # but it is never a handover.
+                            state['transitions'].append(dict(change,protocol=self.GROUNDED_REGRASP_PROTOCOL,airborne=False))
                             state['custody']=set(support);state['qualified']=set();state['candidate']=set();state['candidate_since']={};state['overlap_since']=None
                         else:mon.violation('unverified_handover',key=ident)
                 if on_table and inside and (original_support or (allowed_release and mon.released(all_g))):state['landed']=True
@@ -207,7 +242,9 @@ class Relay:
                 if (bad_contact or gap) and not state['dropped']:state['dropped']=True;state['drops']+=1
                 if state['dropped']:
                     if support-state['custody']:mon.violation('receiver_recovered_drop',key=ident)
-                    if len(support&state['custody'])>=2 and clear:state['dropped']=False;state['gap_since']=None
+                    if len(support&state['custody'])>=2 and clear:
+                        # Receiver evidence from before the drop does not carry over the drop.
+                        state.update(dropped=False,gap_since=None,qualified=set(),candidate=set(),candidate_since={},overlap_since=None)
             if a.get('tray_body'):
                 tray=mon.d.body(a['tray_body']);weight=mon.d.body(a['weight_body']);delta=tray.xmat.reshape(3,3).T@(weight.xpos-tray.xpos);spec=mon.task['mechanism']['tray']
                 if np.linalg.norm(delta[:2])>(spec['outer_diameter_m']-spec['weight_diameter_m'])/2+.002 or delta[2]<spec['weight_height_m']/2-.005 or delta[2]>.075:
@@ -215,7 +252,7 @@ class Relay:
             moving_names=list(dict.fromkeys(a.get('beam_bodies',[ident])+[name for name in (a.get('weight_body'),a.get('tray_body')) if name]))
             velocities=[mon.velocity(mon.m.body(name).id) for name in moving_names]
             stable=current_contract or all(np.linalg.norm(v[3:])<.01 and np.linalg.norm(v[:3])<.1 for v in velocities)
-            handover_ok=not mon.task['completion'].get('required_airborne_handover',False) or any(set(item['receivers'])-set(item['senders']) for item in state['transitions'])
+            handover_ok=not mon.task['completion'].get('required_airborne_handover',False) or any(map(self.is_handover,state['transitions']))
             done=state['landed'] and inside and on_table and mon.released(all_g) and stable and not state['dropped'] and not state['spill'] and handover_ok
             state['goal_since']=(t if state['goal_since'] is None else state['goal_since']) if done else None
             qualified=state['goal_since'] is not None and t-state['goal_since']>=mon.task['completion']['stable_duration_sim_s']
@@ -232,12 +269,12 @@ class Relay:
                 terminal=bool(fraction >= mon.task['completion']['timber_inside_fraction_min'] and mon.released(all_g))
             else:
                 terminal=inside and on_table and mon.released(all_g)
-            handover_met=any(set(item['receivers'])-set(item['senders']) for item in state['transitions'])
+            handover_met=any(map(self.is_handover,state['transitions']))
             handover_required=mon.task.get('run_protocol',{}).get('relay_completion_rule') is not None
             terminal=bool(terminal and (handover_met or not handover_required))
             terminal_completed+=int(terminal)
-            completed+=int(qualified);reports[ident]=dict(completed=qualified,terminal_goal_met=terminal,airborne=state['airborne'],drops=state['drops'],custody=sorted(state['custody']),support=sorted(support),goal_table_support=on_table,handovers=state['transitions'],spill=state['spill'])
-            if handover_required:reports[ident].update(airborne_handover_met=handover_met)
+            completed+=int(qualified);reports[ident]=dict(completed=qualified,terminal_goal_met=terminal,airborne=state['airborne'],drops=state['drops'],dropped=state['dropped'],custody=sorted(state['custody']),support=sorted(support),goal_table_support=on_table,handovers=state['transitions'],spill=state['spill'])
+            if handover_required:reports[ident].update(airborne_handover_met=handover_met,handover_protocol=self.HANDOVER_PROTOCOL)
             if fraction_contract:
                 reports[ident].update(timber_inside_fraction=fraction,
                     timber_inside_fraction_min=mon.task['completion']['timber_inside_fraction_min'])
