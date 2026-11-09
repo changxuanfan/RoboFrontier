@@ -150,7 +150,21 @@ def interval_union(intervals):
     return total
 
 
+def without(intervals, gaps):
+    """Each interval with the parts inside `gaps` removed."""
+    out = []
+    for start, stop in intervals:
+        parts = [(start, stop)]
+        for low, high in gaps:
+            parts = [piece for a, b in parts for piece in ((a, min(b, low)), (max(a, high), b)) if piece[1] > piece[0]]
+        out += parts
+    return out
+
+
 def performance_report(batch_path):
+    """Per job: wall time from START to the end of the trial without the downtime between
+    segments of a continued run, and the parts of it with an action or a model turn running.
+    The host log is shared by every segment; a turn left open by a segment that ended ends there."""
     batch = json.loads((batch_path/'batch.json').read_text()); result = []
     for job in batch['jobs']:
         run = Path(job['run_directory']); db = run/'private/state/runtime.sqlite'
@@ -158,10 +172,18 @@ def performance_report(batch_path):
             starts = [v for v, in conn.execute("select created from events where kind='START' order by seq limit 1")]
             ends = [v for v, in conn.execute("select created from events where kind in ('POLICY_WALL_LIMIT','POLICY_BUDGET_CLOSED','RUN_SEALED') order by seq limit 1")]
             values = [json.loads(v) for v, in conn.execute('select value from actions')]
+            row = conn.execute("select value from meta where key='segments'").fetchone()
+        segments = json.loads(row[0]) if row else []
         if not starts:
             result.append({'case_id': job['case_id'], 'started': False}); continue
-        start = starts[0]; end = ends[0] if ends else time.time(); elapsed = max(0., end-start)
-        actions = [(max(start, v['started_at']), min(end, v.get('finished_at') or end)) for v in values if v.get('started_at')]
+        start = starts[0]; end = ends[0] if ends else time.time()
+        downs = [(max(start, a['ended_at']), min(end, b['started_at'])) for a, b in zip(segments, segments[1:])
+                 if a.get('ended_at') is not None and b.get('started_at') is not None]
+        downs = [(a, b) for a, b in downs if b > a]
+        elapsed = max(0., end-start-interval_union(downs))
+        seg_ends = sorted(x['ended_at'] for x in segments if x.get('ended_at') is not None)
+        actions = without([(max(start, v['started_at']), min(end, v.get('finished_at') or end))
+                           for v in values if v.get('started_at')], downs)
         spans = {}; finished = []
         path = run_layout.path(run, 'host_log', 'codex')
         if path.exists():
@@ -172,18 +194,22 @@ def performance_report(batch_path):
                 if event.get('event') == 'turn/started': spans[key] = event['at']
                 elif event.get('event') == 'turn/completed' and key in spans:
                     finished.append((max(start, spans.pop(key)), min(end, event['at'])))
-        finished.extend((max(start, at), end) for at in spans.values())
+        for at in spans.values():
+            stop = next((e for e in seg_ends if e >= at), end)
+            finished.append((max(start, at), min(end, stop)))
+        finished = without(finished, downs)
         perf = run/'private/outputs/cpu-performance.jsonl'; latest = {}
         if perf.exists():
             for line in perf.open():
                 try: latest = json.loads(line)
                 except json.JSONDecodeError: continue
         action_time=interval_union(actions); turn_time=interval_union(finished)
-        result.append({'case_id':job['case_id'],'elapsed_s':elapsed,'actions':len(values),
+        result.append({'case_id':job['case_id'],'elapsed_s':elapsed,'segments':max(1, len(segments)),
+                       'downtime_s':interval_union(downs),'actions':len(values),
                        'any_action_wall_s':action_time, 'any_action_wall_fraction':action_time/elapsed if elapsed else None,
                        'any_model_turn_wall_s':turn_time, 'any_model_turn_wall_fraction':turn_time/elapsed if elapsed else None,
                        'owner_counters':latest,
-                       'scope':'Action and model-turn wall intervals overlap; model-turn time includes tool waits and is not API latency. Owner counters start at owner launch and pump includes capture.'})
+                       'scope':'Action and model-turn wall intervals overlap; model-turn time includes tool waits and is not API latency. Owner counters start at owner launch and pump includes capture. Downtime between segments is excluded.'})
     return {'jobs':result}
 
 
