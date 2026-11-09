@@ -35,9 +35,9 @@
         "mosaic"
       ],
       "historical_sha256": "88d0cd4d24cc298015c0f119b5d565b70451394cd73654b02e9bafd32d8380af",
-      "integrated_sha256": "3f42867d66ea65a461c40a2d396eb421a1dea84a1bf1525d4034b03c10014711",
+      "integrated_sha256": "99d721da180c46d1055f3bf09ba8e260be8f98338be27c3ad0be8ad69d1887a1",
       "unaffected_ast_sha256": "dd926c6b8cb16c3dfe4cee59495907fea98e55c4585c5e6983a5181b7f35c9fa",
-      "review": "Only the exact reviewed Controller/Coordinator label acceptance and engine/direct-START selection checks in load_harness are normalized. All remaining AST nodes match the pinned baseline, including action limits, controller settings and execution timing. This is historical control-source compatibility, not equal physics, policy observations or current-task qualification. Re-reviewed for the two new frozen harness checks in load_harness (motion_hz, process_log), which only validate new settings (source_compatibility.HARNESS_RUN_STORAGE); with them removed the AST equals the original unaffected digest. The accepted physics profile names now include realtime-v2; that check is part of the same removed block."
+      "review": "Only the exact reviewed Controller/Coordinator label acceptance and engine/direct-START selection checks in load_harness are normalized. All remaining AST nodes match the pinned baseline, including action limits, controller settings and execution timing. This is historical control-source compatibility, not equal physics, policy observations or current-task qualification. Re-reviewed for the two new frozen harness checks in load_harness (motion_hz, process_log), which only validate new settings (source_compatibility.HARNESS_RUN_STORAGE); with them removed the AST equals the original unaffected digest. The accepted physics profile names now include realtime-v2; that check is part of the same removed block. Re-reviewed for the physics profile in physical_control_fingerprint: only a harness that names a profile adds it and the physics_profile.py hash (source_compatibility.FINGERPRINT_PROFILE); a harness without one, as every historical Mosaic and Dial Oracle, hashes the original value. With it removed the AST equals the original unaffected digest."
     },
     {
       "path": "scripts/preview_mosaic_local_colors.py",
@@ -59,9 +59,9 @@
         "dial"
       ],
       "historical_sha256": "46a02d147383673cf36a17865ad601c034dea6ff7f9c3a72561c28b64fc899b2",
-      "integrated_sha256": "93f22a4ff0d19b26239ce95e046846a1f51fd991144edeb00fa3066f6df892e0",
+      "integrated_sha256": "b4280f521526593770c36d9cfecd26e7fc5f5586958b176295e27d205327f7e5",
       "unaffected_ast_sha256": "0a44db54291887a829f4ab3118c73ae0ae14992efec4b12a45bf1e9d03854026",
-      "review": "Only the exact reviewed PandaArm statements for local recovery of an uncertain stop (recover_stopped and its stability sampling after uncertainty), the engineering fault hold, and the details a move without a verified IK solution reports (IKNoSolution and PandaArm.ik_failure; same rejection before execution, same message) are normalized (source_compatibility.ARM_RECOVERY). The recovery and fault statements act only after a stop was already reported uncertain or when a fault is frozen in private/inputs, and the IK details are computed only after the move is already rejected; with them reverted the AST equals the historical source, including motion, gripper, grasp and stop control. This is historical control-source compatibility, not new physics qualification."
+      "review": "Only the exact reviewed PandaArm statements for local recovery of an uncertain stop (recover_stopped and its stability sampling after uncertainty), the engineering fault hold, and the details a move without a verified IK solution reports (IKNoSolution and PandaArm.ik_failure; same rejection before execution, same message) are normalized (source_compatibility.ARM_RECOVERY). The recovery and fault statements act only after a stop was already reported uncertain or when a fault is frozen in private/inputs, and the IK details are computed only after the move is already rejected; with them reverted the AST equals the historical source, including motion, gripper, grasp and stop control. This is historical control-source compatibility, not new physics qualification. Re-reviewed for realtime-v2 settle counting (source_compatibility.ARM_POLL_STABILITY): an arm counts one settle sample per simulation time only when a frozen physics profile sets poll_stability to per-tick; otherwise it stays per-call and runs the original statements. With them reverted the AST equals the original unaffected digest."
     }
   ]
 }

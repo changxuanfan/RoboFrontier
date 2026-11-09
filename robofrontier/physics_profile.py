@@ -28,8 +28,10 @@ PROFILES = {'realtime-v1': {
 # about 12 mm/min. See docs/running/physics-profiles.md for the measurements.
 # noslip 1e-9 stops creep as well as 1e-12; at 1e-12 a Relay receiver's fingers could not
 # slide along a held beam on approach and lifted it out of the carriers' grip.
+# An arm's arrival, gripper and stop settle counts take one sample per simulation tick
+# (poll_stability), so polling more often between two physics steps cannot shorten them.
 _V2 = {'cone': 'elliptic', 'impratio': 1., 'noslip_tolerance': 1e-9, 'noslip_iterations': 10,
-       'finger_condim': 4, 'unify_contacts': True}
+       'finger_condim': 4, 'unify_contacts': True, 'poll_stability': 'per-tick'}
 PROFILES['realtime-v2'] = {family: {**settings, **_V2} for family, settings in PROFILES['realtime-v1'].items()}
 IDLE_BEFORE_SLEEP_S = 2.
 
@@ -124,6 +126,8 @@ def attach(world, harness):
         world.model.geom_priority[fingers] = 1
         world.model.geom_condim[fingers] = settings['finger_condim']
     if settings.get('unify_contacts'): unify_contacts(world.model)
+    if 'poll_stability' in settings:
+        for arm in world.arms.values(): arm.poll_stability = settings['poll_stability']
     if settings['sleep'] == 'always':
         world.model.opt.enableflags |= SLEEP
         return None

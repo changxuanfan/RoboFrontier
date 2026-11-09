@@ -24,6 +24,19 @@ harness. Oracle worlds (`suite.oracle.Trial`) apply it the same way policy world
 | Static parts | `condim` 4 or more |
 | Moving parts | `condim` 4 |
 | Cylinders and spheres of loose bodies | `condim` 6, rolling friction 0.1 x radius |
+| Arm settle counts | One sample per simulation tick (`poll_stability: per-tick`) |
+
+A move ends after 12 samples within tolerance, a gripper action after 10 settled samples
+and a stop after 3. Under `realtime-v2` each sample is one simulation tick (20 ms), so an
+arrival takes at least 0.24 s at the goal however often the world polls between two
+physics steps. Runs without a profile, and `realtime-v1` runs, count every poll, as they
+did when they ran: a world that polls several times per step can then report an arrival
+at the first in-tolerance instant while the arm still moves. Oracle worlds poll once per
+tick, so this changes nothing there.
+
+`physical_control_sha256` names the profile and the `physics_profile.py` source when a
+harness sets one, so runs and Oracle references of different profiles never share it. A
+harness without a profile keeps the value it had before.
 
 Two task values stay because they act in recorded contacts:
 

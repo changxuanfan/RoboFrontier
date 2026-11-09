@@ -138,6 +138,73 @@ class TerminalServoTests(unittest.TestCase):
         self.assertAlmostEqual(a.gripper,reference)
 
 
+class SettleCountTests(unittest.TestCase):
+    """A move ends after 12 in-tolerance samples, a gripper after 10 settled ones, a stop after 3.
+
+    The world does not step here, so the arm holds still at its goal; each poll time
+    stands for one 20 ms simulation tick."""
+    def setUp(self):
+        self.world=robot_fixture();self.arm=self.world.arms['A'];self.cfg=load_harness()
+
+    def profile(self,name):
+        from robofrontier.physics_profile import attach
+        self.world.task={'family':'transport'};attach(self.world,{'physics_profile':name})
+
+    def begin(self,op):
+        w=self.world;a=self.arm
+        if op=='gripper':
+            a.start('jaw',w.validate_action('A','gripper',{'width_m':a.observe()['gripper_width_m']},self.cfg),0.)
+            a.gripper=a.grip_goal
+        else:
+            command=w.validate_action('A','move',{'joint_rad':a.qref.tolist()},self.cfg)
+            w.data.qpos[a.qids]=command['joint_goal'];a.start('move',command,0.)
+            if op=='stop':a.request_stop(0.)
+        return a
+
+    def ticks_until_done(self,a,polls_per_tick=1):
+        for tick in range(100):
+            for _ in range(polls_per_tick):
+                result=a.poll(.02*tick,15)
+                if result:return tick+1,result['status']
+        return None
+
+    def test_each_action_ends_after_its_settle_count(self):
+        # A gripper sample counts once its fingers have been still for 0.18 s (10 ticks).
+        for op,expected in (('move',(12,'completed')),('gripper',(19,'completed')),('stop',(3,'failed'))):
+            with self.subTest(op=op):
+                self.setUp()
+                self.assertEqual(self.ticks_until_done(self.begin(op)),expected)
+
+    def test_an_out_of_tolerance_sample_restarts_the_move_count(self):
+        a=self.begin('move');goal=self.world.data.qpos[a.qids].copy()
+        for tick in range(11):self.assertIsNone(a.poll(.02*tick,15))
+        self.world.data.qpos[a.qids[0]]+=.01
+        self.assertIsNone(a.poll(.22,15))
+        self.world.data.qpos[a.qids]=goal
+        for tick in range(12,23):self.assertIsNone(a.poll(.02*tick,15))
+        self.assertEqual(a.poll(.46,15)['status'],'completed')
+
+    def test_realtime_v2_counts_each_simulation_tick_once(self):
+        for op,ticks in (('move',12),('gripper',19),('stop',3)):
+            with self.subTest(op=op):
+                self.setUp();self.profile('realtime-v2')
+                a=self.begin(op)
+                self.assertEqual(a.poll_stability,'per-tick')
+                for _ in range(30):self.assertIsNone(a.poll(0.,15))
+                self.assertEqual(self.ticks_until_done(a,polls_per_tick=5)[0],ticks)
+
+    def test_without_realtime_v2_every_poll_still_counts(self):
+        # Finished runs keep their terms: realtime-v1 and no profile count polls, not ticks.
+        for name in (None,'realtime-v1'):
+            for op,ticks in (('move',3),('gripper',11),('stop',1)):
+                with self.subTest(profile=name,op=op):
+                    self.setUp()
+                    if name:self.profile(name)
+                    a=self.begin(op)
+                    self.assertEqual(a.poll_stability,'per-call')
+                    self.assertEqual(self.ticks_until_done(a,polls_per_tick=5)[0],ticks)
+
+
 class SceneTopologyContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
