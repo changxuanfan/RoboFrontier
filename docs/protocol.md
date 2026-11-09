@@ -191,8 +191,9 @@ keep the rules through context compaction. Both engines receive the same bytes.
   and the family materials), each under its absolute path. The files stay
   readable on disk. The message is limited to 400,000 bytes.
 - **Wall limit.** The public `task.json` no longer states
-  `run_protocol.total_wall_limit_s`; the private task keeps it and the host
-  enforces it as before. The rules ask policies to plan as if time were
+  `run_protocol.total_wall_limit_s` (nor, for new runs, `run_protocol.clock`);
+  the private task keeps them and the host enforces the limit as before
+  ([how it is counted](running/run-segments.md#time)). The rules ask policies to plan as if time were
   unlimited, and a policy can no longer estimate the time left from its inputs.
 
 Earlier runs keep their frozen system prompt, start message and public task.
