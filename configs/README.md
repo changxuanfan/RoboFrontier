@@ -14,7 +14,7 @@ See the [configuration and CLI guide](../docs/unified-cli.md).
 | `claude-models.json` | Native Claude Code model/provider profiles and transcript pricing; select an engine-specific profile explicitly |
 | `harness.json` | Default runtime harness, used when a task names none |
 | `harnesses/policy.json` | Native shared runtime/tool defaults for policy runs; model fields are baseline native settings, not overrides of a frozen unified profile |
-| `harness-frontier-v2.json`, `harness-frontier-v2-servo2.json` | Frontier V2 harnesses that historical suites and the released records name by file. The first differs from `harness.json` only in `topology`; servo2 adds the PD gripper servo, with its own model and effort fields, and is the one released records and Oracle executions use |
+| `harness-frontier-v2.json`, `harness-frontier-v2-servo2.json` | Frontier V2 harnesses that historical suites and the released records name by file. The first differs from `harness.json` in `topology` and `action_timeout_sim_s` (15 s, the earlier default; `harness.json` now allows 30 s); servo2 adds the PD gripper servo, with its own model and effort fields, and is the one released records and Oracle executions use |
 | `policy-assets.json` | Pinned policy asset archive and integrity inventory used by automatic bootstrap/preparation |
 | `factory-assets.json` | Independent R14 Factory recording release, split sizes and SHA-256 fingerprints; it does not change policy scene selection |
 | `backgrounds/robo_factory.json` | Factory appearance, layout and shared visual resources |
