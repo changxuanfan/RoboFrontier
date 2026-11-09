@@ -1,6 +1,6 @@
 """Extract one run's actions, evaluator timeline, tokens and activity spans into a compact JSON."""
 
-import collections, contextlib, json, os, re, shutil, sqlite3, tempfile, datetime
+import collections, contextlib, json, lzma, os, re, shutil, sqlite3, tempfile, datetime
 from pathlib import Path
 
 from .archive import Run
@@ -442,6 +442,8 @@ def host(run, cutoff_unix=None):
         gapmark=[],
         rows=0,
         unfinished=0,
+        reported_until={},
+        session_actor={},
     )
     prev = {}
     sess = {}
@@ -561,6 +563,11 @@ def host(run, cutoff_unix=None):
                 H['turns'].append([e.get('actor'), st[0], end])
             if late:
                 continue
+            s = e.get('session_id')
+            if s and (e.get('model_usage') or e.get('usage')):
+                # A result arrived, so this session's requests are reported up to here.
+                H['reported_until'][s] = max(H['reported_until'].get(s, 0), at)
+                H['session_actor'][s] = e.get('actor')
             mu = e.get('model_usage')
             if isinstance(mu, dict) and mu:
                 vals = list(mu.values())
@@ -646,6 +653,61 @@ def call_id(line):
         pass
     m = CID.search(line)
     return m.group(1) if m else None
+
+
+def claude_late_usage(run, H, cutoff_unix=None):
+    """Claude requests that no reported result covers, from the run's native transcripts.
+
+    Same rule as run_metrics._claude_usage_after_results (a background task can wake an idle
+    CLI after the host stopped reading results; fork copies keep message ids, so a copy counts
+    only if every session holding it with a known result ended earlier). Requests after
+    `cutoff_unix` are outside the trial. Returns (input, cached, write, output) totals and the
+    number of requests counted."""
+    names = {}
+    for n in run.files:
+        if '/projects/' in n and (n.endswith('.jsonl') or n.endswith('.jsonl.xz')):
+            stem = n[: -len('.xz')] if n.endswith('.xz') else n
+            if stem not in names or n == stem:
+                names[stem] = n
+    until = H.get('reported_until') or {}
+    entries = {}
+    for n in sorted(names.values()):
+        if n.endswith('.xz'):
+            text = lzma.decompress(run.read(n)).decode(errors='replace').splitlines()
+        else:
+            text = run.lines(n)
+        stem = os.path.basename(n).split('.jsonl')[0]
+        for line in text:
+            if '"usage"' not in line:
+                continue
+            try:
+                r = json.loads(line)
+                at = epoch(r['timestamp'])
+            except (ValueError, KeyError, TypeError, AttributeError):
+                continue
+            msg = r.get('message') if isinstance(r.get('message'), dict) else {}
+            if not (isinstance(msg.get('usage'), dict) and msg.get('id')):
+                continue
+            x = entries.setdefault(msg['id'], dict(holders=set(), at=at, usage=None))
+            x['holders'].add(r.get('sessionId') or stem)
+            x['at'] = max(x['at'], at)
+            x['usage'] = msg['usage']  # repeated per content block; the last is final
+    tot = [0, 0, 0, 0]
+    count = 0
+    for x in entries.values():
+        if cutoff_unix is not None and x['at'] > cutoff_unix:
+            continue
+        known = {h: until[h] for h in x['holders'] if h in until}
+        if known and not any(x['at'] > u for u in known.values()):
+            continue
+        u = x['usage']
+        i, c, w, o = (
+            num(u.get(k)) or 0
+            for k in ('input_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens', 'output_tokens')
+        )
+        tot = [tot[0] + i + c + w, tot[1] + c, tot[2] + w, tot[3] + o]
+        count += 1
+    return tot, count
 
 
 def transcripts(run, cutoff_unix=None):
@@ -752,7 +814,12 @@ def extract_run(sel, root, cache_dir=None):
         O['meta'] = M
         O['msgT'] = msgT
         O['suite'] = suite(run, cut and cut['sim'])
-        O['host'] = host(run, cut and cut['unix'])
+        O['host'] = H = host(run, cut and cut['unix'])
+        if H and H['engine'] == 'claude':
+            late, count = claude_late_usage(run, H, cut and cut['unix'])
+            H['tok_after_results'] = dict(zip(('input', 'cached', 'write', 'output'), late), requests=count)
+            for k, v in zip(('input', 'cached', 'write', 'output'), late):
+                H['tok'][k] += v
         sp, src = transcripts(run, cut and cut['unix'])
         O['spans'] = sp
         O['span_src'] = src
