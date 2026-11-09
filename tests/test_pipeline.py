@@ -585,4 +585,31 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(b['result']['messages'][0]['from'],'C')
         finally:service.close()
 
+    def test_malformed_field_types_return_tool_errors_and_keep_the_owner_alive(self):
+        """Any JSON value a model sends is answered as a tool error; none may end the shared world."""
+        from robofrontier.robot_ops import POLICY_OPS
+        self.start()
+        # FakeWorld has no screening; a real check answers asynchronously and catches its own errors.
+        self.service.world.check_motion=lambda data,cfg:iter([{'assessment':'unknown','advisory_only':True}])
+        malformed=({'call_id':['x']},{'call_id':{'a':1}},{'call_id':5},{'call_id':None},
+                   {'robot':['A']},{'robot':{'x':1}},{'cameras':'global'},{'cameras':[['global']]},
+                   {'to':'B','text':1},{'to':[1],'text':'x'},{'to':['Controller'],'text':'x','reply_to':['m1']},
+                   {'to':['Controller'],'text':'x','reply_to':{'id':'m1'}},{'call_ids':'x'},{'call_ids':[[1]]},
+                   {'actions':'x'},{'actions':[1]},{'actions':[{'robot':'A','op':'move','parameters':'x'}]},
+                   {'wait':'no'},{'state':[1],'note':['x']},{'delegate_id':[1]},{'timeout_s':'x'},
+                   {'after_s':'x','note':'x'},{'scopes':'x'},{'outcome':['x'],'result':{}},{'sync_group':'x'})
+        must_fail={'job','stop','recover_action'}
+        for op in sorted(POLICY_OPS-{'finish'}):
+            for data in malformed:
+                with self.subTest(op=op,data=data):
+                    self.counter+=1
+                    job=self.service.accept('A',op,dict(data),'malformed-'+str(self.counter))
+                    self.service.pump()  # must not raise
+                    if op in must_fail and 'call_id' in data or 'reply_to' in data and op=='send':
+                        self.assertIn('error',job['result'])
+                        self.assertTrue(job['done'].is_set())
+                    self.service.waiters.clear()
+        self.assertEqual(self.service.store.get('lifecycle'),'running')
+        self.assertNotIn('error',self.call('Controller','observe',{'cameras':['global']})['result'])
+
 if __name__=='__main__':unittest.main()

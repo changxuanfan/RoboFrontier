@@ -215,6 +215,8 @@ class RuntimeStore:
 
     def send(self, actor, to, text, send_key, reply_to=None):
         cfg = self.get('config')
+        if reply_to is not None and not isinstance(reply_to, str):
+            raise ValueError('reply_to must be a message ID string')
         to = [to] if isinstance(to, str) else to
         if not isinstance(to, list) or not to or len(set(to)) != len(to):
             raise ValueError('Explicit unique recipients required')
@@ -359,6 +361,9 @@ class RuntimeStore:
                 raise ValueError('Call was not accepted')
 
     def call(self, call_id, actor=None):
+        if not isinstance(call_id, str):
+            # A policy may send any JSON value; only a string can name a call.
+            raise ValueError('call_id must be a string call ID')
         with self.lock:
             row = self.db.execute('SELECT * FROM calls WHERE id=?', (call_id,)).fetchone()
             if not row or actor is not None and row['actor'] != actor:

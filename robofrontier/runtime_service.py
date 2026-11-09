@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 import queue
 import secrets
+import sqlite3
 import threading
 import time
 
@@ -572,7 +573,9 @@ class RuntimeService:
                 self.shutdown = True
             else:
                 raise ValueError('Unknown tool operation')
-        except (ValueError, KeyError, TypeError) as error:
+        except (ValueError, KeyError, TypeError, sqlite3.InterfaceError, sqlite3.ProgrammingError) as error:
+            # A policy value the store cannot bind is a malformed request, never a reason to end
+            # the owner loop (and with it the shared world). Other database errors still propagate.
             # A failed IK request also reports what the solver found (robot_control.IKNoSolution).
             detail = getattr(error, 'detail', None)
             self.respond(job, {'error': str(error), **({'ik_detail': detail} if detail is not None else {})})
