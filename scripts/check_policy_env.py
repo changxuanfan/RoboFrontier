@@ -3,8 +3,10 @@
 Runs each real CLI against a local stub model in a throwaway run, with the access table and
 variables a real run freezes. No provider is contacted and no credential is used. Prints
 ok/denied per attempt and never prints file contents; exits nonzero on any difference. A pass
-on both engines records a receipt beside the environment, which preparing a run requires. Give
---scratch where batches will really run, since where a run sits changes what can be opened.
+on both engines records a receipt beside the environment, which preparing a run requires. The
+receipt lists each engine with the sandbox and CLI version it ran, and preparation refuses any
+other combination. Give --scratch where batches will really run, since where a run sits changes
+what can be opened.
 
     .venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id>
 """
@@ -193,6 +195,14 @@ def run_codex_landlock(run, command, scratch, seen, shared):
 ENGINES = {'codex': run_codex_landlock if sys.platform == 'linux' else run_codex, 'claude': run_claude}
 
 
+def isolation(name):
+    """The sandbox the check runs `name` in, which a run prepared on this host would freeze."""
+    if name == 'codex':
+        return 'landlock-v1' if ENGINES['codex'] is run_codex_landlock else 'native'
+    from robofrontier.claude.landlock_shell import choose
+    return choose()
+
+
 def throwaway_run(scratch, name, environment):
     """A run laid out as preparation lays it out, with the table a real run would freeze."""
     run = scratch/name/'run'
@@ -223,9 +233,12 @@ def shell_succeeded(seen):
             and not any(item.get('is_error') for item in seen))
 
 
-def check_engine(name, environment, scratch):
-    """Run the probe through one engine; returns its results, or raises when it did not report."""
+def check_engine(name, environment, scratch, mode):
+    """Run the probe through one engine in sandbox `mode`; returns its results, or raises when it did not report."""
     run, other = throwaway_run(scratch, name, environment)
+    if name == 'claude':
+        # Read by claude.runner.confine, as a prepared run's launch record is.
+        (run/'private/inputs/claude.json').write_text(json.dumps({'bash_isolation': mode}))
     shared = Path('/tmp')/('robofrontier-probe-' + scratch.name)
     shared.mkdir()
     shared_memory = Path('/dev/shm')/('robofrontier-probe-' + scratch.name)
@@ -276,6 +289,16 @@ def differences(results, known=()):
     return wrong
 
 
+def receipt_record(manifest, modes):
+    """What a pass records: each engine with the sandbox and CLI version it ran.
+
+    Per build: host and platform say where it ran, and preparation compares only `checked`.
+    """
+    return {'schema': policy_env.RECEIPT_SCHEMA, 'passed': True, 'tree_sha256': manifest['tree_sha256'],
+            'checked': [policy_env.combination(name, mode) for name, mode in sorted(modes.items())],
+            'host': socket.gethostname(), 'platform': sys.platform, 'at': time.time()}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('environment', type=Path)
@@ -288,11 +311,13 @@ def main(argv=None):
     failed = False
     # Beside the environment, so nothing here sits in a shared temporary folder.
     scratch = Path(tempfile.mkdtemp(prefix='check-', dir=args.scratch or environment.parent)).resolve()
+    names = args.engine or sorted(ENGINES)
+    modes = {name: isolation(name) for name in names}
     try:
-        for name in args.engine or sorted(ENGINES):
-            results = check_engine(name, environment, scratch)
+        for name in names:
+            results = check_engine(name, environment, scratch, modes[name])
             wrong = differences(results, KNOWN_LIMITS.get((sys.platform, name), ()))
-            print(json.dumps({'engine': name, 'attempts': len(results), 'differences': wrong}))
+            print(json.dumps({'engine': name, policy_env.ISOLATION[name]: modes[name], 'attempts': len(results), 'differences': wrong}))
             failed = failed or bool(wrong)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
@@ -301,8 +326,7 @@ def main(argv=None):
     if not args.engine:
         receipt = policy_env.receipt_path(environment)
         temporary = receipt.with_name(receipt.name + '.tmp')
-        temporary.write_text(json.dumps({'passed': True, 'tree_sha256': manifest['tree_sha256'], 'host': socket.gethostname(),
-                                         'platform': sys.platform, 'at': time.time()}) + '\n')
+        temporary.write_text(json.dumps(receipt_record(manifest, modes)) + '\n')
         temporary.replace(receipt)
         print('recorded', receipt)
 

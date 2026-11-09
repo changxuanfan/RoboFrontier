@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -19,6 +20,8 @@ from robofrontier.codex.launch import launch_config
 from robofrontier.run_layout import manifest_record
 from scripts import check_policy_env
 
+CHECKED = [{'engine': 'codex', 'tool_backend': 'landlock-v1', 'cli': 'codex-cli 0.165.0'},
+           {'engine': 'claude', 'bash_isolation': 'claude-sandbox', 'cli': '2.1.312 (Claude Code)'}]
 STUB = dict(model='offline-protocol', provider='offline_protocol', effort='high', vision=True, context_window=272000,
             auto_compact_token_limit=258400, env_key='ROBOFRONTIER_OFFLINE_STUB_TOKEN', base_url='https://stub.invalid')
 
@@ -32,7 +35,8 @@ def fake_environment(folder):
                 'core': ['numpy'], 'store': ['networkx'], 'packages': {'numpy': '2.5.4'}}
     manifest['tree_sha256'] = policy_env.tree_sha256(root)
     (root/policy_env.MANIFEST).write_text(json.dumps(manifest))
-    policy_env.receipt_path(root).write_text(json.dumps({'passed': True, 'tree_sha256': manifest['tree_sha256']}))
+    policy_env.receipt_path(root).write_text(json.dumps({'schema': policy_env.RECEIPT_SCHEMA, 'passed': True,
+                                                         'tree_sha256': manifest['tree_sha256'], 'checked': CHECKED}))
     return root
 
 
@@ -104,6 +108,47 @@ class AccessTableTests(Fixture):
             self.freeze()
         receipt.write_text(passed)
         self.freeze()
+
+    def test_a_check_from_before_engine_combinations_must_be_rerun(self):
+        receipt = policy_env.receipt_path(self.root)
+        current = json.loads(receipt.read_text())
+        receipt.write_text(json.dumps({key: current[key] for key in ('passed', 'tree_sha256')}))
+        with self.assertRaisesRegex(ValueError, 'predates.*rerun scripts/check_policy_env.py'):
+            self.freeze()
+        with patch.dict(os.environ, {policy_env.ENV_VAR: str(self.root)}), \
+                self.assertRaisesRegex(ValueError, 'predates.*rerun scripts/check_policy_env.py'):
+            policy_env.require_combination('codex', 'landlock-v1')
+
+    def test_only_the_engine_sandbox_and_cli_the_check_ran_are_admitted(self):
+        versions = {'codex': 'codex-cli 0.165.0', 'claude': '2.1.312 (Claude Code)'}
+        version = lambda binary, env=None, timeout_s=30: versions[binary]
+        with patch.dict(os.environ, {policy_env.ENV_VAR: str(self.root)}), patch.object(policy_env, 'cli_version', version):
+            policy_env.require_combination('codex', 'landlock-v1')
+            policy_env.require_combination('claude', 'claude-sandbox')
+            for engine, mode in (('codex', 'native'), ('claude', 'landlock-v1')):
+                with self.assertRaisesRegex(ValueError, 'has not checked.*' + mode):
+                    policy_env.require_combination(engine, mode)
+            versions['codex'] = 'codex-cli 0.166.0'
+            with self.assertRaisesRegex(ValueError, 'has not checked.*0.166.0'):
+                policy_env.require_combination('codex', 'landlock-v1')
+        with patch.dict(os.environ):
+            os.environ.pop(policy_env.ENV_VAR, None)
+            policy_env.require_combination('codex', 'native')
+
+    def test_preparing_a_batch_refuses_a_combination_the_check_did_not_run(self):
+        from robofrontier.codex.batch import prepare_batch
+        with patch.dict(os.environ, {policy_env.ENV_VAR: str(self.root)}):
+            with self.assertRaisesRegex(ValueError, 'has not checked.*native'):
+                prepare_batch(self.tmp/'batch', ['astra'], cases=['dial-best5-n04-d1'])
+        self.assertFalse((self.tmp/'batch').exists())
+
+    def test_a_cli_that_hangs_or_is_missing_has_no_version(self):
+        with tempfile.TemporaryDirectory() as folder:
+            hung = Path(folder)/'hung'
+            hung.write_text('#!/bin/sh\nsleep 60\n')
+            hung.chmod(0o755)
+            self.assertIsNone(policy_env.cli_version(str(hung), timeout_s=1))
+            self.assertIsNone(policy_env.cli_version(str(Path(folder)/'absent')))
 
     def test_linux_closes_its_own_folders(self):
         with patch.object(policy_access.sys, 'platform', 'linux'):
@@ -230,6 +275,21 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(check_policy_env.differences({**good, 'tempfile': 'denied'}), ['tempfile should work'])
         self.assertEqual(check_policy_env.differences({**good, 'tempfile': 'denied'}, ('tempfile',)), [])
         self.assertIn('venv should work', check_policy_env.differences({k: v for k, v in good.items() if k != 'venv'}))
+
+    def test_a_receipt_admits_exactly_what_the_check_ran(self):
+        self.assertEqual(check_policy_env.isolation('codex'), 'landlock-v1' if sys.platform == 'linux' else 'native')
+        with tempfile.TemporaryDirectory() as folder:
+            root = fake_environment(folder)
+            manifest = policy_env.load(root)
+            version = lambda binary, env=None, timeout_s=30: binary + ' 1.0'
+            with patch.object(policy_env, 'cli_version', version), patch.dict(os.environ, {policy_env.ENV_VAR: str(root)}):
+                record = check_policy_env.receipt_record(manifest, {'codex': 'native', 'claude': 'claude-sandbox'})
+                policy_env.receipt_path(root).write_text(json.dumps(record))
+                policy_env.require_combination('codex', 'native')
+                policy_env.require_combination('claude', 'claude-sandbox')
+                with self.assertRaisesRegex(ValueError, 'has not checked'):
+                    policy_env.require_combination('codex', 'landlock-v1')
+        self.assertEqual(record['checked'][0], {'engine': 'claude', 'bash_isolation': 'claude-sandbox', 'cli': 'claude 1.0'})
 
     def test_a_wrapper_failure_counts_even_when_the_script_itself_succeeded(self):
         finished = check_policy_env.policy_env_probe.FINISHED

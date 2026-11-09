@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import shlex
 import stat
+import subprocess
 
 SCHEMA = 'robofrontier.policy-env.v1'
 MANIFEST = 'policy-env.json'
@@ -25,6 +26,10 @@ USER_BASE = '.python'  # Under workspace/: packages this run installs from the w
 SHELL_FILE = 'policy-env.sh'
 GUIDE_FILE = 'environment.md'
 RECEIPT_SUFFIX = '.check.json'
+RECEIPT_SCHEMA = 'robofrontier.policy-env-check.v2'
+CLIS = {'codex': 'codex', 'claude': 'claude'}
+# What each engine's policy shells run in: the Codex tool backend, or Claude Code's Bash isolation.
+ISOLATION = {'codex': 'tool_backend', 'claude': 'bash_isolation'}
 
 
 def _digest_file(path):
@@ -71,19 +76,60 @@ def verify(root):
 
 
 def receipt_path(root):
-    """Beside the read-only environment, one per build, so each host's own build needs its own check."""
+    """Beside the read-only environment, one per build.
+
+    A build on shared storage has one receipt for every node that uses it: the check passes the
+    build with the engines, sandboxes and CLIs it ran, not each node. A node without what Codex's
+    confined tools need (unprivileged user namespaces) fails each command rather than running it
+    less confined.
+    """
     root = Path(root).resolve()
     return root.parent/(root.name + RECEIPT_SUFFIX)
 
 
-def require_checked(root, manifest):
-    """Refuse an environment that scripts/check_policy_env.py has not passed on this host's build."""
+def cli_version(binary, env=None, timeout_s=30):
+    """What `binary --version` prints, or None when it is missing, fails or does not answer in time."""
+    try:
+        done = subprocess.run([binary, '--version'], env=env, capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL, timeout=timeout_s)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return (done.stdout.strip() or None) if done.returncode == 0 else None
+
+
+def combination(engine, isolation, env=None):
+    """One engine as a run would use it here: its sandbox and the CLI version on PATH."""
+    return {'engine': engine, ISOLATION[engine]: isolation, 'cli': cli_version(CLIS[engine], env)}
+
+
+def require_checked(root, manifest, wanted=None):
+    """Refuse an environment whose build scripts/check_policy_env.py has not passed.
+
+    With `wanted` (a combination()), also refuse when the check did not run that engine with
+    that sandbox and CLI version.
+    """
+    rerun = 'Run scripts/check_policy_env.py on this build first: ' + str(root)
     try:
         receipt = json.loads(receipt_path(root).read_text())
     except (OSError, ValueError):
-        raise ValueError('Run scripts/check_policy_env.py on this host first: ' + str(root)) from None
-    if not receipt.get('passed') or receipt.get('tree_sha256') != manifest['tree_sha256']:
-        raise ValueError('Run scripts/check_policy_env.py on this host first: ' + str(root))
+        raise ValueError(rerun) from None
+    if not isinstance(receipt, dict) or not receipt.get('passed') or receipt.get('tree_sha256') != manifest['tree_sha256']:
+        raise ValueError(rerun)
+    if receipt.get('schema') != RECEIPT_SCHEMA or not isinstance(receipt.get('checked'), list):
+        raise ValueError('This build\'s check predates recording which engines, sandboxes and CLI versions it '
+                         'ran; rerun scripts/check_policy_env.py: ' + str(root))
+    if wanted is not None and wanted not in receipt['checked']:
+        raise ValueError('scripts/check_policy_env.py has not checked %s on this build (it checked %s); rerun it '
+                         'with this engine, sandbox and CLI: %s'
+                         % (json.dumps(wanted, sort_keys=True),
+                            ', '.join(json.dumps(item, sort_keys=True) for item in receipt['checked']), root))
+
+
+def require_combination(engine, isolation):
+    """Before preparing runs with an environment: refuse an engine combination its check did not run."""
+    root = selected()
+    if root is not None:
+        require_checked(root, load(root), combination(engine, isolation))
 
 
 def require_private_route(config):

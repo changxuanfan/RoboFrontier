@@ -15,13 +15,20 @@ the network and `uvx`; the result is read-only and runs need no network:
 .venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier
 ```
 
-Check it where batches will run, on a compute node for Slurm, and again if the CLIs or sandbox
-tools change. This drives each real CLI with a local stub model, so it contacts no provider and
-uses no credential. A pass records a receipt beside the environment:
+Check it where batches will run, on a compute node for Slurm. This drives each real CLI with a
+local stub model, so it contacts no provider and uses no credential. A pass records a receipt
+beside the environment that lists each engine with the sandbox it ran (Codex's tool backend,
+Claude Code's Bash isolation) and the CLI version on `PATH`. Preparation refuses any other
+combination, so check again after changing a CLI, or to use Codex's `native` tool backend on Linux.
+A receipt from before these lists is refused until the check runs again:
 
 ```sh
 .venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id> --scratch <batch location>
 ```
+
+The receipt is per build, not per node: on shared storage, one pass admits every node that uses
+that build. Nodes should match the one checked (kernel, Landlock, user namespaces); a node without
+unprivileged user namespaces fails each Codex command rather than running it less confined.
 
 Prepare with the flag:
 

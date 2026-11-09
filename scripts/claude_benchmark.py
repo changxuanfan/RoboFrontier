@@ -107,6 +107,9 @@ def prepare_draft(output, names, families=None, cases=None, level=None, min_arms
     # Prepared on the host that runs it: Claude Code's sandbox, or Landlock where it cannot run.
     from robofrontier.claude.landlock_shell import choose
     bash_isolation = choose()
+    # A policy environment admits only the Bash isolation and Claude Code CLI its check ran.
+    from robofrontier import policy_env
+    policy_env.require_combination('claude', bash_isolation)
     output = Path(output).absolute()
     output.mkdir(parents=True, exist_ok=False)
     for folder in run_layout.BATCH_FOLDERS: (output/folder).mkdir()
