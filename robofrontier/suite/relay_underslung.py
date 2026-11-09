@@ -20,6 +20,11 @@ SHAFT=.170
 TIP_DISTANCE=.100
 
 
+def _require(ok,*detail):
+    """Build and static checks must hold under python -O as well."""
+    if not ok:raise ValueError('Relay underslung check failed: '+repr(detail))
+
+
 def design(arms,level):
     if arms not in (8,12,16) or level not in (2,3):raise ValueError('R16 changes only six L2/L3 cases')
     chord=1.2 if arms==16 else 1.15
@@ -100,7 +105,7 @@ def fit_initial(model,data,task,hook_points):
             c,s=math.cos(pitch),math.sin(pitch);rotation=heading@np.array([[1,0,0],[0,c,-s],[0,s,c]])
             free[:]=np.r_[xy,0.,matrix_quat(rotation)];mujoco.mj_kinematics(model,data)
             return exact_bottom(model,data,hooks)-exact_bottom(model,data,rod),rotation
-        lo,hi=0.,.15;assert geometry(lo)[0]<0<geometry(hi)[0],ident
+        lo,hi=0.,.15;_require(geometry(lo)[0]<0<geometry(hi)[0], ident)
         for _ in range(48):
             mid=(lo+hi)/2
             if geometry(mid)[0]<0:lo=mid
@@ -187,7 +192,7 @@ def build(case,replace_draft=False,render=True,source=None,destination=None):
     mechanism['presentation']['physics_scope']='R16 user-requested apparatus replacement; unchanged robot mounts, worktop, robot controllers, timestep and goal acceptance. Timber shape, suspension and L3 hinge direction follow the new declared geometry.'
     task['rules'].append('R16 manufactured geometry: direct underside fixed eye100mm along the timber from its end; uniform170mm wooden pendulum. All L3 hinges are transverse out-of-plane angular springs. When Root is horizontal their top-view centreline opening remains148.5degrees; projected length changes. Initial support is actual tabletop contact, not a hidden stand.')
     draft=folder/'.build.xml';ET.ElementTree(root).write(draft,encoding='unicode');model=mujoco.MjModel.from_xml_path(str(draft));data=mujoco.MjData(model)
-    assert [model.joint(i).name for i in range(model.njnt)]==[frozen.model.joint(i).name for i in range(frozen.model.njnt)]
+    _require([model.joint(i).name for i in range(model.njnt)]==[frozen.model.joint(i).name for i in range(frozen.model.njnt)], 'joint names changed')
     mujoco.mj_resetDataKeyframe(model,data,model.key('initial').id);initial=fit_initial(model,data,task,hooks)
     root.find("keyframe/key[@name='initial']").set('qpos',vector(data.qpos))
     for ident,body in replacements.items():
@@ -216,10 +221,10 @@ def validate(folder,source=None):
             np.testing.assert_allclose(getattr(m,field),getattr(old.model,field),rtol=0,atol=0)
         for ident,arm in task['arms'].items():
             np.testing.assert_allclose(d.body(ident+'_link0').xpos,arm['base_position_m'],rtol=0,atol=1e-12)
-    assert not any('hook_bracket' in (m.geom(g).name or '') for g in range(m.ngeom))
-    assert m.nu==8*len(task['arms']) and m.nplugin==0 and m.opt.timestep==.002
+    _require(not any('hook_bracket' in (m.geom(g).name or '') for g in range(m.ngeom)), 'hook bracket present')
+    _require(m.nu==8*len(task['arms']) and m.nplugin==0 and m.opt.timestep==.002, 'actuators, plugins or timestep changed')
     links={item['id']:linking_number(m,d,item['id']) for item in task['mechanism']['payload_assemblies']}
-    assert all(abs(abs(value)-1)<.03 for value in links.values()),links
+    _require(all(abs(abs(value)-1)<.03 for value in links.values()), links)
     return dict(status='static_checks_passed',oracle_verified=False,policy_verified=False,frozen_input=False,scene_revision=REVISION,physics_steps=0,initial_support=task['apparatus_revision']['initial_support_fit'],initial_penetrations=issues,ring_linking_numbers=links,robot_mounts_preserved=True,independent_free_weights=True,scope='New user-declared apparatus; unchanged robots/worktop/contact and acceptance parameters; not Oracle success')
 
 

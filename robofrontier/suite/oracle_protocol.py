@@ -33,6 +33,10 @@ def effective_task(scene, task, protocol):
             raise ValueError('Oracle execution protocol source differs: '+name)
     result = deepcopy(task)
     result.setdefault('run_protocol', {})['evaluation_semantics'] = protocol['evaluation_semantics']
+    if task.get('family') == 'relay' and task.get('completion', {}).get('required_airborne_handover'):
+        # Oracle witnesses obey the same airborne-handover rule as policy runs.
+        from ..task_families import RELAY_HANDOVER_RULE
+        result['run_protocol']['relay_completion_rule'] = RELAY_HANDOVER_RULE
     return result
 
 

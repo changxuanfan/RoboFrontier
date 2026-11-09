@@ -21,6 +21,9 @@ from .joint_route import connect_route
 
 class ReferenceStopped(RuntimeError):pass
 class ProcessViolation(RuntimeError):pass
+class NoVerifiedJointIK(ValueError):
+    """The Oracle's own joint-space IK found no verified pose for an arm."""
+    def __init__(self,robot):super().__init__('No verified robot IK for '+robot)
 
 class PlacementPlanningError(RuntimeError):
     """Finite search failure, not a statement of physical impossibility."""
@@ -232,7 +235,7 @@ class Trial:
         arm=self.arms[robot];q,error=arm.ik.solve(np.asarray(target),rotation,arm.qref,250);_,reached=arm.ik.pose(q)
         if error>.0015 or np.linalg.norm(rotation_vector(rotation,reached))>.02:
             q,error=arm.ik.solve(np.asarray(target),rotation,self.home_q[robot],350);_,reached=arm.ik.pose(q)
-        if error>.0015 or np.linalg.norm(rotation_vector(rotation,reached))>.02:raise ValueError('No verified robot IK for '+robot)
+        if error>.0015 or np.linalg.norm(rotation_vector(rotation,reached))>.02:raise NoVerifiedJointIK(robot)
         return ('move',dict(joint_rad=q.tolist(),joint_speed_rad_s=.65))
     def move(self,robot,target,rotation=None,label='move',precise=False,speed_m_s=None):
         arm=self.arms[robot];rotation=self.data.site_xmat[arm.site].reshape(3,3).copy() if rotation is None else rotation
@@ -242,7 +245,9 @@ class Trial:
         straight=robot in self.held or any(x in label for x in ('contact','lift','prealign','seat','withdraw'))
         try:self.execute(label,{robot:self.pose_command(robot,target,rotation,speed=(.035 if robot in self.held else .10) if speed_m_s is None else speed_m_s,joints=not straight and speed_m_s is None)})
         except ValueError as error:
-            if robot not in self.held and 'no verified IK solution' in str(error):self.move_free(robot,target,rotation,label)
+            # Both the Oracle's joint IK and the controller's IK refusal
+            # leave an empty arm free to take a sampled joint route.
+            if robot not in self.held and (isinstance(error,NoVerifiedJointIK) or 'no verified IK solution' in str(error)):self.move_free(robot,target,rotation,label)
             else:raise
         if precise:
             for i in range(3):

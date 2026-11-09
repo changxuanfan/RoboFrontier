@@ -22,6 +22,12 @@ PAINT = (.95, .93, .86, 1)
 ARROW = (.10, .30, .43, 1)
 
 
+def _require(ok, *detail):
+    """Static checks must hold under python -O as well."""
+    if not ok:
+        raise ValueError('Relay static check failed: '+repr(detail))
+
+
 def endpoint_half(revision):
     return np.array([.40, .68]) if revision >= 12 else np.array([HALF, HALF])
 
@@ -403,18 +409,18 @@ def validate(folder, source, persist=True):
     mujoco.mj_forward(old, old_data)
     task = json.loads((folder/'task.json').read_text())
     half = endpoint_half(task['scale']['scene_revision'])
-    assert model.nq == old.nq and model.nv == old.nv and model.nu == old.nu
+    _require(model.nq == old.nq and model.nv == old.nv and model.nu == old.nu, 'state or actuator dimensions changed')
     for field in ('body_mass', 'body_inertia', 'body_ipos', 'body_iquat'):
         for i in range(1, old.nbody):
             name = old.body(i).name
             if not name or name.startswith(('route_zone_', 'route_arrow_', 'pickup_')):
                 continue
-            assert np.allclose(getattr(model, field)[model.body(name).id], getattr(old, field)[i]), (field, name)
+            _require(np.allclose(getattr(model, field)[model.body(name).id], getattr(old, field)[i]), field, name)
     for field in ('actuator_gainprm', 'actuator_biasprm', 'actuator_forcerange',
                   'actuator_ctrlrange', 'jnt_range', 'jnt_stiffness', 'dof_damping'):
-        assert np.array_equal(getattr(model, field), getattr(old, field)), field
+        _require(np.array_equal(getattr(model, field), getattr(old, field)), field)
     for field in ('timestep', 'solver', 'iterations', 'noslip_iterations', 'gravity'):
-        assert np.array_equal(getattr(model.opt, field), getattr(old.opt, field)), field
+        _require(np.array_equal(getattr(model.opt, field), getattr(old.opt, field)), field)
     # Apparatus and robot local geometry stay unchanged. R13 rebuilds the table.
     for g in range(old.ngeom):
         if not (old.geom_contype[g] or old.geom_conaffinity[g]):
@@ -426,7 +432,7 @@ def validate(folder, source, persist=True):
         peers = np.flatnonzero(model.geom_bodyid == model.body(body).id)
         new_g = int(peers[ordinal])
         for field in ('geom_type', 'geom_pos', 'geom_quat', 'geom_size', 'geom_friction', 'geom_solref', 'geom_solimp', 'geom_condim'):
-            assert np.allclose(getattr(model, field)[new_g], getattr(old, field)[g]), (field, body, ordinal)
+            _require(np.allclose(getattr(model, field)[new_g], getattr(old, field)[g]), field, body, ordinal)
     # A downward ray restricted to tabletop colliders checks both full regions.
     model.geom_group[:] = 5
     tabletop = []
@@ -438,12 +444,12 @@ def validate(folder, source, persist=True):
     hit = np.zeros(1, dtype=np.int32)
     samples = 0
     for region in (task['route'][0], task['route'][-1]):
-        assert region['half_size_m'] == half.tolist()
+        _require(region['half_size_m'] == half.tolist(), 'endpoint half size', region['region_id'])
         for x in np.linspace(-half[0]-.003, half[0]+.003, 25):
             for y in np.linspace(-half[1]-.003, half[1]+.003, 25):
                 point = np.array(region['center_m'])+v2.rz(region['nominal_yaw_rad'])@np.array([x, y, .05])
                 distance = mujoco.mj_ray(model, data, point, np.array([0., 0., -1.]), group, 1, -1, hit)
-                assert abs(distance-.05) < .001, ('region outside tabletop', region['region_id'], point, distance)
+                _require(abs(distance-.05) < .001, 'region outside tabletop', region['region_id'], point, distance)
                 samples += 1
     first = task['mechanism']['payload_assemblies'][0]['id']
     start = np.array(task['route'][0]['center_m'])
@@ -455,11 +461,11 @@ def validate(folder, source, persist=True):
         local_bounds.extend([center-extent,center+extent])
     lo,hi=np.min(local_bounds,axis=0),np.max(local_bounds,axis=0)
     first_inside = bool(np.all(lo[:2] >= -half+.01) and np.all(hi[:2] <= half-.01))
-    if task['scale']['scene_revision'] < 12: assert first_inside
+    if task['scale']['scene_revision'] < 12: _require(first_inside, 'first assembly outside the start region')
     if task['scale']['scene_revision'] == 12 or task['scale']['arms']==8:
         mounts = [arm['base_position_m'][0] for arm in task['arms'].values()]
-        assert start[0]+half[0] <= min(mounts)-.10
-        assert task['route'][-1]['center_m'][0]-half[0] >= max(mounts)+.10
+        _require(start[0]+half[0] <= min(mounts)-.10, 'start region inside the robot mounts')
+        _require(task['route'][-1]['center_m'][0]-half[0] >= max(mounts)+.10, 'goal region inside the robot mounts')
     transformed = []
     apparatus_tabletop_samples = 0
     for assembly in task['mechanism']['payload_assemblies']:
@@ -474,16 +480,16 @@ def validate(folder, source, persist=True):
                 vertices=np.array([[x,y,z] for x in (-1,1) for y in (-1,1) for z in (-1,1)])*model.geom_aabb[g,3:]+model.geom_aabb[g,:3]
             for point in vertices@rotation.T+data.geom_xpos[g]:
                 distance=mujoco.mj_ray(model,data,np.array([point[0],point[1],task['table_height_m']+.05]),np.array([0.,0.,-1.]),group,1,-1,hit)
-                assert abs(distance-.05)<.001,('initial apparatus over table edge/hole',ident,point,distance)
+                _require(abs(distance-.05)<.001, 'initial apparatus over table edge/hole',ident,point,distance)
                 apparatus_tabletop_samples+=1
         turn = root_new.xmat.reshape(3, 3)@root_old.xmat.reshape(3, 3).T
-        assert np.allclose(root_new.xpos,v2.rz(assembly.get('layout_yaw_change_rad',0.))@root_old.xpos+np.asarray(assembly.get('layout_translation_world_m',[0.,0.,0.])))
+        _require(np.allclose(root_new.xpos,v2.rz(assembly.get('layout_yaw_change_rad',0.))@root_old.xpos+np.asarray(assembly.get('layout_translation_world_m',[0.,0.,0.]))), 'assembly root is not the declared rigid transform', ident)
         for i in range(1, old.nbody):
             name = old.body(i).name or ''
             if name != ident and not name.startswith(ident+'_'):
                 continue
-            assert np.allclose(data.body(name).xpos, root_new.xpos+turn@(old_data.body(i).xpos-root_old.xpos), atol=1e-8), name
-            assert np.allclose(data.body(name).xmat.reshape(3,3), turn@old_data.body(i).xmat.reshape(3,3), atol=1e-8), name
+            _require(np.allclose(data.body(name).xpos, root_new.xpos+turn@(old_data.body(i).xpos-root_old.xpos), atol=1e-8), name)
+            _require(np.allclose(data.body(name).xmat.reshape(3,3), turn@old_data.body(i).xmat.reshape(3,3), atol=1e-8), name)
         transformed.append(ident)
     forbidden_initial_contacts = []
     for contact in data.contact:
@@ -496,7 +502,7 @@ def validate(folder, source, persist=True):
         different_payloads = all(payloads) and payloads[0] != payloads[1]
         if contact.dist < -.001 and (robot_payload or robot_robot or different_payloads):
             forbidden_initial_contacts.append(dict(bodies=names, penetration_m=-float(contact.dist)))
-    assert not forbidden_initial_contacts, forbidden_initial_contacts
+    _require(not forbidden_initial_contacts, forbidden_initial_contacts)
     result = dict(status='static_checks_passed', endpoint_size_xy_m=(2*half).tolist(),
         tabletop_samples=samples, endpoint_regions_fully_supported=True,
         complete_assembly_footprint_tabletop_samples=apparatus_tabletop_samples,

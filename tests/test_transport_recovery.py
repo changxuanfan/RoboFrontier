@@ -207,6 +207,31 @@ class EngineeringRecoveryTests(unittest.TestCase):
                 self.assertFalse(handler.poll(t,runtime,[],[],force=True))
                 runtime.recover.assert_not_called();self.assertTrue((handler.path/'rejected/x.json').exists())
 
+    def test_input_without_complete_provenance_is_refused_before_admission(self):
+        accepted=dict(id='owner',job='g1',scene_sha256='scene',steps=[])
+        for request in (dict(job='g1',scene_sha256='scene',steps=[]),dict(id=7,job='g1',scene_sha256='scene'),
+                        dict(id='',job='g1',scene_sha256='scene'),dict(id='owner',job='g1',scene_sha256='scene'),[]):
+            with self.subTest(request=request),TemporaryDirectory() as tmp:
+                handler=EngineeringRecovery(tmp)
+                handler.observation=Mock(return_value=dict(failed_jobs={},accepted_goals={}))
+                handler.external_inputs.append(dict(id='owner'))
+                handler._retry=Mock(return_value='g1-recovery-1')
+                (handler.path/'inbox/r1.json').write_text(json.dumps(request))
+                t=SimpleNamespace(time=0.,task={'scene_sha256':'scene'},event=Mock())
+                runtime=SimpleNamespace(jobs={'g1':dict(status='failed')},leases={})
+                self.assertFalse(handler.poll(t,runtime,[],[],force=True))
+                handler._retry.assert_not_called();self.assertEqual(handler.external_inputs,[dict(id='owner')])
+                self.assertTrue((handler.path/'rejected/r1.json').exists())
+        with TemporaryDirectory() as tmp:
+            handler=EngineeringRecovery(tmp)
+            handler.observation=Mock(return_value=dict(failed_jobs={},accepted_goals={}))
+            handler._retry=Mock(return_value='g1-recovery-1')
+            (handler.path/'inbox/r1.json').write_text(json.dumps(accepted))
+            t=SimpleNamespace(time=0.,task={'scene_sha256':'scene'},event=Mock())
+            self.assertTrue(handler.poll(t,SimpleNamespace(jobs={'g1':dict(status='failed')},leases={}),[],[],force=True))
+            self.assertEqual([item['id'] for item in handler.external_inputs],['owner'])
+            self.assertEqual(handler.external_inputs[0]['recovery_job'],'g1-recovery-1')
+
     def test_frontier_polling_is_bounded_not_every_physics_step(self):
         with TemporaryDirectory() as tmp:
             handler=EngineeringRecovery(tmp)
