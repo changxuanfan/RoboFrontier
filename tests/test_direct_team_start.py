@@ -62,6 +62,28 @@ class DirectTeamStartTests(unittest.TestCase):
                     self.assertIn('error', call('Controller', 'gripper', {'robot': 'C', 'state': 'close'}))
                 service.close()
 
+    def test_a_refused_start_gate_leaves_the_run_prepared(self):
+        from unittest.mock import patch
+        for readiness in ('environment_preview_only', 'prepared_policy_trial'):
+            with self.subTest(readiness=readiness), tempfile.TemporaryDirectory() as temporary:
+                service, call = self.make_service(Path(temporary), 'peer')
+                videos = []
+                service.video_factory = lambda: videos.append(1)
+                for actor in ('A', 'B', 'C'):
+                    call('Meta', 'bind', {'actor': actor, 'thread_id': 'thread-'+actor})
+                started = []
+                service.world.start_trial = lambda: started.append(1)
+                service.task['execution_readiness'] = readiness
+                with patch('robofrontier.task_families.validate_frozen_policy',
+                           side_effect=ValueError('Frozen policy release differs')):
+                    result = call('Meta', 'start')
+                self.assertIn('error', result)
+                self.assertEqual(service.store.get('lifecycle'), 'prepared')
+                self.assertIsNone(service.store.get('start_at'))
+                self.assertNotIn('START', [e['kind'] for e in service.store.events()])
+                self.assertEqual((videos, started), ([], []))
+                self.assertEqual({service.store.agent(a)['work_state'] for a in ('A', 'B', 'C')} & {'continue'}, set())
+
     def test_duplicate_native_session_cannot_bind_two_initial_roles_at_start(self):
         with tempfile.TemporaryDirectory() as temporary:
             service, call = self.make_service(Path(temporary), 'peer')

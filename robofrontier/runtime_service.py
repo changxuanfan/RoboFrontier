@@ -213,6 +213,15 @@ class RuntimeService:
             job['result'] = answer
         # The outer operation releases the client after its transaction commits.
 
+    def check_startable(self):
+        """The task's START gates. World.start_trial repeats them as it opens the recorders."""
+        readiness = self.task.get('execution_readiness')
+        if readiness == 'environment_preview_only':
+            raise ValueError('This v2 scene is an environment preview. Mechanism-specific evaluation and recording commissioning are required before starting a policy trial.')
+        if readiness == 'prepared_policy_trial':
+            from .task_families import validate_frozen_policy
+            validate_frozen_policy(self.task, self.directory)
+
     def fault_injected(self):
         """The run's one engineering fault already fired, in this or an earlier segment.
 
@@ -348,6 +357,9 @@ class RuntimeService:
                         raise ValueError('Direct team START requires every initial role bound to a distinct session')
                 elif not all(v['ready'] and v['thread_id'] and v['session_status']=='idle' and v['session_observed_at'] is not None and 0 <= now-v['session_observed_at'] <= self.config['session_observation_ttl_s'] for v in policy):
                     raise ValueError('Import fresh actual idle session observations before START')
+                # The trial's START gates run before START is committed, so a refused START
+                # leaves the run prepared: no START event, start time or video.
+                self.check_startable()
                 if self.video_factory:
                     self.video = self.video_factory()
                 self.store.start()
