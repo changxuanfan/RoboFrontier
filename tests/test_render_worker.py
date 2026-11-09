@@ -86,4 +86,44 @@ class RenderWorkerTests(unittest.TestCase):
         self.assertFalse(self.worker.submit(job))
 
 
+
+class LocalRenderWaitTests(unittest.TestCase):
+    """The readiness gate without a renderer process: replies are simulated."""
+    def worker(self):
+        import threading
+        worker = object.__new__(RenderWorker)
+        worker.lock = threading.Lock(); worker.changed = threading.Condition(worker.lock)
+        worker.pending, worker.failed, worker.local, worker.closed = {}, [], set(), False
+        return worker
+
+    def test_a_capture_rendered_by_the_owner_is_unfinished_until_written(self):
+        worker = self.worker()
+        worker.pending = {1: {'id': 1}, 2: {'id': 2}}
+        with worker.changed:  # capture 1 fails in the worker
+            worker.failed.append(worker.pending.pop(1)); worker.changed.notify_all()
+        handed = worker.failed_captures()
+        self.assertEqual([r['id'] for r in handed], [1])
+        with worker.changed:  # another capture's reply arrives during the owner's local render
+            worker.pending.pop(2); worker.changed.notify_all()
+        self.assertFalse(worker.wait(.05))
+        worker.rendered_locally()
+        self.assertTrue(worker.wait(.05))
+
+    def test_a_wait_that_began_before_the_hand_back_still_covers_it(self):
+        import threading
+        worker = self.worker()
+        worker.pending = {1: {'id': 1}}
+        answers = []
+        waiter = threading.Thread(target=lambda: answers.append(worker.wait(5)))
+        waiter.start(); time.sleep(.05)
+        with worker.changed:
+            worker.failed.append(worker.pending.pop(1)); worker.changed.notify_all()
+        worker.failed_captures()
+        with worker.changed: worker.changed.notify_all()
+        time.sleep(.05)
+        self.assertEqual(answers, [])
+        worker.rendered_locally(); waiter.join(5)
+        self.assertEqual(answers, [True])
+
+
 if __name__ == '__main__': unittest.main()

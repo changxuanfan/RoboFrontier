@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -246,6 +247,25 @@ class RunEvidenceTests(unittest.TestCase):
                  'revisions': [{'rev': 2, 'role': 'Delegate_ab', 'change': 'open to 4 cm; faster'}]},
                 {'type': None, 'title': 'loose heading', 'role': None, 'tags': [],
                  'revisions': [{'rev': None, 'role': None, 'change': 'a loose revision'}]}])
+
+    def test_a_linked_or_special_skills_file_is_reported_and_never_read(self):
+        from robofrontier.run_layout import manifest_record
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)/'run'; (run/'private/inputs/meta').mkdir(parents=True); (run/'workspace').mkdir()
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('codex')))
+            (run/'private/inputs/meta/x.md').write_text('## private heading\n')
+            outside = Path(tmp)/'outside.md'; outside.write_text('## outside heading\n')
+            lessons = run/'workspace/skills.md'
+            for target in (outside, Path('../private/inputs/meta/x.md')):
+                with self.subTest(target=str(target)):
+                    lessons.symlink_to(target)
+                    [record] = run_skills(run)
+                    self.assertEqual(record['path'], 'workspace/skills.md')
+                    self.assertEqual(record['entries'], []); self.assertIn('not read', record['issue'])
+                    lessons.unlink()
+            os.mkfifo(lessons)
+            [record] = run_skills(run)  # must not block
+            self.assertEqual(record['entries'], []); self.assertIn('not read', record['issue'])
 
     def test_native_subagent_calls_are_counted_but_robot_and_text_are_not(self):
         with tempfile.TemporaryDirectory() as tmp:

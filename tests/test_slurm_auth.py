@@ -136,6 +136,21 @@ class CredentialCustodyTests(unittest.TestCase):
                 (lease.home/'auth.json').write_bytes(b'')
         self.assertEqual((self.root/'job/auth.json').read_bytes(), b'')
 
+    def test_a_bootstrap_lost_between_its_two_writes_leaves_a_usable_store(self):
+        from unittest.mock import patch
+        from robofrontier import slurm_auth
+        original, writes = slurm_auth._atomic_private, []
+        def lost_after_first(path, value):
+            if writes: raise KeyboardInterrupt('job killed')
+            writes.append(path.name); original(path, value)
+        with patch.object(slurm_auth, '_atomic_private', side_effect=lost_after_first):
+            with self.assertRaises(KeyboardInterrupt):
+                with CredentialLease(self.store, self.root/'job'):
+                    pass
+        with CredentialLease(self.store, self.root/'next') as lease:
+            self.assertEqual(lease.current['generation'], 1)
+        self.assertTrue((self.store/'initialized.json').exists())
+
     def test_missing_persisted_generation_does_not_fall_back_to_bootstrap(self):
         with CredentialLease(self.store, self.root/'job') as lease:
             private_json(lease.home/'auth.json', auth(1))

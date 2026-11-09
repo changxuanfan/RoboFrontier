@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 import queue
 import secrets
+import sqlite3
 import threading
 import time
 
@@ -86,7 +87,7 @@ class RuntimeService:
         if (lifecycle != 'prepared' and not resuming) or self.store.get('execution_owner_attached'):
             # Reading a run must never silently recreate its physical world.
             if lifecycle not in ('ended', 'interrupted'):
-                self.store.recover_execution()
+                self.recover_execution()
                 self.store.put('dispatch_paused', True)
                 self.store.put('lifecycle', 'interrupted')
                 self.store.put('physics_state', 'stopped')
@@ -106,6 +107,15 @@ class RuntimeService:
             # The trial's recorders start now; the run itself resumes on the host's `resume`.
             begin = getattr(self.world, 'start_trial', None)
             if begin is not None: begin()
+
+    def recover_execution(self):
+        """Settle unfinished execution as unknown; a failure here must not hide the interruption."""
+        try:
+            self.store.recover_execution()
+        except Exception as error:
+            # The recovery transaction rolled back; the run is still recorded as interrupted
+            # and its unsettled calls stay as they were for engineering review.
+            self.store.event('EXECUTION_RECOVERY_FAILED', 'Meta', {'reason': type(error).__name__+': '+str(error)})
 
     @property
     def started(self):
@@ -128,7 +138,7 @@ class RuntimeService:
                             self.motion_check = None
                         self.stop_video()
                         if self.store.get('lifecycle') != 'ended':
-                            self.store.recover_execution()
+                            self.recover_execution()
                             self.store.put('dispatch_paused', True)
                             self.store.put('lifecycle', 'interrupted')
                             self.store.put('physics_state', 'stopped')
@@ -202,6 +212,25 @@ class RuntimeService:
                              'result': answer if job['op'] != 'state' else {'snapshot': True}})
             job['result'] = answer
         # The outer operation releases the client after its transaction commits.
+
+    def check_startable(self):
+        """The task's START gates. World.start_trial repeats them as it opens the recorders."""
+        readiness = self.task.get('execution_readiness')
+        if readiness == 'environment_preview_only':
+            raise ValueError('This v2 scene is an environment preview. Mechanism-specific evaluation and recording commissioning are required before starting a policy trial.')
+        if readiness == 'prepared_policy_trial':
+            from .task_families import validate_frozen_policy
+            validate_frozen_policy(self.task, self.directory)
+
+    def fault_injected(self):
+        """The run's one engineering fault already fired, in this or an earlier segment.
+
+        A continued segment builds a new world whose fault state starts afresh; the run
+        store is what remembers that the fault was applied."""
+        if not getattr(self, '_fault_injected', False):
+            self._fault_injected = self.store.db.execute(
+                "SELECT 1 FROM events WHERE kind='ENGINEERING_FAULT_INJECTED' LIMIT 1").fetchone() is not None
+        return self._fault_injected
 
     def stopping_diagnostics(self, action):
         arm=getattr(self.world,'arms',{}).get(action['arm'])
@@ -328,6 +357,9 @@ class RuntimeService:
                         raise ValueError('Direct team START requires every initial role bound to a distinct session')
                 elif not all(v['ready'] and v['thread_id'] and v['session_status']=='idle' and v['session_observed_at'] is not None and 0 <= now-v['session_observed_at'] <= self.config['session_observation_ttl_s'] for v in policy):
                     raise ValueError('Import fresh actual idle session observations before START')
+                # The trial's START gates run before START is committed, so a refused START
+                # leaves the run prepared: no START event, start time or video.
+                self.check_startable()
                 if self.video_factory:
                     self.video = self.video_factory()
                 self.store.start()
@@ -492,8 +524,10 @@ class RuntimeService:
                 try:
                     self.world.start_action(robot, job['id'], prepared)
                     inject = getattr(self.world, 'inject_fault', None)
-                    injected = inject(robot, job['id'], op) if callable(inject) else None
-                    if injected: self.store.event('ENGINEERING_FAULT_INJECTED', 'Meta', injected)
+                    injected = inject(robot, job['id'], op) if callable(inject) and not self.fault_injected() else None
+                    if injected:
+                        self.store.event('ENGINEERING_FAULT_INJECTED', 'Meta', injected)
+                        self._fault_injected = True
                 except Exception as error:
                     self.store.uncertain_action(job['id'],'Executor acknowledgement failed: '+str(error),isolate=True)
                     self.respond(job,{'execution_status':'uncertain',
@@ -535,7 +569,13 @@ class RuntimeService:
                 action = self.store.actions().get(data['call_id'])
                 diagnostics=None
                 if action and action.get('phase')=='stopping':
-                    diagnostics=self.stopping_diagnostics(action)
+                    # Only a live stop has a controller to ask. A terminal action keeps its phase
+                    # (an integrity abort, a recovery or a new segment ended it); the world that
+                    # owned the stop may be gone, so its recorded diagnostics are the answer.
+                    diagnostics=action.get('stop_diagnostics')
+                    if action.get('status')=='running':
+                        try:diagnostics=self.stopping_diagnostics(action)
+                        except ValueError:pass
                 self.respond(job, {'execution': action or {'call_id':data['call_id'],'status':call['status']},
                                    'original_result':call['result'], **({'stop_diagnostics':diagnostics} if diagnostics is not None else {}),
                                    **({'execution_diagnostics':self.isolated_diagnostics(action)} if action and action.get('isolated') else {})})
@@ -565,14 +605,18 @@ class RuntimeService:
                 self.export_records()
             elif op == 'shutdown':
                 from .action_batch import cancel_collecting
-                cancel_collecting(self.store,'shutdown_before_group_start',float(self.world.time))
-                if any(v['status'] in ('pending','running') for v in self.store.actions().values()):
-                    raise ValueError('Resolve execution before shutdown')
+                # One transaction: a refused shutdown leaves every forming sync group intact.
+                with self.store.transaction():
+                    cancel_collecting(self.store,'shutdown_before_group_start',float(self.world.time))
+                    if any(v['status'] in ('pending','running') for v in self.store.actions().values()):
+                        raise ValueError('Resolve execution before shutdown')
                 self.respond(job, {'shutdown': True})
                 self.shutdown = True
             else:
                 raise ValueError('Unknown tool operation')
-        except (ValueError, KeyError, TypeError) as error:
+        except (ValueError, KeyError, TypeError, sqlite3.InterfaceError, sqlite3.ProgrammingError) as error:
+            # A policy value the store cannot bind is a malformed request, never a reason to end
+            # the owner loop (and with it the shared world). Other database errors still propagate.
             # A failed IK request also reports what the solver found (robot_control.IKNoSolution).
             detail = getattr(error, 'detail', None)
             self.respond(job, {'error': str(error), **({'ik_detail': detail} if detail is not None else {})})

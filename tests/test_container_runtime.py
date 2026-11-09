@@ -175,6 +175,26 @@ class ContainerRuntimeTests(unittest.TestCase):
         self.assertEqual(json.loads(records[0].read_text())['source_commit'], 'commit')
         self.assertEqual(control.call_args.args[0][:2], ['docker', 'rm'])
 
+    def test_a_slow_stop_after_ctrl_c_still_records_the_retained_container(self):
+        def run(command, **options):
+            if command[:2] in (['docker', 'stop'], ['docker', 'exec']):
+                raise subprocess.TimeoutExpired(command, options.get('timeout'))
+            return SimpleNamespace(returncode=0, stdout='daemon')
+        waits = iter([KeyboardInterrupt(), KeyboardInterrupt()])
+        def wait(timeout=None):
+            raise next(waits)
+        with patch.object(runtime.shutil, 'which', return_value='/docker'), \
+                patch.object(runtime, '_image', return_value=('image', 'commit')), \
+                patch.object(runtime, '_ensure_image'), patch.object(runtime, '_ensure_volumes'), \
+                patch.object(runtime, '_running', return_value=True), \
+                patch.object(runtime.subprocess, 'Popen', return_value=SimpleNamespace(wait=wait)), \
+                patch.object(runtime.subprocess, 'run', side_effect=run):
+            result = runtime.execute(['plan'], self.config, root=self.root)
+        self.assertEqual(result['status'], 'still_running_needs_review')
+        self.assertTrue(result['interrupted'])
+        records = list((self.root/'.robofrontier/containers/default/commands').glob('*.json'))
+        self.assertEqual(json.loads(records[0].read_text())['status'], 'still_running_needs_review')
+
     def test_live_or_disconnected_container_is_retained_without_copy_or_restart(self):
         result, control = self.execute(running=True)
         self.assertEqual(result['status'], 'still_running_needs_review')
@@ -189,6 +209,16 @@ class ContainerRuntimeTests(unittest.TestCase):
         self.assertNotIn('--result-file', command)
         with self.assertRaisesRegex(ValueError, 'Supported auth'):
             self.command(['auth', 'shell', 'something'])
+
+    def test_engine_only_selection_uses_that_engines_default_profile(self):
+        settings = runtime._settings(['plan', '--engine', 'claude'], load_configuration())
+        self.assertEqual(settings['policy']['profile'],
+                         load_configuration(overrides={'policy': {'engine': 'claude'}})['policy']['profile'])
+        self.assertEqual(settings['policy']['profile'], 'haiku_subscription_token')
+        runtime._credential_environment(settings, {})
+        explicit = runtime._settings(['plan', '--engine', 'claude', '--profile', 'haiku_subscription_token'], load_configuration())
+        self.assertEqual(explicit['policy']['profile'], 'haiku_subscription_token')
+        self.assertEqual(runtime._settings(['plan', '--engine', 'codex'], load_configuration()), load_configuration())
 
     def test_invalid_container_options_fail_during_configuration_resolution(self):
         for value in ({'workspace': '../escape'}, {'workspace': 'MixedCase'},

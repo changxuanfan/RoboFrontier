@@ -585,4 +585,68 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(b['result']['messages'][0]['from'],'C')
         finally:service.close()
 
+    def test_malformed_field_types_return_tool_errors_and_keep_the_owner_alive(self):
+        """Any JSON value a model sends is answered as a tool error; none may end the shared world."""
+        from robofrontier.robot_ops import POLICY_OPS
+        self.start()
+        # FakeWorld has no screening; a real check answers asynchronously and catches its own errors.
+        self.service.world.check_motion=lambda data,cfg:iter([{'assessment':'unknown','advisory_only':True}])
+        malformed=({'call_id':['x']},{'call_id':{'a':1}},{'call_id':5},{'call_id':None},
+                   {'robot':['A']},{'robot':{'x':1}},{'cameras':'global'},{'cameras':[['global']]},
+                   {'to':'B','text':1},{'to':[1],'text':'x'},{'to':['Controller'],'text':'x','reply_to':['m1']},
+                   {'to':['Controller'],'text':'x','reply_to':{'id':'m1'}},{'call_ids':'x'},{'call_ids':[[1]]},
+                   {'actions':'x'},{'actions':[1]},{'actions':[{'robot':'A','op':'move','parameters':'x'}]},
+                   {'wait':'no'},{'state':[1],'note':['x']},{'delegate_id':[1]},{'timeout_s':'x'},
+                   {'after_s':'x','note':'x'},{'scopes':'x'},{'outcome':['x'],'result':{}},{'sync_group':'x'})
+        must_fail={'job','stop','recover_action'}
+        for op in sorted(POLICY_OPS-{'finish'}):
+            for data in malformed:
+                with self.subTest(op=op,data=data):
+                    self.counter+=1
+                    job=self.service.accept('A',op,dict(data),'malformed-'+str(self.counter))
+                    self.service.pump()  # must not raise
+                    if op in must_fail and 'call_id' in data or 'reply_to' in data and op=='send':
+                        self.assertIn('error',job['result'])
+                        self.assertTrue(job['done'].is_set())
+                    self.service.waiters.clear()
+        self.assertEqual(self.service.store.get('lifecycle'),'running')
+        self.assertNotIn('error',self.call('Controller','observe',{'cameras':['global']})['result'])
+
+    def test_a_stopping_action_ended_outside_its_world_is_answered_from_its_record(self):
+        """After a new segment or an integrity abort, the original call still reads its failure."""
+        from types import SimpleNamespace
+        store=self.service.store
+        # A fresh world's arm: no live job and no stop (stop_diagnostics would refuse it).
+        self.service.world.arms={a:SimpleNamespace(job=None,stopping=False,data=object()) for a in ('A','B','C')}
+        self.start()
+        for ident,end in (('segment-move',lambda:store.interrupt_for_segment('Interrupted by an unexpected host exit',5.)),
+                          ('abort-move',lambda:store.finish_action('abort-move','failed',6.,'Engineering inputs changed'))):
+            parameters={'robot':'A','delta_m':[0,0,.01]}
+            store.begin_call(ident,'A','move',parameters)
+            store.start_action(ident,'A','move',parameters,0.)
+            store.isolate_stopping_action(ident,'Stop is still settling',{'recorded':True})
+            end()
+            self.assertEqual(store.actions()[ident]['status'],'failed')
+            result=self.call('A','job',{'call_id':ident})['result']
+            self.assertNotIn('error',result)
+            self.assertEqual(result['execution']['status'],'failed')
+            self.assertEqual(result['stop_diagnostics'],{'recorded':True})
+        self.assertTrue(self.call('A','job',{'call_id':'segment-move'})['result']['original_result']['interrupted_by_segment'])
+
+    def test_an_engineering_fault_fired_in_an_earlier_segment_is_not_applied_again(self):
+        calls=[]
+        def inject(robot,call_id,op):
+            calls.append(call_id);return {'call_id':call_id,'arm':robot,'kind':'unsettled_stop'}
+        self.service.world.inject_fault=inject
+        self.start()
+        self.call('A','move',{'delta_m':[0,0,.01],'wait':False},'first-move')
+        self.service.world.complete('A');self.service.pump()
+        self.assertEqual(calls,['first-move'])
+        # A continued segment: a new owner (fresh world fault state) on the same run store.
+        self.service.__dict__.pop('_fault_injected',None)
+        self.call('A','move',{'delta_m':[0,0,.01],'wait':False},'later-move')
+        self.assertEqual(calls,['first-move'])
+        kinds=[e['kind'] for e in self.service.store.events()]
+        self.assertEqual(kinds.count('ENGINEERING_FAULT_INJECTED'),1)
+
 if __name__=='__main__':unittest.main()

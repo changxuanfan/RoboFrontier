@@ -76,11 +76,31 @@ class SessionArchiveTests(unittest.TestCase):
             self.assertEqual(native_codex_sessions(run, THREAD), [folder/sessions[0].name])
             # An interrupted run that may still continue is not archived without --final.
             from robofrontier import run_segments
-            with patch.object(run_segments, 'retry_eligibility', lambda run, store: (True, None)):
+            store = RuntimeStore(run/'private/state/runtime.sqlite'); store.put('start_at', time.time()-60); store.close()
+            with patch.object(run_segments, '_last_frame', lambda run, segment: ('reader', 0, 1., 'pose')):
                 with self.assertRaisesRegex(ValueError, 'can still be continued'): session_archive.archive_run(run)
             self.assertTrue(all(s.exists() for s in sessions))
             # One that can no longer continue (here: it never recorded motion) is final.
             self.assertEqual(session_archive.archive_run(run)['archived'], 2)
+
+    def test_a_continuable_run_needs_final_after_its_source_moved_on_or_its_retry_was_used(self):
+        from robofrontier import run_segments
+        with tempfile.TemporaryDirectory() as tmp:
+            run, home, sessions = finished_run(Path(tmp), lifecycle='interrupted')
+            store = RuntimeStore(run/'private/state/runtime.sqlite')
+            store.put('start_at', time.time()-60); store.put('segment', run_segments.MAX_RETRIES); store.close()
+            with patch.object(run_segments, '_last_frame', lambda run, segment: ('reader', 0, 1., 'pose')), \
+                    patch('robofrontier.run_setup.verify_inputs', return_value=['source:robofrontier/edited.py']), \
+                    patch.object(run_segments, 'verify_inputs', return_value=['source:robofrontier/edited.py'], create=True):
+                with self.assertRaisesRegex(ValueError, 'can still be continued'): session_archive.archive_run(run)
+                self.assertTrue(all(s.exists() for s in sessions))
+                self.assertEqual(session_archive.archive_run(run, final=True)['archived'], 2)
+            # A normal end is final without --final.
+            run2, _, _ = finished_run(Path(tmp)/'other', lifecycle='interrupted')
+            store = RuntimeStore(run2/'private/state/runtime.sqlite')
+            store.put('start_at', time.time()-60); store.event('POLICY_WALL_LIMIT', 'Meta'); store.close()
+            with patch.object(run_segments, '_last_frame', lambda run, segment: ('reader', 0, 1., 'pose')):
+                self.assertEqual(session_archive.archive_run(run2)['archived'], 2)
 
     def test_a_final_run_is_archived_and_releases_its_home_copies(self):
         with tempfile.TemporaryDirectory() as tmp:

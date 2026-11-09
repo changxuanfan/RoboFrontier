@@ -7,6 +7,7 @@ import math
 import os
 from pathlib import Path
 import re
+import stat
 import time
 
 from . import run_layout
@@ -52,16 +53,26 @@ def codex_run_transcripts(run, thread):
 
 
 def run_skills(run_dir):
-    """The run's shared lessons file: one item per entry heading, with its revisions."""
+    """The run's shared lessons file: one item per entry heading, with its revisions.
+
+    The policy writes this file, so it is opened without following a link and only as
+    a regular file inside the run; anything else is reported as an issue and not read."""
     run_dir = Path(run_dir)
+    unread = 'skills file is a link or not a regular file; not read'
     try:
         lessons = run_layout.path(run_dir, 'skills_file')
     except KeyError:
         return []
-    if not lessons.is_file():
+    except run_layout.LayoutError:
+        # A link that leaves the run.
+        return [{'path': _recorded_skills_path(run_dir), 'issue': unread, 'entries': []}]
+    if not os.path.lexists(lessons):
         return []
+    data = _read_regular(run_dir, lessons)
+    if data is None:
+        return [{'path': str(lessons.relative_to(run_dir)), 'issue': unread, 'entries': []}]
     entries = []
-    for line in lessons.read_text(errors='replace').splitlines():
+    for line in data.decode(errors='replace').splitlines():
         if line.startswith('### ') and entries:
             match = REVISION.match(line)
             entries[-1]['revisions'].append({'rev': int(match.group(1)), 'role': match.group(2), 'change': match.group(3)}
@@ -73,7 +84,33 @@ def run_skills(run_dir):
         entries.append({'type': match.group(1), 'title': match.group(2), 'role': match.group(3),
                         'tags': [t.strip() for t in match.group(4).split(',') if t.strip()], 'revisions': []}
                        if match else {'type': None, 'title': line[3:].strip(), 'role': None, 'tags': [], 'revisions': []})
-    return [{'path': str(lessons.relative_to(run_dir)), 'bytes': lessons.stat().st_size, 'entries': entries}]
+    return [{'path': str(lessons.relative_to(run_dir)), 'bytes': len(data), 'entries': entries}]
+
+
+def _recorded_skills_path(run_dir):
+    try:
+        manifest = json.loads((Path(run_dir)/'private/inputs/manifest.json').read_text())
+        return manifest['layout_paths']['skills_file']
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def _read_regular(run_dir, path):
+    """Bytes of a regular file reached without any link below the run, else None."""
+    relative = Path(path).relative_to(run_dir)
+    current = Path(run_dir)
+    for part in relative.parts[:-1]:
+        current = current/part
+        if current.is_symlink() or not current.is_dir():
+            return None
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError:
+        return None
+    with os.fdopen(descriptor, 'rb') as stream:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            return None
+        return stream.read()
 
 
 def native_subagent_calls(paths):
