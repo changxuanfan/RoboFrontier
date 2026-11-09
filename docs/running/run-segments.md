@@ -210,8 +210,13 @@ the first failed probe of that streak is taken back from `active_s`
 world (`OUTAGE_RESUMED`), with the same ownership and integrity checks as an
 egress resume and no replay; an operator pause made meanwhile is kept
 (`OUTAGE_HELD_FOR_REVIEW`). The resume is recorded as `egress_recovery`, so a
-Codex turn that failed on the network gets its one network continuation, as after
-an egress pause.
+turn that failed on the network during the pause gets its one network
+continuation per role and pause, as after an egress pause: Codex resends it when
+the app-server reports a transport failure, Claude when the CLI's structured API
+error names a lost connection or does not say what failed
+([Claude network continuation](../engines/claude-code.md#engineering-run-status-and-stop)). The resent turn
+continues the same session and replays nothing; a second failure in the same
+pause, or a failure for another reason within it, holds the run for review.
 
 The probe pauses only a running trial (not before START or after the cutoff). It
 is off for Slurm runs (they keep the egress pause), for frozen START-wall-time

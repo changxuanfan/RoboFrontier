@@ -637,6 +637,24 @@ bounded recovery, under the [current recovery checks](README.md#capacity-and-rat
 Ordinary nonzero exits, unknown actions, uncertain fork creation and unknown
 identity remain review-required. Provider retries never replay physical actions.
 
+A run whose protocol counts active time (`run_protocol.clock: active_time_v1`)
+also gets the Codex host's network continuation
+(`recovery.recover_network`). When the world resumes after a network-outage or
+Slurm egress pause it records `egress_recovery`. A role's failed turn found
+within that pause (30 s either side) is resent once per role and pause, in the
+same session (`--resume`), with the frozen `network-resume.md` notice, after the
+role has no robot work in flight and the runtime grants the claim
+(`runtime_cli network-recovery`). This applies when the turn's structured API
+error names a lost connection (`api_error` `connection_failed`, `no_response`,
+`stream_idle_timeout` or `computer_slept`, with no HTTP status) or does not say
+what failed. A typed network failure seen before any pause waits up to 30 s for
+the world to pause; without a pause it is an ordinary failed turn. A second
+failure in the same pause, or a turn that failed for another reason within it
+(an authentication error, a turn or budget limit), holds the run for review
+(`NETWORK_CONTINUATION_UNCERTAIN`) and is never resent. Nothing is replayed: the
+resent turn reads its saved work and original call IDs. Runs frozen without the
+clock never resend.
+
 ## Normal finish and native reply completion
 
 A genuine protocol commissioning witness exercises real observation, delegation,
