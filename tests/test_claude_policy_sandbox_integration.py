@@ -2,7 +2,8 @@
 
 The stub replays a fixed list of tool calls; nothing is sent to a provider. It
 checks that a run-v4 policy writes only workspace/, its working directory (never the run
-root, public/, private/ or .agents/), and cannot read answers or credentials. Network access is
+root, public/, private/ or .agents/), and cannot read answers or credentials, including the
+private/ folder of a run prepared beside it after the CLI started. Network access is
 configured but not exercised here. Skipped when no `claude` binary is installed.
 """
 import http.server
@@ -54,7 +55,6 @@ def stub_model(steps, results, before=None):
     return Handler
 
 
-@unittest.skipUnless(shutil.which('claude'), 'Claude Code CLI is not installed')
 def frozen_settings(run, repo, home):
     """Freeze this run's access table as preparation does, then render it for Claude."""
     path = Path(run) / 'private/inputs/policy-access.json'
@@ -63,12 +63,31 @@ def frozen_settings(run, repo, home):
     return policy_settings(run)
 
 
+def cli_version():
+    """The installed CLI's version, named in failures: the rule matching is the CLI's own."""
+    try:
+        return subprocess.run(['claude', '--version'], capture_output=True, text=True, timeout=30).stdout.strip()
+    except (OSError, subprocess.SubprocessError) as error:
+        return 'unknown (%s)' % error
+
+
+@unittest.skipUnless(shutil.which('claude'), 'Claude Code CLI is not installed')
 class PolicySandboxTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.version = cli_version()
+
+    def _formatMessage(self, msg, standardMsg):
+        # Every assertion failure names the CLI version, since matching rules are the CLI's own.
+        return 'claude %s: %s' % (self.version, super()._formatMessage(msg, standardMsg))
+
     def test_policy_tools_work_in_run_but_cannot_reach_answers_credentials_or_private(self):
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp).resolve()
             repo, home = t / 'repo', t / 'home'
             run, other = repo / 'runs/batch/profile/case-a', repo / 'runs/batch/profile/case-b'
+            # Prepared under the same runs folder only after the CLI has started (see `later`).
+            late = repo / 'runs/later-batch/profile/case-z'
             files = {run / 'public/inputs/task.json': 'PUBLIC-TASK', run / 'private/inputs/task.json': 'OWN-ANSWER',
                      other / 'private/inputs/task.json': 'OTHER-ANSWER', repo / 'configs/task.json': 'REPO-ANSWER',
                      repo / '.env': 'ENV-SECRET', home / '.claude/credentials': 'HOME-SECRET'}
@@ -100,13 +119,26 @@ class PolicySandboxTests(unittest.TestCase):
                      ('Write', {'file_path': str(run / '.agents/skills/mine/SKILL.md'), 'content': 'x'}),
                      ('Write', {'file_path': str(run / 'public/results/Controller-notes.md'), 'content': 'x'}),
                      ('Write', {'file_path': str(run / 'workspace/notes/Controller.md'), 'content': 'x'}),
-                     ('Write', {'file_path': str(run / 'root-tool.txt'), 'content': 'x'})]
+                     ('Write', {'file_path': str(run / 'root-tool.txt'), 'content': 'x'}),
+                     ('Read', {'file_path': str(late / 'private/secret.txt')}),
+                     ('Grep', {'pattern': 'LATE', 'path': str(late), 'output_mode': 'content'}),
+                     ('Glob', {'pattern': '**/*', 'path': str(late / 'private')}),
+                     ('Bash', {'command': 'cat ' + str(late / 'private/secret.txt'), 'description': 'probe late run'}),
+                     ('Read', {'file_path': str(run / 'workspace/tool.txt')})]
             results = []
-            server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), stub_model(steps, results))
+
+            def later(index):
+                # After the first tool call the CLI has loaded its settings: a run prepared now
+                # is on no rendered list, so only the private/ patterns can close it.
+                if index == 1 and not late.exists():
+                    (late / 'private').mkdir(parents=True); (late / 'private/secret.txt').write_text('LATE-SECRET')
+            server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), stub_model(steps, results, later))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
+                # Runners pass the settings as a file (the deny list can outgrow one argv string).
                 command = build_command('claude-opus-5-5', 'high', '{"mcpServers":{}}', 'go', auth_mode='oauth_token',
-                                        settings=frozen_settings(run, repo, home))
+                                        settings=frozen_settings(run, repo, home), settings_dir=run / 'private/settings')
+                self.assertTrue(Path(command[command.index('--settings') + 1]).is_file())
                 env = {'PATH': os.environ.get('PATH', ''), 'HOME': str(home),
                        'ANTHROPIC_BASE_URL': 'http://127.0.0.1:%d' % server.server_port,
                        'ANTHROPIC_API_KEY': 'local-fake-key', 'CLAUDE_CONFIG_DIR': str(t / 'config'),
@@ -144,6 +176,13 @@ class PolicySandboxTests(unittest.TestCase):
             self.assertFalse((run / 'public/observations/bash.jpg').exists())
             self.assertTrue(results[13].get('is_error'), text(13))
             for stray in ('root.txt', 'root-tool.txt'): self.assertFalse((run / stray).exists(), stray)
+            # The later run's private/ is refused to the file tools; to Bash too, except on Linux,
+            # whose sandbox ignores glob patterns. The run's own workspace stays readable.
+            self.assertTrue(late.is_dir())
+            for index in (14, 16): self.assertTrue(results[index].get('is_error'), text(index))
+            for index in (14, 15, 16): self.assertNotIn('LATE-SECRET', text(index))
+            if sys.platform != 'linux': self.assertNotIn('LATE-SECRET', text(17))
+            self.assertFalse(results[18].get('is_error'), text(18))
 
             self.assertEqual((run / 'public/inputs/task.json').read_text(), 'PUBLIC-TASK')
             self.assertFalse((run / 'public/inputs/bash.txt').exists())

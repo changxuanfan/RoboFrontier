@@ -7,11 +7,17 @@ import math
 import time
 
 
+# active_time_v1: the host ends a run on its own only this far past the world's limit, and
+# waits this long after the world's cutoff for it to brake and close.
+ACTIVE_BACKSTOP_S = 60.
+ACTIVE_CLOSE_WAIT_S = 120.
+
+
 class CentralizedSupervisor:
     def __init__(self, policy, owner_alive, *, stop_requested=lambda: False,
                  startup_timeout_s=300, wall_limit_s=86400, poll_s=1,
-                 seal_timeout_s=30, finish_turn_grace_s=30,
-                 clock=time.monotonic, wall_clock=time.time, sleep=time.sleep):
+                 seal_timeout_s=30, finish_turn_grace_s=30, time_rule='START_wall_time',
+                 wall_backstop_s=None, clock=time.monotonic, wall_clock=time.time, sleep=time.sleep):
         for name, value, maximum in (('startup_timeout_s', startup_timeout_s, 86400),
                                      ('wall_limit_s', wall_limit_s, 86400),
                                      ('poll_s', poll_s, 60)):
@@ -22,6 +28,11 @@ class CentralizedSupervisor:
         if (isinstance(finish_turn_grace_s, bool) or not isinstance(finish_turn_grace_s, (int, float))
                 or not math.isfinite(finish_turn_grace_s) or not 0 <= finish_turn_grace_s <= 120):
             raise ValueError('Invalid finished-turn grace period')
+        if time_rule not in ('START_wall_time', 'active_time_v1'):
+            raise ValueError('Unknown run clock')
+        if wall_backstop_s is not None and (isinstance(wall_backstop_s, bool) or not isinstance(wall_backstop_s, (int, float))
+                                            or not math.isfinite(wall_backstop_s) or wall_backstop_s <= 0):
+            raise ValueError('Invalid wall backstop')
         self.policy = policy
         self.owner_alive = owner_alive
         self.stop_requested = stop_requested
@@ -33,13 +44,46 @@ class CentralizedSupervisor:
         self.clock = clock
         self.wall_clock = wall_clock
         self.sleep = sleep
+        # active_time_v1 (the run's frozen protocol clock): the world counts only active running
+        # time and ends the run itself; this host never ends it on wall time.
+        self.active_time = time_rule == 'active_time_v1'
+        # The run's frozen wall backstop (policy_probe.BudgetGuard); only active-time runs have one.
+        self.wall_backstop_s = wall_backstop_s if self.active_time else None
+        self.cutoff_seen = None
         self.used = False
 
     def _wall_limit_reached(self):
         """The world's own wall-limit guard has fired: it pauses dispatch, stops the arms and
         then ends the run, so a pause seen in between is that normal end, not a review stop."""
+        if self._backstopped(): return True
         db = getattr(self.policy.store, 'db', None)
         return bool(db and db.execute("SELECT 1 FROM events WHERE kind='POLICY_WALL_LIMIT' LIMIT 1").fetchone())
+
+    def _backstopped(self):
+        """The world's wall backstop has fired: it ends the run the same way as the cutoff."""
+        return self.wall_backstop_s is not None and bool(self.policy.store.get('wall_backstop'))
+
+    def _backstop_overdue(self):
+        """The world did not end the run at its wall backstop, even after the closing wait: a hung
+        owner. The host ends it itself, with the same reason."""
+        if self.wall_backstop_s is None or self.policy.store.get('start_at') is None: return False
+        # The active-time cutoff already fired: the run is closing at its limit, not the backstop.
+        if not self._backstopped() and self._wall_limit_reached(): return False
+        from robofrontier.policy_probe import backstop_since
+        return (self.wall_clock() - backstop_since(self.policy.store)
+                >= self.wall_backstop_s + ACTIVE_CLOSE_WAIT_S + self.seal_timeout_s)
+
+    def _limit_reached(self, now, started_at):
+        if not self.active_time: return now - started_at >= self.wall_limit_s
+        # The world's own guard fires at the limit; this is only a backstop if it did not.
+        return float(self.policy.store.get('active_s', 0.) or 0.) >= self.wall_limit_s + ACTIVE_BACKSTOP_S
+
+    def _await_world_close(self, began):
+        """After the world's wall limit fired, wait for it to brake and end the run."""
+        if not self.active_time:
+            return self.clock()-began < self.startup_timeout_s+self.wall_limit_s+self.seal_timeout_s
+        if self.cutoff_seen is None: self.cutoff_seen = self.clock()
+        return self.clock()-self.cutoff_seen < ACTIVE_CLOSE_WAIT_S+self.seal_timeout_s
 
     def _turn_states(self):
         # Standing teams expose a team status; Adaptive also has child hosts
@@ -89,14 +133,20 @@ class CentralizedSupervisor:
                         reason = 'world_' + lifecycle; break
                     if not self.owner_alive():
                         reason = 'owner_unavailable'; break
+                    if self._backstop_overdue():
+                        reason = 'wall_backstop'; break
+                    if self.policy.store.get('physics_state') == 'paused_by_egress':
+                        # The world holds itself through a route or model-API outage (egress_pause);
+                        # it resumes by itself and the paused time does not count.
+                        self.sleep(self.poll_s); continue
                     if self.policy.store.get('dispatch_paused', False):
-                        if self._wall_limit_reached() and self.clock()-began < self.startup_timeout_s+self.wall_limit_s+self.seal_timeout_s:
+                        if self._wall_limit_reached() and self._await_world_close(began):
                             self.sleep(self.poll_s); continue
                         reason = 'dispatch_paused'; break
                     observation = self.policy.host.observe()
                     state = observation['status']
                     now = self.clock()
-                    if started_at is not None and now-started_at >= self.wall_limit_s:
+                    if started_at is not None and self._limit_reached(now, started_at):
                         reason = 'wall_limit'; break
                     recovering = (state == 'error' and hasattr(self.policy.host, 'recover_capacity')
                                   and self.policy.host.recover_capacity(self.policy.store))
@@ -112,7 +162,7 @@ class CentralizedSupervisor:
                             self.policy.start_when_ready()
                             started_at = self._projected_start()
                     else:
-                        if now - started_at >= self.wall_limit_s:
+                        if self._limit_reached(now, started_at):
                             reason = 'wall_limit'; break
                         result = self.policy.cycle()
                         if result.get('paused') and not self._wall_limit_reached():
@@ -126,7 +176,8 @@ class CentralizedSupervisor:
             # existing native turns to receive its reply and settle their
             # accounting before cancellation. No dispatch or physics occurs.
             # A wall-limit end cuts the turns off instead: no reply is due.
-            ended_by = 'wall_limit' if reason == 'world_ended' and self._wall_limit_reached() else None
+            ended_by = ('wall_backstop' if reason == 'world_ended' and self._backstopped()
+                        else 'wall_limit' if reason == 'world_ended' and self._wall_limit_reached() else None)
             if reason == 'world_ended' and ended_by is None:
                 try:
                     deadline = self.clock() + self.finish_turn_grace_s
@@ -161,4 +212,6 @@ class CentralizedSupervisor:
                 'seal_error_type': seal_error_type, 'started': started_at is not None,
                 'session_evidence': session_evidence,
                 'finish_turns_drained': finish_turns_drained, 'ended_by': ended_by,
+                # Stopped by wall time, not the active-time limit: needs review, never counted.
+                'wall_backstop': reason == 'wall_backstop' or ended_by == 'wall_backstop',
                 'scope': 'engineering lifecycle; task success requires runtime evaluation'}

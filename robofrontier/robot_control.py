@@ -106,6 +106,11 @@ class PandaArm:
         # the arm is treated as unsettled until this simulation time.
         self.fault_hold_s=None;self.fault_hold_until=None
         self.recovery_last_sample=None
+        # Set by a frozen physics profile (physics_profile.attach). 'per-tick' counts one
+        # settle sample per simulation time however often the owner polls; 'per-call',
+        # the original rule, counts every poll.
+        self.poll_stability='per-call'
+        self.last_poll_sample=None
 
     def configure_hand_position_servo(self,profile):
         """Engineering initialization only; no Agent action or object-state use.
@@ -273,6 +278,7 @@ class PandaArm:
         self.grasp_settling.clear()
         self.execution_timeout_s=command.get('timing',{}).get('timeout_sim_s')
         self.uncertainty_reported=False;self.stop_reason=None;self.stop_details={}
+        self.last_poll_sample=None
 
     def hold_aperture(self):
         """Cancel a force-producing close without continuing its old target."""
@@ -384,6 +390,9 @@ class PandaArm:
                 if self.fault_hold_until is not None and now<self.fault_hold_until:reached=False
                 self.stable=self.stable+1 if reached else 0
             return None
+        if self.poll_stability=='per-tick':
+            if self.last_poll_sample is not None and now<=self.last_poll_sample+1e-9:return None
+            self.last_poll_sample=now
         age=now-self.job_start;feedback=self.observe();details={}
         fingers_settled=self.finger_stationary(now) if self.job_op=='gripper' or self.stopping else False
         if self.job_op=='gripper' and not self.stopping:

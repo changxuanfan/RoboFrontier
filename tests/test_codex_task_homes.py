@@ -116,6 +116,45 @@ class CodexTaskHomesTests(unittest.TestCase):
                 if path.is_file():
                     self.assertNotIn(b'never-persist-this', path.read_bytes())
 
+    def test_a_stop_after_a_continuation_was_prepared_needs_review(self):
+        from robofrontier import run_layout
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            batch = root/'batch'
+            selected = {'provider': 'openai_api', 'env_key': 'RF_TEST_KEY'}
+            run = batch/'luna'/'one'
+            write_json(run/'private/inputs/codex.json', {'profile': selected, 'args': []})
+            write_json(run/'private/inputs/models.json', {'models': []})
+            (run/'private/outputs').mkdir(parents=True)
+            jobs = [{'profile': 'luna', 'case_id': 'one', 'run_directory': str(run), 'status': 'prepared'}]
+            catalog = (run/'private/inputs/models.json').read_bytes()
+            write_json(root/'runs/engineering/model-compatibility/luna/report.json', {
+                'passed': True, 'profile_sha256': hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest(),
+                'catalog_sha256': hashlib.sha256(catalog).hexdigest(), 'codex_version': 'test-cli',
+                'probe_version': preflight_probe.VERSION})
+            write_json(batch/'batch.json', {'status': 'prepared_not_started', 'jobs': jobs,
+                'execution': {'codex_home_scope': 'task', 'startup_interval_s': 0}})
+            launched = []
+            def host(*args, **kwargs):
+                launched.append(1)
+                return SimpleNamespace(pid=99999, wait=lambda: 1)  # The world died.
+            def prepared(run_dir, reason):
+                run_layout.path(run_dir, 'stop', 'codex').touch()  # The operator stops right after.
+                return True, 'continuation prepared'
+            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'verify_inputs', return_value=[]), \
+                    patch.object(benchmark, 'initialize_codex_home'), \
+                    patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'), \
+                    patch.object(benchmark.subprocess, 'run'), \
+                    patch.object(benchmark.subprocess, 'Popen', side_effect=host), \
+                    patch.object(benchmark, 'try_continue', side_effect=prepared), \
+                    patch.dict(os.environ, {'RF_TEST_KEY': 'never-persist-this'}):
+                benchmark.run_batch(batch, 1)
+            self.assertEqual(len(launched), 1)
+            state = json.loads((batch/'batch.json').read_text())
+            self.assertEqual(state['jobs'][0]['status'], 'needs_review')
+            self.assertEqual(state['jobs'][0]['segments'][0]['host_exit_code'], 1)
+            self.assertEqual(state['status'], 'needs_review')
+
 
 class SharedCodexHomeTests(unittest.TestCase):
     def test_batches_never_default_to_the_personal_codex_home(self):

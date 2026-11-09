@@ -36,6 +36,10 @@ MAX_FRAME = 100000
 CHUNK = 8192
 WINDOW = 131072
 CHANNEL_WINDOW = 524288
+# Upstream probes run every 2*HEARTBEAT_S (4 s), each host bounded to 3 s. Only
+# this many consecutive failed probes mark the route down (about 8-17 s after
+# an outage starts); one successful probe marks it up again.
+PROBE_FAILURES = 3
 
 
 class EgressError(RuntimeError):
@@ -89,17 +93,49 @@ def read_record(path):
     raise EgressError('Egress readiness record kept changing during read')
 
 
+def pause_marker(identity, instance, watcher, pause_id, claim):
+    """One route pause, as the trusted job watcher publishes it to every world.
+
+    pause_id rises by one with each pause the same watcher publishes. A world
+    that slept through a short resume still holds the earlier claim; it reads
+    a higher pause_id from the same watcher as the same continuing outage, not
+    as a changed owner. The fields are additive, so the schema stays v1 and
+    worlds frozen before them read the marker exactly as before.
+    """
+    return {'schema': 'robofrontier.egress-pause.v1', 'job_id': identity, 'instance': instance,
+            'claim': claim, 'watcher': watcher, 'pause_id': pause_id, 'at': time.time()}
+
+
 def job_id(value):
     if not re.fullmatch(r'[0-9]{1,16}', value):
         raise EgressError('An existing numeric Slurm allocation is required')
     return value
 
 
-def target_allowed(host, port):
+# One table decides which destinations the relay forwards and which hosts the
+# Mac probes for each engine's job, so the two lists cannot drift apart. A route
+# is healthy only while every probe host of its engine completes a TLS handshake.
+ENGINE_ROUTES = {
+    'codex': {'domains': ('openai.com', 'chatgpt.com'), 'probe_hosts': ('chatgpt.com', 'auth.openai.com')},
+    'claude': {'domains': ('anthropic.com',), 'probe_hosts': ('api.anthropic.com',)},
+}
+ALLOWED_DOMAINS = tuple(domain for route in ENGINE_ROUTES.values() for domain in route['domains'])
+
+
+def target_allowed(host, port, domains=ALLOWED_DOMAINS):
     return (port == 443 and isinstance(host, str) and len(host) <= 253
             and bool(re.fullmatch(r'[a-z0-9.-]+', host))
-            and any(host == domain or host.endswith('.'+domain)
-                    for domain in ('openai.com', 'chatgpt.com', 'anthropic.com')))
+            and any(host == domain or host.endswith('.'+domain) for domain in domains))
+
+
+def probe_hosts(engine):
+    """Hosts whose TLS reachability decides route health for this engine."""
+    route = ENGINE_ROUTES.get(engine)
+    if route is None:
+        raise EgressError('Unknown relay engine')
+    if not all(target_allowed(host, 443, route['domains']) for host in route['probe_hosts']):
+        raise EgressError('Relay probe hosts must be destinations of the same engine route')
+    return route['probe_hosts']
 
 
 def validate_record(record, identity, node, *, allow_paused=False):
@@ -182,6 +218,7 @@ def environment(config, *, on_failure):
     def watch():
         paused_at = None
         claim = None
+        watcher = secrets.token_hex(16); pause_id = 0
         while not stopped.wait(.5):
             try:
                 current = read_record(directory/'ready.json')
@@ -192,9 +229,8 @@ def environment(config, *, on_failure):
                 if current.get('state','ready')=='paused':
                     if paused_at is None:
                         paused_at=time.monotonic()
-                        claim=secrets.token_hex(16)
-                        atomic(pause_path,{'schema':'robofrontier.egress-pause.v1','job_id':identity,
-                                          'instance':record['instance'],'claim':claim,'at':time.time()})
+                        claim=secrets.token_hex(16);pause_id+=1
+                        atomic(pause_path,pause_marker(identity,record['instance'],watcher,pause_id,claim))
                     if time.monotonic()-paused_at>grace_s:raise EgressError('Short outage grace expired')
                 elif paused_at is not None:
                     marker=read_record(pause_path)
@@ -646,19 +682,37 @@ async def serve(root, identity, *, grace_s=0):
 
 
 class MacRelay:
-    def __init__(self, frames, *, status=None, dial=None, grace_s=0, probe=None):
+    def __init__(self, frames, *, status=None, dial=None, grace_s=0, probe=None, probe_hosts=(), probe_dial=None):
         self.frames, self.status = frames, status
         self.dial = dial or asyncio.open_connection
         self.streams = {}; self.tasks = {}; self.last_pong = None; self.ready = None
         self.failure_code = None; self.peak_streams = 0
         self.failure_transport = None
         self.grace_s=grace_s;self.paused_since=None;self.upstream_failed=False
+        # The job's engine decides these hosts (probe_hosts(engine)); they are
+        # passed explicitly so a Claude route never depends on an OpenAI host.
+        self.probe_hosts=tuple(probe_hosts)
+        if any(not target_allowed(host,443) for host in self.probe_hosts):
+            raise EgressError('Relay probe hosts must be relayed destinations')
+        if grace_s and probe is None and not self.probe_hosts:
+            raise EgressError('Short-outage recovery requires the engine probe hosts')
+        self.probe_dial=probe_dial or self.tls_handshake
         self.probe=probe or self.probe_upstream
 
-    async def probe_upstream(self):
-        reader,writer=await asyncio.wait_for(asyncio.open_connection('auth.openai.com',443,ssl=True),3)
+    @staticmethod
+    async def tls_handshake(host):
+        reader,writer=await asyncio.open_connection(host,443,ssl=True)
         writer.close();await writer.wait_closed()
         return True
+
+    async def probe_upstream(self):
+        """True only when every probe host of this engine answers TLS."""
+        results=await asyncio.gather(*(asyncio.wait_for(self.probe_dial(host),3) for host in self.probe_hosts),
+                                     return_exceptions=True)
+        for result in results:
+            if isinstance(result,BaseException) and not isinstance(result,(OSError,asyncio.TimeoutError)):
+                raise result
+        return bool(results) and all(result is True for result in results)
 
     async def liveness(self):
         while True:
@@ -680,7 +734,7 @@ class MacRelay:
             if ready:failures=0;self.upstream_failed=False
             else:
                 failures+=1
-                if failures>=2:self.upstream_failed=True
+                if failures>=PROBE_FAILURES:self.upstream_failed=True
             await asyncio.sleep(HEARTBEAT_S*2)
 
     def publish(self, state):
@@ -691,6 +745,7 @@ class MacRelay:
                                  'peak_streams': self.peak_streams,
                                  'transport': self.frames.stats(),
                                  'last_pong_age_s': None if self.last_pong is None else round(time.monotonic()-self.last_pong, 3),
+                                 'probe_hosts': list(self.probe_hosts),
                                  **(self.ready or {})})
 
     async def open_stream(self, identity, host, port):
@@ -704,8 +759,10 @@ class MacRelay:
             self.streams[identity] = {'writer': writer, 'sink': sink, 'window': window}
             await self.frames.send({'type': 'opened', 'id': identity, 'ok': True})
             await copy_to_frames(reader, self.frames, identity, window)
-        except (OSError, asyncio.TimeoutError, EgressError) as error:
-            if self.grace_s and isinstance(error,(OSError,asyncio.TimeoutError)):self.upstream_failed=True
+        except (OSError, asyncio.TimeoutError, EgressError):
+            # A failed dial or reset read fails only this stream. Route health
+            # comes from upstream_monitor alone, so one provider-side reset
+            # never pauses every world in the job.
             await self.frames.send({'type': 'opened', 'id': identity, 'ok': False})
         finally:
             self.streams.pop(identity, None); self.tasks.pop(identity, None)
@@ -861,7 +918,8 @@ async def connect(args):
         atomic(status, {'status': 'connecting', 'job_id': args.job_id, 'updated_at': time.time()})
         process = await asyncio.create_subprocess_exec(*ssh_command(args),
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=log, limit=MAX_FRAME)
-        relay = MacRelay(Frames(process.stdout, process.stdin), status=status,grace_s=args.pause_grace_s)
+        relay = MacRelay(Frames(process.stdout, process.stdin), status=status,grace_s=args.pause_grace_s,
+                         probe_hosts=probe_hosts(args.engine) if args.engine else ())
         await relay.run()
     finally:
         if process:
@@ -898,6 +956,8 @@ def main(argv=None):
     mac.add_argument('--ssh-config', default='', help='Optional private operator SSH config for this route only')
     mac.add_argument('--job-id', required=True)
     mac.add_argument('--pause-grace-s',type=int,default=0)
+    mac.add_argument('--engine', choices=sorted(ENGINE_ROUTES), default='',
+                     help="The job's engine; chooses the upstream hosts probed during short-outage recovery")
     mac.add_argument('--state-root', required=True, help='Private durable path on the cluster, outside checkouts')
     mac.add_argument('--remote-script', required=True, help='Published matching robofrontier/slurm_proxy.py on the cluster')
     mac.add_argument('--remote-python', default='python3')
@@ -911,6 +971,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if hasattr(args,'pause_grace_s') and not 0<=args.pause_grace_s<=600:
         parser.error('pause-grace-s must be between 0 and 600')
+    if args.command=='connect' and args.pause_grace_s and not args.engine:
+        parser.error('--engine is required with --pause-grace-s')
     try:
         if args.command == 'tcp-pipe':
             tcp_pipe(args.host, args.port, args.interface)

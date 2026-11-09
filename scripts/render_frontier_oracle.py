@@ -3,7 +3,8 @@
 The directory is an Oracle trial (report.json, scene.xml, motion/) or a policy
 run's private/outputs (evaluation.json, motion/ with its frozen source scene).
 A policy run renders at its family's release speedup with stationary intervals
-removed, unless --keep-idle or an explicit --speed/--timeline is given.
+removed, unless --keep-idle or an explicit --speed/--timeline is given. Its
+video needs --output outside the run, whose outputs are sealed evidence.
 
 Only kinematics and appearance events are restored. No commands, IK, contact
 solve or new physical integration are executed to manufacture a video.
@@ -51,7 +52,14 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
     timeline=timeline or edit_timeline
     if encoder_threads<1:raise ValueError("Positive encoder thread count required")
     directory=Path(directory).resolve();report,scene=trial_report(directory)
+    # A policy run's outputs are sealed evidence; never write renders inside them.
+    if report.get('policy_run') and (output is None or Path(output).resolve().is_relative_to(directory.parents[1])):
+        raise ValueError('Pass --output outside the policy run for its video')
     target=Path(output) if output else directory/'video'
+    # Check every view before writing anything (the stationary cut) or starting any
+    # encoder, so a refused rerun leaves no files and no running ffmpeg behind.
+    existing=[str(target/(view+'.mp4')) for view in views if (target/(view+'.mp4')).exists()]
+    if existing:raise FileExistsError(existing)
     if report.get('policy_run'):
         if speed is None:speed=policy_speedup(directory)
         if timeline is None and not keep_idle:timeline=stationary_cut(directory/'motion',target)
@@ -101,7 +109,6 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
     processes={};started=time.monotonic();font=_font(22);rendered=0;source_frames=0;last=None;last_rendered=None
     for view in views:
         path=target/(view+'.mp4')
-        if path.exists():raise FileExistsError(path)
         processes[view]=subprocess.Popen(['ffmpeg','-hide_banner','-loglevel','error','-filter_threads','1','-filter_complex_threads','1','-f','rawvideo','-pix_fmt','rgb24','-s',f'{width}x{height}','-r',str(fps),'-i','-','-an','-c:v','libx264','-threads',str(encoder_threads),'-crf','20','-preset','veryfast','-pix_fmt','yuv420p','-movflags','+frag_keyframe+empty_moov+default_base_moof',str(path)],stdin=subprocess.PIPE)
     commissioning=report.get('commissioning_only') or report.get('full_task_attempt') is False
     outcome=('MECHANICAL PASS' if report.get('passed') or report.get('local_passed') else 'MECHANICAL PARTIAL / FAILED') if commissioning else 'PASS' if report.get('passed') else 'UNIT PASS' if report.get('local_passed') else 'INTERRUPTED' if report.get('interrupted') else 'PARTIAL / FAILED'

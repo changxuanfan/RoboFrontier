@@ -5,6 +5,7 @@ one `claude -p` turn, and summarising its stream-json evidence. A process exit
 or a `result` event only means the model turn ended; task success is decided by
 the runtime and is never inferred here.
 """
+import hashlib
 import json
 import os
 import queue
@@ -19,7 +20,7 @@ import uuid
 import weakref
 from pathlib import Path
 from urllib.parse import urlsplit
-from robofrontier.claude.recovery import capacity_code
+from robofrontier.claude.recovery import api_error, capacity_code
 from robofrontier.claude.native_home import config_directory
 from robofrontier.claude.cost_state import amount, baseline, invocation_cost
 from robofrontier.run_metrics import host_event
@@ -45,8 +46,10 @@ def _denied_paths(table):
     """Paths to deny for Claude, whose rules have no "most specific path wins".
 
     A denied folder that contains an allowed path (the repository holding this run)
-    becomes denies on everything beside the route to that path, level by level, read
-    when each turn starts so folders created later are covered too.
+    becomes denies on everything beside the route to that path, level by level, as the
+    folder stands when the settings are rendered: once per CLI process, which a
+    persistent session keeps for the whole run. A folder created later beside the route
+    is not on this list; `_private_globs` keeps every run's private/ closed regardless.
     """
     entries = {Path(p): mode for p, mode in table.items()}
     denied = []
@@ -73,6 +76,21 @@ def _denied_paths(table):
     return sorted(set(denied))
 
 
+def _private_globs(run, table):
+    """Patterns for every private/ folder below the denied folders that hold this run.
+
+    The rendered deny list is fixed for a CLI process, so a run folder prepared later
+    beside the route (another batch under the same runs folder) would be open. These
+    patterns cover each run's private/ there, now and later. They also cover a folder
+    or file named private inside this run's workspace/, which the policy then cannot
+    use; its own public/ and workspace/ stay open. A run that itself lies below a folder
+    named private gets no pattern for that root, which would close the whole run.
+    """
+    roots = [Path(p) for p, mode in table.items() if mode == 'deny' and Path(p) in run.parents]
+    return sorted(str(root) + suffix for root in roots if 'private' not in run.relative_to(root).parts
+                  for suffix in ('/**/private', '/**/private/**'))
+
+
 def policy_settings(run_dir):
     """Settings for a policy turn rendered from the run's frozen access table, or None
     for runs prepared before the table existed.
@@ -88,17 +106,25 @@ def policy_settings(run_dir):
     access = json.loads(path.read_text())
     table = access['filesystem']
     hidden = [str(p) for p in _denied_paths(table)]
+    private = _private_globs(run, table)
     # A run with a policy environment renders its table as written: the sandbox lets a more
-    # specific allowRead win, so a folder created during the run is closed too.
-    sandbox_read = ({'denyRead': sorted(p for p, mode in table.items() if mode == 'deny'),
+    # specific allowRead win, so a folder created during the run is closed too. The private/
+    # patterns are matched by the macOS sandbox; Claude Code's Linux sandbox ignores glob
+    # patterns, so there Bash keeps the literal list only.
+    sandbox_read = ({'denyRead': sorted(p for p, mode in table.items() if mode == 'deny') + private,
                      'allowRead': sorted(p for p, mode in table.items() if mode != 'deny' and p != '/')}
-                    if access.get('policy_env') else {'denyRead': hidden})
+                    if access.get('policy_env') else {'denyRead': hidden + private})
     writable = sorted(p for p, mode in table.items() if mode == 'write')
     # Claude rules take absolute paths as //path. acceptEdits accepts edits only inside
     # the working folder and every other edit is refused; these rules also keep hidden
-    # paths and the frozen inputs out of reach.
-    rule = lambda tool, p: tool+'(//'+p.lstrip('/')+'/**)'
-    deny = [rule('Read', p) for p in hidden] + [rule('Edit', p) for p in hidden+[str(run/'public')]]
+    # paths and the frozen inputs out of reach. Rules follow gitignore matching, where
+    # 'path/**' covers only what lies inside path, so each path also gets an exact rule:
+    # a hidden file (the repository's .env beside the runs folder) is denied by that one.
+    def rules(tool, paths):
+        return [tool+'(//'+p.lstrip('/')+suffix+')' for p in paths for suffix in ('', '/**')]
+    deny = rules('Read', hidden) + rules('Edit', hidden+[str(run/'public')])
+    # Glob rules are matched when a tool runs, so they also cover run folders created later.
+    deny += ['%s(//%s)' % (tool, p.lstrip('/')) for tool in ('Read', 'Edit') for p in private]
     return {'permissions': {'deny': deny},
             'sandbox': {'enabled': True, 'allowUnsandboxedCommands': False,
                         'filesystem': {'allowWrite': writable, **sandbox_read},
@@ -180,16 +206,48 @@ def gate_settings(gate):
         {'type': 'command', 'command': script, 'timeout': timeout}]}]}}
 
 
+def settings_argument(settings, folder=None):
+    """The --settings value: the JSON itself, or with `folder` the path of a file holding it.
+
+    One argv string is limited to 128 KiB on Linux, and the deny list grows with every
+    folder beside the run route, so runners pass a file. Its name is the content's hash,
+    so turns with the same settings share one file and a file is never rewritten.
+    """
+    text = json.dumps(settings, sort_keys=True)
+    if folder is None:
+        return text
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder/('settings-' + hashlib.sha256(text.encode()).hexdigest()[:24] + '.json')
+    if not path.is_file():
+        fd, temporary = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=folder)
+        try:
+            with os.fdopen(fd, 'w') as output:
+                os.fchmod(output.fileno(), 0o600)
+                output.write(text)
+            os.replace(temporary, path)
+        finally:
+            try: os.unlink(temporary)
+            except FileNotFoundError: pass
+    return str(path)
+
+
+def settings_folder(run_dir):
+    """Where runners keep the settings files of a run's policy turns (private to the harness)."""
+    return run_layout.path(Path(run_dir).resolve(), 'engine_mcp', 'claude').parent/'policy-settings'
+
+
 def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget_usd=None, binary='claude', resume=None,
                   fork_from=None, enable_robot=True, auth_mode='api_key', prompt_via_stdin=False, settings=None,
-                  system_prompt=None, stream_input=False, gate=None):
+                  system_prompt=None, stream_input=False, gate=None, settings_dir=None):
     """Return argv for one headless turn.
 
     With `settings` (see `policy_settings`) a policy turn gets the bound robot tool plus
     file and shell tools confined by those settings; without it, only the robot tool.
     `resume` continues an existing session by its explicit ID; it never picks the most
     recent one. `fork_from` starts session `session_id` as a fork of that session;
-    a delegate fork passes `gate` (see `gate_settings`).
+    a delegate fork passes `gate` (see `gate_settings`). With `settings_dir` the
+    settings are passed as a file written there (see `settings_argument`).
     """
     if effort not in EFFORTS:
         raise ValueError('Unsupported effort: ' + str(effort))
@@ -214,12 +272,12 @@ def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget
            '--mcp-config', mcp_arg, '--strict-mcp-config']
     if enable_robot and settings is not None:
         cmd += ['--tools', ','.join(POLICY_TOOLS), '--permission-mode', 'acceptEdits', '--permission-prompts', 'none',
-                '--settings', json.dumps({**settings, **(hooks or {})}, sort_keys=True),
+                '--settings', settings_argument({**settings, **(hooks or {})}, settings_dir),
                 '--allowedTools', *ALLOWED_POLICY_TOOLS]
     else:
         cmd += ['--tools', '', '--permission-mode', 'dontAsk']
         if hooks is not None:
-            cmd += ['--settings', json.dumps(hooks, sort_keys=True)]
+            cmd += ['--settings', settings_argument(hooks, settings_dir)]
         if enable_robot:
             cmd += ['--allowedTools', ROBOT_TOOL]
     if system_prompt is not None:
@@ -350,6 +408,7 @@ def summarize(lines):
         'reported_model': init.get('model'),
         'turn_status': turn,
         'capacity_error_code': capacity_code(events),
+        'api_error': api_error(events),
         'result_subtype': (result or {}).get('subtype'),
         'num_turns': (result or {}).get('num_turns'),
         'result_text': ((result or {}).get('result') or '')[:2000],
@@ -411,7 +470,7 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
     cmd = build_command(model, effort, mcp_config, prompt, session_id, native_limit, binary, resume,
                         fork_from=fork_from, enable_robot=enable_robot, auth_mode=profile.get('auth_mode','api_key'),
                         prompt_via_stdin=True, settings=settings, system_prompt=policy_system_prompt(run_dir),
-                        gate=gate)
+                        gate=gate, settings_dir=settings_folder(run_dir))
     env = {**build_env(profile, base_env, config_dir), **confined}
     launch = run_dir/'private/inputs/claude.json'
     frozen = json.loads(launch.read_text()) if launch.is_file() else {}
@@ -442,7 +501,8 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
             # The owner must reconcile outstanding physical operations separately.
             try:
                 os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
+            except (ProcessLookupError, PermissionError):
+                # macOS refuses (EPERM) to signal a group whose members are all zombies.
                 pass
             stdout, stderr = process.communicate()
             status = 'cancelled' if cancelled else 'timeout'
@@ -499,7 +559,7 @@ def _stop_process(process):
     try: process.wait(timeout=10)
     except subprocess.TimeoutExpired:
         try: os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError: pass
+        except (ProcessLookupError, PermissionError): pass  # EPERM: only zombies left (macOS).
         process.wait()
 
 
@@ -545,7 +605,8 @@ class PersistentSession:
         settings, confined = confine(run_dir, policy_settings(run_dir), config_dir)
         cmd = build_command(model, effort, mcp_config, None, session_id, None, binary, resume, fork_from=fork_from,
                             auth_mode=profile.get('auth_mode', 'api_key'), settings=settings,
-                            system_prompt=policy_system_prompt(run_dir), stream_input=True, gate=gate)
+                            system_prompt=policy_system_prompt(run_dir), stream_input=True, gate=gate,
+                            settings_dir=settings_folder(run_dir))
         env = {**build_env(profile, base_env, config_dir), **confined}
         launch = Path(run_dir)/'private/inputs/claude.json'
         frozen = json.loads(launch.read_text()) if launch.is_file() else {}
@@ -604,8 +665,14 @@ class PersistentSession:
             began = time.monotonic()
             host_event(run_dir, 'cli_turn_started', actor=actor, session_id=session_id or resume,
                        events_name=events_name, phase=phase, transport='persistent', pid=self.process.pid)
-            self._write({'type': 'user', 'message': {'role': 'user', 'content': prompt}})
             lines, status, interrupted_at = [], None, None
+            try:
+                self._write({'type': 'user', 'message': {'role': 'user', 'content': prompt}})
+            except (OSError, ValueError):
+                # The CLI exited after the liveness check, before this turn began: a lost CLI
+                # (which a run may restart), not a turn of unknown outcome.
+                _stop_process(self.process)
+                status = 'process_exited'
             deadline = None if timeout is None else began + timeout
             while status is None:
                 stopping = (cancel_event is not None and cancel_event.is_set()) or (deadline and time.monotonic() >= deadline)

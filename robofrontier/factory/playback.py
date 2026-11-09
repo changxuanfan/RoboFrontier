@@ -30,7 +30,8 @@ class StationTrack:
         if digest(self.edit_path) != spec['edit_sha256']:
             raise ValueError('Released edit changed')
         self.edit = json.loads(self.edit_path.read_text())
-        self.reader = MotionReader(spec['recording'])
+        from ..task_families import oracle_recording
+        self.reader = MotionReader(oracle_recording(spec['recording']))
         self.source = Workstation(spec['directory'])
         recorded_id = spec.get('recorded_case_id', spec['id'])
         recorded_scene = self.reader.meta['source_scene_sha256']
@@ -71,7 +72,7 @@ class StationTrack:
             self.indices = sample_timeline(edit.keep, self.reader.meta['sample_hz'], speed, fps)
         elif 'dial_profile' in self.edit:
             from ..suite.dial_motion_edit import DialReplayTrack
-            with DialReplayTrack(spec['recording'], self.edit_path, fps, speed) as track:
+            with DialReplayTrack(self.reader.path, self.edit_path, fps, speed) as track:
                 self.indices = track.indices.copy()
         else:
             from ..replay_edit import ReplayEdit

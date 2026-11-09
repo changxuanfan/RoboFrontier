@@ -5,7 +5,7 @@ Status: direction A (Control room) chosen on 2026-11-05 and implemented in `inde
 
 ## Audience and promise
 
-A visitor should understand in 30 seconds what RoboFrontier is (language-model agents
+A visitor should understand in 30 seconds what RoboFrontier is (multimodal agents
 controlling up to 16 robot arms in one physical world), see it working, and find
 the headline result. A researcher should then be able to drill into every task,
 every video and every metric.

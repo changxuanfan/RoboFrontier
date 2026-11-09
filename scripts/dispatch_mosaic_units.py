@@ -40,8 +40,10 @@ def main(args):
     for c in catalog:
         p=ROOT/'runs/engineering/mosaic-r13-coverage-20261025'/c['id']/'report.json'
         coverage[c['id']]=json.loads(p.read_text())
-        assert coverage[c['id']]['passed']
-        assert hashlib.sha256((ROOT/c['directory']/'scene.xml').read_bytes()).hexdigest()==coverage[c['id']]['source_scene_sha256']
+        if not (coverage[c['id']]['passed']):
+            raise ValueError('Placement coverage did not pass for '+c['id'])
+        if not (hashlib.sha256((ROOT/c['directory']/'scene.xml').read_bytes()).hexdigest()==coverage[c['id']]['source_scene_sha256']):
+            raise ValueError('Scene changed since placement coverage for '+c['id'])
     groups=[[(c,x['id']) for x in coverage[c['id']]['sources']] for c in catalog if c['level'] in (1,2)]
     jobs=[group[i] for i in range(max(map(len,groups))) for group in groups if i<len(group)]
     for n,name in [(4,'B_stock06'),(6,'C_stock01'),(8,'A_stock01')]:

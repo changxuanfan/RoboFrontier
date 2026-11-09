@@ -19,6 +19,10 @@ class BatchTests(unittest.TestCase):
         for i in range(4):
             case = f'case{i}'; run = self.root / 'fake' / case
             (run/'private/inputs').mkdir(parents=True); (run/'private/state').mkdir(parents=True)
+            (run/'public/inputs').mkdir(parents=True)
+            (run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
+                'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2']},
+                'A1': {'kind': 'worker', 'robot': 'A1'}, 'A2': {'kind': 'worker', 'robot': 'A2'}}}))
             profile = {'provider': 'anthropic', 'model': 'fake', 'effort': 'high', 'env_key': 'FAKE_KEY'}
             (run/'private/inputs/claude.json').write_text(json.dumps({'schema':'robofrontier.claude-launch-draft.v1',
                 'qualified':False,'execution_available':False,'profile':profile}))
@@ -48,6 +52,15 @@ class BatchTests(unittest.TestCase):
         state = self.run_case(runner)
         self.assertEqual(state['status'], 'closed')
         self.assertEqual(set(seen), {'case0','case1','case2','case3'})
+
+    def test_a_task_cap_concurrent_roles_could_exhaust_fails_preflight_before_any_claim(self):
+        path = Path(self.jobs[2]['run_directory'])/'private/inputs/harness.json'
+        data = json.loads(path.read_text()); data.update(topology='peer', startup_protocol='direct_team_v3')
+        path.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, 'concurrent roles'):
+            run_batch(self.root, self.env, parallel=2, turn_budget_usd=.6, total_budget_usd=1, wall_limit_s=5,
+                      runner=lambda *a, **k: self.fail('must not launch'), verifier=lambda _: [], startup_interval_s=0)
+        self.assertFalse(any(self.root.rglob('*claim*')))
 
     def test_only_a_world_that_died_is_offered_a_continuation(self):
         # A host stop at its own wall limit or on STOP is final, even when its seal is missing.

@@ -211,13 +211,17 @@ def engine(jobs, *, env, preflight=False, timeout_s=180):
             try:
                 proc.wait(timeout=15)
             except subprocess.TimeoutExpired:
-                os.killpg(proc.pid, signal.SIGKILL)
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
                 proc.wait()
         # Reap a native descendant even if its Node parent died unexpectedly.
         # Policy hosts/worlds do not belong to this isolated process group.
         try:
             os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
+        except (ProcessLookupError, PermissionError):
+            # macOS refuses (EPERM) to signal a group whose members are all zombies.
             pass
         try:
             export_sessions(manifest, env['CODEX_HOME'])

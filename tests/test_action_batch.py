@@ -43,6 +43,18 @@ class BatchTests(unittest.TestCase):
         self.s.world.complete('B');self.s.pump()
         self.assertEqual(j['result']['execution_status'],'completed')
         self.call('Controller','action_batch',self.data,'group');self.assertEqual(len(self.s.world.executed),2)
+    def test_a_job_query_of_a_running_batch_is_itself_answered(self):
+        j=self.call('Controller','action_batch',self.data,'group')
+        q=self.call('Controller','job',{'call_id':'group'},'query-1')
+        self.assertEqual(q['result']['execution_status'],'running')
+        self.assertEqual(self.s.store.call('query-1')['status'],'completed')
+        self.assertEqual(self.s.store.call('group')['status'],'running')
+        self.s.world.complete('A');self.s.world.complete('B');self.s.pump()
+        self.assertEqual(j['result']['execution_status'],'completed')
+        self.assertEqual(self.s.store.call('group')['status'],'completed')
+        self.assertEqual([r[0] for r in self.s.store.db.execute("SELECT id FROM calls WHERE status NOT IN ('completed','failed')")],[])
+        # A retried query returns its stored answer, not 'owner must supply the original result'.
+        self.assertEqual(self.call('Controller','job',{'call_id':'group'},'query-1')['result']['execution_status'],'running')
     def test_all_validate_before_start_and_duplicate_robot_rejected(self):
         bad=json.loads(json.dumps(self.data));bad['actions'][1]={'robot':'B','op':'gripper','parameters':{'state':'wrong'}}
         self.assertIn('error',self.call('Controller','action_batch',bad)['result'])
@@ -107,6 +119,34 @@ class BatchTests(unittest.TestCase):
         count=self.s.store.recover_execution();self.assertEqual(count,2)
         self.assertTrue(all(a['status']=='uncertain' for a in self.s.store.actions().values()))
         self.assertEqual(self.s.store.call('accepted-group')['status'],'uncertain')
+    def test_owner_close_with_a_worker_batch_naming_no_robot_records_the_interruption(self):
+        root=Path(self.tmp.name)/'worker';root.mkdir();run=prepare_run(root/'run')
+        s=RuntimeService(run,FakeWorld,fake_capture)
+        s.store.put('lifecycle','running');s.store.put('physics_state','running')
+        job=s.accept('A','action_batch',{'actions':[{'robot':None,'op':'gripper','parameters':{'state':'open'}}]},'b1');s.pump()
+        self.assertEqual(s.store.call('b1')['status'],'accepted')
+        s.close()  # must not raise
+        store=RuntimeStore(run/'private/state/runtime.sqlite')
+        try:
+            self.assertEqual(store.get('lifecycle'),'interrupted')
+            self.assertEqual({v['status'] for v in store.actions().values()},{'uncertain'})
+            self.assertEqual({v['arm'] for v in store.actions().values()},{'A'})
+            kinds=[e['kind'] for e in store.events()]
+            self.assertIn('EXECUTION_RECOVERY_REQUIRED',kinds);self.assertIn('RUN_INTERRUPTED',kinds)
+            self.assertNotIn('EXECUTION_RECOVERY_FAILED',kinds)
+            self.assertTrue((run/'private/outputs/runtime.json').is_file())
+        finally:store.close()
+
+    def test_a_failed_execution_recovery_still_records_the_interruption(self):
+        with patch.object(RuntimeStore,'recover_execution',side_effect=RuntimeError('bookkeeping fault')):
+            self.s.close()
+        store=RuntimeStore(self.run/'private/state/runtime.sqlite')
+        try:
+            self.assertEqual(store.get('lifecycle'),'interrupted')
+            kinds=[e['kind'] for e in store.events()]
+            self.assertIn('EXECUTION_RECOVERY_FAILED',kinds);self.assertIn('RUN_INTERRUPTED',kinds)
+        finally:store.close()
+
     def test_group_failure_preserves_other_gripper_operation(self):
         data=json.loads(json.dumps(self.data));data['actions'][1]={'robot':'B','op':'gripper','parameters':{'mode':'grasp','width_m':.045,'force_n':50}}
         self.call('Controller','action_batch',data);self.s.world.complete('A','failed');self.s.pump()

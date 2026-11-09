@@ -21,6 +21,10 @@ from .oracle import ReferenceStopped
 from .scenes import rz
 
 
+# Simulated settle allowance after release, beyond the task's stable duration.
+VERIFY_SETTLE_S=5.
+
+
 @dataclass
 class Frontier:
     ident: str
@@ -137,6 +141,10 @@ def direct_terminal_plan(t,f,frontiers):
     if not ref.goal_contact_allowed(t):return None
     state=t.monitor.relay_v2.states[f.ident]
     if ref.process_blocks(t) and (state['dropped'] or not state['transitions']):return None
+    # Every Relay timber reaches GOAL only after a qualified airborne
+    # handover, in every Oracle mode. A transition that only released hands
+    # adds no new holder and is not a handover.
+    if not any(set(item['receivers'])-set(item['senders']) for item in state['transitions']):return None
     if not set(f.team)<=t.monitor.bilateral(state['rod_geoms'],positive_force=True):return None
     body=t.data.body(f.ident);actual=body.xpos.copy();r=body.xmat.reshape(3,3)
     if t.monitor.relay_v2.inside(state):return actual,math.atan2(r[1,0],r[0,0])
@@ -354,7 +362,7 @@ def solve(t,*,flexible=False,terminal_observer=None,handover_observer=None):
             if ref.payload_complete(t,t.monitor.result().get('payloads',{}).get(f.ident,{})):
                 if f.phase!='done':
                     if f.phase in ('verify','recheck'):notify(f,'terminal_complete')
-                    f.phase='done';f.milestone+=1;progress=True
+                    f.phase='done';f.recheck_since=None;f.milestone+=1;progress=True
                 continue
             if f.phase=='done':
                 f.phase='recheck';f.recheck_since=t.time;f.blocked='';f.milestone+=1
@@ -406,6 +414,10 @@ def solve(t,*,flexible=False,terminal_observer=None,handover_observer=None):
                 elif f.phase in ('verify','recheck'):
                     state=t.monitor.relay_v2.states[f.ident]
                     if not t.monitor.relay_v2.inside(state) or (ref.process_blocks(t) and state['dropped']):raise RuntimeError('Released payload needs actual goal recovery '+f.ident)
+                    # A released load that never satisfies final acceptance
+                    # becomes a blocked scope, not an endless settle wait.
+                    if f.recheck_since is not None and t.time-f.recheck_since>VERIFY_SETTLE_S+float(t.task['completion'].get('stable_duration_sim_s',1.)):
+                        raise RuntimeError('Released payload did not satisfy final acceptance '+f.ident)
                     t.wait(.25)
                 f.blocked='';f.blocked_at=None;f.milestone+=1;progress=True;snapshot(t,frontiers)
                 # Finish enabled landing/release before an upstream search

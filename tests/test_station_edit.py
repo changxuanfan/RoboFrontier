@@ -70,4 +70,12 @@ class MotionClassificationTests(unittest.TestCase):
         self.assertEqual(classify_window(q,j),'keep')
 
 
+class ReleasedRecordingTests(unittest.TestCase):
+    def test_a_recording_missing_from_this_host_is_named(self):
+        old='/Users/fanchangxuan/Repos/roomscript2/runs/oracle/relay-absent/relay-a08-d1/attempt-001/motion'
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(FileNotFoundError,'Released Oracle recording is not on this host: '+old):
+                build(dict(id='relay-a08-d1',recording=old,directory=tmp),Path(tmp)/'out')
+
+
 if __name__=='__main__':unittest.main()

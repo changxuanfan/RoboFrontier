@@ -32,7 +32,10 @@ def ledger(store):
 
 def stopped(run, store):
     run = Path(run).resolve()
-    if (store.get('lifecycle') != 'interrupted' or store.get('physics_state') != 'stopped'
+    # A world the wall backstop stopped ended as at a cutoff (policy_probe.BudgetGuard).
+    backstop = (store.get('wall_backstop') and store.get('lifecycle') == 'ended'
+                and store.get('physics_state') == 'finished')
+    if (not backstop and (store.get('lifecycle') != 'interrupted' or store.get('physics_state') != 'stopped')
             or not store.get('dispatch_paused') or store.get('integrity_valid') is not True
             or store.get('segment_journal') or store.get('pending_segment')):
         raise ValueError('Upgrade requires a fully stopped, sealed and integrity-valid segment')

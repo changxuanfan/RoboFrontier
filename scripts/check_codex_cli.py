@@ -7,6 +7,7 @@ import base64
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import threading
@@ -42,6 +43,18 @@ def check(output):
             self.wfile.flush()
     server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
     threading.Thread(target=server.serve_forever,daemon=True).start()
+    # A private Codex home, like the sibling checks: test threads never land in the
+    # operator's or a batch's home, and that home's config and MCP servers never load.
+    home=output/'codex-home';home.mkdir(mode=0o700,exist_ok=True)
+    previous_home=os.environ.get('CODEX_HOME');os.environ['CODEX_HOME']=str(home)
+    try:return _check(output,server,requests)
+    finally:
+        server.shutdown();server.server_close()
+        if previous_home is None:os.environ.pop('CODEX_HOME',None)
+        else:os.environ['CODEX_HOME']=previous_home
+
+
+def _check(output,server,requests):
     p=dict(model='offline-protocol',provider='offline_protocol',effort='high',vision=True,
         context_window=272000,auto_compact_token_limit=245000,
         base_url=f'http://127.0.0.1:{server.server_port}',env_key='ROBOFRONTIER_OFFLINE_STUB_TOKEN')
@@ -70,19 +83,17 @@ fs.writeFileSync(out+'/native.json',JSON.stringify({parent:a.thread.id,status:re
 for(const f of forks)await rpc.call('thread/archive',{threadId:f.id});await rpc.call('thread/archive',{threadId:a.thread.id});
 }finally{await rpc.close();}})().then(()=>process.exit(0)).catch(e=>{console.error(e.stack);process.exit(1)});
 '''
-    try:
-        result=subprocess.run(['node','-e',script,str(Path(__file__).resolve().parents[1]),str(output)],
-            capture_output=True,text=True,timeout=40)
-        (output/'client.log').write_text(result.stdout+result.stderr)
-        if result.returncode:raise RuntimeError(result.stderr[-3000:])
-        native=json.loads((output/'native.json').read_text())
-        proofs=[fork_provenance(native['parent'],f['id']) for f in native['forks']]
-        report=dict(passed=native['tool_calls']==1 and len(requests)==2 and proofs[0]==proofs[1],
-            external_model_calls=0,local_stub_requests=len(requests),native=native,lineage=proofs,
-            image_returned_to_model='input_image' in json.dumps(requests[-1]),
-            scope='Actual installed CLI, local Responses stub; not provider access or Desktop UI acceptance')
-        write_json(output/'report.json',report);return report
-    finally:server.shutdown()
+    result=subprocess.run(['node','-e',script,str(Path(__file__).resolve().parents[1]),str(output)],
+        capture_output=True,text=True,timeout=40,env=dict(os.environ))
+    (output/'client.log').write_text(result.stdout+result.stderr)
+    if result.returncode:raise RuntimeError(result.stderr[-3000:])
+    native=json.loads((output/'native.json').read_text())
+    proofs=[fork_provenance(native['parent'],f['id']) for f in native['forks']]
+    report=dict(passed=native['tool_calls']==1 and len(requests)==2 and proofs[0]==proofs[1],
+        external_model_calls=0,local_stub_requests=len(requests),native=native,lineage=proofs,
+        image_returned_to_model='input_image' in json.dumps(requests[-1]),
+        scope='Actual installed CLI, local Responses stub; not provider access or Desktop UI acceptance')
+    write_json(output/'report.json',report);return report
 
 
 if __name__=='__main__':

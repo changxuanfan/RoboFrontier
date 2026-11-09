@@ -2,7 +2,7 @@
 
 An Oracle is engineering reference code with access to the physical scene and
 evaluator. It is separate from both native policy engines and their controllers.
-An Oracle result is not an LLM benchmark result. A successful historical witness
+An Oracle result is not a multimodal-agent benchmark result. A successful historical witness
 does not qualify a changed scene, controller, solver or physics release.
 
 The unified CLI prepares single-use, host-local executions of the four existing

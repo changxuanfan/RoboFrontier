@@ -50,7 +50,7 @@ experiments or credentials.
 The build installs observed CLI pins Codex 0.165.0 and Claude Code 2.1.312.
 They are reproducibility pins, not a claim that they are the latest releases.
 The Python dependency lock is used unchanged. Policy assets are downloaded and
-verified during image construction. No language-model call occurs during build.
+verified during image construction. No model call occurs during build.
 
 The Linux default is NVIDIA EGL. For macOS Docker, explicitly prepare CPU tasks:
 

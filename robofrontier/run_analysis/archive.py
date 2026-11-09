@@ -3,6 +3,10 @@
 A run key names the run relative to a data root: `dir/of/run` for a plain folder, or
 `container//inner/prefix` for a run inside a `.tar`, a `.zip` (optionally `manifest.json::prefix`
 for a content-addressed zip) or a content-addressed folder with `manifest.json` and `objects/`.
+
+A key that resolves to no files raises FileNotFoundError, so a typo or an unmounted drive is
+never read as an empty run. Content-addressed objects are named by the SHA-256 of their
+(decompressed) bytes; every read checks it.
 """
 
 import hashlib
@@ -10,6 +14,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import tarfile
 import tempfile
 import zipfile
@@ -20,11 +25,26 @@ def default_cache_dir():
     return Path(tempfile.gettempdir()) / 'robofrontier-tar-index'
 
 
+OBJECT_NAME = re.compile(r'[0-9a-f]{64}')
+
+
+def object_name(name):
+    """A content address from a manifest; anything else (a path, `..`) is refused."""
+    if not isinstance(name, str) or not OBJECT_NAME.fullmatch(name):
+        raise ValueError('Invalid object name in manifest: %r' % (name,))
+    return name
+
+
 def tar_index(path, cache_dir=None):
-    """Member offsets of an uncompressed tar, cached so later runs seek directly."""
+    """Member offsets of an uncompressed tar, cached so later runs seek directly.
+
+    The cache is bound to the archive's identity (resolved path, size, modification time and
+    inode), so a tar that was rewritten or was still growing is indexed again."""
     cache = Path(cache_dir) if cache_dir else default_cache_dir()
     cache.mkdir(parents=True, exist_ok=True)
-    p = cache / (hashlib.sha1(str(path).encode()).hexdigest()[:16] + '.jsonl')
+    st = os.stat(path)
+    ident = '%s|%d|%d|%d' % (Path(path).resolve(), st.st_size, st.st_mtime_ns, st.st_ino)
+    p = cache / (hashlib.sha1(ident.encode()).hexdigest()[:16] + '.jsonl')
     if not p.exists():
         tmp = p.with_suffix('.tmp.%d' % os.getpid())
         with tarfile.open(path, 'r:') as a, open(tmp, 'w') as o:
@@ -36,6 +56,12 @@ def tar_index(path, cache_dir=None):
     return p
 
 
+def _verified(data, want):
+    if hashlib.sha256(data).hexdigest() != want:
+        raise ValueError('Object %s does not match its content address' % want)
+    return data
+
+
 class Run:
     def __init__(self, k, root, cache_dir=None):
         V = Path(root)
@@ -44,10 +70,13 @@ class Run:
         if '//' not in k:
             self.kind = 'dir'
             b = V / k
+            if not b.is_dir():
+                raise FileNotFoundError('Run folder missing: %s' % b)
             for d, _, fs in os.walk(b):
                 for f in fs:
                     q = Path(d) / f
                     self.files[str(q.relative_to(b))] = q
+            self._require_files()
             return
         c, rest = k.split('//', 1)
         C = V / c
@@ -72,11 +101,13 @@ class Run:
                     self.pre = man[: -len('manifest.json')]
                     for f in m['files']:
                         if f['path'].startswith(pre):
+                            object_name(f['object'])
                             self.files[f['path'][len(pre) :]] = f
                 else:
                     self.kind = 'zip_custom'
                     for f in m:
                         if f['path'].startswith(pre):
+                            object_name(f['sha256'])
                             self.files[f['path'][len(pre) :]] = f
             else:
                 self.kind = 'zip'
@@ -91,7 +122,14 @@ class Run:
             pre = rest.rstrip('/') + '/'
             for f in m['files']:
                 if f['path'].startswith(pre):
+                    object_name(f['object'])
                     self.files[f['path'][len(pre) :]] = f
+        self._require_files()
+
+    def _require_files(self):
+        if not self.files:
+            self.close()
+            raise FileNotFoundError('No files for run key %s' % self.k)
 
     def close(self):
         for h in (getattr(self, 'fh', None), getattr(self, 'z', None)):
@@ -112,12 +150,12 @@ class Run:
         if K == 'zip':
             return self.z.read(h)
         if K == 'zip_custom':
-            return self.z.read('objects/' + h['sha256'][:2] + '/' + h['sha256'])
+            return _verified(self.z.read('objects/' + h['sha256'][:2] + '/' + h['sha256']), h['sha256'])
         if K == 'zip_objects':
             raw = self.z.read(self.pre + 'objects/' + h['object'][:2] + '/' + h['object'])
         else:
             raw = (self.base / 'objects' / h['object'][:2] / h['object']).read_bytes()
-        return zlib.decompress(raw)
+        return _verified(zlib.decompress(raw), h['object'])
 
     def lines(self, n):
         """Stream text lines without holding a large log in memory."""
@@ -144,28 +182,39 @@ class Run:
             if tail:
                 yield tail.decode(errors='replace')
             return
-        if K in ('zip', 'zip_custom'):
-            name = h if K == 'zip' else 'objects/' + h['sha256'][:2] + '/' + h['sha256']
-            with self.z.open(name) as f:
+        if K == 'zip':
+            with self.z.open(h) as f:
                 for p in io.TextIOWrapper(f, errors='replace'):
                     yield p
             return
-        raw = (
-            self.z.open(self.pre + 'objects/' + h['object'][:2] + '/' + h['object'])
-            if K == 'zip_objects'
-            else open(self.base / 'objects' / h['object'][:2] / h['object'], 'rb')
-        )
-        d = zlib.decompressobj()
+        if K == 'zip_custom':
+            raw, d, want = self.z.open('objects/' + h['sha256'][:2] + '/' + h['sha256']), None, h['sha256']
+        elif K == 'zip_objects':
+            raw = self.z.open(self.pre + 'objects/' + h['object'][:2] + '/' + h['object'])
+            d, want = zlib.decompressobj(), h['object']
+        else:
+            raw = open(self.base / 'objects' / h['object'][:2] / h['object'], 'rb')
+            d, want = zlib.decompressobj(), h['object']
+        digest = hashlib.sha256()
         tail = b''
         with raw:
             while True:
                 b = raw.read(1 << 22)
                 if not b:
                     break
-                parts = (tail + d.decompress(b)).split(b'\n')
+                b = d.decompress(b) if d else b
+                digest.update(b)
+                parts = (tail + b).split(b'\n')
                 tail = parts.pop()
                 for p in parts:
                     yield p.decode(errors='replace')
+        if d:
+            rest = d.flush()
+            digest.update(rest)
+            tail += rest
+        # Every line was already yielded; a mismatch still fails the caller before it finishes.
+        if digest.hexdigest() != want:
+            raise ValueError('Object %s does not match its content address (%s)' % (want, n))
         if tail:
             yield tail.decode(errors='replace')
 

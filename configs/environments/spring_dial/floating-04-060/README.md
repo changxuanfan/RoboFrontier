@@ -14,4 +14,4 @@ Private sampling records apparatus pose, support contacts and premature contact 
 
 ## Engineering verification
 
-The contact-based reference at `runs/oracle/floating-puzzle-060-oracle-20261023-r1` advances the actual dynamics, without LLM or module/dial pose writes. It tests four groups concurrently, all nonzero marks within the ±4° task tolerance, passive return, support retention and inter-robot contacts. This is engineering feasibility evidence, not a model result or proof every policy trajectory is safe.
+The contact-based reference at `runs/oracle/floating-puzzle-060-oracle-20261023-r1` advances the actual dynamics, without a multimodal agent or module/dial pose writes. It tests four groups concurrently, all nonzero marks within the ±4° task tolerance, passive return, support retention and inter-robot contacts. This is engineering feasibility evidence, not a model result or proof every policy trajectory is safe.

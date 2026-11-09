@@ -17,7 +17,7 @@ from robofrontier.benchmark_common import load_env, select_cases
 from robofrontier.codex.launch import codex_home, initialize_codex_home, launch_config, profile
 from robofrontier.task_families import ROOT, read, prepare
 from robofrontier.run_setup import write_json, verify_inputs
-from robofrontier.run_segments import try_continue
+from robofrontier.run_segments import try_continue, wall_backstopped
 
 
 def prepare_batch(output, names, families=None, cases=None, config=None, level=None, min_arms=False, wall_limit_s=86400, *, harness_overrides=None):
@@ -73,6 +73,9 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
             write_json(output/'batch.json',batch)
     batch['status']='prepared_not_started';write_json(output/'batch.json',batch)
     return output/'batch.json'
+
+
+STOPPED_BETWEEN_SEGMENTS='stopped_between_segments'
 
 
 def read_lifecycle(run):
@@ -215,15 +218,23 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
     def task(job):
         # An unexpected exit continues the same run once (docs/running/run-segments.md).
         run=Path(job['run_directory'])
-        # A segment prepared just before the supervisor died starts as it is.
-        if continuing and read_lifecycle(run) not in ('prepared','resuming'):
-            continued,why=try_continue(run,'batch supervisor exited')
-            job.setdefault('segments',[]).append({'host_exit_code':None,'continued':continued,'reason':why})
-            write_json(folder/'batch.json',batch)
-            if not continued:raise ValueError('Run cannot continue: '+why)
+        # Whether a continuation segment is prepared and not yet run.
+        pending=False
+        if continuing:
+            lifecycle=read_lifecycle(run)
+            pending=lifecycle=='resuming'
+            # A segment prepared just before the supervisor died starts as it is.
+            if lifecycle not in ('prepared','resuming'):
+                continued,why=try_continue(run,'batch supervisor exited')
+                job.setdefault('segments',[]).append({'host_exit_code':None,'continued':continued,'reason':why})
+                write_json(folder/'batch.json',batch)
+                if not continued:raise ValueError('Run cannot continue: '+why)
+                pending=True
         while True:
             result=launch(job)
-            if result is None:return result
+            # A stop before the first segment leaves the run unstarted; a stop after a
+            # continuation was prepared leaves a run that ran and needs review.
+            if result is None:return STOPPED_BETWEEN_SEGMENTS if pending else None
             # A shared-server failure is a job fault. Never automatically create
             # another shared manager or resend an uncertain turn/action.
             if scope=='job':return result
@@ -233,6 +244,7 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
             job.setdefault('segments',[]).append({'host_exit_code':result,'continued':continued,'reason':why})
             write_json(folder/'batch.json',batch)
             if not continued:return result
+            pending=True
     def launch(job):
         run=Path(job['run_directory'])
         stop,batch_stop=run_layout.path(run,'stop','codex'),run_layout.batch_path(folder,'stop')
@@ -252,8 +264,14 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
             job=futures[future]
             try:
                 result=future.result()
-                job.update(status='stopped_before_start' if result is None else 'closed' if result==0 else 'needs_review')
-                if result is not None:job['host_exit_code']=result
+                if result==STOPPED_BETWEEN_SEGMENTS:
+                    job.update(status='needs_review',reason='Stopped after a continuation segment was prepared; it never ran')
+                else:
+                    job.update(status='stopped_before_start' if result is None else 'closed' if result==0 else 'needs_review')
+                    if result is not None:job['host_exit_code']=result
+                    # Stopped by the 48 h wall backstop, not the active-time limit: never counted.
+                    if result is not None and wall_backstopped(job['run_directory']):
+                        job.update(status='needs_review',reason='wall_backstop')
             except Exception as error:job.update(status='needs_review',error=str(error))
             write_json(folder/'batch.json',batch)
     from .recover_task import wait_for_recoveries

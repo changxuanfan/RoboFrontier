@@ -66,8 +66,10 @@ START; continue after its response without waiting for another START. Frozen
 Legacy `ready_barrier_v1` runs retain their readiness/idle-observation barrier
 and original continuation behavior. Their inputs are not silently migrated.
 
-The policy deadline is persisted `start_at + task_wall_limit_s`, normally 86,400
-seconds. Preparation has a separate startup timeout. An external engineering
+The policy limit is `task_wall_limit_s`, normally 86,400 seconds, of active
+running time saved in the run store; host stalls, pauses and network outages do
+not count. Runs frozen before that clock keep the persisted
+`start_at + task_wall_limit_s` deadline ([run segments](running/run-segments.md#time)). Preparation has a separate startup timeout. An external engineering
 stop is distinct from the public task limit. Oracle engineering elapsed limits
 include planning and review pauses; they are not a second policy START clock.
 

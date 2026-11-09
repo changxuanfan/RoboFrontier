@@ -12,11 +12,12 @@ from pathlib import Path
 import re
 import sys
 import threading
+import time
 import uuid
 
 from robofrontier.claude.runner import PersistentSession, PreLaunchCancelled, policy_settings, run_turn
 from robofrontier.run_setup import verify_inputs, write_json
-from robofrontier.claude.recovery import MAX_CAPACITY_RETRIES, recover, recover_model_loss
+from robofrontier.claude.recovery import MAX_CAPACITY_RETRIES, recover, recover_model_loss, recover_network
 from robofrontier import run_layout
 
 ACTOR_NAME = re.compile(r'[A-Za-z][A-Za-z0-9_-]{0,63}')
@@ -109,14 +110,19 @@ class ClaudeSessionHost:
         self.cli_lost = False
         self.capacity_retry_due = None
         self.retryable_capacity = False
+        # Wall time the last turn was found failed, and the failed turn whose network
+        # continuation was already decided (recovery.recover_network).
+        self.failed_at = None
+        self.network_handled = None
 
     def event(self, event, **fields):
         from robofrontier.run_metrics import host_event
         host_event(self.run, event, actor=self.actor, session_id=self.session_id, turn_id=self.turn_id, **fields)
 
     def recover_capacity(self, store, now=None):
-        """Resume after a capacity failure or a lost CLI; False leaves ordinary handling."""
-        return recover(self, store, now) or recover_model_loss(self, store)
+        """Resume after a capacity failure, a lost CLI or a network outage; False leaves
+        ordinary handling."""
+        return recover(self, store, now) or recover_model_loss(self, store) or recover_network(self, store)
 
     @classmethod
     def fork_delegate(cls, run_dir, actor, profile, base_env, *, budget_ledger, max_budget_usd, fork_from, gate,
@@ -292,6 +298,7 @@ class ClaudeSessionHost:
                 # An unrecorded turn cannot be resumed safely.
                 state = 'unknown'
             self.state = state
+            self.failed_at = time.time() if state == 'error' else None
             self.retryable_capacity = retryable and state == 'error'
             if state == 'idle':
                 self.capacity_retry_count = 0

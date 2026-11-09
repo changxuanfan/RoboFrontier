@@ -5,8 +5,9 @@ import json
 import re
 import tarfile
 
+from .extract import call_id
+
 TS = re.compile(r'"timestamp":"([^"]+)"')
-CID = re.compile(r'"call_id":"([^"]+)"')
 
 
 def epoch(s):
@@ -54,17 +55,17 @@ def summarize_session_archive(p):
                         state = None
                         opened = {}
                     elif '"type":"function_call"' in h or '"type":"custom_tool_call"' in h:
-                        c = CID.search(raw[:900].decode(errors='ignore'))
+                        c = call_id(raw.decode(errors='ignore'))
                         O['calls'] += 1
                         if state == 'model' and since:
                             O['spans'].append([since, now])
                             state = 'tool'
                         if c:
-                            opened[c.group(1)] = 1
+                            opened[c] = 1
                     elif '"function_call_output"' in h or '"custom_tool_call_output"' in h:
-                        c = CID.search(raw[:400].decode(errors='ignore'))
-                        if c and c.group(1) in opened:
-                            opened.pop(c.group(1))
+                        c = call_id(raw.decode(errors='ignore'))
+                        if c and c in opened:
+                            opened.pop(c)
                             if not opened and state == 'tool':
                                 state = 'model'
                                 since = now

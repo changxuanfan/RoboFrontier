@@ -34,7 +34,8 @@ def evaluate(n,k,sample_size=4096,belief_cap=8192):
         nodes+=1
         if len(ids)==1:
             guess=codes[ids[0]];queries[test_indices]+=1;moves[test_indices]+=np.sum(guess!=current)
-            assert np.all(sample_ids[test_indices]==ids[0]);return
+            if not np.all(sample_ids[test_indices]==ids[0]):raise ValueError('Check failed: np.all(sample_ids[test_indices]==ids[0])')
+            return
         count=min(96,len(ids));positions=np.asarray([round(i*(len(ids)-1)/(count-1)) for i in range(count)])
         guesses=codes[ids[positions]]
         if incumbent is not None:
@@ -71,9 +72,11 @@ def evaluate(n,k,sample_size=4096,belief_cap=8192):
         for response in np.unique(observed):
             test_child=test_indices[observed==response]
             if response==n:
-                assert np.all(codes[sample_ids[test_child]]==guess);continue
+                if not np.all(codes[sample_ids[test_child]]==guess):raise ValueError('Check failed: np.all(codes[sample_ids[test_child]]==guess)')
+                continue
             child=ids[responses==response]
-            assert len(child)<len(ids) and len(child)>0
+            if not (len(child)<len(ids) and len(child)>0):
+                raise ValueError('Check failed: len(child)<len(ids) and len(child)>0')
             new_incumbent=guess if int(response)>best else incumbent
             next_seed=(seed*1664525+1013904223+int(response)+int(np.sum(guess*np.arange(1,n+1))))&0xffffffff
             visit(child,test_child,guess,max(best,int(response)),new_incumbent,next_seed)
@@ -103,7 +106,8 @@ def coordinate_distribution(n,k):
     for length in range(1,n+1):
         term=np.convolve(prefix,last);hist[1:len(term)+1]+=term
         prefix=np.convolve(prefix,one)
-    assert int(hist.sum())==k**n
+    if not (int(hist.sum())==k**n):
+        raise ValueError('Check failed: int(hist.sum())==k**n')
     cumulative=np.cumsum(hist)
     return dict(mean=float(np.dot(hist,np.arange(len(hist)))/hist.sum()),
         percentiles={f'P{p}':int(np.searchsorted(cumulative,math.ceil(hist.sum()*p/100))) for p in PERCENTILES},

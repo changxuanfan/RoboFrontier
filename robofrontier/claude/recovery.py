@@ -117,3 +117,108 @@ def recover_model_loss(host, store):
             host.state = 'unknown'
             raise
         return True
+
+
+# A failed turn's structured API error that names a lost connection (the CLI's typed `api_error`
+# kinds for a connection failure, an unanswered request, a stalled stream and a sleeping host).
+# It has no HTTP status: a status means the API answered.
+NETWORK_API_ERRORS = frozenset(('connection_failed', 'no_response', 'stream_idle_timeout', 'computer_slept'))
+# How long a network failure waits for the world's outage or egress pause to notice it (three
+# failed probes take about 15-35 s); without one it is an ordinary failed turn. The same margin
+# bounds how far a failure may come before a pause (runtime_cli network-recovery).
+NETWORK_WAIT_S = 30.
+NETWORK_WINDOW_S = 30.
+
+
+def api_error(events):
+    """The last structured API error of a turn, or None. Only typed CLI fields count."""
+    for event in reversed(events):
+        if event.get('type') != 'assistant': continue
+        if event.get('isApiErrorMessage') is not True and event.get('is_api_error_message') is not True: continue
+        kind, status, error = (event.get('api_error', event.get('apiError')),
+                               event.get('api_error_status', event.get('apiErrorStatus')), event.get('error'))
+        return {'error': error if isinstance(error, str) else None, 'api_error': kind if isinstance(kind, str) else None,
+                'status': status if isinstance(status, int) and not isinstance(status, bool) else None}
+    return None
+
+
+def failure_kind(summary):
+    """'network', 'other' or None (not told by the turn's own record) for a failed turn."""
+    error = summary.get('api_error')
+    if isinstance(error, dict):
+        if error.get('status') is None and error.get('api_error') in NETWORK_API_ERRORS: return 'network'
+        # An untyped server error without HTTP status is how the CLI reports other lost connections.
+        if error.get('status') is None and error.get('api_error') is None and error.get('error') == 'server_error': return None
+        return 'other'
+    if summary.get('capacity_error_code'): return 'other'
+    if summary.get('result_subtype') not in (None, 'success', 'error_during_execution'): return 'other'
+    return None
+
+
+def _active_time(run):
+    from robofrontier.policy_probe import WALL_CLOCK, run_clock
+    task = run/'private/inputs/task.json'
+    try: return run_clock(json.loads(task.read_text()).get('run_protocol') or {}) != WALL_CLOCK
+    except (OSError, ValueError, AttributeError): return False
+
+
+def recover_network(host, store, now=None):
+    """Resend once a turn that failed on the network during an outage or egress pause.
+
+    Runs whose protocol counts active time only (clock active_time_v1), as the Codex host does
+    (codex_policy_host.js retryCapacity): after the world resumes it records `egress_recovery`;
+    a failed turn of this role seen within that pause (NETWORK_WINDOW_S either side) that is a
+    network failure, or whose record does not say what failed, is continued once per role and
+    pause in the same session with the frozen network notice, once the role has no robot work
+    in flight. No request or action is replayed. A second failure in the same pause, or a turn
+    that failed for another reason within it, holds the run for review
+    (runtime_cli network-recovery-uncertain). A network failure seen before any pause waits up
+    to NETWORK_WAIT_S for one. Returns True while waiting, resending or holding."""
+    from robofrontier.runtime_cli import execute
+    wall = time.time() if now is None else now
+    notice = host.run/'private/inputs/bootstrap/network-resume.md'
+    with host.lock:
+        failed_at = getattr(host, 'failed_at', None)
+        if (host.state != 'error' or failed_at is None or getattr(host, 'cli_lost', False)
+                or getattr(host, 'network_handled', None) == host.turn_id
+                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop', 'claude').exists()
+                or not notice.is_file() or not _active_time(host.run)
+                or store.get('lifecycle') != 'running' or store.get('dispatch_paused', False)
+                or host.budget_status not in ('tracking', 'not_set')):
+            return False
+        summary = (host.last_result or {}).get('summary') or {}
+        kind = failure_kind(summary)
+        if summary.get('capacity_error_code'): return False  # capacity has its own bounded retries
+        recovery = store.get('egress_recovery')
+        within = bool(recovery and recovery['paused_at'] - NETWORK_WINDOW_S <= failed_at
+                      <= recovery['resumed_at'] + NETWORK_WINDOW_S)
+        if not within:
+            return kind == 'network' and wall - failed_at < NETWORK_WAIT_S
+        ids = {'actor': host.actor, 'thread_id': host.session_id}
+
+        def hold(why):
+            host.network_handled = host.turn_id
+            execute(store, 'network-recovery-uncertain', ids, host.actor, wall)
+            host.event('network_continuation_uncertain', reason=why, failed_turn_id=host.turn_id)
+            return True
+
+        if kind == 'other': return hold('turn failed for another reason during a network outage')
+        from robofrontier.scheduling import blocks_model_recovery
+        if (any(blocks_model_recovery(a) for a in store.actions(host.actor).values())
+                or store.db.execute("SELECT 1 FROM calls WHERE actor=? AND status IN ('accepted','running','uncertain') "
+                                    "AND op IN ('move','gripper','action_batch','delegate') LIMIT 1", (host.actor,)).fetchone()):
+            return True
+        claim = execute(store, 'network-recovery', {**ids, 'failed_turn_id': host.turn_id, 'error_observed_at': failed_at},
+                        host.actor, wall)
+        if claim.get('review_required'): return hold('second failure in the same outage, or outside its window')
+        if not claim.get('allowed'): return False
+        failed_turn = host.turn_id
+        host.network_handled = failed_turn
+        host.state = 'idle'  # Proven failure; the same session continues, never a new one.
+        try:
+            host.send(notice.read_text())
+        except Exception:
+            host.state = 'error'
+            return hold('network continuation could not be sent')
+        host.event('network_continuation', failed_turn_id=failed_turn, failure=kind or 'unclassified')
+        return True

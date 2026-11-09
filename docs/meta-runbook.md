@@ -15,7 +15,7 @@ successful private grasp coordinates, process truth logs or Oracle routes.
 
 ## Current command-line operation
 
-The unified command is the normal new-run entry. It needs no LLM manager or
+The unified command is the normal new-run entry. It needs no agent manager or
 manual directory/session preparation. Install dependencies and the native CLI
 for the selected engine; configure credentials locally as described in
 [CLI configuration](unified-cli.md). Credentials belong in the environment or

@@ -78,7 +78,7 @@ physics steps, or model turns. It is not a provider rate-limit guarantee.
 | `policy.topology` | `single`, `controller-worker`, `worker-worker`, or `adaptive` |
 | `batch.parallel` | Maximum concurrent task hosts, from 1 to 36; no automatic reduction |
 | `batch.startup_interval_s` | Global interval within this batch supervisor, default 0.3 seconds |
-| `batch.task_wall_limit_s` | Per-task elapsed limit from persisted START, default 86,400 seconds |
+| `batch.task_wall_limit_s` | Per-task limit of active running time, default 86,400 seconds ([how it is counted](running/run-segments.md#time)) |
 | `batch.startup_timeout_s` | Owner readiness timeout; distinct from task time and transport acknowledgement timeouts |
 | `selection.families` / `cases` | Filters against the current release registry |
 | `selection.level` | 0 for every level, otherwise 1, 2 or 3 |

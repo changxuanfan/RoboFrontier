@@ -45,7 +45,7 @@ class EditorialTests(unittest.TestCase):
         lock = bundle.read(root/'configs/factory-assets.json')
         self.assertEqual(shipped['project']['source']['bundle_sha256'],lock['bundle_sha256'])
         self.assertEqual(shipped['project']['duration_s']*shipped['project']['fps'],6315)
-        self.assertIn('Multi-Robot World',shipped['titles'][0][2])
+        self.assertIn('Can Multimodal Agents Work Together',shipped['titles'][0][2])
 
     def test_frozen_project_is_independent_and_changed_prepared_captions_block_execution(self):
         result = server.prepare(self.data,self.root/'render',mode='promo',device='CPU',project=self.project)

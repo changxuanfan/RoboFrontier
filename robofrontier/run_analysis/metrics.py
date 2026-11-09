@@ -97,6 +97,23 @@ def host_model_spans(H):
     return merge(out)
 
 
+def cutoff_unix(d):
+    """Wall time at which the trial was scored (24 h rule), or None."""
+    c = d.get('cutoff') or {}
+    return c.get('unix')
+
+
+def until(t, d):
+    """The earlier of `t` and the trial cutoff; either may be None."""
+    c = cutoff_unix(d)
+    return c if t is None else t if c is None else min(t, c)
+
+
+def upto(x, end):
+    """Intervals clipped to end at `end`."""
+    return [[a, min(b, end)] for a, b in x if a < end]
+
+
 def timing(d):
     H = d.get('host') or {}
     M = d.get('meta') or {}
@@ -107,6 +124,7 @@ def timing(d):
         last = max(last, H['last'])
     if first is None:
         return None
+    last = until(last, d)
     rt = d.get('runtime.json') or {}
     segs = rt.get('segments') or []
     downs = []
@@ -123,9 +141,11 @@ def timing(d):
     else:
         model = []
         src = None
-    act = merge([[x['s'], x['e']] for x in A])
-    turns = merge([[a, b] for _, a, b in (H.get('turns') or [])])
-    tools = merge([[a, b] for _, a, b in (H.get('tools') or [])])
+    model = upto(model, last)
+    act = upto(merge([[x['s'], x['e']] for x in A]), last)
+    turns = upto(merge([[a, b] for _, a, b in (H.get('turns') or [])]), last)
+    tools = upto(merge([[a, b] for _, a, b in (H.get('tools') or [])]), last)
+    downs = upto(downs, last)
     busy = merge(model + act + tools + turns + downs)
     gaps = []
     cur = first
@@ -141,6 +161,9 @@ def timing(d):
     stops = []
     limits = []
     other = []
+    # Only Codex hosts log liveness cycles; without them a quiet gap of 5 min or more is
+    # taken as a host stop, so the two engines' active times are not measured alike.
+    stop_src = 'cycles' if cyc else 'gap>=300s'
     for a, b in gaps:
         if cyc:
             n = sum(v for k, v in cyc.items() if a // 60 <= k <= b // 60)
@@ -173,9 +196,13 @@ def timing(d):
         both_h=total(both) / 3600 if model and A else None,
         idle_h=(clock - total(off) - total(union)) / 3600 if model and A else None,
         think_src=src,
+        stop_src=stop_src,
+        cutoff=cutoff_unix(d),
         other_stall_h=total(other) / 3600,
         off=off,
-        host_think_h=total(fast_clip(host_model_spans(H), off)) / 3600 if H.get('turns') else None,
+        host_think_h=total(fast_clip(upto(host_model_spans(H), last), off)) / 3600
+        if H.get('turns')
+        else None,
     )
 
 
@@ -235,7 +262,7 @@ def goals_atomic(d, clk):
     S = d['suite']
     A = [x for x in d['actions'] if x['s'] and x['e']]
     goals = S['goals']
-    done = clk.wall(S['done_at']) if S.get('done_at') is not None else None
+    done = until(clk.wall(S['done_at']) if S.get('done_at') is not None else None, d)
     opens = collections.defaultdict(list)
     moves = collections.defaultdict(list)
     for x in sorted(A, key=lambda x: x['s']):
@@ -305,7 +332,10 @@ def goals_atomic(d, clk):
             if nxt - t >= REGRESS_MIN_S:
                 byg[g]['failed'].add('object')
                 reg += 1
-    lost = [i for i, t in S['lost'].items()]
+    # None: the process log cannot show lost items (see extract.suite); counted as unknown.
+    lost = None if S['lost'] is None else [i for i, t in S['lost'].items()]
+    unknown = lost is None
+    lost = lost or []
     delivered_items = {s['item'] for s in steps}
     lost_extra = [i for i in lost if i not in delivered_items]
     for s in steps:
@@ -326,7 +356,8 @@ def goals_atomic(d, clk):
         delivered=len(steps),
         trailing=len(trail),
         regressions=reg,
-        lost=len(lost),
+        lost=None if unknown else len(lost),
+        objects_unknown=S.get('objects_unknown'),
         attrib_far=amb,
         failed_actions=len(F),
         timeline=[[s['t'], bool(s['failed'])] for s in steps],
@@ -337,7 +368,7 @@ def relay_atomic(d, clk):
     S = d['suite']
     A = [x for x in d['actions'] if x['s'] and x['e']]
     steps = []
-    done = clk.wall(S['done_at']) if S.get('done_at') is not None else None
+    done = until(clk.wall(S['done_at']) if S.get('done_at') is not None else None, d)
     for p, hs in S['handovers'].items():
         for h in hs:
             steps.append(
@@ -418,7 +449,7 @@ def dial_atomic(d, clk):
         for _ in range(int(v - last)):
             T.append(dict(t=clk.wall(t), failed=set()))
         last = max(last, v)
-    done = clk.wall(S['solved_at']) if S.get('solved_at') is not None else None
+    done = until(clk.wall(S['solved_at']) if S.get('solved_at') is not None else None, d)
     F = failures(A, done)
     ts = [s['t'] for s in T]
     trail = set()
@@ -458,23 +489,28 @@ def outcome(d):
     if not S or not S.get('lines'):
         return None
     L = S['last']
+    # Scored at the trial cutoff when the run reached it: its evaluation, else the last row
+    # before it (extract.suite already dropped later rows).
+    E = (d.get('cutoff') or {}).get('evaluation')
     if fam == 'relay':
-        fp = S.get('final_payloads') or {}
-        tot = S.get('total') or len(fp)
-        ok = [p for p, x in fp.items() if x.get('terminal') and S['handovers'].get(p)]
+        fp = (E.get('payloads') if E else None) or S.get('final_payloads') or {}
+        tot = (E or {}).get('total_payloads') or S.get('total') or len(fp)
+        ok = [p for p, x in fp.items() if x.get('terminal') and (x.get('nh') or S['handovers'].get(p))]
         return dict(
             success=len(ok) == tot and tot > 0,
             done=len(ok),
             total=tot,
             label=f'{len(ok)}/{tot}',
             handover_timbers=sum(1 for p in fp if S['handovers'].get(p)),
-            evaluator_completed=L.get('completed_payloads'),
+            evaluator_completed=(E or L).get('completed_payloads'),
         )
     if fam == 'dial':
-        solved = S.get('solved_at') is not None
-        tr = L.get('valid_trials') or 0
+        solved = S.get('solved_at') is not None or bool(E and E.get('solved'))
+        tr = S.get('valid_trials')
+        tr = (L.get('valid_trials') or 0) if tr is None else tr
         disp = max([v or 0 for _, v in S['disp']] or [0])
         return dict(success=solved, done=disp, total=None, label=f'best {disp}', trials=tr)
+    L = E or L
     m = L.get('matched_goals') or 0
     tot = L.get('total_goals') or S.get('total') or 0
     return dict(
@@ -485,11 +521,22 @@ def outcome(d):
     )
 
 
+def excluded(d):
+    """Why a run's result is not counted, or None.
+
+    wall_backstop: the 48 h wall backstop stopped it before its 24 h active-time cutoff
+    (policy_probe.BudgetGuard); it needs review, whatever its outcome."""
+    if (d.get('cutoff') or {}).get('wall_backstop') or (d.get('evaluation.json') or {}).get('wall_backstop') is True:
+        return 'wall_backstop'
+    return None
+
+
 def compute(d):
     s = d['sel']
     T = timing(d)
     O = dict(
         id=s['id'],
+        cutoff=d.get('cutoff'),
         model=s.get('model'),
         case=s.get('case'),
         level=s.get('level'),
@@ -502,7 +549,9 @@ def compute(d):
         meta=d.get('meta'),
         timing=T,
         outcome=outcome(d),
+        excluded=excluded(d),
     )
+    O['needs_review'] = O['excluded'] is not None
     H = d.get('host')
     O['tokens'] = H['tok'] if H else None
     O['engine'] = H['engine'] if H else None

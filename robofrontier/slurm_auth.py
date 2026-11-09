@@ -190,14 +190,20 @@ class CredentialLease:
                         or credential_owner(current.get('auth')) != current.get('owner')):
                     raise CredentialError('Invalid persisted credential generation')
                 self.current = current
+                if not os.path.lexists(self.store/'initialized.json'):
+                    # A bootstrap that stopped between its two writes: current.json alone is
+                    # authoritative, so complete the marker.
+                    _atomic_private(self.store/'initialized.json', {'schema': 'robofrontier.codex-auth-initialized.v1'})
             else:
                 if os.path.lexists(self.store/'initialized.json'):
                     raise CredentialError('Persisted credential generation is missing; never restore the old bootstrap seed')
                 auth = _decode(_read_private(self.store/'auth.json'))
                 self.current = {'schema': 'robofrontier.codex-auth.v1', 'generation': 1,
                                 'owner': credential_owner(auth), 'auth': auth}
-                _atomic_private(self.store/'initialized.json', {'schema': 'robofrontier.codex-auth-initialized.v1'})
+                # The generation first: a job lost between the two writes leaves a store the
+                # next lease can use, never an initialized store without a generation.
                 _atomic_private(state, self.current)
+                _atomic_private(self.store/'initialized.json', {'schema': 'robofrontier.codex-auth-initialized.v1'})
             self.home.mkdir(mode=0o700, parents=True, exist_ok=False)
             _private_directory(self.home)
             _atomic_private(self.home/'auth.json', self.current['auth'])

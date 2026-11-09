@@ -2,6 +2,7 @@
 import time
 import threading
 
+from robofrontier.claude.budget import BudgetExhausted
 from robofrontier.delegation import Delegations
 from robofrontier.runtime_cli import execute
 
@@ -115,6 +116,12 @@ class AdaptiveDispatcher:
                 ack=host.send(claimed['prompt'])
                 if ack.get('threadId') != claimed['thread_id']:
                     raise ValueError('Child turn acknowledgement mismatch')
+            except BudgetExhausted:
+                # Refused before any launch: the wake was not sent, and the task cap is spent.
+                self.admin('dispatch-result',{'wake_id':claimed['wake_id'],'outcome':'cancelled',
+                                              'result':{'error':'budget_exhausted'}})
+                self.pause('Claude task budget exhausted')
+                return {'dispatched':sent, 'paused':True}
             except Exception:
                 self.admin('dispatch-result',{'wake_id':claimed['wake_id'],'outcome':'uncertain',
                                               'result':{'error':'Claude wake outcome requires review'}})

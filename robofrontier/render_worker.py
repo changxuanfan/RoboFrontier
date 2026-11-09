@@ -99,6 +99,7 @@ class RenderWorker:
         self.changed = threading.Condition(self.lock)
         self.pending = {}
         self.failed = []
+        self.local = set()  # failed captures the owner is rendering itself
         self.closed = False
         threading.Thread(target=self._read_replies, daemon=True).start()
 
@@ -133,21 +134,27 @@ class RenderWorker:
         return True
 
     def failed_captures(self):
+        """Hand failed captures to the owner, which renders them before `rendered_locally`."""
         with self.changed:
             requests, self.failed = self.failed, []
+            # The owner renders one handed-back set at a time, so this replaces the last one.
+            self.local = {request['id'] for request in requests}
         return requests
 
     def wait(self, timeout_s):
         """Whether every capture queued before this call has finished in time.
 
-        A failed capture counts as unfinished until the owner has rendered it."""
+        A failed capture counts as unfinished until the owner has rendered it, including
+        while the owner is still rendering it after taking it from `failed`."""
         with self.changed:
-            limit = max(self.pending, default=0)
+            limit = max(set(self.pending) | self.local, default=0)
             return self.changed.wait_for(
-                lambda: not self.failed and not any(ident <= limit for ident in self.pending), timeout_s)
+                lambda: not self.failed and not any(ident <= limit for ident in self.pending)
+                and not any(ident <= limit for ident in self.local), timeout_s)
 
     def rendered_locally(self):
         with self.changed:
+            self.local = set()
             self.changed.notify_all()
 
     def close(self):

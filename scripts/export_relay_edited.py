@@ -135,11 +135,14 @@ def encoder(path, fps):
 def validate_movie(path, frames, fps):
     probe = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
         '-show_entries', 'stream=nb_frames,r_frame_rate,width,height', '-of', 'json', str(path)], text=True))['streams'][0]
-    assert int(probe['nb_frames']) == frames, probe
-    assert probe['r_frame_rate'] == f'{fps}/1', probe
+    if not (int(probe['nb_frames']) == frames):
+        raise ValueError(probe)
+    if not (probe['r_frame_rate'] == f'{fps}/1'):
+        raise ValueError(probe)
     decoded = subprocess.run(['ffmpeg', '-v', 'error', '-threads', '1', '-filter_threads', '1',
         '-i', str(path), '-f', 'null', '-'], capture_output=True, text=True)
-    assert decoded.returncode == 0, decoded.stderr
+    if not (decoded.returncode == 0):
+        raise RuntimeError(decoded.stderr)
     return dict(decode_passed=True, frames=frames, fps=fps, duration_s=frames/fps, sha256=digest(path))
 
 
@@ -149,9 +152,11 @@ def render_case(folder, output, factory_renderer=None, play=None, fps=30, speed=
     edit = json.loads((folder / 'edit.json').read_text())
     if edit.get('schema') not in ('robofrontier.relay-motion-edit.v1','robofrontier.motion-edit.v1') or not {'track_sha256','kept_intervals_source_s'} <= edit.keys():
         raise ValueError('Expected a Relay recorded-track edit; a frame-reference timeline needs its own adapter')
-    assert digest(folder / 'track.npz') == edit['track_sha256']
+    if not (digest(folder / 'track.npz') == edit['track_sha256']):
+        raise ValueError('Edited track checksum mismatch: '+str(folder))
     for name, key in [('events.jsonl','events_sha256'),('initial-rgba.json','initial_rgba_sha256')]:
-        assert digest(folder / name) == edit[key]
+        if not (digest(folder / name) == edit[key]):
+            raise ValueError(f'{name} checksum mismatch: {folder}')
     source = Workstation(folder / 'source')
     with np.load(folder / 'track.npz', allow_pickle=False) as z:
         track = {k:z[k].copy() for k in z.files}
@@ -162,7 +167,8 @@ def render_case(folder, output, factory_renderer=None, play=None, fps=30, speed=
                 factory_scene_sha256=play.manifest['scene_sha256'] if play else None)
     if (output / 'render.json').exists():
         prior = json.loads((output / 'render.json').read_text())
-        assert prior['plan'] == plan
+        if not (prior['plan'] == plan):
+            raise ValueError('Existing render plan differs from this render')
         for key in prior['videos']:
             validate_movie(output / f'{key}.mp4', len(indices), fps)
         print(case, 'existing simple movie verified', flush=True)
@@ -211,7 +217,8 @@ def render_case(folder, output, factory_renderer=None, play=None, fps=30, speed=
     finally:
         mapfile.close()
         for process in encoders.values():process.stdin.close()
-        for process in encoders.values():assert process.wait()==0,'Video encoder failed'
+        codes=[process.wait() for process in encoders.values()]
+        if any(codes):raise RuntimeError('Video encoder failed: '+str(codes))
     checks={name:validate_movie(path,len(indices),fps) for name,path in partials.items()}
     for name,path in partials.items():path.replace(paths[name])
     result=dict(case_id=case,plan=plan,videos=checks,shared_frame_map='frame-map.csv',

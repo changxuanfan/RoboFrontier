@@ -1,7 +1,8 @@
 """Object poses at a simulation time, read from a run's motion recording.
 
 Logs of format events-60s leave poses out because the recording already holds them,
-30 times per second. The values are float32, as recorded.
+30 times per second; events-10s logs keep them every 10 s as a backup. The values are
+float32, as recorded.
 """
 import json
 from pathlib import Path

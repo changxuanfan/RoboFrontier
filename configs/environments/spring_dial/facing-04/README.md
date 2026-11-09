@@ -1,6 +1,6 @@
 # Spring Dial Codebreaker · four arms / four dials
 
-Environment and policy adapter, built 2026-10-23. No LLM trial has started.
+Environment and policy adapter, built 2026-10-23. No multimodal-agent trial has started.
 Existing beam and mosaic environments are unchanged.
 
 ## Inspect

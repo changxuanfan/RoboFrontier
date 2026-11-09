@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="docs/media/readme/banner.png" alt="RoboFrontier. Can language models run a robot world? 36 tasks, 4 families, up to 16 arms; a map of Robo World's four zones" width="100%">
+<img src="docs/media/readme/banner.png" alt="RoboFrontier. Can multimodal agents run a robot world? 36 tasks, 4 families, up to 16 arms; a map of Robo World's four zones" width="100%">
 
-**Benchmarking How LLM Agents Organize, Communicate, and Collaborate in a Multi-Robot World**
+**Can Multimodal Agents Work Together on Long Physical Tasks?**
 
 [Project page](https://changxuanfan.github.io/RoboFrontier/) ·
 [Film](https://changxuanfan.github.io/RoboFrontier/#film) ·
@@ -21,7 +21,7 @@
 
 ## What it is
 
-RoboFrontier asks language-model agents to **organize, communicate and collaborate**
+RoboFrontier asks multimodal agents to **organize, communicate and collaborate**
 across many robot arms. Every model drives the same simulated Franka arms through the
 same robot tool, sees the same cameras and follows the same rules. Nothing is scripted:
 who does what, when to wait, how to talk and how to recover are the agent's choices.
@@ -167,8 +167,8 @@ monitoring, data handoff, Oracle runs and Robo World rendering (the `factory` co
 
 ```bibtex
 @misc{robofrontier2026,
-  title  = {RoboFrontier: Benchmarking How LLM Agents Organize,
-            Communicate, and Collaborate in a Multi-Robot World},
+  title  = {RoboFrontier: Can Multimodal Agents Work Together on Long
+            Physical Tasks?},
   author = {Fan, Changxuan and others},
   year   = {2026},
   url    = {https://github.com/changxuanfan/RoboFrontier}

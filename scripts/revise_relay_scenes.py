@@ -46,10 +46,12 @@ def main(replace=False):
         if c['scene_revision']==REV:
             build(c, replace_draft=replace, render=True)
         else:
-            assert (directory(c)/'preview-top.png').exists() and (directory(c)/'preview-global.png').exists()
+            if not ((directory(c)/'preview-top.png').exists() and (directory(c)/'preview-global.png').exists()):
+                raise ValueError("Check failed: (directory(c)/'preview-top.png').exists() and (directory(c)/'preview-global.png').exists()")
         print('STATIC READY', c['id'], flush=True)
     changed = [p for p, checksum in before.items() if hashlib.sha256((ROOT/p).read_bytes()).hexdigest()!=checksum]
-    assert not changed, changed
+    if not (not changed):
+        raise ValueError(changed)
     write_json(OUT/'catalog.json', dict(revision=REV, family='relay', case_count=9, cases=data,
         source_revision=10, old_source_files_checked=len(before), old_source_changes=changed,
         physics_steps=0, oracle_run=False, policy_run=False))

@@ -47,10 +47,12 @@ def entropy_tree(codes,mode,pool_limit=96,movement_weight=.015,incumbent_neighbo
         for response in np.unique(visible):
             child=ids[visible==response]
             if response==n:
-                assert len(child)==1 and np.all(codes[child[0]]==guess)
+                if not (len(child)==1 and np.all(codes[child[0]]==guess)):
+                    raise ValueError('Check failed: len(child)==1 and np.all(codes[child[0]]==guess)')
                 continue
             new_best=max(best,int(response))
-            assert len(child)<len(ids), 'A candidate query must eliminate itself on failure'
+            if not (len(child)<len(ids)):
+                raise ValueError('A candidate query must eliminate itself on failure')
             best_input=guess if int(response)>best else incumbent
             visit(child,guess,new_best,best_input)
     visit(np.arange(size),np.zeros(n,dtype=np.uint8),-1)
@@ -82,8 +84,10 @@ def coordinate_record(codes):
                     if evaluate(candidate)>baseline:
                         incumbent=candidate;break
                 if best==n:break
-        assert best==n and np.array_equal(current,secret)
-        assert count<=1+2*n
+        if not (best==n and np.array_equal(current,secret)):
+            raise ValueError('Check failed: best==n and np.array_equal(current,secret)')
+        if not (count<=1+2*n):
+            raise ValueError('Check failed: count<=1+2*n')
         queries.append(count);moves.append(motion)
     return dict(queries=np.asarray(queries),moves=np.asarray(moves),simulation_wall_s=time.perf_counter()-start)
 
@@ -117,7 +121,7 @@ def main():
         movement_metric='Number of dial digits changed between submitted configurations, including initial0->nonzero; not robot actions or trajectory time',
         entropy_policy='Same candidate-only pool<=96, entropy minus0.015changed digits; not an optimality proof',
         coordinate_policy='Known record-incumbent, one-position alternatives; return lower-score experiments to incumbent in the next submitted configuration',
-        excluded=['Robot dynamics','Intermediate automatic feedback during motion','Grasp/recovery','Mechanical timing','LLM reasoning/cognitive error'],
+        excluded=['Robot dynamics','Intermediate automatic feedback during motion','Grasp/recovery','Mechanical timing','Multimodal-agent reasoning/cognitive error'],
         algorithm_compute_note='Decision-tree walltime shares prefixes across all passwords; not a per-episode Oracle or GPT runtime')
     (OUT/'summary.json').write_text(json.dumps(dict(assumptions=assumptions,results=summary),indent=2)+'\n')
 

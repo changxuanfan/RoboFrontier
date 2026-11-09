@@ -153,4 +153,91 @@ class MotionQueryTests(unittest.TestCase):
             with self.assertRaises(ValueError):object_poses(folder, .5)
 
 
+class SettleCountingTests(unittest.TestCase):
+    def test_only_realtime_v2_counts_settle_samples_per_tick(self):
+        self.assertEqual({PROFILES['realtime-v2'][family]['poll_stability'] for family in PROFILES['realtime-v2']}, {'per-tick'})
+        self.assertFalse(any('poll_stability' in settings for settings in PROFILES['realtime-v1'].values()))
+        for name, expected in ((None, None), ('realtime-v1', None), ('realtime-v2', 'per-tick')):
+            w = world()
+            attach(w, {'physics_profile': name} if name else {})
+            self.assertEqual(getattr(w.arms['A'], 'poll_stability', None), expected)
+
+
+class ControlFingerprintTests(unittest.TestCase):
+    NAMES = ('robot_control.py', 'sim.py', 'motion_check.py', 'task_config.py', 'pipeline.py', 'physics_profile.py')
+    HASHES = {'robofrontier/'+name: str(i)*64 for i, name in enumerate(NAMES)}
+    CONFIG = {'action_timeout_sim_s': 30., 'allowed_tcp_speed_m_s': [.01, .15], 'default_tcp_speed_m_s': .06}
+
+    def test_a_harness_without_profile_keeps_its_fingerprint(self):
+        from robofrontier.task_config import physical_control_fingerprint
+        # Values computed by the function before profiles entered the fingerprint.
+        self.assertEqual(physical_control_fingerprint(self.HASHES, self.CONFIG),
+                         '8a87768b3d75495438dc8078f67dd2a839eb45c0b25fe457cbf07b9b32e6b686')
+        self.assertEqual(physical_control_fingerprint(self.HASHES, {**self.CONFIG, 'gripper_position_servo': 'pd1000-v1'}),
+                         'f2bc459b8d219ae312c7077bb20e5104c91a9c63fe5a1cebb3a0d50b221e21d8')
+        self.assertEqual(physical_control_fingerprint(self.HASHES, {**self.CONFIG, 'physics_profile': None}),
+                         physical_control_fingerprint(self.HASHES, self.CONFIG))
+
+    def test_each_profile_and_its_source_has_its_own_fingerprint(self):
+        from robofrontier.task_config import physical_control_fingerprint
+        values = {name: physical_control_fingerprint(self.HASHES, {**self.CONFIG, 'physics_profile': name} if name else self.CONFIG)
+                  for name in (None, 'realtime-v1', 'realtime-v2')}
+        self.assertEqual(len(set(values.values())), 3)
+        edited = {**self.HASHES, 'robofrontier/physics_profile.py': 'f'*64}
+        self.assertNotEqual(physical_control_fingerprint(edited, {**self.CONFIG, 'physics_profile': 'realtime-v2'}), values['realtime-v2'])
+        self.assertEqual(physical_control_fingerprint(edited, self.CONFIG), values[None])
+
+
+# One released case per family that has every kind of part unify_contacts treats apart.
+RELEASED = {'transport': 'transport-a08-d1', 'mosaic': 'mosaic-a04-6x12-d1', 'relay': 'relay-a08-d2', 'dial': 'dial-best5-n04-d2'}
+
+
+@unittest.skipUnless(all((Path('benchmark')/family/case/'assets').is_dir() for family, case in RELEASED.items()),
+                     'Generated scene assets missing; run `python -m robofrontier.cli bootstrap`')
+class ReleasedSceneContactTests(unittest.TestCase):
+    """unify_contacts finds parts by name; these counts break if a released scene renames one."""
+    # family: (arms, hooks and eyes, module disks and stems, round geoms of loose bodies, round geoms on hinged module parts)
+    EXPECTED = {'transport': (8, 0, 0, 6, 0), 'mosaic': (4, 0, 0, 0, 0), 'relay': (8, 80, 0, 8, 0), 'dial': (8, 0, 8, 4, 4)}
+
+    def test_released_scene_names_match_the_contact_rule(self):
+        from robofrontier.physics_profile import HOOK, MODULE, ROBOT_JOINT, unify_contacts
+        for family, case in RELEASED.items():
+            with self.subTest(case=case):
+                folder = Path('benchmark')/family/case
+                task = json.loads((folder/'task.json').read_text())
+                model = mujoco.MjModel.from_xml_path(str(folder/'scene.xml'))
+                condim, friction = model.geom_condim.copy(), model.geom_friction.copy()
+                unify_contacts(model)
+                arms = {model.body(arm+'_link0').id for arm in task['arms']}
+                def under(body, roots):
+                    while body:
+                        if body in roots: return True
+                        body = int(model.body_parentid[body])
+                    return False
+                touching = [g for g in range(model.ngeom) if model.geom_contype[g] | model.geom_conaffinity[g]]
+                named = lambda pattern: [g for g in touching if pattern.search(model.geom(g).name or '')]
+                robot = [g for g in touching if under(int(model.geom_bodyid[g]), arms)]
+                free = {int(model.jnt_bodyid[j]) for j in range(model.njnt) if int(model.jnt_type[j]) == int(mujoco.mjtJoint.mjJNT_FREE)}
+                round_parts = [g for g in touching if g not in robot and int(model.geom_type[g]) in (int(mujoco.mjtGeom.mjGEOM_CYLINDER), int(mujoco.mjtGeom.mjGEOM_SPHERE))]
+                loose = [g for g in round_parts if int(model.geom_bodyid[g]) in free]
+                hinged = [g for g in round_parts if int(model.geom_bodyid[g]) not in free and under(int(model.geom_bodyid[g]), free)]
+                robot_joints = [j for j in range(model.njnt) if ROBOT_JOINT.fullmatch(model.joint(j).name or '')]
+                self.assertEqual((len(task['arms']), len(named(HOOK)), len(named(MODULE)), len(loose), len(hinged)), self.EXPECTED[family])
+                # Every arm joint is recognised, so no robot geom takes the scene's contact terms.
+                self.assertEqual(len(robot_joints), 9*len(task['arms']))
+                self.assertGreater(len(robot), 0)
+                np.testing.assert_array_equal(model.geom_condim[robot], condim[robot])
+                np.testing.assert_array_equal(model.geom_friction[robot], friction[robot])
+                for g in named(HOOK):
+                    self.assertEqual((int(model.geom_condim[g]), *model.geom_friction[g]), (int(condim[g]), *friction[g]))
+                    self.assertEqual(float(model.geom_friction[g, 0]), .5)
+                for g in named(MODULE):
+                    self.assertEqual((int(model.geom_condim[g]), float(model.geom_friction[g, 2])), (6, .03))
+                for g in loose:
+                    self.assertEqual(int(model.geom_condim[g]), 6)
+                # A round part on a hinged child body of a loose body (a Dial knob) is a moving part: condim 4.
+                for g in hinged:
+                    self.assertEqual(int(model.geom_condim[g]), 4)
+
+
 if __name__ == '__main__': unittest.main()

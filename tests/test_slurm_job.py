@@ -112,6 +112,25 @@ class SlurmJobTests(unittest.TestCase):
                 slurm.stage_out(self.local, self.submission, 0)
         self.assertFalse((self.submission/'results').exists())
 
+    def test_a_fifo_named_like_a_lock_does_not_block_stage_out(self):
+        import signal
+        self.stage()
+        run = self.local/'source/runs/policy/batch/luna/case'
+        (run/'workspace').mkdir(parents=True)
+        os.mkfifo(run/'workspace/world.lock')
+        (run/'private/state/control').mkdir(parents=True)
+        os.mkfifo(run/'private/state/control/world.lock')
+        def timeout(*_): raise TimeoutError('stage-out blocked on a FIFO')
+        previous = signal.signal(signal.SIGALRM, timeout)
+        signal.alarm(10)
+        try:
+            report = slurm.stage_out(self.local, self.submission, 1)
+        finally:
+            signal.alarm(0); signal.signal(signal.SIGALRM, previous)
+        self.assertTrue((self.submission/'results').is_dir())
+        self.assertIn({'path': str((run/'private/state/control/world.lock').resolve()), 'issue': 'nonregular lock'}, report['issues'])
+        self.assertIn('runs/policy/batch/luna/case/workspace/world.lock', [i['path'] for i in report['issues']])
+
     def test_failed_collection_returns_stopped_raw_motion_and_sessions_without_auth(self):
         self.stage()
         source = self.local/'source'
@@ -143,6 +162,90 @@ class SlurmJobTests(unittest.TestCase):
         self.assertTrue((source/'.robofrontier/codex/task/auth.json').exists())
         with self.assertRaisesRegex(ValueError, 'destination exists'):
             slurm.stage_out(self.local, self.submission, 1)
+
+    def test_raw_fallback_with_a_workspace_symlink_still_stages_motion_and_records_the_link(self):
+        self.stage()
+        source = self.local/'source'
+        run = source/'runs/policy/batch/luna/case'
+        (run/'private/outputs/motion').mkdir(parents=True)
+        (run/'private/outputs/motion/frames.bin').write_bytes(b'only copy')
+        (run/'private/state').mkdir(parents=True)
+        (run/'private/state/runtime.sqlite').write_bytes(b'stopped SQLite fixture')
+        (run/'workspace/.tmp/venv/bin').mkdir(parents=True)
+        (run/'workspace/.tmp/venv/bin/python').symlink_to('/etc/hosts')
+        (run/'workspace/linked').symlink_to(self.root, target_is_directory=True)
+        os.mkfifo(run/'workspace/pipe')
+        unreadable = run/'workspace/locked.txt'
+        unreadable.write_bytes(b'unreadable')
+        unreadable.chmod(0)
+        self.addCleanup(unreadable.chmod, 0o600)
+        report = slurm.stage_out(self.local, self.submission, 1)
+        output = self.submission/'results'
+        self.assertEqual(report['status'], 'needs_review')
+        self.assertEqual((output/'runs/policy/batch/luna/case/private/outputs/motion/frames.bin').read_bytes(), b'only copy')
+        self.assertTrue((output/'runs/policy/batch/luna/case/private/state/runtime.sqlite').is_file())
+        issues = {item['path']: item for item in report['issues']}
+        base = 'runs/policy/batch/luna/case/workspace/'
+        self.assertEqual(issues[base+'.tmp/venv/bin/python'], {'path': base+'.tmp/venv/bin/python', 'issue': 'symlink', 'link': '/etc/hosts'})
+        self.assertEqual(issues[base+'linked']['issue'], 'symlink')
+        self.assertEqual(issues[base+'pipe']['issue'], 'nonregular')
+        if os.geteuid() != 0:
+            self.assertEqual(issues[base+'locked.txt']['issue'], 'not copied')
+        self.assertFalse(any(p.is_symlink() for p in output.rglob('*')))
+        self.assertFalse((output/base/'.tmp/venv/bin/python').exists())
+        self.assertFalse((output/base/'linked').exists())
+        self.assertEqual(json.loads((output/'stage-out.json').read_text())['issues'], report['issues'])
+        for name, expected in report['sha256'].items():
+            self.assertEqual(slurm.checksum(output/name), expected)
+
+    def test_codex_session_symlink_is_recorded_not_fatal(self):
+        self.stage()
+        sessions = self.local/'source/.robofrontier/codex/task/sessions'
+        sessions.mkdir(parents=True)
+        (sessions/'session.jsonl').write_bytes(b'exact native session\n')
+        (sessions/'other.jsonl').symlink_to(self.local/'source/.robofrontier/codex/task/sessions/session.jsonl')
+        report = slurm.stage_out(self.local, self.submission, 1)
+        output = self.submission/'results'
+        self.assertEqual((output/'native-sessions/task/sessions/session.jsonl').read_bytes(), b'exact native session\n')
+        self.assertFalse((output/'native-sessions/task/sessions/other.jsonl').exists())
+        self.assertEqual([i['issue'] for i in report['issues']], ['symlink'])
+        self.assertEqual(report['status'], 'needs_review')
+
+    def test_a_fence_failing_on_exit_keeps_the_collected_archive(self):
+        from contextlib import contextmanager
+        from robofrontier.slurm_proxy import EgressError
+        self.stage()
+        source = (self.local/'source').resolve()
+        archive = source/'runs/exports/collected.zip'
+        archive.parent.mkdir(parents=True)
+        with zipfile.ZipFile(archive, 'w') as output:
+            output.writestr('manifest.json', '{}')
+        @contextmanager
+        def fenced(config, local, *, on_failure):
+            yield
+            raise EgressError('route lost after the run sealed')
+        result = {'archive': str(archive), 'status': 'closed', 'collection_complete': True}
+        with patch.object(slurm, 'ROOT', source), patch.object(slurm, 'subscription_environment', fenced), \
+                patch('robofrontier.cli.prepare'), patch('robofrontier.cli.run', return_value=result):
+            with self.assertRaises(EgressError):
+                slurm.execute(self.local)
+        written = json.loads((self.local/'execution-result.json').read_text())
+        self.assertEqual(written, {**result, 'context_failure': 'EgressError'})
+        report = slurm.stage_out(self.local, self.submission, 1)
+        self.assertFalse(report['raw_fallback'])
+        self.assertEqual(report['status'], 'needs_review')
+        self.assertEqual(report['context_failure'], 'EgressError')
+        self.assertEqual((self.submission/'results/evidence.zip').read_bytes(), archive.read_bytes())
+
+    def test_a_stop_before_start_is_recorded(self):
+        self.stage()
+        source = (self.local/'source').resolve()
+        (self.local/'STOP').touch()
+        with patch.object(slurm, 'ROOT', source), patch('robofrontier.cli.prepare'), \
+                patch('robofrontier.cli.run') as run:
+            self.assertEqual(slurm.execute(self.local), {'status': 'stopped_before_start'})
+            run.assert_not_called()
+        self.assertEqual(json.loads((self.local/'execution-result.json').read_text()), {'status': 'stopped_before_start'})
 
     def test_successful_collection_returns_only_one_evidence_zip(self):
         self.stage()

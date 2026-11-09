@@ -176,6 +176,15 @@ class SyncTests(unittest.TestCase):
         self.assertTrue(self.call(s,'Meta','shutdown')['result']['shutdown'])
         self.assertEqual(a['result']['execution_status'],'failed');self.assertEqual(s.world.executed,[])
 
+    def test_refused_shutdown_keeps_a_forming_group(self):
+        s=self.service();a=self.call(s,'A','action_batch',self.part('A'))
+        self.call(s,'C','move',{'delta_m':[0,0,.01],'wait':False})
+        self.assertIn('Resolve execution',self.call(s,'Meta','shutdown')['result']['error'])
+        from robofrontier.action_batch import groups
+        self.assertEqual(groups(s.store)['g']['state'],'collecting')
+        self.assertNotIn('SYNC_GROUP_CANCELLED',[e['kind'] for e in s.store.events()])
+        self.assertFalse(s.shutdown)
+
     def test_report_counts_actual_motion_not_cancelled_reservations(self):
         from scripts.export_run_report import export
         s=self.service();a=self.call(s,'A','action_batch',self.part('A'))

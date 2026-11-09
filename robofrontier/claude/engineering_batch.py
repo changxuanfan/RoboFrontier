@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import time
 
-from robofrontier.claude.engineering_run import _positive, run_engineering
+from robofrontier.claude.engineering_run import _check_shared_budget, _positive, run_engineering
 from robofrontier.claude.runner import build_env
 from robofrontier.claude.native_home import config_directory
 from robofrontier import run_layout
@@ -88,7 +88,7 @@ def _run_once_continued(runner, run_dir, base_env, continuing=False, **options):
     return result
 
 
-def _preflight(jobs, env, verifier, continuing=False):
+def _preflight(jobs, env, verifier, continuing=False, budgets=(None, None)):
     for job in jobs:
         run = Path(job['run_directory'])
         if _r(run, 'stop').exists() or (_r(run, 'engineering_claim').exists() and not continuing):
@@ -103,6 +103,7 @@ def _preflight(jobs, env, verifier, continuing=False):
                 or config.get('topology') not in ('centralized', 'adaptive', 'hierarchical', 'peer') or config.get('model') != profile.get('model')
                 or config.get('effort') != profile.get('effort')):
             raise ValueError('Run does not match the engineering launch profile')
+        _check_shared_budget(run, config['topology'], *budgets)
         if profile.get('auth_mode') != 'native_login' and not env.get(profile.get('env_key')):
             raise ValueError('Missing provider credential variable')
         if profile.get('provider') != 'anthropic' and not profile.get('base_url'):
@@ -186,7 +187,7 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
             jobs = [jobs[i] for i in unfinished]
         elif claim.exists(): raise ValueError('Batch already claimed; never restart')
         if _b(folder, 'stop').exists() or stop_requested(): raise ValueError('Batch was stopped before launch')
-        _preflight(jobs, base_env, verifier, continuing)
+        _preflight(jobs, base_env, verifier, continuing, (turn_budget_usd, total_budget_usd))
         if _b(folder, 'stop').exists() or stop_requested(): raise ValueError('Batch was stopped before launch')
         if continuing:
             state.setdefault('continued_at', []).append(time.time())
@@ -241,7 +242,7 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
                     try:
                         result = future.result()
                         state['jobs'][index]['status'] = 'closed' if result.get('status') == 'finished' else 'needs_review'
-                        state['jobs'][index]['reason'] = result.get('reason')
+                        state['jobs'][index]['reason'] = 'wall_backstop' if result.get('wall_backstop') else result.get('reason')
                         if result.get('segments'): state['jobs'][index]['segments'] = result['segments']
                     except Exception as error:
                         state['jobs'][index].update(status='needs_review', error_type=type(error).__name__)
