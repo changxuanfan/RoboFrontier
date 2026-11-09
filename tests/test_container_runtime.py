@@ -190,6 +190,16 @@ class ContainerRuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Supported auth'):
             self.command(['auth', 'shell', 'something'])
 
+    def test_engine_only_selection_uses_that_engines_default_profile(self):
+        settings = runtime._settings(['plan', '--engine', 'claude'], load_configuration())
+        self.assertEqual(settings['policy']['profile'],
+                         load_configuration(overrides={'policy': {'engine': 'claude'}})['policy']['profile'])
+        self.assertEqual(settings['policy']['profile'], 'haiku_subscription_token')
+        runtime._credential_environment(settings, {})
+        explicit = runtime._settings(['plan', '--engine', 'claude', '--profile', 'haiku_subscription_token'], load_configuration())
+        self.assertEqual(explicit['policy']['profile'], 'haiku_subscription_token')
+        self.assertEqual(runtime._settings(['plan', '--engine', 'codex'], load_configuration()), load_configuration())
+
     def test_invalid_container_options_fail_during_configuration_resolution(self):
         for value in ({'workspace': '../escape'}, {'workspace': 'MixedCase'},
                       {'memory_gib': -1}, {'cpus': float('nan')}, {'image': 'name with spaces'},

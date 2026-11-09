@@ -90,6 +90,11 @@ def _settings(arguments, config):
     for option in ('engine', 'profile', 'effort'):
         if getattr(options, option) is not None:
             result['policy'][option] = getattr(options, option)
+    if options.engine is not None and options.engine != config['policy']['engine'] and options.profile is None:
+        # The host profile belongs to the other engine. Select by engine only, as the
+        # native CLI does (Claude: the subscription-token profile).
+        from .configuration import load_configuration
+        result['policy']['profile'] = load_configuration(overrides={'policy': {'engine': options.engine}})['policy']['profile']
     if options.render is not None:
         result['render']['device'] = options.render
     validate_configuration(result)
