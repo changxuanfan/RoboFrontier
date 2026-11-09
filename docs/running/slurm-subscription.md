@@ -247,8 +247,11 @@ connectivity to the hosts the job's engine uses: `api.anthropic.com` for
 `--engine claude`; `chatgpt.com` and `auth.openai.com` for `--engine codex`
 (all of them must answer). These come from the same table in
 `robofrontier/slurm_proxy.py` (`ENGINE_ROUTES`) that decides which destinations
-the relay forwards, and the private Mac status lists them. The relay never
-reissues an HTTP request body. New CONNECT requests wait within the existing bounded route.
+the relay forwards, and the private Mac status lists them. Probes run every
+four seconds (each host bounded to three seconds); only three consecutive failed
+probes mark the route down, and one successful probe marks it up again. A failed
+dial or a reset read on one stream fails only that stream; it never pauses the
+route. The relay never reissues an HTTP request body. New CONNECT requests wait within the existing bounded route.
 SSH server-alive tolerances cover the configured grace rather than terminating
 the TCP connection after fifteen seconds.
 

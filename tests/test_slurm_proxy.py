@@ -560,4 +560,58 @@ class RecoverableTransportTests(RelayFixture,unittest.IsolatedAsyncioTestCase):
         self.assertIn(b'200 Connection Established',reply)
         writer.write(b'unique');await writer.drain();self.assertEqual(await reader.readexactly(6),b'unique');writer.close()
 
+    async def until(self,condition,timeout=1.5):
+        deadline=time.monotonic()+timeout
+        while not condition() and time.monotonic()<deadline:await asyncio.sleep(.01)
+        return condition()
+
+    async def test_one_stream_reset_fails_only_that_stream(self):
+        # Block the probe so only the stream failures could change route health (B-4).
+        self.mac.probe=lambda:asyncio.Event().wait()
+        pings=[];send=self.mac.frames.send
+        async def record(value):
+            if value.get('type')=='ping':pings.append(value['network_available'])
+            return await send(value)
+        self.mac.frames.send=record
+        class ResetReader:
+            async def read(self,size):raise ConnectionResetError('fixture reset by provider')
+        echo=self.echo_server.sockets[0].getsockname()[1];dials=[]
+        async def dial(host,port):
+            dials.append(host)
+            if len(dials)==1:raise ConnectionResetError('fixture dial reset')
+            _,writer=await asyncio.open_connection('127.0.0.1',echo)
+            return ResetReader(),writer
+        self.mac.dial=dial
+        for target in ('api.anthropic.com:443','chatgpt.com:443'):
+            reader,writer=await asyncio.open_connection('127.0.0.1',self.port)
+            writer.write(('CONNECT '+target+' HTTP/1.1\r\nProxy-Authorization: '+self.compute.authorization+'\r\n\r\n').encode())
+            await writer.drain()
+            await asyncio.wait_for(reader.read(),2);writer.close()
+        self.assertEqual(len(dials),2)
+        pings.clear()
+        self.assertTrue(await self.until(lambda:len(pings)>=3))
+        self.assertFalse(self.mac.upstream_failed);self.assertTrue(all(pings))
+        self.assertTrue(self.compute.upstream_ready)
+        self.assertEqual(proxy.read_record(self.directory/'ready.json')['state'],'ready')
+        reader,writer,reply=await self.request('auth.openai.com:443')
+        self.assertIn(b'200 Connection Established',reply);writer.close()
+
+    async def test_three_failed_probes_pause_and_one_success_resumes(self):
+        results=asyncio.Queue();taken=[]
+        async def probe():
+            value=await results.get();taken.append(value);return value
+        self.mac.probe=probe
+        for _ in range(2):results.put_nowait(False)  # the documented threshold is three
+        self.assertTrue(await self.until(lambda:len(taken)==2))
+        await asyncio.sleep(.1)
+        self.assertFalse(self.mac.upstream_failed)
+        self.assertEqual(proxy.read_record(self.directory/'ready.json')['state'],'ready')
+        results.put_nowait(False)
+        self.assertTrue(await self.until(lambda:self.mac.upstream_failed))
+        self.assertTrue(await self.until(lambda:proxy.read_record(self.directory/'ready.json')['state']=='paused'))
+        results.put_nowait(True)
+        self.assertTrue(await self.until(lambda:not self.mac.upstream_failed))
+        self.assertTrue(await self.until(lambda:proxy.read_record(self.directory/'ready.json')['state']=='ready'))
+        self.assertFalse(self.mac_task.done());self.assertFalse(self.compute_task.done())
+
 if __name__=='__main__':unittest.main()

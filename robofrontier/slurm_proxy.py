@@ -36,6 +36,10 @@ MAX_FRAME = 100000
 CHUNK = 8192
 WINDOW = 131072
 CHANNEL_WINDOW = 524288
+# Upstream probes run every 2*HEARTBEAT_S (4 s), each host bounded to 3 s. Only
+# this many consecutive failed probes mark the route down (about 8-17 s after
+# an outage starts); one successful probe marks it up again.
+PROBE_FAILURES = 3
 
 
 class EgressError(RuntimeError):
@@ -717,7 +721,7 @@ class MacRelay:
             if ready:failures=0;self.upstream_failed=False
             else:
                 failures+=1
-                if failures>=2:self.upstream_failed=True
+                if failures>=PROBE_FAILURES:self.upstream_failed=True
             await asyncio.sleep(HEARTBEAT_S*2)
 
     def publish(self, state):
@@ -742,8 +746,10 @@ class MacRelay:
             self.streams[identity] = {'writer': writer, 'sink': sink, 'window': window}
             await self.frames.send({'type': 'opened', 'id': identity, 'ok': True})
             await copy_to_frames(reader, self.frames, identity, window)
-        except (OSError, asyncio.TimeoutError, EgressError) as error:
-            if self.grace_s and isinstance(error,(OSError,asyncio.TimeoutError)):self.upstream_failed=True
+        except (OSError, asyncio.TimeoutError, EgressError):
+            # A failed dial or reset read fails only this stream. Route health
+            # comes from upstream_monitor alone, so one provider-side reset
+            # never pauses every world in the job.
             await self.frames.send({'type': 'opened', 'id': identity, 'ok': False})
         finally:
             self.streams.pop(identity, None); self.tasks.pop(identity, None)
