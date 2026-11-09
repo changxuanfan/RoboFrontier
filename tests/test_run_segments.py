@@ -55,10 +55,12 @@ class EligibilityTests(unittest.TestCase):
             fcntl.flock(lock, fcntl.LOCK_EX)
             self.assertEqual(self.reason(), 'a process still owns the physical world')
         limit = json.loads((self.run / 'private/inputs/task.json').read_text())['run_protocol']['total_wall_limit_s']
-        self.store.put('start_at', time.time() - limit + MIN_REMAINING_S / 2)
+        # A new run counts active time (test_active_time covers the wall clock of frozen runs).
+        self.store.put('start_at', time.time() - limit * 2)
+        self.assertEqual(self.reason(), 'no recorded motion frame')
+        self.store.put('active_s', limit - MIN_REMAINING_S / 2)
         self.assertIn('of the wall limit left', self.reason())
-        # Downtime does not count as used time.
-        self.store.put('downtime_s', MIN_REMAINING_S * 2)
+        self.store.put('active_s', limit - MIN_REMAINING_S * 2)
         self.assertEqual(self.reason(), 'no recorded motion frame')
 
     def test_only_a_seal_of_a_live_world_counts_as_a_normal_end(self):

@@ -59,8 +59,9 @@ class RuntimeService:
         self.task = json.loads((self.directory/'private/inputs/task.json').read_text())
         self.policy_budget = None
         if self.task.get('execution_readiness') == 'prepared_policy_trial':
-            from .policy_probe import BudgetGuard, protocol
-            self.policy_budget = BudgetGuard(protocol(self.task['run_protocol']['total_wall_limit_s']))
+            from .policy_probe import BudgetGuard, protocol, run_clock
+            self.policy_budget = BudgetGuard(protocol(self.task['run_protocol']['total_wall_limit_s'],
+                                                      run_clock(self.task['run_protocol'])))
         self.roles = tuple(self.store.agents())
         self.policy_roles = tuple(a for a in self.roles if self.store.agent(a)['kind'] != 'manager')
         self.tokens = {}
@@ -101,7 +102,9 @@ class RuntimeService:
         self.owns_world = True
         self.world = world_factory(self.directory, self.task)
         from .egress_pause import WorldPause
-        self.egress_pause = WorldPause(self)
+        from .network_outage import monitor_for
+        self.egress_pause = WorldPause(self, monitor_for(self.task, self.config))
+        if self.egress_pause.outage is not None: self.egress_pause.outage.start()
         self.store.event('EXECUTION_OWNER_ATTACHED', 'Meta', {'segment': self.store.get('segment', 0)})
         if resuming:
             # The trial's recorders start now; the run itself resumes on the host's `resume`.
@@ -131,6 +134,7 @@ class RuntimeService:
                 try:
                     if self.owns_world:
                         if getattr(self,'egress_pause',None) is not None:self.egress_pause.close()
+                        if getattr(self,'policy_budget',None) is not None:self.policy_budget.flush(self.store)
                         if getattr(self,'motion_check',None) is not None:
                             job,_ = self.motion_check
                             self.respond(job, {'motion_check':{'assessment':'unknown','reason':'Execution owner closed during screening','advisory_only':True}})
@@ -255,6 +259,8 @@ class RuntimeService:
         return {'schema_version': 3, 'lifecycle': self.store.get('lifecycle'), 'started': self.started,
                 'segment': self.store.get('segment', 0), 'segments': self.store.get('segments') or [],
                 'downtime_s': self.store.get('downtime_s', 0.),
+                # Active running time, kept only by runs whose protocol counts it (policy_probe.BudgetGuard).
+                **({'active_s': self.store.get('active_s')} if self.store.get('active_s') is not None else {}),
                 'ended': self.ended, 'sim_time_s': float(self.world.time) if self.world else None, 'agents': agents,
                 'unread': {a: self.store.pending(a)['messages'] for a in self.policy_roles},
                 'messages': [self.store._message(r) for r in self.store.db.execute('SELECT * FROM messages ORDER BY seq')],

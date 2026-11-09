@@ -23,6 +23,7 @@ from robofrontier.claude.runner import build_env
 from robofrontier.claude.native_home import config_directory
 from robofrontier.claude.supervisor import CentralizedSupervisor
 from robofrontier.claude.standing_team import StandingTeamPolicyHost
+from robofrontier.policy_probe import run_clock
 from robofrontier.run_seal import seal_run
 from robofrontier.run_setup import verify_inputs, write_json
 from robofrontier.task_config import ROOT
@@ -81,6 +82,12 @@ def _evaluation_present(run):
         return isinstance(evaluation, dict) and isinstance(evaluation.get('task_success'), bool)
     except (OSError, ValueError, TypeError):
         return False
+
+
+def _time_rule(run):
+    """The clock the run's frozen protocol counts its limit by (policy_probe.run_clock)."""
+    task = run/'private/inputs/task.json'
+    return run_clock((json.loads(task.read_text()).get('run_protocol') or {}) if task.is_file() else {})
 
 
 def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400, startup_timeout_s=120,
@@ -200,6 +207,7 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
         supervisor = CentralizedSupervisor(policy, lambda: owner.poll() is None,
                                             stop_requested=lambda: run_layout.path(run, 'stop', 'claude').exists(),
                                             startup_timeout_s=startup_timeout_s, wall_limit_s=wall_limit_s,
+                                            time_rule=_time_rule(run),
                                             poll_s=poll_s, clock=clock, sleep=sleep)
         result = supervisor.run()
     except Exception as error:
