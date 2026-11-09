@@ -14,8 +14,9 @@ fields are copied into the outputs.
   run_analysis.py session-archive package.tar.gz ... --out sessions.json
 
 Object poses (lost items, goal positions) and Dial angles come from each run's motion recording
-when its process log is events-60s, which keeps poses only every 60 s (`--motion always` reads
-the recording for every run that has one).
+when its process log is events-60s, which keeps poses only every 60 s, or events-10s, which keeps
+them every 10 s (`--motion always` reads the recording for every run that has one). An events-10s
+log without a recording is read at its 10 s sampling.
 
 Every command exits 1 when a selected run is missing, fails or lacks the data it needs;
 the failing ids are printed, and dial-turns and atomic-v2 also write them beside --out
@@ -122,7 +123,7 @@ def main(argv=None):
             choices=extract.MOTION_MODES,
             default='sparse',
             help='read object poses and dial angles from the motion recording only for '
-            'events-60s logs (sparse, default) or for every run that has one (always)',
+            'events-60s and events-10s logs (sparse, default) or for every run that has one (always)',
         )
     s = sub.add_parser('compute')
     s.add_argument('--extracted', required=True)

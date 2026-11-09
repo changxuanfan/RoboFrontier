@@ -112,9 +112,11 @@ def run_dial_turns(run, dwell_s=DIAL_DWELL_S, motion='sparse'):
     The evaluator log is found as extract.suite finds it; a run without one raises
     FileNotFoundError. The trial is cut per segment and at the trial cutoff (extract.trial_rows).
     Angles come from the motion recording, every 30 Hz frame, when extract.use_motion says so
-    (always for a sparse 'events-60s' log, which has angles only every 60 s) and the run has
-    one; otherwise from the log rows. A sparse log without a recording cannot show turns, so
-    `turns` is None and `unknown` says why. `source` names where the angles came from."""
+    (always for a sparse 'events-60s' log, which has angles only every 60 s, and a coarse
+    'events-10s' log) and the run has one; otherwise from the log rows, which for 'events-10s'
+    see a turn only once a snapshot or event row shows the dial at its new mark. A sparse log
+    without a recording cannot show turns, so `turns` is None and `unknown` says why.
+    `source` names where the angles came from."""
     n = run.find(*extract.SUITE_LOGS)
     if not n:
         raise FileNotFoundError('No evaluator log (suite-process.jsonl) in run ' + run.k)

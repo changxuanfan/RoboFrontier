@@ -162,6 +162,22 @@ class TransportFromMotionTests(unittest.TestCase):
         self.assertEqual(S['objects_source'], 'motion')
         self.assertAlmostEqual(S['lost']['A_item2'], 75.4, places=6)
 
+    def test_events_10s_logs_prefer_the_recording_and_fall_back_to_their_poses(self):
+        t = frames(0, 120)
+        rows = [header('events-10s')]
+        for s in sorted(set(range(0, 121, 10)) | {30, 120}):
+            a = {'g1': 'A_item1'} if s >= 30 else {}
+            obj = {'A_item1': {'position_m': [0.3, 0.1, 0.8]}, 'A_item2': {'position_m': [0, 0, -0.5 if s >= 80 else 0.8]}}
+            rows.append(snap(float(s), obj, assignments=a, matched_goals=len(a), total_goals=2))
+        f = self.run_with('t10', rows, [('motion', t, transport_states(t, fall_at=75.4))])
+        S = f.extract('transport')['suite']
+        self.assertEqual(S['objects_source'], 'motion')
+        self.assertAlmostEqual(S['lost']['A_item2'], 75.4, places=6)
+        g = self.run_with('t10-bare', rows, [])
+        S = g.extract('transport')['suite']
+        self.assertEqual((S['objects_source'], S['lost'], S.get('objects_unknown')),
+                         ('process log', {'A_item2': 80.0}, None))
+
     def test_chunks_missing_from_an_unclosed_index_are_read(self):
         t = frames(0, 120)
         f = Fixture(self.tmp, 'open')
