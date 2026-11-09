@@ -76,3 +76,6 @@ as its source stay in `configs/environments/` as provenance.
 Frozen runs, Oracle recordings, review packages and the asset archive name files
 by their earlier paths. `robofrontier.task_families.current_path` translates those names
 through `legacy-paths.json`, and `legacy_bytes` returns a moved file's original bytes.
+The nine Relay Oracle rows in `release.json` name the roomscript2 checkout they were
+recorded in; `oracle_recording` finds a released recording under `runs/oracle/` (or
+where it was recorded) and names it when this host does not have it.

@@ -171,5 +171,30 @@ class FamilyReleaseTests(unittest.TestCase):
                 load_harness(bad)
 
 
+class OracleRecordingTests(unittest.TestCase):
+    # Relay rows name the roomscript2 checkout they were recorded in.
+    OLD = '/Users/fanchangxuan/Repos/roomscript2/runs/oracle/relay-test/relay-a08-d1/attempt-001/motion'
+    NEW = 'runs/oracle/relay-test/relay-a08-d1/attempt-001/motion'
+
+    def test_every_released_recording_maps_into_the_checkout(self):
+        from robofrontier.task_families import current_path
+        for family in read(ROOT/RELEASE)['families'].values():
+            for row in family['oracle']:
+                with self.subTest(case=row['id']):
+                    self.assertFalse(Path(current_path(row['recording'])).is_absolute())
+
+    def test_a_recording_resolves_under_root_or_is_named_when_missing(self):
+        import re
+        from robofrontier.task_families import oracle_recording
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaisesRegex(FileNotFoundError, 'not on this host: '+re.escape(self.OLD)):
+                oracle_recording(self.OLD, root)
+            (root/self.NEW).mkdir(parents=True)
+            self.assertEqual(oracle_recording(self.OLD, root), root/self.NEW)
+            self.assertEqual(oracle_recording(self.NEW, root), root/self.NEW)
+            self.assertEqual(oracle_recording(str(root/self.NEW), ROOT), root/self.NEW)
+
+
 if __name__ == '__main__':
     unittest.main()

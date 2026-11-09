@@ -81,4 +81,16 @@ class FactoryTimelineTests(unittest.TestCase):
         self.assertEqual(camera_at(plan,0),camera_at(plan,sum(p['duration_s']for p in plan)))
 
 
+class ReleasedRecordingTests(unittest.TestCase):
+    def test_a_recording_missing_from_this_host_is_named(self):
+        import tempfile
+        from robofrontier.motion_recording import digest
+        old='/Users/fanchangxuan/Repos/roomscript2/runs/oracle/relay-absent/relay-a08-d1/attempt-001/motion'
+        with tempfile.TemporaryDirectory() as tmp:
+            edit=Path(tmp)/'edit.json';edit.write_text('{}')
+            spec=dict(id='relay-a08-d1',recording=old,directory=tmp,edit=str(edit),edit_sha256=digest(edit))
+            with self.assertRaisesRegex(FileNotFoundError,'Released Oracle recording is not on this host: '+old):
+                StationTrack(spec,10)
+
+
 if __name__=='__main__':unittest.main()

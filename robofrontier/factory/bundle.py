@@ -231,7 +231,11 @@ def export(output, scene, release, cameras, asset, source_root):
                 for field in PATH_FIELDS:
                     if field not in spec:
                         continue
-                    original = (source_root/spec[field]).resolve()
+                    if field == 'recording':
+                        from ..task_families import oracle_recording
+                        original = oracle_recording(spec[field], source_root).resolve()
+                    else:
+                        original = (source_root/spec[field]).resolve()
                     directory = original.parent if field == 'edit' else original
                     # One copy per source folder, even when several display cases
                     # explicitly reuse one recording. Archive hardlinks share bytes.
