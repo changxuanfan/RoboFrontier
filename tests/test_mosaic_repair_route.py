@@ -70,4 +70,34 @@ class RepairRouteTests(unittest.TestCase):
         with self.assertRaises(ValueError):choose(self.rows(),'C',['A'],['A','B','C'],[frozenset(('B','C'))])
 
 
+    def trial(self,root):
+        import json
+        from pathlib import Path
+        root=Path(root);review=root/'trial/review';(review/'requests').mkdir(parents=True);(review/'engineering').mkdir()
+        task=dict(goals=[dict(goal_id='g1',requires=dict(color='red'),position_m=[1,0,.8])],objects=[dict(id='o1',color='red')],
+            table_height_m=.7,scene_sha256='s')
+        (root/'trial/task.json').write_text(json.dumps(task))
+        (review/'observation.json').write_text(json.dumps(dict(world_id='w',review_id=1,job=dict(object='o1'),held=dict(C='o1'),
+            evaluation=dict(violations=[],assignments={}),objects=dict(o1=dict(position_m=[0,0,.9])),
+            robots=dict(C=dict(grasp_force_setpoint_n=5.),B=dict(grasp_force_setpoint_n=None)))))
+        (root/'trial/coverage.json').write_text(json.dumps(dict(goals=dict(g1=['B']))))
+        (root/'src').mkdir();(root/'src/task.json').write_text(json.dumps(dict(scene_sha256='s')))
+        (root/'src/buffers.json').write_text(json.dumps(dict(table_buffers=[dict(robots=['C','B'],position_m=[.5,0,.8],angled_grasp=None)])))
+        import argparse
+        return review,argparse.Namespace(trial=root/'trial',buffers_source=root/'src/buffers.json',goal='g1',object=None,id='X',resume=False)
+
+    def test_rerun_never_replaces_the_issued_route_evidence(self):
+        import tempfile
+        from scripts.execute_mosaic_repair_route import run
+        with tempfile.TemporaryDirectory() as temporary:
+            review,args=self.trial(temporary)
+            (review/'requests/route-X-stage.json').write_text('{}')
+            route=review/'engineering/X-route.json';route.write_text('{"path": ["C", "A"]}')
+            with self.assertRaisesRegex(ValueError,'Do not rerun'):run(args)
+            self.assertEqual(route.read_text(),'{"path": ["C", "A"]}')
+            route.unlink()
+            with self.assertRaisesRegex(ValueError,'Do not rerun'):run(args)
+            self.assertFalse(route.exists())
+
+
 if __name__=='__main__':unittest.main()
