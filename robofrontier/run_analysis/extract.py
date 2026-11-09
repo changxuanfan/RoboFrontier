@@ -463,6 +463,22 @@ def host(run):
     return H
 
 
+CID = re.compile(r'"call_id":"([^"]+)"')
+
+
+def call_id(line):
+    """The call_id of a Codex rollout tool call or output. Rollouts write it after the
+    arguments, so it can be anywhere in a long line."""
+    try:
+        c = (json.loads(line).get('payload') or {}).get('call_id')
+        if isinstance(c, str):
+            return c
+    except (ValueError, AttributeError):
+        pass
+    m = CID.search(line)
+    return m.group(1) if m else None
+
+
 def transcripts(run):
     """Model-busy spans per actor from Codex transcripts or Claude native sessions."""
     spans = []
@@ -471,7 +487,6 @@ def transcripts(run):
     if idx:
         src = 'codex-transcript'
         TS = re.compile(r'"timestamp":"([^"]+)"')
-        CID = re.compile(r'"call_id":"([^"]+)"')
         base = idx.rsplit('/transcripts/', 1)[0] + '/transcripts/'
         I = json.loads(run.read(idx)).get('threads') or []
         for th in I:
@@ -503,16 +518,16 @@ def transcripts(run):
                     state = None
                     opened = {}
                 elif '"type":"function_call"' in h or '"type":"custom_tool_call"' in h:
-                    c = CID.search(line[:900])
+                    c = call_id(line)
                     if state == 'model' and since:
                         spans.append([th['actor'], since, t])
                         state = 'tool'
                     if c:
-                        opened[c.group(1)] = 1
+                        opened[c] = 1
                 elif '"function_call_output"' in h or '"custom_tool_call_output"' in h:
-                    c = CID.search(line[:400])
-                    if c and c.group(1) in opened:
-                        opened.pop(c.group(1))
+                    c = call_id(line)
+                    if c and c in opened:
+                        opened.pop(c)
                         if not opened and state == 'tool':
                             state = 'model'
                             since = t
