@@ -17,7 +17,10 @@ import collections
 import json
 import math
 
+import numpy as np
+
 from . import extract
+from . import motion as trial_motion
 from . import metrics as M
 
 DIAL_MARK_DEG = 60.0
@@ -40,40 +43,78 @@ def dial_turns(lines, dwell_s=DIAL_DWELL_S):
     return dial_turns_rows(rows, dwell_s)
 
 
+class DialSettle:
+    """The Dial turn rule over angle samples in trial order (log rows or motion frames).
+
+    A dial is at a mark while its angle is within DIAL_BAND_DEG of a multiple of DIAL_MARK_DEG.
+    It settles once samples at least `dwell_s` apart show it at the same mark with no sample
+    between at another mark or between marks; a settle at a mark other than the dial's last
+    settled one is a turn, timed when the dial reached that mark."""
+
+    def __init__(self, dwell_s=DIAL_DWELL_S):
+        self.dwell_s = dwell_s
+        self.cur = None  # per dial: [mark or None, time reached, settled already]
+        self.settled = None
+        self.found = []  # [sim time the settle was seen, dial, time reached]
+
+    def feed(self, times, degrees):
+        """Samples `times` (n,) and angles `degrees` (n, dials), in time order."""
+        times = np.asarray(times, dtype=float)
+        A = np.asarray(degrees, dtype=float).reshape(len(times), -1)
+        if not len(times):
+            return
+        if self.cur is None:
+            self.cur = [[None, times[0], False] for _ in range(A.shape[1])]
+            self.settled = [None] * A.shape[1]
+        q = np.round(A / DIAL_MARK_DEG)
+        at = np.abs(A - DIAL_MARK_DEG * q) <= DIAL_BAND_DEG
+        code = np.where(at, q, np.nan)
+        for k in range(A.shape[1]):
+            c = code[:, k]
+            same = (c[1:] == c[:-1]) | (np.isnan(c[1:]) & np.isnan(c[:-1]))
+            cuts = np.flatnonzero(~same) + 1
+            for s, e in zip(np.r_[0, cuts], np.r_[cuts, len(c)]):
+                b = None if np.isnan(c[s]) else int(c[s])
+                cur = self.cur[k]
+                first = s
+                if b != cur[0]:
+                    cur[:] = [b, float(times[s]), False]
+                    first = s + 1  # the sample that reached a mark only starts its dwell
+                if b is None or cur[2]:
+                    continue
+                hit = np.flatnonzero(times[first:e] - cur[1] >= self.dwell_s)
+                if len(hit):
+                    cur[2] = True
+                    if self.settled[k] is not None and b != self.settled[k]:
+                        self.found.append([float(times[first + hit[0]]), k, cur[1]])
+                    self.settled[k] = b
+
+    def turns(self):
+        """[[sim_s reached, dial], ...] in the order the settles were seen."""
+        return [[t, k] for _, k, t in sorted(self.found, key=lambda x: (x[0], x[1]))]
+
+
 def dial_turns_rows(rows, dwell_s=DIAL_DWELL_S):
     """As dial_turns, from parsed evaluator rows in trial order."""
-    cur = settled = done = None
-    steps = []
+    rule = DialSettle(dwell_s)
     for x in rows:
         A = (x.get('result') or {}).get('private_angles_deg')
         t = extract.row_sim(x)
         if A is None or t is None:
             continue
-        if cur is None:
-            cur = [(None, t)] * len(A)
-            settled = [None] * len(A)
-            done = [False] * len(A)
-        for k, a in enumerate(A):
-            q = round(a / DIAL_MARK_DEG)
-            b = q if abs(a - DIAL_MARK_DEG * q) <= DIAL_BAND_DEG else None
-            if b != cur[k][0]:
-                cur[k] = (b, t)
-                done[k] = False
-            elif b is not None and not done[k] and t - cur[k][1] >= dwell_s:
-                done[k] = True
-                if settled[k] is not None and b != settled[k]:
-                    steps.append([cur[k][1], k])
-                settled[k] = b
-    return steps
+        rule.feed([t], [A])
+    return rule.turns()
 
 
-def run_dial_turns(run, dwell_s=DIAL_DWELL_S):
+def run_dial_turns(run, dwell_s=DIAL_DWELL_S, motion='sparse'):
     """Dial turns of an `archive.Run` within the trial: {'turns': [...], 'unknown': None, ...}.
 
     The evaluator log is found as extract.suite finds it; a run without one raises
-    FileNotFoundError. Rows are cut per segment and at the trial cutoff (extract.trial_rows).
-    A sparse log ('events-60s', angles only every 60 s) cannot show turns, so `turns` is None
-    and `unknown` says why."""
+    FileNotFoundError. The trial is cut per segment and at the trial cutoff (extract.trial_rows).
+    Angles come from the motion recording, every 30 Hz frame, when extract.use_motion says so
+    (always for a sparse 'events-60s' log, which has angles only every 60 s) and the run has
+    one; otherwise from the log rows. A sparse log without a recording cannot show turns, so
+    `turns` is None and `unknown` says why. `source` names where the angles came from."""
     n = run.find(*extract.SUITE_LOGS)
     if not n:
         raise FileNotFoundError('No evaluator log (suite-process.jsonl) in run ' + run.k)
@@ -82,12 +123,22 @@ def run_dial_turns(run, dwell_s=DIAL_DWELL_S):
     blocks = extract.log_blocks(run, n)
     formats = sorted({b['format'] for b in blocks if b['format']})
     low = [f for f in formats if f in extract.LOW_RESOLUTION]
-    out = dict(turns=None, unknown=None, formats=formats, cutoff_sim=sim)
+    out = dict(turns=None, unknown=None, formats=formats, cutoff_sim=sim, source=None)
+    rec = trial_motion.find(run, n, sim) if extract.use_motion(formats, motion) else None
+    if rec is not None:
+        rule = DialSettle(dwell_s)
+        for t, A in trial_motion.dial_angles(rec):
+            rule.feed(t, A)
+        out.update(turns=rule.turns(), source='motion')
+        return out
     if low:
-        out['unknown'] = 'process log %s records dial angles only every 60 s' % '/'.join(low)
+        out['unknown'] = (
+            'process log %s records dial angles only every 60 s and the run has no motion recording'
+            % '/'.join(low)
+        )
         return out
     rows = (d for _, _, d in extract.trial_rows(run, n, sim, blocks))
-    out['turns'] = dial_turns_rows(rows, dwell_s)
+    out.update(turns=dial_turns_rows(rows, dwell_s), source='process log')
     return out
 
 

@@ -13,6 +13,10 @@ fields are copied into the outputs.
       --dial-turns dial-turns.json --out atomic-v2.json
   run_analysis.py session-archive package.tar.gz ... --out sessions.json
 
+Object poses (lost items, goal positions) and Dial angles come from each run's motion recording
+when its process log is events-60s, which keeps poses only every 60 s (`--motion always` reads
+the recording for every run that has one).
+
 Every command exits 1 when a selected run is missing, fails or lacks the data it needs;
 the failing ids are printed, and dial-turns and atomic-v2 also write them beside --out
 (`<out>.errors.json`, `<out>.skipped.json`). Extraction writes each record atomically and
@@ -48,12 +52,12 @@ def _write_atomic(path, text):
 
 
 def _extract(job):
-    sel, root, cache, out = job
+    sel, root, cache, out, motion = job
     target = Path(out) / f"{sel['id']}.json"
     if target.exists() and _valid_record(target):
         return sel['id'], 'skip'
     try:
-        _write_atomic(target, json.dumps(extract.extract_run(sel, root, cache), ensure_ascii=False))
+        _write_atomic(target, json.dumps(extract.extract_run(sel, root, cache, motion), ensure_ascii=False))
         return sel['id'], 'ok'
     except Exception:
         return sel['id'], 'FAIL ' + traceback.format_exc()[-400:]
@@ -69,13 +73,13 @@ def _compute(path):
 
 def _turns(job):
     """(id, turns or None, error or None); None turns without error: not a Dial run."""
-    sel, root, cache = job
+    sel, root, cache, motion = job
     if sel.get('family') not in (None, 'dial'):
         return sel['id'], None, None
     try:
         run = Run(sel['k'], root, cache)
         try:
-            return sel['id'], atomic_v2.run_dial_turns(run), None
+            return sel['id'], atomic_v2.run_dial_turns(run, motion=motion), None
         finally:
             run.close()
     except Exception:
@@ -113,6 +117,13 @@ def main(argv=None):
         s.add_argument('--out', required=True)
         s.add_argument('--cache-dir', help='tar member index cache (default: system temp)')
         s.add_argument('--workers', type=int, default=6)
+        s.add_argument(
+            '--motion',
+            choices=extract.MOTION_MODES,
+            default='sparse',
+            help='read object poses and dial angles from the motion recording only for '
+            'events-60s logs (sparse, default) or for every run that has one (always)',
+        )
     s = sub.add_parser('compute')
     s.add_argument('--extracted', required=True)
     s.add_argument('--out', required=True)
@@ -131,7 +142,7 @@ def main(argv=None):
         runs = json.loads(Path(a.runs).read_text())
         if a.cmd == 'extract':
             Path(a.out).mkdir(parents=True, exist_ok=True)
-            jobs = [(r, a.root, a.cache_dir, a.out) for r in runs]
+            jobs = [(r, a.root, a.cache_dir, a.out, a.motion) for r in runs]
             failed = []
             with ProcessPoolExecutor(a.workers) as ex:
                 for rid, status in ex.map(_extract, jobs):
@@ -143,7 +154,7 @@ def main(argv=None):
             return 1 if failed else 0
         turns, errors = {}, {}
         with ProcessPoolExecutor(a.workers) as ex:
-            for rid, value, err in ex.map(_turns, [(r, a.root, a.cache_dir) for r in runs]):
+            for rid, value, err in ex.map(_turns, [(r, a.root, a.cache_dir, a.motion) for r in runs]):
                 if err:
                     errors[rid] = err
                     print('FAIL', rid, err.strip().splitlines()[-1], file=sys.stderr)

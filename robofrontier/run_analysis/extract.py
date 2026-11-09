@@ -3,6 +3,7 @@
 import collections, contextlib, json, lzma, os, re, shutil, sqlite3, tempfile, datetime
 from pathlib import Path
 
+from . import motion as trial_motion
 from .archive import Run
 
 
@@ -176,6 +177,16 @@ SUITE_LOGS = (
 # Process-log formats whose rows are too sparse to recover object poses or dial turns:
 # 'events-60s' writes poses only in the final row when the scene records motion.
 LOW_RESOLUTION = ('events-60s',)
+# Where object poses and dial angles come from: 'sparse' reads the motion recording for runs
+# whose process log is low resolution and the log otherwise; 'always' reads the recording of
+# every run that has one. They differ on events-1s logs only by the log's 1 s sampling.
+MOTION_MODES = ('sparse', 'always')
+
+
+def use_motion(formats, mode):
+    if mode not in MOTION_MODES:
+        raise ValueError('motion mode must be one of %s, not %r' % (MOTION_MODES, mode))
+    return mode == 'always' or any(f in LOW_RESOLUTION for f in formats)
 
 
 def is_header(line):
@@ -238,13 +249,19 @@ def trial_rows(run, n, cutoff_sim=None, blocks=None):
         yield i, t, d
 
 
-def suite(run, cutoff_sim=None):
+def suite(run, cutoff_sim=None, motion='sparse'):
+    """Evaluator timeline of the trial from the process log.
+
+    Lost items and the position of each goal's item when first assigned come from the motion
+    recording when `use_motion` says so and the run has one (`objects_source`); a sparse log
+    without a recording leaves them unknown (None, with `objects_unknown`)."""
     n = run.find(*SUITE_LOGS)
     if not n:
         return None
     blocks = log_blocks(run, n)
     formats = sorted({b['format'] for b in blocks if b['format']})
     low = any(f in LOW_RESOLUTION for f in formats)
+    want_motion = use_motion(formats, motion)
     S = dict(
         fam=None,
         total=None,
@@ -288,6 +305,7 @@ def suite(run, cutoff_sim=None):
     blk_v = blk_carry = None
     obj_rows = 0
     last_obj = False
+    goal_rows = False
     for i, t, d in trial_rows(run, n, cutoff_sim, blocks):
         if i != blk:
             if blk_v is not None:
@@ -312,6 +330,7 @@ def suite(run, cutoff_sim=None):
                     x['pos'] = (objs.get(x['item']) or {}).get('position_m')
                 pend.discard(g)
         if 'assignments' in r:
+            goal_rows = True
             a = r['assignments'] or {}
             m = num(r.get('matched_goals'))
             S['total'] = r.get('total_goals', S['total'])
@@ -396,11 +415,25 @@ def suite(run, cutoff_sim=None):
     S['viol'] = list(S['viol'].values())
     S['goals_final'] = prev_assign
     S.pop('z0', None)
-    # A sparse log has object poses only in its final row: lost items and the positions of
-    # delivered goals are unknown, not zero (they would need the motion recording).
     S['object_rows'] = obj_rows
-    if low and obj_rows - last_obj <= 0:
-        S['objects_unknown'] = 'process log %s has no object poses before its final row' % '/'.join(formats)
+    S['objects_source'] = 'process log' if goal_rows else None
+    if not goal_rows:
+        return S
+    rec = trial_motion.find(run, n, cutoff_sim) if want_motion else None
+    if rec is not None:
+        S['objects_source'] = 'motion'
+        S['lost'] = trial_motion.lost_items(rec, [o['id'] for o in rec.task['objects']])
+        pos = trial_motion.positions_at(rec, [(g, x['item'], x['t']) for g, x in S['goals'].items()])
+        for g, x in S['goals'].items():
+            x['pos'] = pos[g]
+    elif low and obj_rows - last_obj <= 0:
+        # Object poses only in the final row and no recording: lost items and the positions
+        # of delivered goals are unknown, not zero.
+        S['objects_source'] = None
+        S['objects_unknown'] = (
+            'process log %s has no object poses before its final row and the run has no motion recording'
+            % '/'.join(formats)
+        )
         S['lost'] = None
         for g in S['goals'].values():
             g['pos'] = None
@@ -798,11 +831,12 @@ def _transcripts(run):
     return spans, src
 
 
-def extract_run(sel, root, cache_dir=None):
+def extract_run(sel, root, cache_dir=None, motion='sparse'):
     """Compact record of one run. `sel` needs `id` and the archive key `k`; it is stored as is.
 
     Everything is cut at the trial cutoff (`cutoff`, see trial_cutoff): post-cutoff work
-    never counts toward outcome, steps, time or tokens."""
+    never counts toward outcome, steps, time or tokens. `motion` chooses where object poses
+    come from (see MOTION_MODES)."""
     run = Run(sel['k'], root, cache_dir)
     try:
         O = dict(sel=sel, kind=run.kind, nfiles=len(run.files), parse_errors=[])
@@ -813,7 +847,7 @@ def extract_run(sel, root, cache_dir=None):
         O['actions'] = A
         O['meta'] = M
         O['msgT'] = msgT
-        O['suite'] = suite(run, cut and cut['sim'])
+        O['suite'] = suite(run, cut and cut['sim'], motion)
         O['host'] = H = host(run, cut and cut['unix'])
         if H and H['engine'] == 'claude':
             late, count = claude_late_usage(run, H, cut and cut['unix'])
