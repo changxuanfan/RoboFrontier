@@ -42,7 +42,7 @@ An outer Desktop session, another coding agent, or a shell can invoke and monito
 the commands: prepare, launch, inspect engineering errors, stop and collect. It
 need not use the same model or engine as the evaluated policy, and selecting the
 Claude policy engine does not require the outer manager to be Claude Desktop. No
-outer LLM session is needed at all. The measured policy runs in independent
+outer agent session is needed at all. The measured policy runs in independent
 native sessions; an outer chat does not have to remain inside a tool turn.
 
 The selected engine profile and frozen runtime configuration determine the

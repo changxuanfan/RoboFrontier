@@ -333,7 +333,7 @@ def build(directory=DEFAULT_DIRECTORY):
         "initial_penetrations_over_1mm": contacts,
         "settling_duration_s": settling_duration_s,
         "settling": stability,
-        "scope": "Scene-load, contact and passive-settling check only; no arm manipulation or LLM policy trial.",
+        "scope": "Scene-load, contact and passive-settling check only; no arm manipulation or multimodal-agent policy trial.",
     }
     _write_json(directory / "parameters.json", p)
     _write_json(directory / "environment.json", env)
@@ -346,7 +346,7 @@ def build(directory=DEFAULT_DIRECTORY):
         "contacts the tabletop. The module is not welded or propped up; this motion comes from free-body dynamics and contact geometry.\n\n"
         "The scene includes two Panda arms facing each other across the disk. The intended manipulation concept is one arm "
         "stabilizing the blue rear handle while the other grasps and turns the red knob. That behavior has not yet "
-        "been tested. No task policy, dial-angle command, or LLM trial is included.\n\n"
+        "been tested. No task policy, dial-angle command, or multimodal-agent trial is included.\n\n"
         "Inspect `preview-global.png`, `preview-front.png`, `preview-side.png`, and `preview-close.png`. "
         "`validation.json` records scene loading, distal handle contact, and 60 seconds of passive settling.\n"
     )

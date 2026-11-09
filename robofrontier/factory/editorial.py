@@ -227,7 +227,7 @@ def _create_verified(data_root, output):
         k: deepcopy(r['camera'][k]) for k in ('position_m', 'target_m', 'vertical_fov_deg')}} for r in keys]
     tasks = {s['id']:bundle.read(Path(s['directory'])/'task.json')
              for family in bundle.resolved_release(data_root)['families'].values() for s in family['oracle']}
-    titles = [(0., 10., 'RoboFrontier\nBenchmarking How LLM Agents Organize, Communicate,\nand Collaborate in a Multi-Robot World')]
+    titles = [(0., 10., 'RoboFrontier\nCan Multimodal Agents Work Together\non Long Physical Tasks?')]
     subtitles = [(0., 11.5, 'Four task families. Thirty-six workstations.\nRecorded physical state replayed in a complex Factory background.')]
     descriptions = {
         'relay': 'Relay | Carry beam assemblies through coordinated support and handovers.',
