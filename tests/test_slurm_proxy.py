@@ -27,6 +27,58 @@ class DestinationTests(unittest.TestCase):
             self.assertFalse(proxy.target_allowed(host, port), host)
 
 
+class EngineProbeTests(unittest.IsolatedAsyncioTestCase):
+    """Route health follows the hosts the job's own engine uses (B-3)."""
+    def relay(self, engine, failing=()):
+        dialled = []
+        async def probe_dial(host):
+            dialled.append(host)
+            if host in failing: raise ConnectionRefusedError('fixture')
+            return True
+        return proxy.MacRelay(None, grace_s=60, probe_hosts=proxy.probe_hosts(engine), probe_dial=probe_dial), dialled
+
+    def test_probe_hosts_come_from_the_relayed_destination_table(self):
+        self.assertEqual(proxy.probe_hosts('claude'), ('api.anthropic.com',))
+        self.assertEqual(set(proxy.probe_hosts('codex')), {'chatgpt.com', 'auth.openai.com'})
+        for engine, route in proxy.ENGINE_ROUTES.items():
+            for host in proxy.probe_hosts(engine):
+                self.assertTrue(proxy.target_allowed(host, 443, route['domains']), host)
+        with self.assertRaises(proxy.EgressError): proxy.probe_hosts('gemini')
+        with self.assertRaises(proxy.EgressError): proxy.MacRelay(None, grace_s=60)
+        with self.assertRaises(proxy.EgressError): proxy.MacRelay(None, grace_s=60, probe_hosts=('example.com',))
+
+    async def test_claude_route_stays_available_when_only_openai_auth_fails(self):
+        relay, dialled = self.relay('claude', failing=('auth.openai.com',))
+        self.assertTrue(await relay.probe_upstream())
+        self.assertEqual(dialled, ['api.anthropic.com'])
+        with patch.object(proxy, 'HEARTBEAT_S', .005):
+            monitor = asyncio.create_task(relay.upstream_monitor())
+            await asyncio.sleep(.1); monitor.cancel(); await asyncio.gather(monitor, return_exceptions=True)
+        self.assertFalse(relay.upstream_failed)
+        self.assertGreater(len(dialled), 3)
+
+    async def test_codex_route_needs_every_engine_host(self):
+        relay, dialled = self.relay('codex')
+        self.assertTrue(await relay.probe_upstream())
+        self.assertEqual(set(dialled), {'chatgpt.com', 'auth.openai.com'})
+        for host in ('chatgpt.com', 'auth.openai.com'):
+            self.assertFalse(await self.relay('codex', failing=(host,))[0].probe_upstream(), host)
+        self.assertFalse(await self.relay('claude', failing=('api.anthropic.com',))[0].probe_upstream())
+
+    def test_connector_requires_an_engine_for_short_outage_recovery(self):
+        base = ['connect', '--ssh-host', 'cluster', '--job-id', '123', '--state-root', '/private/egress',
+                '--remote-script', '/private/helper.py']
+        started = []
+        async def connect(args): started.append(args.engine)  # never reaches SSH in this test
+        with patch.object(proxy, 'connect', connect):
+            for extra in (['--pause-grace-s', '120'], ['--pause-grace-s', '120', '--engine', 'gemini']):
+                with patch('sys.stderr'), self.assertRaises(SystemExit):
+                    proxy.main([*base, *extra])
+            self.assertEqual(started, [])
+            self.assertEqual(proxy.main([*base, '--pause-grace-s', '120', '--engine', 'claude']), 0)
+        self.assertEqual(started, ['claude'])
+
+
 class EnvironmentTests(unittest.TestCase):
     def test_quota_error_publishing_pause_fences_without_clearing_authority(self):
         import errno
@@ -59,6 +111,30 @@ class EnvironmentTests(unittest.TestCase):
                 until=time.monotonic()+2
                 while marker.exists() and time.monotonic()<until:time.sleep(.01)
                 self.assertFalse(marker.exists());self.assertFalse(self.failure.is_set())
+
+    def test_quick_pause_resume_pause_publishes_a_rising_pause_id_from_one_watcher(self):
+        # B-12: a world that misses the short resume must see the same outage continue.
+        private=self.root/'engine';private.mkdir(mode=0o700)
+        self.config['slurm']['egress_pause_s']=2;self.value.update(state='ready',grace_s=2)
+        proxy.atomic(self.path,self.value)
+        def wait(condition):
+            until=time.monotonic()+2
+            while not condition() and time.monotonic()<until:time.sleep(.01)
+            self.assertTrue(condition())
+        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}):
+            with proxy.environment(self.config,on_failure=self.failure.set):
+                marker=Path(os.environ['ROBOFRONTIER_EGRESS_PAUSE_FILE']);seen=[]
+                for _ in range(2):
+                    proxy.atomic(self.path,{**self.value,'state':'paused','heartbeat':time.time()})
+                    wait(marker.exists);seen.append(proxy.read_record(marker))
+                    proxy.atomic(self.path,{**self.value,'heartbeat':time.time()})
+                    wait(lambda:not marker.exists())
+                self.assertFalse(self.failure.is_set())
+        first,second=seen
+        self.assertEqual([first['pause_id'],second['pause_id']],[1,2])
+        self.assertEqual(first['watcher'],second['watcher']);self.assertEqual(len(first['watcher']),32)
+        self.assertNotEqual(first['claim'],second['claim'])
+        self.assertEqual(first['schema'],'robofrontier.egress-pause.v1')
 
     def test_replaced_instance_fences_even_during_short_outage_grace(self):
         private=self.root/'engine';private.mkdir(mode=0o700)
@@ -507,5 +583,59 @@ class RecoverableTransportTests(RelayFixture,unittest.IsolatedAsyncioTestCase):
         reader,writer,reply=await asyncio.wait_for(request,.6)
         self.assertIn(b'200 Connection Established',reply)
         writer.write(b'unique');await writer.drain();self.assertEqual(await reader.readexactly(6),b'unique');writer.close()
+
+    async def until(self,condition,timeout=1.5):
+        deadline=time.monotonic()+timeout
+        while not condition() and time.monotonic()<deadline:await asyncio.sleep(.01)
+        return condition()
+
+    async def test_one_stream_reset_fails_only_that_stream(self):
+        # Block the probe so only the stream failures could change route health (B-4).
+        self.mac.probe=lambda:asyncio.Event().wait()
+        pings=[];send=self.mac.frames.send
+        async def record(value):
+            if value.get('type')=='ping':pings.append(value['network_available'])
+            return await send(value)
+        self.mac.frames.send=record
+        class ResetReader:
+            async def read(self,size):raise ConnectionResetError('fixture reset by provider')
+        echo=self.echo_server.sockets[0].getsockname()[1];dials=[]
+        async def dial(host,port):
+            dials.append(host)
+            if len(dials)==1:raise ConnectionResetError('fixture dial reset')
+            _,writer=await asyncio.open_connection('127.0.0.1',echo)
+            return ResetReader(),writer
+        self.mac.dial=dial
+        for target in ('api.anthropic.com:443','chatgpt.com:443'):
+            reader,writer=await asyncio.open_connection('127.0.0.1',self.port)
+            writer.write(('CONNECT '+target+' HTTP/1.1\r\nProxy-Authorization: '+self.compute.authorization+'\r\n\r\n').encode())
+            await writer.drain()
+            await asyncio.wait_for(reader.read(),2);writer.close()
+        self.assertEqual(len(dials),2)
+        pings.clear()
+        self.assertTrue(await self.until(lambda:len(pings)>=3))
+        self.assertFalse(self.mac.upstream_failed);self.assertTrue(all(pings))
+        self.assertTrue(self.compute.upstream_ready)
+        self.assertEqual(proxy.read_record(self.directory/'ready.json')['state'],'ready')
+        reader,writer,reply=await self.request('auth.openai.com:443')
+        self.assertIn(b'200 Connection Established',reply);writer.close()
+
+    async def test_three_failed_probes_pause_and_one_success_resumes(self):
+        results=asyncio.Queue();taken=[]
+        async def probe():
+            value=await results.get();taken.append(value);return value
+        self.mac.probe=probe
+        for _ in range(2):results.put_nowait(False)  # the documented threshold is three
+        self.assertTrue(await self.until(lambda:len(taken)==2))
+        await asyncio.sleep(.1)
+        self.assertFalse(self.mac.upstream_failed)
+        self.assertEqual(proxy.read_record(self.directory/'ready.json')['state'],'ready')
+        results.put_nowait(False)
+        self.assertTrue(await self.until(lambda:self.mac.upstream_failed))
+        self.assertTrue(await self.until(lambda:proxy.read_record(self.directory/'ready.json')['state']=='paused'))
+        results.put_nowait(True)
+        self.assertTrue(await self.until(lambda:not self.mac.upstream_failed))
+        self.assertTrue(await self.until(lambda:proxy.read_record(self.directory/'ready.json')['state']=='ready'))
+        self.assertFalse(self.mac_task.done());self.assertFalse(self.compute_task.done())
 
 if __name__=='__main__':unittest.main()

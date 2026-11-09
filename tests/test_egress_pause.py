@@ -75,6 +75,33 @@ class EgressPauseTests(unittest.TestCase):
         execute(self.service.store,'network-recovery-uncertain',{'actor':'A','thread_id':'thread-A'},'Meta',time.time())
         self.assertFalse(self.service.step_physics());self.assertTrue(self.service.store.get('dispatch_paused'))
 
+    def test_world_that_missed_a_short_resume_continues_the_pause_unfenced(self):
+        # B-12: the watcher resumed and re-paused between two reads of this world.
+        from robofrontier.slurm_proxy import pause_marker
+        world=self.service.world;self.service.step_physics();sim=world.time;watcher='w'*32
+        atomic(self.marker,pause_marker('123','a'*32,watcher,1,'first-pause'));self.service.pump()
+        time.sleep(.02)
+        atomic(self.marker,pause_marker('123','a'*32,watcher,2,'second-pause'));self.service.pump()
+        for _ in range(5):self.assertFalse(self.service.step_physics())
+        self.assertEqual(world.time,sim)
+        self.assertFalse((self.private/'EGRESS_ERROR').exists());self.assertFalse(self.service.shutdown)
+        self.marker.unlink();self.service.pump()
+        self.assertTrue(self.service.step_physics());self.assertIs(self.service.world,world)
+        kinds=[e['kind'] for e in self.service.store.events() if e['kind'].startswith('EGRESS_')]
+        self.assertEqual(kinds,['EGRESS_PAUSED','EGRESS_PAUSE_CONTINUED','EGRESS_RESUMED'])
+        self.assertEqual(self.service.store.get('egress_recovery')['claim'],'second-pause')
+        self.assertGreaterEqual(self.service.store.get('downtime_s'),.02)
+
+    def test_new_claim_from_another_watcher_or_an_older_pause_still_fences(self):
+        from robofrontier.slurm_proxy import pause_marker
+        for watcher,pause_id in (('x'*32,2),('w'*32,1),('w'*32,'2')):
+            with self.subTest(watcher=watcher,pause_id=pause_id):
+                self.setUp()
+                atomic(self.marker,pause_marker('123','a'*32,'w'*32,1,'first-pause'));self.service.pump()
+                atomic(self.marker,{**pause_marker('123','a'*32,watcher,1,'other-claim'),'pause_id':pause_id})
+                self.service.pump()
+                self.assertTrue(self.service.shutdown);self.assertTrue((self.private/'EGRESS_ERROR').exists())
+
 @unittest.skipUnless(sys.platform=='linux','MuJoCo qualification runs on allocated Linux CPU')
 class RealPhysicsPauseTests(unittest.TestCase):
     def test_qpos_qvel_and_sim_time_remain_exactly_frozen_in_original_world(self):
