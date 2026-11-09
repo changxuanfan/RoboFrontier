@@ -15,6 +15,19 @@ class WorkflowTests(unittest.TestCase):
                  if not re.fullmatch(r'(-\s+)?uses: [\w.-]+/[\w./-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+', entry[1])]
         self.assertEqual(loose, [])
 
+    def test_analysis_job_runs_existing_paper_statistics_and_script_tests(self):
+        text = (ROOT/'.github/workflows/harness.yml').read_text()
+        job = text.split('  analysis-and-scripts:', 1)[1]
+        self.assertNotIn('bootstrap', job)  # No scene assets: the job cannot load scenes or step physics.
+        modules = re.findall(r'\btest_\w+', job.split('-m unittest', 1)[1])
+        self.assertEqual([m for m in modules if not (ROOT/'tests'/(m+'.py')).is_file()], [])
+        self.assertLessEqual({'test_run_metrics', 'test_run_analysis_atomic', 'test_scripts_index', 'test_workflows'},
+                             set(modules))
+
+    def test_task_atlas_also_validates_pushes_to_main(self):
+        text = (ROOT/'.github/workflows/task-atlas.yml').read_text()
+        self.assertRegex(text, r'\n  push:\n    branches: \[main\]\n    paths:')
+
 
 if __name__ == '__main__':
     unittest.main()

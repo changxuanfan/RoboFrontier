@@ -19,6 +19,25 @@ on:
       - 'configs/policy-assets.json'
       - 'uv.lock'
       - 'pyproject.toml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/task-atlas.yml'
+      - 'scripts/build_task_atlas.py'
+      - 'tests/test_task_atlas.py'
+      - 'web/task-atlas/**'
+      - 'docs/task-atlas/**'
+      - 'benchmark/**'
+      - 'configs/environments/**'
+      - 'robofrontier/task_families.py'
+      - 'robofrontier/task_config.py'
+      - 'robofrontier/suite/tasks.py'
+      - 'robofrontier/suite/v2.py'
+      - 'prompts/**'
+      - 'scripts/benchmark_handoff.py'
+      - 'configs/policy-assets.json'
+      - 'uv.lock'
+      - 'pyproject.toml'
   workflow_dispatch:
 
 # The project page (site/, deployed by site.yml) replaced the atlas on GitHub Pages;
