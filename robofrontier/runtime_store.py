@@ -562,6 +562,9 @@ class RuntimeStore:
                     for ident,member in zip(child_ids(batch['id'],len(members)),members):
                         if not isinstance(member,dict) or member.get('op') not in ('move','gripper'):continue
                         if not isinstance(member.get('parameters',{}),dict):continue
+                        # A reserved member already has its call (with the resolved robot) and its
+                        # action, which the loops below settle; only unreserved members are added.
+                        if self.db.execute('SELECT 1 FROM calls WHERE id=?',(ident,)).fetchone():continue
                         p={**member.get('parameters',{}),'robot':member.get('robot'),'wait':True,'cameras':[]}
                         self.begin_call(ident,batch['actor'],member['op'],p)
                 self.db.execute("UPDATE calls SET status='uncertain' WHERE id=?",(batch['id'],))

@@ -87,7 +87,7 @@ class RuntimeService:
         if (lifecycle != 'prepared' and not resuming) or self.store.get('execution_owner_attached'):
             # Reading a run must never silently recreate its physical world.
             if lifecycle not in ('ended', 'interrupted'):
-                self.store.recover_execution()
+                self.recover_execution()
                 self.store.put('dispatch_paused', True)
                 self.store.put('lifecycle', 'interrupted')
                 self.store.put('physics_state', 'stopped')
@@ -107,6 +107,15 @@ class RuntimeService:
             # The trial's recorders start now; the run itself resumes on the host's `resume`.
             begin = getattr(self.world, 'start_trial', None)
             if begin is not None: begin()
+
+    def recover_execution(self):
+        """Settle unfinished execution as unknown; a failure here must not hide the interruption."""
+        try:
+            self.store.recover_execution()
+        except Exception as error:
+            # The recovery transaction rolled back; the run is still recorded as interrupted
+            # and its unsettled calls stay as they were for engineering review.
+            self.store.event('EXECUTION_RECOVERY_FAILED', 'Meta', {'reason': type(error).__name__+': '+str(error)})
 
     @property
     def started(self):
@@ -129,7 +138,7 @@ class RuntimeService:
                             self.motion_check = None
                         self.stop_video()
                         if self.store.get('lifecycle') != 'ended':
-                            self.store.recover_execution()
+                            self.recover_execution()
                             self.store.put('dispatch_paused', True)
                             self.store.put('lifecycle', 'interrupted')
                             self.store.put('physics_state', 'stopped')
