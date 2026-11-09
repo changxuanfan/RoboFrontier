@@ -48,7 +48,14 @@ New runs also declare `relay-airborne-handover-v1`: a timber counts as complete
 only after a qualified airborne handover. A new arm must hold the timber for at
 least 0.2 seconds while at least two current holders keep it off the table, and
 then a current holder must let go. Pushing or dragging a timber along the table
-never qualifies. Each payload reports `airborne_handover_met`. Runs prepared before
+never qualifies. Off the table means the lowest assembly part is more than 2 mm
+above the tabletop and nothing connects the timber to the table, directly or through
+other cargo; the receiver's 0.2 seconds restart whenever that stops. A change of
+holders while the timber rests in GOAL is recorded with `airborne: false`
+(`grounded-regrasp-v1`) and never counts. Handover rows written by this evaluator
+carry `protocol: qualified-members-v3` and `airborne: true`; rows of earlier logs
+(`qualified-members-v2`) did not check the table, so they may include such regrasps.
+Each payload reports `airborne_handover_met`. Runs prepared before
 this rule keep their placement-only terminal outcome, and no agent in those runs was
 told a handover was required.
 

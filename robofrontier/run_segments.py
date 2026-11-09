@@ -364,7 +364,8 @@ def process_summary(run):
 
 
 def relay_record(run, cutoff=None):
-    """Each Relay timber's handovers and drops over all segments, up to `cutoff`.
+    """Each Relay timber's handovers and drops over all segments, up to `cutoff`, with its
+    custody and dropped state as last logged.
 
     A segment's rows run to the restore frame of the next. Handovers are matched by their
     content, so a carried record is not counted twice. None for other families or an empty log.
@@ -389,6 +390,9 @@ def relay_record(run, cutoff=None):
             for handover in item.get('handovers') or []:
                 if handover not in entry['handovers']: entry['handovers'].append(handover)
             entry['drops'] = max(entry['drops'], int(item.get('drops') or 0))
+            # Who held it and whether it lay dropped, at the end of the latest segment.
+            for key in ('custody', 'dropped'):
+                if key in item: entry[key] = item[key]
     return payloads or None
 
 
