@@ -142,8 +142,10 @@ def generate(counts, render=True):
                     image.save(base/'previews'/f"{env['id']}-{view}.png")
                     write_json(base/'previews'/f"{env['id']}-{view}.json", metadata)
                     if view in ('global', 'top'):
-                        assert len(metadata['robot_labels']) == count, 'Global camera misses a robot base'
-                        assert not any(v['overlap_area_pixel2'] for v in metadata['robot_labels']), 'Overlapping robot labels'
+                        if not (len(metadata['robot_labels']) == count):
+                            raise ValueError('Global camera misses a robot base')
+                        if not (not any(v['overlap_area_pixel2'] for v in metadata['robot_labels'])):
+                            raise ValueError('Overlapping robot labels')
         for obsolete in (base/'references').glob(f"{env['id']}-seed*.json"):
             obsolete.unlink()
         for seed in (0, 1, 2):

@@ -51,23 +51,32 @@ def main():
         cmd=['claude','--bare','-p','Call robot observe tool.','--model','claude-opus-5-5','--mcp-config',str(cfg),'--strict-mcp-config','--allowedTools','mcp__robot__robot','--permission-mode','dontAsk','--tools','','--output-format','stream-json','--verbose']
         try:
             p=subprocess.run(cmd,cwd=run,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=45)
-            assert p.returncode == 0, 'Claude CLI failed: ' + p.stderr[-1000:]
-            assert len(REQUESTS) >= 2, 'Expected tool and follow-up model requests'
-            assert all([x.get('name') for x in req.get('tools', [])] == ['mcp__robot__robot'] for req in REQUESTS), 'Unexpected tools exposed'
+            if not (p.returncode == 0):
+                raise RuntimeError('Claude CLI failed: ' + p.stderr[-1000:])
+            if not (len(REQUESTS) >= 2):
+                raise ValueError('Expected tool and follow-up model requests')
+            if not (all([x.get('name') for x in req.get('tools', [])] == ['mcp__robot__robot'] for req in REQUESTS)):
+                raise ValueError('Unexpected tools exposed')
             followup = json.dumps(REQUESTS[-1])
-            assert '"type": "image"' in followup and 'iVBORw0KGgo' in followup, 'Tool image was not forwarded to the model endpoint'
-            assert 'tool_result' in followup, 'Missing tool result'
+            if not ('"type": "image"' in followup and 'iVBORw0KGgo' in followup):
+                raise ValueError('Tool image was not forwarded to the model endpoint')
+            if not ('tool_result' in followup):
+                raise ValueError('Missing tool result')
             events = [json.loads(line) for line in p.stdout.splitlines() if line.strip()]
             parent = next(e['session_id'] for e in events if e.get('type') == 'result')
             old_count = len(REQUESTS)
             fork_cmd = cmd + ['--resume', parent, '--fork-session']
             fork = subprocess.run(fork_cmd, cwd=run, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=45)
-            assert fork.returncode == 0, 'Fork failed: ' + fork.stderr[-1000:]
+            if not (fork.returncode == 0):
+                raise RuntimeError('Fork failed: ' + fork.stderr[-1000:])
             fork_events = [json.loads(line) for line in fork.stdout.splitlines() if line.strip()]
             child = next(e['session_id'] for e in fork_events if e.get('type') == 'result')
-            assert child != parent, 'Fork reused the parent session'
-            assert len(REQUESTS) > old_count and 'toolu_test' in json.dumps(REQUESTS[-1]['messages']), 'Fork did not include prior tool history'
-            assert '"type": "image"' in json.dumps(REQUESTS[-1]['messages']), 'Fork did not include prior tool image'
+            if not (child != parent):
+                raise ValueError('Fork reused the parent session')
+            if not (len(REQUESTS) > old_count and 'toolu_test' in json.dumps(REQUESTS[-1]['messages'])):
+                raise ValueError('Fork did not include prior tool history')
+            if not ('"type": "image"' in json.dumps(REQUESTS[-1]['messages'])):
+                raise ValueError('Fork did not include prior tool image')
             print(json.dumps({'passed': True, 'claude_exit': p.returncode, 'mcp_tool': 'robot', 'tool_image_forwarded': True, 'fork_has_prior_tool_and_image_history': True, 'real_model_calls': 0, 'note': 'Local simulated model and world; no provider compatibility or trusted provenance claim'}))
         finally:
             server.shutdown(); server.server_close()
