@@ -1,4 +1,9 @@
-"""Hold one live world through a temporary route outage, without replay."""
+"""Hold one live world through a temporary route outage, without replay.
+
+Two sources pause the world the same way (physics and dispatch held, original calls kept,
+the paused time not counted): a Slurm egress pause marker, and on a local active-time run the
+network-outage monitor (robofrontier/network_outage.py), which probes the model API hosts.
+"""
 import json,os,time
 from pathlib import Path
 
@@ -7,11 +12,15 @@ from .run_setup import verify_inputs
 
 
 class WorldPause:
-    def __init__(self, service):
+    def __init__(self, service, outage=None):
         self.service=service;self.store=service.store;self.world=service.world
         self.path=Path(os.environ['ROBOFRONTIER_EGRESS_PAUSE_FILE']) if os.environ.get('ROBOFRONTIER_EGRESS_PAUSE_FILE') else None
         self.instance=os.environ.get('ROBOFRONTIER_EGRESS_INSTANCE')
         self.job=os.environ.get('SLURM_JOB_ID');self.claim=None;self.failed=False;self.operator_hold=False
+        # A Slurm egress route has its own pause; the outage monitor serves only local runs.
+        self.outage=None if self.path else outage
+        self.prefix='OUTAGE' if self.outage is not None else 'EGRESS'
+        self.outages=0
 
     def ownership(self):
         return {'run_id':self.store.get('run_id'),'segment':self.store.get('segment',0),
@@ -27,6 +36,7 @@ class WorldPause:
         if additions:
             # A fork acknowledged before pause may finish binding while paused.
             # Its native ID must already belong to this exact trusted gateway task.
+            if self.path is None:return False
             try:
                 records=json.loads((self.path.parent/'control/ownership.json').read_text())
                 owned={tid for row in records if row['run']==str(self.service.directory) for tid in row['threads']}
@@ -37,20 +47,34 @@ class WorldPause:
 
     def fence(self):
         self.failed=True;self.store.put('dispatch_paused',True)
-        self.store.event('EGRESS_RESUME_REFUSED','Meta',{'reason':'Original world, input integrity or ownership changed; no replay'})
-        (self.path.parent/'EGRESS_ERROR').touch(mode=0o600)
+        self.store.event(self.prefix+'_RESUME_REFUSED','Meta',{'reason':'Original world, input integrity or ownership changed; no replay'})
+        if self.path is not None:(self.path.parent/'EGRESS_ERROR').touch(mode=0o600)
         self.service.shutdown=True
         return True
 
     def close(self):
+        if self.outage is not None:self.outage.stop()
         if self.claim is not None:
             elapsed=time.monotonic()-self.started
             if self.before['lifecycle']=='running':self.store.put('downtime_s',self.store.get('downtime_s',0.)+elapsed)
-            self.store.event('EGRESS_PAUSE_CLOSED','Meta',{'paused_s':elapsed,'automatic_replays':0})
+            self.store.event(self.prefix+'_PAUSE_CLOSED','Meta',{'paused_s':elapsed,'automatic_replays':0})
             self.claim=None
 
+    def begin(self,claim,details):
+        self.claim=claim;self.started=time.monotonic();self.before=self.ownership()
+        self.wall_started=time.time()
+        self.prior_dispatch=self.store.get('dispatch_paused',False)
+        self.prior_physics=self.store.get('physics_state')
+        self.receipts={r[0]:tuple(r) for r in self.store.db.execute("SELECT * FROM calls WHERE op IN ('move','gripper','action_batch') AND status IN ('completed','failed')")}
+        with self.store.transaction():
+            self.store.put('dispatch_paused',True);self.store.put('physics_state','paused_by_egress')
+            self.event_seq=self.store.event(self.prefix+'_PAUSED','Meta',{**details,'claim':self.claim,'sim_time_s':float(self.world.time)})
+        budget=getattr(self.service,'policy_budget',None)
+        if budget is not None:budget.interrupt()
+
     def sync(self):
-        if not self.path:return False
+        if not self.path:
+            return self.sync_outage() if self.outage is not None else False
         if self.failed:return True
         if any((self.path.parent/name).exists() for name in ('EGRESS_ERROR','CREDENTIAL_ERROR')):
             self.failed=True;self.service.shutdown=True
@@ -66,18 +90,34 @@ class WorldPause:
             if (marker.get('schema')!='robofrontier.egress-pause.v1' or marker.get('job_id')!=self.job
                     or marker.get('instance')!=self.instance or not isinstance(marker.get('claim'),str)):
                 return self.fence()
-            if self.claim is None:
-                self.claim=marker['claim'];self.started=time.monotonic();self.before=self.ownership()
-                self.wall_started=time.time()
-                self.prior_dispatch=self.store.get('dispatch_paused',False)
-                self.prior_physics=self.store.get('physics_state')
-                self.receipts={r[0]:tuple(r) for r in self.store.db.execute("SELECT * FROM calls WHERE op IN ('move','gripper','action_batch') AND status IN ('completed','failed')")}
-                with self.store.transaction():
-                    self.store.put('dispatch_paused',True);self.store.put('physics_state','paused_by_egress')
-                    self.event_seq=self.store.event('EGRESS_PAUSED','Meta',{'instance':self.instance,'claim':self.claim,'sim_time_s':float(self.world.time)})
+            if self.claim is None:self.begin(marker['claim'],{'instance':self.instance})
             elif marker['claim']!=self.claim:return self.fence()
             return True
         if self.claim is None:return False
+        return self.resume({'instance':self.instance})
+
+    def sync_outage(self):
+        """Pause a running world while its model API is down; resume once it answers again."""
+        if self.failed:return True
+        for kind,value in self.outage.take_notes():self.store.event(kind,'Meta',value)
+        if self.operator_hold:return self.store.get('dispatch_paused',True)
+        state=self.outage.state()
+        if self.claim is None:
+            # Only a running trial pauses: not before START, after the budget cutoff or at an end.
+            if not state['down'] or self.store.get('lifecycle')!='running' or self.store.get('physics_state')!='running':
+                return False
+            self.outages+=1
+            # The probes that failed before the pause found the API already down; that time does not count either.
+            budget=getattr(self.service,'policy_budget',None);retracted=0.
+            if budget is not None and state['streak_started'] is not None:
+                retracted=budget.retract(self.service,max(0.,self.outage.clock()-state['streak_started']))
+            self.begin('outage-%d'%self.outages,{'hosts':list(self.outage.hosts),'failed_probes':state['failures'],
+                                                 'retracted_active_s':retracted})
+            return True
+        if state['down']:return True
+        return self.resume({'hosts':list(self.outage.hosts)})
+
+    def resume(self,details):
         unchanged=all(tuple(self.store.db.execute('SELECT * FROM calls WHERE id=?',(key,)).fetchone() or ())==value for key,value in self.receipts.items())
         if (self.world is not self.service.world or not self.same_ownership() or not unchanged
                 or self.store.get('integrity_valid') is not True or verify_inputs(self.service.directory)
@@ -90,13 +130,15 @@ class WorldPause:
             if self.before['lifecycle']=='running':self.store.put('downtime_s',self.store.get('downtime_s',0.)+elapsed)
             self.store.put('dispatch_paused',True if manual else self.prior_dispatch)
             self.store.put('physics_state','paused_by_user' if manual else self.prior_physics)
-            self.store.event('EGRESS_HELD_FOR_REVIEW' if manual else 'EGRESS_RESUMED','Meta',
-                             {'instance':self.instance,'claim':self.claim,'paused_s':elapsed,'automatic_replays':0})
+            self.store.event(self.prefix+('_HELD_FOR_REVIEW' if manual else '_RESUMED'),'Meta',
+                             {**details,'claim':self.claim,'paused_s':elapsed,'automatic_replays':0})
+            # The hosts' one network continuation per role and pause reads this (runtime_cli network-recovery).
             self.store.put('egress_recovery',{'instance':self.instance,'claim':self.claim,
                                             'paused_at':self.wall_started,'resumed_at':time.time()})
         budget=self.service.policy_budget
         if budget is not None and budget.deadline is not None:budget.deadline+=elapsed
         if budget is not None and budget.cutoff is not None:budget.cutoff+=elapsed
+        if budget is not None:budget.interrupt()
         for waiter in self.service.waiters.values():waiter['deadline']+=elapsed
         for actor,agent in self.store.agents().items():
             if agent.get('next_check') is not None:self.store.update_agent(actor,next_check=agent['next_check']+elapsed)

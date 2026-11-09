@@ -113,6 +113,10 @@ class CentralizedSupervisor:
                         reason = 'world_' + lifecycle; break
                     if not self.owner_alive():
                         reason = 'owner_unavailable'; break
+                    if self.policy.store.get('physics_state') == 'paused_by_egress':
+                        # The world holds itself through a route or model-API outage (egress_pause);
+                        # it resumes by itself and the paused time does not count.
+                        self.sleep(self.poll_s); continue
                     if self.policy.store.get('dispatch_paused', False):
                         if self._wall_limit_reached() and self._await_world_close(began):
                             self.sleep(self.poll_s); continue
