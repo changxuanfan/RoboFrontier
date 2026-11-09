@@ -145,7 +145,7 @@ class TransportFromMotionTests(unittest.TestCase):
         self.assertEqual(motion.lost_items(m, ITEMS), full)
         self.assertAlmostEqual(full['A_item2'], 333.3, places=6)
 
-    def test_events_1s_logs_keep_the_log_unless_motion_is_asked_for(self):
+    def test_every_run_with_a_recording_is_read_from_motion_unless_sparse_is_asked_for(self):
         t = frames(0, 120)
         rows = [header('events-1s')]
         for s in range(0, 121):
@@ -156,11 +156,11 @@ class TransportFromMotionTests(unittest.TestCase):
             rows.append(snap(float(s), obj, assignments=a, matched_goals=len(a), total_goals=2))
         f = self.run_with('t1', rows, [('motion', t, transport_states(t, fall_at=75.4))])
         S = f.extract('transport')['suite']
-        self.assertEqual((S['objects_source'], S['lost']), ('process log', {'A_item2': 76.0}))
-        run = Run('t1', f.root)
-        S = extract.suite(run, motion='always')
         self.assertEqual(S['objects_source'], 'motion')
         self.assertAlmostEqual(S['lost']['A_item2'], 75.4, places=6)
+        run = Run('t1', f.root)
+        S = extract.suite(run, motion='sparse')
+        self.assertEqual((S['objects_source'], S['lost']), ('process log', {'A_item2': 76.0}))
 
     def test_chunks_missing_from_an_unclosed_index_are_read(self):
         t = frames(0, 120)

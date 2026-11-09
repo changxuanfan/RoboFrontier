@@ -177,9 +177,10 @@ SUITE_LOGS = (
 # Process-log formats whose rows are too sparse to recover object poses or dial turns:
 # 'events-60s' writes poses only in the final row when the scene records motion.
 LOW_RESOLUTION = ('events-60s',)
-# Where object poses and dial angles come from: 'sparse' reads the motion recording for runs
-# whose process log is low resolution and the log otherwise; 'always' reads the recording of
-# every run that has one. They differ on events-1s logs only by the log's 1 s sampling.
+# Where object poses and dial angles come from: 'always' (the default) reads the 30 Hz motion
+# recording of every run that has one, so every run is counted the same way; 'sparse' reads it
+# only for runs whose process log is low resolution. They differ on events-1s logs only by the
+# log's 1 s sampling (a few Dial turns; lost items agree).
 MOTION_MODES = ('sparse', 'always')
 
 
@@ -249,7 +250,7 @@ def trial_rows(run, n, cutoff_sim=None, blocks=None):
         yield i, t, d
 
 
-def suite(run, cutoff_sim=None, motion='sparse'):
+def suite(run, cutoff_sim=None, motion='always'):
     """Evaluator timeline of the trial from the process log.
 
     Lost items and the position of each goal's item when first assigned come from the motion
@@ -831,7 +832,7 @@ def _transcripts(run):
     return spans, src
 
 
-def extract_run(sel, root, cache_dir=None, motion='sparse'):
+def extract_run(sel, root, cache_dir=None, motion='always'):
     """Compact record of one run. `sel` needs `id` and the archive key `k`; it is stored as is.
 
     Everything is cut at the trial cutoff (`cutoff`, see trial_cutoff): post-cutoff work

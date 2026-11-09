@@ -120,9 +120,9 @@ def main(argv=None):
         s.add_argument(
             '--motion',
             choices=extract.MOTION_MODES,
-            default='sparse',
-            help='read object poses and dial angles from the motion recording only for '
-            'events-60s logs (sparse, default) or for every run that has one (always)',
+            default='always',
+            help='read object poses and dial angles from the motion recording of every run '
+            'that has one (always, default) or only for events-60s logs (sparse)',
         )
     s = sub.add_parser('compute')
     s.add_argument('--extracted', required=True)

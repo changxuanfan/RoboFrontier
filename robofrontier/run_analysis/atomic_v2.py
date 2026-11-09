@@ -106,7 +106,7 @@ def dial_turns_rows(rows, dwell_s=DIAL_DWELL_S):
     return rule.turns()
 
 
-def run_dial_turns(run, dwell_s=DIAL_DWELL_S, motion='sparse'):
+def run_dial_turns(run, dwell_s=DIAL_DWELL_S, motion='always'):
     """Dial turns of an `archive.Run` within the trial: {'turns': [...], 'unknown': None, ...}.
 
     The evaluator log is found as extract.suite finds it; a run without one raises
