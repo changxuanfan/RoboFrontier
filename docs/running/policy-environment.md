@@ -68,8 +68,8 @@ its Bash sandbox.
 - Keep the Mac route's `slurm.egress_root` outside `/tmp` too, since policies can read and write
   there. Preparing a run with an environment refuses it otherwise.
 - Put the pinned Codex CLI (see `docs/engines/codex.md`) first on `PATH`. A newer one can reject the
-  run's configuration, and a shared account's copy can change without notice, so a shared Slurm
-  engine refuses any other version.
+  run's configuration, and a shared account's copy can change without notice, so every job-scoped
+  Slurm engine refuses any other version, with or without a policy environment.
 
 ## Known limits
 

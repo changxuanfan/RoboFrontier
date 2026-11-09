@@ -306,7 +306,9 @@ operating environment that supports the native Codex sandbox. Configure software
 according to the site's rules; a site may not provide Docker or permit
 installing system packages. Without a global Codex install, install the pinned
 CLI locally (the version must match `CODEX_VERSION` in
-[`docker/Dockerfile`](../../docker/Dockerfile), currently `0.165.0`):
+[`docker/Dockerfile`](../../docker/Dockerfile), currently `0.165.0`). Job-scoped
+(Slurm subscription) batches and their preflight refuse to start with any other
+`codex` first on `PATH`:
 
 ```sh
 uv sync --locked --extra oracle

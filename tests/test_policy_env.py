@@ -289,6 +289,23 @@ class PinnedCliTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, pinned):
                 require_pinned_cli({'PATH': folder + '/absent'})
 
+    def test_a_hung_cli_or_an_unpinned_dockerfile_is_refused_clearly(self):
+        import time
+        from robofrontier.codex import job_engine
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)/'codex'
+            path.write_text('#!/bin/sh\nsleep 60\n')
+            path.chmod(0o755)
+            started = time.monotonic()
+            with self.assertRaisesRegex(ValueError, 'found none'):
+                job_engine.require_pinned_cli({'PATH': folder + ':/usr/bin:/bin'}, timeout_s=1)
+            self.assertLess(time.monotonic() - started, 30)
+            (Path(folder)/'docker').mkdir()
+            (Path(folder)/'docker/Dockerfile').write_text('FROM ubuntu\nARG CODEX_VERSION\n')
+            with patch.object(job_engine, 'ROOT', Path(folder)), \
+                    self.assertRaisesRegex(ValueError, 'no longer pins the Codex CLI'):
+                job_engine.require_pinned_cli({'PATH': folder + ':/usr/bin:/bin'})
+
 
 class CheckTests(unittest.TestCase):
     def test_every_attempt_has_an_expected_outcome_and_a_difference_is_reported(self):

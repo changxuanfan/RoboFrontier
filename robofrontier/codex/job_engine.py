@@ -15,11 +15,14 @@ import signal
 import threading
 import time
 
+from robofrontier import policy_env
 from robofrontier.policy_access import mode
 from robofrontier.run_setup import write_json
 from robofrontier.task_config import ROOT
 
 BACKEND = 'slurm-managed-v1'
+PINNED_CLI = re.compile(r'^ARG CODEX_VERSION=(\S+)$', re.M)
+CLI_TIMEOUT_S = 30
 
 
 def fingerprint():
@@ -163,20 +166,33 @@ def export_sessions(manifest, home):
                    {'backend': BACKEND, 'task_id': task['id'], 'threads': rows})
 
 
-def require_pinned_cli(env=None):
-    """Refuse any other Codex CLI, as a newer one can reject this backend's configuration."""
-    pinned = re.search(r'^ARG CODEX_VERSION=(\S+)$', (ROOT/'docker/Dockerfile').read_text(), re.M).group(1)
-    try:
-        actual = subprocess.run(['codex', '--version'], env=env, capture_output=True, text=True).stdout.strip()
-    except OSError:
-        actual = ''
+def pinned_cli():
+    """The Codex CLI version that docker/Dockerfile pins."""
+    found = PINNED_CLI.search((ROOT/'docker/Dockerfile').read_text())
+    if found is None:
+        raise ValueError('docker/Dockerfile no longer pins the Codex CLI as ARG CODEX_VERSION=<version>')
+    return found.group(1)
+
+
+def require_pinned_cli(env=None, timeout_s=CLI_TIMEOUT_S):
+    """Refuse any Codex CLI but the pinned one, for every job-scoped engine.
+
+    This covers each Slurm subscription batch and its preflight, with or without a policy
+    environment: a newer CLI can reject this backend's configuration, and a shared account's
+    copy can change without notice. A CLI that fails or does not answer within `timeout_s`
+    counts as none.
+    """
+    pinned = pinned_cli()
+    actual = policy_env.cli_version('codex', env, timeout_s)
     if actual != 'codex-cli ' + pinned:
-        raise ValueError('Put Codex CLI %s first on PATH; found %s' % (pinned, actual or 'none'))
+        raise ValueError('Every job-scoped Codex engine needs Codex CLI %s first on PATH; found %s'
+                         % (pinned, actual or 'none'))
 
 
 @contextmanager
 def engine(jobs, *, env, preflight=False, timeout_s=180):
     env = dict(env)
+    # Every job-scoped batch and preflight, not only runs with a policy environment.
     require_pinned_cli(env)
     for key in ('OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_BASE_URL', 'OPENAI_API_BASE'):
         env.pop(key, None)
