@@ -72,7 +72,7 @@ class PolicyVideoTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which('ffmpeg'), 'ffmpeg is required to encode')
     def test_a_policy_run_renders_a_decodable_cut_video(self):
         with tempfile.TemporaryDirectory() as temporary:
-            outputs = self.make_run(Path(temporary))
+            outputs = self.make_run(Path(temporary)/'run')
             target = Path(temporary)/'video'
             video.render(outputs, views=('global',), output=target)
             manifest = json.loads((target/'manifest.json').read_text())

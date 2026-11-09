@@ -16,6 +16,10 @@ from robofrontier.suite.dial_pose_timeline import EditedMotion,checksum,playback
 def render(directory,views=('global','global_rear'),speed=None,every=None,output=None,edit=None):
     directory=Path(directory).resolve();report=json.loads((directory/'report.json').read_text())
     if not report['case_id'].startswith('dial-best5-'):raise ValueError('Use the R11 BEST5 dial entrypoint only')
+    target=Path(output) if output else directory/'video'
+    # Check every view before starting any encoder, so a refused rerun leaves none running.
+    existing=[str(target/(view+'.mp4')) for view in views if (target/(view+'.mp4')).exists()]
+    if existing:raise FileExistsError(existing)
     speed=playback_speed(report['case_id'],speed)
     model=mujoco.MjModel.from_xml_path(str(directory/'scene.xml'));data=mujoco.MjData(model)
     reader=MotionReader(directory/'motion')
@@ -30,11 +34,10 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
     edited=EditedMotion(directory/'motion',edit) if edit is not None else None
     selected=set(edited.video_indices(fps,speed).tolist()) if edited else None
     selected_frames=[];selected_times=[]
-    target=Path(output) if output else directory/'video';target.mkdir(parents=True,exist_ok=True)
+    target.mkdir(parents=True,exist_ok=True)
     processes={};started=time.monotonic();font=_font(22);rendered=0;source_frames=0;last=None;last_rendered=None
     for view in views:
         path=target/(view+'.mp4')
-        if path.exists():raise FileExistsError(path)
         processes[view]=subprocess.Popen(['ffmpeg','-hide_banner','-loglevel','error','-f','rawvideo','-pix_fmt','rgb24','-s','1280x800','-r',str(fps),'-i','-','-an','-c:v','libx264','-crf','23','-preset','fast','-pix_fmt','yuv420p','-movflags','+frag_keyframe+empty_moov+default_base_moof',str(path)],stdin=subprocess.PIPE)
     commissioning=report.get('commissioning_only') or report.get('full_task_attempt') is False
     outcome=('MECHANICAL PASS' if report.get('passed') or report.get('local_passed') else 'MECHANICAL PARTIAL / FAILED') if commissioning else 'PASS' if report.get('passed') else 'UNIT PASS' if report.get('local_passed') else 'INTERRUPTED' if report.get('interrupted') else 'PARTIAL / FAILED'
