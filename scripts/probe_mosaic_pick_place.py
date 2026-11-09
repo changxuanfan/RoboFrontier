@@ -150,8 +150,10 @@ def main(args):
     cases=json.loads((ROOT/'configs/suites/frontier-mosaic-r13.json').read_text())['cases']
     case=next(c for c in cases if c['arms']==args.arms and c['level']==args.level)
     coverage=json.loads((ROOT/'runs/engineering/mosaic-r13-coverage-20261025'/case['id']/'report.json').read_text())
-    assert coverage['complete'] and coverage['passed']
-    assert hashlib.sha256((ROOT/case['directory']/'scene.xml').read_bytes()).hexdigest()==coverage['source_scene_sha256']
+    if not (coverage['complete'] and coverage['passed']):
+        raise ValueError("Check failed: coverage['complete'] and coverage['passed']")
+    if not (hashlib.sha256((ROOT/case['directory']/'scene.xml').read_bytes()).hexdigest()==coverage['source_scene_sha256']):
+        raise ValueError("Check failed: hashlib.sha256((ROOT/case['directory']/'scene.xml').read_bytes()).hexdigest()==coverage['source_scene_sha256']")
     names=args.items or [x['id'] for x in coverage['sources']]
     names=names[args.shard_index::args.shards]
     summary=dict(case_id=case['id'],planned=len(names),unit_results=[],pattern_ignored=True,independent_new_episode_per_item=True)

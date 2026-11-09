@@ -2,7 +2,7 @@
 
 An Oracle is engineering reference code with access to the physical scene and
 evaluator. It is separate from both native policy engines and their controllers.
-An Oracle result is not an LLM benchmark result. A successful historical witness
+An Oracle result is not a multimodal-agent benchmark result. A successful historical witness
 does not qualify a changed scene, controller, solver or physics release.
 
 The unified CLI prepares single-use, host-local executions of the four existing
@@ -21,7 +21,8 @@ Legacy native entries remain available with their original timing semantics.
 .venv/bin/robofrontier oracle run runs/oracle/r14-two-goals
 ```
 
-Plan is read-only. Prepare installs the pinned policy assets when needed and
+`--physics-profile realtime-v2` (or `realtime-v1`) freezes that physics profile into the
+prepared harness; without it an Oracle runs full physics. Plan is read-only. Prepare installs the pinned policy assets when needed and
 verifies the selected task, workstation and every asset without advancing
 physics. It requires exactly one selected case and a clean committed checkout.
 Use another output directory for another attempt. Source is copied before native

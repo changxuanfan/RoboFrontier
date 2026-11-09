@@ -120,6 +120,19 @@ frozen=json.loads(harness.read_text()) if harness.exists() else {}
 self.suite_sampler=Monitor(self,secret=secret,log_path=self.directory/'private/outputs/suite-process.jsonl',
                            log_format=frozen.get('process_log','full'),append=self.segment>0)
 """, "self.suite_sampler=Monitor(self,secret=secret,log_path=self.directory/'private/outputs/suite-process.jsonl')"),
+    ('physics profile', """
+from .physics_profile import attach
+self.physics_profile=attach(self,frozen_cfg)
+""", None),
+    ('physics profile step', """
+if getattr(self,'physics_profile',None) is not None:self.physics_profile.before_step()
+""", None),
+    ('physics profile forward', """
+if getattr(self,'physics_profile_active',False):
+    from .physics_profile import forward_after_step
+    forward_after_step(self)
+else:mujoco.mj_forward(self.model,self.data)
+""", "mujoco.mj_forward(self.model,self.data)"),
     ('motion rate and segment folder', """
 hz=frozen.get('motion_hz',60)
 from .run_segments import output_dir
@@ -188,6 +201,24 @@ def ik_failure(self,goal,rotation,requested,q,error):
         scope='Found by a local IK search from the current joint references; not a proof of the reach limit')
 ''', None, 1),
 )
+# Reviewed realtime-v2 settle counting (docs/running/physics-profiles.md): only a frozen
+# physics profile that sets poll_stability changes it; every other arm keeps 'per-call',
+# where the original statements run.
+ARM_POLL_STABILITY = (
+    ('settle sampling default', "self.poll_stability='per-call'\nself.last_poll_sample=None", None, 1),
+    ('settle sampling start', "self.last_poll_sample=None", None, 1),
+    ('settle sampling per tick', """
+if self.poll_stability=='per-tick':
+    if self.last_poll_sample is not None and now<=self.last_poll_sample+1e-9:return None
+    self.last_poll_sample=now
+""", None, 1),
+)
+# Reviewed physics profile in the control fingerprint: a harness without one hashes the
+# original value.
+FINGERPRINT_PROFILE = """
+if config.get('physics_profile') is not None:
+    value['physics_profile']=config['physics_profile'];code['physics_profile.py']=source_hashes.get('robofrontier/physics_profile.py')
+"""
 # Reviewed Mosaic Level 2/3 centre tolerance: read from the task with the original
 # 5 mm default, so a task that does not declare mosaic-center-6mm-v1 is unchanged.
 MOSAIC_CENTER_TOLERANCE = ("""
@@ -200,7 +231,8 @@ out&=~(np.linalg.norm(delta[:,:,:2],axis=2)>tolerance)
 HARNESS_RUN_STORAGE = """
 if 'motion_hz' in c and (isinstance(c['motion_hz'],bool) or not math.isfinite(float(c['motion_hz'])) or c['motion_hz']<=0):
     raise ValueError('Invalid motion sampling rate')
-if c.get('process_log','full') not in ('full','events-1s'):raise ValueError('Unknown process log format')
+if c.get('process_log','full') not in ('full','events-1s','events-10s','events-60s'):raise ValueError('Unknown process log format')
+if c.get('physics_profile') not in (None,'realtime-v1','realtime-v2'):raise ValueError('Unknown physics profile')
 """
 
 
@@ -264,6 +296,8 @@ def normalized_digest(source, rule):
     elif rule == 'exclude_policy_harness_selection':
         method=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='load_harness')
         _revert(method, HARNESS_RUN_STORAGE, None, 'Run storage harness checks')
+        fingerprint=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='physical_control_fingerprint')
+        _revert(fingerprint, FINGERPRINT_PROFILE, None, 'Physics profile fingerprint')
         reviewed=ast.parse("if c['manager'] != 'Meta' or c['coordinator'] not in ('Controller', 'Coordinator'):\n"
                            " raise ValueError('Use Meta and Controller; legacy Coordinator is accepted for frozen runs')\n"
                            "if c.get('engine','codex') not in ('codex','claude'):\n"
@@ -283,7 +317,7 @@ def normalized_digest(source, rule):
             if index==0:method.body[matches[0]]=original
             else:method.body.pop(matches[0])
     elif rule == 'exclude_local_recovery_and_engineering_fault':
-        for what, current, original, count in ARM_RECOVERY: _revert(tree, current, original, what, count)
+        for what, current, original, count in ARM_RECOVERY+ARM_POLL_STABILITY: _revert(tree, current, original, what, count)
     elif rule == 'mosaic_public_projection':
         # This authenticates only the old review artifact's public projection.
         # Validator improvements and current scoring are explicitly not equated.

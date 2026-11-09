@@ -63,11 +63,13 @@ and original protocol.
 
 Policy runs declare `terminal_outcome_v2` in the frozen run protocol. Placement
 tasks require the existing geometric, release, stability and assignment
-predicates; Dial uses its solved state. Relay requires every timber to be
-released with at least 70 percent of its centreline above the GOAL outline
-(`relay-timber-goal-70pct-v1`; earlier tasks keep the 50 mm boundary rule with
-table support); earlier qualified handover, dropped flags and
-recorded violations do not independently veto terminal completion. Reports
+predicates; Dial uses its solved state. Relay requires every timber to have had
+a qualified airborne handover (`relay-airborne-handover-v1`, declared in the run
+protocol) and to be released with at least 70 percent of its centreline above the
+GOAL outline (`relay-timber-goal-70pct-v1`; earlier tasks keep the 50 mm boundary
+rule with table support). Runs prepared before that protocol field keep the same
+placement check without the handover requirement. Dropped flags and recorded
+violations do not independently veto terminal completion. Reports
 retain `strict_task_success`, process compliance and violations; Relay retains
 `legacy_process_goals_met`, `legacy_completed_payloads`, drops and handover
 records. A violation entry is deduplicated by kind and key, not a verified count
@@ -189,8 +191,9 @@ keep the rules through context compaction. Both engines receive the same bytes.
   and the family materials), each under its absolute path. The files stay
   readable on disk. The message is limited to 400,000 bytes.
 - **Wall limit.** The public `task.json` no longer states
-  `run_protocol.total_wall_limit_s`; the private task keeps it and the host
-  enforces it as before. The rules ask policies to plan as if time were
+  `run_protocol.total_wall_limit_s` (nor, for new runs, `run_protocol.clock`);
+  the private task keeps them and the host enforces the limit as before
+  ([how it is counted](running/run-segments.md#time)). The rules ask policies to plan as if time were
   unlimited, and a policy can no longer estimate the time left from its inputs.
 
 Earlier runs keep their frozen system prompt, start message and public task.

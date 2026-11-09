@@ -143,7 +143,8 @@ def build(n,level,refresh_draft=False):
     # Authorized panel relocation/resizing changes only its static collider.
     physical=np.flatnonzero((model.geom_contype!=0)|(model.geom_conaffinity!=0)).tolist();row=physical.index(model.geom('score_base').id)
     for key in ('geom_pos','geom_size'):before[key][row]=after[key][row]
-    assert before==after, 'Panel revision changed robot or dial physics'
+    if not (before==after):
+        raise ValueError('Panel revision changed robot or dial physics')
     verify_panel_support(model,data)
     state=v2.manifest(model,data,case,folder,env)
     state['motion_recording_contract']['visual_events']=['BEST digits and ready-dependent brightness','READY grey/amber/green'];write_json(folder/'workstation.json',state)

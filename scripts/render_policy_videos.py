@@ -52,8 +52,8 @@ def render_run(outputs, target, views=VIEWS):
         still = longest_still_seconds(active, FPS)
         passes.append(dict(pass_number=number, kept_source_frames=int(keep.sum()), video_frames=len(active),
                            visibly_changing_frames=int(active.sum()), longest_still_s=still))
-        if still*FPS <= MAX_STILL_FRAMES+1e-9:
-            break
+        if still*FPS <= MAX_STILL_FRAMES+1e-9 or number == PASSES:
+            break  # The last pass is final: never report a refinement that was not rendered.
         keep = refine_with_video(keep, hz, speed, FPS, visible_frame_selection(active))
     final = target/f'pass-{number}'
     for earlier in range(1, number):
@@ -73,6 +73,12 @@ def render_run(outputs, target, views=VIEWS):
     return summary
 
 
+def target_for(output, outputs):
+    """<output>/<batch>/<profile>/<case> for a run's private/outputs: profiles of one batch never collide."""
+    run = Path(outputs).resolve().parents[1]
+    return Path(output)/run.parent.parent.name/run.parent.name/run.name
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('outputs', type=Path, nargs='+', help="Runs' private/outputs folders")
@@ -80,6 +86,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     for outputs in args.outputs:
         run = outputs.resolve().parents[1]
-        result = render_run(outputs, args.output/run.parent.parent.name/run.name)
+        result = render_run(outputs, target_for(args.output, outputs))
         print(json.dumps(dict(run=str(run), video_seconds=result['video_seconds'], longest_still_s=result['longest_still_s'],
                               passes=len(result['passes']), decode_passed=result['decode_passed'])), flush=True)

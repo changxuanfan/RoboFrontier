@@ -156,7 +156,13 @@ class EngineeringRecovery:
             if file.name in self.seen:continue
             try:
                 payload=file.read_bytes();request=json.loads(payload)
+                if not isinstance(request,dict):raise ValueError('Engineering input must be an object')
                 if set(request)-{'id','job','scene_sha256','robots','steps','reason','author','resume_goal','retain_robots','pause_after_prepare'}:raise ValueError('Unsupported engineering input')
+                # Provenance must be complete before any admission side effect.
+                missing={'id','job','scene_sha256'}-set(request)
+                if missing:raise ValueError('Missing engineering input fields: '+str(sorted(missing)))
+                if not isinstance(request['id'],str) or not request['id'] or not isinstance(request['job'],str):raise ValueError('Engineering input id and job must be strings')
+                if request['id'] in {item['id'] for item in self.external_inputs}:raise ValueError('Duplicate engineering input id')
                 if request['scene_sha256']!=t.task['scene_sha256']:raise ValueError('Wrong physical scene')
                 ident=request['job']
                 if ident not in runtime.jobs or runtime.jobs[ident]['status'] not in ('failed','prepared'):raise ValueError('No matching failed or prepared job')

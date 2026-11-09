@@ -56,8 +56,8 @@ Edit `titles.srt` and `subtitles.srt` in a text or subtitle editor. For example:
 1
 00:00:00,000 --> 00:00:10,000
 RoboFrontier
-Benchmarking How LLM Agents Organize, Communicate,
-and Collaborate in a Multi-Robot World
+Can Multimodal Agents Work Together
+on Long Physical Tasks?
 ```
 
 Each track must have numbered, chronologically ordered, nonoverlapping cues,

@@ -13,7 +13,13 @@ height 4 cm, mass 50 g, initially upright. Body origin and center of mass are
 at the geometric center. Layout, demand assignment/distance proportions,
 initial coordinates, slots and cameras preserve the earlier configuration;
 only shape requirements change. Ten sizes each have three order seeds that
-change orders, not geometry.
+change orders, not geometry. One exception: at three arms, `line-03` seed-1 and
+seed-2 orders are identical, in this collection and in the earlier sphere
+collection (`configs/tasks/cube_transport/`), so that size has only two distinct
+order sets (its three `references/summary.csv` rows carry the same counts). The generator
+reverses the slot order for both seeds at three arms and its per-row shuffle of
+three items happens to match for seeds 1 and 2; the frozen files are kept as
+generated.
 
 The background is pale blue and table warm wood. Each arm has front/side views,
 plus global/global_side/top views, totaling 2N+3 cameras. `startup.md` /
@@ -34,7 +40,7 @@ penetration, point IK / endpoint contacts and one-second settling at every
 size, with maximum settling displacement about 0.075 mm. This is not swept-path
 or multi-arm collision acceptance.
 
-Known-pose local checks used a program and robot IK, without an LLM: a three-arm
+Known-pose local checks used a program and robot IK, without a multimodal agent: a three-arm
 A cube, seven-arm G red cylinder and 12-arm L cyan cylinder. All three recorded
 passes. Cylinder final XY errors were about 3.08 mm and 0.14 mm, respectively,
 with bilateral grip, lift, release and stable upright placement. The original

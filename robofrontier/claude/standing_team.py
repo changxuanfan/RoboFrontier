@@ -9,6 +9,7 @@ import time
 import uuid
 
 from .bootstrap import bootstrap_prompt
+from .budget import BudgetExhausted
 from .session_host import ClaudeSessionHost
 from ..pipeline_client import client_call
 from ..run_setup import verify_inputs
@@ -194,6 +195,12 @@ class StandingTeamPolicyHost:
                 ack = host.send(claimed['prompt'])
                 if ack.get('threadId') != claimed['thread_id']:
                     raise ValueError('Standing role acknowledgement mismatch')
+            except BudgetExhausted:
+                # Refused before any launch: the wake was not sent, and the task cap is spent.
+                self.admin('dispatch-result', {'wake_id': claimed['wake_id'], 'outcome': 'cancelled',
+                                               'result': {'error': 'budget_exhausted'}})
+                self.admin('pause', {'reason': 'Claude task budget exhausted'})
+                return {'dispatched': sent, 'paused': True}
             except Exception:
                 self.admin('dispatch-result', {'wake_id': claimed['wake_id'], 'outcome': 'uncertain',
                                                'result': {'error': 'Claude role dispatch requires review'}})

@@ -21,6 +21,9 @@ from .joint_route import connect_route
 
 class ReferenceStopped(RuntimeError):pass
 class ProcessViolation(RuntimeError):pass
+class NoVerifiedJointIK(ValueError):
+    """The Oracle's own joint-space IK found no verified pose for an arm."""
+    def __init__(self,robot):super().__init__('No verified robot IK for '+robot)
 
 class PlacementPlanningError(RuntimeError):
     """Finite search failure, not a statement of physical impossibility."""
@@ -85,6 +88,9 @@ class Trial:
             self.model.key_qpos[self.model.key('initial').id]=self.data.qpos.copy();root.find("keyframe/key[@name='initial']").set('qpos',' '.join(repr(float(x)) for x in self.data.qpos));ET.ElementTree(root).write(self.directory/'scene.xml',encoding='unicode');mujoco.mj_forward(self.model,self.data)
         self.arms={r:PandaArm(self.model,self.data,r) for r in self.task['arms']};self.cfg=deepcopy(controller_cfg) if controller_cfg is not None else load_harness();self.tick=0;self.stride=round(.02/self.model.opt.timestep)
         for arm in self.arms.values():arm.configure_hand_position_servo(self.cfg.get('gripper_position_servo','legacy'))
+        # A harness that names a physics profile gets it here too; one that names none is untouched.
+        from ..physics_profile import attach
+        self.physics_profile=attach(self,self.cfg)
         self.home={r:(self.data.site_xpos[a.site].copy(),self.data.site_xmat[a.site].reshape(3,3).copy()) for r,a in self.arms.items()}
         self.home_q={r:self.data.qpos[a.qids].copy() for r,a in self.arms.items()}
         self.screen_model=copy(self.model)
@@ -158,6 +164,7 @@ class Trial:
             for arm in self.arms.values():arm.control(.02)
         for arm in self.arms.values():
             if arm.grasp_force is not None:arm.physics_control()
+        if getattr(self,'physics_profile',None) is not None:self.physics_profile.before_step()
         before=self.time;mujoco.mj_step(self.model,self.data)
         from ..physics_health import require_valid_step
         try:require_valid_step(self.data,before)
@@ -228,7 +235,7 @@ class Trial:
         arm=self.arms[robot];q,error=arm.ik.solve(np.asarray(target),rotation,arm.qref,250);_,reached=arm.ik.pose(q)
         if error>.0015 or np.linalg.norm(rotation_vector(rotation,reached))>.02:
             q,error=arm.ik.solve(np.asarray(target),rotation,self.home_q[robot],350);_,reached=arm.ik.pose(q)
-        if error>.0015 or np.linalg.norm(rotation_vector(rotation,reached))>.02:raise ValueError('No verified robot IK for '+robot)
+        if error>.0015 or np.linalg.norm(rotation_vector(rotation,reached))>.02:raise NoVerifiedJointIK(robot)
         return ('move',dict(joint_rad=q.tolist(),joint_speed_rad_s=.65))
     def move(self,robot,target,rotation=None,label='move',precise=False,speed_m_s=None):
         arm=self.arms[robot];rotation=self.data.site_xmat[arm.site].reshape(3,3).copy() if rotation is None else rotation
@@ -238,7 +245,9 @@ class Trial:
         straight=robot in self.held or any(x in label for x in ('contact','lift','prealign','seat','withdraw'))
         try:self.execute(label,{robot:self.pose_command(robot,target,rotation,speed=(.035 if robot in self.held else .10) if speed_m_s is None else speed_m_s,joints=not straight and speed_m_s is None)})
         except ValueError as error:
-            if robot not in self.held and 'no verified IK solution' in str(error):self.move_free(robot,target,rotation,label)
+            # Both the Oracle's joint IK and the controller's IK refusal
+            # leave an empty arm free to take a sampled joint route.
+            if robot not in self.held and (isinstance(error,NoVerifiedJointIK) or 'no verified IK solution' in str(error)):self.move_free(robot,target,rotation,label)
             else:raise
         if precise:
             for i in range(3):

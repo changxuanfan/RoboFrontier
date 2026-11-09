@@ -38,6 +38,20 @@ def current_path(name, root=ROOT):
     return name
 
 
+def oracle_recording(name, root=ROOT):
+    """The motion folder a released Oracle row names, on this host.
+
+    Some rows name the checkout they were recorded in; legacy-paths maps those to
+    their place under root. The recorded location is still accepted where it exists."""
+    mapped = Path(current_path(name, root))
+    candidates = list(dict.fromkeys([Path(root)/mapped, Path(name)]))
+    for path in candidates:
+        if path.is_dir():
+            return path
+    raise FileNotFoundError('Released Oracle recording is not on this host: '+str(name)
+                            +' (looked in '+', '.join(map(str, candidates))+')')
+
+
 def legacy_bytes(name, root=ROOT):
     """A released file's bytes as recorded before the benchmark/ move; only path text changed."""
     import re
@@ -64,17 +78,50 @@ def resolve_case(case_id, purpose='gpt', root=ROOT):
     return name, family, case
 
 
+# New Relay runs count a timber as complete only after a qualified airborne handover.
+RELAY_HANDOVER_RULE = 'relay-airborne-handover-v1'
+RELAY_HANDOVER_DEFINITION = ('A handover qualifies only while the timber is off the table and at least two current holders '
+    'keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL '
+    'without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.')
+
+
+# New policy runs count their wall limit as active running time (policy_probe.BudgetGuard):
+# only time the world is running unpaused counts; host stalls, pauses and network outages
+# do not. Runs frozen without this field keep the START wall-clock rule.
+ACTIVE_TIME_CLOCK = 'active_time_v1'
+# Active time no longer ends a hung run, so those runs also stop once this much wall time has
+# passed since START (policy_probe.BudgetGuard). A run stopped this way needs review and is not
+# counted. Runs frozen without this field have no backstop.
+WALL_BACKSTOP_S = 172800
+
+
 def protocol_for(case, release_sha256, wall_limit_s=86400):
     import math
     if isinstance(wall_limit_s, bool) or not isinstance(wall_limit_s, (int,float)) or not math.isfinite(wall_limit_s) or not 0 < wall_limit_s <= 86400:
         raise ValueError('Invalid policy wall limit')
-    return dict(kind='policy_trial', launch='explicit_manager_start',
+    protocol = dict(kind='policy_trial', launch='explicit_manager_start',
         release_sha256=release_sha256, case_id=case['id'],
         source_task_sha256=case['source_files']['task.json'],
         source_scene_sha256=case['source_files']['scene.xml'],
         reference_evidence=case['qualification'], total_wall_limit_s=wall_limit_s,
-        evaluation_semantics='terminal_outcome_v2',
+        clock=ACTIVE_TIME_CLOCK, wall_backstop_s=WALL_BACKSTOP_S, evaluation_semantics='terminal_outcome_v2',
         experience='fresh_run_only', presentation_loop=False)
+    if case['id'].startswith('relay-'):
+        protocol['relay_completion_rule'] = RELAY_HANDOVER_RULE
+    return protocol
+
+
+def expected_protocol(case, protocol, release_sha256):
+    """The protocol a task should carry; runs frozen before the handover rule, the
+    active-time clock or the wall backstop keep their own terms."""
+    expected = protocol_for(case, release_sha256, protocol['total_wall_limit_s'])
+    if 'relay_completion_rule' not in protocol:
+        expected.pop('relay_completion_rule', None)
+    if 'clock' not in protocol:
+        expected.pop('clock', None)
+    if 'wall_backstop_s' not in protocol:
+        expected.pop('wall_backstop_s', None)
+    return expected
 
 
 def policy_task(case_id, root=ROOT, wall_limit_s=86400):
@@ -94,7 +141,7 @@ def validate_policy_task(task, root=ROOT):
             or not isinstance(protocol.get('total_wall_limit_s'), (int, float))):
         raise ValueError('Invalid released policy protocol')
     _, _, case = resolve_case(task['id'], root=root)
-    if (protocol != protocol_for(case, sha(Path(root)/RELEASE), protocol['total_wall_limit_s'])
+    if (protocol != expected_protocol(case, protocol, sha(Path(root)/RELEASE))
             or protocol.get('case_id') != task['id']
             or protocol.get('source_task_sha256') != case['source_files']['task.json']
             or protocol.get('source_scene_sha256') != task['scene_sha256']
@@ -152,13 +199,19 @@ def freeze_public(task, directory, public, root=ROOT):
             public['completion'] = deepcopy(task['completion'])
             public['rules'] = deepcopy(task['rules'])
         rules = public.get('rules', [])
-        public['rules'] = [rule for rule in rules if not rule.startswith((
-            'Airborne transport requires', 'Inside GOAL, original qualified holders',
-            'Drops and violations remain recorded.'))]
+        handover_rule = task.get('run_protocol', {}).get('relay_completion_rule') == RELAY_HANDOVER_RULE
+        removed = ('Inside GOAL, original qualified holders',) if handover_rule else (
+            'Airborne transport requires', 'Inside GOAL, original qualified holders', 'Drops and violations remain recorded.')
+        public['rules'] = [rule for rule in rules if not rule.startswith(removed)]
+        if handover_rule: public['rules'].append(RELAY_HANDOVER_DEFINITION)
         public['rules'].append('Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history.')
-        public['completion']['required_airborne_handover'] = False
-        public['completion']['scope'] = ('Every timber at least 70% above painted GOAL and released; process events are reported separately.'
-                                         if timber_fraction_rule else 'All assemblies released, actually supported and inside GOAL tolerance; process events are reported separately.')
+        public['completion']['required_airborne_handover'] = handover_rule
+        if handover_rule:
+            public['completion']['relay_completion_rule'] = RELAY_HANDOVER_RULE
+            public['completion']['scope'] = 'Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.'
+        else:
+            public['completion']['scope'] = ('Every timber at least 70% above painted GOAL and released; process events are reported separately.'
+                                             if timber_fraction_rule else 'All assemblies released, actually supported and inside GOAL tolerance; process events are reported separately.')
     if terminal:
         # Released public projections carry three statements that contradict the
         # current task or address engineers; the private evaluator task is unchanged.
@@ -244,7 +297,7 @@ def validate_frozen_policy(task, directory):
     if len(cases) != 1:
         raise ValueError('Policy case is not in the frozen release')
     case = cases[0]
-    if protocol != protocol_for(case, sha(release), protocol['total_wall_limit_s']):
+    if protocol != expected_protocol(case, protocol, sha(release)):
         raise ValueError('Frozen policy protocol differs')
     source = directory/Path(task['scene_asset']).parent
     for name, expected in case['source_files'].items():

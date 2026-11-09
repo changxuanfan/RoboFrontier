@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 
-from robofrontier.task_families import ROOT,RELEASE,read
+from robofrontier.task_families import ROOT,RELEASE,oracle_recording,read
 from robofrontier.run_setup import write_json
 
 
@@ -62,7 +62,7 @@ def check_historical():
     bindings=[]
     for family in read(ROOT/RELEASE)['families'].values():
         for row in family['oracle']:
-            reader=read(Path(row['recording'])/'stream.json')
+            reader=read(oracle_recording(row['recording'])/'stream.json')
             source=Path(row['directory'])
             for name,expected in row['source_files'].items():
                 if digest(source/name)!=expected:raise ValueError('Frozen source changed')

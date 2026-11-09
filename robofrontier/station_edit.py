@@ -112,7 +112,8 @@ def _base_keep(spec,reader,times):
 def build(spec,output):
     """Stream raw chunks in bounded 32-second windows; never integrate physics."""
     output=Path(output);output.mkdir(parents=True,exist_ok=False)
-    reader=MotionReader(spec['recording']);joints=json.loads((Path(spec['directory'])/'workstation.json').read_text())['joints']
+    from .task_families import oracle_recording
+    reader=MotionReader(oracle_recording(spec['recording']));joints=json.loads((Path(spec['directory'])/'workstation.json').read_text())['joints']
     times=np.empty(reader.meta['frames'],dtype=float)
     candidates=[];buffer=[];offset=0;stride=max(1,round(reader.meta['sample_hz']/10))
     window=max(8,round(32*reader.meta['sample_hz']/stride))

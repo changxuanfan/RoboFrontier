@@ -233,6 +233,26 @@ test('closing one task settles its pending tools without stopping peer tasks',as
   assert.equal(f.calls.some(c=>c.method==='close'),false);
 });
 
+test('a host lost while its turn cannot settle fences only its own task',async t=>{
+  const f=fixture(),parent=await f.start(f.clients[0]);await f.start(f.clients[1]);
+  const read=f.native.call;
+  // The lost task's thread stays active with no known turn, so its release cannot settle.
+  f.native.call=async(method,p)=>method==='thread/read'&&p.threadId===parent.thread.id?
+    {thread:{id:p.threadId,status:{type:'active'}}}:read.call(f.native,method,p);
+  const pending=f.gateway.tool('item/tool/call',{threadId:parent.thread.id,tool:'robot',callId:'c',arguments:{}})
+    .then(value=>({value}),error=>({error:error.message}));
+  t.mock.method(process.stderr,'write',()=>true);
+  f.gateway.disconnected(f.clients[0]);
+  assert.match((await pending).error,/Task channel (closed|lost)/);
+  for(let n=0;n<100&&f.clients[0].task.state==='closing'&&!f.gateway.failed;n++)await new Promise(r=>setTimeout(r,10));
+  assert.equal(f.clients[0].task.state,'quarantined');
+  assert.ok(!f.gateway.failed);
+  assert.ok(!f.clients[1].destroyed);
+  await f.gateway.request(f.clients[1],'config/read');
+  await assert.rejects(f.gateway.tool('item/tool/call',{threadId:parent.thread.id,tool:'robot',callId:'d',arguments:{}}));
+  assert.equal(f.gateway.owners.get(parent.thread.id),f.clients[0].task);
+});
+
 test('a delayed tool response keeps its Unix task channel and leaves peers usable',async t=>{
   const directory=fs.mkdtempSync(path.join(os.tmpdir(),'rf-gw-long-')),f=fixture();
   for(const task of f.gateway.tasks.values()){task.state='new';delete task.client;}

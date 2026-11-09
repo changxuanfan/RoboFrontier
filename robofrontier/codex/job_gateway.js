@@ -209,7 +209,17 @@ class JobGateway {
   disconnected(client){
     this.clients.delete(client);
     const task=client.task;
-    if(task?.client===client&&task.state==='bound')this.release(task).catch(()=>this.fail());
+    if(task?.client===client&&task.state==='bound')this.release(task).catch(()=>this.quarantine(task));
+  }
+  // One task's host died and its native state did not settle: fence that task alone. It
+  // keeps its threads (no other task can adopt them), gets no events or tools, and is not
+  // recoverable automatically; every other task keeps the shared engine. A native exit
+  // still fails the whole engine through onExit.
+  quarantine(task){
+    if(this.failed)return;
+    task.state='quarantined';
+    for(const [id,p]of this.serverRequests)if(p.task===task){p.reject(new Error('Task channel lost'));this.serverRequests.delete(id);}
+    process.stderr.write('Task '+task.id+' lost its channel before its native state settled; it needs review.\n');
   }
   fail(){
     if(this.failed)return;this.failed=true;

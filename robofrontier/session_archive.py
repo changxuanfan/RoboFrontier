@@ -131,13 +131,25 @@ def compress_verified(path):
 
 
 def continuable(run, meta):
-    """Whether this run may still be continued as a new segment, and so must keep its sessions."""
-    if meta.get('lifecycle') == 'ended': return False
-    from .run_segments import retry_eligibility
-    from .runtime_store import RuntimeStore
-    store = RuntimeStore(run/'private/state/runtime.sqlite')
-    try: return retry_eligibility(run, store)[0]
-    finally: store.close()
+    """Whether this run may still be continued as a new segment, and so must keep its sessions.
+
+    Only what no continuation can change ends it: a normal end or integrity abort, a run
+    that never started, a layout without segments, or no recorded motion to restore. A
+    source checkout that moved on, the automatic continuation already used, a stop
+    request or a seal do not: an operator-authorized runtime upgrade can still continue
+    such a run (runtime_upgrade), and it resumes its Codex threads from the home."""
+    from . import run_segments
+    if meta.get('lifecycle') == 'ended' or meta.get('integrity_valid') is False: return False
+    if not run_segments.supported(run) or meta.get('start_at') is None: return False
+    kinds = ('INTEGRITY_ABORT',) + run_segments.NORMAL_END_EVENTS
+    database = run/'private/state/runtime.sqlite'
+    with sqlite3.connect(database.resolve().as_uri()+'?mode=ro', uri=True) as db:
+        if db.execute('SELECT 1 FROM events WHERE kind IN (%s) LIMIT 1' % ','.join('?'*len(kinds)), kinds).fetchone():
+            return False
+    try:
+        return run_segments._last_frame(run, meta.get('segment', 0)) is not None
+    except (OSError, ValueError, KeyError, TypeError):
+        return True  # Unreadable motion is for review, not a reason to release the sessions.
 
 
 def _host_alive(pid):

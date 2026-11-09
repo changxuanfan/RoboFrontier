@@ -78,8 +78,11 @@ class FamilyReleaseTests(unittest.TestCase):
                             else:
                                 self.assertEqual(public[key], review[key])
                     if case.startswith('relay-'):
-                        self.assertFalse(public['completion']['required_airborne_handover'])
-                        self.assertFalse(any('Airborne transport requires' in r or 'Only the last established' in r for r in public['rules']))
+                        self.assertTrue(public['completion']['required_airborne_handover'])
+                        self.assertEqual(public['completion']['relay_completion_rule'], 'relay-airborne-handover-v1')
+                        self.assertTrue(any('Every assembly must undergo a real qualified airborne handover' in r for r in public['rules']))
+                        self.assertTrue(any('Only the last established' in r for r in public['rules']))
+                        self.assertTrue(any('never counts as transport' in r for r in public['rules']))
                         self.assertIn('terminal outcome v2', (run/'public/inputs'/public['family_guidance']).read_text())
                 if case.startswith('transport-'):
                     self.assertFalse(public['completion']['acceptance']['process_compliance_required'])
@@ -142,9 +145,9 @@ class FamilyReleaseTests(unittest.TestCase):
             try:
                 world.start_trial()
                 self.assertEqual(world.motion_recorder.meta['sample_hz'], 30)
-                self.assertEqual(world.suite_sampler.log_format, 'events-1s')
+                self.assertEqual(world.suite_sampler.log_format, 'events-10s')
                 header = json.loads((run/'private/outputs/suite-process.jsonl').read_text().splitlines()[0])
-                self.assertEqual((header['schema'], header['snapshot_interval_s']), ('robofrontier.suite-process.v2', 1.0))
+                self.assertEqual((header['schema'], header['snapshot_interval_s']), ('robofrontier.suite-process.v2', 10.0))
             finally:
                 world.close()
             # A harness frozen before motion_hz existed keeps the original 60 Hz.
@@ -163,9 +166,55 @@ class FamilyReleaseTests(unittest.TestCase):
                 bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'motion_hz': value}))
                 with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'motion sampling'):
                     load_harness(bad)
-            bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'process_log': 'every-step'}))
-            with self.assertRaisesRegex(ValueError, 'process log format'):
-                load_harness(bad)
+            for value in ('every-step', 'events-5s', 'events-10'):
+                bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'process_log': value}))
+                with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'process log format'):
+                    load_harness(bad)
+            # Every Monitor format, and only those, is accepted (task_config keeps the list literal).
+            from robofrontier.suite.evaluate import PROCESS_LOG_FORMATS
+            self.assertEqual(sorted(PROCESS_LOG_FORMATS), ['events-10s', 'events-1s', 'events-60s', 'full'])
+            for value in PROCESS_LOG_FORMATS:
+                bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'process_log': value}))
+                with self.subTest(value=value):
+                    self.assertEqual(load_harness(bad)['process_log'], value)
+
+
+class ReleaseRecordTests(unittest.TestCase):
+    def test_the_release_pins_no_harness_and_the_asset_pin_follows_it(self):
+        # Each run freezes its own harness.json and harness_sha256; the release's own
+        # harness pin went stale on 2026-10-28 and nothing enforced it.
+        from robofrontier.task_families import sha
+        self.assertNotIn('harness', sorted(read(ROOT/RELEASE)))
+        assets = read(ROOT/'configs/policy-assets.json')
+        self.assertEqual(assets['release_sha256'], sha(ROOT/RELEASE))
+        # A task-only revision reuses the pinned asset archive.
+        self.assertEqual(assets['archive_release_sha256'],
+                         'b432892f174f9394927905345fc860b68b3ebc64d7c276530635eda79a699d1c')
+
+
+class OracleRecordingTests(unittest.TestCase):
+    # Relay rows name the roomscript2 checkout they were recorded in.
+    OLD = '/Users/fanchangxuan/Repos/roomscript2/runs/oracle/relay-test/relay-a08-d1/attempt-001/motion'
+    NEW = 'runs/oracle/relay-test/relay-a08-d1/attempt-001/motion'
+
+    def test_every_released_recording_maps_into_the_checkout(self):
+        from robofrontier.task_families import current_path
+        for family in read(ROOT/RELEASE)['families'].values():
+            for row in family['oracle']:
+                with self.subTest(case=row['id']):
+                    self.assertFalse(Path(current_path(row['recording'])).is_absolute())
+
+    def test_a_recording_resolves_under_root_or_is_named_when_missing(self):
+        import re
+        from robofrontier.task_families import oracle_recording
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaisesRegex(FileNotFoundError, 'not on this host: '+re.escape(self.OLD)):
+                oracle_recording(self.OLD, root)
+            (root/self.NEW).mkdir(parents=True)
+            self.assertEqual(oracle_recording(self.OLD, root), root/self.NEW)
+            self.assertEqual(oracle_recording(self.NEW, root), root/self.NEW)
+            self.assertEqual(oracle_recording(str(root/self.NEW), ROOT), root/self.NEW)
 
 
 if __name__ == '__main__':

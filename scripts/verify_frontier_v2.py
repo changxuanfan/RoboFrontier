@@ -2,7 +2,7 @@
 
 Designed for four external workers, one --family per worker; no nested pool.
 """
-import argparse,json,time,signal
+import argparse,hashlib,json,time,signal
 from pathlib import Path
 import mujoco
 from robofrontier.suite.v2 import ROOT,CATALOG
@@ -22,6 +22,14 @@ def preflight(case):
  checked=json.loads((p/'engineering-check.json').read_text()) if (p/'engineering-check.json').exists() else {}
  return dict(case_id=case['id'],source_scene_sha256=source.manifest['scene_sha256'],schema=task['suite_version'],passed=bool(checked.get('passed') and not result.get('task_success')),initial_acceptance=result,
    source_valid=True,evaluator_constructed=True,static_layout_checked=checked.get('passed',False),oracle_started=False,scope='Input/evaluator preflight only; no physics time or actions; not a physical reference witness')
+
+
+def write_preflight(rows,family=None,cases=None,root=ROOT):
+ """One receipt per selection (parallel --family workers never overwrite each other), recording the filter."""
+ name='oracle-preflight'+(f'-{family}' if family else '')+('-cases-'+hashlib.sha256(json.dumps(sorted(cases)).encode()).hexdigest()[:10] if cases else '')
+ path=Path(root)/'docs/generated/frontier-v2'/(name+'.json')
+ write_json(path,dict(passed=all(r['passed'] for r in rows),oracle_started=False,selection=dict(family=family,cases=sorted(cases) if cases else None),cases=rows))
+ return path
 
 
 def run(case,seed=0,output_root=None,wall_budget_s=900.,sim_budget_s=3600.,action_budget=20000,max_goals=None,harness_path=None):
@@ -79,6 +87,6 @@ if __name__=='__main__':
    result=run(case,a.seed,a.output_root,a.wall_budget_s,a.sim_budget_s,a.action_budget,a.max_goals,harness_path=a.harness)
    if not result['passed']:break
  else:
-  rows=[preflight(c) for c in selected];write_json(ROOT/'docs/generated/frontier-v2/oracle-preflight.json',dict(passed=all(r['passed'] for r in rows),oracle_started=False,cases=rows))
-  print(json.dumps(dict(passed=all(r['passed'] for r in rows),cases=len(rows),oracle_started=False)))
+  rows=[preflight(c) for c in selected];path=write_preflight(rows,a.family,a.case)
+  print(json.dumps(dict(passed=all(r['passed'] for r in rows),cases=len(rows),oracle_started=False,report=str(path))))
   if not all(r['passed'] for r in rows):raise SystemExit(1)

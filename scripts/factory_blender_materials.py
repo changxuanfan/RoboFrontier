@@ -28,7 +28,7 @@ def task_role(geom):
     name=geom.get('name','')
     if '__' not in name:return None
     if any(mark in name for mark in ('_label','_print','_mark','__score_title_geom')):return 'print'
-    if (name.startswith('relay-') and re.search(r'__payload_\d+_beam$',name)
+    if (name.startswith('relay-') and re.search(r'__payload_\d+_beam(?:_surface|_segment\d+)?$',name)
             or name.startswith('mosaic-') and re.search(r'__[A-Z]_stock\d+_geom$',name)):
         return 'painted_wood'
     if (name.startswith('transport-') and re.search(r'__(?:[A-Z]_item\d+_geom|[A-Z]_slot\d+_cue_color\d+|board_[A-Z]_plate)$',name)
@@ -55,6 +55,9 @@ def resolve(spec, role=None, calibrated=True):
                       metallic=0., specular=.30)
     if role in ('print','painted_wood'):
         result.update(roughness=.95 if role=='print' else .58,metallic=0.,specular=0. if role=='print' else .25)
+    if role=='print':
+        # Emission has no texture input, so it would lift printed black to gray.
+        result['emission']=0.
     if role=='task_color' and max(result['rgba'][:3])-min(result['rgba'][:3]) < .06:
         result.update(roughness=.65,metallic=0.,specular=.18)
     if role in ('print','painted_wood','task_color'):

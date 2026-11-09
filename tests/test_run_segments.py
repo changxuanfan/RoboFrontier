@@ -55,10 +55,12 @@ class EligibilityTests(unittest.TestCase):
             fcntl.flock(lock, fcntl.LOCK_EX)
             self.assertEqual(self.reason(), 'a process still owns the physical world')
         limit = json.loads((self.run / 'private/inputs/task.json').read_text())['run_protocol']['total_wall_limit_s']
-        self.store.put('start_at', time.time() - limit + MIN_REMAINING_S / 2)
+        # A new run counts active time (test_active_time covers the wall clock of frozen runs).
+        self.store.put('start_at', time.time() - limit * 2)
+        self.assertEqual(self.reason(), 'no recorded motion frame')
+        self.store.put('active_s', limit - MIN_REMAINING_S / 2)
         self.assertIn('of the wall limit left', self.reason())
-        # Downtime does not count as used time.
-        self.store.put('downtime_s', MIN_REMAINING_S * 2)
+        self.store.put('active_s', limit - MIN_REMAINING_S * 2)
         self.assertEqual(self.reason(), 'no recorded motion frame')
 
     def test_only_a_seal_of_a_live_world_counts_as_a_normal_end(self):
@@ -108,6 +110,16 @@ class EligibilityTests(unittest.TestCase):
         self.assertEqual(process_summary(self.run)['total']['dial']['valid_trials'], 67)
         (out / 'suite-process.jsonl').write_text(json.dumps(header) + '\n' + json.dumps({'type': 'snapshot', 'sim_time_s': 1, 'result': {'samples': 1}}) + '\n')
         self.assertIsNone(run_segments.dial_record(self.run))
+
+    def test_dial_record_carries_which_dials_had_ready_support_at_the_restore_frame(self):
+        out = self.run / 'private/outputs'; header = {'schema': 'x', 'format': 'events-1s'}
+        row = lambda t, ready: {'type': 'event', 'sim_time_s': t, 'result': {
+            'valid_trials': 3, 'display': 2, 'feedback_mode': 'best_so_far', 'solved': False,
+            'input_ready': all(ready), 'private_support_ready': ready}}
+        rows = [header, row(10, [True, False]), row(20, [True, True]), row(30, [False, True])]
+        (out / 'suite-process.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows))
+        self.assertEqual(run_segments.dial_record(self.run, 25.)['support_ready'], [True, True])
+        self.assertEqual(run_segments.dial_record(self.run)['support_ready'], [False, True])
 
     def test_deadline_excludes_downtime(self):
         self.store.put('start_at', 1000.); self.store.put('downtime_s', 25.)

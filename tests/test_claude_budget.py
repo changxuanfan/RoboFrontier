@@ -29,6 +29,25 @@ class SharedBudgetTests(unittest.TestCase):
                 self.assertEqual((snapshot['reported_spend_usd'],snapshot['unreported_cost_count']),('0.0189',1))
             finally: ledger.close()
 
+    def test_capped_interrupted_turn_becomes_uncertain_and_blocks(self):
+        # docs/running/run-segments.md: under a cap a cut-off turn's unknown cost keeps blocking.
+        self.assertEqual(self.ledger.reserve('cut','A',.3),.3)
+        snapshot=self.ledger.settle_interrupted()
+        self.assertEqual(snapshot['status'],'uncertain')
+        self.assertEqual([(r['id'],r['status']) for r in snapshot['reservations']],[('cut','uncertain')])
+        with self.assertRaisesRegex(ValueError,'exhausted or uncertain'):
+            self.ledger.reserve('next','A',.3)
+
+    def test_an_exhausted_cap_refuses_with_its_own_error(self):
+        from robofrontier.claude.budget import BudgetExhausted
+        self.assertEqual(self.ledger.reserve('all','A'),1.0)
+        with self.assertRaises(BudgetExhausted):
+            self.ledger.reserve('next','B',.3)
+        self.ledger.settle('all',None,outcome_known=True)
+        with self.assertRaises(ValueError) as caught:
+            self.ledger.reserve('later','B',.3)
+        self.assertNotIsInstance(caught.exception,BudgetExhausted)
+
     def test_busy_budget_reservation_waits_and_is_recorded_once(self):
         from robofrontier import sqlite_busy
         self.assertEqual(self.ledger.db.execute('PRAGMA busy_timeout').fetchone()[0],30000)

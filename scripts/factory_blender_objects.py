@@ -13,6 +13,7 @@ import bpy
 import bmesh
 import numpy as np
 from mathutils import Euler,Matrix
+from factory_capsule import capsule_vertices
 
 
 def eulers(rotation):
@@ -178,7 +179,7 @@ def build(metadata,meshes,primitive,geom_material,scene,mutable_ids,use_instance
                 v,f,smooth,uv=piece(g);v=v.copy()
                 if g['kind']==6:v*=g['size']
                 elif g['kind']==5:v*=np.array([g['size'][0],g['size'][0],g['size'][1]])
-                elif g['kind']==3:v*=g['size'][0]
+                elif g['kind']==3:v=capsule_vertices(v,g['size'][0],g['size'][1])
                 v=v@np.array(g['local_rotation']).T+g['local_position']
                 mat=geom_material(g)
                 if mat.name=='factory_bench_wood':uv=v[f][...,:2]*2.

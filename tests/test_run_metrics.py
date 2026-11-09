@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -83,6 +84,127 @@ class RunMetricTests(unittest.TestCase):
             self.assertEqual(result['unfinished_cli_turns'],1)
             self.assertFalse(result['usage_complete']);self.assertFalse(result['cost_complete'])
 
+    def _claude_turns(self, tmp, *turns):
+        output=Path(tmp)/'private/outputs';output.mkdir(parents=True)
+        rows=[]
+        for index,(session,actor,cumulative) in enumerate(turns):
+            row={'event':'cli_turn_completed','events_name':f'turn{index}','session_id':session,'actor':actor,
+                 'phase':'policy','at':index,'duration_s':1,'reported_cost_usd':.1,'usage':{'input_tokens':1}}
+            if cumulative is not None:
+                read,write,fresh,out=cumulative
+                row['model_usage']={'m':{'inputTokens':fresh,'cacheReadInputTokens':read,
+                                         'cacheCreationInputTokens':write,'outputTokens':out}}
+            else: row['usage']=None
+            rows.append(row)
+        (output/'claude-host.jsonl').write_text('\n'.join(map(json.dumps,rows))+'\n')
+        return export_metrics(tmp,'claude')
+
+    def test_claude_model_usage_counts_each_session_once_across_persistent_turns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result=self._claude_turns(tmp,('s','G',(800,100,100,10)),('s','G',(900,100,150,15)),
+                                      ('other','K',(40,5,5,2)),('s','G',(1000,120,180,20)),('s','G',(1000,120,180,20)))
+            self.assertEqual(result['usage']['input_tokens'],1300+50)
+            self.assertEqual(result['usage']['cached_input_tokens'],1040)
+            self.assertEqual(result['usage']['cache_write_input_tokens'],125)
+            self.assertEqual(result['usage']['output_tokens'],22)
+            self.assertEqual(result['by_actor']['G']['input_tokens'],1300)
+            self.assertEqual(result['by_actor']['K']['input_tokens'],50)
+            self.assertEqual([r['usage']['input_tokens'] for r in result['rows']],[1000,150,50,150,0])
+            self.assertEqual(result['rows'][1]['usage']['cache_miss_input_tokens'],50)
+            self.assertTrue(result['usage_complete'])
+
+    def test_claude_counter_that_restarts_counts_from_zero_again(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result=self._claude_turns(tmp,('s','G',(800,100,100,10)),('s','G',(30,10,10,1)),('s','G',(60,10,20,2)))
+            self.assertEqual([r['usage']['input_tokens'] for r in result['rows']],[1000,50,40])
+            self.assertEqual(result['usage']['input_tokens'],1090)
+            self.assertEqual(result['usage']['output_tokens'],12)
+
+    def test_claude_turn_without_a_result_stays_unknown_and_next_turn_keeps_its_baseline(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result=self._claude_turns(tmp,('s','G',(800,100,100,10)),('s','G',None),('s','G',(900,100,150,15)))
+            self.assertIsNone(result['usage']['input_tokens'])
+            self.assertEqual(result['known_usage_subtotals']['input_tokens'],1150)
+            self.assertEqual(result['known_usage_subtotals']['output_tokens'],15)
+
+    def _claude_transcripts(self, tmp, files):
+        from datetime import datetime, timezone
+        from robofrontier import run_layout
+        def stamp(at): return datetime.fromtimestamp(at,timezone.utc).isoformat().replace('+00:00','Z')
+        root=run_layout.path(tmp,'engine_config','claude')/'projects/p'
+        for name,(session,records) in files.items():
+            path=root/name;path.parent.mkdir(parents=True,exist_ok=True)
+            lines=[]
+            for record in records:
+                if record[0]=='compact':
+                    lines.append({'type':'system','subtype':'compact_boundary','sessionId':session,'timestamp':stamp(record[1]),
+                                  'compactMetadata':{'preTokens':record[2]}})
+                else:
+                    ident,at,read,write,fresh,out=record
+                    lines.append({'type':'assistant','sessionId':session,'timestamp':stamp(at),'message':{'id':ident,
+                        'usage':{'input_tokens':fresh,'cache_read_input_tokens':read,'cache_creation_input_tokens':write,'output_tokens':out}}})
+            path.write_text('\n'.join(map(json.dumps,lines))+'\n')
+
+    def _claude_results(self, tmp, *results):
+        output=Path(tmp)/'private/outputs';output.mkdir(parents=True)
+        rows=[]
+        for index,(session,actor,at,cumulative) in enumerate(results):
+            read,write,fresh,out=cumulative
+            row={'event':'cli_turn_completed','events_name':f'turn{index}','session_id':session,'actor':actor,'phase':'policy',
+                 'duration_s':2,'reported_cost_usd':.1,'usage':{'input_tokens':1},
+                 'model_usage':{'m':{'inputTokens':fresh,'cacheReadInputTokens':read,'cacheCreationInputTokens':write,'outputTokens':out}}}
+            if at is not None: row['at']=at
+            rows.append(row)
+        (output/'claude-host.jsonl').write_text('\n'.join(map(json.dumps,rows))+'\n')
+
+    def test_claude_requests_after_the_last_result_count_from_transcripts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._claude_results(tmp,('s','G',1000,(90,5,5,10)))
+            self._claude_transcripts(tmp,{'s.jsonl':('s',[('before',900,90,5,5,10),('late',1100,1,0,0,1),('late',1101,70,20,10,5)]),
+                                          's/subagents/agent-1.jsonl':('s',[('agent',1200,5,3,2,1)])})
+            result=export_metrics(tmp,'claude')
+            self.assertEqual(result['usage']['input_tokens'],100+100+10)
+            self.assertEqual(result['usage']['cached_input_tokens'],165)
+            self.assertEqual(result['usage']['cache_write_input_tokens'],28)
+            self.assertEqual(result['usage']['output_tokens'],16)
+            self.assertEqual(result['by_actor']['G']['input_tokens'],210)
+            late=result['rows'][-1]
+            self.assertEqual((late['phase'],late['usage_source'],late['actor']),('after_last_result','transcript','G'))
+            self.assertEqual(result['usage_after_last_result'],{'sessions':1,'compactions':0,'compaction_pre_tokens':0})
+            self.assertTrue(result['usage_complete']);self.assertFalse(result['cost_complete'])
+            self.assertEqual(result['model_process_seconds_sum'],2)
+
+    def test_claude_transcript_adds_nothing_when_every_request_has_a_result(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._claude_results(tmp,('s','G',1000,(90,5,5,10)),('old','K',None,(9,0,1,1)))
+            self._claude_transcripts(tmp,{'s.jsonl':('s',[('before',900,90,5,5,10)]),'old.jsonl':('old',[('any',5000,9,0,1,1)])})
+            result=export_metrics(tmp,'claude')
+            self.assertEqual(result['usage']['input_tokens'],110)
+            self.assertEqual(result['phase_counts'],{'policy':2})
+            self.assertTrue(result['cost_complete'])
+
+    def test_claude_fork_copies_count_once_and_only_when_no_result_covers_them(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._claude_results(tmp,('parent','Controller',1000,(90,5,5,10)),('child','Delegate_a',1500,(4,1,0,1)))
+            self._claude_transcripts(tmp,{
+                'parent.jsonl':('parent',[('old',900,90,5,5,10),('pending',1200,50,0,0,2)]),
+                'child.jsonl':('child',[('old',900,90,5,5,10),('pending',1200,50,0,0,2),('own',1300,4,1,0,1)]),
+                'silent.jsonl':('silent',[('old',900,90,5,5,10),('quiet',1400,7,0,0,1)])})
+            result=export_metrics(tmp,'claude')
+            self.assertEqual(result['usage']['input_tokens'],100+5+50+7)
+            self.assertEqual(result['by_actor']['Controller']['input_tokens'],150)
+            self.assertEqual(result['by_actor']['Delegate_a']['input_tokens'],5)
+            self.assertEqual(result['known_usage_subtotals']['output_tokens'],14)
+
+    def test_claude_compaction_after_the_last_result_leaves_usage_incomplete(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._claude_results(tmp,('s','G',1000,(90,5,5,10)))
+            self._claude_transcripts(tmp,{'s.jsonl':('s',[('compact',900,500),('compact',1100,270),('late',1200,10,0,0,1)])})
+            result=export_metrics(tmp,'claude')
+            self.assertEqual(result['usage']['input_tokens'],110)
+            self.assertEqual(result['usage_after_last_result'],{'sessions':1,'compactions':1,'compaction_pre_tokens':270})
+            self.assertFalse(result['usage_complete'])
+
     def test_collected_session_mapping_wins_over_stale_batch_marker(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); run=root/'batch/profile/case'; run.mkdir(parents=True)
@@ -125,6 +247,25 @@ class RunEvidenceTests(unittest.TestCase):
                  'revisions': [{'rev': 2, 'role': 'Delegate_ab', 'change': 'open to 4 cm; faster'}]},
                 {'type': None, 'title': 'loose heading', 'role': None, 'tags': [],
                  'revisions': [{'rev': None, 'role': None, 'change': 'a loose revision'}]}])
+
+    def test_a_linked_or_special_skills_file_is_reported_and_never_read(self):
+        from robofrontier.run_layout import manifest_record
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)/'run'; (run/'private/inputs/meta').mkdir(parents=True); (run/'workspace').mkdir()
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('codex')))
+            (run/'private/inputs/meta/x.md').write_text('## private heading\n')
+            outside = Path(tmp)/'outside.md'; outside.write_text('## outside heading\n')
+            lessons = run/'workspace/skills.md'
+            for target in (outside, Path('../private/inputs/meta/x.md')):
+                with self.subTest(target=str(target)):
+                    lessons.symlink_to(target)
+                    [record] = run_skills(run)
+                    self.assertEqual(record['path'], 'workspace/skills.md')
+                    self.assertEqual(record['entries'], []); self.assertIn('not read', record['issue'])
+                    lessons.unlink()
+            os.mkfifo(lessons)
+            [record] = run_skills(run)  # must not block
+            self.assertEqual(record['entries'], []); self.assertIn('not read', record['issue'])
 
     def test_native_subagent_calls_are_counted_but_robot_and_text_are_not(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -17,7 +17,9 @@ continuation is segment 1; a run continues at most once
 - `segments`: one record per segment, with start and end times, the end
   reason, the restore source (segment, frame and simulation time), downtime and
   the interrupted actions;
-- `downtime_s`: total downtime.
+- `downtime_s`: total downtime;
+- `active_s`: active running time so far, for runs whose limit counts it (see
+  [Time](#time)).
 
 `private/outputs/segments.json` is an exported copy.
 
@@ -52,7 +54,11 @@ really died with time left:
 - the sources and frozen inputs are unchanged and there was no integrity abort;
 - no process holds the world lock, so the old host and world are gone;
 - a motion frame was recorded;
-- more than 60 s of the wall limit remain, not counting downtime.
+- more than 60 s of the wall limit remain, by the run's own clock (see
+  [Time](#time)): remaining active time, or for a frozen START-wall-time run the
+  wall time since START not counting downtime;
+- the run was not stopped by the [wall backstop](#wall-backstop), unless an
+  operator authorized the continuation explicitly.
 
 The Codex batch asks after every host exit, clean or not, because a host whose
 world died seals the run and exits normally; the checks above tell the cases
@@ -139,21 +145,133 @@ only.
 - The Dial game is episode history, so it continues: the new evaluator starts
   from the carried trial count, BEST and success, and the display shows that
   BEST at once. An input already scored and still held at the restore frame
-  stays the same trial while it is held on. Trials scored after the restore
+  stays the same trial while it is held on: blue support ready at that frame stays
+  qualified, and a red knob held there is not a new (premature) contact. Trials scored after the restore
   frame were never physically kept and are not carried. Process logs mark the
   carried part (`carried_valid_trials`); `run_segments.dial_record` combines
   segments, including runs continued before this existed (their later segment
   counted from zero, so its trials are added and BEST is the maximum).
+- A Relay timber's handovers and drops are episode history too, because completion
+  requires a qualified handover. The new evaluator keeps those made up to the restore
+  frame (`run_segments.relay_record`). A timber held at that frame becomes airborne
+  again through the ordinary lift check, keeping the custody and dropped state it had
+  there: a receiver joining before the frame must qualify again, and a timber dropped
+  there may still only be lifted by its holders.
 - The two CLIs describe the cut-off tool call differently (Claude: outcome
   unknown; Codex: cancelled); the resume message is authoritative.
 
 ## Time
 
-The effective deadline is `start_at + wall limit + downtime_s`: downtime does
-not count against the wall limit. Downtime is the new segment's start minus the
-previous segment's last activity (the later of the last database event written
-while it was alive and the last host log line). Hosts write a few log lines
-after the world dies, so downtime is underestimated by a few seconds.
+The 24-hour limit (`run_protocol.total_wall_limit_s`) is **the time the trial is
+actually running**. A continuation is the same trial, so its time adds to the
+time already used. The frozen `run_protocol.clock` says how a run counts it.
+
+### Active time (`clock: active_time_v1`, every new policy run)
+
+The world owner adds up active time tick by tick (`policy_probe.BudgetGuard`).
+An interval counts only while the lifecycle is `running`, physics is `running`
+and dispatch is not paused (`policy_probe.counting`). It does not count:
+
+- a pause by the experiment manager, the budget cutoff itself, an egress review
+  hold;
+- a Slurm egress pause or a network-outage pause (below);
+- a stall: when the owner's previous tick is more than 5 s ago
+  (`policy_probe.STALL_S`), the gap adds nothing and is recorded as an
+  `ACTIVE_TIME_STALL` event. Ticks normally come every few milliseconds, so this
+  catches a frozen or suspended host and a machine that slept;
+- the time between segments, when no owner runs.
+
+The total is saved as `active_s` in the runtime database at least every second,
+at the cutoff and when the owner closes. A continued segment or a restarted owner
+starts from the saved value; it never recomputes the deadline from wall time, so
+a sleep or crash is never counted again. The cutoff fires when `active_s` reaches
+the limit. `budget-cutoff.json` and `evaluation.json` record `active_s` /
+`budget_active_s` and the clock; a continuation needs at least 60 s of active
+time left (`run_segments.remaining_s`).
+
+`downtime_s` is still recorded (segment gaps and pauses) for reports; it no longer
+enters the limit. The public task does not state the clock, as it does not state
+the limit.
+
+The Claude supervisor leaves the end to the world: it ends a run on its own only
+60 s of active time past the limit, and waits for an outage or egress pause
+instead of sealing the paused run. The Codex host never had its own limit.
+
+### Wall backstop
+
+Active time does not advance while a world is paused or its host is frozen, so it
+alone would never end a run held forever. New policy runs therefore also freeze
+`run_protocol.wall_backstop_s` (172,800 s, `task_families.WALL_BACKSTOP_S`;
+private, like the limit). If that much wall time has passed since START and the
+active-time cutoff has not fired, the world owner stops the run exactly like a
+cutoff (dispatch paused, arms braked, the run closed after the braking grace),
+even while an outage pause, egress pause or review hold holds the world: the
+pause is closed first and is not taken up again. The records differ, so the stop
+is not a normal end:
+
+- a `POLICY_WALL_BACKSTOP` event (not `POLICY_WALL_LIMIT`) and
+  `POLICY_BACKSTOP_CLOSED` (not `POLICY_BUDGET_CLOSED`); `wall_backstop` in the
+  runtime database;
+- `budget-cutoff.json` with `wall_backstop: true` and `needs_review: true`;
+  `evaluation.json` with `termination_reason: wall_backstop`,
+  `wall_backstop: true`, `needs_review: true` and `budget_exhausted: false`.
+
+Its result needs review and is not counted. The Claude supervisor reports
+`ended_by: wall_backstop` (or reason `wall_backstop` when it had to end a world
+that did not close itself 150 s after the backstop) and the run's status is
+`needs_review`; both batches mark the job `needs_review` with reason
+`wall_backstop`. Run analysis keeps the cutoff's `wall_backstop` flag and
+`metrics.compute` sets `excluded: wall_backstop` and `needs_review`; the
+`compute` command lists such runs as `EXCLUDED`.
+
+A backstopped run never continues automatically. It continues only with an
+explicit operator authorization from the stopped-runtime upgrade path
+(`runtime_upgrade`, the same `manual_authorization` as for a further segment),
+which accepts the backstop's ended world as a stopped segment. Its continuation
+moves the backstop's `budget-cutoff.json` and `evaluation.json` aside (with
+`-wall-backstop-N` in their names), records `WALL_BACKSTOP_WAIVED`, and the
+backstop then counts again from that moment. Runs frozen without the field
+(every START-wall-time run, and active-time runs frozen before it) have no
+backstop.
+
+### Network-outage pause (local runs)
+
+A run off Slurm (a Mac or RunPod host) has no egress route to pause its world, so
+its world owner probes the engine's model API hosts
+(`robofrontier/network_outage.py`): Claude `api.anthropic.com`; Codex
+`chatgpt.com` and `auth.openai.com`, all of which must answer. A probe is a TCP
+connection on port 443, every 5 s, with a 5 s timeout. After three consecutive
+failures the world pauses exactly like a Slurm egress pause: physics stops
+stepping (arms hold mid-motion), dispatch is paused, new policy requests wait with
+their original call IDs, and an `OUTAGE_PAUSED` event is written. The time since
+the first failed probe of that streak is taken back from `active_s`
+(`retracted_active_s` in the event). The first successful probe resumes the same
+world (`OUTAGE_RESUMED`), with the same ownership and integrity checks as an
+egress resume and no replay; an operator pause made meanwhile is kept
+(`OUTAGE_HELD_FOR_REVIEW`). The resume is recorded as `egress_recovery`, so a
+turn that failed on the network during the pause gets its one network
+continuation per role and pause, as after an egress pause: Codex resends it when
+the app-server reports a transport failure, Claude when the CLI's structured API
+error names a lost connection or does not say what failed
+([Claude network continuation](../engines/claude-code.md#engineering-run-status-and-stop)). The resent turn
+continues the same session and replays nothing; a second failure in the same
+pause, or a failure for another reason within it, holds the run for review.
+
+The probe pauses only a running trial (not before START or after the cutoff). It
+is off for Slurm runs (they keep the egress pause), for frozen START-wall-time
+runs, and with `ROBOFRONTIER_OUTAGE_PROBE=off` (the test suite sets this). A probe
+that never succeeds, because the world process has no direct route out, never
+pauses: after 12 failures it stops and records `OUTAGE_PROBE_UNAVAILABLE`.
+
+### START wall time (frozen runs without `clock`)
+
+Runs frozen before the active-time clock keep their terms exactly. The effective
+deadline is `start_at + wall limit + downtime_s`: downtime does not count against
+the wall limit. Downtime is the new segment's start minus the previous segment's
+last activity (the later of the last database event written while it was alive
+and the last host log line), plus Slurm egress pauses. Hosts write a few log lines
+after the world dies, so downtime is underestimated by a few seconds. A stall or a
+sleep inside a segment counts.
 
 ## Reports and archives
 

@@ -62,7 +62,8 @@ def main():
     from robofrontier.suite.relay_live_recovery import RelayLiveRecovery
     from robofrontier.suite import relay_pipeline
     frozen=Path(os.environ['ROBOFRONTIER_ORACLE_FROZEN_ROOT']);snap=json.loads((frozen/'snapshot.json').read_text());sources={n:(frozen/n).read_bytes() for n in snap['files']}
-    assert all(hashlib.sha256(payload).hexdigest()==snap['files'][n] for n,payload in sources.items())
+    if not (all(hashlib.sha256(payload).hexdigest()==snap['files'][n] for n,payload in sources.items())):
+        raise ValueError("Check failed: all(hashlib.sha256(payload).hexdigest()==snap['files'][n] for n,payload in sources.items())")
     manifest=json.loads((frozen.parent/'run.json').read_text())
     t=Trial(a.scene,out,controller_cfg=load_harness(a.harness),sources=sources,record_hz=60.)
     relay_pipeline.install_motion_metrics(t)

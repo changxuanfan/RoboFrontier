@@ -1613,9 +1613,5 @@
     "fps": 30,
     "export_requires_duration": true
   },
-  "harness": {
-    "path": "configs/harnesses/policy.json",
-    "sha256": "8dfee2da8b1f38fe0340c6f6b707fca36f736d003a7ff0e9665c1ec569bd31a4"
-  },
   "transport_physics_revision": "r14-rolling-friction-candidate-20261029"
 }

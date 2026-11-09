@@ -31,6 +31,18 @@ def fixture(base, name):
     return run
 
 
+class WorkerRequestTests(unittest.TestCase):
+    def test_any_command_the_broker_admits_reaches_the_worker_whole_however_it_is_escaped(self):
+        import io
+        from robofrontier.codex import tool_worker
+        # JSON.stringify escapes these as the broker sends them: newline as two bytes, control as six.
+        for command in ('a\n'*60000, '\x01'*131000, 'x'*131000):
+            data = json.dumps({'tool': 'policy_exec', 'command': command}).encode()
+            self.assertEqual(tool_worker.read_request(io.BytesIO(data))['command'], command)
+        with self.assertRaisesRegex(ValueError, 'too large'):
+            tool_worker.read_request(io.BytesIO(b' '*(tool_worker.REQUEST_LIMIT+1)))
+
+
 class ConfigurationTests(unittest.TestCase):
     def test_shared_volume_clones_and_archives_are_denied_without_blocking_own_workspace(self):
         with tempfile.TemporaryDirectory() as temporary:

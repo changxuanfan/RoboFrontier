@@ -85,8 +85,28 @@ def restore_world(run, task, model, data):
 
 
 def deadline(store, wall_limit_s):
-    """Wall-clock end of the trial: downtime between segments is not counted."""
+    """Wall-clock end of a START_wall_time trial: downtime between segments is not counted.
+
+    An active_time_v1 trial has no wall-clock end; see used_s and remaining_s."""
     return store.get('start_at') + wall_limit_s + store.get('downtime_s', 0.)
+
+
+def used_s(run, store, ended_at=None):
+    """Seconds of the trial's limit used so far, by the clock its frozen protocol names.
+
+    START_wall_time: wall time from START to `ended_at` (default: the last activity), less
+    downtime. active_time_v1: the active running time the world saved (policy_probe.BudgetGuard)."""
+    from .policy_probe import WALL_CLOCK, run_clock
+    task = json.loads((Path(run) / 'private/inputs/task.json').read_text())
+    if run_clock(task['run_protocol']) != WALL_CLOCK: return float(store.get('active_s', 0.) or 0.)
+    ended_at = last_activity(run, store) if ended_at is None else ended_at
+    return ended_at - store.get('start_at') - store.get('downtime_s', 0.)
+
+
+def remaining_s(run, store, ended_at=None):
+    """Seconds of the trial's limit left (see used_s)."""
+    task = json.loads((Path(run) / 'private/inputs/task.json').read_text())
+    return task['run_protocol']['total_wall_limit_s'] - used_s(run, store, ended_at)
 
 
 # Written after the segment had already ended; they do not show it was alive.
@@ -140,6 +160,17 @@ def _last_frame(run, segment):
 NORMAL_END_EVENTS = ('POLICY_WALL_LIMIT', 'POLICY_BUDGET_CLOSED', 'TEAM_FINISH_PROPOSED')
 
 
+BACKSTOP_REFUSAL = ('stopped by the 48 h wall-time backstop; continuing needs an explicit operator authorization '
+                    '(runtime_upgrade)')
+
+
+def wall_backstopped(run):
+    """True when the run's last stop was the wall backstop (policy_probe.BudgetGuard): its
+    budget-cutoff.json says so. Such a run needs review and its result is not counted."""
+    try: return json.loads((Path(run) / 'private/outputs/budget-cutoff.json').read_text()).get('wall_backstop') is True
+    except (OSError, ValueError, AttributeError): return False
+
+
 def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None, manual_authorization=None):
     """(True, None) when this run may continue in a new segment, else (False, reason).
 
@@ -156,10 +187,14 @@ def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None
         from .runtime_upgrade import validate_authorization
         try: validate_authorization(run, store, manual_authorization, source_root=source_root)
         except (ValueError, OSError, KeyError, TypeError) as error: return False, str(error)
+    # A run stopped by the wall backstop continues only on an operator's explicit authorization;
+    # the backstop's own stop (an ended world, sealed live) is then not a normal end.
+    backstop = bool(store.get('wall_backstop'))
+    if backstop and manual_authorization is None: return False, BACKSTOP_REFUSAL
     if store.get('segment', 0) >= MAX_RETRIES and not journal and manual_authorization is None:
         return False, 'already continued once'
     lifecycle = store.get('lifecycle')
-    if lifecycle not in ('running', 'interrupted', 'recovery_required'):
+    if lifecycle not in ('running', 'interrupted', 'recovery_required') and not (backstop and lifecycle == 'ended'):
         return False, 'run ended normally or never started (' + str(lifecycle) + ')'
     marks = ','.join('?' * (len(NORMAL_END_EVENTS) + 1))
     events = {kind for (kind,) in store.db.execute(
@@ -172,7 +207,8 @@ def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None
     for (value,) in store.db.execute("SELECT value FROM events WHERE kind='RUN_SEALED'"):
         sealed = json.loads(value)
         report = sealed.get('report_ref') or ''
-        if not sealed_host_failure and sealed.get('owner_was_live', True) and Path(report).resolve().parent == output_dir(run, segment).resolve():
+        if (not sealed_host_failure and not backstop and sealed.get('owner_was_live', True)
+                and Path(report).resolve().parent == output_dir(run, segment).resolve()):
             return False, 'run was sealed with its world alive'
     if run_path(run, 'stop').exists(): return False, 'stop requested'
     # A preparation that stopped part way may have left its own restore files unverified.
@@ -181,11 +217,8 @@ def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None
     if changed: return False, 'frozen inputs changed: ' + ', '.join(changed[:3])
     if not owner_released(run): return False, 'a process still owns the physical world'
     if store.get('start_at') is None: return False, 'never started'
-    task = json.loads((run / 'private/inputs/task.json').read_text())
-    limit = task['run_protocol']['total_wall_limit_s']
-    ended_at = journal['ended_at'] if journal else last_activity(run, store)
-    used = ended_at - store.get('start_at') - store.get('downtime_s', 0.)
-    if limit - used < MIN_REMAINING_S: return False, 'less than %d s of the wall limit left' % MIN_REMAINING_S
+    ended_at = journal['ended_at'] if journal else None
+    if remaining_s(run, store, ended_at) < MIN_REMAINING_S: return False, 'less than %d s of the wall limit left' % MIN_REMAINING_S
     if _last_frame(run, segment) is None: return False, 'no recorded motion frame'
     return True, None
 
@@ -237,6 +270,9 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
             'scope': 'Approximate physical restore of the same trial; the run, its sessions and records continue'}
     # The Dial game is episode history: the new world's evaluator continues its trials and BEST.
     record = dial_record(run, sim_s)
+    if record is None:
+        payloads = relay_record(run, sim_s)
+        if payloads is not None: record = {'relay_payloads': payloads}
     if record is not None: note['evaluator'] = record
     write_json(folder / 'restore-pose.json', note)
     import hashlib
@@ -251,6 +287,8 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
         value = json.loads(connection.read_text())
         if value.pop('url', None) is not None:
             write_json(connection, value); connection.chmod(0o600)
+    # Last, so a preparation that stopped part way still sees the backstop stop it continues.
+    if store.get('wall_backstop'): _waive_backstop(run, store, manual_authorization)
     with store.transaction():
         segments = store.get('segments') or [{'index': 0, 'started_at': store.get('start_at')}]
         segments[-1].update(ended_at=journal['ended_at'], end_reason=journal['reason'])
@@ -267,6 +305,24 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
                                                  'source_frame': journal['source_frame'], 'interrupted': journal['interrupted']})
     export(run, store)
     return note
+
+
+def _waive_backstop(run, store, authorization):
+    """An operator authorized continuing a run the wall backstop stopped: the backstop's stop
+    records are kept under their own names, so the trial is again scored at its active-time
+    cutoff, and the backstop counts again from now."""
+    outputs = Path(run) / 'private/outputs'
+    segment = store.get('segment', 0)
+    for name in ('budget-cutoff.json', 'evaluation.json'):
+        if (outputs / name).is_file():
+            (outputs / name).replace(outputs / name.replace('.json', '-wall-backstop-%d.json' % segment))
+    with store.transaction():
+        waived = {'at': time.time(), 'authorization': authorization, 'segment': segment,
+                  'backstop': store.get('wall_backstop')}
+        store.put('wall_backstop_waived', waived)
+        store.put('wall_backstop', None)
+        store.put('termination_reason', None)
+        store.event('WALL_BACKSTOP_WAIVED', 'Meta', waived)
 
 
 def begin_segment(store, now=None):
@@ -330,7 +386,7 @@ def process_summary(run):
     Each world process starts its own counts, so a continued run's final evaluation covers
     only its last segment. Earlier segments are read from their last cumulative snapshot
     in the shared process log (each segment starts with its own header row); a segment
-    whose world was killed loses at most its last snapshot interval. None for one segment.
+    whose world was killed loses what changed since its last logged row. None for one segment.
     """
     run = Path(run); log = run / 'private/outputs/suite-process.jsonl'
     if not log.is_file(): return None
@@ -339,7 +395,7 @@ def process_summary(run):
         try: row = json.loads(line)
         except ValueError: continue
         if 'schema' in row and 'type' not in row: parts.append(None)
-        elif row.get('type') == 'snapshot' and parts: parts[-1] = row['result']
+        elif row.get('type') in ('snapshot', 'event') and parts: parts[-1] = row['result']
     if len(parts) < 2: return None
     final = run / 'private/outputs/evaluation.json'
     if final.is_file():
@@ -357,7 +413,40 @@ def process_summary(run):
     record = dial_record(run)
     if record is not None: total['dial'] = record
     return {'segments': segments, 'total': total, 'missing_segments': [i for i, p in enumerate(parts) if not p],
-            'scope': 'Earlier segments from their last 1 s snapshot before they ended'}
+            'scope': 'Earlier segments from their last logged row before they ended'}
+
+
+def relay_record(run, cutoff=None):
+    """Each Relay timber's handovers and drops over all segments, up to `cutoff`, with its
+    custody and dropped state as last logged.
+
+    A segment's rows run to the restore frame of the next. Handovers are matched by their
+    content, so a carried record is not counted twice. None for other families or an empty log.
+    """
+    log = Path(run) / 'private/outputs/suite-process.jsonl'
+    if not log.is_file(): return None
+    blocks = [[]]
+    for line in log.read_text(errors='replace').splitlines():
+        try: row = json.loads(line)
+        except ValueError: continue
+        if not isinstance(row, dict): continue
+        if 'schema' in row and 'type' not in row: blocks.append([])
+        elif isinstance(row.get('result'), dict) and isinstance(row['result'].get('payloads'), dict): blocks[-1].append(row)
+    blocks = [b for b in blocks if b]
+    payloads = {}
+    for i, block in enumerate(blocks):
+        end = blocks[i + 1][0]['sim_time_s'] if i + 1 < len(blocks) else cutoff
+        kept = [r for r in block if end is None or r['sim_time_s'] <= end + 1e-9]
+        if not kept: continue
+        for ident, item in kept[-1]['result']['payloads'].items():
+            entry = payloads.setdefault(ident, {'handovers': [], 'drops': 0})
+            for handover in item.get('handovers') or []:
+                if handover not in entry['handovers']: entry['handovers'].append(handover)
+            entry['drops'] = max(entry['drops'], int(item.get('drops') or 0))
+            # Who held it and whether it lay dropped, at the end of the latest segment.
+            for key in ('custody', 'dropped'):
+                if key in item: entry[key] = item[key]
+    return payloads or None
 
 
 def dial_record(run, cutoff=None):
@@ -390,5 +479,9 @@ def dial_record(run, cutoff=None):
             best = max(best or 0, result['display'])
         solved = solved or bool(result.get('solved'))
     if last is None: return None
-    return {'valid_trials': trials, 'best': best, 'solved': solved,
-            'input_ready': bool(last['result'].get('input_ready')), 'sim_time_s': last['sim_time_s']}
+    record = {'valid_trials': trials, 'best': best, 'solved': solved,
+              'input_ready': bool(last['result'].get('input_ready')), 'sim_time_s': last['sim_time_s']}
+    # Which dials had qualified blue support at the restore frame (Monitor.continue_dial_record).
+    if isinstance(last['result'].get('private_support_ready'), list):
+        record['support_ready'] = [bool(x) for x in last['result']['private_support_ready']]
+    return record

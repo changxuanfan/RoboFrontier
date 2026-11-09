@@ -29,13 +29,27 @@ class PortableBenchmarkTests(unittest.TestCase):
             def run(path,parallel):
                 self.assertEqual(parallel,6)
                 (path/'batch.json').write_text(json.dumps({'status':'closed'}))
+            receipt=root/'report.json';receipt.write_text('{}')
             with patch.object(sys,'argv',['portable_benchmark','--output',str(output)]), \
+                 patch.object(cli,'compatibility_receipt',return_value=receipt), \
                  patch.object(cli,'load_env'),patch.object(cli,'batch_codex_home',return_value=home), \
                  patch.object(cli.platform,'system',return_value='Darwin'),patch.object(cli,'sandbox_probe'), \
                  patch.object(cli,'native_render_probe',return_value='ok'), \
                  patch.object(cli,'prepare_batch',side_effect=prepare),patch.object(cli,'run_batch',side_effect=run):
                 self.assertEqual(cli.main(),0)
             self.assertEqual(json.loads((output/'codex-home.json').read_text())['codex_home'],str(home))
+
+
+    def test_missing_preflight_receipt_stops_before_preparing(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,{'OPENLUX_API_KEY':'fake'},clear=True):
+            output=Path(tmp)/'batch'
+            with patch.object(sys,'argv',['portable_benchmark','--output',str(output)]), \
+                 patch.object(cli,'compatibility_receipt',return_value=Path(tmp)/'missing.json'), \
+                 patch.object(cli,'load_env'),patch.object(cli.platform,'system',return_value='Darwin'), \
+                 patch.object(cli,'sandbox_probe'),patch.object(cli,'prepare_batch') as prepare:
+                with self.assertRaisesRegex(SystemExit,'luna_cpu preflight --profile openlux-terra'):cli.main()
+            prepare.assert_not_called()
+            self.assertFalse(output.exists())
 
 
 if __name__=='__main__':unittest.main()

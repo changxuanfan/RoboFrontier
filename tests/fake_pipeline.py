@@ -1,5 +1,9 @@
 """Offline executor. No MuJoCo import, windows, model calls or real actions."""
+import os
 from pathlib import Path
+
+# Tests never probe the real model API hosts (robofrontier/network_outage.py).
+os.environ.setdefault('ROBOFRONTIER_OUTAGE_PROBE', 'off')
 
 class FakeWorld:
     def __init__(self,directory,task):

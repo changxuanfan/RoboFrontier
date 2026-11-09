@@ -20,9 +20,15 @@ class Channel:
     def __init__(self,mode,args,log,worker=WORKER,timeout_s=60.):
         self.timeout_s=timeout_s;self.pending=b''
         self.tmp=tempfile.TemporaryDirectory(prefix='dial-count-only-');self.log=Path(log).open('x')
+        # Worker diagnostics go to a file: an unread pipe loses the cause of a
+        # failure and blocks a worker that writes more than the pipe buffer.
+        self.stderr_path=Path(log).with_name(Path(log).stem+'-stderr.log');self.stderr=self.stderr_path.open('x')
         self.process=subprocess.Popen([sys.executable,'-I','-S',str(worker),mode,*map(str,args)],
-            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1,
+            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.stderr,text=True,bufsize=1,
             cwd=self.tmp.name,env={'PATH':os.defpath,'LC_ALL':'C'})
+    def stderr_tail(self,limit=2000):
+        self.stderr.flush()
+        return self.stderr_path.read_text(errors='replace')[-limit:].strip()
     def call(self,request):
         self.process.stdin.write(json.dumps(request)+'\n');self.process.stdin.flush()
         deadline=time.monotonic()+self.timeout_s
@@ -33,7 +39,9 @@ class Channel:
                 raise TimeoutError('Isolated worker response deadline exceeded')
             data=os.read(self.process.stdout.fileno(),4096)
             if not data:
-                raise RuntimeError('Isolated worker stopped before returning a complete response')
+                try:self.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:pass
+                raise RuntimeError('Isolated worker stopped before returning a complete response; stderr: '+(self.stderr_tail() or '(empty)'))
             self.pending+=data
         line,self.pending=self.pending.split(b'\n',1)
         result=json.loads(line);self.log.write(json.dumps(dict(input=request,output=result))+'\n');self.log.flush();return result
@@ -45,10 +53,16 @@ class Channel:
             try:self.process.wait(timeout=10)
             except subprocess.TimeoutExpired:self.process.kill();self.process.wait()
         code=self.process.returncode
-        for pipe in (self.process.stdin,self.process.stdout,self.process.stderr):
+        for pipe in (self.process.stdin,self.process.stdout):
             if pipe and not pipe.closed:pipe.close()
-        self.log.close();self.tmp.cleanup()
-        if code:raise RuntimeError('Isolated worker failed '+str(code))
+        if code:self.stderr.write(f'\nIsolated worker failed {code}\n')
+        self.stderr.close();self.log.close();self.tmp.cleanup()
+        if code:
+            failure='Isolated worker failed '+str(code)+'; see '+str(self.stderr_path)
+            # Called from a finally clause, never replace the error in flight.
+            current=sys.exc_info()[1]
+            if current is not None:current.add_note(failure);return
+            raise RuntimeError(failure)
 
 
 class BlindDecoder:

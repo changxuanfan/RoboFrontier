@@ -44,12 +44,24 @@ each boundary, released and actually supported. A low release may begin when
 the lowest assembly part is at most 30 mm above the table; opening the gripper
 alone does not establish landing or completion.
 
+New runs also declare `relay-airborne-handover-v1`: a timber counts as complete
+only after a qualified airborne handover. A new arm must hold the timber for at
+least 0.2 seconds while at least two current holders keep it off the table, and
+then a current holder must let go. Pushing or dragging a timber along the table
+never qualifies. Off the table means the lowest assembly part is more than 2 mm
+above the tabletop and nothing connects the timber to the table, directly or through
+other cargo; the receiver's 0.2 seconds restart whenever that stops. A change of
+holders while the timber rests in GOAL is recorded with `airborne: false`
+(`grounded-regrasp-v1`) and never counts. Handover rows written by this evaluator
+carry `protocol: qualified-members-v3` and `airborne: true`; rows of earlier logs
+(`qualified-members-v2`) did not check the table, so they may include such regrasps.
+Each payload reports `airborne_handover_met`. Runs prepared before
+this rule keep their placement-only terminal outcome, and no agent in those runs was
+told a handover was required.
+
 Collisions, drops, unsupported transfers and recovery violations remain process
 records. They are not an automatic veto on an otherwise valid terminal outcome.
-Airborne two-gripper support, receiving support before sender release, a real
-handover and sender-authorized recovery are process criteria; the current public
-overlay does not require a clean process history or an airborne handover for
-terminal success. Models may recover through ordinary robot actions. Reset,
+Models may recover through ordinary robot actions. Reset,
 respawn, direct object-state writes, welds and history erasure are unavailable.
 See [shared START and scoring semantics](../protocol.md#direct-controller-startup-and-terminal-scoring-v2).
 
@@ -58,8 +70,8 @@ See [shared START and scoring semantics](../protocol.md#direct-controller-startu
 `relay-final-goal-50mm-v1`); `robofrontier/suite/relay_goal_fraction.py` measures
 the centreline fraction. `robofrontier/task_families.py` applies the
 new-run terminal overlay and freezes the corresponding public guidance. Do not
-publish the older base handover/process vetoes as the current policy completion
-rule. Old recordings retain their original contract and native verdict.
+publish the older clean-process vetoes as the current policy completion rule. Old
+recordings retain their original contract and native verdict.
 
 ## Execution and reference code
 

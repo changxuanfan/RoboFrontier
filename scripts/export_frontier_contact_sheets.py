@@ -83,7 +83,8 @@ def render_case(case):
             cameras[view] = fit_camera(model, data, view)
             renderer.update_scene(data, camera=view)
             Image.fromarray(renderer.render()).save(target / (view + '.png'))
-    assert data.time == 0 and np.array_equal(data.qpos, qpos), 'Static export moved physics'
+    if not (data.time == 0 and np.array_equal(data.qpos, qpos)):
+        raise ValueError('Static export moved physics')
     print(case['id'], flush=True)
     return dict(case_id=case['id'], directory=str(folder.relative_to(ROOT)),
                 scene_revision=case.get('scene_revision', 1),

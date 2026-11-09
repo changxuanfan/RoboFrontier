@@ -39,7 +39,12 @@ def choose(rows,start,destinations,available,blocked=(),pickup_position=None,tar
 
 
 def run(a):
-    directory=a.trial.resolve();review=directory/'review';o=json.loads((review/'observation.json').read_text())
+    directory=a.trial.resolve();review=directory/'review'
+    # Rerun guards come before any evidence is written: the route file records the
+    # commands already issued under this ID and must never be replaced.
+    ident=a.id+'-stage';request=review/'requests'/f'route-{ident}.json';route_file=review/'engineering'/f'{a.id}-route.json'
+    if request.exists() or route_file.exists():raise ValueError('Do not rerun a partially executed route; inspect its original request IDs')
+    o=json.loads((review/'observation.json').read_text())
     if o['evaluation']['violations']:raise ValueError('Retained task violation prevents canonical recovery')
     task=json.loads((directory/'task.json').read_text());target=next(g for g in task['goals'] if g['goal_id']==a.goal)
     obj=a.object
@@ -64,13 +69,12 @@ def run(a):
     evidence=dict(scope='Finite normal-port route, not a global optimum or task permission restriction',
         path=path,object=obj,goal=a.goal,world_id=o['world_id'],review_id=o['review_id'],
         source_ports_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),protected_pairs=dict(o['evaluation']['assignments']))
-    write_json(review/'engineering'/f'{a.id}-route.json',evidence)
+    route_file.parent.mkdir(parents=True,exist_ok=True)
+    with route_file.open('x') as handle:handle.write(json.dumps(evidence,ensure_ascii=False,indent=2,allow_nan=False)+'\n')
     code=Path(__file__).read_bytes();code_path=review/'engineering/sources'/(hashlib.sha256(code).hexdigest()+'.py');code_path.parent.mkdir(parents=True,exist_ok=True)
     if not code_path.exists():code_path.write_bytes(code)
     print(json.dumps(evidence),flush=True)
     first=points[frozenset(path[:2])] if len(path)>1 else target['position_m']
-    ident=a.id+'-stage';request=review/'requests'/f'route-{ident}.json'
-    if request.exists():raise ValueError('Do not rerun a partially executed route; inspect its original request IDs')
     write_json(request,dict(id=ident,world_id=o['world_id'],review_id=o['review_id'],operation='finish_held',robot=carrier,target_m=first))
     while True:
         result=review/'results'/f'{ident}.json'

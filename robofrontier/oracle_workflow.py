@@ -56,6 +56,8 @@ def add_arguments(subparsers):
             command.add_argument('--evaluation-mode', choices=('task-reference', 'strict-process'))
             command.add_argument('--mosaic-max-goals', type=int)
             command.add_argument('--mosaic-planning-workers', type=int)
+            command.add_argument('--physics-profile', choices=('realtime-v1', 'realtime-v2'),
+                                 help='Frozen into the Oracle harness; default is full physics')
     for name in ('run', 'status', 'stop'):
         command = actions.add_parser(name)
         command.add_argument('execution', type=Path)
@@ -113,7 +115,7 @@ def _scene_inventory(scene, case):
     return inventory, task
 
 
-def prepare(output, config, *, codebook=None):
+def prepare(output, config, *, codebook=None, physics_profile=None):
     from .task_families import RELEASE, resolve_case
     from .task_config import load_harness
     from .suite.source_snapshot import freeze_executor
@@ -157,6 +159,8 @@ def prepare(output, config, *, codebook=None):
     private.mkdir(mode=0o700)
     harness = load_harness(ROOT/'configs/harness-frontier-v2-servo2.json')
     harness['observation_image_profile'] = config['render']['observation_profile']
+    if physics_profile is not None:
+        harness['physics_profile'] = physics_profile
     write_json(private/'harness.json', harness)
     catalog['cases'] = [{**native[0], 'directory': str(scene)}]
     write_json(private/'catalog.json', catalog)
@@ -286,26 +290,43 @@ def _owner(root):
         yield
 
 
-def _close_remaining_group(pid, grace_s):
-    """An exited owner must not leave solver/planner writers behind."""
+# Darwin answers kill(-pgid, ...) with EPERM, not ESRCH, while every member of
+# the group is an exited but unreaped zombie. Such members can no longer write.
+_GROUP_GONE = (ProcessLookupError, PermissionError)
+# Interpreter helpers (multiprocessing's resource tracker) leave the group a
+# few milliseconds after a clean owner exit. They are not leaked writers.
+NATURAL_EXIT_DRAIN_S = .5
+
+
+def _group_alive(pid):
     try:
         os.killpg(pid, 0)
-    except ProcessLookupError:
+    except _GROUP_GONE:
+        return False
+    return True
+
+
+def _close_remaining_group(pid, grace_s):
+    """An exited owner must not leave solver/planner writers behind."""
+    began = time.monotonic()
+    while _group_alive(pid):
+        if time.monotonic()-began >= min(grace_s, NATURAL_EXIT_DRAIN_S):
+            break
+        time.sleep(.01)
+    else:
         return False
     try:
         os.killpg(pid, signal.SIGTERM)
-    except ProcessLookupError:
+    except _GROUP_GONE:
         return True
     began = time.monotonic()
     while time.monotonic()-began < grace_s:
-        try:
-            os.killpg(pid, 0)
-        except ProcessLookupError:
+        if not _group_alive(pid):
             return True
         time.sleep(.05)
     try:
         os.killpg(pid, signal.SIGKILL)
-    except ProcessLookupError:
+    except _GROUP_GONE:
         pass
     return True
 
@@ -355,7 +376,7 @@ def run(execution):
                     if stopped_at is not None and time.monotonic()-stopped_at >= config['oracle']['stop_grace_s']:
                         try:
                             os.killpg(process.pid, signal.SIGKILL)
-                        except ProcessLookupError:
+                        except _GROUP_GONE:
                             pass
                         row['forced_kill'] = True
                         break
@@ -391,7 +412,7 @@ def run(execution):
                 # Never return while a known child keeps mutating this world.
                 try:
                     os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
+                except _GROUP_GONE:
                     pass
                 process.wait()
             row.update(phase='execution_error', error=type(error).__name__+': '+str(error),
@@ -453,4 +474,5 @@ def execute(args):
     config = load_configuration(args.config, overrides)
     if args.oracle_action == 'plan':
         return plan(config)
-    return prepare(args.output, config, codebook=args.codebook)
+    return prepare(args.output, config, codebook=args.codebook,
+                   physics_profile=getattr(args, 'physics_profile', None))

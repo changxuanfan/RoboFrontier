@@ -215,6 +215,8 @@ class RuntimeStore:
 
     def send(self, actor, to, text, send_key, reply_to=None):
         cfg = self.get('config')
+        if reply_to is not None and not isinstance(reply_to, str):
+            raise ValueError('reply_to must be a message ID string')
         to = [to] if isinstance(to, str) else to
         if not isinstance(to, list) or not to or len(set(to)) != len(to):
             raise ValueError('Explicit unique recipients required')
@@ -351,14 +353,27 @@ class RuntimeStore:
                             (call_id, actor, op, packed(parameters), 'accepted', None, time.time()))
             return {'id': call_id, 'actor': actor, 'op': op, 'status': 'new', 'result': None}
 
+    # Calls whose own status follows the physical execution they started.
+    EXECUTION_OPS = ('move', 'gripper', 'action_batch')
+
     def finish_call(self, call_id, result):
         with self.transaction():
-            changed = self.db.execute('UPDATE calls SET status=?, result=?, updated=? WHERE id=?',
-                                     (result['execution_status'] if result.get('execution_status') in ('uncertain','running','pending') else 'failed' if result.get('error') else 'completed', packed(result), time.time(), call_id)).rowcount
-            if not changed:
+            row = self.db.execute('SELECT op FROM calls WHERE id=?', (call_id,)).fetchone()
+            if row is None:
                 raise ValueError('Call was not accepted')
+            # A query such as `job` reports another call's execution status; the query itself
+            # is answered, never left running or uncertain.
+            if row['op'] in self.EXECUTION_OPS and result.get('execution_status') in ('uncertain','running','pending'):
+                status = result['execution_status']
+            else:
+                status = 'failed' if result.get('error') else 'completed'
+            self.db.execute('UPDATE calls SET status=?, result=?, updated=? WHERE id=?',
+                            (status, packed(result), time.time(), call_id))
 
     def call(self, call_id, actor=None):
+        if not isinstance(call_id, str):
+            # A policy may send any JSON value; only a string can name a call.
+            raise ValueError('call_id must be a string call ID')
         with self.lock:
             row = self.db.execute('SELECT * FROM calls WHERE id=?', (call_id,)).fetchone()
             if not row or actor is not None and row['actor'] != actor:
@@ -507,6 +522,24 @@ class RuntimeStore:
             rows = self.db.execute('SELECT * FROM actions' + (' WHERE actor=?' if actor else ''), (actor,) if actor else ()).fetchall()
             return {r['id']: json.loads(r['value']) for r in rows}
 
+    def unresolved_actions(self):
+        """Only the actions a live stop or an unknown outcome can still concern.
+
+        The main loop asks on every tick, so this stays small however long a run gets;
+        reading every action there grew the tick with the run (21.8 ms at 5063 actions)."""
+        with self.lock:
+            rows = self.db.execute("SELECT id,value FROM actions WHERE status IN ('running','uncertain')").fetchall()
+            return {r['id']: json.loads(r['value']) for r in rows}
+
+    def actions_for_calls(self, actor, call_ids):
+        """These calls of one actor, without reading the actor's other actions."""
+        with self.lock:
+            found = {}
+            for call_id in call_ids:
+                row = self.db.execute('SELECT value FROM actions WHERE id=? AND actor=?', (call_id, actor)).fetchone()
+                if row: found[call_id] = json.loads(row['value'])
+            return found
+
     def latest_execution(self, actor):
         """Executor facts only; no goal, grasp or clearance inference."""
         with self.lock:
@@ -529,6 +562,9 @@ class RuntimeStore:
                     for ident,member in zip(child_ids(batch['id'],len(members)),members):
                         if not isinstance(member,dict) or member.get('op') not in ('move','gripper'):continue
                         if not isinstance(member.get('parameters',{}),dict):continue
+                        # A reserved member already has its call (with the resolved robot) and its
+                        # action, which the loops below settle; only unreserved members are added.
+                        if self.db.execute('SELECT 1 FROM calls WHERE id=?',(ident,)).fetchone():continue
                         p={**member.get('parameters',{}),'robot':member.get('robot'),'wait':True,'cameras':[]}
                         self.begin_call(ident,batch['actor'],member['op'],p)
                 self.db.execute("UPDATE calls SET status='uncertain' WHERE id=?",(batch['id'],))

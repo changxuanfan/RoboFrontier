@@ -102,7 +102,7 @@ def inspect(run, manifest, source):
         if any(not 0 <= sim_s-hold.get('sim_s', -1e9) <= run_segments.HOLD_MAX_AGE_S for hold in holds.values()):
             raise RecoveryBlocked('A recorded grasp is too old to restore safely')
         config = json.loads((run/'private/inputs/task.json').read_text())
-        used = run_segments.last_activity(run, store)-store.get('start_at')-store.get('downtime_s', 0.)
+        used = run_segments.used_s(run, store)
         threads = sorted({json.loads(value)['thread_id'] for (value,) in store.db.execute('SELECT value FROM agents')
                           if json.loads(value).get('thread_id')})
         record = {'run': str(run), 'task_id': identity, 'segment': store.get('segment', 0)+1,

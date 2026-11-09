@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 import platform
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -46,6 +47,57 @@ def _copy_verified(source, destination):
     if checksum(destination) != expected or checksum(source) != expected:
         raise ValueError('File changed or was corrupted during transfer: ' + str(source))
     return expected
+
+
+def _stopped_files(root, relative, issues, *, prune_config=True):
+    """Regular files below `root` for the stopped-evidence fallback; never raises.
+
+    Links are never followed or copied and nonregular files are never opened: each is
+    recorded in `issues` (a link with its link text) and the walk goes on. With
+    `prune_config`, CLI configuration folders are skipped except their native JSONL
+    transcripts (projects/**/*.jsonl), as in the original fallback."""
+    if root.is_symlink():
+        issues.append({'path': relative(root), 'issue': 'symlink', 'link': _link_text(root)})
+        return
+    def walk_error(error):
+        issues.append({'path': relative(Path(error.filename)) if error.filename else None,
+                       'issue': 'unreadable', 'error': type(error).__name__})
+    for parent, dirs, files in os.walk(root, followlinks=False, onerror=walk_error):
+        parent = Path(parent)
+        kept = []
+        for name in sorted(dirs):
+            path = parent/name
+            if path.is_symlink():
+                issues.append({'path': relative(path), 'issue': 'symlink', 'link': _link_text(path)})
+            elif prune_config and (name == 'claude-config' and parent.name == 'private' or
+                                   name == 'config' and parent.name == 'engine' and parent.parent.name == 'private'):
+                # A Claude home can contain credentials beside its projects.
+                projects = path/'projects'
+                if projects.is_dir() or projects.is_symlink():
+                    yield from (file for file in _stopped_files(projects, relative, issues, prune_config=False)
+                                if file.name.endswith('.jsonl'))
+            elif not (prune_config and (name == 'claude-config' or name == 'config' and parent.name == 'engine')):
+                kept.append(name)
+        dirs[:] = kept
+        for name in sorted(files):
+            if name == '.DS_Store': continue
+            path = parent/name
+            try:
+                mode = os.lstat(path).st_mode
+            except OSError as error:
+                issues.append({'path': relative(path), 'issue': 'unreadable', 'error': type(error).__name__})
+                continue
+            if stat.S_ISLNK(mode):
+                issues.append({'path': relative(path), 'issue': 'symlink', 'link': _link_text(path)})
+            elif not stat.S_ISREG(mode):
+                issues.append({'path': relative(path), 'issue': 'nonregular'})
+            else:
+                yield path
+
+
+def _link_text(path):
+    try: return os.readlink(path)
+    except OSError: return None
 
 
 def _extract_source(archive, output):
@@ -264,13 +316,24 @@ def execute(local):
         raise ValueError('Execute must import the staged node-local source')
     document = json.loads((local/'local-job.json').read_text())
     config = json.loads((local/'config.json').read_text())
-    with subscription_environment(config, local, on_failure=lambda: request_stop(local)):
-        prepare(ROOT/'runs/policy/batch', config)
-        if (local/'STOP').exists():
-            request_stop(local)
-            return {'status': 'stopped_before_start'}
-        result = run(ROOT/'runs/policy/batch', engineering=document['engineering'])
-    write_json(local/'execution-result.json', result)
+    path = local/'execution-result.json'
+    result = None
+    try:
+        with subscription_environment(config, local, on_failure=lambda: request_stop(local)):
+            prepare(ROOT/'runs/policy/batch', config)
+            if (local/'STOP').exists():
+                request_stop(local)
+                result = {'status': 'stopped_before_start'}
+            else:
+                result = run(ROOT/'runs/policy/batch', engineering=document['engineering'])
+            # Persist the result (naming any verified archive) before leaving the managed
+            # route/credential context, whose exit raises when its fence fired.
+            write_json(path, result)
+    except Exception as error:
+        if result is not None:
+            # The kind only; a message could carry route or credential details.
+            write_json(path, {**result, 'context_failure': type(error).__name__})
+        raise
     return result
 
 
@@ -387,21 +450,55 @@ def snapshot(local, submission):
     return state
 
 
+def _writer_locks(local):
+    """Every lock path a batch or run layout defines, for each layout version.
+
+    Only these fixed paths: a file a policy names world.lock in its workspace is not a lock."""
+    batch = (Path(local)/'source/runs/policy/batch').resolve()
+    locks = {batch/layout[key] for layout in run_layout.BATCH_LAYOUTS.values()
+             for key in ('supervisor_lock', 'engineering_lock')}
+    runs = set()
+    try:
+        jobs = json.loads((batch/'batch.json').read_text())['jobs'] if (batch/'batch.json').is_file() else []
+        runs |= {Path(job['run_directory']).resolve() for job in jobs}
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    # Runs live at <profile>/<case>/; also find them when batch.json is missing or unreadable.
+    if batch.is_dir() and not batch.is_symlink():
+        for profile in batch.iterdir():
+            if profile.is_dir() and not profile.is_symlink():
+                runs |= {case for case in profile.iterdir() if case.is_dir() and not case.is_symlink()}
+    for run in runs:
+        if not run.is_relative_to(batch) or run == batch:
+            continue
+        locks |= {run/layout[key] for layout in run_layout.LAYOUTS.values() for key in ('world_lock', 'engineering_lock')}
+    return sorted(locks)
+
+
 @contextmanager
 def _assert_no_writers(local):
+    """Refuse while any writer holds its lock; yield issues for lock paths that are not files."""
     import contextlib
+    issues = []
     with contextlib.ExitStack() as stack:
-        for pattern in ('source/runs/policy/**/world.lock', 'source/runs/policy/**/supervisor.lock',
-                        'source/runs/policy/**/engineering-supervisor.lock',
-                        'source/runs/policy/**/claude-engineering.lock',
-                        'source/runs/policy/**/engineering.lock'):
-            for path in Path(local).glob(pattern):
-                lock = stack.enter_context(path.open('r'))
-                try:
-                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except BlockingIOError:
-                    raise ValueError('Writer still live; refusing stage-out: ' + str(path)) from None
-        yield
+        for path in _writer_locks(local):
+            try:
+                # Never block on a FIFO or follow a link planted at a lock path.
+                descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+            except FileNotFoundError:
+                continue
+            except OSError as error:
+                issues.append({'path': str(path), 'issue': 'lock not opened', 'error': type(error).__name__})
+                continue
+            lock = stack.enter_context(os.fdopen(descriptor, 'r'))
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                issues.append({'path': str(path), 'issue': 'nonregular lock'})
+                continue
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise ValueError('Writer still live; refusing stage-out: ' + str(path)) from None
+        yield issues
 
 
 def stage_out(local, submission, step_exit_code):
@@ -410,11 +507,11 @@ def stage_out(local, submission, step_exit_code):
     srun must have returned. No source deletion, auth/config transfer, physical
     replay, or success certification is performed here.
     """
-    with _assert_no_writers(local):
-        return _stage_out_stopped(local, submission, step_exit_code)
+    with _assert_no_writers(local) as lock_issues:
+        return _stage_out_stopped(local, submission, step_exit_code, lock_issues)
 
 
-def _stage_out_stopped(local, submission, step_exit_code):
+def _stage_out_stopped(local, submission, step_exit_code, lock_issues=()):
     local, submission = Path(local).resolve(), Path(submission).resolve()
     _verify_submission(submission)
     output = submission/'results'
@@ -433,35 +530,49 @@ def _stage_out_stopped(local, submission, step_exit_code):
     with tempfile.TemporaryDirectory(prefix='.rf-stage-out-', dir=submission) as temporary:
         staged = Path(temporary)/'results'
         staged.mkdir(mode=0o700)
-        files = {}
+        files, issues = {}, list(lock_issues)
         def copy(file, relative):
             files[relative] = _copy_verified(file, staged/relative)
+        def keep(file, relative):
+            # Best effort per file: one unreadable, vanished or over-quota file is recorded
+            # and the rest of the stopped evidence is still returned.
+            try:
+                copy(file, relative)
+            except (OSError, ValueError) as error:
+                files.pop(relative, None)
+                try: (staged/relative).unlink(missing_ok=True)
+                except OSError: pass
+                issues.append({'path': relative, 'issue': 'not copied', 'error': type(error).__name__})
         if archive:
             copy(archive, 'evidence.zip')
         else:
-            # Retain the only motion/trace copy if automatic collection failed.
-            from scripts.collect_benchmark_batch import _files
+            # Retain the only motion/trace copy if automatic collection failed. Only
+            # native JSONL transcripts of a CLI configuration enter this fallback.
+            name = lambda file: file.relative_to(source).as_posix()
             for base in (source/'runs/policy', source/'runs/state-assets'):
-                if base.exists():
-                    for file in _files(base):
-                        copy(file, file.relative_to(source).as_posix())
-            # A Claude home can contain credentials beside its projects. Only
-            # native JSONL transcripts enter this stopped-evidence fallback.
-            for pattern in ('**/private/claude-config/projects/**/*.jsonl', '**/private/engine/config/projects/**/*.jsonl'):
-                for file in (source/'runs/policy').glob(pattern):
-                    copy(file, file.relative_to(source).as_posix())
-            for home in (source/'.robofrontier/codex').glob('*'):
-                if (home/'sessions').exists():
-                    for file in sorted((home/'sessions').rglob('*')):
-                        if file.is_file() or file.is_symlink():
-                            copy(file, 'native-sessions/'+file.relative_to(home.parent).as_posix())
+                if base.exists() or base.is_symlink():
+                    for file in _stopped_files(base, name, issues):
+                        keep(file, name(file))
+            codex = source/'.robofrontier/codex'
+            if codex.is_dir() and not codex.is_symlink():
+                for home in sorted(codex.iterdir()):
+                    sessions = home/'sessions'
+                    if home.is_symlink():
+                        issues.append({'path': name(home), 'issue': 'symlink', 'link': _link_text(home)})
+                    elif sessions.exists() or sessions.is_symlink():
+                        for file in _stopped_files(sessions, name, issues, prune_config=False):
+                            keep(file, 'native-sessions/'+file.relative_to(home.parent).as_posix())
         for file in (local/'local-job.json', result_path):
             if file.is_file():
-                copy(file, file.name)
+                keep(file, file.name)
         report = {'schema': 'robofrontier.slurm-stage-out.v1', 'sha256': files,
                   'step_exit_code': step_exit_code, 'returned_at': time.time(),
-                  'status': 'collected' if archive and step_exit_code == 0 and result.get('status') != 'needs_review' and result.get('collection_complete') else 'needs_review',
+                  'status': 'collected' if (archive and step_exit_code == 0 and result.get('status') != 'needs_review'
+                                            and result.get('collection_complete') and not issues
+                                            and not result.get('context_failure')) else 'needs_review',
+                  **({'context_failure': result['context_failure']} if result.get('context_failure') else {}),
                   'task_status': result.get('status'), 'raw_fallback': archive is None,
+                  'issues': issues,
                   'node_local_source_retained': str(local),
                   'task_success': 'See independent per-task evaluation'}
         write_json(staged/'stage-out.json', report)

@@ -25,6 +25,8 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from factory_blender_materials import resolve as resolve_material, robot_role, task_role, ROBOT_BODY, apply_recorded_appearance
 from factory_mesh_rotation import asset_frame_rotation
 from factory_primitive_uv import primitive_uv
+from factory_capsule import capsule_vertices
+from factory_mesh_detail import keeps_hard_edges,shares_shaft_surface,thicken_thin_axis
 
 SCRIPT_SHA256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
@@ -236,6 +238,8 @@ def main():
             spec=dict(material_specs[original['material']],rgba=list(rgba))
             appearance_materials[key]=make_material(spec,task_role(original))
         return appearance_materials[key]
+    hard_edge_meshes={g['mesh'] for g in metadata['geoms'] if g['kind']==7 and keeps_hard_edges(g['name'])}
+    lifted_tips={g['mesh'] for g in metadata['geoms'] if g['kind']==7 and shares_shaft_surface(g['name'])}
     meshes={}
     flat_meshes={g['mesh']for g in metadata['geoms']if g['kind']==7 and
         g['material']>=0 and 'factory_bench_wood'in material_specs[g['material']]['name']}
@@ -248,6 +252,14 @@ def main():
                     if 0<=index<len(coords):uv.data[loop].uv=(float(coords[index][0]),1.-float(coords[index][1])) # MuJoCo-authored image origin is top-left.
         for polygon in mesh.polygons:
             polygon.use_smooth=not spec['textured'] and spec['id']not in flat_meshes and not spec['name'].startswith('factory_')
+        if i in lifted_tips:
+            vertices=np.empty(len(mesh.vertices)*3);mesh.vertices.foreach_get('co',vertices)
+            mesh.vertices.foreach_set('co',thicken_thin_axis(vertices.reshape(-1,3)).ravel());mesh.update()
+        if i in hard_edge_meshes:
+            # Smooth along an arc, sharp at the corners of a timber or an arrow tip.
+            bm=bmesh.new();bm.from_mesh(mesh)
+            bmesh.ops.split_edges(bm,edges=[e for e in bm.edges if e.is_manifold and e.calc_face_angle(0.)>math.radians(30)])
+            bm.to_mesh(mesh);bm.free();mesh.update()
         mesh.materials.append(next(iter(materials.values())));meshes[('mesh',i)]=mesh
     def primitive(kind):
         key=('primitive',kind)
@@ -255,7 +267,7 @@ def main():
         mesh=bpy.data.meshes.new('primitive_'+str(kind));bm=bmesh.new()
         if kind==6:bmesh.ops.create_cube(bm,size=2.)
         elif kind==5:bmesh.ops.create_cone(bm,cap_ends=True,cap_tris=False,segments=40,radius1=1.,radius2=1.,depth=2.)
-        elif kind==3:bmesh.ops.create_uvsphere(bm,u_segments=24,v_segments=12,radius=1.)
+        elif kind==3:bmesh.ops.create_uvsphere(bm,u_segments=24,v_segments=13,radius=1.)
         bm.to_mesh(mesh);bm.free();mesh.update();uv=mesh.uv_layers.new(name='UVMap')
         for polygon in mesh.polygons:
             for li in polygon.loop_indices:
@@ -263,6 +275,14 @@ def main():
                 uv.data[li].uv=primitive_uv(kind,co,polygon.normal)
             polygon.use_smooth=kind==3 or (kind==5 and abs(polygon.normal.z)<.5)
         mesh.materials.append(next(iter(materials.values())));meshes[key]=mesh;return mesh
+    capsules={}
+    def capsule_mesh(radius,half_length):
+        key=(float(radius),float(half_length))
+        if key not in capsules:
+            template=primitive(3);mesh=template.copy();unit=np.empty(len(template.vertices)*3)
+            template.vertices.foreach_get('co',unit)
+            mesh.vertices.foreach_set('co',capsule_vertices(unit.reshape(-1,3),radius,half_length).ravel());mesh.update();capsules[key]=mesh
+        return capsules[key]
     max_position_error=0.;max_rotation_error=0.;objects={}
     grouped=None
     if metadata.get('bodies') and not args.recorded_pose and (not animation or 'appearance_geom_ids'in animation):
@@ -273,12 +293,11 @@ def main():
         grouped=build(metadata,meshes,primitive,geom_material,scene,mutable,args.instances,camera_positions,args.profile=='fast',lighting.get('robot_lod',{}))
         objects=grouped['objects'];max_position_error=grouped['position_error'];max_rotation_error=grouped['rotation_error']
     for g in ([] if grouped else metadata['geoms']):
-        mesh=meshes[('mesh',g['mesh'])] if g['kind']==7 else primitive(g['kind'])
+        mesh=meshes[('mesh',g['mesh'])] if g['kind']==7 else capsule_mesh(g['size'][0],g['size'][1]) if g['kind']==3 else primitive(g['kind'])
         obj=bpy.data.objects.new(g['name'] or f'geom_{g["id"]}',mesh);scene.collection.objects.link(obj)
         obj.rotation_mode='QUATERNION';obj.rotation_quaternion=Matrix(g['rotation']).to_quaternion();obj.location=g['position']
         if g['kind']==6:obj.scale=g['size']
         elif g['kind']==5:obj.scale=(g['size'][0],g['size'][0],g['size'][1])
-        elif g['kind']==3:obj.scale=(g['size'][0],)*3
         obj.material_slots[0].link='OBJECT';obj.material_slots[0].material=geom_material(g)
         obj['source_geom_id']=g['id'];obj['source_geom_name']=g['name'];obj['presentation_only']=True;objects[g['id']]=obj
         max_position_error=max(max_position_error,float(np.max(abs(np.asarray(obj.location,dtype=float)-np.array(g['position'])))))
@@ -307,7 +326,7 @@ def main():
                 if size.shape!=(3,)or not np.isfinite(size).all()or np.any(size<0):raise ValueError('Invalid recorded geometry dimensions')
                 if original['kind']==6:obj.scale=size
                 elif original['kind']==5:obj.scale=(size[0],size[0],size[1])
-                elif original['kind']==3:obj.scale=(size[0],)*3
+                elif original['kind']==3:obj.data=capsule_mesh(size[0],size[1])
             max_position_error=max(max_position_error,float(np.max(abs(np.asarray(obj.location)-position))))
             max_rotation_error=max(max_rotation_error,float(np.max(abs(np.asarray(obj.rotation_quaternion.to_matrix())-rotation))))
             apply_recorded_appearance(obj,original,rgba,geom_material)
@@ -543,7 +562,7 @@ def main():
         frame_storage_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_video_frames.py').read_bytes()).hexdigest(),
         instance_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_blender_objects.py').read_bytes()).hexdigest(),
         material_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_blender_materials.py').read_bytes()).hexdigest(),
-        primitive_uv_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_primitive_uv.py').read_bytes()).hexdigest(),
+        primitive_uv_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_primitive_uv.py').read_bytes()).hexdigest(),capsule_helper_sha256=hashlib.sha256((Path(__file__).parent/'factory_capsule.py').read_bytes()).hexdigest(),
         asset_metadata_sha256=hashlib.sha256((args.asset/'scene.json').read_bytes()).hexdigest(),
         animation_sha256=hashlib.sha256(args.animation.read_bytes()).hexdigest()if args.animation else None)
     if args.animation and args.encode and not args.keep_frames:

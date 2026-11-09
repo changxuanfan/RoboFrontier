@@ -258,13 +258,13 @@ class Opening:
         if k > 0:
             layer = Image.new('RGBA', (900, 520), (0, 0, 0, 0)); g = ImageDraw.Draw(layer)
             mark(g, 2, 8, 15, 4)
-            tracked(g, (52, 8), 'MULTI-ROBOT BENCHMARK · LLM AGENTS', font('mono', 22), DIM + (255,), 2.2)
+            tracked(g, (52, 8), 'MULTI-ROBOT BENCHMARK · MULTIMODAL AGENTS', font('mono', 22), DIM + (255,), 2.2)
             g.text((0, 62), 'RoboFrontier', font=font('display', 112), fill=INK + (255,))
             place(img, layer, x, 300 + 30 * (1 - k), k)
         k = ease_out((t - .55) / .6)
         if k > 0:
             layer = Image.new('RGBA', (900, 200), (0, 0, 0, 0)); g = ImageDraw.Draw(layer)
-            g.text((0, 0), 'Can language models', font=font('display', 50), fill=INK2 + (255,))
+            g.text((0, 0), 'Can multimodal agents', font=font('display', 50), fill=INK2 + (255,))
             g.text((0, 60), 'run a robot world?', font=font('display', 50), fill=INK2 + (255,))
             place(img, layer, x, 520 + 24 * (1 - k), k)
         k = ease_out((t - .95) / .6)

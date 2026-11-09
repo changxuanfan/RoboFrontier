@@ -6,6 +6,29 @@ from scripts.factory_blender_materials import resolve, robot_role, task_role
 
 
 class MaterialChecks(unittest.TestCase):
+    def test_printed_black_stays_black_under_source_emission(self):
+        spec = dict(name='ws_asset_258', rgba=[1., 1., 1., 1.], roughness=-1., metallic=-1., emission=.05)
+        self.assertEqual(resolve(spec, 'print')['emission'], 0.)
+        self.assertEqual(resolve(spec)['emission'], .05)
+
+    def test_arrow_tips_keep_edges_and_clear_the_shaft(self):
+        from scripts.factory_mesh_detail import keeps_hard_edges, shares_shaft_surface, thicken_thin_axis
+        self.assertTrue(keeps_hard_edges('relay-a08-d1__relay_direction_01_tip'))
+        self.assertTrue(keeps_hard_edges('dial-best5-n04-d2__D01_pointer_tip'))
+        self.assertTrue(keeps_hard_edges('relay-a08-d2__payload_01_beam_surface'))
+        self.assertFalse(keeps_hard_edges('relay-a08-d1__relay_direction_01_shaft'))
+        self.assertTrue(shares_shaft_surface('relay-a08-d1__relay_direction_01_tip'))
+        self.assertFalse(shares_shaft_surface('dial-best5-n04-d2__D01_pointer_tip'))
+        flat = np.array([[0., 0., -.1], [.5, .2, -.1], [.5, -.2, .1], [0., 0., .1]])
+        lifted = thicken_thin_axis(flat)
+        np.testing.assert_allclose(lifted[:, :2], flat[:, :2])
+        np.testing.assert_allclose(lifted[:, 2], flat[:, 2]*1.6)
+
+    def test_relay_timber_is_painted_wood_at_every_level(self):
+        for part in ('beam', 'beam_surface', 'beam_segment0', 'beam_segment1'):
+            self.assertEqual(task_role(dict(name=f'relay-a08-d2__payload_01_{part}')), 'painted_wood')
+        self.assertIsNone(task_role(dict(name='relay-a08-d3__payload_01_hinge_housing')))
+
     def test_recorded_pose_updates_each_changed_geom_independently(self):
         from types import SimpleNamespace
         from scripts.factory_blender_materials import apply_recorded_appearance

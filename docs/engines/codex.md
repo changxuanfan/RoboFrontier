@@ -290,7 +290,7 @@ organization, all 36 R14 task selections and 36 requested concurrent task hosts.
 CPU rendering is an explicit override of the unified Linux NVIDIA default.
 MuJoCo dynamics always use CPU; Linux CPU images use Mesa OSMesa/llvmpipe.
 Adaptive delegates may create more native sessions/model requests than tasks.
-No outer LLM session is needed to prepare, launch, monitor, stop or collect.
+No outer agent session is needed to prepare, launch, monitor, stop or collect.
 
 A task's default 86,400-second limit starts at its persisted START, separately
 for every task. The host does not impose another fixed 24 hours from process

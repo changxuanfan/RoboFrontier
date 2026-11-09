@@ -32,10 +32,12 @@ def report_run(run):
         elif kind == 'ACTION_FINISHED':
             if isinstance(value.get('started_at'), (int, float)) and isinstance(value.get('finished_at'), (int, float)):
                 actions.append((value['started_at'], value['finished_at'], value.get('arm')))
-    host = run_layout.path(run, 'host_log', 'codex')
+    # The run's own manifest names its engine (legacy run-v3 host logs are engine-specific).
+    host = run_layout.path(run, 'host_log')
+    found = host.exists()
     latest_usage, updates = {}, defaultdict(list)
     ids = {value.get('thread_id'): name for name, value in agents.items() if value.get('thread_id')}
-    if host.exists():
+    if found:
         with host.open() as stream:
             for line in stream:
                 try:
@@ -54,10 +56,12 @@ def report_run(run):
     def summary(values):
         return {'count': len(values), 'mean_s': statistics.mean(values) if values else None,
                 'max_s': max(values) if values else None}
-    return {'run': str(run), 'roles': {name: {'kind': a.get('kind'), 'thread_id': a.get('thread_id'),
+    # Without a host log, waits and token updates are unknown (None), not zero.
+    return {'run': str(run), 'host_log': str(host), 'host_log_found': found,
+            'roles': {name: {'kind': a.get('kind'), 'thread_id': a.get('thread_id'),
             'messages_sent': messages[name], 'wake_sent': wakes[name], 'delivery_delay': summary(deliveries[name]),
-            'wait_events_tool_duration': summary([x for x in waits[name] if isinstance(x, (int, float))]),
-            'latest_recorded_token_total': latest_usage.get(name), 'token_usage_updates': updates[name]}
+            'wait_events_tool_duration': summary([x for x in waits[name] if isinstance(x, (int, float))]) if found else None,
+            'latest_recorded_token_total': latest_usage.get(name), 'token_usage_updates': updates[name] if found else None}
             for name, a in agents.items() if a.get('kind') != 'manager'},
             'finished_action_count': len(actions), 'pairwise_action_overlap_s': overlap,
             'notes': ['Delivery latency ends when a delivery batch is prepared, not when the model understood it.',
@@ -72,7 +76,11 @@ def main():
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     batch = json.loads((args.batch / 'batch.json').read_text())
-    data = {'batch': str(args.batch.resolve()), 'status': batch['status'],
+    # A Claude draft's batch.json keeps its static preparation status; the supervisor's
+    # snapshot holds the live one.
+    snapshot = run_layout.batch_path(args.batch, 'engineering_status')
+    status = json.loads(snapshot.read_text()).get('status', batch['status']) if snapshot.is_file() else batch['status']
+    data = {'batch': str(args.batch.resolve()), 'status': status,
             'runs': [report_run(job['run_directory']) for job in batch['jobs']]}
     text = json.dumps(data, indent=2, ensure_ascii=False) + '\n'
     if args.output:

@@ -45,7 +45,8 @@ def plan(manifest,cameras):
   for p,offset in ((p1,0),(p2,8),(p3,12),(p3,17),(p23,24),(p33,31)):
    visits.append(dict(case_id=p['case_id'],arrival_s=start+offset))
  add(210.5,overview,'factory closing')
- assert all(a['t']<b['t'] for a,b in zip(k,k[1:]))
+ if not (all(a['t']<b['t'] for a,b in zip(k,k[1:]))):
+     raise ValueError("Check failed: all(a['t']<b['t'] for a,b in zip(k,k[1:]))")
  return k,visits
 
 def may_be_visible(camera,placement):

@@ -1,7 +1,10 @@
 """Historical r13/r15 layout acceptance; r16 mechanics have separate tests."""
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
@@ -18,6 +21,47 @@ from robofrontier.workstation import Workstation
 def cases():
     return [dict(c,scene_revision=15 if c['arms']==12 else 13,source_scene_revision=10)
             if c['family']=='relay' else c for c in current_cases()]
+
+
+
+STATIC_ROOT = Path(__file__).resolve().parents[1]
+STATIC_CHECK_PROGRAM = r'''
+import json, sys, tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+import numpy as np
+from robofrontier.suite import relay_scene, relay_underslung
+
+def scene(folder, joints):
+    folder.mkdir()
+    bodies = ''.join(f'<body name="b{i}"><joint name="j{i}" type="hinge"/><geom size=".01"/></body>' for i in range(joints))
+    (folder/'scene.xml').write_text(f'<mujoco><worldbody>{bodies}</worldbody>'
+        f'<keyframe><key name="initial" qpos="{" ".join("0" for _ in range(joints))}"/></keyframe></mujoco>')
+    (folder/'task.json').write_text(json.dumps({'scale': {'scene_revision': 13}}))
+    return folder
+
+outcomes = []
+with tempfile.TemporaryDirectory() as tmp:
+    tmp = Path(tmp)
+    try:
+        relay_scene.validate(scene(tmp/'new', 1), scene(tmp/'old', 2), persist=False)
+        outcomes.append('scene passed')
+    except ValueError as error:
+        outcomes.append('scene refused: '+str(error))
+    (tmp/'under').mkdir()
+    (tmp/'under/task.json').write_text(json.dumps({'arms': {'A': {}}, 'mechanism': {'payload_assemblies': []}}))
+    model = SimpleNamespace(ngeom=0, nu=7, nplugin=0, opt=SimpleNamespace(timestep=.002))
+    station = SimpleNamespace(model=model, data=SimpleNamespace(contact=[]))
+    with patch('robofrontier.workstation.Workstation', return_value=station), patch('mujoco.mj_forward'):
+        try:
+            relay_underslung.validate(tmp/'under')
+            outcomes.append('underslung passed')
+        except ValueError as error:
+            outcomes.append('underslung refused: '+str(error))
+print(json.dumps(outcomes))
+'''
+
 
 
 class RelaySceneTests(unittest.TestCase):
@@ -135,6 +179,19 @@ class RelaySceneTests(unittest.TestCase):
                 for rule in contract['legacy_added_rules']:task['rules'].remove(rule)
                 payload=(json.dumps(task,ensure_ascii=False,indent=2)+'\n').encode()
             self.assertEqual(hashlib.sha256(payload).hexdigest(),checksum,name)
+
+    def test_bad_scenes_are_refused_with_and_without_optimization(self):
+        env = dict(os.environ, PYTHONPATH=str(STATIC_ROOT))
+        env.pop('PYTHONOPTIMIZE', None)
+        for flags in ([], ['-O']):
+            with self.subTest(flags=flags):
+                result = subprocess.run([sys.executable, *flags, '-c', STATIC_CHECK_PROGRAM], cwd=STATIC_ROOT, env=env,
+                                        capture_output=True, text=True, timeout=120)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip().splitlines()[-1], '["scene refused: Relay static check failed: '
+                                 '(\'state or actuator dimensions changed\',)", "underslung refused: Relay underslung '
+                                 'check failed: (\'actuators, plugins or timestep changed\',)"]')
+
 
 
 if __name__=='__main__':unittest.main()

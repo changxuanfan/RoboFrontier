@@ -117,8 +117,9 @@ SQLite, CLI state, sessions, and temporary files on local storage. Do not open a
 container's live database from macOS or copy a running database to Lustre/NFS.
 The Slurm and Docker wrappers enforce their own stopped-data export workflows.
 
-Each public task's default limit is 24 hours from persisted START. The initial
-reading and observations count toward that time. A short engineering stop is a
+Each public task's default limit is 24 hours of active running time from
+persisted START ([how it is counted](run-segments.md#time)). The initial reading
+and observations count toward that time. A short engineering stop is a
 separate external interruption; it must not rewrite the public task's limit.
 Request a native orderly stop with:
 

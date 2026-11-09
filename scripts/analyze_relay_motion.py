@@ -14,16 +14,20 @@ def load_samples(run,out,every=3):
     if prefix.exists():end=json.loads(prefix.read_text())['completion_cutoff_s'];terminal=None
     else:
         native_report=json.loads((run/'report.json').read_text());user_report=run/'user-goal-report.json'
-        assert native_report.get('passed') or (user_report.exists() and json.loads(user_report.read_text())['passed'])
+        if not (native_report.get('passed') or (user_report.exists() and json.loads(user_report.read_text())['passed'])):
+            raise ValueError('Relay Oracle trial did not pass: '+str(run))
         end=native_report['evaluation']['sim_time_s']
         with np.load(run/'event-states.npz',allow_pickle=False) as events:terminal=events['qpos'][-1].copy()
     if cache.exists():
-        info=json.loads(identity.read_text());assert info['scene_sha256']==reader.meta['source_scene_sha256'] and abs(info['end_sim_s']-end)<1e-7
+        info=json.loads(identity.read_text())
+        if not (info['scene_sha256']==reader.meta['source_scene_sha256'] and abs(info['end_sim_s']-end)<1e-7):
+            raise ValueError('Motion cache identity does not match the recording')
         with np.load(cache,allow_pickle=False) as z:return reader,task,z['times'].copy(),z['qpos'].copy(),info
     qs=[];stamps=[];offset=0;last=None;raw_count=0
     for chunk in reader.meta['chunks']:
         if chunk['start_sim_s']>end:break
-        file=reader.path/chunk['file'];assert digest(file)==chunk['sha256']
+        file=reader.path/chunk['file']
+        if digest(file)!=chunk['sha256']:raise ValueError('Recording chunk checksum mismatch: '+str(file))
         with np.load(file,allow_pickle=False) as z:
             q=np.bitwise_xor(np.bitwise_xor.accumulate(z['xor'],axis=0),z['base']).view('<f4');times=z['time_s'];valid=times<=end+1e-8;ids=np.flatnonzero(valid);raw_count+=len(ids)
             if len(ids):last=float(times[ids[-1]]),q[ids[-1]].copy()
@@ -106,7 +110,8 @@ def main():
     state_summary=dict(case_id=task['id'],samples=len(times),source_duration_s=float(times[-1]-times[0]),state_motion_s=float(np.count_nonzero(masks['keep'])/info['analysis_hz']),weight_only_wait_s=float(np.count_nonzero(masks['weight_only'])/info['analysis_hz']),robot_motion_s=float(np.count_nonzero(masks['robot'])/info['analysis_hz']),primary_motion_s=float(np.count_nonzero(masks['primary'])/info['analysis_hz']),candidate_visual_regions=len(ranges(masks['visual_candidates'])),thresholds=cfg.manifest(),layout=layout);(out/'state-summary.json').write_text(json.dumps(state_summary,indent=2)+'\n');print(json.dumps({k:v for k,v in state_summary.items() if k not in ['thresholds','layout']}),flush=True)
     if a.analyse_only:return
     keep,audit=visual_audit(model,task,times,q,masks,groups,out)
-    assert np.all(keep[masks['robot']]) and np.all(keep[masks['primary']])
+    if not (np.all(keep[masks['robot']]) and np.all(keep[masks['primary']])):
+        raise ValueError('Edit dropped robot or primary payload motion')
     manifest=dict(**{k:v for k,v in info.items() if k!='scope'},input_recording_scope=info['scope'],rule='scene-motion-two-windows-visual-weight-exception-v1',
         thresholds=cfg.manifest(),motion_analysis=state_summary,
         visual_audit={k:v for k,v in audit.items() if k!='records'},
