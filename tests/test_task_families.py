@@ -145,9 +145,9 @@ class FamilyReleaseTests(unittest.TestCase):
             try:
                 world.start_trial()
                 self.assertEqual(world.motion_recorder.meta['sample_hz'], 30)
-                self.assertEqual(world.suite_sampler.log_format, 'events-60s')
+                self.assertEqual(world.suite_sampler.log_format, 'events-10s')
                 header = json.loads((run/'private/outputs/suite-process.jsonl').read_text().splitlines()[0])
-                self.assertEqual((header['schema'], header['snapshot_interval_s']), ('robofrontier.suite-process.v2', 60.0))
+                self.assertEqual((header['schema'], header['snapshot_interval_s']), ('robofrontier.suite-process.v2', 10.0))
             finally:
                 world.close()
             # A harness frozen before motion_hz existed keeps the original 60 Hz.
@@ -166,9 +166,17 @@ class FamilyReleaseTests(unittest.TestCase):
                 bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'motion_hz': value}))
                 with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'motion sampling'):
                     load_harness(bad)
-            bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'process_log': 'every-step'}))
-            with self.assertRaisesRegex(ValueError, 'process log format'):
-                load_harness(bad)
+            for value in ('every-step', 'events-5s', 'events-10'):
+                bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'process_log': value}))
+                with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'process log format'):
+                    load_harness(bad)
+            # Every Monitor format, and only those, is accepted (task_config keeps the list literal).
+            from robofrontier.suite.evaluate import PROCESS_LOG_FORMATS
+            self.assertEqual(sorted(PROCESS_LOG_FORMATS), ['events-10s', 'events-1s', 'events-60s', 'full'])
+            for value in PROCESS_LOG_FORMATS:
+                bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'process_log': value}))
+                with self.subTest(value=value):
+                    self.assertEqual(load_harness(bad)['process_log'], value)
 
 
 class ReleaseRecordTests(unittest.TestCase):

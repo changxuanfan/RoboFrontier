@@ -34,7 +34,7 @@
   ],
   "video_fps": 30,
   "motion_hz": 30,
-  "process_log": "events-60s",
+  "process_log": "events-10s",
   "physics_profile": "realtime-v2",
   "motion_check": {
     "max_horizon_s": 15.0,

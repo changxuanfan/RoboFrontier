@@ -8,8 +8,13 @@ DIGITS={0:'abcdef',1:'bc',2:'abged',3:'abgcd',4:'fgbc',5:'afgcd',6:'afgedc',7:'a
 # Process-log formats. 'full': a snapshot with object poses every 0.1 s (Oracle
 # tooling reads this). 'events-1s': an event whenever a non-continuous result
 # field changes, checked at every 20 ms sample, plus a full snapshot every 1 s
-# and at the end. Detection itself is identical in both.
-PROCESS_LOG_FORMATS={'full':.10,'events-1s':1.0,'events-60s':60.0}
+# and at the end. Detection itself is identical in both. 'events-10s' (the policy
+# default) and 'events-60s' write the same events with snapshots every 10 s or 60 s
+# and each Dial trial with its event; 'events-10s' keeps object poses in every
+# snapshot, 'events-60s' leaves recorded poses to the motion recording.
+PROCESS_LOG_FORMATS={'full':.10,'events-1s':1.0,'events-10s':10.0,'events-60s':60.0}
+# Formats that write each new Dial trial (input symbols and score) with its event.
+TRIAL_LOG_FORMATS=frozenset({'events-10s','events-60s'})
 # Fields that change with time alone; 'events-1s' keeps them in snapshots only.
 CONTINUOUS_FIELDS=frozenset({'sim_time_s','samples','private_angles_deg','private_angle_speeds_rad_s','private_clearance_m',
                              'timber_inside_fraction'})
@@ -273,7 +278,7 @@ class Monitor:
             elif events!=self.last_event:record=dict(type='event',sim_time_s=t,result=result)
             else:return
             self.last_event=events
-            if self.log_format=='events-60s' and getattr(getattr(self,'game',None),'trials',None):
+            if self.log_format in TRIAL_LOG_FORMATS and getattr(getattr(self,'game',None),'trials',None):
                 fresh=self.game.trials[self.logged_trials:]
                 if fresh:record['trials']=fresh;self.logged_trials=len(self.game.trials)
         self.log.write(json.dumps(record,allow_nan=False)+'\n');self.log.flush()

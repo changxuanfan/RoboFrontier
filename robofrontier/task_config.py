@@ -178,7 +178,7 @@ def load_harness(path=None):
     if 'motion_hz' in c and (isinstance(c['motion_hz'],bool) or not math.isfinite(float(c['motion_hz'])) or c['motion_hz']<=0):
         raise ValueError('Invalid motion sampling rate')
     # Keys of suite.evaluate.PROCESS_LOG_FORMATS (kept literal: no MuJoCo import here).
-    if c.get('process_log','full') not in ('full','events-1s','events-60s'):raise ValueError('Unknown process log format')
+    if c.get('process_log','full') not in ('full','events-1s','events-10s','events-60s'):raise ValueError('Unknown process log format')
     # Keys of physics_profile.PROFILES (kept literal for the same reason).
     if c.get('physics_profile') not in (None,'realtime-v1','realtime-v2'):raise ValueError('Unknown physics profile')
     screening = c['motion_check']
