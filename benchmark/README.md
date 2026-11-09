@@ -80,3 +80,6 @@ through `legacy-paths.json`, and `legacy_bytes` returns a moved file's original 
 Suite manifests, parameter histories and provenance records also name earlier case
 folders that were removed from the tree; `pruned-paths.json` lists them, and each is
 kept at tag `archive/pre-prune-20261103` (`git checkout archive/pre-prune-20261103 -- <path>`).
+The nine Relay Oracle rows in `release.json` name the roomscript2 checkout they were
+recorded in; `oracle_recording` finds a released recording under `runs/oracle/` (or
+where it was recorded) and names it when this host does not have it.

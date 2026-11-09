@@ -145,6 +145,7 @@ def prepare(data_root, output, families=None, levels=None, views=('front', 'side
             effective_configuration=None, asset_lock_sha256=None, project=None):
     from ..motion_recording import MotionReader
     from ..station_edit import StationEdit
+    from ..task_families import oracle_recording
     initial_code=code_hashes()
     data_root, output = Path(data_root).resolve(), Path(output).resolve()
     verified = verify(data_root)
@@ -187,7 +188,7 @@ def prepare(data_root, output, families=None, levels=None, views=('front', 'side
                 level = spec.get('level', read(Path(spec['directory'])/'task.json')['level'])
                 if levels and level not in levels:
                     continue
-                reader = MotionReader(spec['recording'])
+                reader = MotionReader(oracle_recording(spec['recording']))
                 edit = StationEdit(spec['edit'], reader)
                 frames = len(edit.select(family['speedup'], fps))
                 if duration_s is not None:

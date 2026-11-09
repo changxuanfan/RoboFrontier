@@ -1,8 +1,9 @@
 {
   "schema": "robofrontier.legacy-paths.v1",
-  "scope": "Files that moved after records named them: the released inputs moved into benchmark/ on 2026-11-03, and policy texts moved into prompts/archive/ earlier. Frozen runs, Oracle recordings, review packages and the pinned asset archive keep the earlier names; readers translate them here.",
+  "scope": "Files that moved after records named them: the released inputs moved into benchmark/ on 2026-11-03, and policy texts moved into prompts/archive/ earlier. The nine Relay Oracle recordings in release.json still name the roomscript2 checkout they were recorded in; they live under runs/oracle/ here. Frozen runs, Oracle recordings, review packages and the pinned asset archive keep the earlier names; readers translate them here.",
   "paths": {
     ".agents/skills/mosaic-r13": "prompts/archive/skills/mosaic-r13",
+    "/Users/fanchangxuan/Repos/roomscript2/runs/oracle": "runs/oracle",
     "configs/environments/beam_handoff/frontier-v2-r13-relay-a08-d1": "benchmark/relay/relay-a08-d1",
     "configs/environments/beam_handoff/frontier-v2-r13-relay-a16-d1": "benchmark/relay/relay-a16-d1",
     "configs/environments/beam_handoff/frontier-v2-r15-relay-a12-d1": "benchmark/relay/relay-a12-d1",

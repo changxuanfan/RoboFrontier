@@ -38,6 +38,20 @@ def current_path(name, root=ROOT):
     return name
 
 
+def oracle_recording(name, root=ROOT):
+    """The motion folder a released Oracle row names, on this host.
+
+    Some rows name the checkout they were recorded in; legacy-paths maps those to
+    their place under root. The recorded location is still accepted where it exists."""
+    mapped = Path(current_path(name, root))
+    candidates = list(dict.fromkeys([Path(root)/mapped, Path(name)]))
+    for path in candidates:
+        if path.is_dir():
+            return path
+    raise FileNotFoundError('Released Oracle recording is not on this host: '+str(name)
+                            +' (looked in '+', '.join(map(str, candidates))+')')
+
+
 def legacy_bytes(name, root=ROOT):
     """A released file's bytes as recorded before the benchmark/ move; only path text changed."""
     import re

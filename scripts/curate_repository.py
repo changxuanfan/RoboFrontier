@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 
 from robofrontier.run_setup import write_json
+from robofrontier.task_families import current_path
 
 
 def strings(value):
@@ -62,8 +63,8 @@ def plan(root,since_ns=None):
     release=json.loads((root/'benchmark/release.json').read_text())
     for f in release['families'].values():
         for c in f['oracle']:
-            p=Path(c['recording']);p=p if p.is_absolute() else root/p
-            protect(p.parent)
+            # Relay rows name the checkout they were recorded in; protect their copy here.
+            protect(Path(current_path(c['recording'],root)).parent)
     # Retain old policy runs with substantive archived videos/results, but group
     # them separately in a later explicit migration rather than invalidate paths.
     def children(folder):return sorted(folder.iterdir()) if folder.is_dir() else []
