@@ -75,6 +75,7 @@ Read finished runs; none starts a model or physics.
 | `collect_benchmark_batch.py` | Collect stopped Codex/Claude benchmark evidence without inference or source edits. |
 | `communication_report.py` | Summarize recorded multi-role communication without inferring model intent. |
 | `export_run_report.py` | Read-only audit of a finished v3 run. |
+| `run_analysis.py` | Extract archived runs and compute timing, outcomes and atomic-step metrics; data root, run list and outputs are arguments. |
 | `summarize_oracle_batch.py` | Read-only summary of complete Oracle results, pilots and ongoing attempts. |
 | `verify_evidence_replay.py` | Compare restored evidence, all motion states/events and sampled renders. |
 | `view_policy_batch.py` | Loopback, read-only batch viewer using existing JSON and images only. |
@@ -115,6 +116,7 @@ Offline presentation of recorded motion; never steps task physics.
 | `factory_blender_materials.py` | Explicit presentation materials. |
 | `factory_blender_objects.py` | Retain exact rigid body frames with shared meshes and isolated material slots. |
 | `factory_desk_cameras.py` | Place each source workstation's inspection cameras in the factory. |
+| `factory_mesh_detail.py` | Per-mesh corrections for shapes that smooth shading or coincident faces would spoil. |
 | `factory_mesh_rotation.py` | Compare animated mesh rotations in the exported asset's coordinate frame. |
 | `factory_primitive_uv.py` | Match primitive face texture coordinates to MuJoCo. |
 | `factory_capsule.py` | Build capsule geometry from MuJoCo's radius and half-length. |
