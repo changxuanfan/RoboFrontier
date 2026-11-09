@@ -213,6 +213,16 @@ class RuntimeService:
             job['result'] = answer
         # The outer operation releases the client after its transaction commits.
 
+    def fault_injected(self):
+        """The run's one engineering fault already fired, in this or an earlier segment.
+
+        A continued segment builds a new world whose fault state starts afresh; the run
+        store is what remembers that the fault was applied."""
+        if not getattr(self, '_fault_injected', False):
+            self._fault_injected = self.store.db.execute(
+                "SELECT 1 FROM events WHERE kind='ENGINEERING_FAULT_INJECTED' LIMIT 1").fetchone() is not None
+        return self._fault_injected
+
     def stopping_diagnostics(self, action):
         arm=getattr(self.world,'arms',{}).get(action['arm'])
         if hasattr(self.world,'stop_diagnostics') or arm is not None and hasattr(arm,'data'):
@@ -502,8 +512,10 @@ class RuntimeService:
                 try:
                     self.world.start_action(robot, job['id'], prepared)
                     inject = getattr(self.world, 'inject_fault', None)
-                    injected = inject(robot, job['id'], op) if callable(inject) else None
-                    if injected: self.store.event('ENGINEERING_FAULT_INJECTED', 'Meta', injected)
+                    injected = inject(robot, job['id'], op) if callable(inject) and not self.fault_injected() else None
+                    if injected:
+                        self.store.event('ENGINEERING_FAULT_INJECTED', 'Meta', injected)
+                        self._fault_injected = True
                 except Exception as error:
                     self.store.uncertain_action(job['id'],'Executor acknowledgement failed: '+str(error),isolate=True)
                     self.respond(job,{'execution_status':'uncertain',

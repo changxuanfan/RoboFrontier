@@ -633,4 +633,20 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(result['stop_diagnostics'],{'recorded':True})
         self.assertTrue(self.call('A','job',{'call_id':'segment-move'})['result']['original_result']['interrupted_by_segment'])
 
+    def test_an_engineering_fault_fired_in_an_earlier_segment_is_not_applied_again(self):
+        calls=[]
+        def inject(robot,call_id,op):
+            calls.append(call_id);return {'call_id':call_id,'arm':robot,'kind':'unsettled_stop'}
+        self.service.world.inject_fault=inject
+        self.start()
+        self.call('A','move',{'delta_m':[0,0,.01],'wait':False},'first-move')
+        self.service.world.complete('A');self.service.pump()
+        self.assertEqual(calls,['first-move'])
+        # A continued segment: a new owner (fresh world fault state) on the same run store.
+        self.service.__dict__.pop('_fault_injected',None)
+        self.call('A','move',{'delta_m':[0,0,.01],'wait':False},'later-move')
+        self.assertEqual(calls,['first-move'])
+        kinds=[e['kind'] for e in self.service.store.events()]
+        self.assertEqual(kinds.count('ENGINEERING_FAULT_INJECTED'),1)
+
 if __name__=='__main__':unittest.main()
