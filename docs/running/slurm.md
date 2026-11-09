@@ -107,6 +107,8 @@ unqualified engineering drafts and require --engineering. Where the cluster cann
 reach Anthropic, Claude may use the managed Mac route (`slurm.egress_mode = "mac-ssh"`,
 see [Slurm subscriptions](slurm-subscription.md#managed-mac-egress)) without a
 credential store; the CLI then receives only that route's `HTTPS_PROXY`/`NO_PROXY`.
+With `slurm.egress_pause_s` above 0, start the Mac connector with `--engine claude`
+so outage detection probes `api.anthropic.com`, the host Claude actually uses.
 Claude's own Bash sandbox needs `bwrap` and `socat` on the compute-node PATH. On Linux
 it masks a denied folder with an empty tmpfs, so a Bash write there appears to succeed
 but is discarded with the sandbox; reads stay denied and nothing reaches the run.

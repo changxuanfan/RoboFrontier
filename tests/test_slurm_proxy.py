@@ -27,6 +27,58 @@ class DestinationTests(unittest.TestCase):
             self.assertFalse(proxy.target_allowed(host, port), host)
 
 
+class EngineProbeTests(unittest.IsolatedAsyncioTestCase):
+    """Route health follows the hosts the job's own engine uses (B-3)."""
+    def relay(self, engine, failing=()):
+        dialled = []
+        async def probe_dial(host):
+            dialled.append(host)
+            if host in failing: raise ConnectionRefusedError('fixture')
+            return True
+        return proxy.MacRelay(None, grace_s=60, probe_hosts=proxy.probe_hosts(engine), probe_dial=probe_dial), dialled
+
+    def test_probe_hosts_come_from_the_relayed_destination_table(self):
+        self.assertEqual(proxy.probe_hosts('claude'), ('api.anthropic.com',))
+        self.assertEqual(set(proxy.probe_hosts('codex')), {'chatgpt.com', 'auth.openai.com'})
+        for engine, route in proxy.ENGINE_ROUTES.items():
+            for host in proxy.probe_hosts(engine):
+                self.assertTrue(proxy.target_allowed(host, 443, route['domains']), host)
+        with self.assertRaises(proxy.EgressError): proxy.probe_hosts('gemini')
+        with self.assertRaises(proxy.EgressError): proxy.MacRelay(None, grace_s=60)
+        with self.assertRaises(proxy.EgressError): proxy.MacRelay(None, grace_s=60, probe_hosts=('example.com',))
+
+    async def test_claude_route_stays_available_when_only_openai_auth_fails(self):
+        relay, dialled = self.relay('claude', failing=('auth.openai.com',))
+        self.assertTrue(await relay.probe_upstream())
+        self.assertEqual(dialled, ['api.anthropic.com'])
+        with patch.object(proxy, 'HEARTBEAT_S', .005):
+            monitor = asyncio.create_task(relay.upstream_monitor())
+            await asyncio.sleep(.1); monitor.cancel(); await asyncio.gather(monitor, return_exceptions=True)
+        self.assertFalse(relay.upstream_failed)
+        self.assertGreater(len(dialled), 3)
+
+    async def test_codex_route_needs_every_engine_host(self):
+        relay, dialled = self.relay('codex')
+        self.assertTrue(await relay.probe_upstream())
+        self.assertEqual(set(dialled), {'chatgpt.com', 'auth.openai.com'})
+        for host in ('chatgpt.com', 'auth.openai.com'):
+            self.assertFalse(await self.relay('codex', failing=(host,))[0].probe_upstream(), host)
+        self.assertFalse(await self.relay('claude', failing=('api.anthropic.com',))[0].probe_upstream())
+
+    def test_connector_requires_an_engine_for_short_outage_recovery(self):
+        base = ['connect', '--ssh-host', 'cluster', '--job-id', '123', '--state-root', '/private/egress',
+                '--remote-script', '/private/helper.py']
+        started = []
+        async def connect(args): started.append(args.engine)  # never reaches SSH in this test
+        with patch.object(proxy, 'connect', connect):
+            for extra in (['--pause-grace-s', '120'], ['--pause-grace-s', '120', '--engine', 'gemini']):
+                with patch('sys.stderr'), self.assertRaises(SystemExit):
+                    proxy.main([*base, *extra])
+            self.assertEqual(started, [])
+            self.assertEqual(proxy.main([*base, '--pause-grace-s', '120', '--engine', 'claude']), 0)
+        self.assertEqual(started, ['claude'])
+
+
 class EnvironmentTests(unittest.TestCase):
     def test_quota_error_publishing_pause_fences_without_clearing_authority(self):
         import errno

@@ -129,7 +129,8 @@ old ABI masks on a newer local Linux kernel do not qualify an H800 allocation.
 
 Schema 7 adds an explicit job-scoped `mac-ssh` route. Schema 8 additionally permits
 an explicit `slurm.egress_pause_s` from 0 to 600; 0 retains immediate fencing.
-The Mac connector's `--pause-grace-s` must match that setting. Older frozen schemas keep
+The Mac connector's `--pause-grace-s` must match that setting, and a positive grace
+also requires `--engine claude` or `--engine codex` (the job's engine). Older frozen schemas keep
 their exact configuration shape and do not acquire a new proxy automatically.
 Configure a private canonical reference outside source, scratch, submissions and
 credential stores:
@@ -241,9 +242,13 @@ compute ownership lock after the route has been fenced.
 
 With a positive grace, the compute relay stays on the original listener and
 publishes fresh `ready`/`paused` lease state on node-local scratch. A stale Mac
-round trip or a failed upstream dial pauses admission. The Mac probes upstream
-TLS connectivity before declaring an upstream recovery; it never reissues an
-HTTP request body. New CONNECT requests wait within the existing bounded route.
+round trip or a failed upstream probe pauses admission. The Mac probes TLS
+connectivity to the hosts the job's engine uses: `api.anthropic.com` for
+`--engine claude`; `chatgpt.com` and `auth.openai.com` for `--engine codex`
+(all of them must answer). These come from the same table in
+`robofrontier/slurm_proxy.py` (`ENGINE_ROUTES`) that decides which destinations
+the relay forwards, and the private Mac status lists them. The relay never
+reissues an HTTP request body. New CONNECT requests wait within the existing bounded route.
 SSH server-alive tolerances cover the configured grace rather than terminating
 the TCP connection after fifteen seconds.
 
