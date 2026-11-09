@@ -342,7 +342,7 @@ sys.stderr.write(secret + 'x' * 990)
 
 
 class PolicySettingsTests(unittest.TestCase):
-    """Rendering of the frozen access table into Claude permission and sandbox settings."""
+    """Policy turns of a run with a frozen access table: its rendered settings and their CLI."""
 
     def layout(self, tmp):
         t = Path(tmp).resolve()
@@ -423,6 +423,27 @@ print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 're
             run_turn(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
                      binary=str(binary), timeout=20)
             self.assertEqual(len(list(Path(seen['path']).parent.glob('settings-*.json'))), 1)
+
+
+    def test_a_cli_lost_before_the_prompt_is_written_is_a_lost_cli_not_an_unknown_turn(self):
+        from robofrontier import policy_access
+        from robofrontier.claude.runner import PersistentSession
+        from robofrontier.run_layout import manifest_record
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
+            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
+                                                                      checkouts=[repo])})
+            binary = fake_claude(tmp, 'sys.exit(3)\n')
+            session = PersistentSession()
+            # The CLI dies between the liveness check and the prompt write.
+            with patch.object(PersistentSession, '_write', side_effect=BrokenPipeError(32, 'Broken pipe')):
+                record = session(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                                 session_id='11111111-1111-1111-1111-111111111111', binary=str(binary), timeout=5)
+            self.assertEqual(record['process'], 'process_exited')
+            self.assertEqual(record['exit_code'], 3)
+            self.assertEqual(record['summary']['turn_status'], 'unknown')
+            session.close()
 
 
 if __name__ == '__main__': unittest.main()

@@ -642,8 +642,14 @@ class PersistentSession:
             began = time.monotonic()
             host_event(run_dir, 'cli_turn_started', actor=actor, session_id=session_id or resume,
                        events_name=events_name, phase=phase, transport='persistent', pid=self.process.pid)
-            self._write({'type': 'user', 'message': {'role': 'user', 'content': prompt}})
             lines, status, interrupted_at = [], None, None
+            try:
+                self._write({'type': 'user', 'message': {'role': 'user', 'content': prompt}})
+            except (OSError, ValueError):
+                # The CLI exited after the liveness check, before this turn began: a lost CLI
+                # (which a run may restart), not a turn of unknown outcome.
+                _stop_process(self.process)
+                status = 'process_exited'
             deadline = None if timeout is None else began + timeout
             while status is None:
                 stopping = (cancel_event is not None and cancel_event.is_set()) or (deadline and time.monotonic() >= deadline)
