@@ -90,3 +90,25 @@ class JobManifestTests(unittest.TestCase):
                     deadline=time.monotonic()+3
                     while process.poll() is None and time.monotonic()<deadline:time.sleep(.05)
                     self.assertIsNotNone(process.poll())
+
+    def test_a_zombie_only_engine_group_does_not_abort_cleanup(self):
+        # macOS answers killpg with EPERM once only zombies remain in the engine's group.
+        from robofrontier.codex import job_engine
+        self.private.mkdir(mode=0o700)
+        native = subprocess.Popen
+        def start(args, **options):
+            code = ('import signal,sys,time;from pathlib import Path;'
+                    'signal.signal(signal.SIGTERM,lambda *a:sys.exit(0));'
+                    'Path('+repr(str(self.private/'control/ready.json'))+').write_text("{}");time.sleep(30)')
+            return native([sys.executable,'-c',code],**options)
+        env={**os.environ,'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(self.private),
+             'ROBOFRONTIER_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
+        exported = []
+        with patch('robofrontier.codex.job_engine.subprocess.Popen',side_effect=start), \
+                patch('robofrontier.codex.job_engine.os.killpg',side_effect=PermissionError(1,'Operation not permitted')) as killpg, \
+                patch('robofrontier.codex.job_engine.export_sessions',side_effect=lambda *a: exported.append(a)):
+            with job_engine.engine(self.jobs,env=env,timeout_s=3) as (manifest,process):
+                pass
+        killpg.assert_called()
+        self.assertEqual(process.returncode, 0)
+        self.assertEqual(len(exported), 1)

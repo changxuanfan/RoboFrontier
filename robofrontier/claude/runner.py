@@ -478,7 +478,8 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
             # The owner must reconcile outstanding physical operations separately.
             try:
                 os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
+            except (ProcessLookupError, PermissionError):
+                # macOS refuses (EPERM) to signal a group whose members are all zombies.
                 pass
             stdout, stderr = process.communicate()
             status = 'cancelled' if cancelled else 'timeout'
@@ -535,7 +536,7 @@ def _stop_process(process):
     try: process.wait(timeout=10)
     except subprocess.TimeoutExpired:
         try: os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError: pass
+        except (ProcessLookupError, PermissionError): pass  # EPERM: only zombies left (macOS).
         process.wait()
 
 

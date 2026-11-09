@@ -272,6 +272,29 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             self.assertEqual(record['process'], 'cancelled')
             self.assertEqual(record['summary']['turn_status'], 'unknown')
 
+    def test_cancel_as_the_cli_exits_does_not_raise(self):
+        # macOS answers killpg with EPERM when only zombies remain in the CLI's group.
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = fake_claude(tmp, 'time.sleep(1)\n')
+            cancel = threading.Event()
+            # Not set at the launch check, set at the first poll.
+            with patch('robofrontier.claude.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')), \
+                    patch.object(cancel, 'is_set', side_effect=[False] + [True] * 100):
+                record = run_turn(PROFILE, 'm', 'high', None, 'go', tmp, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                                  binary=str(binary), timeout=5, cancel_event=cancel, enable_robot=False)
+            self.assertEqual(record['process'], 'cancelled')
+            self.assertEqual(record['summary']['turn_status'], 'unknown')
+
+    def test_closing_a_persistent_cli_tolerates_a_zombie_only_group(self):
+        from unittest.mock import Mock
+        from robofrontier.claude.runner import _stop_process
+        process = Mock(pid=12345)
+        process.poll.return_value = None
+        process.wait.side_effect = [subprocess.TimeoutExpired('claude', 10), 0]
+        with patch('robofrontier.claude.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')):
+            _stop_process(process)
+        self.assertEqual(process.wait.call_count, 2)
+
     def test_cancellation_before_launch_never_starts_cli(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp) / 'run'; run.mkdir()
