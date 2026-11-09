@@ -200,10 +200,14 @@ Unknown execution, uncertain cancellation or failed fork provenance still needs
 review regardless of whether a budget exists.
 
 With explicit allowances, the host reserves before launch; reservations and
-remaining estimated task funds bound new turns. A task-only allowance may
-reserve the entire remainder for one turn, so another role can be denied
-concurrently; set a suitable per-turn allowance when intending concurrency
-within a task budget. Unknown/invalid/overspent cost or unresolved reservations
+remaining estimated task funds bound new turns. A task-only allowance would
+reserve the entire remainder for one turn and deny every other role, so an
+adaptive, hierarchical or peer launch with a task budget needs a per-turn
+allowance, and the most roles that can hold a reservation at once (adaptive:
+the Controller plus one delegate per arm) times that allowance must fit the
+task budget; otherwise the launch is refused before any claim. A wake refused
+because the task budget is spent is recorded as not sent and pauses the run
+for its budget. Unknown/invalid/overspent cost or unresolved reservations
 under an allowance block further allocation. Reservations from uncertain or lost
 processes are not automatically released. These are CLI-reported estimates,
 not hard provider billing caps, subscription credits or one shared batch budget.

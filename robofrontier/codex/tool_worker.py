@@ -18,6 +18,10 @@ from robofrontier.claude.landlock_shell import allowlist
 from robofrontier.codex.file_sandbox import abi, restrict
 
 SCHEMA = 'robofrontier.codex-tools.v1'
+# The broker admits a command or path of up to 131000 UTF-8 bytes and sends it as
+# JSON.stringify({tool, command}); an escaped control character takes six bytes.
+INPUT_LIMIT = 131000
+REQUEST_LIMIT = 6*INPUT_LIMIT + 1024
 DENIED_SYSCALLS = (
     'socket', 'socketpair', 'socketcall', 'connect', 'bind', 'listen', 'accept', 'accept4',
     'sendmsg', 'recvmsg', 'sendto', 'recvfrom', 'sendmmsg', 'recvmmsg',
@@ -127,6 +131,17 @@ def standard_stream(fd):
         return False
 
 
+def read_request(stream):
+    """The whole JSON request: any input the broker admits fits, however it was escaped."""
+    data = stream.read(REQUEST_LIMIT + 1)
+    if len(data) > REQUEST_LIMIT:
+        raise ValueError('Tool request too large')
+    request = json.loads(data)
+    if not isinstance(request, dict):
+        raise ValueError('Invalid tool request')
+    return request
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] != '--run-dir' or not sys.platform.startswith('linux'):
         raise ValueError('The Landlock tool worker requires a bound Linux run')
@@ -156,12 +171,10 @@ def main():
     restrict(rules)
     drop_capabilities()
     os.chdir(run/'workspace')
-    request = json.loads(sys.stdin.buffer.read(131073))
-    if not isinstance(request, dict):
-        raise ValueError('Invalid tool request')
+    request = read_request(sys.stdin.buffer)
     if request.get('tool') == 'policy_exec' and set(request) == {'tool', 'command'}:
         command = request['command']
-        if not isinstance(command, str) or not 0 < len(command.encode()) <= 131000:
+        if not isinstance(command, str) or not 0 < len(command.encode()) <= INPUT_LIMIT:
             raise ValueError('Invalid shell command')
         os.execve('/bin/bash', ['/bin/bash', '--noprofile', '--norc', '-c', command], dict(os.environ))
     elif request.get('tool') == 'policy_image' and set(request) == {'tool', 'path'}:

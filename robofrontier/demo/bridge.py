@@ -41,6 +41,8 @@ class Bridge:
                     if not 0 < size <= 8192:
                         raise ValueError("Invalid request size")
                     payload = json.loads(self.rfile.read(size))
+                    if not isinstance(payload, dict):
+                        raise ValueError("A JSON object is required")
                     request_id = payload.get("request_id")
                     if not isinstance(request_id, str) or not request_id:
                         raise ValueError("request_id is required")

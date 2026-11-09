@@ -32,7 +32,7 @@ def _ledger(run, total_budget_usd, resuming):
     """The run's shared cost ledger: reopened, never replaced, when the run continues.
 
     Turns cut off by the unexpected exit have ended with an unknown cost; without a task
-    cap they are settled as unreported, under a cap they stay uncertain and block."""
+    cap they are settled as unreported, under a cap they become uncertain and block."""
     path = run_layout.path(run, 'budget_ledger', 'claude')
     if resuming and path.exists():
         ledger = BudgetLedger(path); ledger.settle_interrupted()
@@ -47,6 +47,31 @@ HOST_STOPS = ('wall_limit', 'stop_requested', 'world_ended')
 def _positive(value, name, limit):
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 < value <= limit:
         raise ValueError('Invalid ' + name)
+
+
+def _concurrent_roles(run, topology):
+    """The most roles that can hold a budget reservation at once."""
+    roles = json.loads((run/'public/inputs/roles.json').read_text())['roles']
+    if topology == 'adaptive':
+        # The Controller's turn stays reserved while it waits for its delegates, at most one
+        # per arm (delegate scopes hold disjoint robots).
+        return 1 + len(roles['Controller']['robots'])
+    return sum(1 for info in roles.values() if info['kind'] != 'manager')
+
+
+def _check_shared_budget(run, topology, turn_budget_usd, total_budget_usd):
+    """Refuse, before any claim, a task cap that concurrent roles could exhaust by reserving.
+
+    A turn without its own allowance reserves the whole remainder, so one role would deny
+    every other; with an allowance, the roles' reservations together must fit the cap."""
+    if total_budget_usd is None or topology == 'centralized':
+        return
+    if turn_budget_usd is None:
+        raise ValueError('A task budget for a multi-role run needs a per-turn budget')
+    roles = _concurrent_roles(run, topology)
+    if roles * turn_budget_usd > total_budget_usd:
+        raise ValueError('Task budget %.4g is below %d concurrent roles x per-turn budget %.4g'
+                         % (total_budget_usd, roles, turn_budget_usd))
 
 
 def _evaluation_present(run):
@@ -92,6 +117,7 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
     if profile.get('auth_mode') == 'native_login':
         build_env(profile, base_env, config_directory(run, profile))
     if run_layout.path(run, 'stop', 'claude').exists(): raise ValueError('Run was stopped before launch')
+    _check_shared_budget(run, topology, turn_budget_usd, total_budget_usd)
     # A run continued after an unexpected exit (docs/running/run-segments.md) starts again only
     # from a prepared segment; its claim stays and its sessions are resumed.
     from robofrontier.runtime_store import RuntimeStore
@@ -101,6 +127,7 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
     host_factory = partial(ClaudeSessionHost, max_budget_usd=turn_budget_usd, total_budget_usd=total_budget_usd)
     policy = None
     ledger = None
+    fresh_ledger = False
     policy_closed = False
     owner = None
     result = None
@@ -119,6 +146,7 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
         if topology == 'centralized':
             # The run's persistent ledger, as for every topology, so a model restart or a
             # continued segment keeps the costs already spent.
+            fresh_ledger = not (resuming and run_layout.path(run, 'budget_ledger', 'claude').exists())
             ledger = _ledger(run, total_budget_usd, resuming)
             host_factory = partial(ClaudeSessionHost, max_budget_usd=turn_budget_usd, budget_ledger=ledger)
             policy = policy_factory(run, profile, base_env, host_factory=host_factory,
@@ -185,6 +213,7 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
     finally:
         budget_status = None
         budget_review_required = False
+        budget = None
         try:
             if policy is not None: policy.close()
             policy_closed = True
@@ -209,8 +238,15 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
             except Exception:
                 budget_status = 'unavailable'
                 budget_review_required = True
+        # Nothing was claimed, so the launch may be retried: a ledger this attempt created
+        # before its claim (centralized) would otherwise make every retry fail to create it.
+        discard = not claimed and fresh_ledger and ledger is not None and policy_closed and budget is not None \
+            and not budget['reservations']
         if ledger is not None and policy_closed:
             ledger.close()
+        if discard:
+            for suffix in ('', '-wal', '-shm'):
+                Path(str(ledger.path) + suffix).unlink(missing_ok=True)
         if result is not None:
             if owner is not None and (result.get('seal') or {}).get('sealed') and owner.poll() is None:
                 try: owner.wait(timeout=5)

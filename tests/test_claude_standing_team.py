@@ -201,6 +201,22 @@ class StandingTeamTests(unittest.TestCase):
             self.assertEqual(len(host.prompts), 2)
             self.assertTrue(any(r['status'] == 'uncertain' for r in service.store.wake_rows()))
 
+    def test_a_wake_refused_by_an_exhausted_task_budget_is_not_sent_and_pauses_for_the_budget(self):
+        from robofrontier.claude.budget import BudgetExhausted
+        with standing_fixture('peer') as (policy, service, call):
+            policy.bind_and_bootstrap()
+            for h in policy.hosts.values(): h.state = 'idle'
+            call(policy.run/'private/state/connections/A.json', 'send', {'to':['B'],'text':'new fact'}, 'fact-1')
+            def refused(prompt):
+                raise BudgetExhausted('Budget is exhausted or uncertain')
+            policy.hosts['B'].send = refused
+            self.assertTrue(policy.cycle()['paused'])
+            rows = service.store.wake_rows()
+            self.assertTrue(any(r['status'] == 'cancelled' for r in rows))
+            self.assertFalse(any(r['status'] == 'uncertain' for r in rows))
+            paused = [e for e in service.store.events() if e['kind'] == 'DISPATCH_PAUSED']
+            self.assertEqual(paused[-1]['details']['reason'], 'Claude task budget exhausted')
+
     def test_unknown_role_pauses_and_other_role_recovery_does_not_mask_failure(self):
         with standing_fixture('peer') as (policy, service, _):
             policy.bind_and_bootstrap()

@@ -172,7 +172,8 @@ class App:
         except queue.Empty:
             return
         payload = job.payload
-        self.episode.event("tool_request", sim_time_s=self.sim.data.time, **payload)
+        # Nested: the request's own keys (such as "kind" or "event") must not collide with the trace's.
+        self.episode.event("tool_request", sim_time_s=self.sim.data.time, request=payload)
         try:
             if time.monotonic() > job.deadline:
                 raise ValueError("Request expired before execution")

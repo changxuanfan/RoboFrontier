@@ -75,6 +75,9 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
     return output/'batch.json'
 
 
+STOPPED_BETWEEN_SEGMENTS='stopped_between_segments'
+
+
 def read_lifecycle(run):
     from robofrontier.runtime_store import RuntimeStore
     store=RuntimeStore(Path(run)/'private/state/runtime.sqlite')
@@ -215,15 +218,23 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
     def task(job):
         # An unexpected exit continues the same run once (docs/running/run-segments.md).
         run=Path(job['run_directory'])
-        # A segment prepared just before the supervisor died starts as it is.
-        if continuing and read_lifecycle(run) not in ('prepared','resuming'):
-            continued,why=try_continue(run,'batch supervisor exited')
-            job.setdefault('segments',[]).append({'host_exit_code':None,'continued':continued,'reason':why})
-            write_json(folder/'batch.json',batch)
-            if not continued:raise ValueError('Run cannot continue: '+why)
+        # Whether a continuation segment is prepared and not yet run.
+        pending=False
+        if continuing:
+            lifecycle=read_lifecycle(run)
+            pending=lifecycle=='resuming'
+            # A segment prepared just before the supervisor died starts as it is.
+            if lifecycle not in ('prepared','resuming'):
+                continued,why=try_continue(run,'batch supervisor exited')
+                job.setdefault('segments',[]).append({'host_exit_code':None,'continued':continued,'reason':why})
+                write_json(folder/'batch.json',batch)
+                if not continued:raise ValueError('Run cannot continue: '+why)
+                pending=True
         while True:
             result=launch(job)
-            if result is None:return result
+            # A stop before the first segment leaves the run unstarted; a stop after a
+            # continuation was prepared leaves a run that ran and needs review.
+            if result is None:return STOPPED_BETWEEN_SEGMENTS if pending else None
             # A shared-server failure is a job fault. Never automatically create
             # another shared manager or resend an uncertain turn/action.
             if scope=='job':return result
@@ -233,6 +244,7 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
             job.setdefault('segments',[]).append({'host_exit_code':result,'continued':continued,'reason':why})
             write_json(folder/'batch.json',batch)
             if not continued:return result
+            pending=True
     def launch(job):
         run=Path(job['run_directory'])
         stop,batch_stop=run_layout.path(run,'stop','codex'),run_layout.batch_path(folder,'stop')
@@ -252,8 +264,11 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
             job=futures[future]
             try:
                 result=future.result()
-                job.update(status='stopped_before_start' if result is None else 'closed' if result==0 else 'needs_review')
-                if result is not None:job['host_exit_code']=result
+                if result==STOPPED_BETWEEN_SEGMENTS:
+                    job.update(status='needs_review',reason='Stopped after a continuation segment was prepared; it never ran')
+                else:
+                    job.update(status='stopped_before_start' if result is None else 'closed' if result==0 else 'needs_review')
+                    if result is not None:job['host_exit_code']=result
             except Exception as error:job.update(status='needs_review',error=str(error))
             write_json(folder/'batch.json',batch)
     from .recover_task import wait_for_recoveries

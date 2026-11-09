@@ -84,12 +84,15 @@ def allowlist(table, read=(), write=()):
     A path whose table entries below it all agree with it becomes one rule. One with a
     different entry below is replaced by its children, read now, except the child on the
     way to that entry, which is visited the same way; later children are not covered.
+    A symbolic link among those children gets no rule: a rule attaches to the link's
+    target, which may be a denied folder (a link beside the repository, or one a policy
+    shell planted in /tmp). Its target keeps whatever its own place in the table grants.
     `read` and `write` add paths after the table, such as Claude Code's shell snapshots.
     """
     entries = {Path(p): mode for p, mode in table.items()}
     rules = []
     def visit(path, mode):
-        below = [p for p in entries if path in p.parents]
+        below = [p for p, m in entries.items() if path in p.parents and m != mode]
         if not below:
             if mode != 'deny': rules.append((str(path), mode))
             return
@@ -98,7 +101,7 @@ def allowlist(table, read=(), write=()):
         except OSError:
             return
         for child in children:
-            if child in entries:
+            if child in entries or child.is_symlink():
                 continue
             if any(child == p or child in p.parents for p in below):
                 visit(child, mode)
@@ -154,12 +157,15 @@ def restrict(rules):
     try:
         for path, mode in rules:
             try:
-                fd = os.open(path, os.O_PATH | os.O_CLOEXEC)
+                fd = os.open(path, os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC)
             except OSError:
                 continue  # Not there now: nothing to grant.
             try:
+                kind = os.fstat(fd).st_mode
+                if stat.S_ISLNK(kind):
+                    continue  # Never grant a link's target under the link's name (see allowlist).
                 access = (READ if mode == 'read' else fs)
-                if not stat.S_ISDIR(os.fstat(fd).st_mode):
+                if not stat.S_ISDIR(kind):
                     access &= FILE_ONLY
                 rule = PathBeneath(access & fs, fd)
                 if libc.syscall(ADD_RULE, ctypes.c_int(ruleset), ctypes.c_int(PATH_BENEATH),

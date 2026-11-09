@@ -272,6 +272,29 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             self.assertEqual(record['process'], 'cancelled')
             self.assertEqual(record['summary']['turn_status'], 'unknown')
 
+    def test_cancel_as_the_cli_exits_does_not_raise(self):
+        # macOS answers killpg with EPERM when only zombies remain in the CLI's group.
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = fake_claude(tmp, 'time.sleep(1)\n')
+            cancel = threading.Event()
+            # Not set at the launch check, set at the first poll.
+            with patch('robofrontier.claude.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')), \
+                    patch.object(cancel, 'is_set', side_effect=[False] + [True] * 100):
+                record = run_turn(PROFILE, 'm', 'high', None, 'go', tmp, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                                  binary=str(binary), timeout=5, cancel_event=cancel, enable_robot=False)
+            self.assertEqual(record['process'], 'cancelled')
+            self.assertEqual(record['summary']['turn_status'], 'unknown')
+
+    def test_closing_a_persistent_cli_tolerates_a_zombie_only_group(self):
+        from unittest.mock import Mock
+        from robofrontier.claude.runner import _stop_process
+        process = Mock(pid=12345)
+        process.poll.return_value = None
+        process.wait.side_effect = [subprocess.TimeoutExpired('claude', 10), 0]
+        with patch('robofrontier.claude.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')):
+            _stop_process(process)
+        self.assertEqual(process.wait.call_count, 2)
+
     def test_cancellation_before_launch_never_starts_cli(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp) / 'run'; run.mkdir()
@@ -316,6 +339,139 @@ sys.stderr.write(secret + 'x' * 990)
             record = run_turn(PROFILE, 'm', 'high', conn_cfg, 'go', run, base, binary=str(hanging), timeout=1)
             self.assertEqual(record['process'], 'timeout')
             self.assertEqual(record['summary']['turn_status'], 'unknown')
+
+
+class PolicySettingsTests(unittest.TestCase):
+    """Policy turns of a run with a frozen access table: its rendered settings and their CLI."""
+
+    def layout(self, tmp):
+        t = Path(tmp).resolve()
+        repo, home = t/'repo', t/'home'
+        run = repo/'runs/batch/profile/case'
+        for folder in (run/'workspace', run/'public/inputs', run/'private/inputs', repo/'configs', home):
+            folder.mkdir(parents=True, exist_ok=True)
+        (repo/'.env').write_text('test fixture')
+        return repo, home, run
+
+    def write_access(self, run, access):
+        (run/'private/inputs/policy-access.json').write_text(json.dumps(access))
+
+    def test_denied_repository_files_beside_the_run_get_rules_that_cover_the_file_itself(self):
+        from robofrontier import policy_access
+        from robofrontier.claude.runner import policy_settings
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
+                                                                      checkouts=[repo])})
+            settings = policy_settings(run)
+            deny = settings['permissions']['deny']
+            env = '//'+str(repo/'.env').lstrip('/')
+            # gitignore matching: 'path/**' never matches path itself, so a file needs the exact rule.
+            self.assertIn('Read(%s)' % env, deny)
+            self.assertIn('Edit(%s)' % env, deny)
+            configs = '//'+str(repo/'configs').lstrip('/')
+            for rule in ('Read(%s)', 'Read(%s/**)', 'Edit(%s)', 'Edit(%s/**)'):
+                self.assertIn(rule % configs, deny)
+            public = '//'+str(run/'public').lstrip('/')
+            self.assertIn('Edit(%s/**)' % public, deny)
+            self.assertIn(str(repo/'.env'), settings['sandbox']['filesystem']['denyRead'])
+            # The route to the run stays open.
+            for folder in (repo, repo/'runs', run):
+                self.assertFalse(any(rule.startswith('Read(//'+str(folder).lstrip('/')+')') for rule in deny), folder)
+
+    def test_every_run_private_folder_under_the_denied_repository_is_closed_by_pattern(self):
+        # The deny list is rendered once per CLI process; a run prepared later beside this
+        # one must still have its private/ closed, so the denied folders holding the run get
+        # patterns the CLI matches when a tool runs.
+        from robofrontier import policy_access
+        from robofrontier.claude.runner import policy_settings
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
+                                                                      checkouts=[repo])})
+            settings = policy_settings(run)
+            deny = settings['permissions']['deny']
+            root = '//'+str(repo).lstrip('/')
+            for tool in ('Read', 'Edit'):
+                for pattern in ('/**/private', '/**/private/**'):
+                    self.assertIn('%s(%s%s)' % (tool, root, pattern), deny)
+            self.assertIn(str(repo)+'/**/private', settings['sandbox']['filesystem']['denyRead'])
+            self.assertIn(str(repo)+'/**/private/**', settings['sandbox']['filesystem']['denyRead'])
+            # Only folders that hold the run get patterns: the home folder is denied whole.
+            self.assertFalse(any(str(home).lstrip('/')+'/**' in rule and 'private' in rule for rule in deny))
+            # A run below a folder named private would be closed whole by such a pattern, so that root gets none.
+            nested = repo/'private/runs/b/case'
+            (nested/'private/inputs').mkdir(parents=True)
+            self.write_access(nested, {'filesystem': policy_access.table(nested, repo=repo, home=home, tmp_dirs=(),
+                                                                         checkouts=[repo])})
+            self.assertFalse(any('/**/private' in rule for rule in policy_settings(nested)['permissions']['deny']))
+
+    def test_policy_env_table_renders_deny_and_allow_read(self):
+        from robofrontier.claude.runner import policy_settings
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            table = {'/': 'read', str(home): 'deny', str(repo): 'deny', str(run): 'deny', str(run/'public'): 'read',
+                     str(run/'private'): 'deny', str(run/'workspace'): 'write', '/tmp': 'write'}
+            self.write_access(run, {'filesystem': table, 'policy_env': {'root': '/env'}})
+            settings = policy_settings(run)
+            sandbox = settings['sandbox']['filesystem']
+            self.assertEqual(sandbox['denyRead'], sorted([str(home), str(repo), str(run), str(run/'private')])
+                             + [str(repo)+'/**/private', str(repo)+'/**/private/**'])
+            self.assertEqual(sandbox['allowRead'], sorted([str(run/'public'), str(run/'workspace'), '/tmp']))
+            self.assertEqual(sandbox['allowWrite'], sorted([str(run/'workspace'), '/tmp']))
+            self.assertIn('Read(//'+str(repo/'.env').lstrip('/')+')', settings['permissions']['deny'])
+
+    def test_a_long_deny_list_reaches_the_cli_as_a_private_settings_file(self):
+        from robofrontier import policy_access
+        from robofrontier.run_layout import manifest_record
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
+            # Thousands of earlier runs beside this one: one argv string would pass Linux's 128 KiB.
+            for index in range(5000):
+                (run.parent/('earlier-run-with-a-long-descriptive-name-%05d' % index)).touch()
+            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
+                                                                      checkouts=[repo])})
+            binary = fake_claude(tmp, '''
+path = sys.argv[sys.argv.index('--settings') + 1]
+settings = json.load(open(path))
+print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 'result': json.dumps({
+    'longest': max(len(a) for a in sys.argv), 'rules': len(settings['permissions']['deny']),
+    'mode': oct(os.stat(path).st_mode & 0o777), 'path': path})}))
+''')
+            record = run_turn(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                              binary=str(binary), timeout=20)
+            self.assertEqual(record['process'], 'exited', record['stderr_tail'])
+            seen = json.loads(record['summary']['result_text'])
+            self.assertLess(seen['longest'], 4096)
+            self.assertGreater(seen['rules'], 4*5000)
+            self.assertEqual(seen['mode'], '0o600')
+            self.assertIn(run/'private', Path(seen['path']).parents)
+            # Settings with the same content share one file.
+            run_turn(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                     binary=str(binary), timeout=20)
+            self.assertEqual(len(list(Path(seen['path']).parent.glob('settings-*.json'))), 1)
+
+
+    def test_a_cli_lost_before_the_prompt_is_written_is_a_lost_cli_not_an_unknown_turn(self):
+        from robofrontier import policy_access
+        from robofrontier.claude.runner import PersistentSession
+        from robofrontier.run_layout import manifest_record
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, home, run = self.layout(tmp)
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
+            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
+                                                                      checkouts=[repo])})
+            binary = fake_claude(tmp, 'sys.exit(3)\n')
+            session = PersistentSession()
+            # The CLI dies between the liveness check and the prompt write.
+            with patch.object(PersistentSession, '_write', side_effect=BrokenPipeError(32, 'Broken pipe')):
+                record = session(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                                 session_id='11111111-1111-1111-1111-111111111111', binary=str(binary), timeout=5)
+            self.assertEqual(record['process'], 'process_exited')
+            self.assertEqual(record['exit_code'], 3)
+            self.assertEqual(record['summary']['turn_status'], 'unknown')
+            session.close()
 
 
 if __name__ == '__main__': unittest.main()

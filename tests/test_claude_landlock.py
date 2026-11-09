@@ -72,6 +72,28 @@ class AllowlistTests(unittest.TestCase):
             self.assertEqual(extra[str(run/'private/engine/config/shell-snapshots')], 'read')
             self.assertEqual(extra['/dev/null'], 'write')
 
+    def test_a_link_beside_a_denied_folder_gets_no_rule(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp).resolve(); repo, run, table = tree(base)
+            (base/'alias').symlink_to(repo)                 # /root/RoboFrontier -> /workspace/RoboFrontier
+            (base/'data-link').symlink_to(base/'outside')   # its target keeps its own rule
+            rules = dict(landlock_shell.allowlist(table))
+            self.assertNotIn(str(base/'alias'), rules)
+            self.assertNotIn(str(base/'data-link'), rules)
+            self.assertEqual(rules[str(base/'outside')], 'read')
+
+    def test_entries_that_agree_with_their_folder_do_not_split_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp).resolve(); repo = base/'repo'; repo.mkdir()
+            temporary = base/'tmp'; (temporary/'job123').mkdir(parents=True); (temporary/'other').mkdir()
+            # A policy shell plants a link in the shared temporary folder before a later turn renders rules.
+            (temporary/'planted').symlink_to(repo)
+            table = {str(base): 'read', str(repo): 'deny', str(temporary): 'write', str(temporary/'job123'): 'write'}
+            rules = landlock_shell.allowlist(table)
+            self.assertIn((str(temporary), 'write'), rules)
+            self.assertFalse(any('planted' in path or path == str(temporary/'other') for path, _ in rules), rules)
+            self.assertFalse(any(Path(path) == repo or repo in Path(path).parents for path, _ in rules), rules)
+
 
 class ConfineTests(unittest.TestCase):
     def prepared(self, base, isolation):
@@ -183,6 +205,18 @@ class LandlockShellTests(unittest.TestCase):
                 port = server.getsockname()[1]
                 refused("exec 3<>/dev/tcp/127.0.0.1/%d" % port)
             self.assertFalse((run/'public/inputs/new.txt').exists())
+
+    def test_a_rule_naming_a_link_never_grants_its_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp).resolve(); repo, run, table = tree(base)
+            table['/'] = 'read'
+            (run/'workspace/link').symlink_to(repo)
+            rules = base/'rules.json'
+            landlock_shell.write_rules(rules, landlock_shell.allowlist(table, write=landlock_shell.DEVICES)
+                                       + [(str(run/'workspace/link'), 'write')])
+            self.assertNotEqual(self.run_shell(rules, 'cat %s' % (repo/'src/answer.py')).returncode, 0)
+            self.assertNotEqual(self.run_shell(rules, 'echo x > %s' % (repo/'src/new.py')).returncode, 0)
+            self.assertFalse((repo/'src/new.py').exists())
 
     def test_only_the_exact_robot_server_string_runs_unconfined(self):
         with tempfile.TemporaryDirectory() as tmp:

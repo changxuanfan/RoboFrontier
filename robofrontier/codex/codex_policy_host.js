@@ -39,6 +39,16 @@ function toolFailure(callId, stdout) {
       'The conflicting request was rejected; the original request status is unknown. Inspect pending. To query your action, send a new job request with the original action ID in data.call_id and omit the outer call_id. Reconcile before any new physical action; never replay uncertain motion.':
       'The original request status is unknown. Inspect pending. To query your action, send a new job request with the original action ID in data.call_id and omit the outer call_id. Retry an uncertain request only with its original outer call_id and identical operation and data; never replay motion under a new ID.'};
 }
+// The delegate a new native fork belongs to: the next unbound child of the one batch
+// being created (the dispatcher forks a batch's children in order and binds each before
+// the next). A batch left for review keeps unbound children and must never be matched.
+function pendingForkActor(snapshot) {
+  const creating=(snapshot.delegations??[]).filter(d=>d.status==='creating');
+  if (creating.length>1) throw new Error('More than one delegation batch is being created');
+  const child=creating.flatMap(d=>d.children).find(c=>!c.thread_id);
+  if (!child) throw new Error('No pending runtime delegation for fork');
+  return child.actor;
+}
 function observationMime(data) {
   if (data.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) return 'image/png';
   if (data.length>=3 && data[0]===255 && data[1]===216 && data[2]===255) return 'image/jpeg';
@@ -378,10 +388,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
           modelProvider:this.launch.provider,excludeTurns:true,ephemeral:false},p.timeoutMs);
         this.event({event:isSnapshot?'snapshot_created':'fork_created',thread_id:result.thread.id,parent:p.threadId,duration_s:(Date.now()-forkStarted)/1000});
         if (!isSnapshot) {
-          const snapshot=await this.admin('snapshot');
-          const child=snapshot.delegations.flatMap(d=>d.children).find(c=>!c.thread_id);
-          if (!child) throw new Error('No pending runtime delegation for fork');
-          this.actors.set(result.thread.id,child.actor);
+          this.actors.set(result.thread.id,pendingForkActor(await this.admin('snapshot')));
         }
         return wrap({threadId:result.thread.id,sourceThreadId:result.thread.forkedFromId,status:'created'});
       };
@@ -449,4 +456,4 @@ if (require.main===module) {
   process.on('SIGTERM',()=>{host.stopped=true;});process.on('SIGINT',()=>{host.stopped=true;});
   host.runTask().then(r=>process.stdout.write(JSON.stringify(r)+'\n')).catch(e=>{process.stderr.write(e.stack+'\n');process.exitCode=1;});
 }
-module.exports={PolicyHost,robotTool,observationMime};
+module.exports={PolicyHost,robotTool,observationMime,pendingForkActor};
