@@ -35,7 +35,7 @@ class CountFeedback:
     def __init__(self,secret):
         self.__secret=tuple(secret)
         if not self.__secret or any(x not in (1,2,3) for x in self.__secret):raise ValueError('Nonzero ternary code required')
-        self.n=len(secret);self.candidate=None;self.since=None;self.submitted=False;self.won=False;self.queries=0;self.last=None;self.trials=[];self.display=None
+        self.n=len(secret);self.candidate=None;self.since=None;self.submitted=False;self.won=False;self.queries=0;self.last=None;self.trials=[];self.display=None;self.ready=False
     def update(self,t,angles,speeds,eligible):
         degrees=np.degrees(angles)%360;marks=np.rint(degrees/90).astype(int)%4
         # The device recognizes a detent band held continuously for 250 ms.
@@ -45,7 +45,7 @@ class CountFeedback:
         guess=tuple(int(x) for x in marks) if valid else None
         if guess!=self.candidate or not valid:self.candidate=guess;self.since=t if valid else None;self.submitted=False
         if self.last is not None and t-self.last>.030001:self.since=t if valid else None
-        self.last=t;ready=valid and t-self.since>=.25-1e-8
+        self.last=t;ready=self.ready=bool(valid and t-self.since>=.25-1e-8)
         score=sum(x==y for x,y in zip(guess,self.__secret)) if ready else None
         if ready and not self.submitted and not self.won:self.queries+=1;self.trials.append(dict(index=self.queries,sim_time_s=t,input_symbols=list(guess),correct_count=score));self.submitted=True
         if score==self.n:self.won=True
@@ -134,11 +134,19 @@ class Monitor:
         Trials, BEST and success are episode history, carried in the bound restore record
         (docs/running/run-segments.md). A configuration already counted and held at that
         frame stays the same trial while it is held on; leaving and re-entering counts again.
+        Blue support ready at that frame stays qualified, and red knobs held there are not new
+        contacts, so the restart neither re-counts a held input nor records a violation.
         """
         from ..run_segments import current_restore
+        # Red contacts present at the first sample are carried, not new (sample_dial).
+        self.previous_red=None
         found=current_restore(self.w.directory) if getattr(self.w,'directory',None) is not None else None
         record=found[0].get('evaluator') if found else None
         if not record:return
+        t=float(self.d.time);ready=record.get('support_ready')
+        if ready is None and record.get('input_ready'):ready=[True]*len(getattr(self,'blue_qualification',[]))
+        for q,held in zip(getattr(self,'blue_qualification',[]),ready or []):
+            if held:q.since=t-q.dwell;q.qualified=True;q.last=t
         game=self.game;game.queries=self.carried_trials=int(record['valid_trials']);game.won=bool(record['solved'])
         if getattr(game,'mode',None)=='best_so_far' and record.get('best') is not None:game.best=game.display=int(record['best'])
         if record.get('input_ready'):
@@ -350,6 +358,7 @@ class Monitor:
             if distance>.0002:continue
             for robot,part in ((int(pair[0]),int(pair[1])),(int(pair[1]),int(pair[0]))):
                 if self.geom_owner[robot]>=0 and part in self.red:red.add((self.red[part],self.robots[self.geom_owner[robot]]))
+        if self.previous_red is None:self.previous_red=red
         if not self.game.won and self.task['level']>1:
             for i,robot in red-self.previous_red:
                 if not ready[i] or not (supporters[i]-{robot}):self.violation('premature_red_contact',key=self.dials[i]['id']+'/'+robot)
@@ -385,6 +394,7 @@ class Monitor:
                                      strict_task_success=self.game.won and not self.violations,
                                      scoring_version='terminal_outcome_v2')
         if spec:self.result_cache.update(feedback_mode=self.game.mode,input_ready=self.game.ready,private_red_hold_ready=red_ready)
+        else:self.result_cache.update(input_ready=self.game.ready)
         if self.carried_trials:self.result_cache['carried_valid_trials']=self.carried_trials
     def sample_relay(self):
         t=float(self.d.time);gs=self.geoms['payload'];support=self.bilateral(self.support_geoms,positive_force=True);position=self.d.body('payload').xpos.copy();contact_env=False;cradle=False

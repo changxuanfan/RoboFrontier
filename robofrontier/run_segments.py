@@ -426,5 +426,9 @@ def dial_record(run, cutoff=None):
             best = max(best or 0, result['display'])
         solved = solved or bool(result.get('solved'))
     if last is None: return None
-    return {'valid_trials': trials, 'best': best, 'solved': solved,
-            'input_ready': bool(last['result'].get('input_ready')), 'sim_time_s': last['sim_time_s']}
+    record = {'valid_trials': trials, 'best': best, 'solved': solved,
+              'input_ready': bool(last['result'].get('input_ready')), 'sim_time_s': last['sim_time_s']}
+    # Which dials had qualified blue support at the restore frame (Monitor.continue_dial_record).
+    if isinstance(last['result'].get('private_support_ready'), list):
+        record['support_ready'] = [bool(x) for x in last['result']['private_support_ready']]
+    return record
