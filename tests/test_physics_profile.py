@@ -153,4 +153,14 @@ class MotionQueryTests(unittest.TestCase):
             with self.assertRaises(ValueError):object_poses(folder, .5)
 
 
+class SettleCountingTests(unittest.TestCase):
+    def test_only_realtime_v2_counts_settle_samples_per_tick(self):
+        self.assertEqual({PROFILES['realtime-v2'][family]['poll_stability'] for family in PROFILES['realtime-v2']}, {'per-tick'})
+        self.assertFalse(any('poll_stability' in settings for settings in PROFILES['realtime-v1'].values()))
+        for name, expected in ((None, None), ('realtime-v1', None), ('realtime-v2', 'per-tick')):
+            w = world()
+            attach(w, {'physics_profile': name} if name else {})
+            self.assertEqual(getattr(w.arms['A'], 'poll_stability', None), expected)
+
+
 if __name__ == '__main__': unittest.main()

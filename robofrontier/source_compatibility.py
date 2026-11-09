@@ -201,6 +201,18 @@ def ik_failure(self,goal,rotation,requested,q,error):
         scope='Found by a local IK search from the current joint references; not a proof of the reach limit')
 ''', None, 1),
 )
+# Reviewed realtime-v2 settle counting (docs/running/physics-profiles.md): only a frozen
+# physics profile that sets poll_stability changes it; every other arm keeps 'per-call',
+# where the original statements run.
+ARM_POLL_STABILITY = (
+    ('settle sampling default', "self.poll_stability='per-call'\nself.last_poll_sample=None", None, 1),
+    ('settle sampling start', "self.last_poll_sample=None", None, 1),
+    ('settle sampling per tick', """
+if self.poll_stability=='per-tick':
+    if self.last_poll_sample is not None and now<=self.last_poll_sample+1e-9:return None
+    self.last_poll_sample=now
+""", None, 1),
+)
 # Reviewed Mosaic Level 2/3 centre tolerance: read from the task with the original
 # 5 mm default, so a task that does not declare mosaic-center-6mm-v1 is unchanged.
 MOSAIC_CENTER_TOLERANCE = ("""
@@ -297,7 +309,7 @@ def normalized_digest(source, rule):
             if index==0:method.body[matches[0]]=original
             else:method.body.pop(matches[0])
     elif rule == 'exclude_local_recovery_and_engineering_fault':
-        for what, current, original, count in ARM_RECOVERY: _revert(tree, current, original, what, count)
+        for what, current, original, count in ARM_RECOVERY+ARM_POLL_STABILITY: _revert(tree, current, original, what, count)
     elif rule == 'mosaic_public_projection':
         # This authenticates only the old review artifact's public projection.
         # Validator improvements and current scoring are explicitly not equated.
