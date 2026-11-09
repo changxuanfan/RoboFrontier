@@ -255,7 +255,12 @@ route. The relay never reissues an HTTP request body. New CONNECT requests wait 
 SSH server-alive tolerances cover the configured grace rather than terminating
 the TCP connection after fifteen seconds.
 
-The trusted job watcher creates an instance-bound `EGRESS_PAUSED` claim. The
+The trusted job watcher creates an instance-bound `EGRESS_PAUSED` claim. Each
+pause gets a fresh claim plus the watcher's fixed token and a `pause_id` that rises
+by one per pause. A world that slept through a short resume and then reads a higher
+`pause_id` from the same watcher treats it as one continuing pause
+(`EGRESS_PAUSE_CONTINUED`); any other new claim still fences the job. Worlds frozen
+before this rule ignore the added fields and keep the earlier behavior. The
 gateway holds new turns/forks while status reads remain available, and bound RPC
 deadlines include the explicit pause grace. The dispatcher waits instead of
 exiting on this infrastructure pause. Each new runtime retains its one live world,

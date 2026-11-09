@@ -112,6 +112,30 @@ class EnvironmentTests(unittest.TestCase):
                 while marker.exists() and time.monotonic()<until:time.sleep(.01)
                 self.assertFalse(marker.exists());self.assertFalse(self.failure.is_set())
 
+    def test_quick_pause_resume_pause_publishes_a_rising_pause_id_from_one_watcher(self):
+        # B-12: a world that misses the short resume must see the same outage continue.
+        private=self.root/'engine';private.mkdir(mode=0o700)
+        self.config['slurm']['egress_pause_s']=2;self.value.update(state='ready',grace_s=2)
+        proxy.atomic(self.path,self.value)
+        def wait(condition):
+            until=time.monotonic()+2
+            while not condition() and time.monotonic()<until:time.sleep(.01)
+            self.assertTrue(condition())
+        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}):
+            with proxy.environment(self.config,on_failure=self.failure.set):
+                marker=Path(os.environ['ROBOFRONTIER_EGRESS_PAUSE_FILE']);seen=[]
+                for _ in range(2):
+                    proxy.atomic(self.path,{**self.value,'state':'paused','heartbeat':time.time()})
+                    wait(marker.exists);seen.append(proxy.read_record(marker))
+                    proxy.atomic(self.path,{**self.value,'heartbeat':time.time()})
+                    wait(lambda:not marker.exists())
+                self.assertFalse(self.failure.is_set())
+        first,second=seen
+        self.assertEqual([first['pause_id'],second['pause_id']],[1,2])
+        self.assertEqual(first['watcher'],second['watcher']);self.assertEqual(len(first['watcher']),32)
+        self.assertNotEqual(first['claim'],second['claim'])
+        self.assertEqual(first['schema'],'robofrontier.egress-pause.v1')
+
     def test_replaced_instance_fences_even_during_short_outage_grace(self):
         private=self.root/'engine';private.mkdir(mode=0o700)
         self.config['slurm']['egress_pause_s']=2;self.value.update(state='ready',grace_s=2)

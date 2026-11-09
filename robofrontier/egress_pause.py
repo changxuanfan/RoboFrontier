@@ -12,6 +12,7 @@ class WorldPause:
         self.path=Path(os.environ['ROBOFRONTIER_EGRESS_PAUSE_FILE']) if os.environ.get('ROBOFRONTIER_EGRESS_PAUSE_FILE') else None
         self.instance=os.environ.get('ROBOFRONTIER_EGRESS_INSTANCE')
         self.job=os.environ.get('SLURM_JOB_ID');self.claim=None;self.failed=False;self.operator_hold=False
+        self.watcher=None;self.pause_id=None
 
     def ownership(self):
         return {'run_id':self.store.get('run_id'),'segment':self.store.get('segment',0),
@@ -42,6 +43,14 @@ class WorldPause:
         self.service.shutdown=True
         return True
 
+    def continues(self,marker):
+        """A later pause from the same route watcher (slurm_proxy.pause_marker).
+        This world missed the short resume between the two pauses and never
+        left its pause, so the outage continues; any other new claim fences."""
+        watcher,pause_id=marker.get('watcher'),marker.get('pause_id')
+        return (isinstance(watcher,str) and len(watcher)==32 and watcher==self.watcher
+                and type(pause_id) is int and type(self.pause_id) is int and pause_id>self.pause_id)
+
     def close(self):
         if self.claim is not None:
             elapsed=time.monotonic()-self.started
@@ -68,6 +77,7 @@ class WorldPause:
                 return self.fence()
             if self.claim is None:
                 self.claim=marker['claim'];self.started=time.monotonic();self.before=self.ownership()
+                self.watcher=marker.get('watcher');self.pause_id=marker.get('pause_id')
                 self.wall_started=time.time()
                 self.prior_dispatch=self.store.get('dispatch_paused',False)
                 self.prior_physics=self.store.get('physics_state')
@@ -75,7 +85,11 @@ class WorldPause:
                 with self.store.transaction():
                     self.store.put('dispatch_paused',True);self.store.put('physics_state','paused_by_egress')
                     self.event_seq=self.store.event('EGRESS_PAUSED','Meta',{'instance':self.instance,'claim':self.claim,'sim_time_s':float(self.world.time)})
-            elif marker['claim']!=self.claim:return self.fence()
+            elif marker['claim']!=self.claim:
+                if not self.continues(marker):return self.fence()
+                self.store.event('EGRESS_PAUSE_CONTINUED','Meta',{'instance':self.instance,'claim':marker['claim'],
+                                                                'previous_claim':self.claim,'pause_id':marker['pause_id']})
+                self.claim=marker['claim'];self.pause_id=marker['pause_id']
             return True
         if self.claim is None:return False
         unchanged=all(tuple(self.store.db.execute('SELECT * FROM calls WHERE id=?',(key,)).fetchone() or ())==value for key,value in self.receipts.items())

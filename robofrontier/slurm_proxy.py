@@ -93,6 +93,19 @@ def read_record(path):
     raise EgressError('Egress readiness record kept changing during read')
 
 
+def pause_marker(identity, instance, watcher, pause_id, claim):
+    """One route pause, as the trusted job watcher publishes it to every world.
+
+    pause_id rises by one with each pause the same watcher publishes. A world
+    that slept through a short resume still holds the earlier claim; it reads
+    a higher pause_id from the same watcher as the same continuing outage, not
+    as a changed owner. The fields are additive, so the schema stays v1 and
+    worlds frozen before them read the marker exactly as before.
+    """
+    return {'schema': 'robofrontier.egress-pause.v1', 'job_id': identity, 'instance': instance,
+            'claim': claim, 'watcher': watcher, 'pause_id': pause_id, 'at': time.time()}
+
+
 def job_id(value):
     if not re.fullmatch(r'[0-9]{1,16}', value):
         raise EgressError('An existing numeric Slurm allocation is required')
@@ -205,6 +218,7 @@ def environment(config, *, on_failure):
     def watch():
         paused_at = None
         claim = None
+        watcher = secrets.token_hex(16); pause_id = 0
         while not stopped.wait(.5):
             try:
                 current = read_record(directory/'ready.json')
@@ -215,9 +229,8 @@ def environment(config, *, on_failure):
                 if current.get('state','ready')=='paused':
                     if paused_at is None:
                         paused_at=time.monotonic()
-                        claim=secrets.token_hex(16)
-                        atomic(pause_path,{'schema':'robofrontier.egress-pause.v1','job_id':identity,
-                                          'instance':record['instance'],'claim':claim,'at':time.time()})
+                        claim=secrets.token_hex(16);pause_id+=1
+                        atomic(pause_path,pause_marker(identity,record['instance'],watcher,pause_id,claim))
                     if time.monotonic()-paused_at>grace_s:raise EgressError('Short outage grace expired')
                 elif paused_at is not None:
                     marker=read_record(pause_path)
