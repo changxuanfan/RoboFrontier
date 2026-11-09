@@ -38,12 +38,15 @@ def restrict(rules):
             if mode not in ('read', 'write'):
                 raise ValueError('Unknown filesystem permission')
             try:
-                fd = os.open(path, os.O_PATH | os.O_CLOEXEC)
+                fd = os.open(path, os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC)
             except FileNotFoundError:
                 continue
             try:
+                kind = os.fstat(fd).st_mode
+                if stat.S_ISLNK(kind):
+                    continue  # A rule would attach to the link's target, which the table may deny.
                 access = READ if mode == 'read' else fs
-                if not stat.S_ISDIR(os.fstat(fd).st_mode):
+                if not stat.S_ISDIR(kind):
                     access &= FILE_ONLY
                 rule = PathBeneath(access & fs, fd)
                 if libc.syscall(ADD_RULE, ctypes.c_int(ruleset), ctypes.c_int(PATH_BENEATH),
