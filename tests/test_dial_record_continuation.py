@@ -131,4 +131,14 @@ class SampledContinuationTests(unittest.TestCase):
         self.assertTrue(result['input_ready'])
 
 
+class ProcessLogTests(unittest.TestCase):
+    def test_an_unknown_log_format_leaves_an_existing_log_untouched(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder)/'suite-process.jsonl'; log.write_text('kept\n')
+            with self.assertRaises(ValueError): Monitor(None, log_path=log, log_format='bogus')
+            self.assertEqual(log.read_text(), 'kept\n')
+
+
 if __name__ == '__main__': unittest.main()
