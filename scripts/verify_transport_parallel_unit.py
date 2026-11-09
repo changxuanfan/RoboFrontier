@@ -58,13 +58,17 @@ def run(a):
     sources=[];sequences={}
     for robot,obj,goal,unit in actors:
         source=batch/'units'/unit/'attempt-001';r=json.loads((source/'report.json').read_text())
-        assert r['local_passed'] and r['evaluation']['assignments'].get(goal)==obj
-        assert r['scene_sha256']==task['scene_sha256']
-        assert r['physical_control_sha256']==expected_control
+        if not (r['local_passed'] and r['evaluation']['assignments'].get(goal)==obj):
+            raise ValueError("Check failed: r['local_passed'] and r['evaluation']['assignments'].get(goal)==obj")
+        if not (r['scene_sha256']==task['scene_sha256']):
+            raise ValueError("Check failed: r['scene_sha256']==task['scene_sha256']")
+        if not (r['physical_control_sha256']==expected_control):
+            raise ValueError("Check failed: r['physical_control_sha256']==expected_control")
         sequence=[];prior=None
         for action in json.loads((source/'actions.json').read_text()):
             if action['label']=='clear-idle-arms':prior=action['end_sim_s'];continue
-            assert set(action['commands'])=={robot};assert all(x['status']=='completed' for x in action['results'].values())
+            if set(action['commands'])!={robot}:raise ValueError('Unit action commanded another robot: '+str(action['commands']))
+            if not all(x['status']=='completed' for x in action['results'].values()):raise ValueError('Unit action did not complete')
             sequence.append(dict(label=action['label'],delay=max(0.,action['start_sim_s']-prior),command=action['commands'][robot]));prior=action['end_sim_s']
         sequences[robot]=sequence
         sources.append(dict(robot=robot,object=obj,goal=goal,reference=str(source),

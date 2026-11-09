@@ -14,13 +14,13 @@ See the [configuration and CLI guide](../docs/unified-cli.md).
 | `claude-models.json` | Native Claude Code model/provider profiles and transcript pricing; select an engine-specific profile explicitly |
 | `harness.json` | Default runtime harness, used when a task names none |
 | `harnesses/policy.json` | Native shared runtime/tool defaults for policy runs; model fields are baseline native settings, not overrides of a frozen unified profile |
-| `harness-frontier-v2.json`, `harness-frontier-v2-servo2.json` | Frontier V2 harnesses that historical suites and the released records name by file. The first differs from `harness.json` only in `topology`; servo2 adds the PD gripper servo, with its own model and effort fields, and is the one released records and Oracle executions use |
+| `harness-frontier-v2.json`, `harness-frontier-v2-servo2.json` | Frontier V2 harnesses that historical suites and the released records name by file. The first differs from `harness.json` in `topology` and `action_timeout_sim_s` (15 s, the earlier default; `harness.json` now allows 30 s); servo2 adds the PD gripper servo, with its own model and effort fields, and is the one released records and Oracle executions use |
 | `policy-assets.json` | Pinned policy asset archive and integrity inventory used by automatic bootstrap/preparation |
 | `factory-assets.json` | Independent R14 Factory recording release, split sizes and SHA-256 fingerprints; it does not change policy scene selection |
 | `backgrounds/robo_factory.json` | Factory appearance, layout and shared visual resources |
 | `backgrounds/robo_factory_lookdev*.json` | Offline lighting and camera overrides for `render_factory_blender --lighting-config/--camera-config` |
 | `patterns/` | Tulip pattern parameters used by the Frontier V2 scene builder |
-| `retention.json` | What `scripts/curate_repository.py` keeps: Oracle sources, released inputs, final media and selected policy evidence |
+| `retention.json` | What `scripts/curate_repository.py` keeps: Oracle sources, released inputs, final media and selected policy evidence; `skip_runs` names the `runs/` data roots it never proposes (batches and policy runs are always kept) |
 | `noslip.json` | No-slip physics variant for the single-arm demo |
 | `examples/luna-l3-cpu.toml` | CPU Slurm example for the four maximum-arm Level 3 tasks |
 | `environments/` | Scene revisions before release, the earlier revisions released cases and Oracle recordings name as sources, and scenes the tests open |

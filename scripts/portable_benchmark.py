@@ -44,6 +44,11 @@ print("macOS native MuJoCo offscreen render OK")'''
                           check=True, capture_output=True, text=True, timeout=60).stdout.strip()
 
 
+def compatibility_receipt(profile):
+    """The model-compatibility preflight receipt run_batch requires before any scored trial."""
+    return ROOT/'runs/engineering/model-compatibility'/profile/'report.json'
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True,help='New batch directory')
@@ -62,6 +67,11 @@ def main():
     if not os.environ.get(key):raise SystemExit('Set '+key+' in .env or the environment')
     output=args.output.absolute()
     if output.exists():raise SystemExit('Output directory already exists; choose a new batch directory')
+    # Check before preparing: a batch prepared without the receipt cannot start, and
+    # this command cannot be retried into the same output.
+    if not compatibility_receipt(args.profile).is_file():
+        raise SystemExit(f'Run the model preflight first: .venv/bin/python -m scripts.luna_cpu preflight '
+                         f'--profile {args.profile} --output {output}')
     home=batch_codex_home(output)
     home.mkdir(parents=True,exist_ok=True,mode=0o700)
     os.environ['CODEX_HOME']=str(home)
@@ -72,7 +82,11 @@ def main():
     marker=run_layout.batch_path(output,'codex_home_marker');marker.parent.mkdir(parents=True,exist_ok=True)
     marker.write_text(json.dumps({'codex_home':str(home)},indent=2)+'\n')
     print('Prepared batch: '+str(output),flush=True)
-    run_batch(output,args.parallel)
+    try:run_batch(output,args.parallel)
+    except Exception:
+        print('The batch is prepared; after fixing the cause, start it with: .venv/bin/python -m scripts.luna_cpu run '+str(output),
+              file=sys.stderr,flush=True)
+        raise
     batch=json.loads((output/'batch.json').read_text())
     print('Batch status: '+batch['status'],flush=True)
     return 0 if batch['status']=='closed' else 1

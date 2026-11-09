@@ -2,7 +2,8 @@
   "schema_version": 1,
   "purpose": "Current reproducible Oracle sources, released GPT inputs, final media and selected historical policy evidence",
   "keep": [
-    "runs/state-assets", "runs/engineering/oracle-integration-20261027", "runs/engineering/cli-migration-cleanup-20261027",
+    "runs/state-assets", "runs/factory-data", "runs/asset-cache", "runs/exports", "runs/archives",
+    "runs/engineering/oracle-integration-20261027", "runs/engineering/cli-migration-cleanup-20261027",
     "runs/oracle/transport-continuation-20261026",
     "outputs/engineering", "outputs/policy-packages", "outputs/gpt",
     "outputs/task-atlas/v1-20261027", "outputs/exports/task-atlas-four-families-20261027.zip",
@@ -16,6 +17,8 @@
     "outputs/robo-factory/v10-centered-labels-review", "outputs/robo-factory/v10-orbit16-cycles",
     "outputs/robo-factory/dial-best5-edited-10x-20261027", "outputs/robo-factory/relay-nine-videos-20x-20261027"
   ],
+  "skip_runs": ["oracle", "engineering", "policy", "state-assets", "history", "exports", "archives", "extracted",
+    "restored", "submissions", "container-exports", "factory-data", "asset-cache"],
   "remove_factory_frame_cache": true,
   "old_engineering_candidates": ["runs/engineering/mosaic-r13-physical-pick-place-20261025"],
   "notes": ["Never delete active task source streams or their scene assets.", "Historical references in old reports are not current runtime dependencies.", "Keep current worktree and main; retired branch commits remain in Git."]

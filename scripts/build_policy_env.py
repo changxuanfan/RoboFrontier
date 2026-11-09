@@ -15,6 +15,7 @@ then relock; --upgrade matters, since compile otherwise keeps a lock's existing 
     uv pip compile --universal --python-version 3.12 --generate-hashes --no-header core.in -c all.lock -o core.lock
 """
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -69,15 +70,35 @@ def make_writable(root):
 
 
 def build(base):
-    target = Path(base).expanduser().resolve()/('policy-env-' + identity())
-    if (target/policy_env.MANIFEST).is_file():
-        policy_env.verify(target)
-        print('Existing environment is valid:', target)
+    base = Path(base).expanduser().resolve()
+    target = base/('policy-env-' + identity())
+    base.mkdir(parents=True, exist_ok=True)
+    # Hosts sharing a base build the same identity; one builds, the others wait and
+    # then find its valid environment instead of deleting a tree still being built.
+    with open(base/(target.name + '.lock'), 'a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if (target/policy_env.MANIFEST).is_file():
+            policy_env.verify(target)
+            print('Existing environment is valid:', target)
+            return target
+        if target.exists():
+            make_writable(target)
+            shutil.rmtree(target)
+        target.mkdir(parents=True)
+        install(target)
+        try:
+            policy_env.verify(target)
+        except Exception:
+            # Leave no manifest behind, so the next build starts over instead of
+            # re-verifying a broken tree forever.
+            make_writable(target)
+            (target/policy_env.MANIFEST).unlink(missing_ok=True)
+            raise
         return target
-    if target.exists():
-        make_writable(target)
-        shutil.rmtree(target)
-    target.mkdir(parents=True)
+
+
+def install(target):
+    """Install the pinned Python, packages and wheel store into the empty target and seal it."""
     installs = target/'python'
     # Standalone: not the host's Python, so nothing else on the machine affects it.
     run([*UV, 'python', 'install', PYTHON, '--no-bin', '--install-dir', installs])
@@ -108,8 +129,6 @@ def build(base):
     manifest['tree_sha256'] = policy_env.tree_sha256(target)
     (target/policy_env.MANIFEST).write_text(json.dumps(manifest, indent=1) + '\n')
     make_read_only(target)
-    policy_env.verify(target)
-    return target
 
 
 def main(argv=None):

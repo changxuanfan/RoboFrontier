@@ -1,5 +1,7 @@
 """Frozen BEST5 blind batch, one pilot then at most two independent worlds.
 
+A failed pilot stops the batch unless --continue-after-pilot-failure is given.
+
 No puzzle content is read by this supervisor. Secrets are passed as evaluator
 file paths. The output root is a unique external artifact directory.
 """
@@ -19,9 +21,27 @@ from robofrontier.run_setup import write_json
 ROOT=Path(__file__).resolve().parents[1]
 
 
+def supervise(ids,run,status,results,base,workers=2,continue_after_pilot_failure=False):
+    """Run the pilot, then the rest only if it passed (or the operator explicitly allowed continuing)."""
+    status(True)
+    pilot=run(ids[0]);results.append(pilot);status(True)
+    if not pilot['passed']:
+        write_json(base/'pilot-needs-review.json',pilot)
+        if not continue_after_pilot_failure:
+            status(False);return 1
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        pending={pool.submit(run,c):c for c in ids[1:]}
+        for task in concurrent.futures.as_completed(pending):
+            try:row=task.result()
+            except Exception as error:row=dict(case_id=pending[task],passed=False,error=type(error).__name__+': '+str(error))
+            results.append(row);status(True)
+    status(False);return 0 if all(r['passed'] for r in results) else 1
+
+
 def main():
     p=argparse.ArgumentParser();p.add_argument('--output-root',required=True,type=Path)
     p.add_argument('--workers',type=int,choices=(1,2),default=2);p.add_argument('--wall-s',type=float,default=0,help='Optional wall budget per case; 0 means no limit')
+    p.add_argument('--continue-after-pilot-failure',action='store_true',help='Run the remaining cases even when the pilot fails')
     p.add_argument('--cases',nargs='*');a=p.parse_args();base=a.output_root.resolve()
     if not math.isfinite(a.wall_s) or a.wall_s<0:p.error('Wall budget must be nonnegative; zero disables it')
     catalog=ROOT/'benchmark/dial/catalog.json';cases=json.loads(catalog.read_text())['cases']
@@ -35,7 +55,7 @@ def main():
     (base/'inputs/harness.json').write_bytes(harness.read_bytes());(base/'inputs/catalog.json').write_bytes(catalog.read_bytes())
     write_json(base/'manifest.json',dict(protocol='dial-best5-continuous-grasp-repair-v2',git_commit=commit,worktree=str(ROOT),
         solver_password_input=False,mechanical_geometry_privileged=True,mechanical_warmup_in_episode=False,
-        cases=ids,workers=a.workers,wall_budget_per_case_s=a.wall_s or None,sim_budget_per_case_s=None,
+        cases=ids,workers=a.workers,continue_after_pilot_failure=a.continue_after_pilot_failure,wall_budget_per_case_s=a.wall_s or None,sim_budget_per_case_s=None,
         catalog_sha256=hashlib.sha256(catalog.read_bytes()).hexdigest(),created_unix_s=time.time()))
     results=[]
     def status(active):
@@ -64,17 +84,7 @@ def main():
             error=r.get('error') or (None if passed else 'Process/report did not establish a clean success'),
             report=str(report) if report.exists() else None,wall_s=time.monotonic()-began)
         write_json(base/(cid+'-process.json'),record);print(json.dumps(record),flush=True);return record
-    status(True)
-    pilot=run(ids[0]);results.append(pilot);status(True)
-    if not pilot['passed']:
-        write_json(base/'pilot-needs-review.json',pilot)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=a.workers) as pool:
-        pending={pool.submit(run,c):c for c in ids[1:]}
-        for task in concurrent.futures.as_completed(pending):
-            try:row=task.result()
-            except Exception as error:row=dict(case_id=pending[task],passed=False,error=type(error).__name__+': '+str(error))
-            results.append(row);status(True)
-    status(False);return 0 if all(r['passed'] for r in results) else 1
+    return supervise(ids,run,status,results,base,a.workers,a.continue_after_pilot_failure)
 
 
 if __name__=='__main__':raise SystemExit(main())
