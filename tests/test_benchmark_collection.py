@@ -270,6 +270,30 @@ class BenchmarkCollectionTests(unittest.TestCase):
             write(batch/'batch.json',state)
             with self.assertRaises(ValueError):collect_batch(batch,root/'export')
 
+    def test_links_in_a_policy_workspace_are_recorded_not_followed(self):
+        from robofrontier import run_layout
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);batch,run,_=self.make_batch(root)
+            write(run/'private/inputs/manifest.json',run_layout.manifest_record('codex'))
+            venv=run/'workspace/.tmp/venv/bin';venv.mkdir(parents=True)
+            (venv/'python').symlink_to(sys.executable)
+            (run/'workspace/secret').symlink_to(root/'home',target_is_directory=True)
+            os.mkfifo(run/'workspace/pipe')
+            (run/'workspace/skills.md').write_text('## lesson\n')
+            report=collect_batch(batch,root/'export')
+            self.assertFalse(report['complete'])
+            issues=report['jobs'][0]['issues']
+            self.assertIn('workspace symlink not collected: workspace/.tmp/venv/bin/python -> '+sys.executable,issues)
+            self.assertIn('workspace symlink not collected: workspace/secret -> '+str(root/'home'),issues)
+            self.assertIn('workspace nonregular not collected: workspace/pipe',issues)
+            exported=root/'export/batch/model/demo/workspace'
+            self.assertEqual((exported/'skills.md').read_text(),'## lesson\n')
+            self.assertFalse(any(p.is_symlink() for p in exported.rglob('*')))
+            self.assertFalse((exported/'secret').exists());self.assertFalse((exported/'pipe').exists())
+            # Outside the workspace a link still stops collection.
+            (run/'private/linked').symlink_to(root/'home',target_is_directory=True)
+            with self.assertRaisesRegex(ValueError,'Symlink inside evidence'):collect_batch(batch,root/'export2')
+
     def test_36_jobs_keep_same_case_across_profiles_distinct(self):
         import shutil
         with tempfile.TemporaryDirectory() as tmp:

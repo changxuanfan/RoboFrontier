@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 import platform
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -46,6 +47,57 @@ def _copy_verified(source, destination):
     if checksum(destination) != expected or checksum(source) != expected:
         raise ValueError('File changed or was corrupted during transfer: ' + str(source))
     return expected
+
+
+def _stopped_files(root, relative, issues, *, prune_config=True):
+    """Regular files below `root` for the stopped-evidence fallback; never raises.
+
+    Links are never followed or copied and nonregular files are never opened: each is
+    recorded in `issues` (a link with its link text) and the walk goes on. With
+    `prune_config`, CLI configuration folders are skipped except their native JSONL
+    transcripts (projects/**/*.jsonl), as in the original fallback."""
+    if root.is_symlink():
+        issues.append({'path': relative(root), 'issue': 'symlink', 'link': _link_text(root)})
+        return
+    def walk_error(error):
+        issues.append({'path': relative(Path(error.filename)) if error.filename else None,
+                       'issue': 'unreadable', 'error': type(error).__name__})
+    for parent, dirs, files in os.walk(root, followlinks=False, onerror=walk_error):
+        parent = Path(parent)
+        kept = []
+        for name in sorted(dirs):
+            path = parent/name
+            if path.is_symlink():
+                issues.append({'path': relative(path), 'issue': 'symlink', 'link': _link_text(path)})
+            elif prune_config and (name == 'claude-config' and parent.name == 'private' or
+                                   name == 'config' and parent.name == 'engine' and parent.parent.name == 'private'):
+                # A Claude home can contain credentials beside its projects.
+                projects = path/'projects'
+                if projects.is_dir() or projects.is_symlink():
+                    yield from (file for file in _stopped_files(projects, relative, issues, prune_config=False)
+                                if file.name.endswith('.jsonl'))
+            elif not (prune_config and (name == 'claude-config' or name == 'config' and parent.name == 'engine')):
+                kept.append(name)
+        dirs[:] = kept
+        for name in sorted(files):
+            if name == '.DS_Store': continue
+            path = parent/name
+            try:
+                mode = os.lstat(path).st_mode
+            except OSError as error:
+                issues.append({'path': relative(path), 'issue': 'unreadable', 'error': type(error).__name__})
+                continue
+            if stat.S_ISLNK(mode):
+                issues.append({'path': relative(path), 'issue': 'symlink', 'link': _link_text(path)})
+            elif not stat.S_ISREG(mode):
+                issues.append({'path': relative(path), 'issue': 'nonregular'})
+            else:
+                yield path
+
+
+def _link_text(path):
+    try: return os.readlink(path)
+    except OSError: return None
 
 
 def _extract_source(archive, output):
@@ -433,35 +485,46 @@ def _stage_out_stopped(local, submission, step_exit_code):
     with tempfile.TemporaryDirectory(prefix='.rf-stage-out-', dir=submission) as temporary:
         staged = Path(temporary)/'results'
         staged.mkdir(mode=0o700)
-        files = {}
+        files, issues = {}, []
         def copy(file, relative):
             files[relative] = _copy_verified(file, staged/relative)
+        def keep(file, relative):
+            # Best effort per file: one unreadable, vanished or over-quota file is recorded
+            # and the rest of the stopped evidence is still returned.
+            try:
+                copy(file, relative)
+            except (OSError, ValueError) as error:
+                files.pop(relative, None)
+                try: (staged/relative).unlink(missing_ok=True)
+                except OSError: pass
+                issues.append({'path': relative, 'issue': 'not copied', 'error': type(error).__name__})
         if archive:
             copy(archive, 'evidence.zip')
         else:
-            # Retain the only motion/trace copy if automatic collection failed.
-            from scripts.collect_benchmark_batch import _files
+            # Retain the only motion/trace copy if automatic collection failed. Only
+            # native JSONL transcripts of a CLI configuration enter this fallback.
+            name = lambda file: file.relative_to(source).as_posix()
             for base in (source/'runs/policy', source/'runs/state-assets'):
-                if base.exists():
-                    for file in _files(base):
-                        copy(file, file.relative_to(source).as_posix())
-            # A Claude home can contain credentials beside its projects. Only
-            # native JSONL transcripts enter this stopped-evidence fallback.
-            for pattern in ('**/private/claude-config/projects/**/*.jsonl', '**/private/engine/config/projects/**/*.jsonl'):
-                for file in (source/'runs/policy').glob(pattern):
-                    copy(file, file.relative_to(source).as_posix())
-            for home in (source/'.robofrontier/codex').glob('*'):
-                if (home/'sessions').exists():
-                    for file in sorted((home/'sessions').rglob('*')):
-                        if file.is_file() or file.is_symlink():
-                            copy(file, 'native-sessions/'+file.relative_to(home.parent).as_posix())
+                if base.exists() or base.is_symlink():
+                    for file in _stopped_files(base, name, issues):
+                        keep(file, name(file))
+            codex = source/'.robofrontier/codex'
+            if codex.is_dir() and not codex.is_symlink():
+                for home in sorted(codex.iterdir()):
+                    sessions = home/'sessions'
+                    if home.is_symlink():
+                        issues.append({'path': name(home), 'issue': 'symlink', 'link': _link_text(home)})
+                    elif sessions.exists() or sessions.is_symlink():
+                        for file in _stopped_files(sessions, name, issues, prune_config=False):
+                            keep(file, 'native-sessions/'+file.relative_to(home.parent).as_posix())
         for file in (local/'local-job.json', result_path):
             if file.is_file():
-                copy(file, file.name)
+                keep(file, file.name)
         report = {'schema': 'robofrontier.slurm-stage-out.v1', 'sha256': files,
                   'step_exit_code': step_exit_code, 'returned_at': time.time(),
-                  'status': 'collected' if archive and step_exit_code == 0 and result.get('status') != 'needs_review' and result.get('collection_complete') else 'needs_review',
+                  'status': 'collected' if archive and step_exit_code == 0 and result.get('status') != 'needs_review' and result.get('collection_complete') and not issues else 'needs_review',
                   'task_status': result.get('status'), 'raw_fallback': archive is None,
+                  'issues': issues,
                   'node_local_source_retained': str(local),
                   'task_success': 'See independent per-task evaluation'}
         write_json(staged/'stage-out.json', report)

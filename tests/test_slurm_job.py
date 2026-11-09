@@ -144,6 +144,54 @@ class SlurmJobTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'destination exists'):
             slurm.stage_out(self.local, self.submission, 1)
 
+    def test_raw_fallback_with_a_workspace_symlink_still_stages_motion_and_records_the_link(self):
+        self.stage()
+        source = self.local/'source'
+        run = source/'runs/policy/batch/luna/case'
+        (run/'private/outputs/motion').mkdir(parents=True)
+        (run/'private/outputs/motion/frames.bin').write_bytes(b'only copy')
+        (run/'private/state').mkdir(parents=True)
+        (run/'private/state/runtime.sqlite').write_bytes(b'stopped SQLite fixture')
+        (run/'workspace/.tmp/venv/bin').mkdir(parents=True)
+        (run/'workspace/.tmp/venv/bin/python').symlink_to('/etc/hosts')
+        (run/'workspace/linked').symlink_to(self.root, target_is_directory=True)
+        os.mkfifo(run/'workspace/pipe')
+        unreadable = run/'workspace/locked.txt'
+        unreadable.write_bytes(b'unreadable')
+        unreadable.chmod(0)
+        self.addCleanup(unreadable.chmod, 0o600)
+        report = slurm.stage_out(self.local, self.submission, 1)
+        output = self.submission/'results'
+        self.assertEqual(report['status'], 'needs_review')
+        self.assertEqual((output/'runs/policy/batch/luna/case/private/outputs/motion/frames.bin').read_bytes(), b'only copy')
+        self.assertTrue((output/'runs/policy/batch/luna/case/private/state/runtime.sqlite').is_file())
+        issues = {item['path']: item for item in report['issues']}
+        base = 'runs/policy/batch/luna/case/workspace/'
+        self.assertEqual(issues[base+'.tmp/venv/bin/python'], {'path': base+'.tmp/venv/bin/python', 'issue': 'symlink', 'link': '/etc/hosts'})
+        self.assertEqual(issues[base+'linked']['issue'], 'symlink')
+        self.assertEqual(issues[base+'pipe']['issue'], 'nonregular')
+        if os.geteuid() != 0:
+            self.assertEqual(issues[base+'locked.txt']['issue'], 'not copied')
+        self.assertFalse(any(p.is_symlink() for p in output.rglob('*')))
+        self.assertFalse((output/base/'.tmp/venv/bin/python').exists())
+        self.assertFalse((output/base/'linked').exists())
+        self.assertEqual(json.loads((output/'stage-out.json').read_text())['issues'], report['issues'])
+        for name, expected in report['sha256'].items():
+            self.assertEqual(slurm.checksum(output/name), expected)
+
+    def test_codex_session_symlink_is_recorded_not_fatal(self):
+        self.stage()
+        sessions = self.local/'source/.robofrontier/codex/task/sessions'
+        sessions.mkdir(parents=True)
+        (sessions/'session.jsonl').write_bytes(b'exact native session\n')
+        (sessions/'other.jsonl').symlink_to(self.local/'source/.robofrontier/codex/task/sessions/session.jsonl')
+        report = slurm.stage_out(self.local, self.submission, 1)
+        output = self.submission/'results'
+        self.assertEqual((output/'native-sessions/task/sessions/session.jsonl').read_bytes(), b'exact native session\n')
+        self.assertFalse((output/'native-sessions/task/sessions/other.jsonl').exists())
+        self.assertEqual([i['issue'] for i in report['issues']], ['symlink'])
+        self.assertEqual(report['status'], 'needs_review')
+
     def test_successful_collection_returns_only_one_evidence_zip(self):
         self.stage()
         archive = self.local/'source/runs/exports/collected.zip'

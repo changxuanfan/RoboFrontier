@@ -114,24 +114,49 @@ def host_is_live(pid, run):
     return 'codex_policy_host.js' in command
 
 
-def _files(root):
-    """Never follow symlinks or collect a CLI credential/configuration store."""
+def _files(root, tolerated=(), skipped=None):
+    """Never follow symlinks or collect a CLI credential/configuration store.
+
+    A link or nonregular entry is fatal, except below a `tolerated` folder (a run's
+    policy-writable workspace, where `python -m venv` makes links): there it is not
+    followed or copied, and (path, kind, link text) is appended to `skipped`."""
     if root.is_symlink():
         raise ValueError('Symlink evidence root: '+str(root))
+    def tolerate(path, kind):
+        if not any(path.is_relative_to(folder) and path != folder for folder in tolerated):
+            return False
+        if skipped is not None:
+            try: link = os.readlink(path) if kind == 'symlink' else None
+            except OSError: link = None
+            skipped.append((path, kind, link))
+        return True
     for parent, dirs, files in os.walk(root, followlinks=False):
         parent = Path(parent)
+        linked = set()
         for name in dirs + files:
             if (parent/name).is_symlink():
-                raise ValueError('Symlink inside evidence; resolve explicitly before collecting: ' + str(parent/name))
+                if not tolerate(parent/name, 'symlink'):
+                    raise ValueError('Symlink inside evidence; resolve explicitly before collecting: ' + str(parent/name))
+                linked.add(name)
         # run-v3 keeps the native configuration in private/claude-config, run-v6 in private/engine/config.
-        dirs[:] = sorted(d for d in dirs if d != 'claude-config' and not (d == 'config' and parent.name == 'engine'))
+        dirs[:] = sorted(d for d in dirs if d not in linked and d != 'claude-config' and not (d == 'config' and parent.name == 'engine'))
         # Finder writes .DS_Store into any folder it shows, even during collection;
         # it is desktop metadata, not run evidence.
-        for name in sorted(f for f in files if f != '.DS_Store'):
+        for name in sorted(f for f in files if f != '.DS_Store' and f not in linked):
             path = parent/name
             if not path.is_file():
+                if tolerate(path, 'nonregular'): continue
                 raise ValueError('Nonregular evidence file: ' + str(path))
             yield path
+
+
+def policy_workspace(run, engine):
+    """The run's policy-writable folder, or None when it is the run itself (run-v3)."""
+    try:
+        folder = run_layout.path(run, 'policy_cwd', engine)
+    except (KeyError, ValueError):
+        return None
+    return None if Path(os.path.normpath(folder)) == Path(os.path.normpath(run)) else folder
 
 
 def motion_inventory(run):
@@ -246,7 +271,10 @@ def collect_batch(batch_path, output, *, codex_home=None):
                 host = run_layout.path(run, 'host_process', engine)
                 if host.is_file() and host_is_live(load(host).get('pid'), run):
                     raise ValueError('Recorded host PID is still live; collect in the runner environment: ' + str(host))
-            initial_files = list(_files(batch_path))
+            workspaces = {run: policy_workspace(run, engine) for job, run, status in runs}
+            tolerated = tuple(folder for folder in workspaces.values() if folder is not None)
+            skipped = []
+            initial_files = list(_files(batch_path, tolerated, skipped))
             hashes, native_sources, native_directories, native_queries = {}, {}, {}, []
             for path in initial_files:
                 rel = Path('batch')/path.relative_to(batch_path)
@@ -257,6 +285,10 @@ def collect_batch(batch_path, output, *, codex_home=None):
                 native_config=run_layout.path(run,'engine_config',engine).relative_to(run)
                 home=Path(load(run_marker)['codex_home']).resolve() if not codex_home and run_marker.is_file() else batch_home
                 issues, roles, snapshot_sessions = [], [], []
+                for path, kind, link in skipped:
+                    if workspaces[run] is not None and path.is_relative_to(workspaces[run]):
+                        issues.append('workspace %s not collected: %s%s' % (kind, path.relative_to(run).as_posix(),
+                                                                           '' if link is None else ' -> '+link))
                 db = temporary/'batch'/run.relative_to(batch_path)/'private/state/runtime.sqlite'
                 agents, meta = [], {}
                 if not db.is_file():
@@ -403,7 +435,7 @@ def collect_batch(batch_path, output, *, codex_home=None):
                              'run': (Path('batch')/run.relative_to(batch_path)).as_posix(), 'roles': roles,
                              'snapshot_sessions':snapshot_sessions, 'issues': issues})
             # Check all original evidence again, including files outside sessions.
-            if list(_files(batch_path)) != initial_files or load(state_path) != state:
+            if list(_files(batch_path, tolerated)) != initial_files or load(state_path) != state:
                 raise ValueError('Batch changed while collecting')
             for path in initial_files:
                 if digest(path) != hashes[(Path('batch')/path.relative_to(batch_path)).as_posix()]:
