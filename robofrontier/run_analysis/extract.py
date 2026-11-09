@@ -177,17 +177,20 @@ SUITE_LOGS = (
 # Process-log formats whose rows are too sparse to recover object poses or dial turns:
 # 'events-60s' writes poses only in the final row when the scene records motion.
 LOW_RESOLUTION = ('events-60s',)
+# Formats whose rows have object poses and dial angles only every 10 s (and at events):
+# the motion recording is preferred, and without one the log still serves, at that sampling.
+COARSE = ('events-10s',)
 # Where object poses and dial angles come from: 'always' (the default) reads the 30 Hz motion
 # recording of every run that has one, so every run is counted the same way; 'sparse' reads it
-# only for runs whose process log is low resolution. They differ on events-1s logs only by the
-# log's 1 s sampling (a few Dial turns; lost items agree).
+# only for runs whose process log is low resolution or coarse. They differ on events-1s logs
+# only by the log's 1 s sampling (a few Dial turns; lost items agree).
 MOTION_MODES = ('sparse', 'always')
 
 
 def use_motion(formats, mode):
     if mode not in MOTION_MODES:
         raise ValueError('motion mode must be one of %s, not %r' % (MOTION_MODES, mode))
-    return mode == 'always' or any(f in LOW_RESOLUTION for f in formats)
+    return mode == 'always' or any(f in LOW_RESOLUTION + COARSE for f in formats)
 
 
 def is_header(line):

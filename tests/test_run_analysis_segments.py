@@ -229,9 +229,11 @@ class SparseLogTests(unittest.TestCase):
             final = t == 120
             objs = {'A_item1': item(0.8), 'A_item2': item(-0.5 if fell else 0.8)}
             a = {'g1': 'A_item1'} if t >= 30 else {}
-            keep = fmt == 'events-1s' or final or t in (0, 60)
+            # events-10s snapshots carry poses every 10 s; the rows at 30 s and 75 s are events.
+            every = fmt == 'events-1s' or (fmt == 'events-10s' and t % 10 == 0)
+            keep = every or final or t in (0, 60)
             if keep or t in (30, 75):
-                with_objects = fmt == 'events-1s' or final
+                with_objects = every or final
                 rows.append(snap(float(t), objs if with_objects else None, assignments=a,
                                  matched_goals=len(a), total_goals=2))
         return rows
@@ -253,6 +255,24 @@ class SparseLogTests(unittest.TestCase):
         self.assertIsNone(a['lost'])
         self.assertTrue(a['objects_unknown'])
         self.assertTrue(atomic_v2.compute(out['events-60s'])['objects_unknown'])
+
+    def test_a_ten_second_log_without_a_recording_still_gives_lost_items_and_dial_turns(self):
+        self.assertTrue(extract.use_motion(['events-10s'], 'sparse'))
+        f = Fixture(self.tmp, 'transport-10s')
+        f.log(self.transport_log('events-10s'))
+        f.db([action('A', 0, 5), action('A', 100, 110)], [(BASE, 'START', {})])
+        S = f.extract('transport')['suite']
+        # The fall at 75 s shows in the next snapshot with poses.
+        self.assertEqual(S['lost'], {'A_item2': 80.0})
+        self.assertIsNone(S.get('objects_unknown'))
+        self.assertEqual(S['objects_source'], 'process log')
+        self.assertEqual(S['goals']['g1']['pos'], [0.0, 0.0, 0.8])
+        angles = lambda t, a: snap(float(t), private_angles_deg=[a], valid_trials=0)
+        f = Fixture(self.tmp, 'dial-10s')
+        f.log([header('events-10s'), angles(0, 0.0), angles(10, 0.0), angles(20, 60.0), angles(30, 60.0)])
+        f.db([action('A', 0, 5)], [(BASE, 'START', {})])
+        r = atomic_v2.run_dial_turns(Run('dial-10s', f.root))
+        self.assertEqual((r['turns'], r['unknown'], r['source']), ([[20.0, 0]], None, 'process log'))
 
     def test_dial_turns_are_unknown_in_a_sparse_log(self):
         angles = lambda t, a: snap(float(t), private_angles_deg=[a], valid_trials=0)

@@ -248,10 +248,21 @@ keeps sources by default and never converts an uncertain action into a replay.
   reads. Converting finished Dial, Mosaic, Relay and Transport logs offline gave
   about 11% of the original size, with every event field recoverable at every
   original sample time.
-- `process_log: "events-60s"` (the policy harness default): the same events, with
-  snapshots every 60 simulated seconds. A scene that records motion leaves poses
-  out of its snapshots, except the last; `robofrontier.motion_query.object_poses`
-  reads them from the recording. Each Dial trial is written with its event.
+- `process_log: "events-10s"` (the policy harness default since 2026-11-09): the
+  same events, written as soon as they happen, with a snapshot every 10 simulated
+  seconds and at the end. Every snapshot carries object poses, also when the scene
+  records motion, so the log still gives lost items, goal positions and Dial
+  angles at 10 s sampling if the motion recording is lost. Each Dial trial is
+  written with its event. Run analysis reads poses and angles from the motion
+  recording when the run has one. Measured on 600 simulated seconds of moving
+  arms, snapshots dominate: about 2.6 MB per simulated hour for
+  transport-a12-d3 (36 items) and 20 MB for mosaic-a08-12x24-d3 (288 cubes),
+  against 26 and 200 MB for `events-1s` and 0.1 and 0.4 MB for `events-60s`.
+- `process_log: "events-60s"` (the policy harness default before 2026-11-09;
+  runs frozen with it keep it): the same events, with snapshots every 60
+  simulated seconds. A scene that records motion leaves poses out of its
+  snapshots, except the last; `robofrontier.motion_query.object_poses` reads them
+  from the recording. Each Dial trial is written with its event.
 
 ## Session transcripts
 
