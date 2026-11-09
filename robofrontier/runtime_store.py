@@ -353,12 +353,22 @@ class RuntimeStore:
                             (call_id, actor, op, packed(parameters), 'accepted', None, time.time()))
             return {'id': call_id, 'actor': actor, 'op': op, 'status': 'new', 'result': None}
 
+    # Calls whose own status follows the physical execution they started.
+    EXECUTION_OPS = ('move', 'gripper', 'action_batch')
+
     def finish_call(self, call_id, result):
         with self.transaction():
-            changed = self.db.execute('UPDATE calls SET status=?, result=?, updated=? WHERE id=?',
-                                     (result['execution_status'] if result.get('execution_status') in ('uncertain','running','pending') else 'failed' if result.get('error') else 'completed', packed(result), time.time(), call_id)).rowcount
-            if not changed:
+            row = self.db.execute('SELECT op FROM calls WHERE id=?', (call_id,)).fetchone()
+            if row is None:
                 raise ValueError('Call was not accepted')
+            # A query such as `job` reports another call's execution status; the query itself
+            # is answered, never left running or uncertain.
+            if row['op'] in self.EXECUTION_OPS and result.get('execution_status') in ('uncertain','running','pending'):
+                status = result['execution_status']
+            else:
+                status = 'failed' if result.get('error') else 'completed'
+            self.db.execute('UPDATE calls SET status=?, result=?, updated=? WHERE id=?',
+                            (status, packed(result), time.time(), call_id))
 
     def call(self, call_id, actor=None):
         if not isinstance(call_id, str):

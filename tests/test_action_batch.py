@@ -43,6 +43,18 @@ class BatchTests(unittest.TestCase):
         self.s.world.complete('B');self.s.pump()
         self.assertEqual(j['result']['execution_status'],'completed')
         self.call('Controller','action_batch',self.data,'group');self.assertEqual(len(self.s.world.executed),2)
+    def test_a_job_query_of_a_running_batch_is_itself_answered(self):
+        j=self.call('Controller','action_batch',self.data,'group')
+        q=self.call('Controller','job',{'call_id':'group'},'query-1')
+        self.assertEqual(q['result']['execution_status'],'running')
+        self.assertEqual(self.s.store.call('query-1')['status'],'completed')
+        self.assertEqual(self.s.store.call('group')['status'],'running')
+        self.s.world.complete('A');self.s.world.complete('B');self.s.pump()
+        self.assertEqual(j['result']['execution_status'],'completed')
+        self.assertEqual(self.s.store.call('group')['status'],'completed')
+        self.assertEqual([r[0] for r in self.s.store.db.execute("SELECT id FROM calls WHERE status NOT IN ('completed','failed')")],[])
+        # A retried query returns its stored answer, not 'owner must supply the original result'.
+        self.assertEqual(self.call('Controller','job',{'call_id':'group'},'query-1')['result']['execution_status'],'running')
     def test_all_validate_before_start_and_duplicate_robot_rejected(self):
         bad=json.loads(json.dumps(self.data));bad['actions'][1]={'robot':'B','op':'gripper','parameters':{'state':'wrong'}}
         self.assertIn('error',self.call('Controller','action_batch',bad)['result'])
