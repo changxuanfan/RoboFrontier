@@ -66,12 +66,5 @@ Cloning the repository does not back up any of these. See
   a case's own scene stay in that case, even when two cases generate the same bytes:
   a scene folder is frozen whole, so it must be complete. Git stores identical
   contents once either way.
-- Five shared source files are bound by
-  [benchmark/source-compatibility.json](../benchmark/source-compatibility.json).
-  Any byte change to them, comments included, needs a reviewed receipt update.
-- The Dial and Mosaic policy packages also check that `robot_control.py`, `sim.py`,
-  `motion_check.py`, `task_config.py` and `pipeline.py` in `robofrontier/` still
-  match the physical control code of the selected Oracle evidence. A file those
-  modules open by a fixed path stays where it is.
 - Historical material keeps its date. Current behavior is described in the guides
   outside `docs/archive/`.

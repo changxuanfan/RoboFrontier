@@ -1,9 +1,19 @@
 {
   "schema": "robofrontier.pruned-paths.v1",
-  "purpose": "Paths removed from the tree that kept records (suite manifests, parameter histories, provenance) still name. They are history, not runtime inputs; restore one from the archive tag.",
+  "purpose": "Paths removed from the tree that kept records (suite manifests, parameter histories, provenance) still name. They are history, not runtime inputs; restore one from the archive tag that lists it.",
   "archive_tag": "archive/pre-prune-20261103",
   "removed_by": "3df8c25",
   "restore": "git checkout archive/pre-prune-20261103 -- <path>",
+  "later": [
+    {
+      "archive_tag": "archive/pre-cleanup-20261110",
+      "removed_by": "2026-11-10 cleanup (docs/cleanup-20261110.md)",
+      "restore": "git checkout archive/pre-cleanup-20261110 -- <path>",
+      "paths": [
+        "robofrontier/suite/mosaic_policy_package.py"
+      ]
+    }
+  ],
   "moved": {
     "robofrontier/factory_workstations.py": "robofrontier/factory/workstations.py"
   },

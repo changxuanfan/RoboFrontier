@@ -12,7 +12,7 @@ grid pitch; cubes stay 60 mm. Only the board changed: the Level 1 pocket walls,
 floor and the table frame around the opening, the Level 2 printed lines, and the
 goal cell centres. Robots, stock and its locally mixed colors, the table, cameras,
 the initial keyframe, the pattern and the completion rules are R14's; the Level 3
-scene file is byte-identical to R14. `scripts/build_mosaic_pitch.py` rebuilds it.
+scene file is byte-identical to R14. Its builder, `scripts/build_mosaic_pitch.py`, was removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
 R14 (81 mm) is kept under `configs/environments/mosaic/frontier-v2-r14-*`. No
 Oracle or policy run has qualified R15 yet. New Factory imports use the actual
 policy/Oracle recording's own frozen scene, source hashes, motion, and events.
@@ -90,18 +90,10 @@ contacts, using permitted RGB, proprioception, and action feedback.
 ## Current preparation and retained family commands
 
 Run `robofrontier bootstrap` to restore the pinned current assets, then use
-[unified preparation](../unified-cli.md). Historical family auditing/review remains:
-
-```sh
-python -m scripts.mosaic
-python -m scripts.mosaic check --purpose oracle
-python -m scripts.mosaic check --verify-recorded-chunks --verify-protected
-python -m scripts.mosaic package --output outputs/policy-packages/NEW
-```
-
-The optional full `--verify-protected` cleanup inventory and raw motion chunks
-require their original complete local evidence trees. They are broader than the
-separate development fixture bundle and its package-level preserved-input checks.
+[unified preparation](../unified-cli.md). The historical delivery check and
+review packager (`scripts/mosaic.py` with `robofrontier/suite/mosaic_delivery.py`)
+were removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the
+[cleanup log](../cleanup-20261110.md)).
 
 The default family check inspects its R14 policy entries without creating a run
 or calling a model. Its explicit `--purpose oracle` inspects Legacy R13 witnesses;

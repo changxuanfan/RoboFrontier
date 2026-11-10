@@ -65,12 +65,8 @@ is still supported. Presentation time is not a policy or physics deadline.
 
 ## Review and replay tools
 
-```sh
-.venv/bin/python -m scripts.check_dial_family --output /absolute/NEW-review
-```
-
-The policy-package checker (`build_dial_policy_package.py`) and the motion editor
-(`edit_dial_recording.py`) were removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
+The family audit (`check_dial_family.py`), the policy-package checker
+(`build_dial_policy_package.py`) and the motion editor (`edit_dial_recording.py`) were removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
 
 These tools do not create policy runtime, role connections, or model sessions.
 They bind reports, assets, controller/evaluator fingerprints, and regenerated

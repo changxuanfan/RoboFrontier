@@ -89,7 +89,6 @@ Offline presentation of recorded motion; never steps task physics.
 
 | Script | Purpose |
 | --- | --- |
-| `edit_transport_recordings.py` | Analyze Transport recordings directly. |
 | `export_factory_blender.py` | Export compiled visual geometry for offline Blender. |
 | `factory.py` | Build, view, audit or render all released Oracle workstations in one factory. |
 | `factory_blender_materials.py` | Explicit presentation materials. |
@@ -115,15 +114,9 @@ Build or inspect released scenes; names are kept for provenance.
 | --- | --- |
 | `build_floating_spring_dial.py` | Build a two-arm MuJoCo preview with one movable spring-dial module. |
 | `build_mosaic.py` | Generate the four-arm shared-table mosaic environment. |
-| `build_mosaic_local_colors.py` | Prepare R14 local stock colours and visual previews, leaving R13 immutable. |
-| `build_mosaic_pitch.py` | Build Mosaic R15 (71 mm grid pitch, 60 mm cubes) from R14 into `benchmark/mosaic/` and update the release entries. |
-| `build_transport_policy_package.py` | Build Transport R14 static scenes and reviewable family inputs. |
-| `check_dial_family.py` | Audit the dial family and recorded source cursors, without a runtime or physics. |
 | `check_mosaic_coverage_r12.py` | Exhaustive item/cell coverage with finite sampled geometric witnesses. |
 | `export_frontier_contact_sheets.py` | Export current initial scenes only: 72 renders and four readable contact sheets. |
 | `generate_cube_transport.py` | Generate offline 3..12-arm scenes, order seeds, references and RGB previews. |
-| `mosaic.py` | Check or export the current Mosaic delivery. |
-| `preview_mosaic_local_colors.py` | Exact colour/layout diagrams and zero-step MuJoCo previews for Mosaic R14. |
 | `preview_suite_rockets.py` | Draft pixel targets only: no MuJoCo scene, robot motion or benchmark run. |
 
 ### Oracle runs and engineering

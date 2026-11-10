@@ -34,8 +34,11 @@ class PrunedPathsTests(unittest.TestCase):
     def present(self, path):
         return path in self.names or path in self.folders
 
+    def all_pruned(self):
+        return self.index['paths'] + [p for group in self.index['later'] for p in group['paths']]
+
     def test_pruned_and_moved_paths_are_gone_and_moves_point_at_files(self):
-        self.assertEqual([p for p in self.index['paths'] if self.present(p)], [])
+        self.assertEqual([p for p in self.all_pruned() if self.present(p)], [])
         for old, new in self.index['moved'].items():
             self.assertFalse(self.present(old), old)
             self.assertIn(new, self.names)
@@ -47,7 +50,7 @@ class PrunedPathsTests(unittest.TestCase):
                 if name == old or name.startswith(old+'/'):
                     return legacy[old]+name[len(old):]
             return name
-        pruned = tuple(self.index['paths'])
+        pruned = tuple(self.all_pruned())
         missing = set()
         for record in sorted(n for n in self.names if n.endswith('.json') and n.startswith(('configs/', 'benchmark/'))):
             if record in ('benchmark/legacy-paths.json', 'benchmark/pruned-paths.json'):
@@ -63,14 +66,16 @@ class PrunedPathsTests(unittest.TestCase):
                 missing.add((record, value))
         self.assertEqual(sorted(missing), [], 'restore these paths or add them to benchmark/pruned-paths.json')
 
-    def test_pruned_paths_exist_at_the_archive_tag(self):
-        tag = self.index['archive_tag']
-        listed = subprocess.run(['git', 'ls-tree', '-r', '--name-only', tag], capture_output=True, text=True, cwd=ROOT)
-        if listed.returncode:
-            self.skipTest('Archive tag not fetched')
-        archived = set(listed.stdout.split())
-        archived |= {str(parent) for name in archived for parent in Path(name).parents}
-        self.assertEqual([p for p in self.index['paths'] if p not in archived], [])
+    def test_pruned_paths_exist_at_their_archive_tag(self):
+        groups = [(self.index['archive_tag'], self.index['paths'])]
+        groups += [(group['archive_tag'], group['paths']) for group in self.index['later']]
+        for tag, paths in groups:
+            listed = subprocess.run(['git', 'ls-tree', '-r', '--name-only', tag], capture_output=True, text=True, cwd=ROOT)
+            if listed.returncode:
+                self.skipTest('Archive tag not fetched: '+tag)
+            archived = set(listed.stdout.split())
+            archived |= {str(parent) for name in archived for parent in Path(name).parents}
+            self.assertEqual([p for p in paths if p not in archived], [], tag)
 
 
 if __name__ == '__main__':

@@ -214,5 +214,4 @@ The response now also carries `ik_detail`:
 The solver searches locally from the current joint references, so these are
 solver facts, not a proof of the reach limit or a suggested target. No object
 state is used. The extra home-orientation solve runs only after the rejection;
-accepted moves and execution are unchanged (`robofrontier/robot_control.py`,
-reviewed in `benchmark/source-compatibility.json`).
+accepted moves and execution are unchanged (`robofrontier/robot_control.py`).

@@ -76,27 +76,15 @@ For a new checkout, run `robofrontier bootstrap`. It restores the pinned release
 assets without requiring historical Oracle folders. Policy preparation also
 verifies needed assets automatically; no model is called during preparation.
 
-The following retained builder is for historical family reconstruction/review,
-not the normal fresh-clone bootstrap:
-
-```sh
-PYTHONPATH=. .venv/bin/python scripts/build_transport_policy_package.py --assets-only
-PYTHONPATH=. .venv/bin/python scripts/build_transport_policy_package.py \
-  --output outputs/transport-r14-review-001 --no-previews
-```
-
-It requires its bound source assets, copies them with independent inodes, and
-refuses drifted existing assets. A full review build uses a new output directory
-and can generate initial previews; `--no-previews` omits them. It creates no
-policy roles, credentials, sessions, or physical run. Use the current registry
-for new policy runs and this family-specific builder for historical review.
+The historical family builder and review packager,
+`scripts/build_transport_policy_package.py`, was removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
 
 ## Source edits and Factory replay
 
 `robofrontier/suite/transport_motion_edit.py` consumes original states, actions,
 and process events; `transport_motion_signals.py` provides motion signals and
-optional visual checks. `scripts/edit_transport_recordings.py` writes
-`robofrontier.transport-source-edit.v1` edits without changing the original stream.
+optional visual checks. The removed `scripts/edit_transport_recordings.py`
+(2026-11-10) wrote `robofrontier.transport-source-edit.v1` edits without changing the original stream.
 Current readers also accept compressed motion; see [evidence storage](../running/evidence-storage.md).
 
 Retain a whole-table interval whenever an arm, gripper, or object has meaningful

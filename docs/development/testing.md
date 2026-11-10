@@ -12,7 +12,7 @@ PYTHONPATH=tests:scripts .venv/bin/python -m scripts.check_harness \
 ```
 
 This group prohibits MuJoCo model creation and physical stepping. It tests
-synthetic task/runtime contracts, source-compatibility guards, private scoring,
+synthetic task/runtime contracts, private scoring,
 frozen inputs, recovery boundaries, JavaScript and portable documentation links.
 It starts no native policy session and calls no model/provider. Its passing
 result does not qualify actual robot dynamics, native provider behavior or

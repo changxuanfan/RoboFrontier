@@ -80,7 +80,6 @@ def placement_candidates(mon,positions,stable):
 
 
 class Relay:
-    # Kept inside the class: source_compatibility excludes only this class for Mosaic and Dial.
     HANDOVER_PROTOCOL='qualified-members-v3'
     GROUNDED_REGRASP_PROTOCOL='grounded-regrasp-v1'
 
