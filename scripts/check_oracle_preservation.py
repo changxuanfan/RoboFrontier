@@ -76,7 +76,21 @@ def check():
     """Current retained dataset; retired historical trials are no longer pins."""
     snapshot=ROOT/'outputs/final/preservation.json'
     if not snapshot.exists():return check_historical()
-    inventory=read(snapshot)['files'];failed=[];cache={};moved=0
+    inventory=read(snapshot)['files'];failed=[];cache={};moved=0;kept_in_git=[]
+    def in_git(name,expected):
+        """A pinned file removed from the tree is still preserved if a commit holds its bytes
+        (earlier scene revisions are in the tag archive/pre-cleanup-20261110)."""
+        parts=Path(name).parts
+        names=[name]
+        if len(parts)>=3:  # the same file of the same case under any earlier folder
+            pattern='*'+parts[-2]+'*/'+parts[-1]
+            names+=sorted(set(subprocess.run(['git','log','--all','--name-only','--format=','--',pattern],
+                                             capture_output=True,text=True,cwd=ROOT).stdout.split())-{name})
+        for path in names:
+            for commit in subprocess.run(['git','log','--all','--format=%H','--',path],capture_output=True,text=True,cwd=ROOT).stdout.split()[:40]:
+                old=subprocess.run(['git','show',commit+':'+path],capture_output=True,cwd=ROOT)
+                if old.returncode==0 and hashlib.sha256(old.stdout).hexdigest()==expected:return True
+        return False
     def digest(p):
         st=p.stat();key=(st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns)
         if key not in cache:
@@ -93,7 +107,9 @@ def check():
         if len(parts)==4 and parts[0]=='benchmark' and parts[1] in ('transport','mosaic','relay','dial'):
             candidates.append(str(Path('benchmark/oracle',parts[2],parts[3])))
         present=[ROOT/c for c in dict.fromkeys(candidates) if (ROOT/c).is_file()]
-        if not present:failed.append(dict(path=name,error='missing'));continue
+        if not present:
+            if in_git(name,row['sha256']):kept_in_git.append(name);continue
+            failed.append(dict(path=name,error='missing'));continue
         def same(p):
             if digest(p)==row['sha256']:return True
             # An Oracle copy names its own folder; otherwise its JSON is the pinned file.
@@ -101,7 +117,9 @@ def check():
                 original=str(Path(name).parent).encode();copy=str(p.parent.relative_to(ROOT)).encode()
                 return hashlib.sha256(p.read_bytes().replace(copy,original)).hexdigest()==row['sha256']
             return False
-        if not any(same(p) for p in present):failed.append(dict(path=name,error='changed'));continue
+        if not any(same(p) for p in present):
+            if in_git(name,row['sha256']):kept_in_git.append(name);continue
+            failed.append(dict(path=name,error='changed'));continue
         if digest(ROOT/name)!=row['sha256'] if (ROOT/name).is_file() else True:moved+=1
     bindings=[]
     from robofrontier.tasks.families import resolve_case
@@ -109,7 +127,7 @@ def check():
         for c in f['oracle']:
             resolve_case(c['id'],'oracle')
             bindings.append(c['id'])
-    return dict(passed=not failed,verified_files=len(inventory)-len(failed),verified_at_moved_paths=moved,failed=failed,
+    return dict(passed=not failed,verified_files=len(inventory)-len(failed),verified_at_moved_paths=moved,preserved_in_git=len(kept_in_git),failed=failed,
                 source_bindings=bindings,physics_steps=0,
                 scope='Current selected sources/final delivery after authorized retirement; use --historical only for the former full archive')
 
