@@ -13,6 +13,7 @@ from robofrontier.physics.motion_check import RobotGeometry, prepare_check, robo
 from robofrontier.runtime.pipeline import Arm, World
 from robofrontier.tasks.config import ROOT, load_harness
 from robofrontier.physics.observation_image import observation_profile
+from motion import filled, MOVE
 
 
 def robot_fixture(separation=.65,arm_count=2,base_offset=0.):
@@ -97,12 +98,12 @@ class MotionCheckTests(unittest.TestCase):
             # The actual validator admits the current pose and rejects points
             # just beyond every published bound, before attempting any IK.
             target=w.data.site_xpos[arm.site].copy()
-            np.testing.assert_allclose(w.validate_action(name,'move',{'target_m':target.tolist()},cfg)['goal'],target)
+            np.testing.assert_allclose(w.validate_action(name,'move',filled('move',{'target_m':target.tolist()}),cfg)['goal'],target)
             for bound,direction in (('lower',-1),('upper',1)):
                 for axis in range(3):
                     outside=target.copy();outside[axis]=robot['tcp_command_bounds_world_m'][bound][axis]+direction*.001
                     with self.assertRaisesRegex(ValueError,'TCP workspace'):
-                        w.validate_action(name,'move',{'target_m':outside.tolist()},cfg)
+                        w.validate_action(name,'move',filled('move',{'target_m':outside.tolist()}),cfg)
 
     def test_ready_facts_need_no_live_state_or_task_objects(self):
         w=self.world;baseline=w.robot_facts(load_harness())
@@ -114,7 +115,7 @@ class MotionCheckTests(unittest.TestCase):
 
     def test_nominal_parallel_motion_is_read_only_and_ignores_object_truth(self):
         w=self.world;cfg=load_harness()
-        params={'motions':[{'actor':a,'delta_m':[.01,0,0]} for a in w.arms],'horizon_s':.4}
+        params={'motions':[{**MOVE,'actor':a,'delta_m':[.01,0,0]} for a in w.arms],'horizon_s':.4}
         q=w.data.qpos.copy();ctrl=w.data.ctrl.copy();before=robot_state(w)
         # If any physics integration is accidentally added, fail this offline test.
         with patch('mujoco.mj_step',side_effect=AssertionError('No physics')):
@@ -138,19 +139,19 @@ class MotionCheckTests(unittest.TestCase):
         w.arms['B']=Arm(w.model,w.data,'B',.3)
         mujoco.mj_kinematics(w.model,w.data)
         self.assertGreater(np.linalg.norm(w.data.site_xpos[w.arms['A'].site]-w.data.site_xpos[w.arms['B'].site]),.29)
-        result=next(prepare_check(w,{'motions':[{'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.2},load_harness()))
+        result=next(prepare_check(w,{'motions':[{**MOVE,'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.2},load_harness()))
         self.assertEqual(result['assessment'],'conflict')
         self.assertLess(result['closest']['distance_m'],0)
         self.assertEqual(result['closest']['time_after_snapshot_s'],0)
 
     def test_delay_and_partial_horizon_are_explicit(self):
-        result=[r for r in prepare_check(self.world,{'motions':[{'actor':'A','delta_m':[.1,0,0],'start_after_s':.11}],'horizon_s':.3},load_harness()) if r is not None][-1]
+        result=[r for r in prepare_check(self.world,{'motions':[{**MOVE,'actor':'A','delta_m':[.1,0,0],'start_after_s':.11}],'horizon_s':.3},load_harness()) if r is not None][-1]
         self.assertEqual(result['nominal_start_after_s']['A'],.12)
         self.assertIn('A',result['unfinished_at_horizon'])
         self.assertIn('between-sample motion',result['not_checked'])
 
     def test_invalid_requests_and_busy_arm_cannot_create_a_future_queue(self):
-        p={'motions':[{'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.4}
+        p={'motions':[{**MOVE,'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.4}
         for change in ({'horizon_s':float('nan')},{'sample_dt_s':.03},{'horizon_s':16},
                        {'motions':[{'actor':'missing','delta_m':[0,0,0]}]},
                        {'motions':p['motions']*2}):
@@ -165,7 +166,7 @@ class MotionCheckTests(unittest.TestCase):
     def test_changing_gripper_returns_unknown(self):
         a=self.world.arms['B'];a.job='grip';a.job_op='gripper'
         try:
-            result=next(prepare_check(self.world,{'motions':[{'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.4},load_harness()))
+            result=next(prepare_check(self.world,{'motions':[{**MOVE,'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.4},load_harness()))
             self.assertEqual(result['assessment'],'unknown')
         finally:a.job=None
 

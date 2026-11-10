@@ -1,0 +1,17 @@
+{
+  "status": "static_checks_passed",
+  "oracle_verified": false,
+  "policy_verified": false,
+  "frozen_input": false,
+  "physics_steps": 0,
+  "robot_count": 4,
+  "physics_sha256": "f8fcff430b5a767aeb5657cea1fa977b455108edd765b52b36247cf0d6c08e02",
+  "source_scene_sha256": "0794eb592888fac3b9250d55945c2dc8eff16f59c239cca19cc2061769962da6",
+  "source_revision": 14,
+  "initial_penetrations_over_1mm": [],
+  "min_cube_centre_spacing_m": 0.08999999999999941,
+  "min_cube_to_table_edge_m": 0.3049999999999986,
+  "cubes_over_board": 0,
+  "passed": true,
+  "scope": "Static compilation, initial contact and placement screen only; no reach coverage, manipulation, Oracle or policy run"
+}

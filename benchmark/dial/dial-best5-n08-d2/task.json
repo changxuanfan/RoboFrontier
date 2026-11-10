@@ -19,7 +19,7 @@
     "directory": "benchmark/dial/dial-best5-n08-d2"
   },
   "scene_asset": "benchmark/dial/dial-best5-n08-d2",
-  "scene_sha256": "82a80c7a51de35318d14bea976bc577ff6ba49809ba385293369ccd43b3fac87",
+  "scene_sha256": "9ec55d8e43a6babf4fff9080416b65f14862693f70cb495b95c3fbede86c9455",
   "arms": {
     "A": {
       "base_position_m": [

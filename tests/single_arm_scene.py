@@ -1,5 +1,7 @@
 """Test-only scene: one Panda (robot B at y=0) on a 0.4 m table with small cubes.
 
+It carries the release physics (scripts/build_release.py) and steps as a Transport world.
+
 It is the scene the removed three-arm generated task built, reduced to one arm, and
 written as a scene folder with an `initial` keyframe so `World` loads it the way it
 loads a released scene. Hand, grasp and contact regressions keep their geometry.
@@ -98,6 +100,8 @@ def make_world(directory, cubes=None, harness=None, noslip_iterations=10):
     (folder/'model-assets').symlink_to(ROOT/'vendor/panda/assets', target_is_directory=True)
     root = scene_xml(cubes, noslip_iterations)
     root.find('compiler').set('meshdir', str(folder/'model-assets'))
+    from scripts.build_release import apply_release_physics
+    apply_release_physics(root, mujoco.MjModel.from_xml_string(ET.tostring(root, encoding='unicode')))
     model = mujoco.MjModel.from_xml_string(ET.tostring(root, encoding='unicode'))
     data = mujoco.MjData(model)
     PandaArm(model, data, ARM, [.40, 0., .68])
@@ -109,6 +113,6 @@ def make_world(directory, cubes=None, harness=None, noslip_iterations=10):
     (folder/'scene.xml').write_text(ET.tostring(root, encoding='unicode'))
     if harness is not None:
         (directory/'private/inputs/harness.json').write_text(json.dumps(harness))
-    task = {'kind': 'single_arm_test_scene', 'scene_asset': 'private/inputs/scene/scene.xml', 'arms': {ARM: {}},
+    task = {'kind': 'single_arm_test_scene', 'family': 'transport', 'scene_asset': 'private/inputs/scene/scene.xml', 'arms': {ARM: {}},
             'objects': [{'id': name} for name in cubes]}
     return World(directory, task)

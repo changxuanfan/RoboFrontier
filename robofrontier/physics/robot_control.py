@@ -5,16 +5,30 @@ import mujoco
 import numpy as np
 
 from .kinematics import RobotIK
-from .motion_check import JOINT_SPEED_LIMIT, JOINT_ACCEL_LIMIT, TRACKING_LIMIT
-from ..tasks.config import action_limits, execution_timing
+from . import franka_limits as franka
+from .motion_check import TRACKING_LIMIT
+from ..tasks.config import execution_timing
+
+JOINT_SPEED=np.array(franka.JOINT_SPEED_RAD_S);JOINT_ACCEL=np.array(franka.JOINT_ACCEL_RAD_S2)
+# The hand's two fingers share one tendon actuator, which passes half its force to each
+# finger. A grasp force (per finger, as in libfranka) is therefore half the actuator force.
+FINGERS_PER_ACTUATOR=2.
+# Position moves of the hand (open, close, width) drive the fingers with at most this
+# actuator force, 35 N per finger; only a grasp presses with the force it names.
+MOVE_ACTUATOR_FORCE_N=70.
+# How far the Cartesian references may lead the measured hand: a fixed part, plus the
+# distance or angle the reference covers in LAG_S at its current speed.
+LAG_M=.003;LAG_RAD=.03;LAG_S=.05
+LEAD_M=.0005;LEAD_RAD=.005
+MOVE_FIELDS=('speed_m_s','acceleration_m_s2','angular_speed_rad_s','angular_acceleration_rad_s2')
+JOINT_FIELDS=('joint_speed_rad_s','joint_acceleration_rad_s2')
 
 
-def hand_position_profile(profile='legacy'):
-    if profile not in ('legacy','pd1000-v1'):raise ValueError('Unknown hand position-servo profile')
-    return dict(id=profile,stiffness_n_m=1000. if profile=='pd1000-v1' else None,
-                damping='Critical from robot motor mass, minus existing passive damping' if profile=='pd1000-v1' else 'Source actuator',
-                max_motor_force_n=70. if profile=='pd1000-v1' else None,
-                scope='Frozen benchmark driver tuning; not a real Franka firmware calibration')
+def hand_position_profile():
+    return dict(id='pd1000-v1',stiffness_n_m=1000.,
+                damping='Critical from robot motor mass, minus existing passive damping',
+                max_motor_force_n=MOVE_ACTUATOR_FORCE_N,
+                scope='Benchmark hand position servo; not a real Franka firmware calibration')
 
 
 def matrix_quat(rotation):
@@ -64,6 +78,31 @@ def bounded(value,limits,label):
     return value
 
 
+def require(p,fields,action):
+    missing=[k for k in fields if k not in p]
+    if missing:raise ValueError(action+' requires '+', '.join(missing)+'; there are no defaults')
+
+
+def limited(p,key):
+    """One required speed, acceleration or force, within its Franka limit."""
+    value=p[key]
+    if isinstance(value,bool) or not isinstance(value,(int,float)):raise ValueError(key+' must be a number')
+    value=float(value);limit=franka.LIMITS[key]
+    if not math.isfinite(value) or not franka.MINIMUM<=value<=limit:
+        raise ValueError(f'{key} must be between {franka.MINIMUM} and {limit}')
+    return value
+
+
+def per_joint(p,key):
+    """A joint speed or acceleration: one number for every joint, or seven, each within that joint's limit."""
+    value=p[key];limits=np.array(franka.LIMITS[key])
+    if isinstance(value,(int,float)) and not isinstance(value,bool):values=np.full(7,float(value))
+    else:values=finite_vector(value,7,key+' (one number or seven)')
+    if not np.isfinite(values).all() or np.any(values<franka.MINIMUM) or np.any(values>limits+1e-12):
+        raise ValueError(f'{key} must be between {franka.MINIMUM} and the joint limits {list(limits)}')
+    return values
+
+
 class PandaArm:
     def __init__(self,model,data,name,home=None):
         self.model,self.data,self.name=model,data,name
@@ -85,8 +124,10 @@ class PandaArm:
         self.qref=data.ctrl[self.act].copy();_,self.rotation=self.ik.pose(data.qpos[self.qids])
         self.home_rotation=self.rotation.copy();self.rotation_goal=None;self.joint_goal=None
         self.velocity=np.zeros(7);self.tcp_ref=None;self.cartesian_integral=np.zeros(3)
-        self.goal=None;self.speed=.06;self.angular_speed=.6;self.joint_speed=JOINT_SPEED_LIMIT
-        self.gripper=float(data.ctrl[self.grip]);self.grip_goal=self.gripper;self.grip_speed=.08
+        self.goal=None;self.speed=0.;self.acceleration=0.;self.angular_speed=0.;self.angular_acceleration=0.
+        self.joint_speed=JOINT_SPEED.copy();self.joint_acceleration=JOINT_ACCEL.copy()
+        self.tcp_rate=0.;self.angular_rate=0.  # reference speed along the path, and turn rate
+        self.gripper=float(data.ctrl[self.grip]);self.grip_goal=self.gripper;self.grip_speed=franka.GRIPPER_SPEED_M_S
         self.grip_initial_width=self.grip_min+sum(float(data.joint(name+'_'+s).qpos[0]) for s in ('finger_joint1','finger_joint2'))
         self.grip_direction='holding'
         self.grasp_force=None;self.grasp_width=None;self.grasp_epsilon=(.005,.005);self.grasp_confirmed=False
@@ -94,7 +135,8 @@ class PandaArm:
         self.grip_position_parameters=tuple(x.copy() for x in
             (model.actuator_gainprm[self.grip],model.actuator_biasprm[self.grip],model.actuator_ctrlrange[self.grip],model.actuator_forcerange[self.grip]))
         self._source_grip_position_parameters=tuple(x.copy() for x in self.grip_position_parameters)
-        self.grasp_hold_velocity_bias=float(self.grip_position_parameters[1][2]);self.hand_position_servo='legacy'
+        self.grasp_hold_velocity_bias=float(self.grip_position_parameters[1][2])
+        self.grasp_force_ceiling=min(-float(self._source_grip_position_parameters[3][0]),float(self._source_grip_position_parameters[3][1]))
         self.grasp_drive_force=0.
         self.grasp_phase=None;self.grasp_force_started=None;self.grasp_contact_width=None
         finger_dofs=[model.jnt_dofadr[model.joint(self.name+'_'+s).id] for s in ('finger_joint1','finger_joint2')]
@@ -106,27 +148,24 @@ class PandaArm:
         # the arm is treated as unsettled until this simulation time.
         self.fault_hold_s=None;self.fault_hold_until=None
         self.recovery_last_sample=None
-        # Set by a frozen physics profile (physics_profile.attach). 'per-tick' counts one
-        # settle sample per simulation time however often the owner polls; 'per-call',
-        # the original rule, counts every poll.
-        self.poll_stability='per-call'
+        # Arrival, gripper and stop settle counts take one sample per simulation time,
+        # however often the owner polls between two physics steps.
         self.last_poll_sample=None
 
-    def configure_hand_position_servo(self,profile):
+    def configure_hand_position_servo(self):
         """Engineering initialization only; no Agent action or object-state use.
 
-        Preserve legacy inputs and force-hold damping. The calibrated position
-        drive uses the same motor, encoder calibration and existing force bound.
+        The position drive uses the same motor and encoder calibration with a 1000 N/m
+        stiffness, critical damping and at most MOVE_ACTUATOR_FORCE_N. Grasps switch the
+        same actuator to force control (start).
         """
-        hand_position_profile(profile)
         if self.job is not None or self.grasp_force is not None:raise ValueError('Configure hand driver before execution')
         params=tuple(x.copy() for x in self._source_grip_position_parameters)
-        if profile=='pd1000-v1':
-            stiffness=1000.;damping=max(0.,2*math.sqrt(stiffness*self.grasp_motor_mass)-self.grasp_passive_damping)
-            params[0][0]=stiffness*self.grip_stroke/(2*255)
-            params[1][1:3]=[-stiffness,-damping]
-            params[3][0]=max(params[3][0],-70.);params[3][1]=min(params[3][1],70.)
-        self.grip_position_parameters=params;self.hand_position_servo=profile
+        stiffness=1000.;damping=max(0.,2*math.sqrt(stiffness*self.grasp_motor_mass)-self.grasp_passive_damping)
+        params[0][0]=stiffness*self.grip_stroke/(2*255)
+        params[1][1:3]=[-stiffness,-damping]
+        params[3][0]=max(params[3][0],-MOVE_ACTUATOR_FORCE_N);params[3][1]=min(params[3][1],MOVE_ACTUATOR_FORCE_N)
+        self.grip_position_parameters=params
         for destination,value in zip((self.model.actuator_gainprm,self.model.actuator_biasprm,self.model.actuator_ctrlrange,self.model.actuator_forcerange),params):destination[self.grip]=value
 
     @property
@@ -154,53 +193,57 @@ class PandaArm:
                 'gripper_width_range_m':[self.grip_min,self.grip_max],
                 'gripper_velocity_m_s':sum(float(j.qvel[0]) for j in fingers),
                 'gripper_target_width_m':self.grip_to_width(self.grip_goal),'status':self.status,
-                'hand_position_servo':self.hand_position_servo,
                 'gripper_mode':'grasp' if self.grasp_force is not None else 'move',
                 'grasp_drive_phase':self.grasp_phase,
                 'grasp_force_setpoint_n':self.grasp_force,'is_grasped':grasped,
                 'measured_grasp_force_n':None}
 
     def validate(self,op,p,cfg,lower,upper):
+        """Check one action against the Franka limits (franka_limits); every speed,
+        acceleration and force is stated by the caller, none has a default."""
         if self.job:raise ValueError('Arm already has an execution')
-        limits=action_limits(cfg)
         if op=='gripper':
             mode=p.get('mode','move')
             if mode=='grasp':
                 fields={'mode','width_m','speed_m_s','force_n','epsilon_inner_m','epsilon_outer_m'}
-                if set(p)-fields or not {'width_m','force_n'}<=set(p):
-                    raise ValueError('Grasp requires width_m and force_n, optional speed and width tolerances')
+                if set(p)-fields:raise ValueError('Grasp takes width_m, speed_m_s, force_n and optional width tolerances')
+                require(p,('width_m','speed_m_s','force_n'),'Grasp')
                 width=bounded(p['width_m'],[self.grip_min+.001,self.grip_max],'Grasp object width')
-                force=bounded(p['force_n'],limits['allowed_grasp_force_n'],'Grasp force')
-                if force>min(-self.grip_position_parameters[3][0],self.grip_position_parameters[3][1]):
-                    raise ValueError('Grasp force exceeds configured drive capacity')
+                force=limited(p,'force_n')
+                if FINGERS_PER_ACTUATOR*force>self.grasp_force_ceiling+1e-9:
+                    raise ValueError('Grasp force exceeds the hand drive capacity')
                 epsilon=[bounded(p.get(k,.005),[0,.01],'Grasp width tolerance') for k in ('epsilon_inner_m','epsilon_outer_m')]
                 if not all(e>0 for e in epsilon):raise ValueError('Grasp width tolerances must be positive')
                 actual=self.observe()['gripper_width_m']
                 if width>actual+epsilon[1]:raise ValueError('Grasp is a closing operation; open with move first')
-                speed=bounded(p.get('speed_m_s',limits['default_gripper_speed_m_s']),limits['allowed_gripper_speed_m_s'],'Gripper speed')
+                speed=bounded(p['speed_m_s'],[franka.MINIMUM,franka.GRIPPER_SPEED_M_S],'Gripper speed')
                 return self.timed({'op':op,'mode':mode,'width':width,'force':force,'epsilon':epsilon,'speed':speed},actual/speed,cfg)
             if mode!='move':raise ValueError('Gripper mode must be move or grasp')
             p={k:v for k,v in p.items() if k!='mode'}
             if set(p)-{'state','width_m','speed_m_s'} or ('state' in p)==('width_m' in p):
-                raise ValueError('Choose gripper state or width_m, with optional speed_m_s')
+                raise ValueError('Choose gripper state or width_m, with speed_m_s')
+            require(p,('speed_m_s',),'Gripper move')
             if 'state' in p and p['state'] not in ('open','close'):raise ValueError('Gripper state must be open or close')
             width=(self.grip_max if p['state']=='open' else self.grip_min) if 'state' in p else bounded(p['width_m'],[self.grip_min,self.grip_max],'Gripper width')
-            speed=bounded(p.get('speed_m_s',limits['default_gripper_speed_m_s']),limits['allowed_gripper_speed_m_s'],'Gripper speed')
+            speed=bounded(p['speed_m_s'],[franka.MINIMUM,franka.GRIPPER_SPEED_M_S],'Gripper speed')
             travel=max(abs(width-self.grip_to_width(self.gripper)),abs(width-self.observe()['gripper_width_m']))
             return self.timed({'op':op,'width':width,'speed':speed},travel/speed,cfg)
-        if set(p)-{'target_m','delta_m','quaternion_wxyz','speed_m_s','angular_speed_rad_s','joint_rad','joint_speed_rad_s'}:
+        if set(p)-{'target_m','delta_m','quaternion_wxyz',*MOVE_FIELDS,'joint_rad',*JOINT_FIELDS}:
             raise ValueError('Unsupported move parameter')
         if 'joint_rad' in p:
-            if set(p)-{'joint_rad','joint_speed_rad_s'}:raise ValueError('Joint and Cartesian move parameters are mutually exclusive')
+            if set(p)-{'joint_rad',*JOINT_FIELDS}:raise ValueError('Joint and Cartesian move parameters are mutually exclusive')
+            require(p,JOINT_FIELDS,'Joint move')
             q=finite_vector(p['joint_rad'],7,'seven joint angles')
             if np.any(q<self.ik.limits[:,0]) or np.any(q>self.ik.limits[:,1]):raise ValueError('Joint target outside soft limits')
             tcp,_=self.ik.pose(q)
             if np.any(tcp<lower) or np.any(tcp>upper):raise ValueError('Joint target TCP outside admitted workspace')
-            speed=bounded(p.get('joint_speed_rad_s',JOINT_SPEED_LIMIT),[.01,JOINT_SPEED_LIMIT],'Joint speed')
-            duration=max(np.max(np.abs(q-self.qref)),np.max(np.abs(q-self.data.qpos[self.qids])))/speed
-            return self.timed({'op':op,'joint_goal':q,'joint_speed':speed},duration,cfg)
-        if 'joint_speed_rad_s' in p:raise ValueError('Joint speed requires joint_rad')
+            speed=per_joint(p,'joint_speed_rad_s');acceleration=per_joint(p,'joint_acceleration_rad_s2')
+            travel=np.maximum(np.abs(q-self.qref),np.abs(q-self.data.qpos[self.qids]))
+            duration=float(np.max(travel/speed+speed/acceleration))
+            return self.timed({'op':op,'joint_goal':q,'joint_speed':speed,'joint_acceleration':acceleration},duration,cfg)
+        if any(k in p for k in JOINT_FIELDS):raise ValueError('Joint speed and acceleration require joint_rad')
         if 'target_m' in p and 'delta_m' in p:raise ValueError('Choose target_m or delta_m')
+        require(p,MOVE_FIELDS,'Move')
         actual=self.data.site_xpos[self.site]
         if 'target_m' in p:goal=finite_vector(p['target_m'],3,'xyz')
         elif 'delta_m' in p:goal=actual+finite_vector(p['delta_m'],3,'xyz delta')
@@ -208,15 +251,16 @@ class PandaArm:
         else:raise ValueError('Move requires a position, delta or orientation')
         if np.any(goal<lower) or np.any(goal>upper):raise ValueError('TCP workspace target outside admitted bounds')
         rotation=quat_matrix(p['quaternion_wxyz']) if 'quaternion_wxyz' in p else self.rotation.copy()
-        speed=bounded(p.get('speed_m_s',cfg['default_tcp_speed_m_s']),cfg['allowed_tcp_speed_m_s'],'TCP speed')
-        angular=bounded(p.get('angular_speed_rad_s',limits['default_angular_speed_rad_s']),limits['allowed_angular_speed_rad_s'],'Angular speed')
+        speed,acceleration,angular,angular_acceleration=(limited(p,k) for k in MOVE_FIELDS)
         q,error=self.ik.solve(goal,rotation,self.qref,250);_,reached=self.ik.pose(q)
         if error>.0025 or np.linalg.norm(rotation_vector(rotation,reached))>.02:
             raise IKNoSolution(self.ik_failure(goal,rotation,'quaternion_wxyz' in p,q,error))
         current_r=self.data.site_xmat[self.site].reshape(3,3)
-        duration=max(np.linalg.norm(goal-actual)/speed,np.linalg.norm(rotation_vector(rotation,current_r))/angular,
-                     np.max(np.abs(q-self.qref))/JOINT_SPEED_LIMIT)
-        return self.timed({'op':op,'goal':goal,'rotation':rotation,'speed':speed,'angular_speed':angular},duration,cfg)
+        duration=max(np.linalg.norm(goal-actual)/speed+speed/acceleration,
+                     np.linalg.norm(rotation_vector(rotation,current_r))/angular+angular/angular_acceleration,
+                     float(np.max(np.abs(q-self.qref)/JOINT_SPEED+JOINT_SPEED/JOINT_ACCEL)))
+        return self.timed({'op':op,'goal':goal,'rotation':rotation,'speed':speed,'acceleration':acceleration,
+                           'angular_speed':angular,'angular_acceleration':angular_acceleration},duration,cfg)
 
     def ik_failure(self,goal,rotation,requested,q,error):
         """Facts for a failed IK request: the closest pose found, and the same position with the home hand orientation."""
@@ -254,15 +298,10 @@ class PandaArm:
                 # Closing velocity control and settled force holding are
                 # separate driver phases. A high approach velocity damper must
                 # not remain saturated while another robot perturbs the load.
-                self.model.actuator_gainprm[self.grip,:]=0
-                self.model.actuator_gainprm[self.grip,0]=1
-                self.model.actuator_biasprm[self.grip,:]=0
-                ceiling=min(70.,-self.grip_position_parameters[3][0],self.grip_position_parameters[3][1])
-                self.model.actuator_forcerange[self.grip]=[-ceiling,ceiling]
-                self.model.actuator_ctrlrange[self.grip]=[-ceiling,ceiling]
-                self.grasp_drive_force=min(previous_drive,command['force'],ceiling-1e-6)
+                self.set_force_drive()
+                self.grasp_drive_force=min(previous_drive,self.drive_target())
                 self.grasp_phase='force' if retained else 'approach';self.grasp_contact_width=self.grip_initial_width if retained else None
-                self.grasp_force_started=now-.4*self.grasp_drive_force/command['force'] if retained else None
+                self.grasp_force_started=now-.4*self.grasp_drive_force/self.drive_target() if retained else None
                 self.data.ctrl[self.grip]=-self.grasp_drive_force
                 self.gripper=self.width_to_grip(self.grip_initial_width)
             elif self.grasp_force is not None:
@@ -270,15 +309,32 @@ class PandaArm:
             delta=command['width']-self.grip_initial_width
             self.grip_direction='opening' if delta>1e-6 else 'closing' if delta< -1e-6 else 'holding'
             self.grip_goal=self.width_to_grip(command['width']);self.grip_speed=command['speed']
-        elif 'joint_goal' in command:self.joint_goal=command['joint_goal'].copy();self.joint_speed=command['joint_speed']
+        elif 'joint_goal' in command:
+            self.joint_goal=command['joint_goal'].copy()
+            self.joint_speed=np.array(command['joint_speed'],dtype=float);self.joint_acceleration=np.array(command['joint_acceleration'],dtype=float)
         else:
             self.goal=command['goal'].copy();self.rotation_goal=command['rotation'].copy()
-            self.speed=command['speed'];self.angular_speed=command['angular_speed']
+            self.speed=command['speed'];self.acceleration=command['acceleration']
+            self.angular_speed=command['angular_speed'];self.angular_acceleration=command['angular_acceleration']
+            self.tcp_rate=0.;self.angular_rate=0.
         self.job=call_id;self.job_op=command['op'];self.job_start=now;self.stable=0
         self.grasp_settling.clear()
         self.execution_timeout_s=command.get('timing',{}).get('timeout_sim_s')
         self.uncertainty_reported=False;self.stop_reason=None;self.stop_details={}
         self.last_poll_sample=None
+
+    def set_force_drive(self):
+        """Switch the hand actuator from its position servo to direct force control."""
+        self.model.actuator_gainprm[self.grip,:]=0
+        self.model.actuator_gainprm[self.grip,0]=1
+        self.model.actuator_biasprm[self.grip,:]=0
+        ceiling=self.grasp_force_ceiling
+        self.model.actuator_forcerange[self.grip]=[-ceiling,ceiling]
+        self.model.actuator_ctrlrange[self.grip]=[-ceiling,ceiling]
+
+    def drive_target(self):
+        """The actuator force that presses each finger with the grasp force."""
+        return min(FINGERS_PER_ACTUATOR*self.grasp_force,self.grasp_force_ceiling-1e-6)
 
     def hold_aperture(self):
         """Cancel a force-producing close without continuing its old target."""
@@ -296,42 +352,61 @@ class PandaArm:
         if self.job_op=='gripper':self.hold_aperture()
         self.stop_started_at=now
         if self.fault_hold_s is not None:self.fault_hold_until=now+3.+self.fault_hold_s
-        self.stopping=True;self.goal=None;self.joint_goal=None;self.rotation_goal=None
+        self.stopping=True;self.goal=None;self.joint_goal=None;self.rotation_goal=None;self.tcp_rate=0.;self.angular_rate=0.
         self.tcp_ref=None;self.cartesian_integral[:]=0
         self.grip_goal=self.gripper if self.grasp_force is None else self.width_to_grip(self.grasp_width);self.stable=0
         self.status='stopping'
         self.stop_reason=reason;self.stop_details=details or {}
 
     def control(self,dt=.02):
-        if self.stopping:requested=np.zeros(7)
+        """Advance the joint reference by one control tick within the Franka limits.
+
+        Joint moves share one progress rate, so every joint finishes together and the arm
+        follows the straight joint-space segment; each joint keeps to its own speed and
+        acceleration and brakes in time. Cartesian moves advance a TCP reference along the
+        straight line, and a hand-orientation reference along the shortest turn, with
+        trapezoid speed profiles; the joints follow their IK solution within the joint limits.
+        """
+        if self.stopping:requested=np.zeros(7);acceleration=JOINT_ACCEL
         elif self.joint_goal is not None:
-            delta=self.joint_goal-self.qref
-            requested=delta*min(6.,self.joint_speed/max(np.max(abs(delta)),1e-12));self.status='moving joints'
+            requested=self.approach(self.joint_goal-self.qref,self.joint_speed,self.joint_acceleration,dt)
+            acceleration=self.joint_acceleration;self.status='moving joints'
         elif self.goal is not None:
             actual=self.data.site_xpos[self.site];actual_r=self.data.site_xmat[self.site].reshape(3,3)
             if self.tcp_ref is None:self.tcp_ref=actual.copy();self.cartesian_integral[:]=0
-            lag=self.tcp_ref-actual
-            self.tcp_ref=actual+lag*min(1.,.003/max(np.linalg.norm(lag),1e-12))
-            delta=self.goal-self.tcp_ref;self.tcp_ref+=delta*min(1.,self.speed*dt/max(np.linalg.norm(delta),1e-9))
+            # Keep the reference near the measured hand, so a blocked arm does not wind up,
+            # and within one tick of travel of the joint reference's own pose, so a joint
+            # reference that fell behind never catches up faster than the commanded speed.
+            lag=self.tcp_ref-actual;allowed=LAG_M+LAG_S*self.tcp_rate
+            self.tcp_ref=actual+lag*min(1.,allowed/max(np.linalg.norm(lag),1e-12))
+            commanded,commanded_r=self.ik.pose(self.qref);commanded=commanded-self.cartesian_integral
+            lead=self.tcp_ref-commanded;allowed=LEAD_M+self.tcp_rate*dt
+            self.tcp_ref=commanded+lead*min(1.,allowed/max(np.linalg.norm(lead),1e-12))
+            delta=self.goal-self.tcp_ref;distance=float(np.linalg.norm(delta))
+            self.tcp_rate=min(self.speed,self.tcp_rate+self.acceleration*dt,math.sqrt(2*self.acceleration*distance))
+            self.tcp_ref+=delta*min(1.,self.tcp_rate*dt/max(distance,1e-12))
             self.cartesian_integral=np.clip(self.cartesian_integral+(self.tcp_ref-actual)*dt*1.5,-.003,.003)
-            self.rotation=advance_rotation(actual_r,self.rotation,.03)
-            self.rotation=advance_rotation(self.rotation,self.rotation_goal,self.angular_speed*dt)
+            self.rotation=advance_rotation(actual_r,self.rotation,LAG_RAD+LAG_S*self.angular_rate)
+            self.rotation=advance_rotation(commanded_r,self.rotation,LEAD_RAD+self.angular_rate*dt)
+            angle=float(np.linalg.norm(rotation_vector(self.rotation_goal,self.rotation)))
+            self.angular_rate=min(self.angular_speed,self.angular_rate+self.angular_acceleration*dt,math.sqrt(2*self.angular_acceleration*angle))
+            self.rotation=advance_rotation(self.rotation,self.rotation_goal,self.angular_rate*dt)
             q,error=self.ik.solve(self.tcp_ref+self.cartesian_integral,self.rotation,self.qref,12)
             if error>.002:q,error=self.ik.solve(self.tcp_ref+self.cartesian_integral,self.rotation,self.qref,50)
-            requested=6*(q-self.qref)
-            requested*=min(1.,JOINT_SPEED_LIMIT/max(np.max(abs(requested)),1e-12))
+            requested=self.approach(q-self.qref,JOINT_SPEED,JOINT_ACCEL,dt);acceleration=JOINT_ACCEL
             self.status='moving' if error<.005 else 'IK limited'
-        else:self.tcp_ref=None;requested=np.zeros(7)
+        else:self.tcp_ref=None;requested=np.zeros(7);acceleration=JOINT_ACCEL
+        # Every joint within its own speed limit, with one shared scale to keep the path.
+        requested=requested*min(1.,float(np.min(JOINT_SPEED/np.maximum(np.abs(requested),1e-12))))
         lower,upper=self.ik.limits.T
-        requested=np.clip(requested,-np.sqrt(2*JOINT_ACCEL_LIMIT*np.maximum(self.qref-lower,0)),
-                           np.sqrt(2*JOINT_ACCEL_LIMIT*np.maximum(upper-self.qref,0)))
+        requested=np.clip(requested,-np.sqrt(2*JOINT_ACCEL*np.maximum(self.qref-lower,0)),
+                           np.sqrt(2*JOINT_ACCEL*np.maximum(upper-self.qref,0)))
         change=requested-self.velocity
         if (self.joint_goal is not None or self.goal is not None) and not self.stopping:
-            # One shared progress rate and acceleration scale preserve the
-            # joint-space segment, instead of letting short axes finish early
-            # and sweeping the arm along an unplanned curved path.
-            self.velocity+=change*min(1.,JOINT_ACCEL_LIMIT*dt/max(np.max(abs(change)),1e-12))
-        else:self.velocity+=np.clip(change,-JOINT_ACCEL_LIMIT*dt,JOINT_ACCEL_LIMIT*dt)
+            # One shared acceleration scale preserves the path, instead of letting short
+            # axes finish early and sweeping the arm along an unplanned curve.
+            self.velocity+=change*min(1.,float(np.min(acceleration*dt/np.maximum(np.abs(change),1e-12))))
+        else:self.velocity+=np.clip(change,-acceleration*dt,acceleration*dt)
         self.qref=np.clip(self.qref+self.velocity*dt,*self.ik.limits.T)
         actualq=self.data.qpos[self.qids]
         if np.max(np.abs(self.qref-actualq))>TRACKING_LIMIT:
@@ -346,6 +421,18 @@ class PandaArm:
             change=255*dt*self.grip_speed/self.grip_stroke
             self.gripper+=float(np.clip(self.grip_goal-self.gripper,-change,change));self.data.ctrl[self.grip]=self.gripper
 
+    @staticmethod
+    def approach(delta,speed,acceleration,dt):
+        """Joint velocities toward a joint target along the straight joint-space segment.
+
+        One shared rate keeps the path; each joint stays within its speed and can still
+        brake to a stop at its acceleration (v <= sqrt(2 a d)), and none overshoots in a tick.
+        """
+        distance=np.abs(delta);moving=distance>1e-12
+        if not moving.any():return np.zeros_like(delta)
+        cap=np.minimum(speed,np.sqrt(2*acceleration*distance))
+        return delta*min(1/dt,float(np.min(cap[moving]/distance[moving])))
+
     def physics_control(self):
         """Fast hand drive, using encoders and robot parameters only.
 
@@ -358,15 +445,14 @@ class PandaArm:
         if self.grasp_phase in ('force','hold') and width<self.grasp_width-self.grasp_epsilon[0] and min(float(j.qvel[0]) for j in fingers)<-.05:
             self.grasp_phase='approach';self.grasp_confirmed=False;self.grasp_drive_force=0.;self.grasp_force_started=None;self.grasp_contact_width=None;self.grasp_settling.clear()
         if self.grasp_phase=='approach':
-            damping=min(2*self.grasp_force/self.grip_speed,self.grasp_motor_mass/self.model.opt.timestep)
+            damping=min(2*self.drive_target()/self.grip_speed,self.grasp_motor_mass/self.model.opt.timestep)
             self.model.actuator_biasprm[self.grip,2]=-damping
             self.data.ctrl[self.grip]=-(damping+self.grasp_passive_damping)*self.grip_speed/2
             self.grasp_drive_force=0.
         else:
             self.model.actuator_biasprm[self.grip,2]=self.grasp_hold_velocity_bias
-            ceiling=min(-self.model.actuator_forcerange[self.grip,0],self.model.actuator_forcerange[self.grip,1])
-            target=min(self.grasp_force,ceiling-1e-6)
-            self.grasp_drive_force=min(target,max(0.,float(self.data.time)-self.grasp_force_started)*self.grasp_force/.4)
+            target=self.drive_target()
+            self.grasp_drive_force=min(target,max(0.,float(self.data.time)-self.grasp_force_started)*target/.4)
             self.data.ctrl[self.grip]=-self.grasp_drive_force
 
     def finger_stationary(self,now):
@@ -390,9 +476,8 @@ class PandaArm:
                 if self.fault_hold_until is not None and now<self.fault_hold_until:reached=False
                 self.stable=self.stable+1 if reached else 0
             return None
-        if self.poll_stability=='per-tick':
-            if self.last_poll_sample is not None and now<=self.last_poll_sample+1e-9:return None
-            self.last_poll_sample=now
+        if self.last_poll_sample is not None and now<=self.last_poll_sample+1e-9:return None
+        self.last_poll_sample=now
         age=now-self.job_start;feedback=self.observe();details={}
         fingers_settled=self.finger_stationary(now) if self.job_op=='gripper' or self.stopping else False
         if self.job_op=='gripper' and not self.stopping:
@@ -421,7 +506,7 @@ class PandaArm:
             if stationary and valid and self.grasp_phase=='approach':
                 self.grasp_phase='force';self.grasp_force_started=now;self.grasp_contact_width=width;self.grasp_settling.clear();self.stable=0
                 stationary=False
-            reached=stationary and (not valid or self.grasp_drive_force>=self.grasp_force-1e-3)
+            reached=stationary and (not valid or self.grasp_drive_force>=self.drive_target()-1e-3)
             reason=None if valid else 'Grasp stopped outside expected object-width tolerance'
             details={'target_width_m':self.grasp_width,'actual_width_m':width,'force_setpoint_n':self.grasp_force,'drive_phase':self.grasp_phase,
                      'is_grasped':valid and stationary,'grasp_verified':False,'measured_grasp_force_n':None,
@@ -466,8 +551,8 @@ class PandaArm:
             if status=='completed':self.grasp_confirmed=True;self.grasp_phase='hold'
             else:self.hold_aperture()
         elif self.job_op=='gripper' and status!='completed':self.hold_aperture()
-        if self.job_op=='gripper' and self.gripper_command_mode=='move' and self.hand_position_servo=='pd1000-v1' and self.grip_direction=='closing' and status=='completed' and not (details or {}).get('target_width_reached',False):self.hold_aperture()
-        self.job=None;self.goal=None;self.joint_goal=None;self.rotation_goal=None
+        if self.job_op=='gripper' and self.gripper_command_mode=='move' and self.grip_direction=='closing' and status=='completed' and not (details or {}).get('target_width_reached',False):self.hold_aperture()
+        self.job=None;self.goal=None;self.joint_goal=None;self.rotation_goal=None;self.tcp_rate=0.;self.angular_rate=0.
         self.grip_goal=self.gripper if self.grasp_force is None else self.width_to_grip(self.grasp_width)
         self.tcp_ref=None;self.cartesian_integral[:]=0;self.stopping=False;self.status='holding'
         # Preserve bounded braking rather than discontinuously zeroing velocity.

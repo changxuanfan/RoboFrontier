@@ -51,8 +51,6 @@ def add_arguments(subparsers):
             command.add_argument('--evaluation-mode', choices=('task-reference', 'strict-process'))
             command.add_argument('--mosaic-max-goals', type=int)
             command.add_argument('--mosaic-planning-workers', type=int)
-            command.add_argument('--physics-profile', choices=('realtime-v1', 'realtime-v2'),
-                                 help='Frozen into the Oracle harness; default is full physics')
     for name in ('run', 'status', 'stop'):
         command = actions.add_parser(name)
         command.add_argument('execution', type=Path)
@@ -88,15 +86,17 @@ def _versions():
 def _scene_inventory(scene, case):
     """Verify all frozen source assets without constructing or stepping a world."""
     scene = Path(scene).resolve()
-    inventory = dict(case['source_files'])
+    # The Oracle copy is checked against its own recorded hashes; its assets folder links
+    # to the released case's, whose files are the same.
+    inventory = {name: _sha(scene/name) for name in case['source_files']}
     workstation = _read(scene/'workstation.json')
     if (workstation['case']['id'] != case['id'] or
             workstation['scene_sha256'] != inventory['scene.xml']):
         raise ValueError('Oracle workstation identity differs from its released case')
     for asset in workstation['assets']:
         name = asset['path']
-        path = (scene/name).resolve()
-        if not path.is_relative_to(scene) or not path.is_file():
+        path = scene/name
+        if Path(name).is_absolute() or '..' in Path(name).parts or not path.is_file():
             raise ValueError('Oracle asset missing or outside workstation: '+name)
         if name in inventory and inventory[name] != asset['sha256']:
             raise ValueError('Conflicting Oracle asset checksum: '+name)
@@ -110,7 +110,7 @@ def _scene_inventory(scene, case):
     return inventory, task
 
 
-def prepare(output, config, *, codebook=None, physics_profile=None):
+def prepare(output, config, *, codebook=None):
     from ..tasks.families import RELEASE, resolve_case
     from ..tasks.config import load_harness
     from .source_snapshot import freeze_executor
@@ -126,7 +126,9 @@ def prepare(output, config, *, codebook=None, physics_profile=None):
     commit, versions = _committed_source(), _versions()
     setup_assets()
     family, _, case = resolve_case(selected[0]['case_id'], purpose='gpt')
-    scene = (ROOT/case['directory']).resolve()
+    # The Oracle runs on the scene its recordings were made with: the case before the
+    # release physics was written into it (benchmark/oracle/, docs/oracle/README.md).
+    scene = (ROOT/'benchmark/oracle'/case['id']).resolve()
     inventory, task = _scene_inventory(scene, case)
     puzzle = None
     if family == 'dial':
@@ -147,15 +149,13 @@ def prepare(output, config, *, codebook=None, physics_profile=None):
         raise ValueError('Released Oracle catalog changed')
     catalog = _read(ROOT/current['path'])
     native = [row for row in catalog['cases'] if row['id'] == case['id']]
-    if len(native) != 1 or native[0]['family'] != family or (ROOT/native[0]['directory']).resolve() != scene:
+    if len(native) != 1 or native[0]['family'] != family or (ROOT/native[0]['directory']).resolve() != (ROOT/case['directory']).resolve():
         raise ValueError('Native Oracle catalog differs from the released scene')
     output.mkdir(parents=True, exist_ok=False)
     private = output/'private'
     private.mkdir(mode=0o700)
     harness = load_harness(ROOT/'configs/harness-frontier-v2-servo2.json')
     harness['observation_image_profile'] = config['render']['observation_profile']
-    if physics_profile is not None:
-        harness['physics_profile'] = physics_profile
     write_json(private/'harness.json', harness)
     catalog['cases'] = [{**native[0], 'directory': str(scene)}]
     write_json(private/'catalog.json', catalog)
@@ -469,5 +469,4 @@ def execute(args):
     config = load_configuration(args.config, overrides)
     if args.oracle_action == 'plan':
         return plan(config)
-    return prepare(args.output, config, codebook=args.codebook,
-                   physics_profile=getattr(args, 'physics_profile', None))
+    return prepare(args.output, config, codebook=args.codebook)

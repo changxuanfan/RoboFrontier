@@ -9,7 +9,7 @@ import mujoco
 import numpy as np
 
 from robofrontier.physics.robot_control import PandaArm
-from robofrontier.oracle.trial import Trial
+from robofrontier.oracle.trial import Trial, oracle_parameters
 from robofrontier.tasks.evaluate import Monitor
 from robofrontier.oracle import transport_full_oracle as full
 
@@ -102,7 +102,7 @@ class TransferCoverageTests(unittest.TestCase):
             # Scratch FK only: exercise the real API validator at every waypoint.
             # This is not a physical motor-success or task-completion witness.
             for r,(op,params) in commands.items():
-                a=t.arms[r];prepared=a.validate(op,params,t.cfg,t.task['workspace_world_m']['lower'],t.task['workspace_world_m']['upper'])
+                a=t.arms[r];prepared=a.validate(op,oracle_parameters(op,params),t.cfg,t.task['workspace_world_m']['lower'],t.task['workspace_world_m']['upper'])
                 if 'joint_goal' in prepared:q=prepared['joint_goal']
                 else:q,_=a.ik.solve(prepared['goal'],prepared['rotation'],a.qref,250)
                 a.qref=q.copy();t.data.qpos[a.qids]=q

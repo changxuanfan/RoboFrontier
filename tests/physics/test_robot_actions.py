@@ -15,6 +15,7 @@ from robofrontier.physics.motion_check import RobotGeometry, prepare_check, stat
 from robofrontier.runtime.setup import prepare_run
 from robofrontier.runtime.service import RuntimeService
 from robofrontier.tasks.config import load_harness
+from motion import filled, MOVE
 
 
 class ActionContractTests(unittest.TestCase):
@@ -37,7 +38,7 @@ class ActionContractTests(unittest.TestCase):
              ('move',{'joint_rad':[100]*7}),('move',{'quaternion_wxyz':[0,0,0,0]}),
              ('move',{'delta_m':[0,0,0],'speed_m_s':float('inf')})]
         for op,p in bad:
-            with self.assertRaises(ValueError):w.validate_action('A',op,p,self.cfg)
+            with self.assertRaises(ValueError):w.validate_action('A',op,filled(op,p),self.cfg)
         np.testing.assert_array_equal(before,w.data.qpos)
         self.assertIsNone(w.arms['A'].job)
 
@@ -46,7 +47,7 @@ class ActionContractTests(unittest.TestCase):
         model_id=RobotGeometry(w.model,w.arms).describe(w,self.cfg)['model_id'];old_state=state_id(w)
         rot=np.array([[0.,-1,0],[1,0,0],[0,0,1]])@arm.rotation
         with patch('mujoco.mj_step',side_effect=AssertionError('No dynamics in screening')):
-            report=list(prepare_check(w,{'motions':[{'actor':'A','quaternion_wxyz':matrix_quat(rot).tolist(),'angular_speed_rad_s':.4}],
+            report=list(prepare_check(w,{'motions':[{**MOVE,'actor':'A','quaternion_wxyz':matrix_quat(rot).tolist(),'angular_speed_rad_s':.4}],
                                           'horizon_s':.1,'sample_dt_s':.1},self.cfg))[-1]
         self.assertIn(report['assessment'],('no_conflict_found','conflict'))
         np.testing.assert_array_equal(original,w.data.qpos)
@@ -57,7 +58,7 @@ class ActionContractTests(unittest.TestCase):
         self.assertNotIn('private_object',json.dumps(report))
 
     def test_stop_braking_has_its_own_deadline_and_holds_gripper_reference(self):
-        w=self.world;arm=w.arms['A'];command=w.validate_action('A','move',{'delta_m':[0,0,.01]},self.cfg)
+        w=self.world;arm=w.arms['A'];command=w.validate_action('A','move',filled('move',{'delta_m':[0,0,.01]}),self.cfg)
         w.start_action('A','long-move',command);arm.job_start=0;arm.velocity[:]=.1
         arm.gripper=120;arm.grip_goal=0
         arm.request_stop(14.99)
@@ -67,7 +68,7 @@ class ActionContractTests(unittest.TestCase):
 
 
     def test_opposing_finger_motion_cannot_be_mistaken_for_a_settled_stop(self):
-        w=self.world;arm=w.arms['A'];command=w.validate_action('A','gripper',{'state':'close'},self.cfg)
+        w=self.world;arm=w.arms['A'];command=w.validate_action('A','gripper',filled('gripper',{'state':'close'}),self.cfg)
         w.start_action('A','closing',command);arm.request_stop(0)
         for suffix,velocity in [('finger_joint1',.01),('finger_joint2',-.01)]:
             w.data.joint('A_'+suffix).qvel[0]=velocity
@@ -79,7 +80,7 @@ class ActionContractTests(unittest.TestCase):
         for suffix in ('finger_joint1','finger_joint2'):
             arm.data.joint('A_'+suffix).qpos[0]=initial/2
             arm.data.joint('A_'+suffix).qvel[0]=0
-        command=self.world.validate_action('A','gripper',{'width_m':target},self.cfg)
+        command=self.world.validate_action('A','gripper',filled('gripper',{'width_m':target}),self.cfg)
         self.world.start_action('A','aperture',command)
         arm.gripper=arm.grip_goal
         for suffix in ('finger_joint1','finger_joint2'):

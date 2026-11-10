@@ -311,9 +311,9 @@ class RuntimeService:
                     'robot_facts':facts,
                     'controlled_robots':([r for r,o in Delegations(self.store).owners().items() if o==actor]
                         if self.config['topology']=='adaptive' else list(self.task['arms']) if kind=='controller' else [actor] if kind=='worker' else []),
-                    'limits': {k: self.config[k] for k in ('min_check_interval_s','max_check_interval_s','allowed_tcp_speed_m_s','default_tcp_speed_m_s','motion_check')},
+                    'limits': {k: self.config[k] for k in ('min_check_interval_s','max_check_interval_s','motion_check')},
                     'execution_timing':execution_timing(self.config),
-                    'cameras': camera_names(self.task), 'action_limits':action_limits(self.config),
+                    'cameras': camera_names(self.task), 'action_limits':action_limits(),
                     'action_batch':{'supported':True,'authority':'Each owner submits only its own members; optional sync_group collects signed parts',
                         'sync_group':{'fields':['id','robots','timeout_s'],'timeout_max_s':self.config['max_check_interval_s'],
                                       'before_start':'Pending own-robot reservation; roster/timeout immutable; revalidate all when complete'},

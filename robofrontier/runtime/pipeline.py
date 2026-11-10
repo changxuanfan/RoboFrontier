@@ -33,8 +33,7 @@ from ..tasks.scene import camera_names
 from ..physics.observation_image import observation_profile
 from .tool_errors import CallIdConflict, conflict_error
 from .service import RuntimeService
-from ..physics.motion_check import (CONTROL_DT, JOINT_SPEED_LIMIT, JOINT_ACCEL_LIMIT,
-                           TRACKING_LIMIT, RobotGeometry, prepare_check, state_id)
+from ..physics.motion_check import CONTROL_DT, TRACKING_LIMIT, RobotGeometry, prepare_check, state_id
 
 def atomic_json(path, value):
     from .setup import write_json
@@ -87,13 +86,12 @@ class World:
         hand_cfg=self.directory/'private/inputs/harness.json'
         frozen_cfg=json.loads(hand_cfg.read_text()) if hand_cfg.exists() else {}
         from ..physics.profile import attach
-        self.physics_profile=attach(self,frozen_cfg)
+        self.physics_profile=attach(self)
         self.observation_image=observation_profile(frozen_cfg)
         if frozen_cfg.get('robot_labels')=='beside-robot-v1':
             from ..factory.labels import place_robot_labels
             place_robot_labels(self.model,self.data,self.task)
-        profile=frozen_cfg.get('gripper_position_servo','legacy')
-        for arm in self.arms.values():arm.configure_hand_position_servo(profile)
+        for arm in self.arms.values():arm.configure_hand_position_servo()
         if segment_restore:
             # Only recent, independently logged completed grasps are
             # approximated. This is not restoration of actuator history.
@@ -109,15 +107,12 @@ class World:
                 arm.grasp_width=float(evidence['target_width_m'])
                 arm.grasp_epsilon=(float(evidence['epsilon_inner_m']),float(evidence['epsilon_outer_m']))
                 arm.grasp_phase='hold';arm.grasp_confirmed=True;arm.gripper_command_mode='grasp'
-                arm.grasp_force_started=-.4;arm.grasp_drive_force=force
-                self.model.actuator_gainprm[arm.grip,:]=0;self.model.actuator_gainprm[arm.grip,0]=1
-                self.model.actuator_biasprm[arm.grip,:]=0
-                ceiling=min(70.,-arm.grip_position_parameters[3][0],arm.grip_position_parameters[3][1])
-                self.model.actuator_forcerange[arm.grip]=[-ceiling,ceiling]
-                self.model.actuator_ctrlrange[arm.grip]=[-ceiling,ceiling]
-                self.data.ctrl[arm.grip]=-min(force,ceiling-1e-6)
+                arm.grasp_force_started=-.4;arm.set_force_drive();arm.grasp_drive_force=arm.drive_target()
+                self.data.ctrl[arm.grip]=-arm.grasp_drive_force
         self.suite_sampler=None;self.motion_recorder=None
         output=self.directory/'private/outputs';output.mkdir(parents=True,exist_ok=True)
+        from .effective_physics import write as write_effective_physics
+        write_effective_physics(output/'effective-physics.json',self.model,self.task['family'])
         (output/'scene.xml').write_text(portable_xml(self.xml,output))
 
     @property
@@ -152,7 +147,7 @@ class World:
                           'arm_dof':len(arm.qids),'grippers':1,
                           'gripper_width_range_m':[arm.grip_min,arm.grip_max],
                           'tcp_command_bounds_world_m':{'lower':lower.tolist(),'upper':upper.tolist()}}
-        width_ranges={tuple(r['gripper_width_range_m']) for r in robots.values()}
+        width_ranges={tuple(r['gripper_width_range_m']) for r in robots.values()};limits=action_limits()
         shared_width=list(next(iter(width_ranges))) if len(width_ranges)==1 else None
         return {'coordinate_frame':'world','base_poses':'fixed throughout this run',
                 'shared_capabilities':{'move':'TCP position and optional quaternion_wxyz using robot-only IK, or joint_rad mode; omitted orientation holds the current reference',
@@ -161,17 +156,20 @@ class World:
                     'gripper':{'state':['open','close'],
                         'width_m':shared_width,
                         'width_limits_source':'Each robots entry gives its installed mechanical gripper_width_range_m; use that robot-specific range.',
-                        'speed_m_s':action_limits(cfg)['allowed_gripper_speed_m_s'],
-                        'mode':['move','grasp'],'grasp':{'force_n':action_limits(cfg)['allowed_grasp_force_n'],
+                        'speed_m_s':{'min':limits['minimum'],'max':limits['gripper_speed_m_s'],'required':True},
+                        'mode':['move','grasp'],'grasp':{'force_n':{'min':limits['minimum'],'max':limits['grasp_force_n'],'continuous_n':limits['grasp_force_continuous_n'],'required':True},
                             'width_m':'expected object width, not zero-close','epsilon_inner_m':{'min_exclusive':0,'max':.01,'default':.005},'epsilon_outer_m':{'min_exclusive':0,'max':.01,'default':.005},
-                            'force_convention':'total opposing finger drive; each finger receives half; no measured contact-force feedback',
+                            'force_convention':'the force each finger presses on the object, as in libfranka; no measured contact-force feedback',
                             'is_grasped_source':'drive width/settling inference, not verified payload support',
                             'measured_force_sensor_available':False,
                             'holding':'continues after completed grasp and during arm moves until another gripper command'}},
                     'stop':'Bounded braking of the named own call; query its terminal result',
                     'quaternion_convention':'world-frame wxyz; normalized on input',
-                    'angular_speed_rad_s':action_limits(cfg)['allowed_angular_speed_rad_s'],
-                    'joint_rad':{'count':7,'speed_limit_rad_s':JOINT_SPEED_LIMIT},
+                    'cartesian_limits':{'speed_m_s':limits['tcp_speed_m_s'],'acceleration_m_s2':limits['tcp_acceleration_m_s2'],
+                        'angular_speed_rad_s':limits['tcp_angular_speed_rad_s'],'angular_acceleration_rad_s2':limits['tcp_angular_acceleration_rad_s2'],
+                        'minimum':limits['minimum'],'required':True},
+                    'joint_rad':{'count':7,'joint_speed_rad_s':limits['joint_speed_rad_s'],'joint_acceleration_rad_s2':limits['joint_acceleration_rad_s2'],
+                        'per_joint':'one number for every joint, or seven','required':True},
                     'action_contract':'pose-aperture-grasp-v2','force_control':False,
                     'force_control_scope':'continuous arm torque/wrench; Hand grasp force is separately supported',
                     'gripper_force_control':True,'robot_gravity_feedforward':True,'max_in_flight_physical_actions_per_robot':1,
@@ -203,10 +201,8 @@ class World:
             require_valid_step(self.data,before)
             if getattr(self,'suite_sampler',None) is not None:self.suite_sampler.physical_step()
             if getattr(self,'motion_recorder',None) is not None and not self.motion_recorder.closed:self.motion_recorder.capture(self.data)
-        if getattr(self,'physics_profile_active',False):
-            from ..physics.profile import forward_after_step
-            forward_after_step(self)
-        else:mujoco.mj_forward(self.model,self.data)
+        from ..physics.profile import forward_after_step
+        forward_after_step(self)
 
     def start_trial(self):
         if self.task.get('execution_readiness')=='environment_preview_only':
@@ -431,11 +427,8 @@ class Service(RuntimeService):
             self.cam.fixedcamid=self.world.model.camera(self.task.get('view_camera','global')).id
             self.record_cam=mujoco.MjvCamera();self.record_cam.type=mujoco.mjtCamera.mjCAMERA_FIXED
             self.record_cam.fixedcamid=self.world.model.camera(self.task.get('recording_camera','global')).id
-            # Only runs that froze a physics profile render apart; others keep their frozen behaviour.
-            lazy=bool(getattr(self.world,'physics_profile_active',False))
-            if lazy:
-                from ..physics.render_worker import RenderWorker
-                self.render_worker=RenderWorker(self.world.model)
+            from ..physics.render_worker import RenderWorker
+            self.render_worker=RenderWorker(self.world.model)
             self.server=ThreadingHTTPServer(('127.0.0.1',0),Handler);self.server.daemon_threads=True
             threading.Thread(target=self.server.serve_forever,daemon=True).start()
             url=f'http://127.0.0.1:{self.server.server_port}'
@@ -453,7 +446,7 @@ class Service(RuntimeService):
                     self.store.event('HOST_LOST','Meta',{'parent_pid':self.parent_pid});break
                 now=time.monotonic();acc+=min(now-previous,.1);previous=now
                 # Between steps nothing changes unless a request arrived or a motion check runs.
-                due=not lazy or acc>=.02 or not self.queue.empty() or self.motion_check is not None or self.ended
+                due=acc>=.02 or not self.queue.empty() or self.motion_check is not None or self.ended
                 if hasattr(self,'window') and due:glfw.poll_events()
                 with self.lock:
                     if self.render_worker is not None:self.finish_failed_captures()

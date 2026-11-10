@@ -20559,7 +20559,7 @@
     }
   ],
   "physics_sha256": "365c02b44edd2d4fa4a7bb3b3523c14c49e1d4e1ca41cd2f1db78f29328d43f4",
-  "scene_sha256": "f333c41857356d46da3634595fda03b79969bee6eaf9f689bf7858993d61a437",
+  "scene_sha256": "685296502a63c34fb9e6644dbcc423d5014433c77db7349d93b8bdc89e0cbde3",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

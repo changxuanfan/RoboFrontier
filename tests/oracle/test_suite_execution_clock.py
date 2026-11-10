@@ -18,7 +18,7 @@ class SuiteExecutionClockTests(unittest.TestCase):
                 w.arms={r:PandaArm(w.model,w.data,r) for r in t.arms};w.command_bounds=t.task['workspace_world_m'];w.beam_sampler=w.spring_sampler=None;w.suite_sampler=Monitor(w)
                 q=t.arms['A'].qref.copy();q[0]+=.05
                 for world in (t,w):
-                    for robot,op,params in [('A','move',dict(joint_rad=q.tolist(),joint_speed_rad_s=.3)),('B','gripper',dict(width_m=0.,speed_m_s=.04))]:
+                    for robot,op,params in [('A','move',dict(joint_rad=q.tolist(),joint_speed_rad_s=.3,joint_acceleration_rad_s2=2.)),('B','gripper',dict(width_m=0.,speed_m_s=.04))]:
                         arm=world.arms[robot];command=arm.validate(op,params,t.cfg,np.asarray(t.task['workspace_world_m']['lower']),np.asarray(t.task['workspace_world_m']['upper']));arm.start(robot,command,0.)
                 for _ in range(120):
                     w.step()

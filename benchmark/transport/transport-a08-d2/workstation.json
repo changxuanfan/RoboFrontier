@@ -45088,7 +45088,7 @@
     }
   ],
   "physics_sha256": "06ede4c82611246ceafd70f12f26577458464725764c66c2ae96678db8c9879e",
-  "scene_sha256": "5a7b6a18d954b295d38f1a90295a69af90af1173f1eeb49eee07eb4b07fa1b66",
+  "scene_sha256": "f7379cbb92c0434ca0f6a83537b59872a522e1b893d8ff063eebed85dd7bb31e",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

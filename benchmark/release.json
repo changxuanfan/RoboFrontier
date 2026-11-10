@@ -13,10 +13,10 @@
           "id": "transport-a04-d1",
           "directory": "benchmark/transport/transport-a04-d1",
           "source_files": {
-            "scene.xml": "53713645c019e1625f20a4b0355ad9979578bf73bb6fa110571d6b7b90f47201",
-            "task.json": "2293c994f5e3cd6fd4c1abf0fab80cbfcad4b428489d1f413aa65d47d4bec092",
-            "environment.json": "7779e0bc09c3d48ddfb4675530e3bdbaa972829c4cee45e6f251da9216d4c259",
-            "workstation.json": "e747a17617bce8ce735d7ec78ae5272d587310c07a1e4f378e14dcd1b5d921e9"
+            "scene.xml": "068f44c6788102cf2dcdbda96076e31da1e2d85caa2320f30e88ee14eba1cfbe",
+            "task.json": "440ac6bd47c2081777dd662dab1100edf9c64c0db07ab9f61163fd0b3416603f",
+            "environment.json": "8b76b1b632d07d1d35bbb2060f00433ac982419c2259bb39584452f75fbb6d2b",
+            "workstation.json": "e1ac653d8e065ea46387e24c3bfb8f3ed22065c8c96abe70b170662b6c741a8b"
           },
           "public_files": {
             "family-guidance.md": {
@@ -34,10 +34,10 @@
           "id": "transport-a04-d2",
           "directory": "benchmark/transport/transport-a04-d2",
           "source_files": {
-            "scene.xml": "7bd4dfe4e3620d10e12855473120a31c24f6b2520a83b11c7e7adcc8058597df",
-            "task.json": "7a60c553ea26ee27946039e666453d640bd10a7a1f5ef7f915506f13ec91d9cc",
-            "environment.json": "44cd83bb0927802bf85097d2d36afa97270b13e1b41f179547904938705c20f9",
-            "workstation.json": "30be06add6615b382cdbeafc497a376e2da7975782131fc643d701ca682f3845"
+            "scene.xml": "bff5d133cc54a6a22c9f60266dfe980886d7a10b4ba1c01c72a36c22952ded5c",
+            "task.json": "f6290495ad0c5be3e392d2e64483fe0ac417cb5af3809bf349f67cb6f84ce189",
+            "environment.json": "dbc4a8b538934172858c85ebcc0d47da135dd472f559ef0b93d3f910e857c8b9",
+            "workstation.json": "80d7ff76d7aaffe91a5c99058509402cbf6b74d1bc55fab5c98bfde4e379b687"
           },
           "public_files": {
             "family-guidance.md": {
@@ -55,10 +55,10 @@
           "id": "transport-a04-d3",
           "directory": "benchmark/transport/transport-a04-d3",
           "source_files": {
-            "scene.xml": "0b5f7ddeb1cacab873419693564f224c4482abc60838e881abe683a8fc34bde8",
-            "task.json": "6ff0ec296d51d0abf28a87cb2080339f283ae00cf3f29c5250886fa325953bab",
-            "environment.json": "a9337e8c1b5779cd74a41ae52a7dcf71a9c6f6f5247bf260b0be2f35b3fe13b7",
-            "workstation.json": "219a5a213b609a9b8c3e9e02606fe9214fac2b794d3264592e9302c1490d50c2"
+            "scene.xml": "143fe5a77c285f9eb5c448be92cb2610b648fa779a3e26fb88a80a7701facdb8",
+            "task.json": "8bcc0c9909ce5541718f0782a1a5d333bb151bb9e38162a7de6421ef5e33c6b8",
+            "environment.json": "57bb7802274b6b97f0a49a0814bd70481aac5c6f73b3d8657f270f0a5fb3e635",
+            "workstation.json": "31deeec86662ec334154636f265c613de3841ff228c0232c75c5045f14139b78"
           },
           "public_files": {
             "family-guidance.md": {
@@ -76,10 +76,10 @@
           "id": "transport-a08-d1",
           "directory": "benchmark/transport/transport-a08-d1",
           "source_files": {
-            "scene.xml": "8df9422a6d07504788bd75a21ed3f3d8427c334ed0c2abe7ec8f7b034322b6b2",
-            "task.json": "1ce75a448a94a85855fe4edc9f0be3fd2814f52cd903c27cbcc4b16d4f354df2",
+            "scene.xml": "77d5e14f4e2370644bc43f2a0cc07930949e3e41b600fb7f03c02615a3732ca5",
+            "task.json": "80e540f3d3ed80ecc71af0a5127d99bb98fe8c7cac098f02f64bb683f3c83d01",
             "environment.json": "5654ced8e03bdf6a6ed2e216a445ba7f46ed7f71d4bf4a5aaaee9c43487b204e",
-            "workstation.json": "c7c3685f62958d90f50e6447a87c44f501551846df9cd75977f9b458a740df36"
+            "workstation.json": "11304b59b89bce8d719a7dd45ca6a70176fe97b3b2484f2cfe44186b11d63cac"
           },
           "public_files": {
             "family-guidance.md": {
@@ -97,10 +97,10 @@
           "id": "transport-a08-d2",
           "directory": "benchmark/transport/transport-a08-d2",
           "source_files": {
-            "scene.xml": "5a7b6a18d954b295d38f1a90295a69af90af1173f1eeb49eee07eb4b07fa1b66",
-            "task.json": "a5f991c116c0d3d84428127f8cf19a11d25ddafae886a192eb4bf33ddad2ec04",
+            "scene.xml": "f7379cbb92c0434ca0f6a83537b59872a522e1b893d8ff063eebed85dd7bb31e",
+            "task.json": "b34ddd6664134a035463aeb9cbea089306c928e6c605c8c30d62230b7f0b0313",
             "environment.json": "66ec66d482b4071a140128ad5329b37c627d1eeb4b3d70ef4dcca21c5a870a6b",
-            "workstation.json": "3afeb6540b75551f5e4e6eacb059be0455b99bc395abca5b850730a049a052fd"
+            "workstation.json": "a6aca0664236031cfc37c6bdcff12b5f460c551a044ab5460a68d977eb7b9662"
           },
           "public_files": {
             "family-guidance.md": {
@@ -118,10 +118,10 @@
           "id": "transport-a08-d3",
           "directory": "benchmark/transport/transport-a08-d3",
           "source_files": {
-            "scene.xml": "de593ea458c9bd29464eec8e8c5cf4a61bdbe28df72aee3eb2d811cb8ed7393c",
-            "task.json": "ff4f4079dabb620675afa9cd91e603ea2c2cc65465ba288ad5d4ee10cc5a7bfa",
+            "scene.xml": "7cef707c1d5b5f83e8ae752f161fb7d69a6df57b639cbeb1f2ee9f7a14fa3a40",
+            "task.json": "df582eccc22c6cf425e960a84c43209cdec379fd4d895a0f494fd6187c6cbfbb",
             "environment.json": "99c3c5515097199391d0d28ca547e62733c0ad4845ed15de569e1dbc5ddfecc1",
-            "workstation.json": "ecf2a2e009532b7541ccf1195cf43dcf56c5132b40d6069e99ca33e9c7325e5d"
+            "workstation.json": "e262b151b8895895257c44c6ae1f6e94ece1164f20bbdc68904f1e28d21315a5"
           },
           "public_files": {
             "family-guidance.md": {
@@ -139,10 +139,10 @@
           "id": "transport-a12-d1",
           "directory": "benchmark/transport/transport-a12-d1",
           "source_files": {
-            "scene.xml": "8c814682126427300b8408fe8ac341199d613524fcebfd5216e8b063aa41440c",
-            "task.json": "ea96ce8158d9f45cd9ab2fff9eea087d962d9a187bfab25da5e797931af897b9",
+            "scene.xml": "8c1bcd8e8cef17c5bf9c6e7135b76051b083a9eacadb5bb286c621c6c497f0c2",
+            "task.json": "521b4f774a471abf30a97b8b4d844ffdf985acc1315003bf5fdcd0d91052f5b8",
             "environment.json": "888c90e07a81fcdd1347f64e007b2cea6f5f9eb4882c37d3a2aa0081afda7441",
-            "workstation.json": "296ae6e530b04ef96a4e77928e165437611ef4611e32923ca21c975e72e6f0aa"
+            "workstation.json": "cd48512f1ed8fe8d6b09184689d3251c27fea0444981e72f6f1205e90e73f1de"
           },
           "public_files": {
             "family-guidance.md": {
@@ -160,10 +160,10 @@
           "id": "transport-a12-d2",
           "directory": "benchmark/transport/transport-a12-d2",
           "source_files": {
-            "scene.xml": "0851cd2f05551603dbf5f090c8d03526f9f77e89d0a90aa4825b00937f5f9f71",
-            "task.json": "a1966a82cf392ab0a9ee61ca35b6036dc37c08d47f1801f8fb5c9c45e4622279",
+            "scene.xml": "15a30dc63dd41b3a7ac85cd8238269d4010ea0b48890a8908df23d4ff5e09276",
+            "task.json": "94bcf051c87f2d48382f7e3a2a512250513ebf172a878f9e1eff1332c3615f1b",
             "environment.json": "38354a2402911dae70a5497ea805de8bb68da86fb00272c0e8f425d6430d3714",
-            "workstation.json": "28a170321641b1cf6dd858edc556d67b57b96e0d6ba13518fae49c8b1c34bd26"
+            "workstation.json": "8117fa8851dfdb43075c8c678debafb064d2c7c6ba5f58ffabce80fa3df9934a"
           },
           "public_files": {
             "family-guidance.md": {
@@ -181,10 +181,10 @@
           "id": "transport-a12-d3",
           "directory": "benchmark/transport/transport-a12-d3",
           "source_files": {
-            "scene.xml": "5855d88166e3449cce8124f0e40773208b14664275477ac3cdf7fa5a81e56fe1",
-            "task.json": "5275a550dccce19dadf9a0c695f12e648f316ba161f9a5b97548fd9ff5c3c005",
+            "scene.xml": "cc40b5c3ea9c742f11417e95a04a97371782d4904f1d6f74decbe3de96edcbde",
+            "task.json": "9625b4d6c820c4fd953cbef665dbfe2810d5c35770f9faa25177dec5c7e24201",
             "environment.json": "2f152f38d7dc827cc4faab1d54744fe5edb502cade8d67dc60bc22e25c504f95",
-            "workstation.json": "0537907c56231cbd31d8291df7ac28a13573436ce8641d471da65d364ef9df45"
+            "workstation.json": "6cb121e0920aad1137bc9c1ea44a77b386e3692c87f84481717f0a84553c23a2"
           },
           "public_files": {
             "family-guidance.md": {
@@ -367,10 +367,10 @@
           "id": "mosaic-a04-6x12-d1",
           "directory": "benchmark/mosaic/mosaic-a04-6x12-d1",
           "source_files": {
-            "scene.xml": "90f704300cd0e17c5514e38bf4d0a5463a4c44e733291bbc7fb87c7707c936ac",
-            "task.json": "c66f87bd04836495d617b4a05768d97e0fad77b2a9c085208fe3e0251db454e7",
+            "scene.xml": "a657566744a800bcb21020f603f3c43bc04466fe57a2e0de4afc90304dad2cf4",
+            "task.json": "a738e82c0ede716a3bdeefdccc98ca822195a14d8dfd4bdc6de53da356510d01",
             "environment.json": "cb3cfdab87297226c12b89e4f496820dfb22491dad93ade9cde16dc8e9520b72",
-            "workstation.json": "e121c728f7a357af7b981eefe4aae99736ad21cc9bf6ee06af127d488baadb85"
+            "workstation.json": "28df9df13a48b8e7e5b350f66764214a2de0340bc1d3edfe66e5f1bc658a98c2"
           },
           "public_files": {
             "family-guidance.md": {
@@ -388,10 +388,10 @@
           "id": "mosaic-a04-6x12-d2",
           "directory": "benchmark/mosaic/mosaic-a04-6x12-d2",
           "source_files": {
-            "scene.xml": "f333c41857356d46da3634595fda03b79969bee6eaf9f689bf7858993d61a437",
-            "task.json": "1837718b630d21634253d0e68ffa09d793d358c6346e6e95531fdef5edb33630",
+            "scene.xml": "685296502a63c34fb9e6644dbcc423d5014433c77db7349d93b8bdc89e0cbde3",
+            "task.json": "952e1a421cd02bea629562458d09e2a4c3d487878f8130eef231cda977e2f36b",
             "environment.json": "28e994e11b15333abf5e89483f5453868ec2096d28a2f52038b3548d20711cd7",
-            "workstation.json": "7e4f2aad65748757085b793d497b6a685c0f6359b300eaff5acc59a9b427f12d"
+            "workstation.json": "e4c3f2608fd4d1eb9e01778098a287dec5027a5cb5029a8a07413e5a240d3f25"
           },
           "public_files": {
             "family-guidance.md": {
@@ -409,10 +409,10 @@
           "id": "mosaic-a04-6x12-d3",
           "directory": "benchmark/mosaic/mosaic-a04-6x12-d3",
           "source_files": {
-            "scene.xml": "c1ad7eeaa2e576a296f402db0235818c5e4cc0980561b692a1f04d9470dc9c95",
-            "task.json": "42ed3ae17ae6cb875210fb68797c4ded798d36dcfce2d271187bc039bedac56a",
+            "scene.xml": "bc9bf3c5036f9f7255f3ffe130a910cc2212ea0dad6886ca8d447f2ea1e72229",
+            "task.json": "43204ae11816c590e918e4e8dc7f4233bce7aa0c970a6c8b0f80a166c24bdf8e",
             "environment.json": "e7d2b5520c9d4771d1650af5e0335237daecd7af9a655d0d4317e103d20da76b",
-            "workstation.json": "dfc43310b84433c17843cd0bf1f6bad45c6ed059c64b4d066007fe7d02d0c1eb"
+            "workstation.json": "435d7fbe0813aee18ff0f7197482740bf6f9db230fe19f0d9e035d59fa6b1a14"
           },
           "public_files": {
             "family-guidance.md": {
@@ -430,10 +430,10 @@
           "id": "mosaic-a06-9x18-d1",
           "directory": "benchmark/mosaic/mosaic-a06-9x18-d1",
           "source_files": {
-            "scene.xml": "7457f6863624d6efd135e5fadd20d29f6b201f1cbec4261a695443e5068934c6",
-            "task.json": "0dd76d90197bb3ad8259f0f541416a585c9be9b47cc4e3e0b92e7b883f6a019e",
+            "scene.xml": "14493f24bd99349d4acf29d4ee32e3d501c9bb27707fe194ab629073e56e1885",
+            "task.json": "cdbb0090a194dbf6f12ba1cb37192774311743eef4fb4abfdd76a73b1f8c18af",
             "environment.json": "e3dbf2b55204238fbd84d60f5c1627860eb4af6dd0b34b8e0a555f5d1f59079c",
-            "workstation.json": "e3d9912b2af7b527d2b488a40320038788bd1e2f470f35a6a2501d972e77c5d6"
+            "workstation.json": "28ba0aa52729f00fb47dac5144370596e7ed4b49f9fb5c28791df91683093b61"
           },
           "public_files": {
             "family-guidance.md": {
@@ -451,10 +451,10 @@
           "id": "mosaic-a06-9x18-d2",
           "directory": "benchmark/mosaic/mosaic-a06-9x18-d2",
           "source_files": {
-            "scene.xml": "94b19ec0d1448f9e0ce011dc0de2fe98473397743f793f83f28929018c644349",
-            "task.json": "129a2407bb1650bbe8d8119d901c4a8e4a3f1d1d4ae961914c51a9ef832fdb29",
+            "scene.xml": "aeb691bfb1c754ce21bcb631b7d3e7259a990009bcd1e05aa01831d890e30506",
+            "task.json": "b5c42cbd7be0ddd277ba9dfcd2cad71d8e4f616b11800b5c97e16342831cadaf",
             "environment.json": "f677c43657363c6280efbba3cea6da6f5f2b11697283802081280150ba3cb1dc",
-            "workstation.json": "4511143f02fbca5776c0e1f60a53582cf3b88b1daabf7fc5622bf96660fb4bcc"
+            "workstation.json": "2d1e30dfbd7791703a8de6e4104650ba468dd00e3cf138138c0d837b7b83aef5"
           },
           "public_files": {
             "family-guidance.md": {
@@ -472,10 +472,10 @@
           "id": "mosaic-a06-9x18-d3",
           "directory": "benchmark/mosaic/mosaic-a06-9x18-d3",
           "source_files": {
-            "scene.xml": "9a21a32dd14477a449f9a1a0f93bf4bfd6d8fcd304ca380538c8141d54cdf0f0",
-            "task.json": "54165768eaa45b31afd07ea8ff22b435416c5cbd1262dcab063668dc8d0373bc",
+            "scene.xml": "ee69ee2b8feb1a17ca8a36a521833e33aaccc4490afad9896f46c0522ec383f2",
+            "task.json": "03748fa089c9f632ea8552f196615b8a9dc1109b36da880d181e0ba30ffc1a2f",
             "environment.json": "58cb72749ff038f1719f772e7c68dff1dafa2ed1aaa2b53d1bb0db453f40dfb0",
-            "workstation.json": "5976046b79aca41e17f9942874b2a39330e8b971f65b378c98cf9cc01e22c5eb"
+            "workstation.json": "c633a1876a7f276654094b84b180afd0ea6012c7b1905bfb8f72f8ce14e4daba"
           },
           "public_files": {
             "family-guidance.md": {
@@ -493,10 +493,10 @@
           "id": "mosaic-a08-12x24-d1",
           "directory": "benchmark/mosaic/mosaic-a08-12x24-d1",
           "source_files": {
-            "scene.xml": "eaa59d848aeaa33a7ba0d5c900a836ef12de4088f88ddb19aed0a0995794f7d1",
-            "task.json": "e69a22785786c3a0bb1775e6196233f50273f60b2f18bc3f69e1efecd2ac2ca4",
+            "scene.xml": "200ce93f41f1e83214e9d9e2864dc98a1bb217475d92cb32924eae0278dea715",
+            "task.json": "6a5e55d505e750e348846c9f656f0a18c5117e130ddfa8222e9049226c43e834",
             "environment.json": "dda26fe56288213455f690d417635324f9f2bfa26439a541933cbba769816d57",
-            "workstation.json": "d105d2dc3343a957a87fde132af0e3b662b250e7dc3549c04557728a0117baf0"
+            "workstation.json": "32c2200e6e3581a6f5caeca2df407c6443c6d8b684510a6f46f5c8fb171f1bfd"
           },
           "public_files": {
             "family-guidance.md": {
@@ -514,10 +514,10 @@
           "id": "mosaic-a08-12x24-d2",
           "directory": "benchmark/mosaic/mosaic-a08-12x24-d2",
           "source_files": {
-            "scene.xml": "8b88a8808fcfa11cef4b90b9a3fc906964072d3443a5fc2822815dc8a687284f",
-            "task.json": "0f317243dbc3398697fcbc4e6826d31585387dcd4d07e0f1564565378e7d1791",
+            "scene.xml": "f00b483cd47e44b09976dda1a4dcedde70ff4842466f1a668d0cd3b30a67e298",
+            "task.json": "9a1a40ebe76d72ee65b80c0f349c44f065d09304155031ddfa7ba5f8230dc517",
             "environment.json": "f8209cfaa64e679daea402a6f6c528f8eafe41e651c4411cf2d2101eba000e10",
-            "workstation.json": "fb84f8e3ff86169cb9ea01d72dcd6383214c4931c4e0aa97076afaf2f9edeedc"
+            "workstation.json": "a56a471ea42f01082b9a10538ae55ccd24ed9f13ce822e5bcf2769b1057e7e1f"
           },
           "public_files": {
             "family-guidance.md": {
@@ -535,10 +535,10 @@
           "id": "mosaic-a08-12x24-d3",
           "directory": "benchmark/mosaic/mosaic-a08-12x24-d3",
           "source_files": {
-            "scene.xml": "3ef29947b51fe420b3e1bc516a8e3b512cc2e0f3568b3ec1f21c8169ed5c9547",
-            "task.json": "6ad02637dfaeb32b0c7b3bc881e36407ee2db0105174fd1081e375ab1ec3c7c5",
+            "scene.xml": "78c671809894eaa8ebf715250720996707b1e9f309c47471bb755fdf9a18cfcb",
+            "task.json": "3daa53827b3a65734e98a2f3e12c64c68af92a17bc555e04272e459c6e8d3a21",
             "environment.json": "26696ed0a87b47af85183671c594747dc3eaff8d6ca9f5603a932f051e284e0d",
-            "workstation.json": "e138424fca411c637fea9d635d81173eaa5af3d6f8415dbec4212540c1569672"
+            "workstation.json": "da403e10de3611ad87923ad9f21f62317f33c2c620f3f25c40f231a893f68b10"
           },
           "public_files": {
             "family-guidance.md": {
@@ -748,10 +748,10 @@
           "id": "relay-a08-d1",
           "directory": "benchmark/relay/relay-a08-d1",
           "source_files": {
-            "scene.xml": "ce01162529bcaaedda48bd2f5ced66fdfa42df7ca044ecd25372a0c610da6cef",
-            "task.json": "bd41b831203d6b11520d5742c97c848407c812956bdb7cd3a80e117df44371ee",
+            "scene.xml": "45552633c43dc5cc8a2cd16344066a03ffa3f74756c1a550dd5d63513d09d68e",
+            "task.json": "94f38f12cc12519687139e4ea1fc9bcf224bb06ff574be8f1fab9be0c569cafd",
             "environment.json": "4c4306611419b8e96992d761e0f459ac05314742222704d8c4e116ea103309a7",
-            "workstation.json": "9e998714534d803c8f67d3077c056e67ba79f2198fbac96af62e5ace45ce3f4a"
+            "workstation.json": "dc5ef5946d308a084b0bbeec0df4fa05f34fe950733e37f2eff7f80284635ee4"
           },
           "public_files": {
             "family-guidance.md": {
@@ -765,10 +765,10 @@
           "id": "relay-a08-d2",
           "directory": "benchmark/relay/relay-a08-d2",
           "source_files": {
-            "scene.xml": "7412a55da139aa0c57278f1f1d6b68d0a9594ce407ad4c0b624aa0a9b766fdfa",
-            "task.json": "6f854393eb3260345f6e98822f4a37bec0a4c8c04095eb3e3de094a86c02d859",
+            "scene.xml": "90a9cc212451aa4b91ea879690debdad7b9a2246a0ef03c5b395af5d0ee3e95e",
+            "task.json": "1431cb8f38bf0ae569ff3e7e14c56bf35440bb557f7c50745cc079314cdd7161",
             "environment.json": "aeab955b43a3f51d0253b3200ae50c02b7622fb9b21674a0eb1d1db102a13160",
-            "workstation.json": "d3fca21de7d9f40c68a5c8ad5995b8daa8446304b320232d6d484fc2103f1c52"
+            "workstation.json": "e8217d52638ae0a0ceb0bf6c2086aff0d5dc32fb2857fe7a945c99883db8b5fd"
           },
           "public_files": {
             "family-guidance.md": {
@@ -782,10 +782,10 @@
           "id": "relay-a08-d3",
           "directory": "benchmark/relay/relay-a08-d3",
           "source_files": {
-            "scene.xml": "0bf3386449482496d13ea597262c470fa5cbb5748840ecda7fb039bbef860a0e",
-            "task.json": "a2d2796df105fc4bf09f53509682a5d1e83dec660be9b703c935c24a8effb35c",
+            "scene.xml": "e241bba5892ca798e8c72d2f65d5604d7169b0d7efc70528a4d994ee913ac374",
+            "task.json": "7d8dd44e22941de23218730492b47077864e359ceb441411e4dc4b559b1295de",
             "environment.json": "0598539858b1cd37e408fe2980eff135ee12b1eb44764caa5563819ce9fd9e7b",
-            "workstation.json": "8595314527aa716fe9034b2933d162c665e9d8e0ae4268902d58b838ead06138"
+            "workstation.json": "e773f24d364b11bc10435749ee86f22d11c97e0a21ee4e54014af8f9841980fb"
           },
           "public_files": {
             "family-guidance.md": {
@@ -799,10 +799,10 @@
           "id": "relay-a12-d1",
           "directory": "benchmark/relay/relay-a12-d1",
           "source_files": {
-            "scene.xml": "09bec4bc56fae92f0e636965f88b4408c67c017f5fb95fd4df5a0182bba7f775",
-            "task.json": "9ae75cc580d7afae9004e579ddb8914e57357c07e5cf1f1f323cc54feb5a1dad",
+            "scene.xml": "88a591081fe5545c8f80eef419c2bc60ef82155bb9f11b3ead8107e2f8c7a5f5",
+            "task.json": "dc328c23f38c33d5e2dc014f28db585ce74e25c89b13dd428eb14a232c5b10cd",
             "environment.json": "bc0f7e933578791b75a16a7665e9d13e4d93b67af5711507299436bf54e8eb5d",
-            "workstation.json": "a9c1c1587421174d0992ef3e20516734f186457d0e8dc14d36183eed3496fa97"
+            "workstation.json": "94eebda34260e12e19d6164351f02cddb95ffa70615f0c79cfcb6f5a52554912"
           },
           "public_files": {
             "family-guidance.md": {
@@ -816,10 +816,10 @@
           "id": "relay-a12-d2",
           "directory": "benchmark/relay/relay-a12-d2",
           "source_files": {
-            "scene.xml": "22a8116ca86b205a2fb2d9e12e96d32764d96db0e3894d792497c00bdfce013f",
-            "task.json": "316e319853fddb7e324047834f1806b58b39191e9d3cd4758a5bbee466a10635",
+            "scene.xml": "8bafba7be4fb089122c6c827f7668aa54284f3dec02b0abc27ba00bfa9e38392",
+            "task.json": "7e11d2094074b461ec8a4035062038b76435a24a74bee21dd4ecf5c51e324a47",
             "environment.json": "d741f83e095ff4f598ee0bcc025d1073f598108c1cd1b9fc010f7bc6b27e4d17",
-            "workstation.json": "598465dc4b42933334e71e32cd14de761e0030e743a04f3660599ff9871fc20c"
+            "workstation.json": "1814b2732119a6171c35c8e082357e32b15a7fdeea52b2bb76acd7e53cb8d2b6"
           },
           "public_files": {
             "family-guidance.md": {
@@ -833,10 +833,10 @@
           "id": "relay-a12-d3",
           "directory": "benchmark/relay/relay-a12-d3",
           "source_files": {
-            "scene.xml": "30122d18736ad61e97c61a9cbea359b873e6a226aa0aacba7c60338d912153ae",
-            "task.json": "534b9fe7c1884aad8bf84c146192d470e1abfad06035d09eca21ebb88a90e290",
+            "scene.xml": "eb192f71d901296a6cea7248e6ad74ced210e09a6f0693fef6a89ccdb45d111d",
+            "task.json": "db904d7e6e6845aeeb83cb7c71592833543c17a3a553dac3f9691a129b893da4",
             "environment.json": "5b7bc0ddf84a6029059c298b324f0e3f51e6c15d2b3087f30d5657b45f39fd1a",
-            "workstation.json": "78697dbcd9ae8cd2d1318ad0800e26bb63cbc72dba0db2796c6ae4d09808652d"
+            "workstation.json": "d476a3ec743865d666318e1cb97c155fd8445a48230ada42785a5e8b708813c0"
           },
           "public_files": {
             "family-guidance.md": {
@@ -850,10 +850,10 @@
           "id": "relay-a16-d1",
           "directory": "benchmark/relay/relay-a16-d1",
           "source_files": {
-            "scene.xml": "8ac11391873bc813df94eb6a3718ed04c1701f6de15224fb68a45226fd158b61",
-            "task.json": "188712601e3c9e532ff2177c5e3924b7258e5abb37592157639482c4df416313",
+            "scene.xml": "0083fdd3ee44d80a9f04be8c7247b0402fc234edd4bd106a08e7bcb94587d80d",
+            "task.json": "21e223bacb432299d59029d987bd3c6963a4fd03ed32e46550e9ea4da5936d8a",
             "environment.json": "ed694fad663e8dfec4c5b68b28d0f7e26482cd98408dd63e8be5eaabea63f51a",
-            "workstation.json": "55e49c69ca1cef710bf020fd3232e436d090c90808af70138ec63ec569d65c47"
+            "workstation.json": "f4610042eddb037559fa772927bca2073a8ceca8fdb73ceb3dbf475297ea7858"
           },
           "public_files": {
             "family-guidance.md": {
@@ -867,10 +867,10 @@
           "id": "relay-a16-d2",
           "directory": "benchmark/relay/relay-a16-d2",
           "source_files": {
-            "scene.xml": "7ded10c6627dd13632332223dff2ec0c5e800d730a36dbdb0f2d3e0971ff3f13",
-            "task.json": "c0e5aa483fc69c2b7756bd787b625f25428a8793ce639303a4bc13d61dd5e932",
+            "scene.xml": "800c52a6d3d0dcfa82bbb0bf6d963832469e6d6a9a2c6f9de8eb6b50a1915b38",
+            "task.json": "1307ce03940cdaa7b7a7e88308a789ed30f094a2b4f3f4ad3c9600f34f7015d4",
             "environment.json": "a7abb4155fad245f24447b01818ca407e64f29f01acba030efa02be2d672ea0d",
-            "workstation.json": "e05499eff01bc4ddea52ec3eacb44fccf90f2f493f43bfb37c67587fccc513c2"
+            "workstation.json": "d4faa7b1f21dbca3ac61df4b631135fe85b1f97437e7aa9f42fcc0b9be47f317"
           },
           "public_files": {
             "family-guidance.md": {
@@ -884,10 +884,10 @@
           "id": "relay-a16-d3",
           "directory": "benchmark/relay/relay-a16-d3",
           "source_files": {
-            "scene.xml": "54466c5c021d9def271ac4a78e82a30ff3084921118028db6da6d297ad8c10b2",
-            "task.json": "0b7dd12cd98d0f72e6b029ddc55ef36f117dc7c1d32e78d36347278cbf4728c7",
+            "scene.xml": "028194de591e9c0034da4e86667a523d4bc96c59008647c3b2c201fe404fc689",
+            "task.json": "1b9535d2653885ed9aac0ec7748be62dfafef99b366747c0ed7050ca19fa1de3",
             "environment.json": "fd9686b23b5b20c39e075484d74b139cd3869e069fe7eac00ad749ab738b57c0",
-            "workstation.json": "2033475df266d061a4375a0a35973129081d9420db70bbd8f3be050fc0d84eb8"
+            "workstation.json": "c4c95421c67c54effc69c1b6a882f70cf62a13b961aee12aad8edb68cafed239"
           },
           "public_files": {
             "family-guidance.md": {
@@ -1057,10 +1057,10 @@
           "id": "dial-best5-n04-d1",
           "directory": "benchmark/dial/dial-best5-n04-d1",
           "source_files": {
-            "scene.xml": "64158f82832ed88b3d15939230be9fb002b1dcf818d8dae7a857ff5143e149c1",
-            "task.json": "70cc1f38928e9d9122a7f2e94f3ceb33b12807129e1ea1eda4d4f487ba5940f9",
+            "scene.xml": "596f6a76e8e44a938fed07289b54c5b680576b939c44d44bc82dd2a31a6d1322",
+            "task.json": "4a65e30561cf2f6fe375fef79988f3083bafce393eef50da1eab2321b33f1023",
             "environment.json": "d9aafa35efd42452e1ab1896751905fe481d13ce4a2d27a9990ac91099d5b348",
-            "workstation.json": "abf817d2e7f865fff366cda22bb79d582bc1a5bc323aa5a61c054c06ca668b5f"
+            "workstation.json": "04dfcf88c9af2c16700e9187271803f1960185e1e68cef578c190fda30dc5fca"
           },
           "public_files": {
             "preview-top.png": {
@@ -1102,10 +1102,10 @@
           "id": "dial-best5-n04-d2",
           "directory": "benchmark/dial/dial-best5-n04-d2",
           "source_files": {
-            "scene.xml": "336bbc14aaf8892419f58dcef6d09a83c07bf3e97483ab01bc0479cc9e41ff2a",
-            "task.json": "7cef37f0e405aea8925715392b099302a5af0a4e07e7412794fe5be731e997bd",
+            "scene.xml": "7be334f7e4d61b5930bb57897402eeeb52dd1011bdbe8f19aba86f2cc02c6fed",
+            "task.json": "177d5e92fdfa99b1132b977f5b6f11b3f4ea4770f964d36e2d3410c09c2c98c3",
             "environment.json": "7ce1035b14032b39b8e339cb9a5cf227685b2e036beb69151c4c6228860f474a",
-            "workstation.json": "f90f59b5cd8ec1b8b93b20d903fc347c4937046f561095a7463306899181cbb8"
+            "workstation.json": "0acaffdc51fc4e827601dbde6f9dbf5516c0bd92884a5ef35e3c9b2b8619fabf"
           },
           "public_files": {
             "preview-top.png": {
@@ -1147,10 +1147,10 @@
           "id": "dial-best5-n04-d3",
           "directory": "benchmark/dial/dial-best5-n04-d3",
           "source_files": {
-            "scene.xml": "ef2185ffed8571c7e26c9a58c38cfc17294785416abd8fc5a06cb7443d888349",
-            "task.json": "20dd490f57c288a326e2f43d17ddad76161f2e07b361b0a831c229e8f9632423",
+            "scene.xml": "557bf6fae96dd237af32ce891043a809ccd7757a2b839848ef4b13bee6e65465",
+            "task.json": "d5ac77f57b244afd6270f2551f4ea165263aeb2c895d941df858f7402cd3456a",
             "environment.json": "4af39190245c6fced12e29eb7a6743f35ce88018f799627d2afefc6c5157940d",
-            "workstation.json": "700ec66f52eed0ccc1669ac5de3fb983f727c6616e5be9d563f7ab0658fb2840"
+            "workstation.json": "2a1bc2219e83284aabfee73e0f8cf994cd4f88e6a42073d5a0e07b57acb23f77"
           },
           "public_files": {
             "preview-top.png": {
@@ -1192,10 +1192,10 @@
           "id": "dial-best5-n06-d1",
           "directory": "benchmark/dial/dial-best5-n06-d1",
           "source_files": {
-            "scene.xml": "88fed05ed351d9709f45d8db8c0d2c89695fae9a4f417b55a5af7d9cf5a1d772",
-            "task.json": "5fa6c6e28242571d42f7c1a4879e25b85ed584fc18a046937ba23a366406a2f0",
+            "scene.xml": "55d6df9de7a9f148859b50026322558be932573d22771c31589cb4347866562d",
+            "task.json": "ebb196209ae4aac319f185dc972cc4301468fe25d76d3489f4b7458351efddd4",
             "environment.json": "788f48d43ca2d489c38e9d29eaabbf4fbd5cba17854ff10b9512054ca8f3009c",
-            "workstation.json": "e33d182994b4dc8d24e36f08a65017f2e71e76bf53b96c5b75e605487b39a6f7"
+            "workstation.json": "37583bfebb262e5ecc067907d349aa442ddec08de11d6b5b00d67b18356b1e05"
           },
           "public_files": {
             "preview-top.png": {
@@ -1237,10 +1237,10 @@
           "id": "dial-best5-n06-d2",
           "directory": "benchmark/dial/dial-best5-n06-d2",
           "source_files": {
-            "scene.xml": "a8029d124a47a786e25ca949db07985459592e12e3a9c6f8fc7298493e2b42c7",
-            "task.json": "fc475e2e65e2b42e7bad500faa492d82ead1da7aca4317c9e08ac759c0f87a55",
+            "scene.xml": "d9bbeea80e4d53969d398c01533ad50afac914f37b6f6b62d2f135da0ef02486",
+            "task.json": "8a582ccb86a1d72cc34141a5fa291b2a17fefd3ba008ef61acfd5cc1559737a5",
             "environment.json": "53021333bcde182e960046168153807582ad6d59bb888f16ac71a28c4da69dea",
-            "workstation.json": "d487ec06bf55bf133cedc3368215ef5650f36faa5d9ce45f3de410244303ca9a"
+            "workstation.json": "e2f7f8908c045f086901ef8d5d41f7418f1da4531b2b83ebc77e7b8b29e8a45f"
           },
           "public_files": {
             "preview-top.png": {
@@ -1282,10 +1282,10 @@
           "id": "dial-best5-n06-d3",
           "directory": "benchmark/dial/dial-best5-n06-d3",
           "source_files": {
-            "scene.xml": "d4f2d67f5b036782beef27dbb7856e44eff1be1b3f7b47cc9c0875b30120aefc",
-            "task.json": "c52a801532e1f5c4e394cf32eb3e3b8b4f7261c0079cc92cacf46a42b5ba2452",
+            "scene.xml": "db898c274c77e17642514add221ff804f1d81efe06639e9ae2a39297116f7f0d",
+            "task.json": "fb4959eba2d83c96d4ee015c7aace9a937b5545ec04509b02c6fd1832a7b8358",
             "environment.json": "14f71bf368e3cc543e067425ef6048294cd1a11f5bc02ddfd226e86f43737a6b",
-            "workstation.json": "f7baa753838ff159f67919c534c244b481ba52537f88878b1df69e221e69b026"
+            "workstation.json": "8d7ce58142084b97f9dd083f441a3ce9f255822edd4a3b282a4d56b121dff21b"
           },
           "public_files": {
             "preview-top.png": {
@@ -1327,10 +1327,10 @@
           "id": "dial-best5-n08-d1",
           "directory": "benchmark/dial/dial-best5-n08-d1",
           "source_files": {
-            "scene.xml": "d4a25d60ddee17ba40678f735b88d39def5133e6725a811fdfb3d781286a32c2",
-            "task.json": "524f22f875c73121c48fc286e630da86c4d77d67c24e2298fb0dfff229661620",
+            "scene.xml": "66ad670c13a8f96053c1536508d3d48d09843a61230e8a291aa2b26bf08f6923",
+            "task.json": "82c1eee2c522108962b2789f19c782805849e4fe4b24a6ea483a1cde83032880",
             "environment.json": "415199f7a6290928682c1c37e71b917d0bb5d2936845f82e1c0e31f4670c0340",
-            "workstation.json": "ebdc8107fe7f9ec3ddc79e33fa978a19f682fb5c3c00b6c04b2f889ce96980eb"
+            "workstation.json": "1bef60cb6b989aaedf1dd7b94517737cf4870da5be32cf9456cd4bafc37deb17"
           },
           "public_files": {
             "preview-top.png": {
@@ -1372,10 +1372,10 @@
           "id": "dial-best5-n08-d2",
           "directory": "benchmark/dial/dial-best5-n08-d2",
           "source_files": {
-            "scene.xml": "82a80c7a51de35318d14bea976bc577ff6ba49809ba385293369ccd43b3fac87",
-            "task.json": "75018d263c588c7b4c0a90bf540448c93f73813d61ce3b442e9fbe688a4f9628",
+            "scene.xml": "9ec55d8e43a6babf4fff9080416b65f14862693f70cb495b95c3fbede86c9455",
+            "task.json": "f7724c5576e795d388a8c31a5d5bcb87f40ca40c7545e0590eed2011bf191757",
             "environment.json": "d61a30eda857e5453f6bbe16992dcb221f2bef174d3a54640255dc98e6853c52",
-            "workstation.json": "633cdf404041eeac878bfb041f41975f5d0111fd02cf139cc1518c616b45fa36"
+            "workstation.json": "3c2d37970da3d265c57df97bbe4178bd3c5e5ee10d13a78ca8c1bfab59d0c15e"
           },
           "public_files": {
             "preview-top.png": {
@@ -1417,10 +1417,10 @@
           "id": "dial-best5-n08-d3",
           "directory": "benchmark/dial/dial-best5-n08-d3",
           "source_files": {
-            "scene.xml": "7aa387ddd7859380d72bc215aaff6fdb48c4ff186e41eb042a3c6918d0b8ea83",
-            "task.json": "75ce91b2a2859284cdc7c31852dca6efa865f2b9b3bcff57ecd223b0a846c455",
+            "scene.xml": "e978d41e204f440aea0dc323d29716689f22083e61c2c3d216e1b7b188580fe9",
+            "task.json": "5a7bc7a464ed9d271328b9864e49e3c9ae0801269964c1c316f5fb659c25e557",
             "environment.json": "79be3dbeb775257f1db3307d65b0ca60359c87f465883cf9fe037c068bb46062",
-            "workstation.json": "6615beecef9f5e233219a73dc4b0c4029c121be1730cb5c663614cb430dc5d94"
+            "workstation.json": "6a564ffe957a1717924838fae0066bf4c5771eb32acd9e4426d87f54276e8d4c"
           },
           "public_files": {
             "preview-top.png": {

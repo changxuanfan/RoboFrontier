@@ -94252,7 +94252,7 @@
     }
   ],
   "physics_sha256": "79142ad4305e0dda4c84c0e73988175d152587259ba31e2dca19ab4e6e18b99c",
-  "scene_sha256": "5855d88166e3449cce8124f0e40773208b14664275477ac3cdf7fa5a81e56fe1",
+  "scene_sha256": "cc40b5c3ea9c742f11417e95a04a97371782d4904f1d6f74decbe3de96edcbde",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

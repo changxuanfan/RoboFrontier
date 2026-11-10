@@ -1,6 +1,6 @@
 <mujoco model="RoboFrontier | relay-a08-d2">
   <compiler angle="radian" meshdir="assets/robot" autolimits="true" />
-  <option integrator="implicitfast" timestep="0.002" gravity="0.0 0.0 -9.81" solver="Newton" iterations="100" noslip_iterations="10">
+  <option integrator="implicitfast" timestep="0.002" gravity="0.0 0.0 -9.81" solver="Newton" iterations="100" noslip_iterations="10" cone="elliptic" impratio="1" noslip_tolerance="1e-9">
     <flag autoreset="disable" />
   </option>
   <default>
@@ -150,8 +150,8 @@
   </asset>
   <worldbody>
     <light pos="0.0 0.0 5.4" dir="0 0 -1" diffuse=".5 .5 .5" castshadow="true" />
-    <geom name="floor" type="plane" size="20 20 .1" material="floor_light" />
-    <geom name="table_0" type="box" pos="0.0 0.0 0.775" size="2.05 1.02 0.025" material="table_oak" friction="1.0 0.005 0.0001" condim="4" />
+    <geom name="floor" type="plane" size="20 20 .1" material="floor_light" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_0" type="box" pos="0.0 0.0 0.775" size="2.05 1.02 0.025" material="table_oak" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <body name="A_link0" childclass="panda" pos="-1.08 -0.65 0.8" quat="0.7071067811865476 0.0 0.0 0.7071067811865475">
       <inertial mass="0.629769" pos="-0.041018 -0.00014 0.049974" fullinertia="0.00315 0.00388 0.004285 8.2904e-7 0.00015 8.2299e-6" />
       <geom mesh="link0_0" material="off_white" class="visual" />
@@ -165,17 +165,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="A_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="A_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="A_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="A_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="A_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="A_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -183,7 +183,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="A_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="A_joint4" range="-3.0718 -0.0698" />
@@ -191,16 +191,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="A_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="A_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="A_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="A_joint6" range="-0.0175 3.7525" />
@@ -221,7 +221,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="A_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="A_joint7" />
@@ -233,7 +233,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="A_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -241,30 +241,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="A_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="A_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="A_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="A_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="A_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -292,17 +292,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="B_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="B_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="B_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="B_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="B_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="B_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -310,7 +310,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="B_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="B_joint4" range="-3.0718 -0.0698" />
@@ -318,16 +318,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="B_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="B_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="B_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="B_joint6" range="-0.0175 3.7525" />
@@ -348,7 +348,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="B_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="B_joint7" />
@@ -360,7 +360,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="B_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -368,30 +368,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="B_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="B_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="B_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="B_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="B_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -419,17 +419,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="C_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="C_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="C_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="C_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="C_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="C_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -437,7 +437,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="C_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="C_joint4" range="-3.0718 -0.0698" />
@@ -445,16 +445,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="C_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="C_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="C_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="C_joint6" range="-0.0175 3.7525" />
@@ -475,7 +475,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="C_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="C_joint7" />
@@ -487,7 +487,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="C_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -495,30 +495,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="C_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="C_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="C_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="C_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="C_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -546,17 +546,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="D_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="D_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="D_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="D_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="D_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="D_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -564,7 +564,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="D_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="D_joint4" range="-3.0718 -0.0698" />
@@ -572,16 +572,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="D_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="D_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="D_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="D_joint6" range="-0.0175 3.7525" />
@@ -602,7 +602,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="D_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="D_joint7" />
@@ -614,7 +614,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="D_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -622,30 +622,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="D_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="D_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="D_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="D_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="D_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -673,17 +673,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="E_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="E_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="E_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="E_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="E_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="E_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -691,7 +691,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="E_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="E_joint4" range="-3.0718 -0.0698" />
@@ -699,16 +699,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="E_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="E_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="E_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="E_joint6" range="-0.0175 3.7525" />
@@ -729,7 +729,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="E_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="E_joint7" />
@@ -741,7 +741,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="E_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -749,30 +749,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="E_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="E_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="E_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="E_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="E_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -800,17 +800,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="F_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="F_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="F_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="F_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="F_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="F_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -818,7 +818,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="F_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="F_joint4" range="-3.0718 -0.0698" />
@@ -826,16 +826,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="F_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="F_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="F_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="F_joint6" range="-0.0175 3.7525" />
@@ -856,7 +856,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="F_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="F_joint7" />
@@ -868,7 +868,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="F_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -876,30 +876,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="F_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="F_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="F_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="F_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="F_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -927,17 +927,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="G_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="G_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="G_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="G_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="G_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="G_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -945,7 +945,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="G_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="G_joint4" range="-3.0718 -0.0698" />
@@ -953,16 +953,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="G_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="G_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="G_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="G_joint6" range="-0.0175 3.7525" />
@@ -983,7 +983,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="G_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="G_joint7" />
@@ -995,7 +995,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="G_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -1003,30 +1003,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="G_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="G_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="G_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="G_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="G_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -1054,17 +1054,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="H_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="H_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="H_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="H_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="H_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="H_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -1072,7 +1072,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="H_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="H_joint4" range="-3.0718 -0.0698" />
@@ -1080,16 +1080,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="H_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="H_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="H_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="H_joint6" range="-0.0175 3.7525" />
@@ -1110,7 +1110,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="H_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="H_joint7" />
@@ -1122,7 +1122,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="H_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -1130,30 +1130,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="H_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="H_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="H_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="H_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="H_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -1168,10 +1168,10 @@
     <geom name="H_label" type="box" size=".065 .065 .0003" pos="1.08 0.79 0.8006" quat="0.7071067811865476 0.0 0.0 -0.7071067811865475" material="label_H" contype="0" conaffinity="0" mass="0" />
     <camera name="H_front" pos="1.08 -0.45 1.65" xyaxes="1.0 0.0 -0.0 0.0 0.729537204140085 0.6839411288813297" fovy="50" />
     <camera name="H_side" pos="0.23 -0.0 1.5499999999999998" xyaxes="0.3328201177351374 -0.9429903335828895 0.0 0.5783841924095382 0.20413559732101344 0.7898103467777309" fovy="50" />
-    <geom name="table_leg_0_0" type="box" pos="-1.9599999999999997 -0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" />
-    <geom name="table_leg_0_1" type="box" pos="1.9599999999999997 -0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" />
-    <geom name="table_leg_0_2" type="box" pos="-1.9599999999999997 0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" />
-    <geom name="table_leg_0_3" type="box" pos="1.9599999999999997 0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" />
+    <geom name="table_leg_0_0" type="box" pos="-1.9599999999999997 -0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_leg_0_1" type="box" pos="1.9599999999999997 -0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_leg_0_2" type="box" pos="-1.9599999999999997 0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_leg_0_3" type="box" pos="1.9599999999999997 0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <camera name="global" pos="0.0 -3.360813265351631 3.568412706585251" xyaxes="1.0 0.0 -0.0 0.0 0.6448709392097829 0.7642914835078909" fovy="43" />
     <camera name="global_rear" pos="0.0 3.3608132653516316 3.5684127065852516" xyaxes="-1.0 0.0 0.0 0.0 -0.6448709392097829 0.7642914835078909" fovy="43" />
     <camera name="global_side" pos="-2.4907736511809127 -1.9926189209447303 2.7265673441993363" xyaxes="0.6246950475544243 -0.7808688094430303 0.0 0.388036627255196 0.3104293018041568 0.8677910027707109" fovy="48" />
@@ -1179,173 +1179,173 @@
     <body name="payload_01" pos="-1.46 0.0 0.8484006300250005" quat="6.121739587891712e-17 1.3527373945396224e-18 0.02209187817224445 0.9997559446779112">
       <freejoint name="payload_01_free" />
       <geom name="payload_01_beam_surface" type="mesh" mesh="payload_01_beam_visual" rgba=".84 .10 .08 1" mass="0" contype="0" conaffinity="0" />
-      <geom name="payload_01_beam_part0" type="box" pos="0.009739871345543438 -0.5587951374120783 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9647514495418958 0.0 0.0 -0.26316276447630443" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part1" type="box" pos="0.02837732349497002 -0.5258954333387726 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9691301367722388 0.0 0.0 -0.24654974751522593" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part2" type="box" pos="0.04587352433043956 -0.4923748708873731 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9732227704785874 0.0 0.0 -0.2298639576401283" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part3" type="box" pos="0.062207818295381245 -0.45827302355617827 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9770281426577544 0.0 0.0 -0.21311031991609136" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part4" type="box" pos="0.07736092155005181 -0.4236301510931947 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9805451300961683 0.0 0.0 -0.19629377943452114" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part5" type="box" pos="0.09131494473753066 -0.38848715196653283 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9837726947014075 0.0 0.0 -0.1794192998535309" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part6" type="box" pos="0.10405341410342717 -0.3528855150807466 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9867098838086088 0.0 0.0 -0.1624918619328416" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part7" type="box" pos="0.11556129094436318 -0.31686727079611904 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9893558304616609 0.0 0.0 -0.14551646206363517" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part8" type="box" pos="0.12582498936227238 -0.2804749413087194 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9917097536690995 0.0 0.0 -0.12849811079379317" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part9" type="box" pos="0.13483239230355648 -0.24375149044981181 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9937709586346295 0.0 0.0 -0.11144183134895745" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part10" type="box" pos="0.14257286586416063 -0.2067402729638813 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.995538836962204 0.0 0.0 -0.09435265814984849" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part11" type="box" pos="0.14903727184368243 -0.16948498332515782 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9970128668356021 0.0 0.0 -0.07723563532627951" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part12" type="box" pos="0.15421797853369223 -0.13202960415306375 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9981926131724506 0.0 0.0 -0.06009581522830464" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part13" type="box" pos="0.15810886972752802 -0.09441835428748516 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9990777277526454 0.0 0.0 -0.042938256934940834" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part14" type="box" pos="0.1607053519409286 -0.05669563658516747 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9996679493211341 0.0 0.0 -0.025768024760903622" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part15" type="box" pos="0.16200435983498152 -0.01890598549886551 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9999631036650289 0.0 0.0 -0.008590186761797595" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part16" type="box" pos="0.16200435983498152 0.01890598549886551 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9999631036650289 0.0 0.0 0.008590186761797595" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part17" type="box" pos="0.1607053519409286 0.056695636585167436 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9996679493211341 0.0 0.0 0.025768024760903608" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part18" type="box" pos="0.15810886972752802 0.09441835428748512 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9990777277526454 0.0 0.0 0.04293825693494082" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part19" type="box" pos="0.15421797853369223 0.13202960415306375 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9981926131724506 0.0 0.0 0.06009581522830464" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part20" type="box" pos="0.14903727184368243 0.16948498332515782 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9970128668356021 0.0 0.0 0.07723563532627951" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part21" type="box" pos="0.14257286586416063 0.20674027296388134 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.995538836962204 0.0 0.0 0.0943526581498485" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part22" type="box" pos="0.13483239230355648 0.24375149044981184 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9937709586346295 0.0 0.0 0.11144183134895747" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part23" type="box" pos="0.12582498936227238 0.2804749413087194 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9917097536690995 0.0 0.0 0.12849811079379317" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part24" type="box" pos="0.11556129094436318 0.31686727079611904 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9893558304616609 0.0 0.0 0.14551646206363517" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part25" type="box" pos="0.10405341410342717 0.3528855150807466 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9867098838086088 0.0 0.0 0.1624918619328416" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part26" type="box" pos="0.09131494473753088 0.3884871519665328 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9837726947014075 0.0 0.0 0.17941929985353086" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part27" type="box" pos="0.07736092155005181 0.4236301510931947 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9805451300961683 0.0 0.0 0.19629377943452114" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part28" type="box" pos="0.062207818295381245 0.45827302355617827 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9770281426577544 0.0 0.0 0.21311031991609136" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part29" type="box" pos="0.04587352433043956 0.49237487088737314 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9732227704785874 0.0 0.0 0.22986395764012832" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part30" type="box" pos="0.02837732349497002 0.5258954333387726 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9691301367722388 0.0 0.0 0.24654974751522593" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_beam_part31" type="box" pos="0.009739871345543438 0.5587951374120783 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9647514495418958 0.0 0.0 0.26316276447630443" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_01_hook_00" type="capsule" fromto="0.07030670314402751 0.48748095465603797 -0.0455 0.06922994650252089 0.48748095465603797 -0.03870162612375116" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_01" type="capsule" fromto="0.06922994650252089 0.48748095465603797 -0.03870162612375116 0.06610507702027635 0.48748095465603797 -0.032568724449565586" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_02" type="capsule" fromto="0.06610507702027635 0.48748095465603797 -0.032568724449565586 0.06123797869446192 0.48748095465603797 -0.027701626123751155" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_03" type="capsule" fromto="0.06123797869446192 0.48748095465603797 -0.027701626123751155 0.05510507702027635 0.48748095465603797 -0.024576756641506624" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_04" type="capsule" fromto="0.05510507702027635 0.48748095465603797 -0.024576756641506624 0.04830670314402751 0.48748095465603797 -0.0235" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_05" type="capsule" fromto="0.04830670314402751 0.48748095465603797 -0.0235 0.04150832926777867 0.48748095465603797 -0.02457675664150662" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_06" type="capsule" fromto="0.04150832926777867 0.48748095465603797 -0.02457675664150662 0.035375427593593106 0.48748095465603797 -0.027701626123751155" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_07" type="capsule" fromto="0.035375427593593106 0.48748095465603797 -0.027701626123751155 0.03050832926777867 0.48748095465603797 -0.032568724449565586" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_08" type="capsule" fromto="0.03050832926777867 0.48748095465603797 -0.032568724449565586 0.027383459785534137 0.48748095465603797 -0.03870162612375115" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_09" type="capsule" fromto="0.027383459785534137 0.48748095465603797 -0.03870162612375115 0.026306703144027513 0.48748095465603797 -0.0455" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_10" type="capsule" fromto="0.026306703144027513 0.48748095465603797 -0.0455 0.02738345978553413 0.48748095465603797 -0.05229837387624883" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_11" type="capsule" fromto="0.02738345978553413 0.48748095465603797 -0.05229837387624883 0.030508329267778668 0.48748095465603797 -0.058431275550434404" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_12" type="capsule" fromto="0.030508329267778668 0.48748095465603797 -0.058431275550434404 0.0353754275935931 0.48748095465603797 -0.06329837387624884" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_13" type="capsule" fromto="0.0353754275935931 0.48748095465603797 -0.06329837387624884 0.041508329267778664 0.48748095465603797 -0.06642324335849337" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_14" type="capsule" fromto="0.041508329267778664 0.48748095465603797 -0.06642324335849337 0.048306703144027505 0.48748095465603797 -0.0675" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_15" type="capsule" fromto="0.048306703144027505 0.48748095465603797 -0.0675 0.05510507702027635 0.48748095465603797 -0.06642324335849338" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_16" type="capsule" fromto="0.05510507702027635 0.48748095465603797 -0.06642324335849338 0.06123797869446192 0.48748095465603797 -0.06329837387624884" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_17" type="capsule" fromto="0.06123797869446192 0.48748095465603797 -0.06329837387624884 0.06610507702027635 0.48748095465603797 -0.05843127555043441" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_18" type="capsule" fromto="0.06610507702027635 0.48748095465603797 -0.05843127555043441 0.06922994650252089 0.48748095465603797 -0.052298373876248846" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_hook_19" type="capsule" fromto="0.06922994650252089 0.48748095465603797 -0.052298373876248846 0.07030670314402751 0.48748095465603797 -0.045500000000000006" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
+      <geom name="payload_01_beam_part0" type="box" pos="0.009739871345543438 -0.5587951374120783 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9647514495418958 0.0 0.0 -0.26316276447630443" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part1" type="box" pos="0.02837732349497002 -0.5258954333387726 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9691301367722388 0.0 0.0 -0.24654974751522593" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part2" type="box" pos="0.04587352433043956 -0.4923748708873731 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9732227704785874 0.0 0.0 -0.2298639576401283" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part3" type="box" pos="0.062207818295381245 -0.45827302355617827 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9770281426577544 0.0 0.0 -0.21311031991609136" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part4" type="box" pos="0.07736092155005181 -0.4236301510931947 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9805451300961683 0.0 0.0 -0.19629377943452114" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part5" type="box" pos="0.09131494473753066 -0.38848715196653283 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9837726947014075 0.0 0.0 -0.1794192998535309" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part6" type="box" pos="0.10405341410342717 -0.3528855150807466 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9867098838086088 0.0 0.0 -0.1624918619328416" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part7" type="box" pos="0.11556129094436318 -0.31686727079611904 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9893558304616609 0.0 0.0 -0.14551646206363517" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part8" type="box" pos="0.12582498936227238 -0.2804749413087194 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9917097536690995 0.0 0.0 -0.12849811079379317" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part9" type="box" pos="0.13483239230355648 -0.24375149044981181 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9937709586346295 0.0 0.0 -0.11144183134895745" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part10" type="box" pos="0.14257286586416063 -0.2067402729638813 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.995538836962204 0.0 0.0 -0.09435265814984849" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part11" type="box" pos="0.14903727184368243 -0.16948498332515782 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9970128668356021 0.0 0.0 -0.07723563532627951" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part12" type="box" pos="0.15421797853369223 -0.13202960415306375 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9981926131724506 0.0 0.0 -0.06009581522830464" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part13" type="box" pos="0.15810886972752802 -0.09441835428748516 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9990777277526454 0.0 0.0 -0.042938256934940834" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part14" type="box" pos="0.1607053519409286 -0.05669563658516747 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9996679493211341 0.0 0.0 -0.025768024760903622" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part15" type="box" pos="0.16200435983498152 -0.01890598549886551 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9999631036650289 0.0 0.0 -0.008590186761797595" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part16" type="box" pos="0.16200435983498152 0.01890598549886551 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9999631036650289 0.0 0.0 0.008590186761797595" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part17" type="box" pos="0.1607053519409286 0.056695636585167436 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9996679493211341 0.0 0.0 0.025768024760903608" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part18" type="box" pos="0.15810886972752802 0.09441835428748512 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9990777277526454 0.0 0.0 0.04293825693494082" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part19" type="box" pos="0.15421797853369223 0.13202960415306375 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9981926131724506 0.0 0.0 0.06009581522830464" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part20" type="box" pos="0.14903727184368243 0.16948498332515782 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9970128668356021 0.0 0.0 0.07723563532627951" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part21" type="box" pos="0.14257286586416063 0.20674027296388134 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.995538836962204 0.0 0.0 0.0943526581498485" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part22" type="box" pos="0.13483239230355648 0.24375149044981184 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9937709586346295 0.0 0.0 0.11144183134895747" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part23" type="box" pos="0.12582498936227238 0.2804749413087194 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9917097536690995 0.0 0.0 0.12849811079379317" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part24" type="box" pos="0.11556129094436318 0.31686727079611904 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9893558304616609 0.0 0.0 0.14551646206363517" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part25" type="box" pos="0.10405341410342717 0.3528855150807466 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9867098838086088 0.0 0.0 0.1624918619328416" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part26" type="box" pos="0.09131494473753088 0.3884871519665328 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9837726947014075 0.0 0.0 0.17941929985353086" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part27" type="box" pos="0.07736092155005181 0.4236301510931947 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9805451300961683 0.0 0.0 0.19629377943452114" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part28" type="box" pos="0.062207818295381245 0.45827302355617827 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9770281426577544 0.0 0.0 0.21311031991609136" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part29" type="box" pos="0.04587352433043956 0.49237487088737314 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9732227704785874 0.0 0.0 0.22986395764012832" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part30" type="box" pos="0.02837732349497002 0.5258954333387726 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9691301367722388 0.0 0.0 0.24654974751522593" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_beam_part31" type="box" pos="0.009739871345543438 0.5587951374120783 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9647514495418958 0.0 0.0 0.26316276447630443" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_00" type="capsule" fromto="0.07030670314402751 0.48748095465603797 -0.0455 0.06922994650252089 0.48748095465603797 -0.03870162612375116" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_01" type="capsule" fromto="0.06922994650252089 0.48748095465603797 -0.03870162612375116 0.06610507702027635 0.48748095465603797 -0.032568724449565586" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_02" type="capsule" fromto="0.06610507702027635 0.48748095465603797 -0.032568724449565586 0.06123797869446192 0.48748095465603797 -0.027701626123751155" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_03" type="capsule" fromto="0.06123797869446192 0.48748095465603797 -0.027701626123751155 0.05510507702027635 0.48748095465603797 -0.024576756641506624" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_04" type="capsule" fromto="0.05510507702027635 0.48748095465603797 -0.024576756641506624 0.04830670314402751 0.48748095465603797 -0.0235" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_05" type="capsule" fromto="0.04830670314402751 0.48748095465603797 -0.0235 0.04150832926777867 0.48748095465603797 -0.02457675664150662" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_06" type="capsule" fromto="0.04150832926777867 0.48748095465603797 -0.02457675664150662 0.035375427593593106 0.48748095465603797 -0.027701626123751155" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_07" type="capsule" fromto="0.035375427593593106 0.48748095465603797 -0.027701626123751155 0.03050832926777867 0.48748095465603797 -0.032568724449565586" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_08" type="capsule" fromto="0.03050832926777867 0.48748095465603797 -0.032568724449565586 0.027383459785534137 0.48748095465603797 -0.03870162612375115" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_09" type="capsule" fromto="0.027383459785534137 0.48748095465603797 -0.03870162612375115 0.026306703144027513 0.48748095465603797 -0.0455" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_10" type="capsule" fromto="0.026306703144027513 0.48748095465603797 -0.0455 0.02738345978553413 0.48748095465603797 -0.05229837387624883" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_11" type="capsule" fromto="0.02738345978553413 0.48748095465603797 -0.05229837387624883 0.030508329267778668 0.48748095465603797 -0.058431275550434404" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_12" type="capsule" fromto="0.030508329267778668 0.48748095465603797 -0.058431275550434404 0.0353754275935931 0.48748095465603797 -0.06329837387624884" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_13" type="capsule" fromto="0.0353754275935931 0.48748095465603797 -0.06329837387624884 0.041508329267778664 0.48748095465603797 -0.06642324335849337" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_14" type="capsule" fromto="0.041508329267778664 0.48748095465603797 -0.06642324335849337 0.048306703144027505 0.48748095465603797 -0.0675" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_15" type="capsule" fromto="0.048306703144027505 0.48748095465603797 -0.0675 0.05510507702027635 0.48748095465603797 -0.06642324335849338" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_16" type="capsule" fromto="0.05510507702027635 0.48748095465603797 -0.06642324335849338 0.06123797869446192 0.48748095465603797 -0.06329837387624884" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_17" type="capsule" fromto="0.06123797869446192 0.48748095465603797 -0.06329837387624884 0.06610507702027635 0.48748095465603797 -0.05843127555043441" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_18" type="capsule" fromto="0.06610507702027635 0.48748095465603797 -0.05843127555043441 0.06922994650252089 0.48748095465603797 -0.052298373876248846" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_hook_19" type="capsule" fromto="0.06922994650252089 0.48748095465603797 -0.052298373876248846 0.07030670314402751 0.48748095465603797 -0.045500000000000006" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <geom name="payload_01_label" type="box" pos="0.16216677177373798 0.0 0.0228" size="0.017 0.029 0.0001" rgba="0.945 0.937 0.91 1.0" material="payload_01_number" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="payload_01_weight" pos="-1.4943067031440276 -0.48963341533937593 0.8104921911827013" quat="0.01634824264546235 0.7398308392978729 -0.014858870871717573 -0.672430128818324">
       <freejoint name="payload_01_weight_free" />
-      <geom name="payload_01_weight_eye_00" type="capsule" fromto="0.0 0.018 0.0 0.0 0.017119017293312763 0.005562305898749053" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_01" type="capsule" fromto="0.0 0.017119017293312763 0.005562305898749053 0.0 0.014562305898749054 0.010580134541264516" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_02" type="capsule" fromto="0.0 0.014562305898749054 0.010580134541264516 0.0 0.010580134541264516 0.014562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_03" type="capsule" fromto="0.0 0.010580134541264516 0.014562305898749054 0.0 0.0055623058987490535 0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_04" type="capsule" fromto="0.0 0.0055623058987490535 0.017119017293312763 0.0 1.1021821192326178e-18 0.018" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_05" type="capsule" fromto="0.0 1.1021821192326178e-18 0.018 0.0 -0.005562305898749052 0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_06" type="capsule" fromto="0.0 -0.005562305898749052 0.017119017293312763 0.0 -0.010580134541264514 0.014562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_07" type="capsule" fromto="0.0 -0.010580134541264514 0.014562305898749054 0.0 -0.01456230589874905 0.010580134541264517" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_08" type="capsule" fromto="0.0 -0.01456230589874905 0.010580134541264517 0.0 -0.017119017293312763 0.005562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_09" type="capsule" fromto="0.0 -0.017119017293312763 0.005562305898749054 0.0 -0.018 2.2043642384652355e-18" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_10" type="capsule" fromto="0.0 -0.018 2.2043642384652355e-18 0.0 -0.017119017293312767 -0.005562305898749044" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_11" type="capsule" fromto="0.0 -0.017119017293312767 -0.005562305898749044 0.0 -0.014562305898749054 -0.010580134541264514" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_12" type="capsule" fromto="0.0 -0.014562305898749054 -0.010580134541264514 0.0 -0.010580134541264517 -0.01456230589874905" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_13" type="capsule" fromto="0.0 -0.010580134541264517 -0.01456230589874905 0.0 -0.005562305898749056 -0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_14" type="capsule" fromto="0.0 -0.005562305898749056 -0.017119017293312763 0.0 -3.3065463576978533e-18 -0.018" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_15" type="capsule" fromto="0.0 -3.3065463576978533e-18 -0.018 0.0 0.00556230589874905 -0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_16" type="capsule" fromto="0.0 0.00556230589874905 -0.017119017293312763 0.0 0.010580134541264512 -0.014562305898749055" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_17" type="capsule" fromto="0.0 0.010580134541264512 -0.014562305898749055 0.0 0.01456230589874905 -0.010580134541264519" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_18" type="capsule" fromto="0.0 0.01456230589874905 -0.010580134541264519 0.0 0.017119017293312763 -0.005562305898749058" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_eye_19" type="capsule" fromto="0.0 0.017119017293312763 -0.005562305898749058 0.0 0.018 -4.408728476930471e-18" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_01_weight_shaft" type="cylinder" pos="0.0 0.0 -0.10300000000000001" size="0.005 0.085" rgba="0.65 0.41 0.2 1.0" friction=".7 .003 .0001" solref=".004 1" mass="0.008011061266653973" />
-      <geom name="payload_01_weight_base" type="cylinder" pos="0.0 0.0 -0.239" size="0.033 0.004" rgba="0.28 0.34 0.39 1.0" solref=".004 1" mass="0.12" />
-      <geom name="payload_01_weight_core" type="cylinder" pos="0.0 0.0 -0.221" size="0.029 0.014" rgba="0.28 0.34 0.39 1.0" solref=".004 1" mass="0.39" />
-      <geom name="payload_01_weight_neck" type="cylinder" pos="0.0 0.0 -0.191" size="0.009 0.009" rgba="0.28 0.34 0.39 1.0" solref=".004 1" mass="0.006" />
-      <geom name="payload_01_weight_shoulder" type="mesh" mesh="payload_01_weight_shoulder_r16" mass="0.084" rgba="0.28 0.34 0.39 1.0" solref=".004 1" />
+      <geom name="payload_01_weight_eye_00" type="capsule" fromto="0.0 0.018 0.0 0.0 0.017119017293312763 0.005562305898749053" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_01" type="capsule" fromto="0.0 0.017119017293312763 0.005562305898749053 0.0 0.014562305898749054 0.010580134541264516" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_02" type="capsule" fromto="0.0 0.014562305898749054 0.010580134541264516 0.0 0.010580134541264516 0.014562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_03" type="capsule" fromto="0.0 0.010580134541264516 0.014562305898749054 0.0 0.0055623058987490535 0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_04" type="capsule" fromto="0.0 0.0055623058987490535 0.017119017293312763 0.0 1.1021821192326178e-18 0.018" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_05" type="capsule" fromto="0.0 1.1021821192326178e-18 0.018 0.0 -0.005562305898749052 0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_06" type="capsule" fromto="0.0 -0.005562305898749052 0.017119017293312763 0.0 -0.010580134541264514 0.014562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_07" type="capsule" fromto="0.0 -0.010580134541264514 0.014562305898749054 0.0 -0.01456230589874905 0.010580134541264517" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_08" type="capsule" fromto="0.0 -0.01456230589874905 0.010580134541264517 0.0 -0.017119017293312763 0.005562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_09" type="capsule" fromto="0.0 -0.017119017293312763 0.005562305898749054 0.0 -0.018 2.2043642384652355e-18" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_10" type="capsule" fromto="0.0 -0.018 2.2043642384652355e-18 0.0 -0.017119017293312767 -0.005562305898749044" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_11" type="capsule" fromto="0.0 -0.017119017293312767 -0.005562305898749044 0.0 -0.014562305898749054 -0.010580134541264514" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_12" type="capsule" fromto="0.0 -0.014562305898749054 -0.010580134541264514 0.0 -0.010580134541264517 -0.01456230589874905" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_13" type="capsule" fromto="0.0 -0.010580134541264517 -0.01456230589874905 0.0 -0.005562305898749056 -0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_14" type="capsule" fromto="0.0 -0.005562305898749056 -0.017119017293312763 0.0 -3.3065463576978533e-18 -0.018" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_15" type="capsule" fromto="0.0 -3.3065463576978533e-18 -0.018 0.0 0.00556230589874905 -0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_16" type="capsule" fromto="0.0 0.00556230589874905 -0.017119017293312763 0.0 0.010580134541264512 -0.014562305898749055" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_17" type="capsule" fromto="0.0 0.010580134541264512 -0.014562305898749055 0.0 0.01456230589874905 -0.010580134541264519" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_18" type="capsule" fromto="0.0 0.01456230589874905 -0.010580134541264519 0.0 0.017119017293312763 -0.005562305898749058" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_eye_19" type="capsule" fromto="0.0 0.017119017293312763 -0.005562305898749058 0.0 0.018 -4.408728476930471e-18" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_shaft" type="cylinder" pos="0.0 0.0 -0.10300000000000001" size="0.005 0.085" rgba="0.65 0.41 0.2 1.0" friction="0.4 0.005 0.0005" solref="0.004 1" mass="0.008011061266653973" condim="6" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_base" type="cylinder" pos="0.0 0.0 -0.239" size="0.033 0.004" rgba="0.28 0.34 0.39 1.0" solref="0.004 1" mass="0.12" friction="0.4 0.005 0.0033000000000000004" condim="6" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_core" type="cylinder" pos="0.0 0.0 -0.221" size="0.029 0.014" rgba="0.28 0.34 0.39 1.0" solref="0.004 1" mass="0.39" friction="0.4 0.005 0.0029000000000000002" condim="6" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_neck" type="cylinder" pos="0.0 0.0 -0.191" size="0.009 0.009" rgba="0.28 0.34 0.39 1.0" solref="0.004 1" mass="0.006" friction="0.4 0.005 0.0009" condim="6" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_01_weight_shoulder" type="mesh" mesh="payload_01_weight_shoulder_r16" mass="0.084" rgba="0.28 0.34 0.39 1.0" solref="0.004 1" friction="0.4 0.005 0.0001" condim="4" solimp="0.95 0.99 0.001 0.5 2" />
       <geom name="payload_01_weight_mass_label" type="box" pos="0.0 -0.0292 -0.219" size="0.022 0.00015 0.009" rgba="0.945 0.937 0.91 1.0" material="weight_mass_mark" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="payload_02" pos="0.03999999999999998 0.0 0.8484006300250005" quat="6.121739587891712e-17 1.3527373945396224e-18 0.02209187817224445 0.9997559446779112">
       <freejoint name="payload_02_free" />
       <geom name="payload_02_beam_surface" type="mesh" mesh="payload_02_beam_visual" rgba=".84 .10 .08 1" mass="0" contype="0" conaffinity="0" />
-      <geom name="payload_02_beam_part0" type="box" pos="0.009739871345543438 -0.5587951374120783 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9647514495418958 0.0 0.0 -0.26316276447630443" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part1" type="box" pos="0.02837732349497002 -0.5258954333387726 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9691301367722388 0.0 0.0 -0.24654974751522593" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part2" type="box" pos="0.04587352433043956 -0.4923748708873731 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9732227704785874 0.0 0.0 -0.2298639576401283" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part3" type="box" pos="0.062207818295381245 -0.45827302355617827 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9770281426577544 0.0 0.0 -0.21311031991609136" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part4" type="box" pos="0.07736092155005181 -0.4236301510931947 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9805451300961683 0.0 0.0 -0.19629377943452114" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part5" type="box" pos="0.09131494473753066 -0.38848715196653283 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9837726947014075 0.0 0.0 -0.1794192998535309" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part6" type="box" pos="0.10405341410342717 -0.3528855150807466 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9867098838086088 0.0 0.0 -0.1624918619328416" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part7" type="box" pos="0.11556129094436318 -0.31686727079611904 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9893558304616609 0.0 0.0 -0.14551646206363517" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part8" type="box" pos="0.12582498936227238 -0.2804749413087194 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9917097536690995 0.0 0.0 -0.12849811079379317" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part9" type="box" pos="0.13483239230355648 -0.24375149044981181 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9937709586346295 0.0 0.0 -0.11144183134895745" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part10" type="box" pos="0.14257286586416063 -0.2067402729638813 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.995538836962204 0.0 0.0 -0.09435265814984849" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part11" type="box" pos="0.14903727184368243 -0.16948498332515782 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9970128668356021 0.0 0.0 -0.07723563532627951" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part12" type="box" pos="0.15421797853369223 -0.13202960415306375 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9981926131724506 0.0 0.0 -0.06009581522830464" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part13" type="box" pos="0.15810886972752802 -0.09441835428748516 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9990777277526454 0.0 0.0 -0.042938256934940834" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part14" type="box" pos="0.1607053519409286 -0.05669563658516747 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9996679493211341 0.0 0.0 -0.025768024760903622" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part15" type="box" pos="0.16200435983498152 -0.01890598549886551 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9999631036650289 0.0 0.0 -0.008590186761797595" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part16" type="box" pos="0.16200435983498152 0.01890598549886551 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9999631036650289 0.0 0.0 0.008590186761797595" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part17" type="box" pos="0.1607053519409286 0.056695636585167436 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9996679493211341 0.0 0.0 0.025768024760903608" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part18" type="box" pos="0.15810886972752802 0.09441835428748512 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9990777277526454 0.0 0.0 0.04293825693494082" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part19" type="box" pos="0.15421797853369223 0.13202960415306375 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9981926131724506 0.0 0.0 0.06009581522830464" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part20" type="box" pos="0.14903727184368243 0.16948498332515782 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9970128668356021 0.0 0.0 0.07723563532627951" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part21" type="box" pos="0.14257286586416063 0.20674027296388134 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.995538836962204 0.0 0.0 0.0943526581498485" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part22" type="box" pos="0.13483239230355648 0.24375149044981184 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9937709586346295 0.0 0.0 0.11144183134895747" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part23" type="box" pos="0.12582498936227238 0.2804749413087194 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9917097536690995 0.0 0.0 0.12849811079379317" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part24" type="box" pos="0.11556129094436318 0.31686727079611904 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9893558304616609 0.0 0.0 0.14551646206363517" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part25" type="box" pos="0.10405341410342717 0.3528855150807466 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9867098838086088 0.0 0.0 0.1624918619328416" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part26" type="box" pos="0.09131494473753088 0.3884871519665328 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9837726947014075 0.0 0.0 0.17941929985353086" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part27" type="box" pos="0.07736092155005181 0.4236301510931947 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9805451300961683 0.0 0.0 0.19629377943452114" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part28" type="box" pos="0.062207818295381245 0.45827302355617827 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9770281426577544 0.0 0.0 0.21311031991609136" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part29" type="box" pos="0.04587352433043956 0.49237487088737314 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9732227704785874 0.0 0.0 0.22986395764012832" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part30" type="box" pos="0.02837732349497002 0.5258954333387726 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9691301367722388 0.0 0.0 0.24654974751522593" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_beam_part31" type="box" pos="0.009739871345543438 0.5587951374120783 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9647514495418958 0.0 0.0 0.26316276447630443" friction="1 .005 .0001" condim="4" group="3" mass="0.04594380495347458" />
-      <geom name="payload_02_hook_00" type="capsule" fromto="0.07030670314402751 0.48748095465603797 -0.0455 0.06922994650252089 0.48748095465603797 -0.03870162612375116" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_01" type="capsule" fromto="0.06922994650252089 0.48748095465603797 -0.03870162612375116 0.06610507702027635 0.48748095465603797 -0.032568724449565586" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_02" type="capsule" fromto="0.06610507702027635 0.48748095465603797 -0.032568724449565586 0.06123797869446192 0.48748095465603797 -0.027701626123751155" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_03" type="capsule" fromto="0.06123797869446192 0.48748095465603797 -0.027701626123751155 0.05510507702027635 0.48748095465603797 -0.024576756641506624" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_04" type="capsule" fromto="0.05510507702027635 0.48748095465603797 -0.024576756641506624 0.04830670314402751 0.48748095465603797 -0.0235" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_05" type="capsule" fromto="0.04830670314402751 0.48748095465603797 -0.0235 0.04150832926777867 0.48748095465603797 -0.02457675664150662" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_06" type="capsule" fromto="0.04150832926777867 0.48748095465603797 -0.02457675664150662 0.035375427593593106 0.48748095465603797 -0.027701626123751155" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_07" type="capsule" fromto="0.035375427593593106 0.48748095465603797 -0.027701626123751155 0.03050832926777867 0.48748095465603797 -0.032568724449565586" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_08" type="capsule" fromto="0.03050832926777867 0.48748095465603797 -0.032568724449565586 0.027383459785534137 0.48748095465603797 -0.03870162612375115" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_09" type="capsule" fromto="0.027383459785534137 0.48748095465603797 -0.03870162612375115 0.026306703144027513 0.48748095465603797 -0.0455" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_10" type="capsule" fromto="0.026306703144027513 0.48748095465603797 -0.0455 0.02738345978553413 0.48748095465603797 -0.05229837387624883" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_11" type="capsule" fromto="0.02738345978553413 0.48748095465603797 -0.05229837387624883 0.030508329267778668 0.48748095465603797 -0.058431275550434404" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_12" type="capsule" fromto="0.030508329267778668 0.48748095465603797 -0.058431275550434404 0.0353754275935931 0.48748095465603797 -0.06329837387624884" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_13" type="capsule" fromto="0.0353754275935931 0.48748095465603797 -0.06329837387624884 0.041508329267778664 0.48748095465603797 -0.06642324335849337" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_14" type="capsule" fromto="0.041508329267778664 0.48748095465603797 -0.06642324335849337 0.048306703144027505 0.48748095465603797 -0.0675" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_15" type="capsule" fromto="0.048306703144027505 0.48748095465603797 -0.0675 0.05510507702027635 0.48748095465603797 -0.06642324335849338" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_16" type="capsule" fromto="0.05510507702027635 0.48748095465603797 -0.06642324335849338 0.06123797869446192 0.48748095465603797 -0.06329837387624884" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_17" type="capsule" fromto="0.06123797869446192 0.48748095465603797 -0.06329837387624884 0.06610507702027635 0.48748095465603797 -0.05843127555043441" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_18" type="capsule" fromto="0.06610507702027635 0.48748095465603797 -0.05843127555043441 0.06922994650252089 0.48748095465603797 -0.052298373876248846" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_hook_19" type="capsule" fromto="0.06922994650252089 0.48748095465603797 -0.052298373876248846 0.07030670314402751 0.48748095465603797 -0.045500000000000006" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
+      <geom name="payload_02_beam_part0" type="box" pos="0.009739871345543438 -0.5587951374120783 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9647514495418958 0.0 0.0 -0.26316276447630443" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part1" type="box" pos="0.02837732349497002 -0.5258954333387726 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9691301367722388 0.0 0.0 -0.24654974751522593" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part2" type="box" pos="0.04587352433043956 -0.4923748708873731 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9732227704785874 0.0 0.0 -0.2298639576401283" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part3" type="box" pos="0.062207818295381245 -0.45827302355617827 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9770281426577544 0.0 0.0 -0.21311031991609136" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part4" type="box" pos="0.07736092155005181 -0.4236301510931947 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9805451300961683 0.0 0.0 -0.19629377943452114" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part5" type="box" pos="0.09131494473753066 -0.38848715196653283 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9837726947014075 0.0 0.0 -0.1794192998535309" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part6" type="box" pos="0.10405341410342717 -0.3528855150807466 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9867098838086088 0.0 0.0 -0.1624918619328416" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part7" type="box" pos="0.11556129094436318 -0.31686727079611904 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9893558304616609 0.0 0.0 -0.14551646206363517" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part8" type="box" pos="0.12582498936227238 -0.2804749413087194 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9917097536690995 0.0 0.0 -0.12849811079379317" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part9" type="box" pos="0.13483239230355648 -0.24375149044981181 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9937709586346295 0.0 0.0 -0.11144183134895745" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part10" type="box" pos="0.14257286586416063 -0.2067402729638813 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.995538836962204 0.0 0.0 -0.09435265814984849" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part11" type="box" pos="0.14903727184368243 -0.16948498332515782 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9970128668356021 0.0 0.0 -0.07723563532627951" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part12" type="box" pos="0.15421797853369223 -0.13202960415306375 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9981926131724506 0.0 0.0 -0.06009581522830464" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part13" type="box" pos="0.15810886972752802 -0.09441835428748516 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9990777277526454 0.0 0.0 -0.042938256934940834" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part14" type="box" pos="0.1607053519409286 -0.05669563658516747 0.0" size="0.0225 0.019295377302840377 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9996679493211341 0.0 0.0 -0.025768024760903622" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part15" type="box" pos="0.16200435983498152 -0.01890598549886551 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9999631036650289 0.0 0.0 -0.008590186761797595" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part16" type="box" pos="0.16200435983498152 0.01890598549886551 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9999631036650289 0.0 0.0 0.008590186761797595" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part17" type="box" pos="0.1607053519409286 0.056695636585167436 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9996679493211341 0.0 0.0 0.025768024760903608" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part18" type="box" pos="0.15810886972752802 0.09441835428748512 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9990777277526454 0.0 0.0 0.04293825693494082" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part19" type="box" pos="0.15421797853369223 0.13202960415306375 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9981926131724506 0.0 0.0 0.06009581522830464" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part20" type="box" pos="0.14903727184368243 0.16948498332515782 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9970128668356021 0.0 0.0 0.07723563532627951" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part21" type="box" pos="0.14257286586416063 0.20674027296388134 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.995538836962204 0.0 0.0 0.0943526581498485" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part22" type="box" pos="0.13483239230355648 0.24375149044981184 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9937709586346295 0.0 0.0 0.11144183134895747" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part23" type="box" pos="0.12582498936227238 0.2804749413087194 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9917097536690995 0.0 0.0 0.12849811079379317" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part24" type="box" pos="0.11556129094436318 0.31686727079611904 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9893558304616609 0.0 0.0 0.14551646206363517" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part25" type="box" pos="0.10405341410342717 0.3528855150807466 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9867098838086088 0.0 0.0 0.1624918619328416" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part26" type="box" pos="0.09131494473753088 0.3884871519665328 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9837726947014075 0.0 0.0 0.17941929985353086" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part27" type="box" pos="0.07736092155005181 0.4236301510931947 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9805451300961683 0.0 0.0 0.19629377943452114" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part28" type="box" pos="0.062207818295381245 0.45827302355617827 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9770281426577544 0.0 0.0 0.21311031991609136" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part29" type="box" pos="0.04587352433043956 0.49237487088737314 0.0" size="0.0225 0.019295377302840408 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9732227704785874 0.0 0.0 0.22986395764012832" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part30" type="box" pos="0.02837732349497002 0.5258954333387726 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9691301367722388 0.0 0.0 0.24654974751522593" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_beam_part31" type="box" pos="0.009739871345543438 0.5587951374120783 0.0" size="0.0225 0.019295377302840346 0.0225" rgba="0.84 0.1 0.08 0.0" quat="0.9647514495418958 0.0 0.0 0.26316276447630443" friction="0.4 0.005 0.0001" condim="4" group="3" mass="0.04594380495347458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_00" type="capsule" fromto="0.07030670314402751 0.48748095465603797 -0.0455 0.06922994650252089 0.48748095465603797 -0.03870162612375116" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_01" type="capsule" fromto="0.06922994650252089 0.48748095465603797 -0.03870162612375116 0.06610507702027635 0.48748095465603797 -0.032568724449565586" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_02" type="capsule" fromto="0.06610507702027635 0.48748095465603797 -0.032568724449565586 0.06123797869446192 0.48748095465603797 -0.027701626123751155" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_03" type="capsule" fromto="0.06123797869446192 0.48748095465603797 -0.027701626123751155 0.05510507702027635 0.48748095465603797 -0.024576756641506624" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_04" type="capsule" fromto="0.05510507702027635 0.48748095465603797 -0.024576756641506624 0.04830670314402751 0.48748095465603797 -0.0235" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_05" type="capsule" fromto="0.04830670314402751 0.48748095465603797 -0.0235 0.04150832926777867 0.48748095465603797 -0.02457675664150662" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_06" type="capsule" fromto="0.04150832926777867 0.48748095465603797 -0.02457675664150662 0.035375427593593106 0.48748095465603797 -0.027701626123751155" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_07" type="capsule" fromto="0.035375427593593106 0.48748095465603797 -0.027701626123751155 0.03050832926777867 0.48748095465603797 -0.032568724449565586" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_08" type="capsule" fromto="0.03050832926777867 0.48748095465603797 -0.032568724449565586 0.027383459785534137 0.48748095465603797 -0.03870162612375115" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_09" type="capsule" fromto="0.027383459785534137 0.48748095465603797 -0.03870162612375115 0.026306703144027513 0.48748095465603797 -0.0455" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_10" type="capsule" fromto="0.026306703144027513 0.48748095465603797 -0.0455 0.02738345978553413 0.48748095465603797 -0.05229837387624883" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_11" type="capsule" fromto="0.02738345978553413 0.48748095465603797 -0.05229837387624883 0.030508329267778668 0.48748095465603797 -0.058431275550434404" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_12" type="capsule" fromto="0.030508329267778668 0.48748095465603797 -0.058431275550434404 0.0353754275935931 0.48748095465603797 -0.06329837387624884" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_13" type="capsule" fromto="0.0353754275935931 0.48748095465603797 -0.06329837387624884 0.041508329267778664 0.48748095465603797 -0.06642324335849337" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_14" type="capsule" fromto="0.041508329267778664 0.48748095465603797 -0.06642324335849337 0.048306703144027505 0.48748095465603797 -0.0675" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_15" type="capsule" fromto="0.048306703144027505 0.48748095465603797 -0.0675 0.05510507702027635 0.48748095465603797 -0.06642324335849338" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_16" type="capsule" fromto="0.05510507702027635 0.48748095465603797 -0.06642324335849338 0.06123797869446192 0.48748095465603797 -0.06329837387624884" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_17" type="capsule" fromto="0.06123797869446192 0.48748095465603797 -0.06329837387624884 0.06610507702027635 0.48748095465603797 -0.05843127555043441" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_18" type="capsule" fromto="0.06610507702027635 0.48748095465603797 -0.05843127555043441 0.06922994650252089 0.48748095465603797 -0.052298373876248846" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_hook_19" type="capsule" fromto="0.06922994650252089 0.48748095465603797 -0.052298373876248846 0.07030670314402751 0.48748095465603797 -0.045500000000000006" size="0.0025" mass="0.0010585150720168338" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <geom name="payload_02_label" type="box" pos="0.16216677177373798 0.0 0.0228" size="0.017 0.029 0.0001" rgba="0.945 0.937 0.91 1.0" material="payload_02_number" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="payload_02_weight" pos="0.0056932968559724045 -0.48963341533937593 0.8104921911827013" quat="0.01634824264546235 0.7398308392978729 -0.014858870871717573 -0.672430128818324">
       <freejoint name="payload_02_weight_free" />
-      <geom name="payload_02_weight_eye_00" type="capsule" fromto="0.0 0.018 0.0 0.0 0.017119017293312763 0.005562305898749053" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_01" type="capsule" fromto="0.0 0.017119017293312763 0.005562305898749053 0.0 0.014562305898749054 0.010580134541264516" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_02" type="capsule" fromto="0.0 0.014562305898749054 0.010580134541264516 0.0 0.010580134541264516 0.014562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_03" type="capsule" fromto="0.0 0.010580134541264516 0.014562305898749054 0.0 0.0055623058987490535 0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_04" type="capsule" fromto="0.0 0.0055623058987490535 0.017119017293312763 0.0 1.1021821192326178e-18 0.018" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_05" type="capsule" fromto="0.0 1.1021821192326178e-18 0.018 0.0 -0.005562305898749052 0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_06" type="capsule" fromto="0.0 -0.005562305898749052 0.017119017293312763 0.0 -0.010580134541264514 0.014562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_07" type="capsule" fromto="0.0 -0.010580134541264514 0.014562305898749054 0.0 -0.01456230589874905 0.010580134541264517" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_08" type="capsule" fromto="0.0 -0.01456230589874905 0.010580134541264517 0.0 -0.017119017293312763 0.005562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_09" type="capsule" fromto="0.0 -0.017119017293312763 0.005562305898749054 0.0 -0.018 2.2043642384652355e-18" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_10" type="capsule" fromto="0.0 -0.018 2.2043642384652355e-18 0.0 -0.017119017293312767 -0.005562305898749044" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_11" type="capsule" fromto="0.0 -0.017119017293312767 -0.005562305898749044 0.0 -0.014562305898749054 -0.010580134541264514" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_12" type="capsule" fromto="0.0 -0.014562305898749054 -0.010580134541264514 0.0 -0.010580134541264517 -0.01456230589874905" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_13" type="capsule" fromto="0.0 -0.010580134541264517 -0.01456230589874905 0.0 -0.005562305898749056 -0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_14" type="capsule" fromto="0.0 -0.005562305898749056 -0.017119017293312763 0.0 -3.3065463576978533e-18 -0.018" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_15" type="capsule" fromto="0.0 -3.3065463576978533e-18 -0.018 0.0 0.00556230589874905 -0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_16" type="capsule" fromto="0.0 0.00556230589874905 -0.017119017293312763 0.0 0.010580134541264512 -0.014562305898749055" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_17" type="capsule" fromto="0.0 0.010580134541264512 -0.014562305898749055 0.0 0.01456230589874905 -0.010580134541264519" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_18" type="capsule" fromto="0.0 0.01456230589874905 -0.010580134541264519 0.0 0.017119017293312763 -0.005562305898749058" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_eye_19" type="capsule" fromto="0.0 0.017119017293312763 -0.005562305898749058 0.0 0.018 -4.408728476930471e-18" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction=".5 .002 .0001" condim="3" solref=".004 1" solimp=".99 .999 .001 .5 2" />
-      <geom name="payload_02_weight_shaft" type="cylinder" pos="0.0 0.0 -0.10300000000000001" size="0.005 0.085" rgba="0.65 0.41 0.2 1.0" friction=".7 .003 .0001" solref=".004 1" mass="0.008011061266653973" />
-      <geom name="payload_02_weight_base" type="cylinder" pos="0.0 0.0 -0.239" size="0.033 0.004" rgba="0.28 0.34 0.39 1.0" solref=".004 1" mass="0.12" />
-      <geom name="payload_02_weight_core" type="cylinder" pos="0.0 0.0 -0.221" size="0.029 0.014" rgba="0.28 0.34 0.39 1.0" solref=".004 1" mass="0.39" />
-      <geom name="payload_02_weight_neck" type="cylinder" pos="0.0 0.0 -0.191" size="0.009 0.009" rgba="0.28 0.34 0.39 1.0" solref=".004 1" mass="0.006" />
-      <geom name="payload_02_weight_shoulder" type="mesh" mesh="payload_02_weight_shoulder_r16" mass="0.084" rgba="0.28 0.34 0.39 1.0" solref=".004 1" />
+      <geom name="payload_02_weight_eye_00" type="capsule" fromto="0.0 0.018 0.0 0.0 0.017119017293312763 0.005562305898749053" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_01" type="capsule" fromto="0.0 0.017119017293312763 0.005562305898749053 0.0 0.014562305898749054 0.010580134541264516" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_02" type="capsule" fromto="0.0 0.014562305898749054 0.010580134541264516 0.0 0.010580134541264516 0.014562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_03" type="capsule" fromto="0.0 0.010580134541264516 0.014562305898749054 0.0 0.0055623058987490535 0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_04" type="capsule" fromto="0.0 0.0055623058987490535 0.017119017293312763 0.0 1.1021821192326178e-18 0.018" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_05" type="capsule" fromto="0.0 1.1021821192326178e-18 0.018 0.0 -0.005562305898749052 0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_06" type="capsule" fromto="0.0 -0.005562305898749052 0.017119017293312763 0.0 -0.010580134541264514 0.014562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_07" type="capsule" fromto="0.0 -0.010580134541264514 0.014562305898749054 0.0 -0.01456230589874905 0.010580134541264517" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_08" type="capsule" fromto="0.0 -0.01456230589874905 0.010580134541264517 0.0 -0.017119017293312763 0.005562305898749054" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_09" type="capsule" fromto="0.0 -0.017119017293312763 0.005562305898749054 0.0 -0.018 2.2043642384652355e-18" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_10" type="capsule" fromto="0.0 -0.018 2.2043642384652355e-18 0.0 -0.017119017293312767 -0.005562305898749044" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_11" type="capsule" fromto="0.0 -0.017119017293312767 -0.005562305898749044 0.0 -0.014562305898749054 -0.010580134541264514" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_12" type="capsule" fromto="0.0 -0.014562305898749054 -0.010580134541264514 0.0 -0.010580134541264517 -0.01456230589874905" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_13" type="capsule" fromto="0.0 -0.010580134541264517 -0.01456230589874905 0.0 -0.005562305898749056 -0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_14" type="capsule" fromto="0.0 -0.005562305898749056 -0.017119017293312763 0.0 -3.3065463576978533e-18 -0.018" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_15" type="capsule" fromto="0.0 -3.3065463576978533e-18 -0.018 0.0 0.00556230589874905 -0.017119017293312763" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_16" type="capsule" fromto="0.0 0.00556230589874905 -0.017119017293312763 0.0 0.010580134541264512 -0.014562305898749055" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_17" type="capsule" fromto="0.0 0.010580134541264512 -0.014562305898749055 0.0 0.01456230589874905 -0.010580134541264519" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_18" type="capsule" fromto="0.0 0.01456230589874905 -0.010580134541264519 0.0 0.017119017293312763 -0.005562305898749058" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_eye_19" type="capsule" fromto="0.0 0.017119017293312763 -0.005562305898749058 0.0 0.018 -4.408728476930471e-18" size="0.0025" mass="0.0008660577861955912" rgba="0.28 0.34 0.39 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_shaft" type="cylinder" pos="0.0 0.0 -0.10300000000000001" size="0.005 0.085" rgba="0.65 0.41 0.2 1.0" friction="0.4 0.005 0.0005" solref="0.004 1" mass="0.008011061266653973" condim="6" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_base" type="cylinder" pos="0.0 0.0 -0.239" size="0.033 0.004" rgba="0.28 0.34 0.39 1.0" solref="0.004 1" mass="0.12" friction="0.4 0.005 0.0033000000000000004" condim="6" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_core" type="cylinder" pos="0.0 0.0 -0.221" size="0.029 0.014" rgba="0.28 0.34 0.39 1.0" solref="0.004 1" mass="0.39" friction="0.4 0.005 0.0029000000000000002" condim="6" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_neck" type="cylinder" pos="0.0 0.0 -0.191" size="0.009 0.009" rgba="0.28 0.34 0.39 1.0" solref="0.004 1" mass="0.006" friction="0.4 0.005 0.0009" condim="6" solimp="0.95 0.99 0.001 0.5 2" />
+      <geom name="payload_02_weight_shoulder" type="mesh" mesh="payload_02_weight_shoulder_r16" mass="0.084" rgba="0.28 0.34 0.39 1.0" solref="0.004 1" friction="0.4 0.005 0.0001" condim="4" solimp="0.95 0.99 0.001 0.5 2" />
       <geom name="payload_02_weight_mass_label" type="box" pos="0.0 -0.0292 -0.219" size="0.022 0.00015 0.009" rgba="0.945 0.937 0.91 1.0" material="weight_mass_mark" contype="0" conaffinity="0" mass="0" />
     </body>
     <camera name="payload_close" pos="-2.36 -1.15 1.8224999999999998" xyaxes="0.7875050010075858 -0.6163082616581106 0.0 0.34100455512366273 0.4357280426580135 0.8329807718226928" fovy="48" />
@@ -1448,7 +1448,7 @@
     <general class="panda" name="A_actuator5" joint="A_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="A_actuator6" joint="A_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="A_actuator7" joint="A_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="A_actuator8" tendon="A_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="A_actuator8" tendon="A_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="B_actuator1" joint="B_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="B_actuator2" joint="B_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="B_actuator3" joint="B_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1456,7 +1456,7 @@
     <general class="panda" name="B_actuator5" joint="B_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="B_actuator6" joint="B_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="B_actuator7" joint="B_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="B_actuator8" tendon="B_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="B_actuator8" tendon="B_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="C_actuator1" joint="C_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="C_actuator2" joint="C_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="C_actuator3" joint="C_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1464,7 +1464,7 @@
     <general class="panda" name="C_actuator5" joint="C_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="C_actuator6" joint="C_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="C_actuator7" joint="C_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="C_actuator8" tendon="C_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="C_actuator8" tendon="C_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="D_actuator1" joint="D_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="D_actuator2" joint="D_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="D_actuator3" joint="D_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1472,7 +1472,7 @@
     <general class="panda" name="D_actuator5" joint="D_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="D_actuator6" joint="D_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="D_actuator7" joint="D_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="D_actuator8" tendon="D_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="D_actuator8" tendon="D_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="E_actuator1" joint="E_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="E_actuator2" joint="E_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="E_actuator3" joint="E_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1480,7 +1480,7 @@
     <general class="panda" name="E_actuator5" joint="E_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="E_actuator6" joint="E_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="E_actuator7" joint="E_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="E_actuator8" tendon="E_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="E_actuator8" tendon="E_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="F_actuator1" joint="F_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="F_actuator2" joint="F_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="F_actuator3" joint="F_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1488,7 +1488,7 @@
     <general class="panda" name="F_actuator5" joint="F_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="F_actuator6" joint="F_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="F_actuator7" joint="F_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="F_actuator8" tendon="F_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="F_actuator8" tendon="F_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="G_actuator1" joint="G_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="G_actuator2" joint="G_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="G_actuator3" joint="G_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1496,7 +1496,7 @@
     <general class="panda" name="G_actuator5" joint="G_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="G_actuator6" joint="G_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="G_actuator7" joint="G_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="G_actuator8" tendon="G_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="G_actuator8" tendon="G_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="H_actuator1" joint="H_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="H_actuator2" joint="H_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="H_actuator3" joint="H_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1504,7 +1504,7 @@
     <general class="panda" name="H_actuator5" joint="H_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="H_actuator6" joint="H_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="H_actuator7" joint="H_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="H_actuator8" tendon="H_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="H_actuator8" tendon="H_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
   </actuator>
   <contact>
     <exclude body1="A_link0" body2="A_link1" />

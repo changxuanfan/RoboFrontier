@@ -182,11 +182,33 @@ def setup_assets(root=ROOT, archive_path=None):
             raise ValueError('Existing Panda source manifest does not match the pinned release')
         expected.update(panda_assets(root))
         if all((root/name).is_file() and digest(root/name) == checksum for name, checksum in expected.items()):
+            link_oracle_assets(root)
             return {'status': 'already_complete', 'files': len(expected)}
     except (FileNotFoundError, KeyError):
         pass
     archive_path = ensure_asset_archive(root, archive_path)
-    return {'status': 'restored', 'archive': str(archive_path), **restore_assets(archive_path, root)}
+    result = restore_assets(archive_path, root)
+    link_oracle_assets(root)
+    return {'status': 'restored', 'archive': str(archive_path), **result}
+
+
+def link_oracle_assets(root=ROOT):
+    """Give each Oracle copy of a case (benchmark/oracle/) the released case's asset files.
+
+    The assets are the same files; they are hard-linked, or copied where links fail."""
+    import os, shutil
+    for family in read(root/RELEASE)['families'].values():
+        for case in family['gpt']:
+            source = root/case['directory']/'assets'; target = root/'benchmark/oracle'/Path(case['directory']).name/'assets'
+            if not source.is_dir() or not target.parent.is_dir(): continue
+            if target.is_symlink(): target.unlink()
+            for path in sorted(source.rglob('*')):
+                destination = target/path.relative_to(source)
+                if path.is_dir(): destination.mkdir(parents=True, exist_ok=True); continue
+                if destination.is_file() and destination.stat().st_size == path.stat().st_size: continue
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                try: os.link(path, destination)
+                except OSError: shutil.copyfile(path, destination)
 
 
 def doctor(names, root=ROOT):

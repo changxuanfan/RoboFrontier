@@ -3,7 +3,7 @@
   "rule_revision": "relay-final-goal-50mm-v1",
   "source_directory": "configs/environments/beam_handoff/frontier-v2-r16-relay-a16-d2",
   "source_task_sha256": "662510c14eeae130e5d3345023dbaf987f12ec8a991529f46833228eeaf05953",
-  "scene_sha256": "7ded10c6627dd13632332223dff2ec0c5e800d730a36dbdb0f2d3e0971ff3f13",
+  "scene_sha256": "800c52a6d3d0dcfa82bbb0bf6d963832469e6d6a9a2c6f9de8eb6b50a1915b38",
   "physics_files_unchanged": [
     "scene.xml",
     "assets/label_K.png",

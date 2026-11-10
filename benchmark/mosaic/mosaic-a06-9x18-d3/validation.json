@@ -6,7 +6,7 @@
   "physics_steps": 0,
   "robot_count": 6,
   "physics_sha256": "f4a72c01acde30883310bf4bdb4a100560e8abeadc346e8fca67cc99687f9e22",
-  "source_scene_sha256": "9a21a32dd14477a449f9a1a0f93bf4bfd6d8fcd304ca380538c8141d54cdf0f0",
+  "source_scene_sha256": "ee69ee2b8feb1a17ca8a36a521833e33aaccc4490afad9896f46c0522ec383f2",
   "source_revision": 14,
   "initial_penetrations_over_1mm": [],
   "min_cube_centre_spacing_m": 0.07499999999999662,

@@ -11,6 +11,7 @@ from robofrontier.tasks.config import load_harness
 from single_arm_scene import make_world
 from robofrontier.physics.motion_check import prepare_check,state_id
 from physics.test_motion_check import robot_fixture
+from motion import filled, MOVE
 
 
 class GraspForceTests(unittest.TestCase):
@@ -23,7 +24,7 @@ class GraspForceTests(unittest.TestCase):
         return make_world(Path(self.tmp.name),{'cube':[.42,0.,.42]} if cube else {})
 
     def execute(self,w,op,p):
-        command=w.validate_action('B',op,p,self.cfg);w.start_action('B','test',command)
+        command=w.validate_action('B',op,filled(op,p),self.cfg);w.start_action('B','test',command)
         for _ in range(3000):
             w.step();done=w.poll_actions(15)
             if done:return done[0]
@@ -59,10 +60,11 @@ class GraspForceTests(unittest.TestCase):
                 self.assertIsNone(result['measured_grasp_force_n'])
                 for _ in range(30):w.step()
                 actual,sides=self.contact_force(w);measured.append(actual)
-                self.assertEqual(len(sides),2);self.assertLess(abs(actual-force),force*.15)
+                # force_n is what each finger presses; the two finger contacts carry twice that.
+                self.assertEqual(len(sides),2);self.assertLess(abs(actual/2-force),force*.15)
                 self.assertTrue(arm.observe()['is_grasped'])
-                self.assertEqual(w.model.actuator_forcerange[arm.grip].tolist(),[-70,70])
-                self.assertLessEqual(abs(w.data.actuator_force[arm.grip]),70+1e-6)
+                self.assertEqual(w.model.actuator_forcerange[arm.grip].tolist(),[-280,280])
+                self.assertLessEqual(abs(w.data.actuator_force[arm.grip]),2*force+1e-6)
                 self.assertEqual(self.execute(w,'gripper',dict(width_m=.075))['status'],'completed')
                 for value,before in zip((w.model.actuator_gainprm,w.model.actuator_biasprm,w.model.actuator_ctrlrange,w.model.actuator_forcerange),original):
                     np.testing.assert_array_equal(value[arm.grip],before)
@@ -81,8 +83,8 @@ class GraspForceTests(unittest.TestCase):
     def test_reissuing_grasp_does_not_drop_existing_motor_force(self):
         w=self.world();self.at_cube(w);self.assertEqual(self.grasp(w)['status'],'completed')
         a=w.arms['B'];previous=a.grasp_drive_force
-        command=w.validate_action('B','gripper',dict(mode='grasp',width_m=.04,
-                                  force_n=70,speed_m_s=.04),self.cfg)
+        command=w.validate_action('B','gripper',filled('gripper',dict(mode='grasp',width_m=.04,
+                                  force_n=70,speed_m_s=.04)),self.cfg)
         w.start_action('B','increase-force',command)
         self.assertAlmostEqual(a.grasp_drive_force,previous)
         self.assertAlmostEqual(w.data.ctrl[a.grip],-previous)
@@ -98,7 +100,7 @@ class GraspForceTests(unittest.TestCase):
 
     def test_stop_cancels_unfinished_force_close_and_holds_aperture(self):
         w=self.world(False);a=w.arms['B']
-        c=w.validate_action('B','gripper',dict(mode='grasp',width_m=.04,force_n=50,speed_m_s=.01),self.cfg)
+        c=w.validate_action('B','gripper',filled('gripper',dict(mode='grasp',width_m=.04,force_n=50,speed_m_s=.01)),self.cfg)
         w.start_action('B','cancel-grasp',c)
         for _ in range(20):w.step();w.poll_actions(15)
         w.request_stop('B','cancel-grasp');terminal=None
@@ -112,9 +114,9 @@ class GraspForceTests(unittest.TestCase):
 
     def test_invalid_grasp_requests_do_not_change_live_controller(self):
         w=self.world();a=w.arms['B'];gain=w.model.actuator_gainprm.copy()
-        for change in (dict(force_n=80),dict(force_n=float('nan')),dict(width_m=0),dict(epsilon_inner_m=0),dict(speed_m_s=.16),dict(state='close')):
+        for change in (dict(force_n=140.1),dict(force_n=0),dict(force_n=float('nan')),dict(width_m=0),dict(epsilon_inner_m=0),dict(speed_m_s=.16),dict(state='close')):
             p=dict(mode='grasp',width_m=.04,force_n=50);p.update(change)
-            with self.assertRaises(ValueError):w.validate_action('B','gripper',p,self.cfg)
+            with self.assertRaises(ValueError):w.validate_action('B','gripper',filled('gripper',p),self.cfg)
         np.testing.assert_array_equal(w.model.actuator_gainprm,gain);self.assertIsNone(a.grasp_force)
 
     def test_force_close_respects_speed_without_alternating_motor_force(self):
@@ -124,8 +126,8 @@ class GraspForceTests(unittest.TestCase):
             with self.subTest(timestep=timestep):
                 w=self.world(False);a=w.arms['B'];w.model.opt.timestep=timestep
                 original_damping=w.model.dof_damping.copy()
-                c=w.validate_action('B','gripper',dict(mode='grasp',width_m=.016,
-                                    force_n=70,speed_m_s=.02),self.cfg)
+                c=w.validate_action('B','gripper',filled('gripper',dict(mode='grasp',width_m=.016,
+                                    force_n=70,speed_m_s=.02)),self.cfg)
                 w.start_action('B','free-close',c)
                 speeds=[];forces=[]
                 for _ in range(round(.6/timestep)):
@@ -144,7 +146,7 @@ class GraspForceTests(unittest.TestCase):
 
     def test_grasp_timeout_does_not_keep_closing_after_failure(self):
         w=self.world(False);a=w.arms['B']
-        c=w.validate_action('B','gripper',dict(mode='grasp',width_m=.04,force_n=30,speed_m_s=.005),self.cfg)
+        c=w.validate_action('B','gripper',filled('gripper',dict(mode='grasp',width_m=.04,force_n=30,speed_m_s=.005)),self.cfg)
         c['timing']['timeout_sim_s']=.25;w.start_action('B','short-deadline',c)
         terminal=None
         for _ in range(250):
@@ -158,7 +160,7 @@ class GraspForceTests(unittest.TestCase):
 
     def test_stopping_arm_motion_preserves_completed_grasp_and_its_width_feedback(self):
         w=self.world();self.at_cube(w);self.assertEqual(self.grasp(w)['status'],'completed')
-        a=w.arms['B'];c=w.validate_action('B','move',dict(target_m=[.42,0,.60],speed_m_s=.04),self.cfg)
+        a=w.arms['B'];c=w.validate_action('B','move',filled('move',dict(target_m=[.42,0,.60],speed_m_s=.04)),self.cfg)
         w.start_action('B','carrying',c)
         for _ in range(20):w.step();w.poll_actions(15)
         w.request_stop('B','carrying')
@@ -174,21 +176,21 @@ class GraspForceTests(unittest.TestCase):
     def test_motion_screen_after_force_grasp_is_read_only(self):
         w=robot_fixture();a=w.arms['A']
         for s in ('finger_joint1','finger_joint2'):w.data.joint('A_'+s).qpos[0]=.02
-        c=w.validate_action('A','gripper',dict(mode='grasp',width_m=.04,force_n=50),self.cfg)
+        c=w.validate_action('A','gripper',filled('gripper',dict(mode='grasp',width_m=.04,force_n=50)),self.cfg)
         w.start_action('A','grasp',c)
         for i in range(80):
             w.data.time=i*.02;a.control(.02)
             if a.poll(w.time,15):break
         self.assertIsNone(a.job);before=state_id(w);ctrl=w.data.ctrl.copy();bias=w.model.actuator_biasprm.copy()
         with patch('mujoco.mj_step',side_effect=AssertionError('No dynamics in read-only screen')):
-            list(prepare_check(w,dict(motions=[dict(actor='A',delta_m=[0,0,.01])],horizon_s=.2),self.cfg))
+            list(prepare_check(w,dict(motions=[dict(**MOVE,actor='A',delta_m=[0,0,.01])],horizon_s=.2),self.cfg))
         self.assertEqual(state_id(w),before);np.testing.assert_array_equal(ctrl,w.data.ctrl)
         np.testing.assert_array_equal(bias,w.model.actuator_biasprm)
 
     def test_grasp_settling_uses_individual_position_window_not_instant_solver_velocity(self):
         w=robot_fixture();a=w.arms['A']
         for s in ('finger_joint1','finger_joint2'):w.data.joint('A_'+s).qpos[0]=.02
-        c=w.validate_action('A','gripper',dict(mode='grasp',width_m=.04,force_n=50),self.cfg);w.start_action('A','grasp',c)
+        c=w.validate_action('A','gripper',filled('gripper',dict(mode='grasp',width_m=.04,force_n=50)),self.cfg);w.start_action('A','grasp',c)
         terminal=None
         for i in range(80):
             w.data.time=i*.02
@@ -202,10 +204,10 @@ class GraspForceTests(unittest.TestCase):
     def test_unfinished_grasp_preview_cannot_change_live_motor_phase_or_model(self):
         w=robot_fixture();a=w.arms['A']
         for s in ('finger_joint1','finger_joint2'):w.data.joint('A_'+s).qpos[0]=.02
-        command=w.validate_action('A','gripper',dict(mode='grasp',width_m=.04,force_n=50),self.cfg);w.start_action('A','pending-grasp',command)
+        command=w.validate_action('A','gripper',filled('gripper',dict(mode='grasp',width_m=.04,force_n=50)),self.cfg);w.start_action('A','pending-grasp',command)
         bias=w.model.actuator_biasprm.copy();ctrl=w.data.ctrl.copy();samples=len(a.grasp_settling)
         with patch('mujoco.mj_step',side_effect=AssertionError('No dynamics in a motion preview')):
-            list(prepare_check(w,dict(motions=[dict(actor='B',delta_m=[0,0,.01])],horizon_s=1.),self.cfg))
+            list(prepare_check(w,dict(motions=[dict(**MOVE,actor='B',delta_m=[0,0,.01])],horizon_s=1.),self.cfg))
         np.testing.assert_array_equal(w.model.actuator_biasprm,bias);np.testing.assert_array_equal(w.data.ctrl,ctrl)
         self.assertEqual(a.grasp_phase,'approach');self.assertEqual(len(a.grasp_settling),samples)
 
@@ -216,14 +218,14 @@ class GraspForceTests(unittest.TestCase):
         # Separate stress test only: an imposed load is not a task witness.
         w.data.xfrc_applied[w.model.body('cube').id,2]=-8.
         for _ in range(300):
-            w.step();self.assertLessEqual(abs(w.data.actuator_force[a.grip]),70+1e-6)
+            w.step();self.assertLessEqual(abs(w.data.actuator_force[a.grip]),140+1e-6)
         self.assertGreater(w.data.body('cube').xpos[2],.54);self.assertTrue(a.observe()['is_grasped'])
         np.testing.assert_array_equal(w.model.dof_damping,passive)
 
     def test_opposing_finger_drift_cannot_settle_just_because_width_is_constant(self):
         w=robot_fixture();a=w.arms['A']
         for s in ('finger_joint1','finger_joint2'):w.data.joint('A_'+s).qpos[0]=.02
-        c=w.validate_action('A','gripper',dict(mode='grasp',width_m=.04,force_n=50),self.cfg);w.start_action('A','grasp',c)
+        c=w.validate_action('A','gripper',filled('gripper',dict(mode='grasp',width_m=.04,force_n=50)),self.cfg);w.start_action('A','grasp',c)
         for i in range(40):
             for sign,s in zip((1,-1),('finger_joint1','finger_joint2')):
                 j=w.data.joint('A_'+s);j.qpos[0]=.02+sign*i*.02*.0015;j.qvel[0]=sign*.0015

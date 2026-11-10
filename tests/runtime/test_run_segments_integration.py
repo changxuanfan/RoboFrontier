@@ -66,7 +66,7 @@ class SegmentIntegrationTests(unittest.TestCase):
                 arm, camera = sorted(task['arms'])[0], camera_names(task)[0]
                 tcp = client_call(controller, 'observe', {'cameras': [camera]}, 'obs-1')['observation']['robot'][arm]['tcp_m']
                 moving = client_call(controller, 'move', {'robot': arm, 'target_m': [tcp[0], tcp[1], tcp[2] + .08],
-                                                          'speed_m_s': .01, 'wait': False, 'cameras': []}, 'move-1')
+                                                          'acceleration_m_s2': 2., 'angular_speed_rad_s': .6, 'angular_acceleration_rad_s2': 5., 'speed_m_s': .01, 'wait': False, 'cameras': []}, 'move-1')
                 self.assertEqual(moving['execution_status'], 'running')
                 # Motion is flushed in 2 s chunks; kill once one is on disk and the arm still moves.
                 wait_until(lambda: json.loads((run / 'private/outputs/motion/stream.json').read_text())['frames'] > 0,
@@ -112,7 +112,7 @@ class SegmentIntegrationTests(unittest.TestCase):
                 self.assertEqual(motion_dirs(run), [run / 'private/outputs/motion', output_dir(run, 1) / 'motion'])
                 # A new action works in the continued world.
                 again = client_call(controller, 'move', {'robot': arm, 'target_m': [tcp[0], tcp[1], tcp[2] + .02],
-                                                         'speed_m_s': .05, 'wait': True, 'cameras': []}, 'move-2')
+                                                         'acceleration_m_s2': 2., 'angular_speed_rad_s': .6, 'angular_acceleration_rad_s2': 5., 'speed_m_s': .05, 'wait': True, 'cameras': []}, 'move-2')
                 self.assertEqual(again['execution']['status'], 'completed')
             finally:
                 parent.send_signal(signal.SIGKILL); parent.wait()

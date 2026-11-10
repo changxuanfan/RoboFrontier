@@ -9,8 +9,8 @@ These optional tools compare robot motion candidates without moving the live wor
 ```json
 {
   "motions": [
-    {"actor":"A", "delta_m":[0.01,0,0], "speed_m_s":0.06, "start_after_s":0},
-    {"actor":"B", "target_m":[0.40,0,0.68], "speed_m_s":0.06, "start_after_s":0.4}
+    {"actor":"A", "delta_m":[0.01,0,0], "speed_m_s":0.06, "acceleration_m_s2":1, "angular_speed_rad_s":0.5, "angular_acceleration_rad_s2":5, "start_after_s":0},
+    {"actor":"B", "target_m":[0.40,0,0.68], "speed_m_s":0.06, "acceleration_m_s2":1, "angular_speed_rad_s":0.5, "angular_acceleration_rad_s2":5, "start_after_s":0.4}
   ],
   "horizon_s":2,
   "sample_dt_s":0.1

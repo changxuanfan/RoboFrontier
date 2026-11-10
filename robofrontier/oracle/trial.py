@@ -19,6 +19,25 @@ from ..tasks.evaluate import Monitor
 from ..tasks.provenance import bundle_manifest,environment_logic_manifest
 from .joint_route import connect_route
 
+
+# Every action states its speeds, accelerations and force (physics/franka_limits.py). The
+# Oracle was written when these had defaults; it states those values where it gives none.
+ORACLE_MOVE = {'speed_m_s': .06, 'acceleration_m_s2': 2., 'angular_speed_rad_s': .6, 'angular_acceleration_rad_s2': 5.}
+ORACLE_JOINT = {'joint_speed_rad_s': .9, 'joint_acceleration_rad_s2': 2.}
+ORACLE_GRIPPER_SPEED_M_S = .08
+
+
+def oracle_parameters(op, p):
+    p = dict(p)
+    if op == 'gripper':
+        p.setdefault('speed_m_s', ORACLE_GRIPPER_SPEED_M_S)
+        # The Oracle's force_n is the total drive of both fingers; a grasp now names the
+        # force of each finger.
+        if p.get('mode') == 'grasp' and 'force_n' in p: p['force_n'] = p['force_n']/2
+    elif 'joint_rad' in p: [p.setdefault(k, v) for k, v in ORACLE_JOINT.items()]
+    else: [p.setdefault(k, v) for k, v in ORACLE_MOVE.items()]
+    return p
+
 class ReferenceStopped(RuntimeError):pass
 class ProcessViolation(RuntimeError):pass
 class NoVerifiedJointIK(ValueError):
@@ -87,10 +106,9 @@ class Trial:
                 a=float(rng.uniform(-.025,.025));self.data.joint('suspension_joint_0').qpos[:]=[math.cos(a/2),math.sin(a/2),0,0]
             self.model.key_qpos[self.model.key('initial').id]=self.data.qpos.copy();root.find("keyframe/key[@name='initial']").set('qpos',' '.join(repr(float(x)) for x in self.data.qpos));ET.ElementTree(root).write(self.directory/'scene.xml',encoding='unicode');mujoco.mj_forward(self.model,self.data)
         self.arms={r:PandaArm(self.model,self.data,r) for r in self.task['arms']};self.cfg=deepcopy(controller_cfg) if controller_cfg is not None else load_harness();self.tick=0;self.stride=round(.02/self.model.opt.timestep)
-        for arm in self.arms.values():arm.configure_hand_position_servo(self.cfg.get('gripper_position_servo','legacy'))
-        # A harness that names a physics profile gets it here too; one that names none is untouched.
-        from ..physics.profile import attach
-        self.physics_profile=attach(self,self.cfg)
+        for arm in self.arms.values():arm.configure_hand_position_servo()
+        # The Oracle keeps the physics its recordings were made with (docs/oracle/README.md):
+        # full physics on its source scenes, without the policy runtime's sleep settings.
         self.home={r:(self.data.site_xpos[a.site].copy(),self.data.site_xmat[a.site].reshape(3,3).copy()) for r,a in self.arms.items()}
         self.home_q={r:self.data.qpos[a.qids].copy() for r,a in self.arms.items()}
         self.screen_model=copy(self.model)
@@ -166,7 +184,6 @@ class Trial:
             for arm in self.arms.values():arm.control(.02)
         for arm in self.arms.values():
             if arm.grasp_force is not None:arm.physics_control()
-        if getattr(self,'physics_profile',None) is not None:self.physics_profile.before_step()
         before=self.time;mujoco.mj_step(self.model,self.data)
         from ..physics.health import require_valid_step
         try:require_valid_step(self.data,before)
@@ -204,7 +221,7 @@ class Trial:
         lower=np.array(self.task['workspace_world_m']['lower']);upper=np.array(self.task['workspace_world_m']['upper'])
         validated={}
         for r,(op,p) in commands.items():
-            try:validated[r]=self.arms[r].validate(op,p,self.cfg,lower,upper)
+            try:validated[r]=self.arms[r].validate(op,oracle_parameters(op,p),self.cfg,lower,upper)
             except ValueError as error:
                 self.event('validation_rejected',label=label,robot=r,command=[op,p],reason=str(error));raise
         index=len(self.actions);self.event('action_start',label=label,commands=commands)

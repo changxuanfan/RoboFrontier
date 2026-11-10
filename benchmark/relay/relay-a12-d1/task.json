@@ -17,7 +17,7 @@
     "directory": "benchmark/relay/relay-a12-d1"
   },
   "scene_asset": "benchmark/relay/relay-a12-d1",
-  "scene_sha256": "09bec4bc56fae92f0e636965f88b4408c67c017f5fb95fd4df5a0182bba7f775",
+  "scene_sha256": "88a591081fe5545c8f80eef419c2bc60ef82155bb9f11b3ead8107e2f8c7a5f5",
   "arms": {
     "A": {
       "base_position_m": [

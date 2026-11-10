@@ -13,11 +13,10 @@ import mujoco
 import numpy as np
 
 from .kinematics import RobotIK
+from . import franka_limits
 
 
 CONTROL_DT = .02
-JOINT_SPEED_LIMIT = .9
-JOINT_ACCEL_LIMIT = 2.
 TRACKING_LIMIT = .1
 
 
@@ -42,7 +41,9 @@ def robot_state(world):
             'rotation_reference':arm.rotation.tolist(),
             'rotation_goal':None if arm.rotation_goal is None else arm.rotation_goal.tolist(),
             'joint_goal':None if arm.joint_goal is None else arm.joint_goal.tolist(),
-            'angular_speed_rad_s':arm.angular_speed,'joint_speed_rad_s':arm.joint_speed,
+            'acceleration_m_s2':arm.acceleration,'angular_speed_rad_s':arm.angular_speed,
+            'angular_acceleration_rad_s2':arm.angular_acceleration,'tcp_rate_m_s':arm.tcp_rate,'angular_rate_rad_s':arm.angular_rate,
+            'joint_speed_rad_s':[float(v) for v in arm.joint_speed],'joint_acceleration_rad_s2':[float(v) for v in arm.joint_acceleration],
             'gripper_speed_m_s':arm.grip_speed,'stopping':arm.stopping,
             'grasp_force_setpoint_n':arm.grasp_force,'grasp_width_m':arm.grasp_width,
             'grasp_epsilon_m':arm.grasp_epsilon,'grasp_confirmed':arm.grasp_confirmed,
@@ -109,8 +110,7 @@ class RobotGeometry:
                                    'home_reference_rotation_world':arm.home_rotation.tolist(),
                                    'orientation_control':'world-frame quaternion_wxyz; robot-only IK'}}
         result = {'robots':robots,'controller':{'tick_s':CONTROL_DT,
-                    'joint_speed_limit_rad_s':JOINT_SPEED_LIMIT,'joint_acceleration_limit_rad_s2':JOINT_ACCEL_LIMIT,
-                    'tracking_limit_rad':TRACKING_LIMIT,'tcp_speed_range_m_s':cfg['allowed_tcp_speed_m_s']},
+                    'limits':franka_limits.describe(),'tracking_limit_rad':TRACKING_LIMIT},
                 'motion_check_limits':cfg['motion_check'],
                 'geometry_note':'Mesh bounds describe geometry; the checker uses internal convex collision meshes. Robot-only; no scene/object state.'}
         result['model_id'] = hashlib.sha256(json.dumps(result,sort_keys=True,allow_nan=False).encode()).hexdigest()
@@ -196,7 +196,8 @@ def prepare_check(world, parameters, cfg):
     mujoco.mj_kinematics(world.model,preview.data)
     scheduled = {}
     for motion in motions:
-        if not isinstance(motion,dict) or set(motion)-{'actor','target_m','delta_m','speed_m_s','start_after_s','quaternion_wxyz','angular_speed_rad_s','joint_rad','joint_speed_rad_s'}:
+        if not isinstance(motion,dict) or set(motion)-{'actor','start_after_s','target_m','delta_m','quaternion_wxyz','speed_m_s','acceleration_m_s2',
+                                                          'angular_speed_rad_s','angular_acceleration_rad_s2','joint_rad','joint_speed_rad_s','joint_acceleration_rad_s2'}:
             raise ValueError('Candidate is an actor, move parameters, optional start_after_s')
         name = motion['actor']
         if name not in preview.arms or name in scheduled:

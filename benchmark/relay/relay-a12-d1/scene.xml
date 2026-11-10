@@ -1,6 +1,6 @@
 <mujoco model="RoboFrontier | relay-a12-d1">
   <compiler angle="radian" meshdir="assets/robot" autolimits="true" />
-  <option integrator="implicitfast" timestep="0.002" gravity="0.0 0.0 -9.81" solver="Newton" iterations="100" noslip_iterations="10" />
+  <option integrator="implicitfast" timestep="0.002" gravity="0.0 0.0 -9.81" solver="Newton" iterations="100" noslip_iterations="10" cone="elliptic" impratio="1" noslip_tolerance="1e-9" />
   <default>
     <default class="panda">
       <material specular="0.5" shininess="0.25" />
@@ -207,7 +207,7 @@
   </asset>
   <worldbody>
     <light pos="0.0 0.0 5.4" dir="0 0 -1" diffuse=".5 .5 .5" castshadow="true" />
-    <geom name="floor" type="plane" size="20 20 .1" material="floor_light" />
+    <geom name="floor" type="plane" size="20 20 .1" material="floor_light" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <body name="A_link0" childclass="panda" pos="-2.4465894629054543 2.4465894629054548 0.8" quat="0.9238795325112867 0.0 0.0 -0.3826834323650899">
       <inertial mass="0.629769" pos="-0.041018 -0.00014 0.049974" fullinertia="0.00315 0.00388 0.004285 8.2904e-7 0.00015 8.2299e-6" />
       <geom mesh="link0_0" material="off_white" class="visual" />
@@ -221,17 +221,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="A_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="A_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="A_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="A_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="A_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="A_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -239,7 +239,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="A_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="A_joint4" range="-3.0718 -0.0698" />
@@ -247,16 +247,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="A_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="A_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="A_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="A_joint6" range="-0.0175 3.7525" />
@@ -277,7 +277,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="A_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="A_joint7" />
@@ -289,7 +289,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="A_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -297,30 +297,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="A_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="A_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="A_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="A_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="A_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -348,17 +348,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="B_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="B_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="B_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="B_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="B_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="B_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -366,7 +366,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="B_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="B_joint4" range="-3.0718 -0.0698" />
@@ -374,16 +374,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="B_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="B_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="B_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="B_joint6" range="-0.0175 3.7525" />
@@ -404,7 +404,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="B_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="B_joint7" />
@@ -416,7 +416,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="B_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -424,30 +424,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="B_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="B_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="B_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="B_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="B_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -475,17 +475,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="C_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="C_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="C_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="C_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="C_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="C_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -493,7 +493,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="C_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="C_joint4" range="-3.0718 -0.0698" />
@@ -501,16 +501,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="C_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="C_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="C_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="C_joint6" range="-0.0175 3.7525" />
@@ -531,7 +531,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="C_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="C_joint7" />
@@ -543,7 +543,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="C_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -551,30 +551,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="C_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="C_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="C_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="C_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="C_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -602,17 +602,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="D_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="D_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="D_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="D_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="D_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="D_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -620,7 +620,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="D_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="D_joint4" range="-3.0718 -0.0698" />
@@ -628,16 +628,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="D_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="D_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="D_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="D_joint6" range="-0.0175 3.7525" />
@@ -658,7 +658,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="D_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="D_joint7" />
@@ -670,7 +670,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="D_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -678,30 +678,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="D_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="D_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="D_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="D_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="D_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -729,17 +729,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="E_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="E_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="E_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="E_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="E_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="E_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -747,7 +747,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="E_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="E_joint4" range="-3.0718 -0.0698" />
@@ -755,16 +755,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="E_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="E_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="E_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="E_joint6" range="-0.0175 3.7525" />
@@ -785,7 +785,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="E_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="E_joint7" />
@@ -797,7 +797,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="E_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -805,30 +805,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="E_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="E_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="E_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="E_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="E_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -856,17 +856,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="F_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="F_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="F_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="F_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="F_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="F_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -874,7 +874,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="F_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="F_joint4" range="-3.0718 -0.0698" />
@@ -882,16 +882,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="F_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="F_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="F_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="F_joint6" range="-0.0175 3.7525" />
@@ -912,7 +912,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="F_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="F_joint7" />
@@ -924,7 +924,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="F_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -932,30 +932,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="F_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="F_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="F_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="F_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="F_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -983,17 +983,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="G_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="G_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="G_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="G_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="G_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="G_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -1001,7 +1001,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="G_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="G_joint4" range="-3.0718 -0.0698" />
@@ -1009,16 +1009,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="G_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="G_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="G_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="G_joint6" range="-0.0175 3.7525" />
@@ -1039,7 +1039,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="G_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="G_joint7" />
@@ -1051,7 +1051,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="G_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -1059,30 +1059,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="G_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="G_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="G_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="G_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="G_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -1110,17 +1110,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="H_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="H_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="H_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="H_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="H_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="H_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -1128,7 +1128,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="H_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="H_joint4" range="-3.0718 -0.0698" />
@@ -1136,16 +1136,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="H_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="H_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="H_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="H_joint6" range="-0.0175 3.7525" />
@@ -1166,7 +1166,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="H_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="H_joint7" />
@@ -1178,7 +1178,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="H_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -1186,30 +1186,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="H_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="H_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="H_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="H_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="H_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -1237,17 +1237,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="I_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="I_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="I_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="I_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="I_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="I_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -1255,7 +1255,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="I_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="I_joint4" range="-3.0718 -0.0698" />
@@ -1263,16 +1263,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="I_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="I_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="I_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="I_joint6" range="-0.0175 3.7525" />
@@ -1293,7 +1293,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="I_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="I_joint7" />
@@ -1305,7 +1305,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="I_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -1313,30 +1313,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="I_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="I_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="I_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="I_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="I_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -1364,17 +1364,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="J_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="J_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="J_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="J_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="J_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="J_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -1382,7 +1382,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="J_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="J_joint4" range="-3.0718 -0.0698" />
@@ -1390,16 +1390,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="J_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="J_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="J_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="J_joint6" range="-0.0175 3.7525" />
@@ -1420,7 +1420,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="J_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="J_joint7" />
@@ -1432,7 +1432,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="J_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -1440,30 +1440,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="J_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="J_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="J_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="J_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="J_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -1491,17 +1491,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="K_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="K_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="K_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="K_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="K_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="K_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -1509,7 +1509,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="K_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="K_joint4" range="-3.0718 -0.0698" />
@@ -1517,16 +1517,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="K_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="K_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="K_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="K_joint6" range="-0.0175 3.7525" />
@@ -1547,7 +1547,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="K_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="K_joint7" />
@@ -1559,7 +1559,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="K_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -1567,30 +1567,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="K_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="K_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="K_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="K_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="K_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -1618,17 +1618,17 @@
       <geom mesh="link0_9" material="black" class="visual" />
       <geom mesh="link0_10" material="off_white" class="visual" />
       <geom mesh="link0_11" material="white" class="visual" />
-      <geom mesh="link0_c" class="collision" />
+      <geom mesh="link0_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <body name="L_link1" pos="0 0 0.333">
         <inertial mass="4.970684" pos="0.003875 0.002081 -0.04762" fullinertia="0.70337 0.70661 0.0091170 -0.00013900 0.0067720 0.019169" />
         <joint name="L_joint1" />
         <geom material="white" mesh="link1" class="visual" />
-        <geom mesh="link1_c" class="collision" />
+        <geom mesh="link1_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
         <body name="L_link2" quat="1 -1 0 0">
           <inertial mass="0.646926" pos="-0.003141 -0.02872 0.003495" fullinertia="0.0079620 2.8110e-2 2.5995e-2 -3.925e-3 1.0254e-2 7.04e-4" />
           <joint name="L_joint2" range="-1.7628 1.7628" />
           <geom material="white" mesh="link2" class="visual" />
-          <geom mesh="link2_c" class="collision" />
+          <geom mesh="link2_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
           <body name="L_link3" pos="0 -0.316 0" quat="1 1 0 0">
             <joint name="L_joint3" />
             <inertial mass="3.228604" pos="2.7518e-2 3.9252e-2 -6.6502e-2" fullinertia="3.7242e-2 3.6155e-2 1.083e-2 -4.761e-3 -1.1396e-2 -1.2805e-2" />
@@ -1636,7 +1636,7 @@
             <geom mesh="link3_1" material="white" class="visual" />
             <geom mesh="link3_2" material="white" class="visual" />
             <geom mesh="link3_3" material="black" class="visual" />
-            <geom mesh="link3_c" class="collision" />
+            <geom mesh="link3_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
             <body name="L_link4" pos="0.0825 0 0" quat="1 1 0 0">
               <inertial mass="3.587895" pos="-5.317e-2 1.04419e-1 2.7454e-2" fullinertia="2.5853e-2 1.9552e-2 2.8323e-2 7.796e-3 -1.332e-3 8.641e-3" />
               <joint name="L_joint4" range="-3.0718 -0.0698" />
@@ -1644,16 +1644,16 @@
               <geom mesh="link4_1" material="white" class="visual" />
               <geom mesh="link4_2" material="black" class="visual" />
               <geom mesh="link4_3" material="white" class="visual" />
-              <geom mesh="link4_c" class="collision" />
+              <geom mesh="link4_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
               <body name="L_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
                 <inertial mass="1.225946" pos="-1.1953e-2 4.1065e-2 -3.8437e-2" fullinertia="3.5549e-2 2.9474e-2 8.627e-3 -2.117e-3 -4.037e-3 2.29e-4" />
                 <joint name="L_joint5" />
                 <geom mesh="link5_0" material="black" class="visual" />
                 <geom mesh="link5_1" material="white" class="visual" />
                 <geom mesh="link5_2" material="white" class="visual" />
-                <geom mesh="link5_c0" class="collision" />
-                <geom mesh="link5_c1" class="collision" />
-                <geom mesh="link5_c2" class="collision" />
+                <geom mesh="link5_c0" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c1" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+                <geom mesh="link5_c2" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <body name="L_link6" quat="1 1 0 0">
                   <inertial mass="1.666555" pos="6.0149e-2 -1.4117e-2 -1.0517e-2" fullinertia="1.964e-3 4.354e-3 5.433e-3 1.09e-4 -1.158e-3 3.41e-4" />
                   <joint name="L_joint6" range="-0.0175 3.7525" />
@@ -1674,7 +1674,7 @@
                   <geom mesh="link6_14" material="black" class="visual" />
                   <geom mesh="link6_15" material="black" class="visual" />
                   <geom mesh="link6_16" material="white" class="visual" />
-                  <geom mesh="link6_c" class="collision" />
+                  <geom mesh="link6_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                   <body name="L_link7" pos="0.088 0 0" quat="1 1 0 0">
                     <inertial mass="7.35522e-01" pos="1.0517e-2 -4.252e-3 6.1597e-2" fullinertia="1.2516e-2 1.0027e-2 4.815e-3 -4.28e-4 -1.196e-3 -7.41e-4" />
                     <joint name="L_joint7" />
@@ -1686,7 +1686,7 @@
                     <geom mesh="link7_5" material="black" class="visual" />
                     <geom mesh="link7_6" material="black" class="visual" />
                     <geom mesh="link7_7" material="white" class="visual" />
-                    <geom mesh="link7_c" class="collision" />
+                    <geom mesh="link7_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                     <body name="L_hand" pos="0 0 0.107" quat="0.9238795 0 0 -0.3826834">
                       <inertial mass="0.73" pos="-0.01 0 0.03" diaginertia="0.001 0.0025 0.0017" />
                       <geom mesh="hand_0" material="off_white" class="visual" />
@@ -1694,30 +1694,30 @@
                       <geom mesh="hand_2" material="black" class="visual" />
                       <geom mesh="hand_3" material="white" class="visual" />
                       <geom mesh="hand_4" material="off_white" class="visual" />
-                      <geom mesh="hand_c" class="collision" />
+                      <geom mesh="hand_c" class="collision" friction="0.4 0.005 0.0001" condim="3" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                       <body name="L_left_finger" pos="0 0 0.0584">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="L_finger_joint1" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <body name="L_right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                         <inertial mass="0.015" pos="0 0 0" diaginertia="2.375e-6 2.375e-6 7.5e-7" />
                         <joint name="L_finger_joint2" class="finger" solreflimit="0.004 1" solimplimit="0.99 0.999 0.0001 0.5 2" />
                         <geom mesh="finger_0" material="off_white" class="visual" />
                         <geom mesh="finger_1" material="black" class="visual" />
-                        <geom mesh="finger_0" class="collision" />
-                        <geom class="fingertip_pad_collision_1" />
-                        <geom class="fingertip_pad_collision_2" />
-                        <geom class="fingertip_pad_collision_3" />
-                        <geom class="fingertip_pad_collision_4" />
-                        <geom class="fingertip_pad_collision_5" />
+                        <geom mesh="finger_0" class="collision" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_1" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_2" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_3" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_4" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
+                        <geom class="fingertip_pad_collision_5" friction="0.8 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" priority="1" />
                       </body>
                       <site name="L_tcp" pos="0 0 .1029" size=".004" rgba="1 .65 .05 1" />
                     </body>
@@ -1738,61 +1738,61 @@
     <camera name="top" pos="0.0 2.185416355729103 8.995549942211197" xyaxes="1 0 0 0 1 0" fovy="48" />
     <body name="payload_01" pos="-2.2556706319850868 1.7182694782833106 0.8225" quat="0.9238795325112867 0.0 0.0 0.3826834323650897">
       <freejoint name="payload_01_free" />
-      <geom name="payload_01_beam" type="box" pos="0.0 0.0 0.0" size="0.0225 0.6 0.0225" rgba="0.84 0.1 0.08 1.0" friction="1 .005 .0001" condim="4" mass="1.458" />
+      <geom name="payload_01_beam" type="box" pos="0.0 0.0 0.0" size="0.0225 0.6 0.0225" rgba="0.84 0.1 0.08 1.0" friction="0.4 0.005 0.0001" condim="4" mass="1.458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <geom name="payload_01_label" type="box" pos="0.0 0.0 0.0228" size="0.017 0.029 0.0001" rgba="0.945 0.937 0.91 1.0" material="payload_01_number" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="payload_02" pos="-0.43958084676304865 2.7754042370723373 0.8225" quat="0.996917333733128 0.0 0.0 0.07845909572784485">
       <freejoint name="payload_02_free" />
-      <geom name="payload_02_beam" type="box" pos="0.0 0.0 0.0" size="0.0225 0.6 0.0225" rgba="0.84 0.1 0.08 1.0" friction="1 .005 .0001" condim="4" mass="1.458" />
+      <geom name="payload_02_beam" type="box" pos="0.0 0.0 0.0" size="0.0225 0.6 0.0225" rgba="0.84 0.1 0.08 1.0" friction="0.4 0.005 0.0001" condim="4" mass="1.458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <geom name="payload_02_label" type="box" pos="0.0 0.0 0.0228" size="0.017 0.029 0.0001" rgba="0.945 0.937 0.91 1.0" material="payload_02_number" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="payload_03" pos="1.632115913943474 2.322132133073495 0.8225" quat="0.9723699203976766 0.0 0.0 -0.2334453638559055">
       <freejoint name="payload_03_free" />
-      <geom name="payload_03_beam" type="box" pos="0.0 0.0 0.0" size="0.0225 0.6 0.0225" rgba="0.84 0.1 0.08 1.0" friction="1 .005 .0001" condim="4" mass="1.458" />
+      <geom name="payload_03_beam" type="box" pos="0.0 0.0 0.0" size="0.0225 0.6 0.0225" rgba="0.84 0.1 0.08 1.0" friction="0.4 0.005 0.0001" condim="4" mass="1.458" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
       <geom name="payload_03_label" type="box" pos="0.0 0.0 0.0228" size="0.017 0.029 0.0001" rgba="0.945 0.937 0.91 1.0" material="payload_03_number" contype="0" conaffinity="0" mass="0" />
     </body>
     <camera name="payload_close" pos="-2.0788939366884494 0.2687005768508882 1.8224999999999998" fovy="48" quat="0.8796562825713216 0.4717284847325486 0.028657774910772652 0.05343962164817854" />
     <camera name="payload_01_close" pos="-2.07889393668845 0.26870057685088816 1.8224999999999998" fovy="48" quat="0.8796562825713217 0.47172848473254847 0.02865777491077263 0.053439621648178524" />
     <camera name="payload_02_close" pos="-1.1486007185024072 1.498771626851721 1.8224999999999998" fovy="48" quat="0.8531165909016808 0.45749618879533 -0.11851695494169033 -0.22100464012638152" />
     <camera name="payload_03_close" pos="0.30812096747346374 1.706066080022464 1.8225000000000002" fovy="48" quat="0.743067903301779 0.39848097833544427 -0.2540904194882801 -0.4738154278954996" />
-    <geom name="table_relay_arc_0" type="mesh" mesh="table_relay_arc_0" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_0_leg" type="box" pos="1.9410081143570732 1.9410081143570728 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_arc_1" type="mesh" mesh="table_relay_arc_1" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_2" type="mesh" mesh="table_relay_arc_2" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_3" type="mesh" mesh="table_relay_arc_3" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_3_leg" type="box" pos="1.5250402896388084 2.2823840857704867 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_arc_4" type="mesh" mesh="table_relay_arc_4" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_5" type="mesh" mesh="table_relay_arc_5" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_6" type="mesh" mesh="table_relay_arc_6" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_6_leg" type="box" pos="1.0504660218421717 2.5360493167434823 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_arc_7" type="mesh" mesh="table_relay_arc_7" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_8" type="mesh" mesh="table_relay_arc_8" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_9" type="mesh" mesh="table_relay_arc_9" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_9_leg" type="box" pos="0.5355229339342723 2.6922555947068676 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_arc_10" type="mesh" mesh="table_relay_arc_10" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_11" type="mesh" mesh="table_relay_arc_11" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_12" type="mesh" mesh="table_relay_arc_12" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_12_leg" type="box" pos="1.6808277318297423e-16 2.745 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_arc_13" type="mesh" mesh="table_relay_arc_13" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_14" type="mesh" mesh="table_relay_arc_14" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_15" type="mesh" mesh="table_relay_arc_15" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_15_leg" type="box" pos="-0.5355229339342719 2.6922555947068676 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_arc_16" type="mesh" mesh="table_relay_arc_16" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_17" type="mesh" mesh="table_relay_arc_17" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_18" type="mesh" mesh="table_relay_arc_18" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_18_leg" type="box" pos="-1.0504660218421713 2.5360493167434823 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_arc_19" type="mesh" mesh="table_relay_arc_19" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_20" type="mesh" mesh="table_relay_arc_20" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_21" type="mesh" mesh="table_relay_arc_21" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_21_leg" type="box" pos="-1.5250402896388087 2.2823840857704862 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_arc_22" type="mesh" mesh="table_relay_arc_22" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_arc_23" type="mesh" mesh="table_relay_arc_23" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_landing_0" type="mesh" mesh="table_relay_landing_0" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_landing_0_leg0" type="box" pos="-1.7465537495307721 0.728319984622144 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_landing_0_leg1" type="box" pos="-3.1536962440920018 2.135462479183374 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_landing_1" type="mesh" mesh="table_relay_landing_1" material="table_oak" mass="0" friction="1 .005 .0001" />
-    <geom name="table_relay_landing_1_leg0" type="box" pos="1.7465537495307724 0.7283199846221438 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
-    <geom name="table_relay_landing_1_leg1" type="box" pos="3.153696244092002 2.1354624791833734 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" />
+    <geom name="table_relay_arc_0" type="mesh" mesh="table_relay_arc_0" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_0_leg" type="box" pos="1.9410081143570732 1.9410081143570728 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_1" type="mesh" mesh="table_relay_arc_1" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_2" type="mesh" mesh="table_relay_arc_2" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_3" type="mesh" mesh="table_relay_arc_3" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_3_leg" type="box" pos="1.5250402896388084 2.2823840857704867 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_4" type="mesh" mesh="table_relay_arc_4" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_5" type="mesh" mesh="table_relay_arc_5" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_6" type="mesh" mesh="table_relay_arc_6" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_6_leg" type="box" pos="1.0504660218421717 2.5360493167434823 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_7" type="mesh" mesh="table_relay_arc_7" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_8" type="mesh" mesh="table_relay_arc_8" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_9" type="mesh" mesh="table_relay_arc_9" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_9_leg" type="box" pos="0.5355229339342723 2.6922555947068676 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_10" type="mesh" mesh="table_relay_arc_10" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_11" type="mesh" mesh="table_relay_arc_11" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_12" type="mesh" mesh="table_relay_arc_12" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_12_leg" type="box" pos="1.6808277318297423e-16 2.745 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_13" type="mesh" mesh="table_relay_arc_13" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_14" type="mesh" mesh="table_relay_arc_14" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_15" type="mesh" mesh="table_relay_arc_15" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_15_leg" type="box" pos="-0.5355229339342719 2.6922555947068676 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_16" type="mesh" mesh="table_relay_arc_16" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_17" type="mesh" mesh="table_relay_arc_17" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_18" type="mesh" mesh="table_relay_arc_18" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_18_leg" type="box" pos="-1.0504660218421713 2.5360493167434823 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_19" type="mesh" mesh="table_relay_arc_19" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_20" type="mesh" mesh="table_relay_arc_20" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_21" type="mesh" mesh="table_relay_arc_21" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_21_leg" type="box" pos="-1.5250402896388087 2.2823840857704862 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_22" type="mesh" mesh="table_relay_arc_22" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_arc_23" type="mesh" mesh="table_relay_arc_23" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_landing_0" type="mesh" mesh="table_relay_landing_0" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_landing_0_leg0" type="box" pos="-1.7465537495307721 0.728319984622144 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_landing_0_leg1" type="box" pos="-3.1536962440920018 2.135462479183374 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_landing_1" type="mesh" mesh="table_relay_landing_1" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_landing_1_leg0" type="box" pos="1.7465537495307724 0.7283199846221438 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <geom name="table_relay_landing_1_leg1" type="box" pos="3.153696244092002 2.1354624791833734 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <body name="relay_start" pos="-2.3263813101037414 1.6475588001646557 0.80035" quat="0.9238795325112867 0.0 0.0 0.3826834323650897">
       <geom name="relay_start_x0" type="box" pos="-0.4 0.0 0.0" size="0.0025 0.68 0.00012" rgba="0.95 0.93 0.86 1.0" contype="0" conaffinity="0" mass="0" />
       <geom name="relay_start_y0" type="box" pos="0.0 -0.68 0.0" size="0.4 0.0025 0.00012" rgba="0.95 0.93 0.86 1.0" contype="0" conaffinity="0" mass="0" />
@@ -1916,7 +1916,7 @@
     <general class="panda" name="A_actuator5" joint="A_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="A_actuator6" joint="A_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="A_actuator7" joint="A_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="A_actuator8" tendon="A_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="A_actuator8" tendon="A_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="B_actuator1" joint="B_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="B_actuator2" joint="B_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="B_actuator3" joint="B_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1924,7 +1924,7 @@
     <general class="panda" name="B_actuator5" joint="B_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="B_actuator6" joint="B_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="B_actuator7" joint="B_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="B_actuator8" tendon="B_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="B_actuator8" tendon="B_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="C_actuator1" joint="C_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="C_actuator2" joint="C_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="C_actuator3" joint="C_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1932,7 +1932,7 @@
     <general class="panda" name="C_actuator5" joint="C_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="C_actuator6" joint="C_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="C_actuator7" joint="C_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="C_actuator8" tendon="C_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="C_actuator8" tendon="C_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="D_actuator1" joint="D_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="D_actuator2" joint="D_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="D_actuator3" joint="D_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1940,7 +1940,7 @@
     <general class="panda" name="D_actuator5" joint="D_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="D_actuator6" joint="D_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="D_actuator7" joint="D_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="D_actuator8" tendon="D_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="D_actuator8" tendon="D_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="E_actuator1" joint="E_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="E_actuator2" joint="E_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="E_actuator3" joint="E_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1948,7 +1948,7 @@
     <general class="panda" name="E_actuator5" joint="E_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="E_actuator6" joint="E_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="E_actuator7" joint="E_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="E_actuator8" tendon="E_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="E_actuator8" tendon="E_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="F_actuator1" joint="F_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="F_actuator2" joint="F_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="F_actuator3" joint="F_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1956,7 +1956,7 @@
     <general class="panda" name="F_actuator5" joint="F_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="F_actuator6" joint="F_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="F_actuator7" joint="F_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="F_actuator8" tendon="F_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="F_actuator8" tendon="F_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="G_actuator1" joint="G_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="G_actuator2" joint="G_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="G_actuator3" joint="G_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1964,7 +1964,7 @@
     <general class="panda" name="G_actuator5" joint="G_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="G_actuator6" joint="G_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="G_actuator7" joint="G_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="G_actuator8" tendon="G_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="G_actuator8" tendon="G_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="H_actuator1" joint="H_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="H_actuator2" joint="H_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="H_actuator3" joint="H_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1972,7 +1972,7 @@
     <general class="panda" name="H_actuator5" joint="H_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="H_actuator6" joint="H_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="H_actuator7" joint="H_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="H_actuator8" tendon="H_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="H_actuator8" tendon="H_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="I_actuator1" joint="I_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="I_actuator2" joint="I_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="I_actuator3" joint="I_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1980,7 +1980,7 @@
     <general class="panda" name="I_actuator5" joint="I_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="I_actuator6" joint="I_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="I_actuator7" joint="I_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="I_actuator8" tendon="I_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="I_actuator8" tendon="I_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="J_actuator1" joint="J_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="J_actuator2" joint="J_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="J_actuator3" joint="J_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1988,7 +1988,7 @@
     <general class="panda" name="J_actuator5" joint="J_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="J_actuator6" joint="J_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="J_actuator7" joint="J_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="J_actuator8" tendon="J_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="J_actuator8" tendon="J_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="K_actuator1" joint="K_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="K_actuator2" joint="K_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="K_actuator3" joint="K_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -1996,7 +1996,7 @@
     <general class="panda" name="K_actuator5" joint="K_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="K_actuator6" joint="K_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="K_actuator7" joint="K_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="K_actuator8" tendon="K_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="K_actuator8" tendon="K_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
     <general class="panda" name="L_actuator1" joint="L_joint1" gainprm="4500" biasprm="0 -4500 -450" />
     <general class="panda" name="L_actuator2" joint="L_joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628" />
     <general class="panda" name="L_actuator3" joint="L_joint3" gainprm="3500" biasprm="0 -3500 -350" />
@@ -2004,7 +2004,7 @@
     <general class="panda" name="L_actuator5" joint="L_joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
     <general class="panda" name="L_actuator6" joint="L_joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525" />
     <general class="panda" name="L_actuator7" joint="L_joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" />
-    <general class="panda" name="L_actuator8" tendon="L_split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
+    <general class="panda" name="L_actuator8" tendon="L_split" forcerange="-280 280" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" />
   </actuator>
   <contact>
     <exclude body1="A_link0" body2="A_link1" />

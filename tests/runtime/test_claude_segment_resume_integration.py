@@ -44,7 +44,7 @@ class SlowMoveModel(StubModel):
         if not names or RESUME in text: return None, None
         if has_result:
             if blocks[-1].get('tool_use_id') == 'toolu_observe':
-                return {'op': 'move', 'data': {'robot': self.robot, 'delta_m': [0, 0, .08], 'speed_m_s': .01}}, 'toolu_move'
+                return {'op': 'move', 'data': {'robot': self.robot, 'delta_m': [0, 0, .08], 'acceleration_m_s2': 2., 'angular_speed_rad_s': .6, 'angular_acceleration_rad_s2': 5., 'speed_m_s': .01}}, 'toolu_move'
             return None, None
         if 'experiment has started' in text:
             return {'op': 'observe', 'data': {'cameras': [self.camera]}}, 'toolu_observe'

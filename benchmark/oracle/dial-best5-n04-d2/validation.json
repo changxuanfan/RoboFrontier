@@ -1,0 +1,11 @@
+{
+  "status": "rolling_friction_003_candidate",
+  "oracle_verified": false,
+  "policy_verified": false,
+  "frozen_input": false,
+  "robot_and_dial_physics_equal_to_r10": false,
+  "panel_footprint_supported": true,
+  "score_panel_scale": 1.0,
+  "physics_sha256": "a327063d7a7e94e14026dd32afd83d73d7d1114dd763a2557dfcaf69f6205765",
+  "scope": "Rolling friction 0.03 engineering candidate; original Oracle results are historical and full manipulation has not been qualified."
+}

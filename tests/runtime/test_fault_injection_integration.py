@@ -38,7 +38,7 @@ class FaultInjectionTests(unittest.TestCase):
                 wait_until(attached, message='world')
                 client_call(meta, 'bind', {'actor': 'Controller', 'thread_id': 'thread-1'}, 'bind-1')
                 client_call(meta, 'start', {}, 'start-1')
-                faulty = client_call(controller, 'move', {'robot': first, 'delta_m': [0, 0, .05], 'speed_m_s': .01,
+                faulty = client_call(controller, 'move', {'robot': first, 'delta_m': [0, 0, .05], 'acceleration_m_s2': 2., 'angular_speed_rad_s': .6, 'angular_acceleration_rad_s2': 5., 'speed_m_s': .01,
                                                           'wait': True, 'cameras': []}, 'move-fault')
                 self.assertEqual(faulty['execution_status'], 'running', faulty)
                 self.assertEqual(faulty['execution']['phase'], 'stopping')
@@ -50,7 +50,7 @@ class FaultInjectionTests(unittest.TestCase):
                 pending = client_call(controller, 'recover_action', {'call_id': 'move-fault'}, 'recover-1')
                 self.assertFalse(pending['recovered'])
                 # The world keeps running: the other arm acts while the first is unresolved.
-                other = client_call(controller, 'move', {'robot': second, 'delta_m': [0, 0, .02], 'speed_m_s': .05,
+                other = client_call(controller, 'move', {'robot': second, 'delta_m': [0, 0, .02], 'acceleration_m_s2': 2., 'angular_speed_rad_s': .6, 'angular_acceleration_rad_s2': 5., 'speed_m_s': .05,
                                                          'wait': True, 'cameras': []}, 'move-other')
                 self.assertEqual(other['execution']['status'], 'completed')
                 def recovered():
@@ -59,7 +59,7 @@ class FaultInjectionTests(unittest.TestCase):
                     return answer if answer.get('recovered') else None
                 done = wait_until(recovered, timeout=60, message='the stop to be confirmed')
                 self.assertEqual(done['execution']['status'], 'failed')
-                again = client_call(controller, 'move', {'robot': first, 'delta_m': [0, 0, .01], 'speed_m_s': .05,
+                again = client_call(controller, 'move', {'robot': first, 'delta_m': [0, 0, .01], 'acceleration_m_s2': 2., 'angular_speed_rad_s': .6, 'angular_acceleration_rad_s2': 5., 'speed_m_s': .05,
                                                          'wait': True, 'cameras': []}, 'move-after')
                 self.assertEqual(again['execution']['status'], 'completed')
             finally:

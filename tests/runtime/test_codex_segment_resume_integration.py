@@ -90,7 +90,7 @@ class CodexSegmentResumeTests(unittest.TestCase):
             task = json.loads((run / 'private/inputs/task.json').read_text())
             arm, camera = sorted(task['arms'])[0], camera_names(task)[0]
             steps = {BOOTSTRAP: [{'op': 'observe', 'data': {'cameras': [camera]}},
-                                 {'op': 'move', 'data': {'robot': arm, 'delta_m': [0, 0, .08], 'speed_m_s': .01}}],
+                                 {'op': 'move', 'data': {'robot': arm, 'delta_m': [0, 0, .08], 'acceleration_m_s2': 2., 'angular_speed_rad_s': .6, 'angular_acceleration_rad_s2': 5., 'speed_m_s': .01}}],
                      RESUME: [{'op': 'observe', 'data': {'cameras': [camera]}}]}
             server = ThreadingHTTPServer(('127.0.0.1', 0), controller_stub(requests, steps))
             threading.Thread(target=server.serve_forever, daemon=True).start()

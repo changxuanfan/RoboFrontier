@@ -20,6 +20,7 @@ from robofrontier.physics.robot_control import matrix_quat
 from robofrontier.runtime.setup import prepare_run
 from robofrontier.runtime.service import RuntimeService
 from robofrontier.tasks.config import ROOT, load_harness
+from motion import filled
 
 
 class TerminalServoTests(unittest.TestCase):
@@ -28,12 +29,12 @@ class TerminalServoTests(unittest.TestCase):
 
     def test_default_action_timeout_allows_more_time_than_previous_15_second_base(self):
         q=self.arm.qref.copy();q[0]+=.2
-        cmd=self.world.validate_action('A','move',{'joint_rad':q.tolist(),'joint_speed_rad_s':.8},self.cfg)
+        cmd=self.world.validate_action('A','move',filled('move',{'joint_rad':q.tolist(),'joint_speed_rad_s':.8}),self.cfg)
         self.assertGreaterEqual(cmd['timing']['timeout_sim_s'],30.0)
 
     def test_live_nonsettling_stop_reports_the_unmet_conditions(self):
         from robofrontier.runtime.stop_diagnostics import stop_diagnostics
-        a=self.arm;cmd=self.world.validate_action('A','move',{'joint_rad':a.qref.tolist()},self.cfg)
+        a=self.arm;cmd=self.world.validate_action('A','move',filled('move',{'joint_rad':a.qref.tolist()}),self.cfg)
         a.start('move',cmd,0);a.request_stop(.1,'Action timeout; stopped at current reference')
         a.velocity[:]=.02;self.world.data.qvel[a.dofs]=.04
         result=a.poll(3.2,15)
@@ -51,18 +52,18 @@ class TerminalServoTests(unittest.TestCase):
 
     def test_accepted_slow_motion_has_enough_budget_for_reference_travel(self):
         w=self.world;a=self.arm
-        jaw=w.validate_action('A','gripper',{'state':'close','speed_m_s':.005},self.cfg)
+        jaw=w.validate_action('A','gripper',filled('gripper',{'state':'close','speed_m_s':.005}),self.cfg)
         self.assertAlmostEqual(jaw['timing']['estimated_reference_s'],16.)
         self.assertGreater(jaw['timing']['timeout_sim_s'],16.2)
         rotation=np.array([[0,-1,0],[1,0,0],[0,0,1]])@a.rotation
-        pose=w.validate_action('A','move',{'quaternion_wxyz':matrix_quat(rotation).tolist(),'angular_speed_rad_s':.05},self.cfg)
+        pose=w.validate_action('A','move',filled('move',{'quaternion_wxyz':matrix_quat(rotation).tolist(),'angular_speed_rad_s':.05}),self.cfg)
         self.assertGreater(pose['timing']['timeout_sim_s'],np.pi/2/.05)
         q=a.qref.copy();q[0]+=.2
-        joint=w.validate_action('A','move',{'joint_rad':q.tolist(),'joint_speed_rad_s':.01},self.cfg)
+        joint=w.validate_action('A','move',filled('move',{'joint_rad':q.tolist(),'joint_speed_rad_s':.01}),self.cfg)
         self.assertGreaterEqual(joint['timing']['estimated_reference_s'],19.99)
         before=w.data.qpos.copy();limited={**self.cfg,'max_action_timeout_sim_s':16}
         with self.assertRaisesRegex(ValueError,'maximum execution budget'):
-            w.validate_action('A','gripper',{'state':'close','speed_m_s':.005},limited)
+            w.validate_action('A','gripper',filled('gripper',{'state':'close','speed_m_s':.005}),limited)
         np.testing.assert_array_equal(before,w.data.qpos);self.assertIsNone(a.job)
 
     def test_a_move_without_ik_solution_reports_what_the_solver_found(self):
@@ -70,7 +71,7 @@ class TerminalServoTests(unittest.TestCase):
         w=self.world;a=self.arm;before=w.data.qpos.copy()
         # Too far at that height with the current hand: the closest pose found falls short.
         with self.assertRaises(IKNoSolution) as caught:
-            w.validate_action('A','move',{'target_m':[.635,-.395,.895]},self.cfg)
+            w.validate_action('A','move',filled('move',{'target_m':[.635,-.395,.895]}),self.cfg)
         far=caught.exception.detail
         self.assertEqual(str(caught.exception),IK_MESSAGE)
         self.assertGreater(far['position_error_m'],.0025)
@@ -82,16 +83,16 @@ class TerminalServoTests(unittest.TestCase):
         target=(w.data.site_xpos[a.site]+np.array([0,0,-.1])).tolist()
         flipped=matrix_quat(quat_matrix([0,0,1,0])@a.home_rotation).tolist()
         with self.assertRaises(IKNoSolution) as caught:
-            w.validate_action('A','move',{'target_m':target,'quaternion_wxyz':flipped},self.cfg)
+            w.validate_action('A','move',filled('move',{'target_m':target,'quaternion_wxyz':flipped}),self.cfg)
         tilted=caught.exception.detail
         self.assertEqual(tilted['orientation']['source'],'requested quaternion_wxyz')
         self.assertTrue(tilted['home_orientation']['solvable'])
-        w.validate_action('A','move',{'target_m':target,'quaternion_wxyz':tilted['home_orientation']['quaternion_wxyz']},self.cfg)
+        w.validate_action('A','move',filled('move',{'target_m':target,'quaternion_wxyz':tilted['home_orientation']['quaternion_wxyz']}),self.cfg)
         # Both were rejected before execution.
         np.testing.assert_array_equal(before,w.data.qpos);self.assertIsNone(a.job)
 
     def test_timeout_stops_reference_and_retains_job_until_settled(self):
-        a=self.arm;command=self.world.validate_action('A','gripper',{'state':'close'},self.cfg)
+        a=self.arm;command=self.world.validate_action('A','gripper',filled('gripper',{'state':'close'}),self.cfg)
         command['timing']['timeout_sim_s']=.1;a.start('jaw',command,0)
         a.control(.02);reference=a.observe()['gripper_width_m']*255/.08
         self.assertIsNone(a.poll(.12,15))
@@ -107,7 +108,7 @@ class TerminalServoTests(unittest.TestCase):
         self.assertAlmostEqual(a.gripper,reference);self.assertAlmostEqual(a.grip_goal,reference)
 
     def test_nonsettling_stop_keeps_ownership_unresolved_and_cannot_reset_deadline(self):
-        a=self.arm;a.start('jaw',self.world.validate_action('A','gripper',{'state':'close'},self.cfg),0)
+        a=self.arm;a.start('jaw',self.world.validate_action('A','gripper',filled('gripper',{'state':'close'}),self.cfg),0)
         a.request_stop(.1);a.request_stop(2.9)
         self.assertEqual(a.stop_started_at,.1)
         self.world.data.joint('A_finger_joint1').qvel[0]=.01
@@ -115,10 +116,10 @@ class TerminalServoTests(unittest.TestCase):
         self.assertEqual(result['status'],'uncertain');self.assertEqual(a.job,'jaw')
         self.assertTrue(a.stopping);self.assertIsNone(a.poll(3.4,15))
         with self.assertRaisesRegex(ValueError,'already has an execution'):
-            self.world.validate_action('A','gripper',{'state':'open'},self.cfg)
+            self.world.validate_action('A','gripper',filled('gripper',{'state':'open'}),self.cfg)
 
     def test_local_recovery_waits_for_proven_stop_and_keeps_original_failed(self):
-        a=self.arm;command=self.world.validate_action('A','move',{'joint_rad':a.qref.tolist()},self.cfg)
+        a=self.arm;command=self.world.validate_action('A','move',filled('move',{'joint_rad':a.qref.tolist()}),self.cfg)
         a.start('original',command,0);a.request_stop(.1,'Action timeout; stopped at current reference')
         a.velocity[:]=.1
         self.assertEqual(a.poll(3.2,15)['status'],'uncertain')
@@ -132,7 +133,7 @@ class TerminalServoTests(unittest.TestCase):
         self.assertEqual(result['status'],'failed');self.assertEqual(result['call_id'],'original');self.assertIsNone(a.job)
 
     def test_direct_abort_freezes_jaw_reference(self):
-        a=self.arm;a.start('jaw',self.world.validate_action('A','gripper',{'state':'close'},self.cfg),0)
+        a=self.arm;a.start('jaw',self.world.validate_action('A','gripper',filled('gripper',{'state':'close'}),self.cfg),0)
         a.control(.02);reference=a.observe()['gripper_width_m']*255/.08;a.end('failed','engineering stop')
         for _ in range(50):a.control(.02)
         self.assertAlmostEqual(a.gripper,reference)
@@ -146,17 +147,13 @@ class SettleCountTests(unittest.TestCase):
     def setUp(self):
         self.world=robot_fixture();self.arm=self.world.arms['A'];self.cfg=load_harness()
 
-    def profile(self,name):
-        from robofrontier.physics.profile import attach
-        self.world.task={'family':'transport'};attach(self.world,{'physics_profile':name})
-
     def begin(self,op):
         w=self.world;a=self.arm
         if op=='gripper':
-            a.start('jaw',w.validate_action('A','gripper',{'width_m':a.observe()['gripper_width_m']},self.cfg),0.)
+            a.start('jaw',w.validate_action('A','gripper',filled('gripper',{'width_m':a.observe()['gripper_width_m']}),self.cfg),0.)
             a.gripper=a.grip_goal
         else:
-            command=w.validate_action('A','move',{'joint_rad':a.qref.tolist()},self.cfg)
+            command=w.validate_action('A','move',filled('move',{'joint_rad':a.qref.tolist()}),self.cfg)
             w.data.qpos[a.qids]=command['joint_goal'];a.start('move',command,0.)
             if op=='stop':a.request_stop(0.)
         return a
@@ -184,25 +181,13 @@ class SettleCountTests(unittest.TestCase):
         for tick in range(12,23):self.assertIsNone(a.poll(.02*tick,15))
         self.assertEqual(a.poll(.46,15)['status'],'completed')
 
-    def test_realtime_v2_counts_each_simulation_tick_once(self):
+    def test_each_simulation_tick_counts_once(self):
+        # Polling several times between two physics steps adds one settle sample.
         for op,ticks in (('move',12),('gripper',19),('stop',3)):
             with self.subTest(op=op):
-                self.setUp();self.profile('realtime-v2')
-                a=self.begin(op)
-                self.assertEqual(a.poll_stability,'per-tick')
+                self.setUp();a=self.begin(op)
                 for _ in range(30):self.assertIsNone(a.poll(0.,15))
                 self.assertEqual(self.ticks_until_done(a,polls_per_tick=5)[0],ticks)
-
-    def test_without_realtime_v2_every_poll_still_counts(self):
-        # Finished runs keep their terms: realtime-v1 and no profile count polls, not ticks.
-        for name in (None,'realtime-v1'):
-            for op,ticks in (('move',3),('gripper',11),('stop',1)):
-                with self.subTest(profile=name,op=op):
-                    self.setUp()
-                    if name:self.profile(name)
-                    a=self.begin(op)
-                    self.assertEqual(a.poll_stability,'per-call')
-                    self.assertEqual(self.ticks_until_done(a,polls_per_tick=5)[0],ticks)
 
 
 class SceneTopologyContractTests(unittest.TestCase):
@@ -231,7 +216,7 @@ class SceneTopologyContractTests(unittest.TestCase):
             def robot_model(self,cfg):return geometry.robot_model(cfg)
             def validate_action(self,actor,op,data,cfg):
                 if actor in self.running:raise ValueError('Arm busy')
-                return geometry.validate_action(actor,op,data,cfg)
+                return geometry.validate_action(actor,op,filled(op,data),cfg)
             def request_stop(self,actor,call):
                 assert self.running.pop(actor)==call
                 self.finished.append({'call_id':call,'status':'failed','reason':'stopped_by_agent'})

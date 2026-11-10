@@ -1,27 +1,27 @@
-"""Opt-in hand driver: encoder position tracking and force-mode isolation."""
+"""The hand driver: encoder position tracking and force-mode isolation."""
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
 import numpy as np
-from robofrontier.tasks.config import CONTROL_FILES,load_harness,physical_control_fingerprint
+from robofrontier.tasks.config import load_harness
 from single_arm_scene import make_world
+from motion import filled
 
 
 class HandPositionProfileTests(unittest.TestCase):
     def setUp(self):
         self.temp=TemporaryDirectory();self.directory=Path(self.temp.name)
-        self.cfg=load_harness();self.cfg['gripper_position_servo']='pd1000-v1'
+        self.cfg=load_harness()
 
     def tearDown(self):self.temp.cleanup()
 
-    def world(self,profile='pd1000-v1'):
-        cfg={**self.cfg,'gripper_position_servo':profile}
-        return make_world(self.directory,harness=cfg)
+    def world(self):
+        return make_world(self.directory,harness=self.cfg)
 
     def command(self,w,op,parameters):
-        command=w.validate_action('B',op,parameters,self.cfg);w.start_action('B','profile-'+op,command)
+        command=w.validate_action('B',op,filled(op,parameters),self.cfg);w.start_action('B','profile-'+op,command)
         deadline=w.time+command['timing']['timeout_sim_s']+4.
         while w.time<deadline:
             w.step();done=w.poll_actions(15.)
@@ -29,9 +29,8 @@ class HandPositionProfileTests(unittest.TestCase):
                 self.assertEqual(done[0]['status'],'completed',done[0]);return done[0]
         self.fail('Bounded controller did not settle')
 
-    def test_frozen_profile_tracks_intermediate_and_full_empty_opening(self):
+    def test_position_servo_tracks_intermediate_and_full_empty_opening(self):
         w=self.world();a=w.arms['B']
-        self.assertEqual(a.hand_position_servo,'pd1000-v1')
         self.assertAlmostEqual(w.model.actuator_biasprm[a.grip,1],-1000.)
         self.assertEqual(w.model.actuator_forcerange[a.grip].tolist(),[-70.,70.])
         self.command(w,'gripper',dict(width_m=0.,speed_m_s=.04))
@@ -48,7 +47,7 @@ class HandPositionProfileTests(unittest.TestCase):
         self.command(w,'gripper',dict(mode='grasp',width_m=.04,force_n=50.,speed_m_s=.02,epsilon_inner_m=.008,epsilon_outer_m=.008))
         self.assertEqual(a.grasp_phase,'hold')
         self.assertAlmostEqual(w.model.actuator_biasprm[a.grip,2],-10.)
-        with self.assertRaises(ValueError):a.configure_hand_position_servo('legacy')
+        with self.assertRaises(ValueError):a.configure_hand_position_servo()
         self.command(w,'move',dict(target_m=[.42,0.,.54],speed_m_s=.06))
         self.assertGreater(w.data.joint('cube_free').qpos[2],.49)
         self.command(w,'move',dict(target_m=[.42,0.,.42],speed_m_s=.04))
@@ -59,23 +58,11 @@ class HandPositionProfileTests(unittest.TestCase):
         for actual,expected in zip((w.model.body_mass,w.model.dof_damping,w.model.geom_friction),physical):
             np.testing.assert_array_equal(actual,expected)
 
-    def test_legacy_profile_keeps_original_actuator(self):
-        w=self.world('legacy');a=w.arms['B']
-        self.assertEqual(a.hand_position_servo,'legacy')
-        self.assertAlmostEqual(w.model.actuator_gainprm[a.grip,0],.01568627451)
-        self.assertEqual(w.model.actuator_forcerange[a.grip].tolist(),[-100.,100.])
-
-    def test_unknown_and_active_reconfiguration_rejected(self):
+    def test_active_reconfiguration_rejected(self):
         w=self.world();a=w.arms['B']
-        with self.assertRaises(ValueError):a.configure_hand_position_servo('typo')
-        command=w.validate_action('B','gripper',dict(width_m=0.),self.cfg)
+        command=w.validate_action('B','gripper',filled('gripper',dict(width_m=0.)),self.cfg)
         w.start_action('B','active',command)
-        with self.assertRaises(ValueError):a.configure_hand_position_servo('legacy')
-
-    def test_driver_selection_changes_physical_control_fingerprint(self):
-        hashes={'robofrontier/'+path:'same-source' for path in CONTROL_FILES.values()}
-        legacy={**self.cfg,'gripper_position_servo':'legacy'}
-        self.assertNotEqual(physical_control_fingerprint(hashes,legacy),physical_control_fingerprint(hashes,self.cfg))
+        with self.assertRaises(ValueError):a.configure_hand_position_servo()
 
 
 if __name__=='__main__':unittest.main()

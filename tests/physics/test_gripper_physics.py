@@ -8,6 +8,7 @@ import numpy as np
 from robofrontier.tasks.config import load_harness
 from single_arm_scene import make_world
 from robofrontier.physics.robot_control import matrix_quat,rotation_vector
+from motion import filled
 
 
 class GripperPhysicsTests(unittest.TestCase):
@@ -20,7 +21,7 @@ class GripperPhysicsTests(unittest.TestCase):
         return make_world(Path(self.temp.name),{'cube':[.42,cube_y,.42]})
 
     def command(self,w,op,data):
-        command=w.validate_action('B',op,data,self.cfg);w.start_action('B','test',command)
+        command=w.validate_action('B',op,filled(op,data),self.cfg);w.start_action('B','test',command)
         for _ in range(int((command['timing']['timeout_sim_s']+4)/.02)):
             w.step();done=w.poll_actions(15)
             if done:return done[0]
@@ -45,11 +46,11 @@ class GripperPhysicsTests(unittest.TestCase):
         self.assertGreater(w.arms['B'].observe()['gripper_width_m'],.075)
         for name in ('finger_joint1','finger_joint2'):
             self.assertGreater(float(w.data.joint('B_'+name).qpos[0]),-.001)
-        # The fix must retain the contact/grip settings requested for the demo.
+        # The fix keeps the release contact and hand settings.
         self.assertEqual(w.model.opt.noslip_iterations,10)
-        self.assertAlmostEqual(w.model.actuator_gainprm[w.arms['B'].grip,0],.01568627451)
-        self.assertEqual(w.model.actuator_forcerange[w.arms['B'].grip].tolist(),[-100.,100.])
-        self.assertEqual(w.model.geom_friction[w.model.geom('cube_geom').id].tolist(),[1.,.005,.0001])
+        self.assertAlmostEqual(w.model.actuator_biasprm[w.arms['B'].grip,1],-1000.)
+        self.assertEqual(w.model.actuator_forcerange[w.arms['B'].grip].tolist(),[-70.,70.])
+        self.assertEqual(w.model.geom_friction[w.model.geom('cube_geom').id].tolist(),[.4,.005,.0001])
 
     def test_open_reports_failure_if_actuator_cannot_open(self):
         w=self.world(.35)
@@ -62,7 +63,13 @@ class GripperPhysicsTests(unittest.TestCase):
     def test_normal_contact_grasp_lifts_and_releases_without_attachment(self):
         w=self.world(0.)
         self.move(w,[.42,0.,.52]);self.move(w,[.42,0.,.42])
+        # A position close stops at the cube and then holds its aperture without squeezing,
+        # so the cube stays down; a grasp presses it with a stated force.
         self.assertEqual(self.command(w,'gripper',{'state':'close'})['status'],'completed')
+        self.move(w,[.42,0.,.47])
+        self.assertLess(w.data.joint('cube_free').qpos[2],.43)
+        self.move(w,[.42,0.,.42])
+        self.assertEqual(self.command(w,'gripper',{'mode':'grasp','width_m':.04,'force_n':20})['status'],'completed')
         self.move(w,[.42,0.,.56])
         self.assertGreater(w.data.joint('cube_free').qpos[2],.50)
         self.move(w,[.57,0.,.56]);self.move(w,[.57,0.,.42])
@@ -77,7 +84,7 @@ class GripperPhysicsTests(unittest.TestCase):
     def test_slow_aperture_and_rotation_complete_beyond_old_fixed_deadline(self):
         w=self.world(.35);a=w.arms['B']
         def execute(op,p,limit=90):
-            command=w.validate_action('B',op,p,self.cfg);w.start_action('B','slow-'+op,command)
+            command=w.validate_action('B',op,filled(op,p),self.cfg);w.start_action('B','slow-'+op,command)
             began=w.time
             while w.time-began<limit:
                 w.step();done=w.poll_actions(self.cfg['action_timeout_sim_s'])
@@ -93,7 +100,7 @@ class GripperPhysicsTests(unittest.TestCase):
         self.assertLess(np.linalg.norm(rotation_vector(target,w.data.site_xmat[a.site].reshape(3,3))),.02)
 
     def test_timed_out_jaw_holds_reference_after_settled_failure(self):
-        w=self.world(.35);a=w.arms['B'];command=w.validate_action('B','gripper',{'state':'close','speed_m_s':.005},self.cfg)
+        w=self.world(.35);a=w.arms['B'];command=w.validate_action('B','gripper',filled('gripper',{'state':'close','speed_m_s':.005}),self.cfg)
         command['timing']['timeout_sim_s']=.5 # Inject an early deadline to exercise failure recovery.
         w.start_action('B','expired',command);terminal=None
         for _ in range(200):
