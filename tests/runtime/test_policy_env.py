@@ -194,7 +194,7 @@ class DefaultTests(Fixture):
     """robofrontier prepare uses the checked environment of the current locks by default on macOS."""
     def place(self, receipt=True, system='darwin', **change):
         # The build's name carries its platform, so name it for the platform the test looks on.
-        from scripts.build_policy_env import identity
+        from robofrontier.runtime.policy_env import identity
         with patch('sys.platform', system): root = self.tmp/('policy-env-' + identity())
         self.root.rename(root); self.root = root
         if receipt:

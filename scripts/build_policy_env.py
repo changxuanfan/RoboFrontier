@@ -8,7 +8,8 @@ environment is kept. Point prepared runs at it with ROBOFRONTIER_POLICY_ENV.
     .venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier
 
 Each host builds its own folder from the same locks. Linux needs glibc 2.28 or newer,
-which the wheels in the locks require. To move to newer versions, update PYTHON and UV,
+which the wheels in the locks require. To move to newer versions, update PYTHON (in
+robofrontier/runtime/policy_env.py) and UV,
 then relock; --upgrade matters, since compile otherwise keeps a lock's existing versions:
 
     uv pip compile --universal --python-version 3.12 --generate-hashes --no-header --upgrade core.in store.in -o all.lock
@@ -30,9 +31,10 @@ import sys
 from robofrontier.runtime import policy_env
 
 ROOT = Path(__file__).resolve().parents[1]
-CONFIG = ROOT/'configs/policy-env'
+CONFIG = policy_env.CONFIG
 # The harness's Python series, in a separate installation. configs/policy-env/*.lock are resolved for it.
-PYTHON = 'cpython-3.12.16'
+PYTHON = policy_env.PYTHON
+identity = policy_env.identity
 UV = ('uvx', '--from', 'uv==0.13.7', 'uv')  # A host's own uv may not know this Python yet.
 FORBIDDEN = ('mujoco', 'pybullet', 'ompl', 'torch', 'tensorflow', 'pinocchio', 'drake', 'python-fcl', 'ikpy', 'isaacgym')
 
@@ -41,14 +43,6 @@ def names(path):
     """Package names of a requirements input file, ignoring comments."""
     lines = (line.split('#')[0].strip() for line in path.read_text().splitlines())
     return sorted(re.split(r'[<>=!~; ]', line)[0] for line in lines if line)
-
-
-def identity():
-    digest = hashlib.sha256()
-    for name in ('core.lock', 'all.lock'):
-        digest.update((CONFIG/name).read_bytes())
-    digest.update(json.dumps([PYTHON, sys.platform, platform.machine()]).encode())
-    return digest.hexdigest()[:12]
 
 
 def run(command, **options):

@@ -146,6 +146,20 @@ OFF = ('off', 'none', '0', 'false', 'no')
 # Where scripts/build_policy_env.py builds by default on macOS: outside every home folder.
 # Elsewhere ROBOFRONTIER_POLICY_ENV_BASE names the base (for example on Slurm shared storage).
 DEFAULT_BASE = Path('/Users/Shared/robofrontier')
+# The interpreter the environment is built on, and the locked package sets in configs/policy-env.
+PYTHON = 'cpython-3.12.16'
+CONFIG = Path(__file__).resolve().parents[2]/'configs/policy-env'
+
+
+def identity():
+    """The environment's folder suffix: its locks, interpreter and platform."""
+    import platform
+    import sys
+    digest = hashlib.sha256()
+    for name in ('core.lock', 'all.lock'):
+        digest.update((CONFIG/name).read_bytes())
+    digest.update(json.dumps([PYTHON, sys.platform, platform.machine()]).encode())
+    return digest.hexdigest()[:12]
 BASE_VAR = 'ROBOFRONTIER_POLICY_ENV_BASE'
 
 
@@ -171,7 +185,6 @@ def default_root():
     import sys
     base = os.environ.get(BASE_VAR) or (str(DEFAULT_BASE) if sys.platform == 'darwin' else None)
     if not base: return None
-    from scripts.build_policy_env import identity
     base = Path(base)
     root = base/('policy-env-' + identity())
     hint = (' Build and check it once: .venv/bin/python -m scripts.build_policy_env --base %s, then '
