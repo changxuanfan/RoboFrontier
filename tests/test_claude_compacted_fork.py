@@ -97,6 +97,23 @@ class CompactedForkTests(unittest.TestCase):
         self.assertEqual(first_input([{'type': 'user', 'message': {'role': 'user', 'content': '<task-notification>x'}}]),
                          '<task-notification>x')
 
+    def test_uncompacted_copy_of_a_parent_that_changed_directory(self):
+        # Observed 2026-11-10: the parent had cd'd into workspace/tools; the copy carried the
+        # fork's launch directory on every row and nothing else differed.
+        from robofrontier.claude.provenance import copied_history_length
+        parent = [row('a', 'user', None, message={'role': 'user', 'content': 'task'}),
+                  row('b', 'assistant', 'a', cwd='/run/workspace/tools', message={'role': 'assistant', 'content': 'delegate'})]
+        child = [dict(r, sessionId=CHILD, promptId='child', cwd='/run/workspace') for r in parent]
+        child.append({'uuid': 'prompt', 'sessionId': CHILD, 'type': 'user', 'message': {'role': 'user', 'content': 'delegate task'}})
+        self.write(parent, child)
+        source = history(transcript_rows(self.config, PARENT), PARENT)
+        copied = history(transcript_rows(self.config, CHILD), CHILD)
+        fork_provenance(PARENT, CHILD, self.config, at=source)
+        self.assertEqual(first_input(copied[copied_history_length(source, copied):]), 'delegate task')
+        child[1]['message'] = {'role': 'assistant', 'content': 'tampered'}
+        self.write(parent, child)
+        with self.assertRaises(ValueError): fork_provenance(PARENT, CHILD, self.config, at=source)
+
     def test_tampered_missing_reordered_or_late_history_is_rejected(self):
         for mutation in ('summary', 'preserved_content', 'missing', 'reordered', 'parent_link',
                          'late', 'metadata', 'unknown_layout'):

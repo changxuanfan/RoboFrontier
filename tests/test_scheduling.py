@@ -169,6 +169,28 @@ class SchedulingTests(unittest.TestCase):
         self.s.observe_session('A','idle','t3',104,'codex.wait_threads')
         self.assertEqual(self.commands(104),[])
         self.assertTrue(self.s.agent('A')['recovery_required'])
+    def test_wakes_from_before_a_continued_segment_do_not_count(self):
+        # Observed 2026-11-10: three wakes for one system event went unacknowledged when the
+        # network dropped; after the run continued, they flagged the Controller at once.
+        self.s.send('Controller',['A'],'work','1')
+        for n in range(3):
+            self.s.observe_session('A','idle','t'+str(n),100+n,'codex.wait_threads')
+            wake=self.commands(100+n)[0];self.planner.claim(wake['wake_id'],'owner',100+n)
+            self.s.record_dispatch(wake['wake_id'],'sent',{})
+            self.s.observe_session('A','active','t'+str(n+1),100+n+.1,'codex.wait_threads')
+        self.s.put('segment',1);self.s.put('segments',[{'index':0,'started_at':0},{'index':1,'started_at':200}])
+        self.s.observe_session('A','idle','t3',201,'codex.wait_threads')
+        wake=self.commands(201)
+        self.assertEqual([w['actor'] for w in wake],['A'])
+        self.assertFalse(self.s.agent('A')['recovery_required'])
+        # The bound still holds inside the new segment.
+        for n in range(3):
+            self.planner.claim(wake[0]['wake_id'],'owner',201+n);self.s.record_dispatch(wake[0]['wake_id'],'sent',{})
+            self.s.observe_session('A','active','u'+str(n),201+n+.1,'codex.wait_threads')
+            self.s.observe_session('A','idle','u'+str(n)+'i',201+n+.2,'codex.wait_threads')
+            wake=self.commands(201+n+.2)
+            if not wake: break
+        self.assertTrue(self.s.agent('A')['recovery_required'])
     def test_fake_adapter_complete_dispatch_contract(self):
         observations={a:{'status':'idle','turn_id':'t0'} for a in ('Controller','A','B','C')}
         adapter=FakeSessionAdapter(observations)

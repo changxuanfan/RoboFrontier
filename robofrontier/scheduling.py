@@ -60,7 +60,11 @@ class Scheduler:
             s.lease(owner, now, cfg['manager_lease_s'])
             if s.get('lifecycle') != 'running' or s.get('dispatch_paused', False):
                 return []
-            wakes = s.wake_rows()
+            # A continued run counts only this segment's wakes: those sent before an interruption
+            # could not be acknowledged, and its interrupt cleared recovery_required for them
+            # (docs/running/run-segments.md).
+            started = ((s.get('segments') or [{}])[-1].get('started_at') if s.get('segment', 0) else None)
+            wakes = [w for w in s.wake_rows() if started is None or w['value'].get('created_at', 0) >= started]
             commands = []
             for actor, a in s.agents().items():
                 if not self.can_wake(actor,a,now):
