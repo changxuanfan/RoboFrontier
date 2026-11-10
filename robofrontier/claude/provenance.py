@@ -16,6 +16,13 @@ from pathlib import Path
 UUID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
 # Per-session fields that legitimately differ between a parent row and its forked copy.
 SESSION_FIELDS = ('sessionId', 'promptId')
+# Where the CLI ran when it wrote a row. A fork starts in its launch directory and rewrites
+# them on every copied row, so a parent that changed directory differs only in these.
+ENVIRONMENT_FIELDS = ('cwd', 'slug', 'gitBranch')
+
+
+def _without_environment(rows):
+    return [{k: v for k, v in row.items() if k not in ENVIRONMENT_FIELDS} for row in rows]
 
 
 def transcript_rows(config_dir, session_id):
@@ -64,7 +71,7 @@ def copied_history_length(source, copied):
     Its preserved-message metadata describes the only supported reordering and the
     two reparented edges. Unknown compaction formats fail closed.
     """
-    if copied[:len(source)] == source:
+    if copied[:len(source)] == source or _without_environment(copied[:len(source)]) == _without_environment(source):
         return len(source)
     boundaries = [i for i, row in enumerate(source)
                   if row.get('type') == 'system' and row.get('subtype') == 'compact_boundary']
