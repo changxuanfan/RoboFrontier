@@ -411,8 +411,12 @@ Use your assigned native session and bound robot tools. Read public task evidenc
     try {
       await this.startServer();
       const ownerLog=fs.openSync(this.hostPath('owner_log'),'a');
+      // The owner's environment is the same for both engines and carries no credentials
+      // (robofrontier/engines/common/owner.py); it runs in its own process group.
+      const ownerEnv=JSON.parse(execFileSync(this.python,['-m','robofrontier.engines.common.owner','env'],
+        {cwd:this.cwd??path.resolve(__dirname,'../../..'),encoding:'utf8'}));
       this.owner=spawn(this.python,['-m','robofrontier.runtime.pipeline','--run-dir',this.run,'--hidden'],
-        {cwd:this.cwd,stdio:['ignore',ownerLog,ownerLog]}); fs.closeSync(ownerLog);
+        {cwd:this.cwd,stdio:['ignore',ownerLog,ownerLog],env:ownerEnv,detached:true}); fs.closeSync(ownerLog);
       this.owner.on('error',error=>{this.ownerError=error;});
       const startupTimeout=read(path.join(this.run,'private/inputs/harness.json')).startup_timeout_s ?? 120;
       if (!Number.isFinite(startupTimeout) || startupTimeout<=0) throw new Error('Invalid owner startup timeout');

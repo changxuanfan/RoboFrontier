@@ -181,16 +181,13 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
         write_json(status, {'status': 'starting', 'claimed_at': time.time(), 'scored': False,
                             'turn_budget_usd': turn_budget_usd, 'task_budget_usd': total_budget_usd,
                             'wall_limit_s': wall_limit_s, 'startup_timeout_s': startup_timeout_s})
-        # Do not pass model credentials to the physical owner.
-        owner_env = {k: v for k, v in base_env.items() if k in (
-            'PATH', 'HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'DISPLAY', 'MUJOCO_GL',
-            'PYOPENGL_PLATFORM', 'LIBGL_ALWAYS_SOFTWARE', 'GALLIUM_DRIVER',
-            'CUDA_VISIBLE_DEVICES', 'MUJOCO_EGL_DEVICE_ID',
-            'PYTHONPATH', 'DYLD_LIBRARY_PATH', 'LD_LIBRARY_PATH')}
+        # The owner's environment is the same for both engines and carries no credentials.
+        from ..common import owner as physics_owner
+        owner_env = physics_owner.environment(base_env)
         owner_log = run_layout.path(run, 'owner_log', 'claude')
         owner_log.parent.mkdir(parents=True, exist_ok=True)
         with owner_log.open('a') as log:
-            owner = owner_factory([sys.executable, '-m', 'robofrontier.runtime.pipeline', '--run-dir', str(run), '--hidden'],
+            owner = owner_factory(physics_owner.command(run),
                                   cwd=ROOT, env=owner_env, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
                                   start_new_session=True)
         write_json(status, {'status': 'waiting_for_owner', 'owner_pid': owner.pid, 'scored': False})
