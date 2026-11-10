@@ -13,8 +13,7 @@ floor and the table frame around the opening, the Level 2 printed lines, and the
 goal cell centres. Robots, stock and its locally mixed colors, the table, cameras,
 the initial keyframe, the pattern and the completion rules are R14's; the Level 3
 scene file is byte-identical to R14. Its builder, `scripts/build_mosaic_pitch.py`, was removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
-R14 (81 mm) is kept under `configs/environments/mosaic/frontier-v2-r14-*`. No
-Oracle or policy run has qualified R15 yet. New Factory imports use the actual
+R14 (81 mm) is only in the archive tag `archive/pre-cleanup-20261110`. New Factory imports use the actual
 policy/Oracle recording's own frozen scene, source hashes, motion, and events.
 
 Historical purpose files, including `benchmark/mosaic/delivery.json`

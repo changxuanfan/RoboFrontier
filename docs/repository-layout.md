@@ -45,7 +45,7 @@ and `uv.lock` pin the Python environment.
 | `runs/state-assets/`, `runs/asset-cache/` | Content-addressed caches used by preparation and bootstrap |
 | `outputs/` | Renders, video projects and delivery packages. `outputs/final/` is the curated delivery; `outputs/oracle-renders/` holds the Factory renders and the promo. |
 | `vendor/panda/` | The Franka Panda model, fetched by `robofrontier bootstrap` |
-| `benchmark/*/*/assets/`, `configs/environments/**/assets/` | Scene meshes and textures, restored from the pinned asset archive |
+| `benchmark/*/*/assets/`, `benchmark/oracle/**/assets/` | Scene meshes and textures, restored from the pinned asset archive (the Oracle copies link to the released cases' files) |
 | `.robofrontier/` | Native engine homes and container receipts |
 
 Cloning the repository does not back up any of these. See
@@ -53,9 +53,8 @@ Cloning the repository does not back up any of these. See
 
 ## Rules
 
-- Released files are never edited in place. Build a new revision under
-  `configs/environments/`, review it, then promote it into `benchmark/` with new
-  hashes in `release.json`.
+- The release is frozen. `scripts/build_release.py` wrote its scenes and public files once;
+  nothing rebuilds them, and earlier scene revisions are only in the archive tag.
 - Frozen runs, recordings and review packages keep the paths they were made with.
   Read them through `robofrontier.tasks.families.current_path`;
   [benchmark/legacy-paths.json](../benchmark/legacy-paths.json) lists every move,

@@ -1,5 +1,5 @@
 {
-  "scene": "configs/environments/cube_transport/frontier-v2-r13-transport-a04-d2",
+  "scene": "benchmark/oracle/sources/cube_transport/frontier-v2-r13-transport-a04-d2",
   "source": "Recorded FK before receiver TCP contact approach hit sender wrist; geometric regression only",
   "sim_s": 506.0500000016882,
   "qpos": [

@@ -19,7 +19,7 @@ sys.path.insert(0,str(DEPS))
 def parse_args(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--case',required=True);p.add_argument('--output',required=True,type=Path)
-    p.add_argument('--catalog',type=Path,default=ROOT/'configs/suites/frontier-transport-r13.json')
+    p.add_argument('--catalog',type=Path,default=ROOT/'benchmark/oracle/sources/frontier-transport-r13.json')
     p.add_argument('--harness',type=Path,default=ROOT/'runs/oracle/transport-r13-units-20261025/harness.json')
     p.add_argument('--wall-s',type=float,help='Optional explicit episode wall cap; default is unlimited')
     p.add_argument('--sim-s',type=float,help='Optional explicit episode simulation cap; default is unlimited')

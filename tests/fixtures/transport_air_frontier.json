@@ -1,5 +1,5 @@
 {
-  "scene": "configs/environments/cube_transport/frontier-v2-r13-transport-a04-d1",
+  "scene": "benchmark/oracle/sources/cube_transport/frontier-v2-r13-transport-a04-d1",
   "source": "Recorded FK at the original pre-repair blocked frontier; not a physics checkpoint",
   "sim_s": 612.1339999993487,
   "qpos": [

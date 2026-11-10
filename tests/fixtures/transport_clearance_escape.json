@@ -1,5 +1,5 @@
 {
-  "scene": "configs/environments/cube_transport/frontier-v2-r13-transport-a08-d2",
+  "scene": "benchmark/oracle/sources/cube_transport/frontier-v2-r13-transport-a08-d2",
   "qpos": [
     1.0153898983844556e-05,
     -0.6024088859558105,

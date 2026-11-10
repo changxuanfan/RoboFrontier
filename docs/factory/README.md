@@ -19,7 +19,7 @@ macOS uses explicit METAL and CPU rendering must be selected explicitly.
 
 The Factory is 55 x 50 metres with four regions and 36 workstations. The build
 configuration is `configs/backgrounds/robo_factory.json`; its historical layout
-input is `configs/suites/frontier-current-oracle.json`. In the current layout
+input was `configs/suites/frontier-current-oracle.json` (archive tag `archive/pre-cleanup-20261110`). In the current layout
 source, levels run from L1 to L3 from top to bottom in plan view, and workstation
 sizes increase from left to right. Station labels sit above the actual desk
 edge. Region labels are centered along the upper edge of each rectangle;

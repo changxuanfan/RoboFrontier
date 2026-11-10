@@ -6,8 +6,7 @@ import unittest
 import mujoco
 import numpy as np
 
-from historical_cases import cases
-from robofrontier.tasks.families import oracle_directory as directory
+from robofrontier.tasks.families import case_specs as cases, oracle_directory as directory
 from robofrontier.physics.workstation import Workstation
 from robofrontier.oracle.relay_oracle_v2 import grasp_targets,cross_x
 
@@ -316,18 +315,6 @@ class RelayReferenceTests(unittest.TestCase):
         self.assertIsNot(result.arms['C'],t.arms['C'])
         np.testing.assert_allclose(result.arms['C'].qref,seeds['C']+.01)
 
-    def test_weighted_grasp_cost_accounts_for_a_separable_successor(self):
-        from robofrontier.tasks.evaluate import Monitor
-        from robofrontier.oracle.relay_oracle_v2 import grasp_horizon_score,grasp_load_moment
-        case=next(c for c in cases() if c['id']=='relay-a08-d3')
-        case=dict(case,scene_revision=13)  # Recorded pre-r16 load-moment regression.
-        source=Workstation(directory(case));mujoco.mj_forward(source.model,source.data)
-        t=SimpleNamespace(model=source.model,data=source.data,task=json.loads((source.path/'task.json').read_text()))
-        t.arms={robot:None for robot in t.task['arms']};t.monitor=Monitor(t)
-        options=(.20,.24,.28,.32,.36,.38,.40,.44,.48,.50,.54,.56,.58)
-        current=grasp_load_moment(t,'payload_01',.50)
-        self.assertGreater(grasp_load_moment(t,'payload_01',.54),current)
-        self.assertLess(grasp_horizon_score(t,'payload_01',.54,options),grasp_horizon_score(t,'payload_01',.50,options))
 
     def test_handover_checks_executed_legs_not_an_uncommitted_later_reach(self):
         from unittest.mock import patch
@@ -447,20 +434,6 @@ class RelayReferenceTests(unittest.TestCase):
         self.assertEqual(set(paths),{'A','B'})
         for key,expected in before.items():np.testing.assert_array_equal(getattr(t.data,key),expected)
 
-    def test_weighted_arc_inner_grasp_requires_more_roll_moment(self):
-        from robofrontier.tasks.evaluate import Monitor
-        from robofrontier.oracle.relay_oracle_v2 import grasp_load_moment
-        case=next(c for c in cases() if c['id']=='relay-a08-d2')
-        case=dict(case,scene_revision=13)  # Its old end-mounted weight defines this ranking.
-        source=Workstation(directory(case));mujoco.mj_forward(source.model,source.data)
-        t=SimpleNamespace(model=source.model,data=source.data,task=json.loads((source.path/'task.json').read_text()))
-        t.arms={robot:None for robot in t.task['arms']};t.monitor=Monitor(t)
-        # On this actual manufactured geometry the apex-side station is a
-        # poor roll support. The most extreme end station is not the best,
-        # either: an intermediate station aligns nearer the assembly COM.
-        self.assertLess(grasp_load_moment(t,'payload_01',.48),grasp_load_moment(t,'payload_01',.54))
-        self.assertLess(grasp_load_moment(t,'payload_01',.54),grasp_load_moment(t,'payload_01',.20))
-        self.assertLess(grasp_load_moment(t,'payload_01',(.56,.40)),grasp_load_moment(t,'payload_01',.32)/3)
 
     def test_fixed_chain_ik_cache_reuses_only_identical_queries(self):
         from robofrontier.oracle.trial import Trial

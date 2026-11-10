@@ -1,5 +1,5 @@
 {
-  "scene": "configs/environments/cube_transport/frontier-v2-r13-transport-a12-d3",
+  "scene": "benchmark/oracle/sources/cube_transport/frontier-v2-r13-transport-a12-d3",
   "robot": "H",
   "object": "H_item2",
   "board": "board_H",

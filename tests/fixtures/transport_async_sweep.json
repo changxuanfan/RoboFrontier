@@ -1,5 +1,5 @@
 {
-  "scene": "configs/environments/cube_transport/frontier-v2-r13-transport-a04-d1",
+  "scene": "benchmark/oracle/sources/cube_transport/frontier-v2-r13-transport-a04-d1",
   "source": "FK reconstruction of the admitted concurrent move before C_hand/D_link5 contact; not restart state",
   "sim_s": 92.19999999996652,
   "qpos": [
