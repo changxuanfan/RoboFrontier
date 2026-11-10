@@ -74,7 +74,7 @@
     "qwen": {
       "model": "qwen3.8-max-0902",
       "provider": "qwen",
-      "effort": "xhigh",
+      "effort": "high",
       "vision": true,
       "context_capacity": 1000000,
       "base_url_env": "DASHSCOPE_BASE_URL",
@@ -84,7 +84,7 @@
     "glm": {
       "model": "glm-5.3-flash",
       "provider": "zhipu",
-      "effort": "max",
+      "effort": "high",
       "vision": true,
       "context_capacity": 1000000,
       "base_url": "https://open.bigmodel.cn/api/v1",
