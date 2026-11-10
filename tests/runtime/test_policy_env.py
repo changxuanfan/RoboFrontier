@@ -219,15 +219,18 @@ class DefaultTests(Fixture):
         self.root.with_name(self.root.name + '.check.json').write_text(json.dumps({'passed': False}))
         with self.assertRaisesRegex(ValueError, 'did not pass'): self.default()
 
-    def test_other_hosts_keep_the_host_python_and_off_opts_out(self):
+    def test_every_platform_prepares_with_a_policy_environment(self):
         self.assertIsNone(self.default(system='linux', base=False))
-        # A Linux host that names a base (a Slurm shared build) uses its checked build too.
+        with patch.object(policy_env.os, 'environ', {}), patch('sys.platform', 'linux'):
+            with self.assertRaisesRegex(ValueError, 'No policy environment'):
+                policy_env.apply_default()
+        # A Linux host that names a base (a Slurm shared build, a RunPod volume) uses its checked build.
         root = self.place(system='linux')
         self.assertEqual(self.default(system='linux'), root.resolve())
         for value in ('off', 'OFF', 'none'):
             with patch.object(policy_env.os, 'environ', {policy_env.ENV_VAR: value}):
-                self.assertIsNone(policy_env.selected())
-                self.assertIsNone(policy_env.apply_default())
+                with self.assertRaisesRegex(ValueError, 'no longer supported'):
+                    policy_env.apply_default()
 
     def test_apply_default_names_it_for_preparation_only_when_unset(self):
         root = self.place()

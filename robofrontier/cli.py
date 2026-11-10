@@ -217,7 +217,13 @@ def run(batch, *, continuing=False):
     from .runtime.diagnostics import require_runtime
     from .runtime import versions
     require_runtime(config)
-    pinned = json.loads((Path(batch)/'batch.json').read_text()).get('versions')
+    document = json.loads((Path(batch)/'batch.json').read_text())
+    # Every run uses a policy environment and the closed access table (E12).
+    for job in document.get('jobs', []):
+        access = json.loads((Path(job['run_directory'])/'private/inputs/policy-access.json').read_text())
+        if access.get('schema') != 'robofrontier.policy-access.v2':
+            raise ValueError('Run prepared without a policy environment: '+job['run_directory'])
+    pinned = document.get('versions')
     if pinned != versions.require(config['policy']['engine']):
         raise ValueError('This batch was prepared with other program versions: '+json.dumps(pinned))
     environment = {**rendering_environment(config['render']['device'], platform.system(), os.environ),

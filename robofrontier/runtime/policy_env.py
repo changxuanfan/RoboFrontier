@@ -181,14 +181,14 @@ def default_root():
     or on macOS under DEFAULT_BASE. The build must have passed scripts/check_policy_env.py
     (require_checked). Preparation refuses when it is missing or unchecked, rather than silently
     falling back to the host's Python. A host without a base (Linux with none named) returns
-    None, so its runs keep the host's Python until a base is configured there."""
+    None, and preparation then refuses (apply_default)."""
     import sys
     base = os.environ.get(BASE_VAR) or (str(DEFAULT_BASE) if sys.platform == 'darwin' else None)
     if not base: return None
     base = Path(base)
     root = base/('policy-env-' + identity())
     hint = (' Build and check it once: .venv/bin/python -m scripts.build_policy_env --base %s, then '
-            '.venv/bin/python -m scripts.check_policy_env %s; or set %s=off for a run on the host Python.' % (base, root, ENV_VAR))
+            '.venv/bin/python -m scripts.check_policy_env %s.' % (base, root))
     if not root.is_dir(): raise ValueError('The default policy environment is not built: ' + str(root) + '.' + hint)
     manifest = verify(root)
     try: require_checked(root, manifest)
@@ -197,10 +197,19 @@ def default_root():
 
 
 def apply_default():
-    """Name the default environment for this process's preparation, unless one was chosen."""
-    if os.environ.get(ENV_VAR): return selected()
+    """Name the environment for this process's preparation: the one chosen, or the default.
+
+    Every run on every platform uses a checked policy environment and the closed access
+    table (E12); there is no run on the host's Python."""
+    value = os.environ.get(ENV_VAR)
+    if value and value.strip().lower() in OFF:
+        raise ValueError(ENV_VAR + '=' + value + ' is no longer supported: every run uses a policy environment')
+    if value: return selected()
     root = default_root()
-    if root is not None: os.environ[ENV_VAR] = str(root)
+    if root is None:
+        raise ValueError('No policy environment: set ' + BASE_VAR + ' to the folder holding the build of this host '
+                         '(scripts/build_policy_env.py --base), or ' + ENV_VAR + ' to the build itself')
+    os.environ[ENV_VAR] = str(root)
     return root
 
 
