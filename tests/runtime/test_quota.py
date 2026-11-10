@@ -27,6 +27,14 @@ class QuotaTests(unittest.TestCase):
         found = usage_limit({'codexErrorInfo': {'usageLimitExceeded': {}}, 'message': 'limit'}, NOW)
         self.assertEqual(found['resets_at'], None)
 
+    def test_the_codex_record_seen_on_2026_11_11(self):
+        error = {'message': 'You\u2019ve hit your usage limit. Visit https://chatgpt.com/settings/usage to purchase more '
+                            'credits or try again at 7:52 AM.', 'codexErrorInfo': 'usageLimitExceeded', 'additionalDetails': None}
+        now = datetime(2026, 11, 11, 7, 49).astimezone().timestamp()
+        for value in (error, error['message']):
+            found = usage_limit(value, now)
+            self.assertEqual(found['resets_at'], datetime(2026, 11, 11, 7, 52).astimezone().timestamp())
+
     def test_a_rate_limit_is_not_a_plan_limit(self):
         for text in ('rate_limit_error: 429 Too Many Requests', 'overloaded_error', 'server_overloaded'):
             self.assertIsNone(usage_limit(text, NOW))

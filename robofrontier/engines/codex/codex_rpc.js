@@ -79,7 +79,7 @@ function capacityFailure(error) {
 // A plan's usage limit (runtime/quota.py LIMIT): the world pauses until it resets.
 function usageLimitFailure(error) {
   const text = typeof error === 'string' ? error : JSON.stringify(error);
-  return /you'?ve hit your (?:\w+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|usageLimitExceeded|weekly limit|session limit/i.test(text||'');
+  return /you[\u2019']?ve hit your (?:\w+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|usageLimitExceeded|weekly limit|session limit/i.test(text||'');
 }
 function networkFailure(error){
   const info=error?.codexErrorInfo;

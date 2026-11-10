@@ -19,7 +19,7 @@ import time
 from datetime import datetime, timedelta
 
 # Text that names a plan limit (not a short rate limit).
-LIMIT = re.compile(r"(you'?ve hit your (?:\w+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|"
+LIMIT = re.compile(r"(you[\u2019']?ve hit your (?:\w+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|"
                    r"usageLimitExceeded|weekly limit|session limit)", re.I)
 # When a reset time cannot be read, the world tries again after this long.
 RECHECK_S = 1800.
@@ -88,10 +88,10 @@ def resets_at(text, now=None):
     now = time.time() if now is None else now
     epoch = re.search(r'usage limit reached\|(\d{9,11})', text, re.I)
     if epoch: return float(epoch.group(1))
-    stated = re.search(r'resets?\s+(?:at\s+)?([^()\n]+?)\s*(?:\(([\w/+-]+)\))?\s*(?:$|[.\n])', text, re.I)
+    stated = re.search(r'resets?\s+(?:at\s+)?([^()\n"]+?)\s*(?:\(([\w/+-]+)\))?\s*(?:$|[.\n"])', text, re.I)
     if stated:
         return _at(stated.group(1), now, _zone(stated.group(2)) if stated.group(2) else None)
-    again = re.search(r'try again (in|at)\s+([^\n]+?)\s*(?:$|\.\s|\.$|\n)', text, re.I)
+    again = re.search(r'try again (in|at)\s+([^\n"]+?)\s*(?:\.(?=\s|"|$)|$|\n|")', text, re.I)
     if again:
         if again.group(1).lower() == 'in':
             seconds = _within(again.group(2))
