@@ -4,7 +4,7 @@ Recorded review date: **2026-10-19**. These are planning-stage research notes
 for the original interactive single-arm application. That review ran no
 simulation, installed no software and validated no grasp. It is not the current
 benchmark's physical qualification or an instruction to reset a live policy
-world. See [physics](../physics.md), [task atlas](../tasks/atlas.md) and
+world. See [physics](../physics.md) and
 [unified CLI](../unified-cli.md) for current scope.
 
 The linked `stable` documentation and Menagerie `main` can change. Pin MuJoCo

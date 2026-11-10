@@ -81,17 +81,8 @@ has a configurable 24-hour engineering limit from owner launch, separate from
 the policy's START clock. An Oracle monitor's engineering corrections are not
 an autonomous model result.
 
-Legacy `scripts/run_relay_nine_oracles.py` reads nine cases from
-`benchmark/relay/catalog.json` and
-`configs/harness-frontier-v2-servo2.json`. Its old default has no total deadline;
-individual action deadlines, STOP and uncertain-result protection remain.
-`run_relay_live_oracle.py` handles individual reference executions. Local static
-input inspection invokes neither a model nor task physics:
-
-```sh
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=. \
-  .venv/bin/python -m scripts.run_relay_nine_oracles --check-inputs
-```
+`run_relay_live_oracle.py` handles individual reference executions. The
+nine-case batch runner, `scripts/run_relay_nine_oracles.py`, was removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
 
 | Module, under `robofrontier/` unless stated | Responsibility |
 | --- | --- |
@@ -102,8 +93,6 @@ OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=. \
 | `suite/relay_observation_state.py` | Privileged readonly state evidence |
 | `suite/relay_scene.py`, `suite/relay_underslung.py`, `suite/rigid_relay.py` | Geometry and retained builders |
 | `relay_video_motion.py`, `relay_motion_edit.py` | Background-independent motion analysis and time mapping |
-| `scripts/analyze_relay_motion.py` | Derive editing decisions; no additional old 16-fps export |
-| `scripts/export_relay_edited.py` | Derived 60-Hz tracks and 20x/30-fps simple-background videos; Factory video uses Cycles |
 
 ## Historical data and handoff
 
@@ -118,8 +107,7 @@ new current-source qualification:
 - Retained dependencies and retired-source manifest: `runs/engineering/relay-cleanup-20261027/manifest.json`.
 
 Original 60-Hz streams, appearance events, failure/recovery/control-correction
-hashes, reports and videos remain evidence. See [recording and replay](../oracle/relay-recorded-video.md),
-[merge notes](../archive/plans/suite-v2/relay-merge-handoff.md) and the
+hashes, reports and videos remain evidence. See the [merge notes](../archive/plans/suite-v2/relay-merge-handoff.md) and the
 [current task-family entry](README.md). Historical Factory presentations use
 independent per-table loops at 20x/30 fps; static neighboring tables do not imply
 simultaneous task completion.

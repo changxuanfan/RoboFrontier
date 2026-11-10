@@ -63,10 +63,11 @@ source being tested; the command refuses dirty source. It freezes the executor
 and creates an independent scene with declared changes, without editing the
 release registry, source assets, API configuration or model sessions.
 
-```sh
-uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap
-.venv/bin/python -m scripts.commission_transport_contacts --case transport-a12-d2 --object I_item2 --variant elliptic-1mm --operation delivery --wall-s 180 --output runs/engineering/transport-contacts/I-item2-ellipse-1mm
+The commissioning script, `scripts/commission_transport_contacts.py`, was
+removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](cleanup-20261110.md)). Its historical invocation was:
+
+```text
+commission_transport_contacts --case transport-a12-d2 --object I_item2 --variant elliptic-1mm --operation delivery --wall-s 180 --output runs/engineering/transport-contacts/I-item2-ellipse-1mm
 ```
 
 For controlled comparisons, run the same case, object and operation with

@@ -1,8 +1,8 @@
 # Legacy Cube Transport v4: cubes and cylinders
 
 This is the current output collection of the **legacy offline generator**, not
-the current 36-case benchmark. Use the [task atlas](../../../docs/tasks/atlas.md)
-and unified CLI for current policy runs. The 3-6-arm cases use six-color cubes;
+the current 36-case benchmark. Use the released tasks in
+[`benchmark/`](../../../benchmark/) and the unified CLI for current policy runs. The 3-6-arm cases use six-color cubes;
 7-12 arms replace v2 spheres with same-color cylinders. Stations A-F initially
 hold three red, blue, green, orange, purple or cyan cubes; G-L hold three
 cylinders in the same color order. Each station has three goals. Same-color,

@@ -305,8 +305,6 @@ def argument_parser(*, prog=None):
     p = sub.add_parser('extract', help='Verify and extract an evidence ZIP archive')
     p.add_argument('archive', type=Path)
     p.add_argument('--output', type=Path, required=True)
-    p = sub.add_parser('demo', help='Legacy interactive single-arm application')
-    p.add_argument('arguments', nargs=argparse.REMAINDER)
     p = sub.add_parser('container', help='Run the native CLI in persistent local Docker volumes')
     p.add_argument('arguments', nargs=argparse.REMAINDER)
     from .factory.workflow import add_arguments
@@ -348,10 +346,6 @@ def main(argv=None):
             report = execute(arguments, load_configuration(args.config))
             emit(report)
             return report['exit_code']
-        if args.command == 'demo':
-            from .demo.app import main as demo
-            sys.argv = [sys.argv[0], *args.arguments]
-            return demo()
         if args.command == 'bootstrap':
             from scripts.benchmark_handoff import setup_assets
             emit(setup_assets())

@@ -30,9 +30,7 @@ observed local versions, not a claim about the latest upstream versions. Install
 the CLI for the engine you intend to use. A changed Codex CLI version invalidates
 an existing provider compatibility receipt and requires another preflight.
 
-The `robofrontier` executable now selects the unified CLI. The earlier interactive
-single-arm application remains available as `robofrontier-demo` or
-`robofrontier demo`. Run these commands from an editable repository installation;
+The `robofrontier` executable selects the unified CLI. Run these commands from an editable repository installation;
 a standalone wheel containing the required catalogs and assets is not yet a
 qualified distribution format.
 

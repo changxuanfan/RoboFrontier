@@ -88,8 +88,7 @@ PYTHONPATH=. .venv/bin/python scripts/build_transport_policy_package.py \
 It requires its bound source assets, copies them with independent inodes, and
 refuses drifted existing assets. A full review build uses a new output directory
 and can generate initial previews; `--no-previews` omits them. It creates no
-policy roles, credentials, sessions, or physical run. The retained
-`build_frontier_v2.py` does not select this R14 family; use the current registry
+policy roles, credentials, sessions, or physical run. Use the current registry
 for new policy runs and this family-specific builder for historical review.
 
 ## Source edits and Factory replay
@@ -165,12 +164,5 @@ Transport insertion, handovers, full Dial turns, other forces and long-duration
 cross-platform behavior remain unqualified. This release is for further
 engineering tests; it does not establish a formally validated benchmark.
 
-For an independent finite passive Transport check, prepare fresh jobs and run:
-
-```sh
-python -m scripts.tasks prepare-batch --output runs/engineering/transport-stability --families transport
-python -m scripts.check_transport_cylinder_stability --batch runs/engineering/transport-stability/batch.json
-```
-
-This check uses simulation time, starts no model, and does not execute a task.
-Do not modify existing frozen experiment inputs; prepare a fresh batch.
+The finite passive Transport stability check,
+`scripts/check_transport_cylinder_stability.py`, was removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).

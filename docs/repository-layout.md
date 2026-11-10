@@ -12,8 +12,8 @@ RoboFrontier/
   configs/          run settings, and scenes that are not (yet) released
   scripts/          engineering commands
   tests/            regression tests and their fixtures
-  docs/             guides; docs/task-atlas/ is the published atlas site
-  assets/           shared art: scene textures, Factory meshes, HTML panels
+  docs/             guides and dated history
+  assets/           shared art: Factory meshes and the runtime HTML dashboard
   web/              atlas page templates
   docker/           the container image
   runs/ outputs/ vendor/ .robofrontier/    not in Git (see below)
@@ -26,19 +26,15 @@ RoboFrontier/
 | `benchmark/` | `release.json`, and per family its catalog, records and nine case folders. A case folder has the scene, task and workstation, and `public/` for reviewed material that belongs to that case only. See [benchmark/README.md](../benchmark/README.md). | Draft or historical scene revisions; run results |
 | `robofrontier/` | The package. Engines are `codex/` and `claude/`; `suite/` builds and scores the four families; `factory/` replays recorded motion in the 3D Factory; `demo/` is the small teleoperation demo. Modules at the top level are the shared runtime (world, robot control, run setup and storage, evidence) and the scene adapters of earlier tasks that tests still exercise. | Data files; one-off analysis |
 | `prompts/` | `rules.md` and `roles/`: one prompt per role, named after its mode (`single-controller.md`, `team-controller.md` for `controller-worker`, `adaptive-controller.md`, `worker.md`, `meta-manager.md`); `skills/` (one per family, plus robot collaboration), `managers/codex.md` and `managers/claude.md` (the outer manager for each engine), `archive/` (earlier texts that released records still name, including the family guidance `benchmark/release.json` delivers). | Anything a model does not read |
-| `configs/` | Engine model profiles (`models.json`, `claude-models.json`, `codex-model-template.json`), harnesses (`harness.json`, `harness-frontier-v2*.json`, `harnesses/`), the pinned asset locks (`policy-assets.json`, `factory-assets.json`), Factory looks (`backgrounds/`), data retention (`retention.json`), the CPU slurm example (`examples/`), the Tulip pattern parameters of the Frontier V2 builder (`patterns/`), the single-arm demo's NoSlip profile (`noslip.json`), and three kinds of scenes: `environments/` (scene revisions before release, and the earlier revisions that released cases and Oracle recordings name as sources), `suites/` (generated catalogs of earlier collections) and `tasks/` (the original single-scene task files). | Released tasks; credentials |
+| `configs/` | Engine model profiles (`models.json`, `claude-models.json`, `codex-model-template.json`), harnesses (`harness.json`, `harness-frontier-v2*.json`, `harnesses/`), the pinned asset locks (`policy-assets.json`, `factory-assets.json`), Factory looks (`backgrounds/`), data retention (`retention.json`), the CPU slurm example (`examples/`), the Tulip pattern parameters of the Frontier V2 builder (`patterns/`), and three kinds of scenes: `environments/` (scene revisions before release, and the earlier revisions that released cases and Oracle recordings name as sources), `suites/` (generated catalogs of earlier collections) and `tasks/` (the original single-scene task files). | Released tasks; credentials |
 | `scripts/` | Commands an engineer runs with `python -m scripts.NAME`. Each is listed in [scripts/README.md](../scripts/README.md). Generators of released or tracked data stay so that data can be rebuilt. | Library code (put it in `robofrontier/`) |
 | `tests/` | `test_*.py`, Node host tests (`*.js`, `*.cjs`) and `fixtures/`. | Large recorded evidence |
 | `docs/` | Guides by topic: `engines/`, `tasks/`, `running/`, `oracle/`, `factory/`, `development/`, `archive/` (dated history). The top level keeps the overview guides; `meta-runbook.md`, `architecture.md` and `harness-v2-verification.md` stay there because every prepared run freezes them by name. | Generated renders (`docs/generated/` is ignored) |
-| `assets/` | `backgrounds/` (scene textures), `robo_factory/` (Factory meshes, textures, fonts, tour project), and the two HTML panels the runtime serves. | Task scenes |
-| `web/` | Templates for the task atlas; the built site is `docs/task-atlas/`. | |
+| `assets/` | `robo_factory/` (Factory meshes, textures, fonts, tour project) and `pipeline_dashboard.html`, the dashboard the runtime serves. | Task scenes |
 | `docker/` | `Dockerfile` for `robofrontier container`. | |
 
 At the root: `robofrontier.toml` holds the defaults for new runs; `pyproject.toml`
-and `uv.lock` pin the Python environment. `config.json` is the baseline physics
-profile of the single-arm demo (`configs/noslip.json` is its default variant). It
-stays at the root because `robofrontier/sim.py` opens it there, and the released
-Dial and Mosaic Oracle evidence pins the bytes of `sim.py`.
+and `uv.lock` pin the Python environment.
 
 ## Folders not in Git
 
@@ -76,6 +72,6 @@ Cloning the repository does not back up any of these. See
 - The Dial and Mosaic policy packages also check that `robot_control.py`, `sim.py`,
   `motion_check.py`, `task_config.py` and `pipeline.py` in `robofrontier/` still
   match the physical control code of the selected Oracle evidence. A file those
-  modules open by a fixed path, such as the root `config.json`, stays where it is.
+  modules open by a fixed path stays where it is.
 - Historical material keeps its date. Current behavior is described in the guides
   outside `docs/archive/`.

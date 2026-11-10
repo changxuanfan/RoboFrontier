@@ -64,10 +64,8 @@ jobs:
         run: |
           PYTHONPATH=tests:scripts .venv/bin/python -m unittest \
             test_run_metrics test_run_analysis_atomic test_oracle_batch_summary test_communication_report \
-            test_policy_archive test_evidence_zip test_historical_fixtures test_relay_nine_oracles test_scripts_index \
-            test_script_checks test_workflows test_curate_repository test_build_policy_env test_codex_cli_check \
-            test_edit_transport_recordings test_factory_server_cli test_render_policy_videos test_render_targets \
-            test_generate_cube_transport test_verify_frontier_v2 test_run_best5_dial_batch test_fetch_robot \
-            test_pipeline_camera_panel test_mosaic_repair_route test_dial_entrypoints test_luna_cpu \
-            test_portable_benchmark test_benchmark_handoff test_configs_readme test_cube_transport_seeds \
-            test_pruned_paths
+            test_policy_archive test_evidence_zip test_scripts_index test_script_checks test_workflows \
+            test_curate_repository test_build_policy_env test_codex_cli_check test_codex_launch_profiles \
+            test_edit_transport_recordings test_render_policy_videos test_render_targets \
+            test_generate_cube_transport test_dial_entrypoints test_benchmark_handoff test_configs_readme \
+            test_cube_transport_seeds test_pruned_paths

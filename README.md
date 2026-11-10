@@ -40,7 +40,7 @@ team brings more arms and more work; a higher level changes the physics of the j
 
 <img src="docs/media/readme/benchmark.jpg" alt="The largest team of each family at Levels 1, 2 and 3, in their initial states, with what each level changes" width="100%">
 
-<sub>Initial states from the [task atlas](docs/tasks/atlas.md): the largest team of each family at Levels 1–3.</sub>
+<sub>Initial states of the largest team of each family at Levels 1–3.</sub>
 
 The videos below are **Oracle** reference runs rendered in Robo World: privileged programs
 that read hidden task state. They show that each task can be done; they are not model

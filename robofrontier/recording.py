@@ -1,16 +1,10 @@
-"""Episode traces and bounded, asynchronous MP4 encoding."""
-from datetime import datetime
+"""Bounded, asynchronous MP4 encoding and video checks."""
 import json
 from pathlib import Path
 import queue
 import shutil
 import subprocess
 import threading
-from zoneinfo import ZoneInfo
-
-import numpy as np
-
-from .scene import ROOT
 
 
 def probe_video(path):
@@ -34,33 +28,6 @@ def probe_video(path):
         return {'readable':True,'duration_s':float(duration) if duration else None,'width':width,'height':height}
     except (OSError,ValueError,IndexError,subprocess.TimeoutExpired) as error:
         return {'readable':None,'reason':str(error)[:400]}
-
-
-class Episode:
-    def __init__(self, simulation):
-        stamp = datetime.now(ZoneInfo("Asia/Hong_Kong")).strftime("%Y%m%d-%H%M%S-%f")
-        self.path = ROOT / "runs" / stamp
-        self.path.mkdir(parents=True)
-        self.trace = (self.path / "trace.jsonl").open("w")
-        (self.path / "metadata.json").write_text(json.dumps(simulation.metadata(), indent=2) + "\n")
-        (self.path / "scene.xml").write_text(simulation.xml)
-        np.savez(self.path / "initial.npz", state=simulation.initial_state,
-                 q_ref=simulation.q_ref, tcp_ref=simulation.tcp_ref,
-                 rotation_ref=simulation.rotation_ref, ref_velocity=simulation.ref_velocity,
-                 gripper_ref=simulation.gripper_ref)
-
-    def event(self, kind, **values):
-        self.trace.write(json.dumps({"event": kind, **values}, ensure_ascii=False) + "\n")
-        self.trace.flush()
-
-    def sample(self, simulation, wall_time, action):
-        self.event("sample", wall_time_s=wall_time, action=action,
-                   observation=simulation.observe(oracle=True),
-                   integration_state=simulation.integration_state().tolist(),
-                   q_ref=simulation.q_ref.tolist())
-
-    def close(self):
-        self.trace.close()
 
 
 class Video:

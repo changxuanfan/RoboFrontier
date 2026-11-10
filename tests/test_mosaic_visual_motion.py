@@ -14,17 +14,6 @@ class VisibleMotionTests(unittest.TestCase):
             active.append(detector.process(frame))
         self.assertEqual(int(visible_frame_selection(active).sum()), 2)
 
-    def test_gripper_jitter_that_survives_state_edit_is_removed_visually(self):
-        from scripts.mosaic_motion_mask import SceneMotionDetector
-        times = np.arange(420) / 60
-        states = ((np.arange(420) % 2) * .00003135).astype(np.float32)[:, None]
-        state_active = SceneMotionDetector([{'type': 2}], 60).process(times, states)
-        self.assertTrue(state_active[1:].all())
-        detector = VisibleMotionDetector()
-        frames = [np.full((20, 20, 3), 80 + i % 2, dtype=np.uint8) for i in range(210)]
-        visual_active = [detector.process(frame) for frame in frames]
-        self.assertEqual(int(visible_frame_selection(visual_active).sum()), 2)
-
     def test_small_local_motion_is_kept(self):
         detector = VisibleMotionDetector()
         frame = np.zeros((20, 20, 3), dtype=np.uint8)

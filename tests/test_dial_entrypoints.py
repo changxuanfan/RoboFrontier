@@ -29,15 +29,6 @@ class DialEntrypointTests(unittest.TestCase):
             self.assertIn('invalid choice',result.stderr)
             self.assertFalse(list(Path(td).iterdir()))
 
-    def test_retired_shoulder_strategy_is_rejected_before_creating_a_world(self):
-        with tempfile.TemporaryDirectory() as td:
-            result=subprocess.run([sys.executable,'-m','scripts.commission_best5_dials',
-                '--case','dial-best5-n04-d1','--output',str(Path(td)/'unused'),
-                '--blue-capture','shoulder'],cwd=ROOT,capture_output=True,text=True)
-            self.assertEqual(result.returncode,2)
-            self.assertIn('unrecognized arguments',result.stderr)
-            self.assertFalse(list(Path(td).iterdir()))
-
     def test_published_source_schedule_survives_namespace_move(self):
         folder=ROOT/'outputs/robo-factory/dial-best5-edited-10x-20261027/dial-best5-n04-d2'
         if not (folder/'report.json').exists():self.skipTest('Published artifacts unavailable')

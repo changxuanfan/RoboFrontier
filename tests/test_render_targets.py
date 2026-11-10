@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from scripts import render_dial_oracle, render_frontier_oracle
+from scripts import render_frontier_oracle
 
 
 def policy_outputs(root):
@@ -38,17 +38,6 @@ class RenderTargetTests(unittest.TestCase):
             cut.assert_not_called()
             popen.assert_not_called()
             self.assertFalse((target/'global.mp4').exists())
-
-    def test_dial_render_checks_every_view_before_starting_encoders(self):
-        with tempfile.TemporaryDirectory() as root, \
-                mock.patch.object(render_dial_oracle.subprocess, 'Popen') as popen:
-            trial = Path(root)
-            (trial/'report.json').write_text(json.dumps({'case_id': 'dial-best5-n04-d1'}))
-            (trial/'video').mkdir()
-            (trial/'video/global_rear.mp4').write_bytes(b'')
-            with self.assertRaises(FileExistsError):
-                render_dial_oracle.render(trial, views=('global', 'global_rear'))
-            popen.assert_not_called()
 
 
 if __name__ == '__main__':

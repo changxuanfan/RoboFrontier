@@ -1,7 +1,7 @@
 # RoboFrontier project page and README: design plan
 
 Status: direction A (Control room) chosen on 2026-11-05 and implemented in `index.html`,
-`assets/` and `data/`. Replaces the task-atlas page style entirely.
+`assets/` and `data/`. Replaced the retired task-atlas page.
 
 ## Audience and promise
 
@@ -17,7 +17,7 @@ One long page with a sticky chapter rail, plus a lightbox video player. Five cha
 | # | Chapter | Content | Data source |
 | --- | --- | --- | --- |
 | 0 | Hero | Full-bleed muted loop cut from the 3.5 min promo; title, one-line claim; buttons: Watch film, Paper, Code, Data; four counters (36 tasks, 4 families, up to 16 arms, N models) | `media.json` |
-| 1 | Benchmark | Four families as large cards (hover/scroll plays the Oracle clip); the 3 x 3 grid of scale x difficulty per family; what the policy sees and does (tools, cameras, rules); the adaptive protocol as an animated diagram (Controller spawns and retires delegates); how scoring works (terminal outcome, process events) | `tasks.json` (from the task atlas) |
+| 1 | Benchmark | Four families as large cards (hover/scroll plays the Oracle clip); the 3 x 3 grid of scale x difficulty per family; what the policy sees and does (tools, cameras, rules); the adaptive protocol as an animated diagram (Controller spawns and retires delegates); how scoring works (terminal outcome, process events) | `tasks.json` (from the release) |
 | 2 | Watch | Video wall: family tabs, a 3 x 3 grid per family, source switch (Oracle / each model), front/side toggle, lightbox with task facts. Sources that are not rendered yet show "coming soon" | `media.json` |
 | 3 | Results | Leaderboard of all models on the adaptive protocol: completion per family/level, then failures and failure rate, retries and retry rate, wall/simulation time, input/output tokens, collisions, parallel efficiency. Metric switcher, sortable table, family x level heatmap per model | `results.json` |
 | 4 | Analysis | (a) Multi-agent communication: Single vs Controller-Worker vs Worker-Worker vs Adaptive (GPT only): success, time, tokens, parallelism, collisions, message volume and an animated message-flow view. (b) Skills: runs that write `skills.md` vs not: progress-over-time curves, late-run retry counts. (c) Parallel efficiency: concurrency timelines | `results.json` |
@@ -87,7 +87,7 @@ Aggregates are computed in the page, so the same file serves results and analysi
 site/                    project page source, deployed by GitHub Actions to Pages
   index.html
   assets/css/ assets/js/ assets/img/   (posters only; no videos)
-  data/tasks.json        36 public task facts (generated from the task atlas)
+  data/tasks.json        36 public task facts (generated from the release)
   data/media.json        every video URL by set, task and view
   data/results.json      generated benchmark results
   DESIGN.md              this plan
@@ -95,8 +95,8 @@ scripts/site/            encode_videos.py, make_montage.py, export_results.py, b
 docs/media/              README stills (posters for the 36-cell table)
 ```
 
-`docs/task-atlas` and `web/task-atlas` are retired once the Benchmark chapter covers
-them (the downloadable atlas ZIP stays in its release).
+`docs/task-atlas` and `web/task-atlas` were removed on 2026-11-10; the Benchmark
+chapter covers them (see `docs/cleanup-20261110.md`).
 
 ## Links and local preview
 

@@ -236,9 +236,10 @@ policy sessions remain in policy evidence, not in the Factory video directory.
 The full motion/frozen assets are needed for another view or background; an MP4
 alone is not an editable recording.
 
-The original `python -m scripts.factory_server` entry remains for legacy plans
-that lack unified effective configuration. It retains its native argument
-contract. The unified entry does not silently append new defaults to those plans.
+Plans without a frozen unified configuration (made by the removed
+`scripts.factory_server`) are refused; prepare them again with
+`robofrontier factory prepare`. The unified entry does not silently append new
+defaults to old plans.
 The optional package preserves historical source physics and qualification labels;
 its older recordings are not relabeled as executions of a new physical release.
 

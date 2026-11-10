@@ -24,10 +24,6 @@ class WorkflowTests(unittest.TestCase):
         self.assertLessEqual({'test_run_metrics', 'test_run_analysis_atomic', 'test_scripts_index', 'test_workflows'},
                              set(modules))
 
-    def test_task_atlas_also_validates_pushes_to_main(self):
-        text = (ROOT/'.github/workflows/task-atlas.yml').read_text()
-        self.assertRegex(text, r'\n  push:\n    branches: \[main\]\n    paths:')
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -26,8 +26,8 @@ with their original source instead of replaying their poses into R14 colors.
 The delivery metadata now uses schema `robofrontier.mosaic-delivery.v2`: its
 `timeline_index` points to the checksum-pinned original video index. Unified
 release `historical_edit` entries can use a `mosaic_video_index` reference;
-`prepare_factory_edits` resolves the case through that index and verifies both
-index and original edit hashes. Legacy direct edit paths remain supported.
+The removed `prepare_factory_edits` script (2026-11-10) resolved the case through
+that index and verified both index and original edit hashes. Legacy direct edit paths remain supported.
 Original non-English filenames stay in the immutable evidence, not current
 configuration strings. No historical file is renamed or rewritten.
 New R14 Oracle attempts have separate qualification; the old success does not

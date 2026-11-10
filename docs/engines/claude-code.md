@@ -118,9 +118,7 @@ their selected profile. The repository's overall Codex default is unchanged.
 This token is a distinct authentication mode. It does not depend on the
 saved-login refresh experiment, and its receipt cannot certify that experiment.
 Formal Claude scoring remains closed. Cluster functionality remains available;
-cluster execution and full-video rerender are deferred. See the
-[official documentation findings](../development/anthropic-subscription-qualification.md)
-for the documented mechanisms and remaining empirical qualifications.
+cluster execution and full-video rerender are deferred.
 
 ### Native saved login
 

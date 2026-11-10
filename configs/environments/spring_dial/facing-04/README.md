@@ -5,17 +5,9 @@ Existing beam and mosaic environments are unchanged.
 
 ## Inspect
 
-From the repository root:
-
-```sh
-.venv/bin/python -m scripts.build_spring_dial
-.venv/bin/mjpython -m scripts.view_spring_dial
-```
-
-F6 cycles board / global / top / side / individual-dial views. F7 resets the whole
-preview and samples a new private code. Closing the window exits normally. Mouse
-perturbation in the native viewer is an engineering aid, not an agent action.
-No keyboard arm teleoperation or policy sessions are launched by this preview.
+The builder (`scripts/build_spring_dial.py`) and the native viewer
+(`scripts/view_spring_dial.py`) that went with this scene are no longer in the
+tree; restore them from tag `archive/pre-cleanup-20261110` to rebuild or view it.
 
 `preview-board.png` emphasizes readable game state; `preview-global.png` shows the
 four-arm arrangement. A and B face each other on the left; C and D face each

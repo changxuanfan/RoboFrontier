@@ -70,13 +70,3 @@ def reexec_entry(root,output_root,entrypoint,argv,harness,catalog,cli_config=Fal
     environment['ROBOFRONTIER_ORACLE_FROZEN_HARNESS']=str(frozen/'inputs/harness.json')
     environment['ROBOFRONTIER_ORACLE_FROZEN_CATALOG']=str(frozen/'inputs/catalog.json')
     os.execve(sys.executable,[sys.executable,str(frozen/relative),*argv],environment)
-
-
-def reexec_frozen(root,args):
-    root=Path(root).resolve()
-    if os.environ.get(MARKER)==str(root):return
-    output=Path(args.output_root).resolve() if args.output_root else root/'runs/oracle/frontier-v2'
-    harness=Path(args.harness).resolve() if args.harness else root/'configs/harness-frontier-v2.json'
-    argv=list(sys.argv[1:])
-    if args.output_root:argv=replace_option(argv,'--output-root',output)
-    reexec_entry(root,output,root/'scripts/verify_frontier_v2.py',argv,harness,Path(args.catalog).resolve(),cli_config=True)
