@@ -71,7 +71,7 @@ installation is `python -m robofrontier.batch.handoff setup-assets --archive
 
 ## Authentication
 
-The model catalog is `configs/claude-models.json`; every profile and its
+The model catalog is `the `claude` section of `configs/models.json``; every profile and its
 credential is listed in the [authentication matrix](providers.md#authentication-matrix).
 Create the ignored `.env` without replacing an existing file
 ([credentials file](README.md#credentials-file)), then edit it locally.

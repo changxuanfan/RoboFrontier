@@ -19,11 +19,12 @@ from robofrontier.runtime.setup import write_json
 from robofrontier.engines.claude.runner import _oauth_endpoint_allowed
 from robofrontier.batch.tasks import check_case_assets
 
-CATALOG = ROOT / 'configs/claude-models.json'
+CATALOG = ROOT / 'configs/models.json'
 
 
 def profile(name, catalog=CATALOG):
-    document = read(catalog)
+    from ..configuration import model_catalog
+    document = model_catalog('claude', catalog)
     if document.get('schema') != 'robofrontier.claude-models.v1':
         raise ValueError('Unsupported Claude model catalog')
     try:
@@ -139,7 +140,8 @@ def prepare_draft(output, names, families=None, cases=None, level=None, min_arms
             inputs = run / 'private/inputs'
             launch = inputs / 'claude.json'
             # Both engines share one context budget, frozen with the run (configs/models.json).
-            context = read(ROOT/'configs/models.json')
+            from ..configuration import model_catalog
+            context = model_catalog('codex')
             write_json(launch, {'schema': 'robofrontier.claude-launch-draft.v1', 'profile': p,
                                 'context_window': context['context_window'],
                                 'auto_compact_token_limit': context['auto_compact_token_limit'],
@@ -149,7 +151,7 @@ def prepare_draft(output, names, families=None, cases=None, level=None, min_arms
             manifest = read(manifest_path)
             for file in (launch,):
                 manifest['input_sha256'][str(file.relative_to(run))] = digest(file)
-            for file in (ROOT / 'robofrontier/batch/claude_benchmark.py', ROOT / 'configs/claude-models.json'):
+            for file in (ROOT / 'robofrontier/batch/claude_benchmark.py', ROOT / 'configs/models.json'):
                 relative = file.relative_to(ROOT)
                 frozen = inputs / 'frozen-source' / relative
                 frozen.parent.mkdir(parents=True, exist_ok=True)

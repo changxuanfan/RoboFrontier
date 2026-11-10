@@ -14,7 +14,8 @@ from robofrontier.tasks.families import ROOT, read
 
 
 def profile(name, config=None):
-    catalog = read(config or ROOT/'configs/models.json')
+    from ...configuration import model_catalog
+    catalog = model_catalog('codex', config)
     p = deepcopy(catalog['profiles'][name])
     p.update(context_window=catalog['context_window'], auto_compact_token_limit=catalog['auto_compact_token_limit'])
     if not p['vision']:
@@ -129,7 +130,7 @@ def launch_config(p, folder, run_dir=None):
     # Preserve exact OpenAI model metadata if available; the checked-in generic
     # template also permits an empty CODEX_HOME on a new server.
     model=deepcopy(next((m for m in cached if m.get('slug')==p['model']),
-                        read(ROOT/'configs/codex-model-template.json')))
+                        read(Path(__file__).with_name('model_template.json'))))
     model.update(slug=p['model'], display_name=p['model'], description='Benchmark provider model',
         context_window=p['context_window'],max_context_window=p['context_window'],
         input_modalities=['text','image'],tool_mode=None,shell_type='shell_command',

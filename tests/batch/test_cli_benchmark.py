@@ -51,7 +51,7 @@ class CliBenchmarkTests(unittest.TestCase):
     def test_profile_selected_standing_workers_use_direct_team_start(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)
-            catalog=json.loads((benchmark.ROOT/'configs/models.json').read_text())
+            catalog=json.loads((benchmark.ROOT/'configs/models.json').read_text())['engines']['codex']
             catalog['profiles']['luna']['benchmark_topology']='peer'
             config=root/'models.json';config.write_text(json.dumps(catalog))
             prepared=prepare_batch(root/'batch',['luna'],cases=['transport-a04-d1'],config=config)

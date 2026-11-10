@@ -260,3 +260,17 @@ def rendering_environment(device, system, base):
     else:
         raise ValueError('Unknown rendering device')
     return env
+
+
+MODELS = ROOT/'configs/models.json'
+
+
+def model_catalog(engine, path=None):
+    """One engine's model catalog: its section of configs/models.json, or a file holding
+    only that section (a run's frozen copy, or one written for a batch)."""
+    import json
+    document = json.loads(Path(path or MODELS).read_text())
+    if 'engines' in document:
+        if engine not in document['engines']: raise ValueError('No model catalog for engine: '+str(engine))
+        return document['engines'][engine]
+    return document

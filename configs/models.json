@@ -1,106 +1,224 @@
 {
-  "schema_version": 1,
-  "checked_on": "2026-10-28",
-  "context_window": 300000,
-  "auto_compact_token_limit": 267000,
-  "profiles": {
-    "luna_subscription": {
-      "model": "gpt-6-luna",
-      "provider": "openai",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 300000
+  "schema": "robofrontier.models.v2",
+  "scope": "Every model profile, one section per engine. A run freezes its own engine section as private/inputs/models.json.",
+  "engines": {
+    "codex": {
+      "schema_version": 1,
+      "checked_on": "2026-10-28",
+      "context_window": 300000,
+      "auto_compact_token_limit": 267000,
+      "profiles": {
+        "luna_subscription": {
+          "model": "gpt-6-luna",
+          "provider": "openai",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000
+        },
+        "sol61_subscription": {
+          "model": "gpt-6.1-sol",
+          "provider": "openai",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000
+        },
+        "terra61_subscription": {
+          "model": "gpt-6.1-terra",
+          "provider": "openai",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000
+        },
+        "astra": {
+          "model": "gpt-6-astra",
+          "provider": "openai",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000
+        },
+        "luna": {
+          "model": "gpt-6-luna",
+          "provider": "openai_api",
+          "base_url": "https://api.openai.com/v1",
+          "env_key": "OPENAI_API_KEY",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000
+        },
+        "openlux-luna": {
+          "model": "gpt-6-luna",
+          "provider": "openlux",
+          "base_url": "https://api.openlux.ai/v1",
+          "env_key": "OPENLUX_API_KEY",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000,
+          "compatibility": "OpenLux account and group Responses, vision, tools and compaction require live preflight"
+        },
+        "openlux-terra": {
+          "model": "gpt-6.1-terra",
+          "provider": "openlux",
+          "base_url": "https://api.openlux.ai/v1",
+          "env_key": "OPENLUX_API_KEY",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000,
+          "compatibility": "OpenLux account and group Responses, vision, tools and compaction require live preflight"
+        },
+        "deepseek": {
+          "model": "deepseek-flash",
+          "provider": "deepseek",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 1048576,
+          "base_url": "https://api.deepseek.com",
+          "env_key": "DEEPSEEK_API_KEY",
+          "documentation": "https://api-docs.deepseek.com/quick_start/agent_integrations/codex/"
+        },
+        "qwen": {
+          "model": "qwen3.8-max-0902",
+          "provider": "qwen",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 1000000,
+          "base_url_env": "DASHSCOPE_BASE_URL",
+          "env_key": "DASHSCOPE_API_KEY",
+          "documentation": "https://help.aliyun.com/zh/model-studio/qwen-api-via-openai-responses"
+        },
+        "glm": {
+          "model": "glm-5.3-flash",
+          "provider": "zhipu",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 1000000,
+          "base_url": "https://open.bigmodel.cn/api/v1",
+          "env_key": "ZAI_API_KEY",
+          "compatibility": "Responses/image/tool support for this model and this account requires live preflight",
+          "documentation": "https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash"
+        },
+        "kimi": {
+          "model": "kimi-k3.1-pro",
+          "provider": "kimi",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 1048576,
+          "base_url": "https://api.moonshot.cn/v1",
+          "env_key": "KIMI_API_KEY",
+          "documentation": "https://platform.kimi.com/docs/guide/codex-kimi"
+        }
+      }
     },
-    "sol61_subscription": {
-      "model": "gpt-6.1-sol",
-      "provider": "openai",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 300000
-    },
-    "terra61_subscription": {
-      "model": "gpt-6.1-terra",
-      "provider": "openai",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 300000
-    },
-    "astra": {
-      "model": "gpt-6-astra",
-      "provider": "openai",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 300000
-    },
-    "luna": {
-      "model": "gpt-6-luna",
-      "provider": "openai_api",
-      "base_url": "https://api.openai.com/v1",
-      "env_key": "OPENAI_API_KEY",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 300000
-    },
-    "openlux-luna": {
-      "model": "gpt-6-luna",
-      "provider": "openlux",
-      "base_url": "https://api.openlux.ai/v1",
-      "env_key": "OPENLUX_API_KEY",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 300000,
-      "compatibility": "OpenLux account and group Responses, vision, tools and compaction require live preflight"
-    },
-    "openlux-terra": {
-      "model": "gpt-6.1-terra",
-      "provider": "openlux",
-      "base_url": "https://api.openlux.ai/v1",
-      "env_key": "OPENLUX_API_KEY",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 300000,
-      "compatibility": "OpenLux account and group Responses, vision, tools and compaction require live preflight"
-    },
-    "deepseek": {
-      "model": "deepseek-flash",
-      "provider": "deepseek",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 1048576,
-      "base_url": "https://api.deepseek.com",
-      "env_key": "DEEPSEEK_API_KEY",
-      "documentation": "https://api-docs.deepseek.com/quick_start/agent_integrations/codex/"
-    },
-    "qwen": {
-      "model": "qwen3.8-max-0902",
-      "provider": "qwen",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 1000000,
-      "base_url_env": "DASHSCOPE_BASE_URL",
-      "env_key": "DASHSCOPE_API_KEY",
-      "documentation": "https://help.aliyun.com/zh/model-studio/qwen-api-via-openai-responses"
-    },
-    "glm": {
-      "model": "glm-5.3-flash",
-      "provider": "zhipu",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 1000000,
-      "base_url": "https://open.bigmodel.cn/api/v1",
-      "env_key": "ZAI_API_KEY",
-      "compatibility": "Responses/image/tool support for this model and this account requires live preflight",
-      "documentation": "https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash"
-    },
-    "kimi": {
-      "model": "kimi-k3.1-pro",
-      "provider": "kimi",
-      "effort": "high",
-      "vision": true,
-      "context_capacity": 1048576,
-      "base_url": "https://api.moonshot.cn/v1",
-      "env_key": "KIMI_API_KEY",
-      "documentation": "https://platform.kimi.com/docs/guide/codex-kimi"
+    "claude": {
+      "schema": "robofrontier.claude-models.v1",
+      "profiles": {
+        "haiku": {
+          "provider": "anthropic",
+          "model": "claude-haiku-5-5",
+          "env_key": "ANTHROPIC_API_KEY",
+          "base_url": "https://api.anthropic.com",
+          "effort": "high"
+        },
+        "haiku_subscription_token": {
+          "provider": "anthropic",
+          "model": "claude-haiku-5-5",
+          "env_key": "CLAUDE_CODE_OAUTH_TOKEN",
+          "base_url": "https://api.anthropic.com",
+          "effort": "high",
+          "auth_mode": "oauth_token"
+        },
+        "haiku_subscription": {
+          "provider": "anthropic",
+          "model": "claude-haiku-5-5",
+          "env_key": null,
+          "base_url": "https://api.anthropic.com",
+          "effort": "high",
+          "auth_mode": "native_login",
+          "native_config_scope": "default",
+          "native_config_dir_env": "ROBOFRONTIER_CLAUDE_HOME"
+        },
+        "haiku_subscription_directory": {
+          "provider": "anthropic",
+          "model": "claude-haiku-5-5",
+          "env_key": null,
+          "base_url": "https://api.anthropic.com",
+          "effort": "high",
+          "auth_mode": "native_login",
+          "native_config_scope": "directory",
+          "native_config_dir_env": "ROBOFRONTIER_CLAUDE_HOME"
+        },
+        "opus": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "env_key": "ANTHROPIC_API_KEY",
+          "base_url": "https://api.anthropic.com",
+          "effort": "high"
+        },
+        "opus_subscription": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "env_key": "CLAUDE_CODE_OAUTH_TOKEN",
+          "base_url": "https://api.anthropic.com",
+          "effort": "high",
+          "auth_mode": "oauth_token"
+        },
+        "kimi": {
+          "provider": "kimi",
+          "model": "kimi-k3.1-pro",
+          "env_key": "KIMI_API_KEY",
+          "base_url": "https://api.moonshot.cn/anthropic",
+          "effort": "high"
+        },
+        "kimi_code": {
+          "provider": "kimi_code",
+          "model": "k3.1-pro",
+          "env_key": "KIMI_CODE_API_KEY",
+          "base_url": "https://api.kimi.com/coding/",
+          "effort": "high"
+        },
+        "qwen": {
+          "provider": "qwen",
+          "model": "qwen3.8-max-0902",
+          "env_key": "DASHSCOPE_API_KEY",
+          "base_url_env": "DASHSCOPE_ANTHROPIC_BASE_URL",
+          "effort": "high"
+        },
+        "glm": {
+          "provider": "zhipu",
+          "model": "glm-5.3-flash",
+          "env_key": "ZAI_API_KEY",
+          "base_url": "https://open.bigmodel.cn/api/anthropic",
+          "effort": "high"
+        },
+        "deepseek": {
+          "provider": "deepseek",
+          "model": "deepseek-flash",
+          "env_key": "DEEPSEEK_API_KEY",
+          "base_url": "https://api.deepseek.com/anthropic",
+          "effort": "high"
+        }
+      },
+      "pricing": {
+        "source": "Anthropic first-party list prices in USD per million tokens (claude-api reference, cached 2026-10-06)",
+        "scope": "Estimates turns whose cost the CLI did not report; never a provider bill",
+        "cache_write_5m_multiplier": 1.25,
+        "cache_write_1h_multiplier": 2.0,
+        "models": {
+          "claude-haiku-5-5": {
+            "input": 0.1,
+            "output": 0.5,
+            "cache_read": 0.01,
+            "long_prompt_threshold_tokens": 100000,
+            "long_prompt_input": 0.5,
+            "long_prompt_output": 2.5,
+            "assumed": "cache_read is the standard 0.1x input rate; cache rates scale with the long-prompt input rate"
+          },
+          "claude-opus-5-5": {
+            "input": 4.0,
+            "output": 20.0,
+            "cache_read": 0.2
+          }
+        }
+      }
     }
   }
 }

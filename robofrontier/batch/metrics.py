@@ -275,9 +275,10 @@ def _union(intervals):
 
 
 def claude_pricing():
-    """List prices from configs/claude-models.json, for estimates only."""
+    """List prices from the Claude section of configs/models.json, for estimates only."""
     from ..tasks.config import ROOT
-    return json.loads((ROOT/'configs/claude-models.json').read_text()).get('pricing') or {}
+    from ..configuration import model_catalog
+    return model_catalog('claude').get('pricing') or {}
 
 
 def claude_transcript_cost(run, pricing=None):

@@ -98,7 +98,7 @@ not an automatic model task failure.
 Store API keys in the ignored `.env` or process environment. Never put credentials
 in TOML or commit them. Existing keys and Desktop authentication are not copied
 into another user's checkout. The selected engine's catalog is
-`configs/models.json` or `configs/claude-models.json`. OpenLux and third-party
+the engine's section of `configs/models.json`. OpenLux and third-party
 profiles need their own compatibility checks; provider routing groups are not
 selected by changing a task's model prompt.
 

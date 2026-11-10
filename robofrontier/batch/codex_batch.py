@@ -306,9 +306,10 @@ def main():
     a=sub.add_parser('status');a.add_argument('batch',type=Path)
     a=sub.add_parser('stop');a.add_argument('batch',type=Path)
     args=p.parse_args()
-    if args.command=='models':print(json.dumps(read(ROOT/'configs/models.json'),ensure_ascii=False,indent=2))
+    from ..configuration import model_catalog
+    if args.command=='models':print(json.dumps(model_catalog('codex'),ensure_ascii=False,indent=2))
     elif args.command=='plan':
-        catalog=read(args.model_config or ROOT/'configs/models.json')
+        catalog=model_catalog('codex',args.model_config)
         if not 1<=args.parallel<=36:raise ValueError('Parallel tasks must be 1..36')
         if not args.models or len(set(args.models))!=len(args.models):raise ValueError('Choose distinct model profiles')
         rows=select_cases(args.families,args.cases,args.level,args.min_arms)

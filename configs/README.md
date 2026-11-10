@@ -9,9 +9,7 @@ See the [configuration and CLI guide](../docs/unified-cli.md).
 
 | Path | Purpose |
 | --- | --- |
-| `models.json` | Native Codex model/provider profiles; unified defaults select Luna/high with API authentication |
-| `codex-model-template.json` | Model metadata a Codex run starts from when its home has no cached entry for the model |
-| `claude-models.json` | Native Claude Code model/provider profiles and transcript pricing; select an engine-specific profile explicitly |
+| `models.json` | Every model profile, one section per engine (`engines.codex`, `engines.claude`, which also holds Claude transcript prices); a run freezes its engine's section. Codex's model metadata template is `robofrontier/engines/codex/model_template.json` |
 | `harness.json` | Default runtime harness, used when a task names none |
 | `harnesses/policy.json` | Native shared runtime/tool defaults for policy runs; model fields are baseline native settings, not overrides of a frozen unified profile |
 | `harness-frontier-v2.json`, `harnesses/oracle.json` | The first is the Frontier V2 harness historical suites name by file. The first differs from `harness.json` in `topology` and `action_timeout_sim_s` (15 s, the earlier default; `harness.json` now allows 30 s). `harnesses/oracle.json` (formerly `harness-frontier-v2-servo2.json`) is the Oracle's, with its own model and effort fields |

@@ -222,7 +222,8 @@ def doctor(names, root=ROOT):
         else:tools[tool]=dict(available=False)
     profiles={}
     for name in names:
-        raw=read(root/'configs/models.json')['profiles'][name]
+        from ..configuration import model_catalog
+        raw=model_catalog('codex',root/'configs/models.json')['profiles'][name]
         key=raw.get('env_key')
         entry=dict(model=raw['model'],credential_env=key,credential_set=bool(os.environ.get(key)) if key else None)
         try:profile(name);entry['configuration_valid']=True

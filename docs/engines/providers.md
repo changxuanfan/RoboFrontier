@@ -12,7 +12,7 @@ file and policy assets are in [shared setup](README.md#shared-setup).
 ## Catalogs and profiles
 
 The native Codex catalog is `configs/models.json`; Claude has
-`configs/claude-models.json`. Profiles are candidates, not provider-availability
+`the `claude` section of `configs/models.json``. Profiles are candidates, not provider-availability
 or compatibility certificates. The dated
 [pricing research](../archive/model-pricing-20261028.md) and
 [compatibility comparison](../archive/model-compatibility-20261028.md) are

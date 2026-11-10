@@ -20,8 +20,8 @@ def _print(value):
 
 def _catalog(config):
     policy = config['policy']
-    name = 'claude-models.json' if policy['engine'] == 'claude' else 'models.json'
-    catalog = json.loads((ROOT/'configs'/name).read_text())
+    from .configuration import model_catalog
+    catalog = model_catalog(policy['engine'])
     if policy['profile'] not in catalog['profiles']:
         raise ValueError('Unknown ' + policy['engine'] + ' profile: ' + policy['profile'])
     catalog['profiles'][policy['profile']]['effort'] = policy['effort']

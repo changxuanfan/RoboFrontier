@@ -71,7 +71,7 @@ physics steps, or model turns. It is not a provider rate-limit guarantee.
 | Setting | Meaning |
 | --- | --- |
 | `policy.engine` | Native `codex` or native `claude` runner |
-| `policy.profile` | Engine-specific entry in `configs/models.json` or `configs/claude-models.json` |
+| `policy.profile` | Engine-specific entry in the engine's section of `configs/models.json` |
 | `policy.effort` | Explicit requested reasoning effort; must pass the provider's preflight |
 | `policy.topology` | `single`, `controller-worker`, `worker-worker`, or `adaptive` |
 | `batch.parallel` | Maximum concurrent task hosts, from 1 to 36; no automatic reduction |
