@@ -3,7 +3,7 @@ FROM node:22-bookworm-slim AS node
 FROM python:3.12-slim-bookworm
 
 ARG CODEX_VERSION=0.165.0
-ARG CLAUDE_CODE_VERSION=2.1.312
+ARG CLAUDE_CODE_VERSION=2.1.316
 ARG UV_VERSION=0.9.28
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libosmesa6 libegl1 libgl1 libglvnd0 libglib2.0-0 ffmpeg git ca-certificates \

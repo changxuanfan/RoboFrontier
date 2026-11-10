@@ -78,6 +78,8 @@ def prepare(output, config):
     policy, selection = config['policy'], config['selection']
     load_env(ROOT/'.env')
     plan(config)  # Reject invalid model and selection before any installation.
+    from .runtime import versions
+    pinned = versions.require(policy['engine'])
     policy_env.require_private_route(config)
     output = Path(output).resolve()
     if output.exists():
@@ -108,6 +110,7 @@ def prepare(output, config):
                                    wall_limit_s=config['batch']['task_wall_limit_s'], harness_overrides=harness)
     batch = json.loads(result.read_text())
     batch['execution'] = {**config['runtime'], 'startup_interval_s': config['batch']['startup_interval_s']}
+    batch['versions'] = pinned
     batch['effective_configuration_sha256'] = hashlib.sha256(
         json.dumps(config, sort_keys=True, allow_nan=False).encode()).hexdigest()
     write_json(output/'effective-config.json', config)
@@ -211,8 +214,13 @@ def run(batch, *, engineering=False, continuing=False):
     if config['policy']['engine'] == 'claude' and not engineering:
         raise ValueError('Claude runs remain unqualified; explicitly select run --engineering')
     from .runtime.diagnostics import require_runtime
+    from .runtime import versions
     require_runtime(config)
-    environment = rendering_environment(config['render']['device'], platform.system(), os.environ)
+    pinned = json.loads((Path(batch)/'batch.json').read_text()).get('versions')
+    if pinned != versions.require(config['policy']['engine']):
+        raise ValueError('This batch was prepared with other program versions: '+json.dumps(pinned))
+    environment = {**rendering_environment(config['render']['device'], platform.system(), os.environ),
+                   **versions.ENGINE_ENVIRONMENT[config['policy']['engine']]}
     os.environ.clear()
     os.environ.update(environment)
     if config['policy']['engine'] == 'claude':

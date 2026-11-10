@@ -8,6 +8,21 @@ from robofrontier.configuration import load_configuration, rendering_environment
 from robofrontier.runtime.setup import verify_inputs
 
 
+
+# These tests prepare batches without the engine CLIs installed; the pinned version check
+# itself is tested in runtime.test_versions.
+def setUpModule():
+    from unittest.mock import patch
+    from robofrontier.runtime import versions
+    global _versions
+    _versions = patch.object(versions, 'engine_version', side_effect=lambda engine, run=None: versions.ENGINES[engine])
+    _versions.start()
+
+
+def tearDownModule():
+    _versions.stop()
+
+
 class UnifiedConfigurationTests(unittest.TestCase):
     def test_claude_engine_defaults_to_setup_token_without_replacing_explicit_profiles(self):
         from robofrontier.batch.claude_benchmark import profile
