@@ -65,42 +65,27 @@ class FamilyReleaseTests(unittest.TestCase):
                 self.assertIn('completion', public)
                 self.assertIn('workspace_world_m', public)
                 _, _, spec = resolve_case(case)
-                if 'public_projection' in spec:
-                    review = read(ROOT/spec['public_projection']['path'])
-                    for key in ('rules', 'target', 'mechanism', 'completion', 'initial_supplies'):
-                        # Terminal runs correct contradicting Relay and Mosaic rules (task_families.freeze_public).
-                        if key in review and not (key == 'completion' or case.startswith(('relay-', 'mosaic-')) and key == 'rules'):
-                            if key == 'target' and 'reference_image' in review[key]:
-                                # The Mosaic target image is delivered with the family materials.
-                                self.assertEqual(public[key]['reference_image'], 'family/'+review[key]['reference_image'])
-                                self.assertEqual({k: v for k, v in public[key].items() if k != 'reference_image'},
-                                                 {k: v for k, v in review[key].items() if k != 'reference_image'})
-                            else:
-                                self.assertEqual(public[key], review[key])
-                    if case.startswith('relay-'):
-                        self.assertTrue(public['completion']['required_airborne_handover'])
-                        self.assertEqual(public['completion']['relay_completion_rule'], 'relay-airborne-handover-v1')
-                        self.assertTrue(any('Every assembly must undergo a real qualified airborne handover' in r for r in public['rules']))
-                        self.assertTrue(any('Only the last established' in r for r in public['rules']))
-                        self.assertTrue(any('never counts as transport' in r for r in public['rules']))
-                        self.assertIn('terminal outcome v2', (run/'public/inputs'/public['family_guidance']).read_text())
+                # A run receives the case's released public task with only its own protocol and
+                # image profile added, and every listed family material plus the family skill.
+                released = read(ROOT/spec['public_projection']['path'])
+                self.assertEqual({k: v for k, v in public.items() if k not in ('run_protocol', 'observation_image')}, released)
+                for name in spec['public_files']:
+                    self.assertTrue((run/'public/inputs/family'/name).is_file(), name)
+                self.assertTrue((run/'public/inputs'/public['task_skill']).is_file())
+                self.assertNotIn('family_guidance', public)
+                if case.startswith('relay-'):
+                    self.assertTrue(public['completion']['required_airborne_handover'])
+                    self.assertEqual(public['completion']['relay_completion_rule'], 'relay-airborne-handover-v1')
+                    self.assertTrue(any('picks it up, none of that timber' in r for r in public['rules']))
+                    self.assertFalse(any('never counts as transport' in r for r in public['rules']))
+                    self.assertEqual(public['completion']['rule_revision'], 'relay-timber-goal-70pct-v1')
                 if case.startswith('transport-'):
                     self.assertFalse(public['completion']['acceptance']['process_compliance_required'])
                 if case.startswith('mosaic-'):
                     self.assertFalse(public['completion']['process_violations_clear_required'])
+                    self.assertEqual(public['target']['reference_image'], 'family/target-pattern.png')
                 if case.startswith('dial-'):
                     self.assertIn('latched', public['completion']['success_semantics'])
-                    self.assertNotIn('clean process', (run/'public/inputs'/public['task_skill']).read_text())
-                if 'initial_reference_images' in public:
-                    self.assertTrue(all((run/'public/inputs'/name).is_file() for name in public['initial_reference_images']))
-                # The family Skill replaces released guidance. A Relay case under the 70% timber rule
-                # states its whole requirement in task.json and gets no older terminal description.
-                self.assertTrue((run/'public/inputs'/public['task_skill']).is_file())
-                self.assertNotIn('family_guidance', public)
-                if case.startswith('relay-'):
-                    self.assertEqual(public['completion']['rule_revision'], 'relay-timber-goal-70pct-v1')
-                    self.assertTrue(any('70 percent' in rule for rule in public['rules']))
-                    self.assertFalse(any('50mm' in rule for rule in public['rules']))
                 rules=(run/'public/inputs/rules.md').read_text()
                 self.assertIn('`ready` is optional',rules)
                 self.assertIn('chooses direct control or bounded delegation',rules)

@@ -18,16 +18,11 @@
             "environment.json": "01f3d25db31dbef5e5396f5f7276618a85b16953760e9285086b3797cee98bf8",
             "workstation.json": "2033b684f422b068f18bfee25027359ed45a6938a7ee9f8c066f5f85b369aa02"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/transport.md",
-              "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
-            }
-          },
+          "public_files": {},
           "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
-            "path": "benchmark/transport/transport-a04-d1/public-task.json",
-            "sha256": "a459c3a4f8454cc482e4af3af567435f2aef7947ec9a314a412bd14773058c48"
+            "path": "benchmark/transport/transport-a04-d1/public/task.json",
+            "sha256": "cad586a62f559535e4eb1a4ca36660bc4466f34e51a389c20063649be65504df"
           }
         },
         {
@@ -39,16 +34,11 @@
             "environment.json": "53af834a80b76599efb477fee60e0789d510759033eafdfbe3d6d5f11fc6b671",
             "workstation.json": "15d0363d591033375cf6f979661bbfaa9f1e15eb5ff38fb08c75b75b759e0bab"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/transport.md",
-              "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
-            }
-          },
+          "public_files": {},
           "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
-            "path": "benchmark/transport/transport-a04-d2/public-task.json",
-            "sha256": "b6efa19bf7cdf6644739f9c45ca34f6fd9a76071a6229c14aca67f4e93214b0e"
+            "path": "benchmark/transport/transport-a04-d2/public/task.json",
+            "sha256": "8270b77e3079919fda77b62e7d4d2ddcceb84ff16e4dd48fbae5677718a442fb"
           }
         },
         {
@@ -60,16 +50,11 @@
             "environment.json": "3ae701ea80df5fd4be28a5eba31ac3679f417cfeaed77e3cd2f34857a5fdd430",
             "workstation.json": "85bb54d5629cc0addc19343a3a80d9bfb0a3cb650d324d20470bf6e3ce72f3a5"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/transport.md",
-              "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
-            }
-          },
+          "public_files": {},
           "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
-            "path": "benchmark/transport/transport-a04-d3/public-task.json",
-            "sha256": "06b73d0061b99d2506adb4ced94e9280c3a2ee4d411884567cdc9a9703fe75a1"
+            "path": "benchmark/transport/transport-a04-d3/public/task.json",
+            "sha256": "a24a0d62713b5d519c99c2091790e8b1dbdbe95c7664cda0bdf530a9977b6e89"
           }
         },
         {
@@ -81,16 +66,11 @@
             "environment.json": "5654ced8e03bdf6a6ed2e216a445ba7f46ed7f71d4bf4a5aaaee9c43487b204e",
             "workstation.json": "5dc2726642dea80faf617767371db7bfda13595af97fb70f00fb22396316371b"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/transport.md",
-              "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
-            }
-          },
+          "public_files": {},
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a08-d1/public-task.json",
-            "sha256": "03be230e9579284d4b4b386ef21d3d596dc1a9572d7103e58b112ac6bb9ca484"
+            "path": "benchmark/transport/transport-a08-d1/public/task.json",
+            "sha256": "62a14d27b0936e39642ae88f008833fd7ff5a247015a64844735eda795ebe241"
           }
         },
         {
@@ -102,16 +82,11 @@
             "environment.json": "66ec66d482b4071a140128ad5329b37c627d1eeb4b3d70ef4dcca21c5a870a6b",
             "workstation.json": "b747ebeeb66003eb84a3169b9fb80c0af0a41f882ead06973f77b26299aaf2d7"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/transport.md",
-              "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
-            }
-          },
+          "public_files": {},
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a08-d2/public-task.json",
-            "sha256": "18e0e481a54097647a950865d05974b71615cc66e3783e45bd37c7e9229dd254"
+            "path": "benchmark/transport/transport-a08-d2/public/task.json",
+            "sha256": "3001629c3b883943363b8d8e35639a792c573be72b34545d04869c8ecabaeb19"
           }
         },
         {
@@ -123,16 +98,11 @@
             "environment.json": "99c3c5515097199391d0d28ca547e62733c0ad4845ed15de569e1dbc5ddfecc1",
             "workstation.json": "e46501e5c0a6105ba42a9800190199c19b554888e82c4ebf674b1d27a805d219"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/transport.md",
-              "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
-            }
-          },
+          "public_files": {},
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a08-d3/public-task.json",
-            "sha256": "6200e5f52d190577819506b5ffa012617ddb5cb38d7f06a76a48e425cbe7fe58"
+            "path": "benchmark/transport/transport-a08-d3/public/task.json",
+            "sha256": "6c6e6345512d2a9e62a8f88f5035eedcc7af4dfaba32ebd962028531b395e1d5"
           }
         },
         {
@@ -144,16 +114,11 @@
             "environment.json": "888c90e07a81fcdd1347f64e007b2cea6f5f9eb4882c37d3a2aa0081afda7441",
             "workstation.json": "1e4d5e8a49b6de1547f7cd1525f43878ee8ae04a6c03b46a5a99c893813e6064"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/transport.md",
-              "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
-            }
-          },
+          "public_files": {},
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a12-d1/public-task.json",
-            "sha256": "0cc8325d6b0b033246708b5bf4985cb7bd9e8cc8c4d3897cb8e640e9a30fe6eb"
+            "path": "benchmark/transport/transport-a12-d1/public/task.json",
+            "sha256": "7c6994a0eebb9b426a2958e6f2c2eab4fca8d14997fd3d373b7daf0c231b8256"
           }
         },
         {
@@ -165,16 +130,11 @@
             "environment.json": "38354a2402911dae70a5497ea805de8bb68da86fb00272c0e8f425d6430d3714",
             "workstation.json": "99a8e8ae374bec6bd8000c0ba1fed86dfc026975822c6b46623a580e68c188e6"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/transport.md",
-              "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
-            }
-          },
+          "public_files": {},
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a12-d2/public-task.json",
-            "sha256": "36b6670621df028dd2f037f9455222dd51464e7ea5d0f0263d10079113cf6d0c"
+            "path": "benchmark/transport/transport-a12-d2/public/task.json",
+            "sha256": "e9a0611b52b15c63ca9c90e41c3f2f5a624e5fd6d2f95c7c341fe1adeb37d355"
           }
         },
         {
@@ -186,16 +146,11 @@
             "environment.json": "2f152f38d7dc827cc4faab1d54744fe5edb502cade8d67dc60bc22e25c504f95",
             "workstation.json": "d33cd65b519b949acb644bb40b9c1ab343689c830c40921cceacfddcb5317e5d"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/transport.md",
-              "sha256": "dc6e82660bc8ecdb16954167c6b0ee3340450ef8f66144ebe61e017dc208543d"
-            }
-          },
+          "public_files": {},
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/transport/transport-a12-d3/public-task.json",
-            "sha256": "709ebcfdb38a7884fd9c92884b5c3c41e0ac235f7b263d433cdb3d023d5b1729"
+            "path": "benchmark/transport/transport-a12-d3/public/task.json",
+            "sha256": "a66c7cface7b830dda791f5fba89764e24d1dcc13c3d0a8f90938f09dd9c60f9"
           }
         }
       ],
@@ -373,15 +328,15 @@
             "workstation.json": "28df9df13a48b8e7e5b350f66764214a2de0340bc1d3edfe66e5f1bc658a98c2"
           },
           "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r15.md",
-              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
+            "target-pattern.png": {
+              "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/target-pattern.png",
+              "sha256": "f3699181bb8494da9c8c5364a58f95143828a24c922d502ca71fdb7965b7f0f3"
             }
           },
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/reviewed-task.json",
-            "sha256": "1e30cea9192a72aa099215968019c0aadf60dbafc9eaf8aebfed2694d03b8ba6"
+            "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/task.json",
+            "sha256": "4410140185bf9fc2e3a06a7180f8bceb738f362a7c64e6259005fecfd231e85b"
           }
         },
         {
@@ -394,15 +349,15 @@
             "workstation.json": "e4c3f2608fd4d1eb9e01778098a287dec5027a5cb5029a8a07413e5a240d3f25"
           },
           "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r15.md",
-              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
+            "target-pattern.png": {
+              "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/target-pattern.png",
+              "sha256": "f3699181bb8494da9c8c5364a58f95143828a24c922d502ca71fdb7965b7f0f3"
             }
           },
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/reviewed-task.json",
-            "sha256": "3e7e5f0ce32fed42ce2848a99902cf8c342c5a23a7e948b5dedf9db708685254"
+            "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/task.json",
+            "sha256": "6eeee0e811ce67712f727f07e3158827e5fdf11c2473c200d7f4aa54996be1c4"
           }
         },
         {
@@ -415,15 +370,15 @@
             "workstation.json": "435d7fbe0813aee18ff0f7197482740bf6f9db230fe19f0d9e035d59fa6b1a14"
           },
           "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r15.md",
-              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
+            "target-pattern.png": {
+              "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/target-pattern.png",
+              "sha256": "f3699181bb8494da9c8c5364a58f95143828a24c922d502ca71fdb7965b7f0f3"
             }
           },
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/reviewed-task.json",
-            "sha256": "6065d7de51c3c82272db8d39a94004d90b50f75ebb9d05325c1f450393b056a8"
+            "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/task.json",
+            "sha256": "a31a13dde52da6c530a9adb71fae162b295a41b1ab4d8b61317847e1291ca711"
           }
         },
         {
@@ -436,15 +391,15 @@
             "workstation.json": "28ba0aa52729f00fb47dac5144370596e7ed4b49f9fb5c28791df91683093b61"
           },
           "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r15.md",
-              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
+            "target-pattern.png": {
+              "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/target-pattern.png",
+              "sha256": "72b85c20800681546a80759cade80f544e5208b86d911e640b30c27e29488328"
             }
           },
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/reviewed-task.json",
-            "sha256": "c8a0b0aad26d00ace05f5614f40776e389968b81fdf7b4ed25efacdd231bc98c"
+            "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/task.json",
+            "sha256": "3001b263c42b7e2bbd771d5f270c3e210a8e910fc2d3211b6663f9cb21c1aa3d"
           }
         },
         {
@@ -457,15 +412,15 @@
             "workstation.json": "2d1e30dfbd7791703a8de6e4104650ba468dd00e3cf138138c0d837b7b83aef5"
           },
           "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r15.md",
-              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
+            "target-pattern.png": {
+              "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/target-pattern.png",
+              "sha256": "72b85c20800681546a80759cade80f544e5208b86d911e640b30c27e29488328"
             }
           },
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/reviewed-task.json",
-            "sha256": "d956697bc6c09be20581b107de9e816365169c73973040b789259c2269741ca7"
+            "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/task.json",
+            "sha256": "a1684fa60015d657cfae7a6229ba11b558b21022824726dedc8e6c8fe1c4277a"
           }
         },
         {
@@ -478,15 +433,15 @@
             "workstation.json": "c633a1876a7f276654094b84b180afd0ea6012c7b1905bfb8f72f8ce14e4daba"
           },
           "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r15.md",
-              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
+            "target-pattern.png": {
+              "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/target-pattern.png",
+              "sha256": "72b85c20800681546a80759cade80f544e5208b86d911e640b30c27e29488328"
             }
           },
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/reviewed-task.json",
-            "sha256": "aa59667ba802f335f161872e309411c119b198e96ca00c75367c8d57b8a5678e"
+            "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/task.json",
+            "sha256": "0958332aa79c662827994210a6836603c44a34ab85220677457b881a94f5d947"
           }
         },
         {
@@ -499,15 +454,15 @@
             "workstation.json": "32c2200e6e3581a6f5caeca2df407c6443c6d8b684510a6f46f5c8fb171f1bfd"
           },
           "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r15.md",
-              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
+            "target-pattern.png": {
+              "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/target-pattern.png",
+              "sha256": "5a1244d7b2ae59d51676e100224741d58c88c7202756ef58e585359863056e92"
             }
           },
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/reviewed-task.json",
-            "sha256": "b196230e0d8f41e0e9533a6de4de059763b30d05ce4d765d46de7f87cef81e34"
+            "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/task.json",
+            "sha256": "d644613d443588047c344b079b9669f57b63090b75b7dfa69d543f3d3333a675"
           }
         },
         {
@@ -520,15 +475,15 @@
             "workstation.json": "a56a471ea42f01082b9a10538ae55ccd24ed9f13ce822e5bcf2769b1057e7e1f"
           },
           "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r15.md",
-              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
+            "target-pattern.png": {
+              "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/target-pattern.png",
+              "sha256": "5a1244d7b2ae59d51676e100224741d58c88c7202756ef58e585359863056e92"
             }
           },
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/reviewed-task.json",
-            "sha256": "42ec4550010cc023d4fe189b5712b87fb1623d1802cf73f2b28f82ed4b86ea29"
+            "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/task.json",
+            "sha256": "7ab3324e66db57d0014d5cb5d2fd285b4099b2e3574a214bbded202c96578bc1"
           }
         },
         {
@@ -541,15 +496,15 @@
             "workstation.json": "da403e10de3611ad87923ad9f21f62317f33c2c620f3f25c40f231a893f68b10"
           },
           "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/mosaic-r15.md",
-              "sha256": "bcd4888207b148a1ae5d70e9e659ea112b75ed89abc8c738d0d4f0221ab6b422"
+            "target-pattern.png": {
+              "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/target-pattern.png",
+              "sha256": "5a1244d7b2ae59d51676e100224741d58c88c7202756ef58e585359863056e92"
             }
           },
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
-            "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/reviewed-task.json",
-            "sha256": "ea48f31c2c41c83d7299f5161851729c35479353d11c50010ea9e10b801706a6"
+            "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/task.json",
+            "sha256": "cc19edff6cac968f4bd10fdeda7c041ae49e1748c647641d2d87ddd916ec9cf8"
           }
         }
       ],
@@ -753,13 +708,12 @@
             "environment.json": "4c4306611419b8e96992d761e0f459ac05314742222704d8c4e116ea103309a7",
             "workstation.json": "dc5ef5946d308a084b0bbeec0df4fa05f34fe950733e37f2eff7f80284635ee4"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/relay.md",
-              "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
-            }
-          },
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence"
+          "public_files": {},
+          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
+          "public_projection": {
+            "path": "benchmark/relay/relay-a08-d1/public/task.json",
+            "sha256": "0cb723eff9b20eb164f30c0116f7b7cd20518fb20fd35659285361a1a3738904"
+          }
         },
         {
           "id": "relay-a08-d2",
@@ -770,13 +724,12 @@
             "environment.json": "aeab955b43a3f51d0253b3200ae50c02b7622fb9b21674a0eb1d1db102a13160",
             "workstation.json": "8e310288f6728fe1d0a1cba959e3cce5052a69cef801868741bd2c4ed12600e4"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/relay.md",
-              "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
-            }
-          },
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence"
+          "public_files": {},
+          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
+          "public_projection": {
+            "path": "benchmark/relay/relay-a08-d2/public/task.json",
+            "sha256": "a9fa032e82ff484a59e3281be40b3381d9c03fc7f4a851f13fdf654cc47585f0"
+          }
         },
         {
           "id": "relay-a08-d3",
@@ -787,13 +740,12 @@
             "environment.json": "0598539858b1cd37e408fe2980eff135ee12b1eb44764caa5563819ce9fd9e7b",
             "workstation.json": "7d86f8ab1b8978cc688f878b2de9acc9b32a7bb0b8c2abdca1a0df9e075a7862"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/relay.md",
-              "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
-            }
-          },
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence"
+          "public_files": {},
+          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
+          "public_projection": {
+            "path": "benchmark/relay/relay-a08-d3/public/task.json",
+            "sha256": "65c7ebbe96463dc2191671f287b2b73b7d775d2a7f0ceed11bc2f58519cd5474"
+          }
         },
         {
           "id": "relay-a12-d1",
@@ -804,13 +756,12 @@
             "environment.json": "bc0f7e933578791b75a16a7665e9d13e4d93b67af5711507299436bf54e8eb5d",
             "workstation.json": "94eebda34260e12e19d6164351f02cddb95ffa70615f0c79cfcb6f5a52554912"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/relay.md",
-              "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
-            }
-          },
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence"
+          "public_files": {},
+          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
+          "public_projection": {
+            "path": "benchmark/relay/relay-a12-d1/public/task.json",
+            "sha256": "9758f688d50f3ee0e92d936fb89fbe10f36b38d2458f6f019184f9ff135aa7f8"
+          }
         },
         {
           "id": "relay-a12-d2",
@@ -821,13 +772,12 @@
             "environment.json": "d741f83e095ff4f598ee0bcc025d1073f598108c1cd1b9fc010f7bc6b27e4d17",
             "workstation.json": "73c45f251322b83f7a1f62b9565edcdda5b5b359c3e4797e69580f862edc3e88"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/relay.md",
-              "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
-            }
-          },
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence"
+          "public_files": {},
+          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
+          "public_projection": {
+            "path": "benchmark/relay/relay-a12-d2/public/task.json",
+            "sha256": "1192ef1bdebde1f3b513f519061ac648666e76a40a3827df6a68f33313b0eddf"
+          }
         },
         {
           "id": "relay-a12-d3",
@@ -838,13 +788,12 @@
             "environment.json": "5b7bc0ddf84a6029059c298b324f0e3f51e6c15d2b3087f30d5657b45f39fd1a",
             "workstation.json": "c9743b1c2a6c0a63e012b3882a29dfb0cc50b698b58e224509089bdf9e259e41"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/relay.md",
-              "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
-            }
-          },
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence"
+          "public_files": {},
+          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
+          "public_projection": {
+            "path": "benchmark/relay/relay-a12-d3/public/task.json",
+            "sha256": "25abb6d0194f0736f2919eff3980f46780939aef8fb33837572c2d7b44f48722"
+          }
         },
         {
           "id": "relay-a16-d1",
@@ -855,13 +804,12 @@
             "environment.json": "ed694fad663e8dfec4c5b68b28d0f7e26482cd98408dd63e8be5eaabea63f51a",
             "workstation.json": "f4610042eddb037559fa772927bca2073a8ceca8fdb73ceb3dbf475297ea7858"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/relay.md",
-              "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
-            }
-          },
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence"
+          "public_files": {},
+          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
+          "public_projection": {
+            "path": "benchmark/relay/relay-a16-d1/public/task.json",
+            "sha256": "f45bfa58218df2c8b72b68926d5be9a4dda9914c372985a77e0676027337f968"
+          }
         },
         {
           "id": "relay-a16-d2",
@@ -872,13 +820,12 @@
             "environment.json": "a7abb4155fad245f24447b01818ca407e64f29f01acba030efa02be2d672ea0d",
             "workstation.json": "c548f53d7a046451ee9ff2c919a052dc813efba9cb07786a8ce00f4b207ba8ed"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/relay.md",
-              "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
-            }
-          },
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence"
+          "public_files": {},
+          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
+          "public_projection": {
+            "path": "benchmark/relay/relay-a16-d2/public/task.json",
+            "sha256": "aadfaebbf3a6fdba7b9eec3e58a1210225d7df1ad6636e76d03f492732bcddfe"
+          }
         },
         {
           "id": "relay-a16-d3",
@@ -889,13 +836,12 @@
             "environment.json": "fd9686b23b5b20c39e075484d74b139cd3869e069fe7eac00ad749ab738b57c0",
             "workstation.json": "17ff2184cbbc9122a39200b3f0240cba49d118361fcda27046d60d916e67d73f"
           },
-          "public_files": {
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/relay.md",
-              "sha256": "1e1526b6c85f3217b0fcfeef210ec629e87aeee26f0b9d556612ab6845c19d59"
-            }
-          },
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence"
+          "public_files": {},
+          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
+          "public_projection": {
+            "path": "benchmark/relay/relay-a16-d3/public/task.json",
+            "sha256": "54649ef38b1994f33d7cb27eba80e693304c5377b392ab00730d6c83bec36e5a"
+          }
         }
       ],
       "oracle": [
@@ -1063,26 +1009,6 @@
             "workstation.json": "04dfcf88c9af2c16700e9187271803f1960185e1e68cef578c190fda30dc5fca"
           },
           "public_files": {
-            "preview-top.png": {
-              "path": "benchmark/dial/dial-best5-n04-d1/public/preview-top.png",
-              "sha256": "33de2c49ec8dc8f7fb06ace6ad7d36878e0c8614990a17ff9d831d4a06ca80f8"
-            },
-            "task-guide.md": {
-              "path": "benchmark/dial/dial-best5-n04-d1/public/task-guide.md",
-              "sha256": "09188517b7a925ea74080d3e9e209d045570ce39dd6f8a301bdc240c63b39485"
-            },
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/dial-best5.md",
-              "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
-            },
-            "preview-global_rear.png": {
-              "path": "benchmark/dial/dial-best5-n04-d1/public/preview-global_rear.png",
-              "sha256": "96db690d747ef4a35906386290c4c9d4a7376e61d617fbc1f0c720f276b8da3b"
-            },
-            "table-geometry.json": {
-              "path": "benchmark/dial/dial-best5-n04-d1/public/table-geometry.json",
-              "sha256": "e78a7e2834149996dc48f0d4d71398c8432b49d5b57e5445d177caf9d300214e"
-            },
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-best5-n04-d1/public/camera-calibration.json",
               "sha256": "341f9dc98e84a92a319e89cf4ec0dcba2fb7b67958d0c33a6bf7cbe9995fefc6"
@@ -1090,12 +1016,24 @@
             "preview-global.png": {
               "path": "benchmark/dial/dial-best5-n04-d1/public/preview-global.png",
               "sha256": "7ae8bdb7fa64f21454be5966e8b594881b03a46aa299db4bd8b6c5be230ce801"
+            },
+            "preview-global_rear.png": {
+              "path": "benchmark/dial/dial-best5-n04-d1/public/preview-global_rear.png",
+              "sha256": "96db690d747ef4a35906386290c4c9d4a7376e61d617fbc1f0c720f276b8da3b"
+            },
+            "preview-top.png": {
+              "path": "benchmark/dial/dial-best5-n04-d1/public/preview-top.png",
+              "sha256": "33de2c49ec8dc8f7fb06ace6ad7d36878e0c8614990a17ff9d831d4a06ca80f8"
+            },
+            "table-geometry.json": {
+              "path": "benchmark/dial/dial-best5-n04-d1/public/table-geometry.json",
+              "sha256": "e78a7e2834149996dc48f0d4d71398c8432b49d5b57e5445d177caf9d300214e"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n04-d1/public/reviewed-task.json",
-            "sha256": "051f4cb11984fa6f68723f70211221a648c8c9d5b897a3a51c0b313c781f854f"
+            "path": "benchmark/dial/dial-best5-n04-d1/public/task.json",
+            "sha256": "269ea9e5f0219fe2c71e29c7235ebd0c505068bbe173a4a345d1a8021db9d602"
           }
         },
         {
@@ -1108,26 +1046,6 @@
             "workstation.json": "0acaffdc51fc4e827601dbde6f9dbf5516c0bd92884a5ef35e3c9b2b8619fabf"
           },
           "public_files": {
-            "preview-top.png": {
-              "path": "benchmark/dial/dial-best5-n04-d2/public/preview-top.png",
-              "sha256": "88d0a20a87e9d4f3eef0b3705eaee5d9f5ad50ab623cca24dc9db06641d02bda"
-            },
-            "task-guide.md": {
-              "path": "benchmark/dial/dial-best5-n04-d2/public/task-guide.md",
-              "sha256": "bf43712dbb61015c0537f0598c8c640d04ae6263df334167a4990181c6754c2e"
-            },
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/dial-best5.md",
-              "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
-            },
-            "preview-global_rear.png": {
-              "path": "benchmark/dial/dial-best5-n04-d2/public/preview-global_rear.png",
-              "sha256": "c1b8d8e072a15f9a0857de52b9b96b0266084431a59e75c57910f1d008295606"
-            },
-            "table-geometry.json": {
-              "path": "benchmark/dial/dial-best5-n04-d2/public/table-geometry.json",
-              "sha256": "479b3bdda0521304f0fadd46967b7511055ae77c481e9239cc60144aef68753e"
-            },
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-best5-n04-d2/public/camera-calibration.json",
               "sha256": "cf32795778d6cea994da3a8e72df06c75e51a61963f98e0f18534d4b7966f73c"
@@ -1135,12 +1053,24 @@
             "preview-global.png": {
               "path": "benchmark/dial/dial-best5-n04-d2/public/preview-global.png",
               "sha256": "4e6bac757c8d80ca7bbf118a9dfbb7b8a536a70b09f5eb4ede322442aa5db075"
+            },
+            "preview-global_rear.png": {
+              "path": "benchmark/dial/dial-best5-n04-d2/public/preview-global_rear.png",
+              "sha256": "c1b8d8e072a15f9a0857de52b9b96b0266084431a59e75c57910f1d008295606"
+            },
+            "preview-top.png": {
+              "path": "benchmark/dial/dial-best5-n04-d2/public/preview-top.png",
+              "sha256": "88d0a20a87e9d4f3eef0b3705eaee5d9f5ad50ab623cca24dc9db06641d02bda"
+            },
+            "table-geometry.json": {
+              "path": "benchmark/dial/dial-best5-n04-d2/public/table-geometry.json",
+              "sha256": "479b3bdda0521304f0fadd46967b7511055ae77c481e9239cc60144aef68753e"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n04-d2/public/reviewed-task.json",
-            "sha256": "bd385255f914a010551a5fbc5a66ee5cdc26154448a923fada0f205a32bc1d9d"
+            "path": "benchmark/dial/dial-best5-n04-d2/public/task.json",
+            "sha256": "dd0b3e37296627d7047e4c1e55dc7473b912885e8af8f6604d574f85507a1324"
           }
         },
         {
@@ -1153,26 +1083,6 @@
             "workstation.json": "2a1bc2219e83284aabfee73e0f8cf994cd4f88e6a42073d5a0e07b57acb23f77"
           },
           "public_files": {
-            "preview-top.png": {
-              "path": "benchmark/dial/dial-best5-n04-d3/public/preview-top.png",
-              "sha256": "bf1552a66f4c865a87857756aaa9b9814c0ed8930c9c005543be8c55f654e5cf"
-            },
-            "task-guide.md": {
-              "path": "benchmark/dial/dial-best5-n04-d3/public/task-guide.md",
-              "sha256": "1e21b85d4695de6bf65d8cf8501fc5f859c62c661f1157c47d7a8e71a584ca10"
-            },
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/dial-best5.md",
-              "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
-            },
-            "preview-global_rear.png": {
-              "path": "benchmark/dial/dial-best5-n04-d3/public/preview-global_rear.png",
-              "sha256": "5452a9eff47678885a476e7c47c5c1cec5616e7e6d85d84c1b2119115f667b46"
-            },
-            "table-geometry.json": {
-              "path": "benchmark/dial/dial-best5-n04-d3/public/table-geometry.json",
-              "sha256": "479b3bdda0521304f0fadd46967b7511055ae77c481e9239cc60144aef68753e"
-            },
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-best5-n04-d3/public/camera-calibration.json",
               "sha256": "cf32795778d6cea994da3a8e72df06c75e51a61963f98e0f18534d4b7966f73c"
@@ -1180,12 +1090,24 @@
             "preview-global.png": {
               "path": "benchmark/dial/dial-best5-n04-d3/public/preview-global.png",
               "sha256": "d14ecfdb383758233cb99aff9d64f4e473601c60241a8105b7b77a1f1cbcb67e"
+            },
+            "preview-global_rear.png": {
+              "path": "benchmark/dial/dial-best5-n04-d3/public/preview-global_rear.png",
+              "sha256": "5452a9eff47678885a476e7c47c5c1cec5616e7e6d85d84c1b2119115f667b46"
+            },
+            "preview-top.png": {
+              "path": "benchmark/dial/dial-best5-n04-d3/public/preview-top.png",
+              "sha256": "bf1552a66f4c865a87857756aaa9b9814c0ed8930c9c005543be8c55f654e5cf"
+            },
+            "table-geometry.json": {
+              "path": "benchmark/dial/dial-best5-n04-d3/public/table-geometry.json",
+              "sha256": "479b3bdda0521304f0fadd46967b7511055ae77c481e9239cc60144aef68753e"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n04-d3/public/reviewed-task.json",
-            "sha256": "7e3f9d282c82b528d924d9d1504230b694427135b750504b3adb86f7e817fd2f"
+            "path": "benchmark/dial/dial-best5-n04-d3/public/task.json",
+            "sha256": "c523dd89cc1c584a3f754cd1f8a6f33a9a2c95cfd81436e4a997fb60ce78bf10"
           }
         },
         {
@@ -1198,26 +1120,6 @@
             "workstation.json": "37583bfebb262e5ecc067907d349aa442ddec08de11d6b5b00d67b18356b1e05"
           },
           "public_files": {
-            "preview-top.png": {
-              "path": "benchmark/dial/dial-best5-n06-d1/public/preview-top.png",
-              "sha256": "33b8bd52b6f240aa3ed5c179bcfc79188f6eb53e50474b9ffdf5dea3ea03d8e0"
-            },
-            "task-guide.md": {
-              "path": "benchmark/dial/dial-best5-n06-d1/public/task-guide.md",
-              "sha256": "b5173454362d8c14ea86f06a1579352525f0f7f97e1d281e07b6c54d19d67b8c"
-            },
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/dial-best5.md",
-              "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
-            },
-            "preview-global_rear.png": {
-              "path": "benchmark/dial/dial-best5-n06-d1/public/preview-global_rear.png",
-              "sha256": "c44b4ca4f97b13db6c04088c3c827baf90370f0d0d81d8fb339f3237293a0f3f"
-            },
-            "table-geometry.json": {
-              "path": "benchmark/dial/dial-best5-n06-d1/public/table-geometry.json",
-              "sha256": "1a5bdc007226dd9b6364e7c1d68dc97a963fcafc2d1b7416e79bb06ede88310c"
-            },
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-best5-n06-d1/public/camera-calibration.json",
               "sha256": "3c49835c3c00036f8ebd8d8b665718bc45ad45e606d4c3b8df2a02c2495792f0"
@@ -1225,12 +1127,24 @@
             "preview-global.png": {
               "path": "benchmark/dial/dial-best5-n06-d1/public/preview-global.png",
               "sha256": "30e8021ac81f356fa3f12943d0bf8a9b08389a65e999580b665136faa5b00e70"
+            },
+            "preview-global_rear.png": {
+              "path": "benchmark/dial/dial-best5-n06-d1/public/preview-global_rear.png",
+              "sha256": "c44b4ca4f97b13db6c04088c3c827baf90370f0d0d81d8fb339f3237293a0f3f"
+            },
+            "preview-top.png": {
+              "path": "benchmark/dial/dial-best5-n06-d1/public/preview-top.png",
+              "sha256": "33b8bd52b6f240aa3ed5c179bcfc79188f6eb53e50474b9ffdf5dea3ea03d8e0"
+            },
+            "table-geometry.json": {
+              "path": "benchmark/dial/dial-best5-n06-d1/public/table-geometry.json",
+              "sha256": "1a5bdc007226dd9b6364e7c1d68dc97a963fcafc2d1b7416e79bb06ede88310c"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n06-d1/public/reviewed-task.json",
-            "sha256": "1b4b388eb8ff942fc5f949648286b3cf8d8dfb7b1ca2b186b3daa1c1cee23b97"
+            "path": "benchmark/dial/dial-best5-n06-d1/public/task.json",
+            "sha256": "40217f880ee12846318448698e007a2ffb142b34715e6c16ddfd871d2e2bedf9"
           }
         },
         {
@@ -1243,26 +1157,6 @@
             "workstation.json": "e2f7f8908c045f086901ef8d5d41f7418f1da4531b2b83ebc77e7b8b29e8a45f"
           },
           "public_files": {
-            "preview-top.png": {
-              "path": "benchmark/dial/dial-best5-n06-d2/public/preview-top.png",
-              "sha256": "1675024b321ac11d66f0e0809348f3d06562d23f0120ab230451519c16f9e62d"
-            },
-            "task-guide.md": {
-              "path": "benchmark/dial/dial-best5-n06-d2/public/task-guide.md",
-              "sha256": "9b010d6bc3b9e07fd894173917e9679248dcd24b1da72c76de0cd765abbaf772"
-            },
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/dial-best5.md",
-              "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
-            },
-            "preview-global_rear.png": {
-              "path": "benchmark/dial/dial-best5-n06-d2/public/preview-global_rear.png",
-              "sha256": "24acfd763ff4d91fb38c48e5455cc6b6ad1238e4aeadacc3dad3f91923d7d277"
-            },
-            "table-geometry.json": {
-              "path": "benchmark/dial/dial-best5-n06-d2/public/table-geometry.json",
-              "sha256": "c226c8983fa145e4e759346eeb13a03d798565afdf6b14f2b9643e595f3834b1"
-            },
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-best5-n06-d2/public/camera-calibration.json",
               "sha256": "ced428cda07aaefd52c691c58e264505176e5e99920310c8885f7dd37e5ebfcb"
@@ -1270,12 +1164,24 @@
             "preview-global.png": {
               "path": "benchmark/dial/dial-best5-n06-d2/public/preview-global.png",
               "sha256": "adb80baa0a184263745233f5b88825e57f3822dbbb57efbf9114ea9609525f0b"
+            },
+            "preview-global_rear.png": {
+              "path": "benchmark/dial/dial-best5-n06-d2/public/preview-global_rear.png",
+              "sha256": "24acfd763ff4d91fb38c48e5455cc6b6ad1238e4aeadacc3dad3f91923d7d277"
+            },
+            "preview-top.png": {
+              "path": "benchmark/dial/dial-best5-n06-d2/public/preview-top.png",
+              "sha256": "1675024b321ac11d66f0e0809348f3d06562d23f0120ab230451519c16f9e62d"
+            },
+            "table-geometry.json": {
+              "path": "benchmark/dial/dial-best5-n06-d2/public/table-geometry.json",
+              "sha256": "c226c8983fa145e4e759346eeb13a03d798565afdf6b14f2b9643e595f3834b1"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n06-d2/public/reviewed-task.json",
-            "sha256": "cfbb4c71f9b073e148dc15a49f674516666831a4f439bc27dc11cbf8e43bc07b"
+            "path": "benchmark/dial/dial-best5-n06-d2/public/task.json",
+            "sha256": "cec9d9894a497c4c464aebc02e45f71b3155ff4c82e196995a469324f3be8f13"
           }
         },
         {
@@ -1288,26 +1194,6 @@
             "workstation.json": "8d7ce58142084b97f9dd083f441a3ce9f255822edd4a3b282a4d56b121dff21b"
           },
           "public_files": {
-            "preview-top.png": {
-              "path": "benchmark/dial/dial-best5-n06-d3/public/preview-top.png",
-              "sha256": "37147fb2fa2d148bebd4c3850a76208c7028f5473988ab635f3218977bb2899c"
-            },
-            "task-guide.md": {
-              "path": "benchmark/dial/dial-best5-n06-d3/public/task-guide.md",
-              "sha256": "92b442a00d2650419c387b0dde39a7183187121d28cba40379abc55ec81a7bf0"
-            },
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/dial-best5.md",
-              "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
-            },
-            "preview-global_rear.png": {
-              "path": "benchmark/dial/dial-best5-n06-d3/public/preview-global_rear.png",
-              "sha256": "47db0ee54cba5298e1bd8333a40f5e400c3fb02474eba5a341a49911bffed204"
-            },
-            "table-geometry.json": {
-              "path": "benchmark/dial/dial-best5-n06-d3/public/table-geometry.json",
-              "sha256": "c226c8983fa145e4e759346eeb13a03d798565afdf6b14f2b9643e595f3834b1"
-            },
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-best5-n06-d3/public/camera-calibration.json",
               "sha256": "ced428cda07aaefd52c691c58e264505176e5e99920310c8885f7dd37e5ebfcb"
@@ -1315,12 +1201,24 @@
             "preview-global.png": {
               "path": "benchmark/dial/dial-best5-n06-d3/public/preview-global.png",
               "sha256": "8ed6bcd66d5af119d5fcee75d0c9dfb9130949f64c8fd009220a10c2a0cbc621"
+            },
+            "preview-global_rear.png": {
+              "path": "benchmark/dial/dial-best5-n06-d3/public/preview-global_rear.png",
+              "sha256": "47db0ee54cba5298e1bd8333a40f5e400c3fb02474eba5a341a49911bffed204"
+            },
+            "preview-top.png": {
+              "path": "benchmark/dial/dial-best5-n06-d3/public/preview-top.png",
+              "sha256": "37147fb2fa2d148bebd4c3850a76208c7028f5473988ab635f3218977bb2899c"
+            },
+            "table-geometry.json": {
+              "path": "benchmark/dial/dial-best5-n06-d3/public/table-geometry.json",
+              "sha256": "c226c8983fa145e4e759346eeb13a03d798565afdf6b14f2b9643e595f3834b1"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n06-d3/public/reviewed-task.json",
-            "sha256": "e4fd89e95bf854a88c41d87766aa44d22dd6ed22fc6cb49dd7908a26792a0258"
+            "path": "benchmark/dial/dial-best5-n06-d3/public/task.json",
+            "sha256": "0f82730fc54b1bad87009357f0120f998f771315238815b124a3d4ee78af9d4f"
           }
         },
         {
@@ -1333,26 +1231,6 @@
             "workstation.json": "1bef60cb6b989aaedf1dd7b94517737cf4870da5be32cf9456cd4bafc37deb17"
           },
           "public_files": {
-            "preview-top.png": {
-              "path": "benchmark/dial/dial-best5-n08-d1/public/preview-top.png",
-              "sha256": "7bcd219c7fbf4ea796925b1516e65f04a17865ea8c3f4484876de2ed6e12046d"
-            },
-            "task-guide.md": {
-              "path": "benchmark/dial/dial-best5-n08-d1/public/task-guide.md",
-              "sha256": "85f79111fde9dcab562f583aca54197c7c6ab3f93f379d1def8a7d5753de4f84"
-            },
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/dial-best5.md",
-              "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
-            },
-            "preview-global_rear.png": {
-              "path": "benchmark/dial/dial-best5-n08-d1/public/preview-global_rear.png",
-              "sha256": "77b309104ba3388f600f98191d2015df8fe2f9e1f4794f1adc1912f31ee1fa77"
-            },
-            "table-geometry.json": {
-              "path": "benchmark/dial/dial-best5-n08-d1/public/table-geometry.json",
-              "sha256": "2d0153ddb30853c830c6a6cf2e5d552ec85e75de2755a6957f10b800cfbbc020"
-            },
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-best5-n08-d1/public/camera-calibration.json",
               "sha256": "94bad44ecade72271a1a96c2d171611426cc2c52775ba5fe2b92ce76c2dd8f80"
@@ -1360,12 +1238,24 @@
             "preview-global.png": {
               "path": "benchmark/dial/dial-best5-n08-d1/public/preview-global.png",
               "sha256": "d9844aad94cc90bc566243e622260f30308f5965e1ff9e6f095526e1bf5c687d"
+            },
+            "preview-global_rear.png": {
+              "path": "benchmark/dial/dial-best5-n08-d1/public/preview-global_rear.png",
+              "sha256": "77b309104ba3388f600f98191d2015df8fe2f9e1f4794f1adc1912f31ee1fa77"
+            },
+            "preview-top.png": {
+              "path": "benchmark/dial/dial-best5-n08-d1/public/preview-top.png",
+              "sha256": "7bcd219c7fbf4ea796925b1516e65f04a17865ea8c3f4484876de2ed6e12046d"
+            },
+            "table-geometry.json": {
+              "path": "benchmark/dial/dial-best5-n08-d1/public/table-geometry.json",
+              "sha256": "2d0153ddb30853c830c6a6cf2e5d552ec85e75de2755a6957f10b800cfbbc020"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n08-d1/public/reviewed-task.json",
-            "sha256": "2cc95ab472edf1a90045a27017a64edca92b7df9dac4fa4cf68c1455be1c8435"
+            "path": "benchmark/dial/dial-best5-n08-d1/public/task.json",
+            "sha256": "b15b2eeb257bdfe0c16be35c4528848111db3e6468d340effaca5a9427f28e85"
           }
         },
         {
@@ -1378,26 +1268,6 @@
             "workstation.json": "3c2d37970da3d265c57df97bbe4178bd3c5e5ee10d13a78ca8c1bfab59d0c15e"
           },
           "public_files": {
-            "preview-top.png": {
-              "path": "benchmark/dial/dial-best5-n08-d2/public/preview-top.png",
-              "sha256": "5855f2aabbae5a828280cdd929d45621fe5d9baddadebe84c111610c76aa1eff"
-            },
-            "task-guide.md": {
-              "path": "benchmark/dial/dial-best5-n08-d2/public/task-guide.md",
-              "sha256": "e830d80bba733a3ce1343ed6cb44fda8bc59e993e93fa7af9ca28fb244094eac"
-            },
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/dial-best5.md",
-              "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
-            },
-            "preview-global_rear.png": {
-              "path": "benchmark/dial/dial-best5-n08-d2/public/preview-global_rear.png",
-              "sha256": "6c6ca647ece84ce45eb8edea1d13b42c7906d2ed22efea3302adf1bc943f9476"
-            },
-            "table-geometry.json": {
-              "path": "benchmark/dial/dial-best5-n08-d2/public/table-geometry.json",
-              "sha256": "9a8f8229967dae3fa0095470bdb61430fa753e3ace7a6e240d0f6c534de9690c"
-            },
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-best5-n08-d2/public/camera-calibration.json",
               "sha256": "c545674b0ccc921e5bb6e4a9353f6341aac9df79c88c03cf57121eb264b6a9d2"
@@ -1405,12 +1275,24 @@
             "preview-global.png": {
               "path": "benchmark/dial/dial-best5-n08-d2/public/preview-global.png",
               "sha256": "a3161122eb20fd8fd657ba55d272772825ce5089cac764edad79ddadfb82458c"
+            },
+            "preview-global_rear.png": {
+              "path": "benchmark/dial/dial-best5-n08-d2/public/preview-global_rear.png",
+              "sha256": "6c6ca647ece84ce45eb8edea1d13b42c7906d2ed22efea3302adf1bc943f9476"
+            },
+            "preview-top.png": {
+              "path": "benchmark/dial/dial-best5-n08-d2/public/preview-top.png",
+              "sha256": "5855f2aabbae5a828280cdd929d45621fe5d9baddadebe84c111610c76aa1eff"
+            },
+            "table-geometry.json": {
+              "path": "benchmark/dial/dial-best5-n08-d2/public/table-geometry.json",
+              "sha256": "9a8f8229967dae3fa0095470bdb61430fa753e3ace7a6e240d0f6c534de9690c"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n08-d2/public/reviewed-task.json",
-            "sha256": "770f0971cccbaccaa4ee881095cb53df6218527ee16d5258f7f0bb21ba3c60c2"
+            "path": "benchmark/dial/dial-best5-n08-d2/public/task.json",
+            "sha256": "1dcfdf51b53e84ed9734e5344a9e5a0fa62c9b4eee3f0371bccc034de20d68bc"
           }
         },
         {
@@ -1423,26 +1305,6 @@
             "workstation.json": "6a564ffe957a1717924838fae0066bf4c5771eb32acd9e4426d87f54276e8d4c"
           },
           "public_files": {
-            "preview-top.png": {
-              "path": "benchmark/dial/dial-best5-n08-d3/public/preview-top.png",
-              "sha256": "064887bcb17f8d13af897ea84d87fb28423457126ee089d628383a1c269de81f"
-            },
-            "task-guide.md": {
-              "path": "benchmark/dial/dial-best5-n08-d3/public/task-guide.md",
-              "sha256": "04d6b84c0010130169198be92ab710707a6db327f48312dff4fae6e466a2985c"
-            },
-            "family-guidance.md": {
-              "path": "prompts/archive/tasks/dial-best5.md",
-              "sha256": "24186659382163ee93e95f57d9e125122148d815a307f6d22d16a80cfc5e5d83"
-            },
-            "preview-global_rear.png": {
-              "path": "benchmark/dial/dial-best5-n08-d3/public/preview-global_rear.png",
-              "sha256": "9dbea361b1ebdadd334f0e459692a5fd7f6284a30b832173dec0697d32b64bc3"
-            },
-            "table-geometry.json": {
-              "path": "benchmark/dial/dial-best5-n08-d3/public/table-geometry.json",
-              "sha256": "9a8f8229967dae3fa0095470bdb61430fa753e3ace7a6e240d0f6c534de9690c"
-            },
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-best5-n08-d3/public/camera-calibration.json",
               "sha256": "c545674b0ccc921e5bb6e4a9353f6341aac9df79c88c03cf57121eb264b6a9d2"
@@ -1450,12 +1312,24 @@
             "preview-global.png": {
               "path": "benchmark/dial/dial-best5-n08-d3/public/preview-global.png",
               "sha256": "f9905219c7296f2d3235535e4cdb162ae1b5a0ba7b188eb21ea777bd0d12847c"
+            },
+            "preview-global_rear.png": {
+              "path": "benchmark/dial/dial-best5-n08-d3/public/preview-global_rear.png",
+              "sha256": "9dbea361b1ebdadd334f0e459692a5fd7f6284a30b832173dec0697d32b64bc3"
+            },
+            "preview-top.png": {
+              "path": "benchmark/dial/dial-best5-n08-d3/public/preview-top.png",
+              "sha256": "064887bcb17f8d13af897ea84d87fb28423457126ee089d628383a1c269de81f"
+            },
+            "table-geometry.json": {
+              "path": "benchmark/dial/dial-best5-n08-d3/public/table-geometry.json",
+              "sha256": "9a8f8229967dae3fa0095470bdb61430fa753e3ace7a6e240d0f6c534de9690c"
             }
           },
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
-            "path": "benchmark/dial/dial-best5-n08-d3/public/reviewed-task.json",
-            "sha256": "62fa8c7fd40e81eea603f7697e400cf65c929017c8195a2420ca84e435ff3fa4"
+            "path": "benchmark/dial/dial-best5-n08-d3/public/task.json",
+            "sha256": "bd7b02bf9e0823b2667c8bb53e90ff5d51ce04f441c050c1175c69a78b192141"
           }
         }
       ],

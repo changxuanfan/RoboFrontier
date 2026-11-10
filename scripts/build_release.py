@@ -8,6 +8,7 @@ run again on its own output.
     python -m scripts.build_release settle    # start every scene at rest under that physics
     python -m scripts.build_release letters   # print Transport block letters upright
     python -m scripts.build_release codes     # one fixed private code per Dial case
+    python -m scripts.build_release public    # each case's final public task and materials
     python -m scripts.build_release check     # the scenes already carry them
 
 See docs/physics.md for the values and where they come from.
@@ -205,6 +206,7 @@ def index_release():
             case['source_files'] = {name: file_sha256(folder/name) for name in case['source_files']}
             projection = case.get('public_projection')
             if projection: projection['sha256'] = file_sha256(ROOT/projection['path'])
+            for entry in case.get('public_files', {}).values(): entry['sha256'] = file_sha256(ROOT/entry['path'])
     path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
     from scripts import site_data
     site_data.tasks()  # the project page's task index records the release hash
@@ -329,6 +331,46 @@ def codes(args):
     print(f'{len(stored)} Dial codes')
 
 
+RUN_ONLY = ('run_protocol', 'observation_image')  # added to the public task by each run
+
+
+def public(args):
+    """Write each case's public task exactly as a run receives it, and its materials.
+
+    A run used to build its public task from the reviewed projection with corrections
+    applied at run time (tasks.families.freeze_public). This writes the result once:
+    public/task.json (without the run's own protocol and image profile) and every family
+    material a run receives, except the family skill, which runs copy from prompts/skills.
+    The release then names these files, and a run only copies them."""
+    import shutil, tempfile
+    from robofrontier.tasks.families import prepare
+    path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
+    for family in release['families'].values():
+        for case in family['gpt']:
+            folder = ROOT/case['directory']; target = folder/'public'
+            with tempfile.TemporaryDirectory(prefix='rf-public-') as temporary:
+                run = Path(temporary)/'run'; prepare(case['id'], run)
+                received = json.loads((run/'public/inputs/task.json').read_text())
+                materials = {p.name: p for p in sorted((run/'public/inputs/family').iterdir()) if p.name != 'skill.md'}
+                staged = Path(temporary)/'public'; staged.mkdir()
+                # A run may adapt a material to itself (a Dial camera calibration to its image
+                # size), so each listed material comes from its released file, not the run's copy.
+                released = case.get('public_files', {})
+                for name, source in materials.items():
+                    shutil.copyfile(ROOT/released[name]['path'] if name in released else source, staged/name)
+                if target.exists(): shutil.rmtree(target)
+                shutil.copytree(staged, target)
+            for name in RUN_ONLY: received.pop(name, None)
+            (target/'task.json').write_text(json.dumps(received, indent=2, ensure_ascii=False)+'\n')
+            for stale in ('public-task.json',):
+                if (folder/stale).exists(): (folder/stale).unlink()
+            case['public_projection'] = {'path': str((target/'task.json').relative_to(ROOT)), 'sha256': file_sha256(target/'task.json')}
+            case['public_files'] = {name: {'path': str((target/name).relative_to(ROOT)), 'sha256': file_sha256(target/name)} for name in sorted(materials)}
+            print(f"{case['id']}: {len(materials)} materials", flush=True)
+    path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
+    index_release(); pin_asset_release()
+
+
 def check(args):
     bad = {folder.name: p for folder in cases() if (p := check_physics(folder))}
     print(json.dumps(bad or 'all scenes carry the release physics', indent=1))
@@ -341,6 +383,7 @@ def main(argv=None):
     sub.add_parser('physics').set_defaults(run=physics)
     sub.add_parser('letters').set_defaults(run=letters)
     sub.add_parser('codes').set_defaults(run=codes)
+    sub.add_parser('public').set_defaults(run=public)
     step = sub.add_parser('settle'); step.add_argument('--cases', nargs='*'); step.set_defaults(run=settle)
     sub.add_parser('check').set_defaults(run=check)
     args = parser.parse_args(argv)

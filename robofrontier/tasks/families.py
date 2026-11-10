@@ -187,121 +187,39 @@ def validate_policy_task(task, root=ROOT):
 
 
 def freeze_public(task, directory, public, root=ROOT):
-    """Copy allowlisted family guidance and overlay its reviewed static facts."""
+    """Give a run its case's public task and family materials, as the release wrote them.
+
+    `public` is replaced by the case's public/task.json, keeping only this run's own
+    protocol and image profile (scripts/build_release.py public). The materials go to public/inputs/family/,
+    with the family skill from prompts/skills."""
     if task.get('execution_readiness') != READINESS:
         return None
     root, directory = Path(root), Path(directory)
     family_name, _, case = resolve_case(task['id'], root=root)
-    projection = case.get('public_projection')
-    review = {}
-    if projection:
-        if sha(root/projection['path']) != projection['sha256']:
-            raise ValueError('Reviewed public task changed')
-        review = read(root/projection['path'])
-        if review['id'] != task['id'] or review['family'] != family_name:
-            raise ValueError('Public projection belongs to another task')
-    keys = ('completion', 'workspace_world_m', 'table_height_m', 'table_geometry',
-            'static_geometry', 'static_workstation', 'static_camera_mounts',
-            'process_requirements', 'task_revision', 'scene_revision',
-            'source_scene_sha256', 'initial_supplies', 'target', 'mechanism',
-            'rules', 'objective', 'observation_contract', 'gripper_profile', 'dials')
-    for key in keys:
-        if key in review:
-            public[key] = deepcopy(review[key])
-    public.setdefault('completion', deepcopy(task['completion']))
-    public.setdefault('workspace_world_m', deepcopy(task['workspace_world_m']))
-    terminal = task.get('run_protocol', {}).get('evaluation_semantics') == 'terminal_outcome_v2'
-    terminal_relay = family_name == 'relay' and terminal
-    if terminal and family_name == 'transport':
-        acceptance = public['completion'].get('acceptance', {})
-        if 'process_compliance_required' in acceptance: acceptance['process_compliance_required'] = False
-    if terminal and family_name == 'mosaic':
-        if 'process_violations_clear_required' in public['completion']:
-            public['completion']['process_violations_clear_required'] = False
-    if terminal and family_name == 'dial':
-        public['completion']['success_semantics'] = 'Unlock once with a simultaneous valid correct input; success remains latched after later dial changes.'
-    if terminal_relay:
-        from .relay import RULE_REVISION
-        timber_fraction_rule = task.get('completion', {}).get('rule_revision') == RULE_REVISION
-        if timber_fraction_rule:
-            # A reviewed legacy projection must not overwrite the versioned
-            # task's changed completion semantics or policy-facing rules.
-            public['completion'] = deepcopy(task['completion'])
-            public['rules'] = deepcopy(task['rules'])
-        rules = public.get('rules', [])
-        handover_rule = task.get('run_protocol', {}).get('relay_completion_rule') == RELAY_HANDOVER_RULE
-        removed = ('Inside GOAL, original qualified holders',) if handover_rule else (
-            'Airborne transport requires', 'Inside GOAL, original qualified holders', 'Drops and violations remain recorded.')
-        public['rules'] = [rule for rule in rules if not rule.startswith(removed)]
-        if handover_rule: public['rules'] += [RELAY_HANDOVER_DEFINITION, RELAY_RECOVERY_RULE]
-        public['rules'].append('Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history.')
-        public['completion']['required_airborne_handover'] = handover_rule
-        if handover_rule:
-            public['completion']['relay_completion_rule'] = RELAY_HANDOVER_RULE
-            public['completion']['scope'] = 'Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.'
-        else:
-            public['completion']['scope'] = ('Every timber at least 70% above painted GOAL and released; process events are reported separately.'
-                                             if timber_fraction_rule else 'All assemblies released, actually supported and inside GOAL tolerance; process events are reported separately.')
-    if terminal:
-        # Released public projections carry three statements that contradict the
-        # current task or address engineers; the private evaluator task is unchanged.
-        if terminal_relay and timber_fraction_rule and 'finish' in public.get('mechanism', {}):
-            public['mechanism']['finish'] = 'Tabletop destination region; no cradle'
-        if family_name == 'mosaic':
-            public['rules'] = [rule.split('. ')[0]+'.' if rule.startswith('Build the supplied') else rule
-                               for rule in public.get('rules', [])]
-        if family_name == 'transport':
-            public.get('completion', {}).pop('scope', None)
+    projection = case['public_projection']
+    if sha(root/projection['path']) != projection['sha256']:
+        raise ValueError('Released public task changed')
+    own = {key: public[key] for key in ('run_protocol', 'observation_image') if key in public}
+    public.clear(); public.update(read(root/projection['path'])); public.update(own)
     family_dir = directory/'public/inputs/family'
     family_dir.mkdir()
     hashes = {}
-    # task.json is the only statement of what a terminal run requires; the family
-    # Skill (how to do it well) comes from prompts/skills in place of released
-    # guidance, which mostly repeated task.json. A relay case without the 70% timber
-    # rule keeps its own terminal description.
-    current, dropped = {}, set()
-    if terminal and family_name in ('relay', 'transport', 'dial', 'mosaic'):
-        current = {'skill.md': root/'prompts/skills'/family_name/'SKILL.md'}
-        dropped = {'family-guidance.md', 'task-guide.md'}
-        if terminal_relay and not timber_fraction_rule:
-            current['family-guidance.md'] = root/'prompts/archive/tasks/relay-terminal-v2.md'
+    sources = {name: root/source['path'] for name, source in case['public_files'].items()}
     for name, source in case['public_files'].items():
         if Path(name).name != name or sha(root/source['path']) != source['sha256']:
             raise ValueError('Invalid/changed public family file: '+name)
-    delivered = (set(case['public_files']) - dropped) | set(current)
-    for name in sorted(delivered):
-        selected = current.get(name) or root/case['public_files'][name]['path']
-        shutil.copyfile(selected, family_dir/name)
-        hashes['public/inputs/family/'+name] = sha(selected)
-    # The Mosaic target image joins the other family materials.
+    sources['skill.md'] = root/'prompts/skills'/family_name/'SKILL.md'
+    for name, source in sorted(sources.items()):
+        shutil.copyfile(source, family_dir/name)
+        hashes['public/inputs/family/'+name] = sha(source)
+    # The scene's own copy of the Mosaic target image is superseded by the family copy.
     target_image = directory/'public/inputs/target-pattern.png'
-    if terminal and target_image.is_file() and isinstance(public.get('target'), dict):
-        shutil.move(target_image, family_dir/target_image.name)
-        public['target']['reference_image'] = 'family/'+target_image.name
-        delivered.add(target_image.name)
-    if 'family-guidance.md' in delivered:
-        public['family_guidance'] = 'family/family-guidance.md'
-    public['family_materials'] = sorted('family/'+n for n in delivered)
-    for key, name in [('static_workstation', 'table-geometry.json')]:
-        if key in public and name in case['public_files']:
-            public[key]['geometry_reference'] = 'family/'+name
-    if 'camera-calibration.json' in case['public_files']:
-        public['camera_calibration'] = 'family/camera-calibration.json'
-    if 'task-guide.md' in delivered:
-        public['task_guide'] = 'family/task-guide.md'
-    if 'skill.md' in delivered:
-        public['task_skill'] = 'family/skill.md'
-    if 'initial_reference_images' in review:
-        images = review['initial_reference_images']
-        if any(name not in case['public_files'] for name in images):
-            raise ValueError('Unfrozen public reference image')
-        public['initial_reference_images'] = ['family/'+name for name in images]
+    if target_image.is_file() and (family_dir/target_image.name).is_file():
+        target_image.unlink()
     private_release = directory/'private/inputs/family-release.json'
     shutil.copyfile(root/RELEASE, private_release)
     return dict(release_sha256=sha(private_release), family=family_name, case_id=task['id'],
-                qualification=case['qualification'], public_files=hashes,
-                public_projection=projection,
-                public_overlay=sorted(str(path.relative_to(root)) for path in current.values()) or None)
+                public_files=hashes, public_projection=projection)
 
 
 def prepare(case_id, directory, harness=None, private_puzzle_path=None, wall_limit_s=86400):

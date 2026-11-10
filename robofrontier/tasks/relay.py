@@ -7,8 +7,6 @@ not acquire these semantics merely because they are read by newer code.
 from copy import deepcopy
 from pathlib import Path
 import json
-import os
-import hashlib
 
 LEGACY_RULE_REVISION = 'relay-final-goal-50mm-v1'
 RULE_REVISION = 'relay-timber-goal-70pct-v1'
@@ -57,40 +55,3 @@ def final_task(task):
         release_height_reference='lowest_assembly_part',
         scope='Each timber centreline at least 70% above the painted Goal, released; process history retained separately')
     return result
-
-
-def write_task(folder):
-    """Replace task metadata atomically; never edit a shared cache inode."""
-    from .public import public_task
-    folder = Path(folder)
-    task = final_task(json.loads((folder / 'task.json').read_text()))
-    for name, value in [('task.json', task), ('public-task.json', public_task(task))]:
-        temporary = folder / (name + '.tmp')
-        temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
-        os.replace(temporary, folder / name)
-    return task
-
-
-def check_inputs(root, catalog):
-    """Read-only validation; never creates a Trial, steps physics or runs GPT."""
-    from ..physics.workstation import Workstation
-    from .config import load_task
-    root = Path(root)
-    cases = json.loads(Path(catalog).read_text())['cases']
-    if len(cases) != 9 or len({c['id'] for c in cases}) != 9 or any(c['family'] != 'relay' for c in cases):
-        raise ValueError('Expected exactly nine distinct Relay inputs')
-    rows = []
-    for case in cases:
-        folder = root / case['directory']
-        source = Workstation(folder)
-        task = load_task(folder / 'task.json')
-        if task['id'] != case['id'] or source.manifest['case']['id'] != case['id'] or task['scene_sha256'] != source.manifest['scene_sha256']:
-            raise ValueError('Relay catalog/task/source identity mismatch: ' + case['id'])
-        if task != final_task(task):
-            raise ValueError('Task differs from the current Relay contract: ' + case['id'])
-        from .public import public_task
-        if json.loads((folder / 'public-task.json').read_text()) != public_task(task):
-            raise ValueError('Stale public Relay task: ' + case['id'])
-        rows.append(dict(case_id=case['id'], scene_sha256=source.manifest['scene_sha256'],
-                         task_sha256=hashlib.sha256((folder / 'task.json').read_bytes()).hexdigest()))
-    return dict(rule_revision=RULE_REVISION, cases=rows, physics_stepped=False, policy_started=False)
