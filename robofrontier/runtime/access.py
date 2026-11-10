@@ -24,10 +24,12 @@ NETWORK = False
 WEB_SEARCH = False
 HOME_SECRETS = ('.codex', '.claude', '.ssh', '.robofrontier', '.config/claude')
 # Closed for a run with a policy environment: people's files, removable disks, other temporary
-# folders, other Python installations, and the system keychain files. /tmp stays open, since
+# folders, other Python installations, the system keychain files, and a RunPod pod's /workspace
+# volume, which holds other runs and data (the run's own public/ and workspace/ open below it). /tmp stays open, since
 # shells and tools write there at fixed paths.
 CLOSED_ROOTS = {'darwin': ('/Users', '/Volumes', '/var/tmp', '/var/folders', '/opt', '/usr/local', '/Library/Keychains'),
-                'linux': ('/home', '/root', '/mnt', '/media', '/raid', '/var/tmp', '/dev/shm', '/opt', '/usr/local')}
+                'linux': ('/home', '/root', '/mnt', '/media', '/raid', '/var/tmp', '/dev/shm', '/opt', '/usr/local',
+                          '/workspace')}
 
 
 def _checkouts(repo):

@@ -303,8 +303,9 @@ def argument_parser(*, prog=None):
         p.add_argument('batch', type=Path)
         if name == 'run':
             p.add_argument('--durable', action='store_true',
-                           help='Run under the macOS user launchd service with Interactive priority, so it outlives '
-                                'this terminal (the macOS default, a continuation included)')
+                           help='Run as a background service that outlives this terminal: launchd with Interactive '
+                                'priority on macOS (the default there, a continuation included), a systemd user service '
+                                'or setsid daemon on Linux')
             p.add_argument('--foreground', action='store_true',
                            help='On macOS, run in this process at its own priority instead of the launchd service')
             p.add_argument('--continue', dest='continuing', action='store_true',
@@ -402,7 +403,9 @@ def main(argv=None):
             # On macOS a batch, a continuation included, runs under launchd with ProcessType=Interactive
             # by default, so it outlives the terminal or agent session that started it.
             if args.foreground: raise ValueError('--durable and --foreground are exclusive')
-            from .batch.mac import submit as submit_durable
+            # On Linux (a RunPod pod) --durable starts a background service (batch/linux.py).
+            if sys.platform == 'darwin': from .batch.mac import submit as submit_durable
+            else: from .batch.linux import submit as submit_durable
             emit(submit_durable(args.batch, continuing=args.continuing))
         elif args.command == 'run':
             from robofrontier.batch.prepare import load_env
@@ -412,7 +415,8 @@ def main(argv=None):
             # Read the supervisor's atomic snapshot, never open a writer's SQLite.
             snapshot = run_layout.batch_path(args.batch, 'engineering_status')
             state = json.loads((snapshot if snapshot.is_file() else args.batch/'batch.json').read_text())
-            from .batch.mac import service_state
+            if sys.platform == 'darwin': from .batch.mac import service_state
+            else: from .batch.linux import service_state
             durable = service_state(args.batch)
             emit({**state, 'durable': durable} if durable else state)
         elif args.command == 'stop':
