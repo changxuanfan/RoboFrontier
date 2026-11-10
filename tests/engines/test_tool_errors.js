@@ -8,7 +8,7 @@ async function failedReply(stdout) {
     const python=path.join(root,'python');
     fs.writeFileSync(python,'#!/usr/bin/env node\nprocess.stdout.write('+JSON.stringify(stdout)+');process.stderr.write("sk-test-private-token");process.exit(1);\n',{mode:0o755});
     const events=[],host={launch:{},actors:new Map([['thread','A']]),run:root,cwd:root,python,event:x=>events.push(x)};
-    const reply=await PolicyHost.prototype.toolRequest.call(host,'item/tool/call',{
+    const reply=await PolicyHost.prototype.runTool.call(host,'item/tool/call',{
       tool:'robot',threadId:'thread',callId:'native-1',arguments:{op:'move',call_id:'original-id',data:{}}});
     assert.equal(reply.success,false);
     assert.doesNotMatch(JSON.stringify({reply,events}),/sk-test-private-token/);
@@ -46,7 +46,7 @@ const a=process.argv.slice(2),id=a[a.indexOf('--call-id')+1],data=JSON.parse(a[a
 process.stdout.write(JSON.stringify({call_id:id,execution:{call_id:data.call_id,status:'completed'}}));`;
     fs.writeFileSync(python,source,{mode:0o755});
     const events=[],host={launch:{},actors:new Map([['thread','Controller']]),run:root,cwd:root,python,event:x=>events.push(x)};
-    const reply=await PolicyHost.prototype.toolRequest.call(host,'item/tool/call',{
+    const reply=await PolicyHost.prototype.runTool.call(host,'item/tool/call',{
       tool:'robot',threadId:'thread',callId:'native-query-1',arguments:{op:'job',data:{call_id:'action-A'}}});
     const value=JSON.parse(reply.contentItems[0].text);
     assert.equal(reply.success,true);

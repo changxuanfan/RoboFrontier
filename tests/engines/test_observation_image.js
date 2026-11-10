@@ -16,12 +16,12 @@ test('Codex bridge keeps original action result and emits the proper image MIME'
   const fake=path.join(root,'python');fs.writeFileSync(fake,'#!/usr/bin/env node\nprocess.stdout.write('+JSON.stringify(JSON.stringify(result))+');\n',{mode:0o755});
   const host={launch:{},actors:new Map([['thread','Controller']]),run:root,cwd:root,python:fake,event:()=>{}};
   const req={threadId:'thread',tool:'robot',callId:'id',arguments:{op:'move',call_id:'call-1',data:{},views:['top']}};
-  let reply=await PolicyHost.prototype.toolRequest.call(host,'item/tool/call',req);
+  let reply=await PolicyHost.prototype.runTool.call(host,'item/tool/call',req);
   assert.equal(reply.success,true);assert.match(reply.contentItems[1].imageUrl,/^data:image\/jpeg;base64,/);
   assert.equal(JSON.parse(reply.contentItems[0].text).execution.status,'completed');
-  fs.writeFileSync(file,png);reply=await PolicyHost.prototype.toolRequest.call(host,'item/tool/call',req);
+  fs.writeFileSync(file,png);reply=await PolicyHost.prototype.runTool.call(host,'item/tool/call',req);
   assert.match(reply.contentItems[1].imageUrl,/^data:image\/png;base64,/);
-  fs.writeFileSync(file,'bad');reply=await PolicyHost.prototype.toolRequest.call(host,'item/tool/call',req);
+  fs.writeFileSync(file,'bad');reply=await PolicyHost.prototype.runTool.call(host,'item/tool/call',req);
   assert.equal(JSON.parse(reply.contentItems[0].text).call_id,'call-1');
   assert.match(reply.contentItems[1].text,/could not be loaded/);
  } finally {fs.rmSync(root,{recursive:true,force:true});}
