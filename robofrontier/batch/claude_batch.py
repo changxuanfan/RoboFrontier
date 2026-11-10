@@ -68,24 +68,24 @@ def _run_once_continued(runner, run_dir, base_env, continuing=False, **options):
     prepared for its next segment; a run that never started starts normally.
     """
     from robofrontier.runtime.store import RuntimeStore
-    segments = []
-    if continuing:
-        store = RuntimeStore(Path(run_dir) / 'private/state/runtime.sqlite')
-        try: lifecycle = store.get('lifecycle')
+    from robofrontier.batch.supervise import supervise_run
+    def lifecycle(run):
+        store = RuntimeStore(Path(run) / 'private/state/runtime.sqlite')
+        try: return store.get('lifecycle')
         finally: store.close()
-        if lifecycle not in ('prepared', 'resuming'):
-            continued, why = try_continue(run_dir, 'batch process exited')
-            segments.append({'reason': 'batch process exited', 'continued': continued, 'why': why})
-            if not continued:
-                return {'status': 'needs_review', 'reason': 'not_continued', 'segments': segments}
-    while True:
-        result = runner(run_dir, base_env, **options)
-        # The host's own wall limit or a STOP is final, even if its seal could not be recorded;
-        # a finish, a cutoff and every other stop are told apart by the stop table.
-        if result.get('status') == 'finished' or result.get('reason') in FINAL: break
-        continued, why = try_continue(run_dir, 'engine run ended: ' + str(result.get('reason')))
-        segments.append({'reason': result.get('reason'), 'continued': continued, 'why': why})
-        if not continued: break
+    segments = []
+    def record(result, continued, why):
+        segments.append({'reason': 'batch process exited' if result is None else result.get('reason'),
+                         'continued': continued, 'why': why})
+    # The host's own wall limit or a STOP is final, even if its seal could not be recorded;
+    # a finish, a cutoff and every other stop are told apart by the stop table.
+    outcome, result, _ = supervise_run(
+        run_dir, lambda: runner(run_dir, base_env, **options), continuing=continuing, lifecycle=lifecycle,
+        try_continue=lambda run, why: try_continue(run, why),
+        final=lambda r: r.get('status') == 'finished' or r.get('reason') in FINAL,
+        reason=lambda r: 'engine run ended: ' + str(r.get('reason')), record=record, exited='batch process exited')
+    if outcome == 'refused':
+        return {'status': 'needs_review', 'reason': 'not_continued', 'segments': segments}
     result['segments'] = segments
     return result
 

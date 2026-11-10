@@ -220,34 +220,21 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
     write_json(folder/'batch.json',batch)
     def task(job):
         # An unexpected exit continues the same run once (docs/running/continuation.md).
+        from .supervise import supervise_run
         run=Path(job['run_directory'])
-        # Whether a continuation segment is prepared and not yet run.
-        pending=False
-        if continuing:
-            lifecycle=read_lifecycle(run)
-            pending=lifecycle=='resuming'
-            # A segment prepared just before the supervisor died starts as it is.
-            if lifecycle not in ('prepared','resuming'):
-                continued,why=try_continue(run,'batch supervisor exited')
-                job.setdefault('segments',[]).append({'host_exit_code':None,'continued':continued,'reason':why})
-                write_json(folder/'batch.json',batch)
-                if not continued:raise ValueError('Run cannot continue: '+why)
-                pending=True
-        while True:
-            result=launch(job)
-            # A stop before the first segment leaves the run unstarted; a stop after a
-            # continuation was prepared leaves a run that ran and needs review.
-            if result is None:return STOPPED_BETWEEN_SEGMENTS if pending else None
-            # A shared-server failure is a job fault. Never automatically create
-            # another shared manager or resend an uncertain turn/action.
-            if scope=='job':return result
-            # Even a clean host exit can follow a world that died; the eligibility
-            # check tells normal ends (finish, stop, wall limit, live seal) apart.
-            continued,why=try_continue(run,'host exit code '+str(result))
+        def record(result,continued,why):
             job.setdefault('segments',[]).append({'host_exit_code':result,'continued':continued,'reason':why})
             write_json(folder/'batch.json',batch)
-            if not continued:return result
-            pending=True
+        # A stop before launch (None) and, in a shared-server job, any end are final: never
+        # create another shared manager or resend an uncertain turn/action. Even a clean host
+        # exit can follow a world that died; the stop table tells normal ends apart.
+        outcome,result,pending=supervise_run(run,lambda:launch(job),continuing=continuing,lifecycle=read_lifecycle,
+            try_continue=lambda r,why:try_continue(r,why),final=lambda r:r is None or scope=='job',
+            reason=lambda r:'host exit code '+str(r),record=record)
+        if outcome=='refused':raise ValueError('Run cannot continue: '+result)
+        # A stop after a continuation was prepared leaves a run that ran and needs review.
+        if result is None:return STOPPED_BETWEEN_SEGMENTS if pending else None
+        return result
     def launch(job):
         run=Path(job['run_directory'])
         stop,batch_stop=run_layout.path(run,'stop','codex'),run_layout.batch_path(folder,'stop')
