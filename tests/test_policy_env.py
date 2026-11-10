@@ -192,9 +192,11 @@ class AccessTableTests(Fixture):
 
 class DefaultTests(Fixture):
     """robofrontier prepare uses the checked environment of the current locks by default on macOS."""
-    def place(self, receipt=True, **change):
+    def place(self, receipt=True, system='darwin', **change):
+        # The build's name carries its platform, so name it for the platform the test looks on.
         from scripts.build_policy_env import identity
-        root = self.tmp/('policy-env-' + identity()); self.root.rename(root); self.root = root
+        with patch('sys.platform', system): root = self.tmp/('policy-env-' + identity())
+        self.root.rename(root); self.root = root
         if receipt:
             manifest = policy_env.load(root)
             check = {'schema': policy_env.RECEIPT_SCHEMA, 'passed': True, 'tree_sha256': manifest['tree_sha256'],
@@ -220,7 +222,7 @@ class DefaultTests(Fixture):
     def test_other_hosts_keep_the_host_python_and_off_opts_out(self):
         self.assertIsNone(self.default(system='linux', base=False))
         # A Linux host that names a base (a Slurm shared build) uses its checked build too.
-        with patch('sys.platform', 'linux'): root = self.place()  # the build's name carries its platform
+        root = self.place(system='linux')
         self.assertEqual(self.default(system='linux'), root.resolve())
         for value in ('off', 'OFF', 'none'):
             with patch.object(policy_env.os, 'environ', {policy_env.ENV_VAR: value}):
