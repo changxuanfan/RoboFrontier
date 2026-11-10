@@ -114,6 +114,76 @@ class CompactedForkTests(unittest.TestCase):
         self.write(parent, child)
         with self.assertRaises(ValueError): fork_provenance(PARENT, CHILD, self.config, at=source)
 
+    def test_uncompacted_copy_with_a_rerendered_edited_file_notice(self):
+        from robofrontier.claude.provenance import copied_history_length
+        notice = {'type': 'edited_text_file', 'filename': '/run/workspace/skills.md', 'snippet': ''}
+        parent = [row('a', 'user', None, message={'role': 'user', 'content': 'task'}),
+                  row('n', 'attachment', 'a', attachment=dict(notice))]
+        child = [dict(r, sessionId=CHILD, promptId='child') for r in copy.deepcopy(parent)]
+        child[1]['attachment']['displayPath'] = 'skills.md'
+        self.write(parent, child)
+        source = history(transcript_rows(self.config, PARENT), PARENT)
+        self.assertEqual(copied_history_length(source, history(transcript_rows(self.config, CHILD), CHILD)), 2)
+        child[1]['attachment']['snippet'] = 'tampered'
+        self.write(parent, child)
+        with self.assertRaises(ValueError): fork_provenance(PARENT, CHILD, self.config, at=source)
+
+    def test_compacted_copy_orders_a_split_assistant_message_as_its_metadata(self):
+        # Observed 2026-11-10: three tool calls of one response were preserved; the file
+        # interleaves call/result, the metadata and the copy list calls first.
+        from robofrontier.claude.provenance import copied_history_length
+        old = row('old', 'user', None, message={'role': 'user', 'content': 'old'})
+        calls = [row('c%d' % i, 'assistant', None, message={'role': 'assistant', 'content': 'call %d' % i}) for i in range(3)]
+        results = [row('r%d' % i, 'user', None, message={'role': 'user', 'content': 'result %d' % i}) for i in range(3)]
+        layout = [old]
+        for c, r in zip(calls, results): layout += [c, r]
+        for i, r in enumerate(layout[1:], 1): r['parentUuid'] = layout[i-1]['uuid']
+        ids = ['c0', 'c1', 'c2', 'r0', 'r1', 'r2']
+        meta = {'preservedSegment': {'headUuid': 'c0', 'anchorUuid': 'summary', 'tailUuid': 'r2'},
+                'preservedMessages': {'anchorUuid': 'summary', 'uuids': ids, 'allUuids': ids}}
+        boundary = row('boundary', 'system', None, subtype='compact_boundary', compactMetadata=meta)
+        summary = row('summary', 'user', 'boundary', isCompactSummary=True, message={'role': 'user', 'content': 'summary'})
+        post = row('post', 'assistant', 'summary', message={'role': 'assistant', 'content': 'pending delegate'})
+        parent = layout + [boundary, summary, post]
+        by = {r['uuid']: r for r in layout}
+        links = {'c0': 'summary', 'c1': 'c0', 'c2': 'c1', 'r0': 'c0', 'r1': 'c1', 'r2': 'c2'}
+        child = copy.deepcopy([boundary, summary] + [dict(by[u], parentUuid=links[u]) for u in ids] + [dict(post, parentUuid='r2')])
+        for item in child: item.update(sessionId=CHILD, promptId='child')
+        self.write(parent, child)
+        source = history(transcript_rows(self.config, PARENT), PARENT)
+        fork_provenance(PARENT, CHILD, self.config, at=source)
+        self.assertEqual(copied_history_length(source, history(transcript_rows(self.config, CHILD), CHILD)), 9)
+        for mutation in ('order', 'content', 'link_outside', 'tail'):
+            with self.subTest(mutation=mutation):
+                bad = copy.deepcopy(child)
+                if mutation == 'order': bad[2], bad[3] = bad[3], bad[2]
+                if mutation == 'content': bad[4]['message']['content'] = 'tampered'
+                if mutation == 'link_outside': bad[3]['parentUuid'] = 'old'
+                if mutation == 'tail': bad[-1]['parentUuid'] = 'c2'
+                self.write(parent, bad)
+                with self.assertRaises(ValueError): fork_provenance(PARENT, CHILD, self.config, at=source)
+
+    def test_a_fork_may_keep_only_some_api_retry_notices(self):
+        # Observed 2026-11-10 after a network outage: the parent had 11 retry notices, the
+        # fork kept 6; a row that hung from a dropped notice hangs from its kept ancestor.
+        from robofrontier.claude.provenance import copied_history_length
+        retry = lambda ident, parent: row(ident, 'system', parent, subtype='api_error', source='request_retry', retryAttempt=1)
+        parent = [row('a', 'user', None, message={'role': 'user', 'content': 'task'}),
+                  retry('x1', 'a'), retry('x2', 'x1'),
+                  row('b', 'assistant', 'x2', message={'role': 'assistant', 'content': 'delegate'})]
+        child = [dict(r, sessionId=CHILD, promptId='child') for r in copy.deepcopy([parent[0], parent[1], parent[3]])]
+        child[2]['parentUuid'] = 'x1'
+        child.append({'uuid': 'prompt', 'sessionId': CHILD, 'type': 'user', 'message': {'role': 'user', 'content': 'delegate task'}})
+        self.write(parent, child)
+        source = history(transcript_rows(self.config, PARENT), PARENT)
+        copied = history(transcript_rows(self.config, CHILD), CHILD)
+        fork_provenance(PARENT, CHILD, self.config, at=source)
+        self.assertEqual(copied_history_length(source, copied), 3)
+        self.assertEqual(first_input(copied[3:]), 'delegate task')
+        child[2]['message'] = {'role': 'assistant', 'content': 'tampered'}
+        self.write(parent, child)
+        with self.assertRaises(ValueError): fork_provenance(PARENT, CHILD, self.config, at=source)
+
     def test_tampered_missing_reordered_or_late_history_is_rejected(self):
         for mutation in ('summary', 'preserved_content', 'missing', 'reordered', 'parent_link',
                          'late', 'metadata', 'unknown_layout'):
