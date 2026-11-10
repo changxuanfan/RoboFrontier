@@ -777,7 +777,7 @@ def goal_endpoint_candidates(trial):
     trial.mosaic_goal_tilted_coverage={}
     workers=getattr(trial,'mosaic_planning_workers',1)
     if workers != 1:
-        from .mosaic_parallel import nominal_goal_coverage
+        from .mosaic_run import nominal_goal_coverage
         result=nominal_goal_coverage(trial,workers)
         if result is not None:return result
     else:
@@ -1056,7 +1056,7 @@ def solve(trial, max_goals=None, goal_ids=None, motion_profile=None, resume=Fals
     neighbors, _ = helpers.graph(trial.env)
     coverage = goal_endpoint_candidates(trial)
     if getattr(trial,'mosaic_planning_workers',1) != 1:
-        from .mosaic_parallel import pickup_coverage
+        from .mosaic_run import pickup_coverage
         pickups = pickup_coverage(trial,trial.mosaic_planning_workers)
     else:
         pickups = pickup_endpoint_candidates(trial)

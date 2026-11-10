@@ -89,7 +89,7 @@ class TransferCoverageTests(unittest.TestCase):
         np.testing.assert_array_equal(t.data.qpos,before)
 
     def test_contact_approach_executes_a_controller_admissible_ik_continuation(self):
-        from robofrontier.oracle import transport_oracle_v2 as ref
+        from robofrontier.oracle import transport_oracle as ref
         from robofrontier.tasks.config import load_harness
         fixture=json.loads((ROOT/'tests/fixtures/transport_regrasp_contact_frontier.json').read_text())
         import hashlib
@@ -195,7 +195,7 @@ class TransferCoverageTests(unittest.TestCase):
         self.assertFalse(sampled_motion_admission(dict(commands=f['request']),runtime))
 
     def test_intermediate_receiver_needs_next_transfer_not_final_board_reach(self):
-        from robofrontier.oracle import transport_oracle_v2 as ref
+        from robofrontier.oracle import transport_oracle as ref
         from robofrontier.physics.robot_control import matrix_quat
         t=recorded_frontier()
         plan=ref.plan_air_regrasp(t,'A','A_item2',planning_budget_s=3.,allowed_receivers=['C'],

@@ -252,7 +252,7 @@ def sampled_motion_admission(request,runtime):
     A conflicting new move waits for currently running actions, rather than
     interrupting them. Actual process monitoring remains authoritative.
     """
-    from .transport_oracle_v2 import _planning_copy
+    from .transport_oracle import _planning_copy
     from ..physics.robot_control import matrix_quat,quat_matrix,rotation_vector,advance_rotation
     import mujoco
     t=runtime.t;new={r:c for r,c in request['commands'].items() if c[0]=='move'}

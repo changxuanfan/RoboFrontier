@@ -9,7 +9,7 @@ import math
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from . import transport_oracle_v2 as ref
+from . import transport_oracle as ref
 from .placement import clear_idle_arms, park
 from .geometry import rz
 from .transport_runtime import TransportRuntime, sampled_motion_admission

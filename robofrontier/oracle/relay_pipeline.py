@@ -16,7 +16,7 @@ import numpy as np
 
 from ..physics.robot_control import matrix_quat,rotation_vector
 from ..runtime.setup import write_json
-from . import relay_oracle_v2 as ref
+from . import relay_oracle as ref
 from .trial import ReferenceStopped
 from .geometry import rz
 
@@ -277,7 +277,7 @@ def carry_chunk(t,frontier):
     distance=float(np.linalg.norm(frontier.target-point))
     if distance<.003 and angle<.01:return None
     fraction=min(1.,.025/max(distance,1e-9),.06/max(angle,1e-9))
-    from robofrontier.oracle.verify_floating_dial_oracle import axis_rotation
+    from robofrontier.oracle.geometry import axis_rotation
     frame=axis_rotation(delta/max(angle,1e-9),angle*fraction)@rotation if angle>1e-9 else rotation
     # Carry yaw interpolation follows the same level-target reference. Small
     # measured pitch/roll are corrected by the ordinary Cartesian controller.

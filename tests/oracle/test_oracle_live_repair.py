@@ -6,8 +6,8 @@ import threading
 import time
 import unittest
 import numpy as np
-from robofrontier.oracle.dial_live_repair import LiveRepair
-from robofrontier.oracle.dial_best_oracle import BestManipulator
+from robofrontier.oracle.recovery import LiveRepair
+from robofrontier.oracle.dial import BestManipulator
 from robofrontier.oracle.trial import Trial
 
 

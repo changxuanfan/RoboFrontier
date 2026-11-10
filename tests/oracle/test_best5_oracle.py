@@ -6,9 +6,9 @@ import unittest
 import numpy as np
 import mujoco
 from robofrontier.oracle.dial_best_worker import RecordDecoder
-from robofrontier.oracle.dial_best_oracle import BestDecoder,BestManipulator,WORKER
-from robofrontier.oracle.dial_hold_oracle import Channel
-from robofrontier.oracle.dial_oracle import Manipulator
+from robofrontier.oracle.dial import BEST_WORKER as WORKER, BestDecoder, BestManipulator
+from robofrontier.oracle.dial import Channel
+from robofrontier.oracle.dial import BaselineManipulator as Manipulator
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -61,7 +61,7 @@ class BestOracleTests(unittest.TestCase):
 
     def test_live_monitor_uses_remote_evaluator_without_generating_parent_secret(self):
         from robofrontier.oracle.trial import Trial
-        from robofrontier.oracle.dial_best_oracle import BestMonitor
+        from robofrontier.oracle.dial import BestMonitor
         scene=ROOT/'benchmark/dial/dial-best5-n04-d1'
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);code=p/'private.json';code.write_text(json.dumps({'code_symbols':[1]*4}))

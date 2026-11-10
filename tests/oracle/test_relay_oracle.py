@@ -8,13 +8,13 @@ import numpy as np
 
 from robofrontier.tasks.families import case_specs as cases, oracle_directory as directory
 from robofrontier.physics.workstation import Workstation
-from robofrontier.oracle.relay_oracle_v2 import grasp_targets,cross_x
+from robofrontier.oracle.relay_oracle import grasp_targets,cross_x
 
 
 class RelayReferenceTests(unittest.TestCase):
     def test_terminal_recovery_replans_after_other_arm_makes_progress(self):
         from unittest.mock import patch, Mock
-        from robofrontier.oracle.relay_oracle_v2 import sequential_terminal_release
+        from robofrontier.oracle.relay_oracle import sequential_terminal_release
         finished=set();calls=[]
         t=SimpleNamespace(arms={r:SimpleNamespace(job=None,grasp_force=None) for r in ('G','H')},
             held={'G':'payload','H':'payload'},wait=Mock(),event=Mock(),
@@ -23,13 +23,13 @@ class RelayReferenceTests(unittest.TestCase):
             return None if donors==['H'] and 'G' not in finished else {donors[0]:[]}
         def release_one(world,ident,team,terminal=False):
             calls.append(team[0]);finished.add(team[0])
-        with patch('robofrontier.oracle.relay_oracle_v2.terminal_recovery_state',return_value=True),patch('robofrontier.oracle.relay_oracle_v2.beam_table_contact',return_value=True),patch('robofrontier.oracle.relay_oracle_v2.donor_exit_routes',route),patch('robofrontier.oracle.relay_oracle_v2.release',release_one),patch('robofrontier.oracle.relay_oracle_v2.arm_payload_contact',return_value=False):
+        with patch('robofrontier.oracle.relay_oracle.terminal_recovery_state',return_value=True),patch('robofrontier.oracle.relay_oracle.beam_table_contact',return_value=True),patch('robofrontier.oracle.relay_oracle.donor_exit_routes',route),patch('robofrontier.oracle.relay_oracle.release',release_one),patch('robofrontier.oracle.relay_oracle.arm_payload_contact',return_value=False):
             self.assertTrue(sequential_terminal_release(t,'payload',['H','G']))
         self.assertEqual(calls,['G','H'])
 
     def test_terminal_recovery_defers_unknown_execution_without_reissuing(self):
         from unittest.mock import Mock
-        from robofrontier.oracle.relay_oracle_v2 import terminal_recovery_state
+        from robofrontier.oracle.relay_oracle import terminal_recovery_state
         data=object();t=SimpleNamespace(data=data,_live_data=data,arms={'G':SimpleNamespace(job='unknown-call')},execute=Mock())
         self.assertFalse(terminal_recovery_state(t,'payload',['G']))
         self.assertEqual(t.relay_recovery_pending['active_jobs'],{'G':'unknown-call'})
@@ -37,7 +37,7 @@ class RelayReferenceTests(unittest.TestCase):
 
     def test_idle_clearance_never_moves_a_busy_or_holding_arm(self):
         from unittest.mock import Mock
-        from robofrontier.oracle.relay_oracle_v2 import clear_free_idle_blocker
+        from robofrontier.oracle.relay_oracle import clear_free_idle_blocker
         for job,force,held in [('job',None,{}),(None,70.,{}),(None,None,{'O':'payload'})]:
             with self.subTest(job=job,force=force,held=held):
                 t=SimpleNamespace(task={'level':1},data=object(),
@@ -50,7 +50,7 @@ class RelayReferenceTests(unittest.TestCase):
 
     def test_idle_clearance_checks_real_support_even_without_held_metadata(self):
         from unittest.mock import Mock
-        from robofrontier.oracle.relay_oracle_v2 import clear_free_idle_blocker
+        from robofrontier.oracle.relay_oracle import clear_free_idle_blocker
         t=SimpleNamespace(task={'level':1},data=object(),
             relay_screen_reason={'kind':'arm_contact','a':'O_left_finger','b':'P_link6'},
             arms={'O':SimpleNamespace(job=None,grasp_force=None),'P':object(),'H':object()},
@@ -63,20 +63,20 @@ class RelayReferenceTests(unittest.TestCase):
 
     def test_idle_clearance_cannot_actuate_a_planning_scratch_world(self):
         from unittest.mock import Mock
-        from robofrontier.oracle.relay_oracle_v2 import clear_free_idle_blocker
+        from robofrontier.oracle.relay_oracle import clear_free_idle_blocker
         t=SimpleNamespace(task={'level':1},data=object(),_live_data=object(),execute=Mock())
         self.assertFalse(clear_free_idle_blocker(t,'payload',['H','P'],[0,0,1.3],0.))
         t.execute.assert_not_called()
 
     def test_idle_clearance_requires_a_known_live_world_marker(self):
         from unittest.mock import Mock
-        from robofrontier.oracle.relay_oracle_v2 import clear_free_idle_blocker
+        from robofrontier.oracle.relay_oracle import clear_free_idle_blocker
         t=SimpleNamespace(task={'level':1},data=object(),execute=Mock())
         self.assertFalse(clear_free_idle_blocker(t,'payload',['H','P'],[0,0,1.3],0.))
         t.execute.assert_not_called()
 
     def test_weighted_terminal_top_class_keeps_better_joint_branch_first(self):
-        from robofrontier.oracle.relay_oracle_v2 import terminal_pair_order
+        from robofrontier.oracle.relay_oracle import terminal_pair_order
         top=np.eye(3)
         side=np.array([[1.,0.,0.],[0.,0.,-1.],[0.,1.,0.]])
         def pair(name,rotation,margin):
@@ -89,7 +89,7 @@ class RelayReferenceTests(unittest.TestCase):
 
     def test_explicit_carry_orientation_is_screened_and_kept_in_commands(self):
         from unittest.mock import patch, Mock
-        from robofrontier.oracle.relay_oracle_v2 import carry
+        from robofrontier.oracle.relay_oracle import carry
         angle=.2
         rotation=np.array([[np.cos(angle),0.,np.sin(angle)],
                            [0.,1.,0.],[-np.sin(angle),0.,np.cos(angle)]])
@@ -105,7 +105,7 @@ class RelayReferenceTests(unittest.TestCase):
             'B':SimpleNamespace(site=1)},pose_command=command,execute=Mock(),
             monitor=SimpleNamespace(violations=[],relay=SimpleNamespace(
                 states={'payload':{'dropped':False}})))
-        with patch('robofrontier.oracle.relay_oracle_v2.carry_clear',return_value=True) as screen:
+        with patch('robofrontier.oracle.relay_oracle.carry_clear',return_value=True) as screen:
             carry(t,'payload',['A','B'],np.array([.03,0.,1.3]),0.,target_rotation=rotation)
         np.testing.assert_allclose(screen.call_args.kwargs['target_rotation'],rotation)
         self.assertTrue(rotations)
@@ -113,7 +113,7 @@ class RelayReferenceTests(unittest.TestCase):
             np.testing.assert_allclose(observed,rotation,atol=1e-12)
 
     def test_terminal_support_does_not_mistake_weight_contact_for_beam_support(self):
-        from robofrontier.oracle.relay_oracle_v2 import final_support
+        from robofrontier.oracle.relay_oracle import final_support
         names={0:'payload_beam',1:'payload_weight',2:'table_0'}
         state={'all_geoms':{0,1},'rod_geoms':{0}}
         relay=SimpleNamespace(states={'payload':state},inside=lambda value:True)
@@ -130,7 +130,7 @@ class RelayReferenceTests(unittest.TestCase):
         from robofrontier.oracle.trial import Trial
         from robofrontier.tasks.evaluate import Monitor
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import handover_plan
+        from robofrontier.oracle.relay_oracle import handover_plan
         case=next(c for c in cases() if c['id']=='relay-a08-d3')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data;mujoco.mj_forward(t.model,t.data)
@@ -143,12 +143,12 @@ class RelayReferenceTests(unittest.TestCase):
             side=np.array([[0.,0,1],[1,0,0],[0,1,0]])
             probe.relay_grasp_plan={robot:dict(rotation=side) for robot in ('G','H')}
             return ['G','H']
-        with patch('robofrontier.oracle.relay_oracle_v2.carry_clear',clear),patch('robofrontier.oracle.relay_oracle_v2.choose_team',side_effect=choose) as selected:
+        with patch('robofrontier.oracle.relay_oracle.carry_clear',clear),patch('robofrontier.oracle.relay_oracle.choose_team',side_effect=choose) as selected:
             handover_plan(t,'payload_02',['E','F'],.44,3)
         self.assertEqual(selected.call_count,4)
 
     def test_terminal_support_requires_table_not_floor(self):
-        from robofrontier.oracle.relay_oracle_v2 import final_support
+        from robofrontier.oracle.relay_oracle import final_support
         names={0:'payload_beam',1:'floor'}
         state={'all_geoms':{0},'rod_geoms':{0}}
         relay=SimpleNamespace(states={'payload':state},inside=lambda value:True)
@@ -158,7 +158,7 @@ class RelayReferenceTests(unittest.TestCase):
         self.assertTrue(final_support(t,'payload',('A','B')))
 
     def test_stack_permission_does_not_release_timber_balanced_on_its_pendant(self):
-        from robofrontier.oracle.relay_oracle_v2 import final_support
+        from robofrontier.oracle.relay_oracle import final_support
         names={0:'payload_beam',1:'payload_weight',2:'table_0'}
         state={'all_geoms':{0,1},'rod_geoms':{0}}
         relay=SimpleNamespace(states={'payload':state},inside=lambda _:True,
@@ -174,7 +174,7 @@ class RelayReferenceTests(unittest.TestCase):
         self.assertTrue(final_support(t,'payload',('A','B')))
 
     def test_terminal_timber_can_rest_on_another_grounded_timber(self):
-        from robofrontier.oracle.relay_oracle_v2 import final_support
+        from robofrontier.oracle.relay_oracle import final_support
         names={0:'upper_beam',1:'lower_beam',2:'table_0',3:'lower_weight'}
         upper={'all_geoms':{0},'rod_geoms':{0}}
         lower={'all_geoms':{1,3},'rod_geoms':{1}}
@@ -193,7 +193,7 @@ class RelayReferenceTests(unittest.TestCase):
         self.assertFalse(final_support(t,'upper',('A','B')))
 
     def test_supported_in_goal_release_may_leave_a_small_timber_gap(self):
-        from robofrontier.oracle.relay_oracle_v2 import final_support
+        from robofrontier.oracle.relay_oracle import final_support
         state={'all_geoms':{0,1},'rod_geoms':{0}}
         relay=SimpleNamespace(states={'payload':state},inside=lambda _:True,
                               supported_payloads=lambda:{'payload'})
@@ -207,7 +207,7 @@ class RelayReferenceTests(unittest.TestCase):
         self.assertFalse(final_support(t,'payload',('A','B')))
 
     def test_declared_low_release_does_not_need_any_prior_table_contact(self):
-        from robofrontier.oracle.relay_oracle_v2 import final_support
+        from robofrontier.oracle.relay_oracle import final_support
         state={'all_geoms':{0},'rod_geoms':{0}}
         relay=SimpleNamespace(states={'payload':state},inside=lambda _:True,supported_payloads=lambda:set())
         t=SimpleNamespace(task={'table_height_m':.8,'completion':{'support_via_goal_payload':True,
@@ -221,9 +221,9 @@ class RelayReferenceTests(unittest.TestCase):
 
     def test_terminal_release_rejects_an_unsafe_opening_before_actuation(self):
         from unittest.mock import patch,Mock
-        from robofrontier.oracle.relay_oracle_v2 import release
+        from robofrontier.oracle.relay_oracle import release
         t=SimpleNamespace(execute=Mock())
-        with patch('robofrontier.oracle.relay_oracle_v2.donor_exit_routes',return_value=None) as route:
+        with patch('robofrontier.oracle.relay_oracle.donor_exit_routes',return_value=None) as route:
             with self.assertRaisesRegex(RuntimeError,'No safe terminal opening/exit plan'):
                 release(t,'payload',('A','B'),terminal=True)
         self.assertEqual(route.call_args.kwargs['opening_width'],.080)
@@ -233,7 +233,7 @@ class RelayReferenceTests(unittest.TestCase):
         from unittest.mock import patch,Mock
         from robofrontier.oracle.trial import Trial
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import execute_landing_increment,LANDING_STOP_REASON
+        from robofrontier.oracle.relay_oracle import execute_landing_increment,LANDING_STOP_REASON
         case=next(c for c in cases() if c['id']=='relay-a08-d1')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data;mujoco.mj_forward(t.model,t.data)
@@ -251,7 +251,7 @@ class RelayReferenceTests(unittest.TestCase):
             return saved
         t.execute=execute
         commands={a:('move',{'target_m':[0,0,1]}) for a in t.arms}
-        with patch('robofrontier.oracle.relay_oracle_v2.final_support',return_value=True):
+        with patch('robofrontier.oracle.relay_oracle.final_support',return_value=True):
             self.assertTrue(execute_landing_increment(t,'payload_01',('A','B'),commands))
         self.assertIs(t.step,original_step)
         for robot,arm in t.arms.items():
@@ -261,7 +261,7 @@ class RelayReferenceTests(unittest.TestCase):
 
     def test_contact_placement_does_not_hide_unrelated_failure(self):
         from unittest.mock import Mock
-        from robofrontier.oracle.relay_oracle_v2 import execute_landing_increment
+        from robofrontier.oracle.relay_oracle import execute_landing_increment
         original=Mock();t=SimpleNamespace(step=original,execute=Mock(return_value={'A':{'status':'failed','reason':'Action timeout'}}))
         with self.assertRaisesRegex(RuntimeError,'Terminal placement action failed'):
             execute_landing_increment(t,'payload',('A',),{'A':('move',{})})
@@ -272,14 +272,14 @@ class RelayReferenceTests(unittest.TestCase):
         from robofrontier.oracle.trial import Trial
         from robofrontier.tasks.evaluate import Monitor
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import carry
+        from robofrontier.oracle.relay_oracle import carry
         case=next(c for c in cases() if c['id']=='relay-a08-d1')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data;mujoco.mj_forward(t.model,t.data)
         t.task=json.loads((source.path/'task.json').read_text());t.arms={a:PandaArm(t.model,t.data,a) for a in t.task['arms']}
         t.monitor=Monitor(t);t.execute=Mock();t.relay_screen_reason={'kind':'arm_contact'}
         goal=t.data.body('payload_01').xpos.copy()+np.array([0,0,.04])
-        with patch('robofrontier.oracle.relay_oracle_v2.carry_clear',return_value=False):
+        with patch('robofrontier.oracle.relay_oracle.carry_clear',return_value=False):
             with self.assertRaisesRegex(RuntimeError,'Actual carry path'):
                 carry(t,'payload_01',('A','B'),goal,0.)
         t.execute.assert_not_called()
@@ -288,7 +288,7 @@ class RelayReferenceTests(unittest.TestCase):
         from unittest.mock import patch
         from robofrontier.oracle.trial import Trial
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import received_transport_preview
+        from robofrontier.oracle.relay_oracle import received_transport_preview
         case=next(c for c in cases() if c['id']=='relay-a08-d1')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data;mujoco.mj_forward(t.model,t.data)
@@ -307,7 +307,7 @@ class RelayReferenceTests(unittest.TestCase):
             probe.relay_carry_endpoint=dict(qpos=probe.data.qpos.copy())
             return True
         future=dict(future_region=[0.,0.,1.],future_height=1.2,future_yaw=0.,future_waypoints=[])
-        with patch('robofrontier.oracle.relay_oracle_v2.carry_clear',clear):
+        with patch('robofrontier.oracle.relay_oracle.carry_clear',clear):
             result=received_transport_preview(t,'payload_01',['A','B'],['C','D'],future)
         np.testing.assert_array_equal(t.data.qpos,before)
         for robot,arm in t.arms.items():
@@ -321,7 +321,7 @@ class RelayReferenceTests(unittest.TestCase):
         from robofrontier.oracle.trial import Trial
         from robofrontier.tasks.evaluate import Monitor
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import handover_plan
+        from robofrontier.oracle.relay_oracle import handover_plan
         case=next(c for c in cases() if c['id']=='relay-a12-d1')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data;mujoco.mj_forward(t.model,t.data)
@@ -331,7 +331,7 @@ class RelayReferenceTests(unittest.TestCase):
         def clear(probe,*args,**kwargs):
             probe.relay_carry_endpoint=dict(qpos=probe.data.qpos.copy(),rotation=np.eye(3))
             return True
-        with patch('robofrontier.oracle.relay_oracle_v2.carry_clear',clear),patch('robofrontier.oracle.relay_oracle_v2.choose_team',return_value=['C','D']):
+        with patch('robofrontier.oracle.relay_oracle.carry_clear',clear),patch('robofrontier.oracle.relay_oracle.choose_team',return_value=['C','D']):
             _,_,_,future=handover_plan(t,'payload_01',['A','B'],.44,1,lookahead_depth=1)
         self.assertEqual(len(future['future_waypoints']),1)
         point,yaw=future['future_waypoints'][0]
@@ -343,7 +343,7 @@ class RelayReferenceTests(unittest.TestCase):
         from robofrontier.oracle.trial import Trial
         from robofrontier.tasks.evaluate import Monitor
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import handover_plan
+        from robofrontier.oracle.relay_oracle import handover_plan
         case=next(c for c in cases() if c['id']=='relay-a12-d1')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data;mujoco.mj_forward(t.model,t.data)
@@ -353,7 +353,7 @@ class RelayReferenceTests(unittest.TestCase):
             probe.relay_carry_endpoint=dict(qpos=probe.data.qpos.copy(),rotation=np.eye(3))
             return True
         successor=(np.array([0.,0.,1.]),0.,.44,{})
-        with patch('robofrontier.oracle.relay_oracle_v2.carry_clear',clear),patch('robofrontier.oracle.relay_oracle_v2.choose_team',return_value=['C','D']) as choose,patch('robofrontier.oracle.relay_oracle_v2.received_transport_preview',return_value=t),patch('robofrontier.oracle.relay_oracle_v2.handover_plan',return_value=successor) as following:
+        with patch('robofrontier.oracle.relay_oracle.carry_clear',clear),patch('robofrontier.oracle.relay_oracle.choose_team',return_value=['C','D']) as choose,patch('robofrontier.oracle.relay_oracle.received_transport_preview',return_value=t),patch('robofrontier.oracle.relay_oracle.handover_plan',return_value=successor) as following:
             handover_plan(t,'payload_01',['A','B'],.44,1)
         self.assertEqual(choose.call_count,1)
         self.assertEqual(following.call_count,1)
@@ -376,7 +376,7 @@ class RelayReferenceTests(unittest.TestCase):
         from robofrontier.oracle.trial import Trial
         from robofrontier.tasks.evaluate import Monitor
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import carry_clear
+        from robofrontier.oracle.relay_oracle import carry_clear
         case=next(c for c in cases() if c['id']=='relay-a08-d1')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data
@@ -414,7 +414,7 @@ class RelayReferenceTests(unittest.TestCase):
         from robofrontier.oracle.trial import Trial
         from robofrontier.tasks.evaluate import Monitor
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import receiving_routes
+        from robofrontier.oracle.relay_oracle import receiving_routes
         case=next(c for c in cases() if c['id']=='relay-a08-d1')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data
@@ -438,7 +438,7 @@ class RelayReferenceTests(unittest.TestCase):
     def test_fixed_chain_ik_cache_reuses_only_identical_queries(self):
         from robofrontier.oracle.trial import Trial
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import screened_ik
+        from robofrontier.oracle.relay_oracle import screened_ik
         case=next(c for c in cases() if c['id']=='relay-a08-d1')
         source=Workstation(directory(case));mujoco.mj_forward(source.model,source.data)
         t=Trial.__new__(Trial);t.model,t.data=source.model,source.data
@@ -457,7 +457,7 @@ class RelayReferenceTests(unittest.TestCase):
 
     def test_geometric_reach_filter_keeps_real_fk_goals(self):
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import potentially_reachable
+        from robofrontier.oracle.relay_oracle import potentially_reachable
         case=next(c for c in cases() if c['id']=='relay-a08-d1')
         source=Workstation(directory(case));mujoco.mj_forward(source.model,source.data)
         arm=PandaArm(source.model,source.data,'A')
@@ -470,28 +470,28 @@ class RelayReferenceTests(unittest.TestCase):
     def test_stage_deadline_is_checked_inside_nested_solver(self):
         from unittest.mock import patch
         from robofrontier.oracle.trial import Trial,ReferenceStopped
-        from robofrontier.oracle.relay_oracle_v2 import handover_plan,choose_team
+        from robofrontier.oracle.relay_oracle import handover_plan,choose_team
         t=Trial.__new__(Trial);t.data=object();t.stop_requested=None
         def nested(search,*args):search.check_stop()
-        with patch('robofrontier.oracle.relay_oracle_v2.STAGE_SEARCH_WALL_S',0.),patch('robofrontier.oracle.relay_oracle_v2._handover_plan',nested):
+        with patch('robofrontier.oracle.relay_oracle.STAGE_SEARCH_WALL_S',0.),patch('robofrontier.oracle.relay_oracle._handover_plan',nested):
             with self.assertRaisesRegex(RuntimeError,'Bounded handover search exhausted'):handover_plan(t,'payload',[],.44,1)
             t.stop_requested=lambda:True
             with self.assertRaises(ReferenceStopped):handover_plan(t,'payload',[],.44,1)
         t.stop_requested=None
-        with patch('robofrontier.oracle.relay_oracle_v2._choose_team',nested):
+        with patch('robofrontier.oracle.relay_oracle._choose_team',nested):
             with self.assertRaisesRegex(RuntimeError,'Receiving candidate search exhausted'):choose_team(t,search_budget_s=0.)
         self.assertIsNone(t.stop_requested)
 
     def test_budget_returns_a_verified_best_candidate_but_user_stop_does_not(self):
         from unittest.mock import patch
         from robofrontier.oracle.trial import Trial,ReferenceStopped
-        from robofrontier.oracle.relay_oracle_v2 import handover_plan
+        from robofrontier.oracle.relay_oracle import handover_plan
         t=Trial.__new__(Trial);t.data=object();t.stop_requested=None
         witness=(np.array([0.,0.,1.]),0.,.5,{'future_waypoints':[]})
         def bounded(search,*args):
             search.relay_handover_best=witness
             search.check_stop()
-        with patch('robofrontier.oracle.relay_oracle_v2._handover_plan',bounded):
+        with patch('robofrontier.oracle.relay_oracle._handover_plan',bounded):
             self.assertIs(handover_plan(t,'payload',[],.44,1,search_budget_s=0),witness)
             t.stop_requested=lambda:True
             with self.assertRaises(ReferenceStopped):handover_plan(t,'payload',[],.44,1,search_budget_s=0)
@@ -500,7 +500,7 @@ class RelayReferenceTests(unittest.TestCase):
         from robofrontier.oracle.trial import Trial
         from robofrontier.tasks.evaluate import Monitor
         from robofrontier.physics.robot_control import PandaArm
-        from robofrontier.oracle.relay_oracle_v2 import carry_clear
+        from robofrontier.oracle.relay_oracle import carry_clear
         case=next(c for c in cases() if c['id']=='relay-a08-d1')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data;mujoco.mj_forward(t.model,t.data)
@@ -521,8 +521,8 @@ class RelayReferenceTests(unittest.TestCase):
         from robofrontier.oracle.trial import Trial
         from robofrontier.tasks.evaluate import Monitor
         from robofrontier.physics.robot_control import PandaArm,matrix_quat,rotation_vector
-        from robofrontier.oracle.relay_oracle_v2 import carry_clear
-        from robofrontier.oracle.verify_floating_dial_oracle import axis_rotation
+        from robofrontier.oracle.relay_oracle import carry_clear
+        from robofrontier.oracle.geometry import axis_rotation
         case=next(c for c in cases() if c['id']=='relay-a08-d1')
         source=Workstation(directory(case));t=Trial.__new__(Trial)
         t.model,t.data=source.model,source.data
@@ -532,7 +532,7 @@ class RelayReferenceTests(unittest.TestCase):
         t.arms={a:PandaArm(t.model,t.data,a) for a in t.task['arms']};t.monitor=Monitor(t)
         before=t.data.qpos.copy();initial=t.data.site_xmat[t.arms['A'].site].reshape(3,3).copy();seen=[]
         def inspect(world,robot,point,rotation,seed=None):seen.append(rotation.copy());return None
-        with patch('robofrontier.oracle.relay_oracle_v2.screened_ik',inspect):
+        with patch('robofrontier.oracle.relay_oracle.screened_ik',inspect):
             self.assertFalse(carry_clear(t,'payload_01',('A','B'),t.data.body('payload_01').xpos.copy(),0.))
         # 0.2 rad uses four samples. The first step may unwind only 0.05 rad,
         # rather than teleporting the entire existing pitch/roll to zero.

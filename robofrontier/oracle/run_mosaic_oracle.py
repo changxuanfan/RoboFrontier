@@ -67,7 +67,7 @@ def run(args):
         equivalent=check_prefix_candidate(args.concurrency_source,scene)
         if not equivalent['equivalent_for_command_candidate']:
             raise ValueError('Concurrency source task and physical input equivalence failed: '+str(equivalent['differences']))
-        from robofrontier.oracle.mosaic_concurrency import build_plan
+        from robofrontier.oracle.mosaic_run import build_plan
         concurrency=build_plan(args.concurrency_source)
         if concurrency['case_id']!=case['id']:
             concurrency['source_case_id']=concurrency['case_id']
@@ -81,8 +81,8 @@ def run(args):
         streaming=check_prefix_candidate(args.streaming_source,ROOT/case['directory'])
         if not streaming['equivalent_for_command_candidate']:raise ValueError('Streaming physical input equivalence failed')
     if args.equivalent_replay_source:
-        from robofrontier.oracle.mosaic_replay import prepare
-        replay=prepare(args.equivalent_replay_source,ROOT/case['directory'])
+        from robofrontier.oracle.mosaic_run import prepare_replay
+        replay=prepare_replay(args.equivalent_replay_source,ROOT/case['directory'])
     sources={str(p.relative_to(ROOT)):p.read_bytes()
         for folder in ('robofrontier','scripts') for p in (ROOT/folder).rglob('*.py')}
     sources.update({'inputs/harness.json':args.harness.read_bytes(),'inputs/catalog.json':args.catalog.read_bytes()})
@@ -138,8 +138,8 @@ def run(args):
                 from robofrontier.oracle.mosaic import solve
                 world.event('mosaic_stream_replanned_from_actual_state',scope='Owner reviewed actual target repair; no prefix replay')
                 return solve(world,**kwargs)
-            from robofrontier.oracle.mosaic_stream import execute
-            return execute(world,args.streaming_source,streaming,max_goals=args.max_goals,prefix_goals=args.stream_prefix_goals,
+            from robofrontier.oracle.mosaic_run import execute_stream
+            return execute_stream(world,args.streaming_source,streaming,max_goals=args.max_goals,prefix_goals=args.stream_prefix_goals,
                 finish_after_source=args.finish_after_source)
         solve_kwargs['solver']=solve_streaming
     elif concurrency is not None:
@@ -153,11 +153,8 @@ def run(args):
                 from robofrontier.oracle.mosaic import solve
                 world.event('mosaic_concurrency_replanned_from_actual_state',scope='Owner reviewed physical repair; remaining matching uses actual state, no failed command stream replay')
                 return solve(world,**kwargs)
-            if args.concurrency_execution=='async':
-                from robofrontier.oracle.mosaic_async import execute_plan
-            else:
-                from robofrontier.oracle.mosaic_concurrency import execute_plan
-            return execute_plan(world,concurrency)
+            from robofrontier.oracle.mosaic_run import execute_plan, execute_plan_async
+            return (execute_plan_async if args.concurrency_execution=='async' else execute_plan)(world,concurrency)
         solve_kwargs['solver']=solve_concurrent
     elif replay is not None:
         write_json(trial.directory/'physical-equivalence.json',replay['equivalence'])
@@ -166,8 +163,8 @@ def run(args):
             if kwargs['resume']:
                 from robofrontier.oracle.mosaic import solve
                 return solve(world,**kwargs)
-            from robofrontier.oracle.mosaic_replay import execute
-            return execute(world,replay)
+            from robofrontier.oracle.mosaic_run import execute_replay
+            return execute_replay(world,replay)
         solve_kwargs['solver']=solve_replay
     try:
         trial.wait(.6);trial.snapshot('initial');review._status('running')

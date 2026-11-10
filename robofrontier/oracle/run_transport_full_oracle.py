@@ -46,7 +46,7 @@ def main():
         os.execve(sys.executable,args,env)
     from robofrontier.oracle.trial import Trial,ReferenceStopped
     from robofrontier.oracle.transport_full_oracle import solve
-    from robofrontier.oracle.transport_recovery import EngineeringRecovery
+    from robofrontier.oracle.recovery import EngineeringRecovery
     from robofrontier.oracle.budget import ExplicitPauseBudget
     from robofrontier.runtime.setup import load_harness,write_json
     cases=json.loads(a.catalog.read_text())['cases'];case=next(c for c in cases if c['id']==a.case)

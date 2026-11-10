@@ -537,7 +537,7 @@ def carry(t,ident,team,point,yaw,landing=False,target_rotation=None):
   if landing or not clear_free_idle_blocker(t,ident,team,point,yaw,target_rotation):
    raise RuntimeError('Actual carry path no longer clears '+ident+': '+str(t.relay_screen_reason))
  body=t.data.body(ident);p0=body.xpos.copy();r0=body.xmat.reshape(3,3).copy();r1=carry_rotation(yaw,target_rotation)
- from robofrontier.oracle.verify_floating_dial_oracle import axis_rotation
+ from robofrontier.oracle.geometry import axis_rotation
  from ..physics.robot_control import rotation_vector
  delta=rotation_vector(r1,r0);angle=float(np.linalg.norm(delta));axis=delta/angle if angle>1e-9 else np.array([0.,0,1.])
  offsets={a:(r0.T@(t.data.site_xpos[t.arms[a].site]-p0),r0.T@t.data.site_xmat[t.arms[a].site].reshape(3,3)) for a in team}
@@ -799,7 +799,7 @@ def carry_clear(t,ident,team,point,yaw,landing=False,target_rotation=None):
  """
  from ..physics.robot_control import matrix_quat
  from ..physics.robot_control import rotation_vector
- from robofrontier.oracle.verify_floating_dial_oracle import axis_rotation
+ from robofrontier.oracle.geometry import axis_rotation
  t.relay_carry_endpoint=None;t.relay_screen_reason=None
  body=t.data.body(ident);p0=body.xpos.copy();r0=body.xmat.reshape(3,3).copy();r1=carry_rotation(yaw,target_rotation)
  delta=rotation_vector(r1,r0);angle=float(np.linalg.norm(delta));axis=delta/angle if angle>1e-9 else np.array([0.,0,1.])

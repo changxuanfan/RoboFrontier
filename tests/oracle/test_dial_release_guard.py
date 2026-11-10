@@ -1,7 +1,7 @@
 """A failed aperture must not be followed by a captured-rotor withdrawal."""
 from types import SimpleNamespace
 import unittest
-from robofrontier.oracle.dial_oracle import Manipulator
+from robofrontier.oracle.dial import BaselineManipulator as Manipulator
 
 
 class DialReleaseGuardTests(unittest.TestCase):

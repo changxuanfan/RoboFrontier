@@ -79,7 +79,7 @@ def main():
     catalog=root/'benchmark/dial/catalog.json'
     reexec_entry(root,a.output,Path(__file__),sys.argv[1:],harness,catalog)
     from robofrontier.oracle.trial import Trial
-    from robofrontier.oracle.dial_best_oracle import BestMonitor,solve
+    from robofrontier.oracle.dial import BestMonitor,solve
     from robofrontier.runtime.setup import write_json
     cat=json.loads((root/'inputs/catalog.json').read_text())
     case=next(c for c in cat['cases'] if c['id']==a.case and c['family']=='dial')
@@ -101,7 +101,7 @@ def main():
     report=dict(case_id=a.case,passed=False,scope='Full blind BEST-only Oracle; no mechanical warmup or historical command prefix',protocol=protocol,
         budgets=dict(wall_s=a.wall_s or None,sim_s=a.sim_s or None,action_batches=a.actions or None,explicit_guesses=a.guesses or None),
         new_physics_integration=True,solver_answer_input=False,mechanical_oracle_geometry_privileged=True,
-        new_evaluator_sha256=hashlib.sha256(b''.join((root/'robofrontier'/name).read_bytes() for name in ('oracle/dial_best_worker.py','tasks/dial.py','oracle/dial_best_oracle.py'))).hexdigest())
+        new_evaluator_sha256=hashlib.sha256(b''.join((root/'robofrontier'/name).read_bytes() for name in ('oracle/dial_best_worker.py','tasks/dial.py','oracle/dial.py'))).hexdigest())
     write_json(trial.directory/'run-limits.json',report['budgets'])
     try:
         trial.event('blind_protocol_start',protocol=protocol['version'])

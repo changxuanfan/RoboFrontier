@@ -7,7 +7,12 @@ LATER_OPTIONS = {'runtime': ('codex_tool_backend',),
                  'slurm': ('auth_mode', 'credential_store', 'egress_mode', 'egress_root', 'egress_wait_s', 'egress_pause_s')}
 
 
+LATER_SECTIONS = ('paths',)
+
+
 def without_later_options(config):
+    for section in LATER_SECTIONS:
+        config.pop(section, None)
     for section, names in LATER_OPTIONS.items():
         for name in names:
             del config[section][name]

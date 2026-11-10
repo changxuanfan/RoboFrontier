@@ -58,8 +58,8 @@ def main():
         if a.owner_start:command.append('--owner-start')
         os.execve(sys.executable,command,env)
     from robofrontier.oracle.trial import Trial,ReferenceStopped
-    from robofrontier.oracle import relay_oracle_v2 as ref
-    from robofrontier.oracle.relay_live_recovery import RelayLiveRecovery
+    from robofrontier.oracle import relay_oracle as ref
+    from robofrontier.oracle.recovery import RelayLiveRecovery
     from robofrontier.oracle import relay_pipeline
     frozen=Path(os.environ['ROBOFRONTIER_ORACLE_FROZEN_ROOT']);snap=json.loads((frozen/'snapshot.json').read_text());sources={n:(frozen/n).read_bytes() for n in snap['files']}
     if not (all(hashlib.sha256(payload).hexdigest()==snap['files'][n] for n,payload in sources.items())):

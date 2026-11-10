@@ -11,7 +11,7 @@ import numpy as np
 
 from robofrontier.oracle.relay_pipeline import simultaneous_carry_clear,carry_chunk,Frontier,packing_shift,solve,extra_prefix_plan,plan_transfer,route_progress,direct_terminal_plan
 from tests.tasks.test_relay_descent_recovery import recorded_world
-from robofrontier.oracle import relay_oracle_v2 as ref
+from robofrontier.oracle import relay_oracle as ref
 
 
 class RelayPipelineTests(unittest.TestCase):

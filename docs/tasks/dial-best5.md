@@ -118,9 +118,9 @@ cover GPU pose synchronization, station transforms/subsets, terminal-state
 ownership, and uncertain-operation fences. Review common ancestry and merge
 small changes rather than overwriting whole shared files with a family branch.
 
-`dial_best_oracle` still uses active holding/geometry implementations through
-`dial_hold_oracle -> dial_oracle_v2 -> dial_oracle` and geometry helpers in
-`verify_floating_dial_oracle`. Do not remove an implementation merely because
+`oracle/dial.py` holds the Oracle's four layers, each built on the one before
+(BaselineManipulator, Manipulator, HoldingManipulator, BestManipulator), with geometry
+helpers in `oracle/geometry.py`. Do not remove an implementation merely because
 its name looks old. Preserve both original recording batches, failed/interrupted
 attempts, recovery provenance, private pairings, frozen source, and required
 assets. Delivered videos keep their actual edit/scene/frame maps; new manifests

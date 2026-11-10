@@ -12,7 +12,7 @@ import mujoco
 import numpy as np
 
 from ..physics.robot_control import advance_rotation, matrix_quat, rotation_vector
-from . import transport_oracle_v2 as ref
+from . import transport_oracle as ref
 from .trial import joint_edge_clear
 from .geometry import rz
 

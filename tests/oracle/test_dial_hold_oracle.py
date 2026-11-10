@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import tempfile
 import unittest
 import numpy as np
-from robofrontier.oracle.dial_hold_oracle import BlindDecoder, Channel, HoldingManipulator
+from robofrontier.oracle.dial import BlindDecoder, Channel, HoldingManipulator
 
 
 class BlindHoldTests(unittest.TestCase):

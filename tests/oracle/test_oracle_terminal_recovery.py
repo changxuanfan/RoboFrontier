@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
-from robofrontier.oracle.dial_oracle_v2 import Manipulator
+from robofrontier.oracle.dial import Manipulator
 from robofrontier.oracle.mosaic_run import require_known_idle
 from robofrontier.oracle.mosaic import check_process
 from robofrontier.oracle.trial import ProcessViolation, Trial
@@ -20,7 +20,7 @@ def terminal_task():
 
 class OracleTerminalRecoveryTests(unittest.TestCase):
     def test_dial_regrasp_uses_measured_stem_projection_with_unchanged_tolerance(self):
-        from robofrontier.oracle.dial_best_oracle import BestManipulator
+        from robofrontier.oracle.dial import BestManipulator
         angle=.008
         stem_rotation=np.array([[1.,0.,0.],[0.,np.cos(angle),-np.sin(angle)],
                                 [0.,np.sin(angle),np.cos(angle)]])
@@ -91,7 +91,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
             manipulator.clear_released_crank({'id':'dial'},np.zeros(3),np.eye(3))
 
     def test_dial_actuator_does_not_reject_a_retained_historical_event(self):
-        from robofrontier.oracle.dial_oracle import Manipulator as BaseManipulator
+        from robofrontier.oracle.dial import BaselineManipulator as BaseManipulator
         manipulator=object.__new__(BaseManipulator)
         manipulator.t=NS(task=terminal_task(),monitor=NS(violations=[{'kind':'contact'}]))
         self.assertFalse(manipulator.rule_failure())
@@ -99,7 +99,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         self.assertTrue(manipulator.rule_failure())
 
     def test_relay_drop_history_does_not_override_current_measured_support(self):
-        from robofrontier.oracle.relay_oracle_v2 import support_lost
+        from robofrontier.oracle.relay_oracle import support_lost
         state=dict(dropped=True,rod_geoms={1})
         trial=NS(task=terminal_task(),wait=Mock(),
                  monitor=NS(relay=NS(states={'part':state}),bilateral=lambda *_,**__:{'A','B'}))
@@ -136,16 +136,16 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         self.assertEqual(current,{'kept':'b'});trial.event.assert_called_once()
 
     def test_relay_known_opening_undershoot_needs_real_separation(self):
-        from robofrontier.oracle.relay_oracle_v2 import observed_wider_release
+        from robofrontier.oracle.relay_oracle import observed_wider_release
         trial=NS(task=terminal_task(),arms={'A':NS(job=None,grasp_force=None)})
         feedback=dict(status='failed',reason='Requested opening not reached',direction='opening',actual_width_m=.066)
-        with patch('robofrontier.oracle.relay_oracle_v2.arm_payload_contact',return_value=False):
+        with patch('robofrontier.oracle.relay_oracle.arm_payload_contact',return_value=False):
             self.assertTrue(observed_wider_release(trial,'part','A',feedback,.072))
             self.assertFalse(observed_wider_release(trial,'part','A',dict(feedback,status='uncertain'),.072))
             trial.task={}
             self.assertFalse(observed_wider_release(trial,'part','A',feedback,.072))
         trial.task=terminal_task()
-        with patch('robofrontier.oracle.relay_oracle_v2.arm_payload_contact',return_value=True):
+        with patch('robofrontier.oracle.relay_oracle.arm_payload_contact',return_value=True):
             self.assertFalse(observed_wider_release(trial,'part','A',feedback,.072))
 
     def test_contact_exit_does_not_allow_new_pairs_or_deeper_penetration(self):
@@ -219,7 +219,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         self.assertNotIn('A',trial.held)
 
     def test_relay_terminal_release_uses_current_support_not_old_drop_flag(self):
-        from robofrontier.oracle import relay_oracle_v2 as relay
+        from robofrontier.oracle import relay_oracle as relay
         task=terminal_task();task.update(completion={'allow_goal_payload_contact':True},
                                          mechanism={'cross_section_m':[.03,.03]})
         trial=NS(task=task,held={'A':'part','B':'part'},wait=Mock(),event=Mock(),

@@ -4,7 +4,7 @@ from unittest.mock import Mock,patch
 import numpy as np
 import json
 from tests.tasks.test_relay_descent_recovery import recorded_world
-from robofrontier.oracle import relay_oracle_v2 as ref
+from robofrontier.oracle import relay_oracle as ref
 
 
 class RelayTerminalContactTests(unittest.TestCase):

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from robofrontier.oracle.transport_recovery import EngineeringRecovery
+from robofrontier.oracle.recovery import EngineeringRecovery
 
 
 class EngineeringRecoveryTests(unittest.TestCase):
@@ -97,7 +97,7 @@ class EngineeringRecoveryTests(unittest.TestCase):
                 data=SimpleNamespace(body=lambda _:SimpleNamespace(xpos=[0.,0.,.8])),
                 stations={r:dict(base_position_m=[0.,0.,.8]) for r in 'AB'},
                 monitor=SimpleNamespace(result=lambda:dict(assignments={})),finger_contacts=lambda r,n:r=='A')
-            with patch('robofrontier.oracle.transport_recovery.goal_coverage',return_value=['B']),patch('robofrontier.oracle.transport_recovery.candidate_graph',return_value={'A':['B'],'B':['A']}):
+            with patch('robofrontier.oracle.recovery.goal_coverage',return_value=['B']),patch('robofrontier.oracle.recovery.candidate_graph',return_value={'A':['B'],'B':['A']}):
                 with self.assertRaisesRegex(ValueError,'available.*route'):handler._retry(t,runtime,'old',{})
                 runtime.recover.assert_not_called();self.assertEqual(old['robots'],{'A','B'})
                 runtime.leases.pop('B');handler._retry(t,runtime,'old',{})
@@ -158,7 +158,7 @@ class EngineeringRecoveryTests(unittest.TestCase):
             t=SimpleNamespace(arms={'A':SimpleNamespace(grasp_force=None)},held={},execute=Mock())
             handler._retry(t,runtime,'old',dict(robots=['A'],resume_goal=False,
                 steps=[dict(robot='A',operation='gripper',parameters=dict(mode='move',width_m=.072))]))
-            with patch('robofrontier.oracle.transport_recovery.execute_job') as execute_goal:
+            with patch('robofrontier.oracle.recovery.execute_job') as execute_goal:
                 with self.assertRaises(PreparationComplete):runtime.recover.call_args.args[3]()
                 execute_goal.assert_not_called()
             t.execute.assert_called_once()
@@ -172,7 +172,7 @@ class EngineeringRecoveryTests(unittest.TestCase):
             t=SimpleNamespace(arms={r:SimpleNamespace(grasp_force=50. if r=='B' else None) for r in 'ABC'},
                 held={r:'item' for r in 'ABC'},event=Mock())
             handler._retry(t,runtime,'old',dict(robots=list('ABC'),resume_goal=False))
-            with patch('robofrontier.oracle.transport_recovery._robot_payload_contacts',side_effect=lambda _,r,n:r=='C'):
+            with patch('robofrontier.oracle.recovery._robot_payload_contacts',side_effect=lambda _,r,n:r=='C'):
                 with self.assertRaises(PreparationComplete):runtime.recover.call_args.args[3]()
             self.assertEqual(t.held,{'B':'item','C':'item'})
 

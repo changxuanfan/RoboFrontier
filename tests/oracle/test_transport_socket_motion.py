@@ -15,7 +15,7 @@ from robofrontier.physics.robot_control import PandaArm
 from robofrontier.oracle.trial import Trial
 from robofrontier.tasks.evaluate import Monitor
 from robofrontier.oracle import transport_socket_motion as socket
-from robofrontier.oracle import transport_oracle_v2 as reference
+from robofrontier.oracle import transport_oracle as reference
 from robofrontier.oracle.transport_unit_motion import insertion_grasps
 
 ROOT=Path(__file__).resolve().parents[2]

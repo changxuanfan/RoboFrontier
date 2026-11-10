@@ -8,7 +8,7 @@ import math
 import time
 import numpy as np
 
-from . import transport_oracle_v2 as ref
+from . import transport_oracle as ref
 from .geometry import rz
 from ..physics.robot_control import matrix_quat
 

@@ -4,12 +4,12 @@ from types import SimpleNamespace
 from unittest.mock import Mock,patch
 import json
 import tempfile
-from robofrontier.oracle.mosaic_stream import completed_prefix,review_deliberation
+from robofrontier.oracle.mosaic_run import completed_prefix,review_deliberation
 
 
 class CompletedPrefixTests(unittest.TestCase):
     def test_closed_partial_source_hands_off_to_actual_target_progress_without_reparking(self):
-        from robofrontier.oracle.mosaic_stream import execute
+        from robofrontier.oracle.mosaic_run import execute_stream as execute
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);source=root/'source';source.mkdir();target=root/'target';target.mkdir();accepted={}
             (source/'executor-launch.json').write_text('immutable')
@@ -28,9 +28,9 @@ class CompletedPrefixTests(unittest.TestCase):
             def native(*args,**kwargs):
                 accepted['g']='cube';t.mosaic_protected_assignments=dict(accepted)
                 return dict(concurrent_operation_peak=1)
-            with patch('robofrontier.oracle.mosaic_stream.snapshot',side_effect=snapshot), \
-                 patch('robofrontier.oracle.mosaic_stream.build_plan',return_value=dict(jobs=[],source_assisted=True,total_goals=1)), \
-                 patch('robofrontier.oracle.mosaic_async.execute_plan',side_effect=native), \
+            with patch('robofrontier.oracle.mosaic_run.snapshot',side_effect=snapshot), \
+                 patch('robofrontier.oracle.mosaic_run.build_plan',return_value=dict(jobs=[],source_assisted=True,total_goals=1)), \
+                 patch('robofrontier.oracle.mosaic_run.execute_plan_async',side_effect=native), \
                  patch('robofrontier.oracle.mosaic.solve',return_value={'reference_placed':2}) as finish:
                 result=execute(t,source,{'equivalent_for_command_candidate':True},finish_after_source=True)
             self.assertEqual(result['reference_placed'],2);self.assertTrue(finish.call_args.kwargs['resume'])

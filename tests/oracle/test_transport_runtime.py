@@ -36,7 +36,7 @@ class TransportRuntimeTests(unittest.TestCase):
         import threading
         from pathlib import Path
         from tempfile import TemporaryDirectory
-        from robofrontier.oracle.transport_recovery import EngineeringRecovery
+        from robofrontier.oracle.recovery import EngineeringRecovery
         from robofrontier.oracle.budget import ExplicitPauseBudget
         from robofrontier.runtime.setup import write_json
         with TemporaryDirectory() as tmp:

@@ -87,8 +87,8 @@ nine-case batch runner, `scripts/run_relay_nine_oracles.py`, was removed on 2026
 | Module, under `robofrontier/` unless stated | Responsibility |
 | --- | --- |
 | `suite/relay_contract.py` | Base rules, projections, input checks and default native paths |
-| `suite/relay_oracle_v2.py`, `suite/relay_pipeline.py` | Private reference planning and parallel execution frontiers |
-| `suite/relay_live_recovery.py` | Typed legacy recovery with request/execution evidence |
+| `oracle/relay_oracle.py`, `oracle/relay_pipeline.py` | Private reference planning and parallel execution frontiers |
+| `oracle/recovery.py` (`RelayLiveRecovery`) | Typed recovery with request/execution evidence |
 | `suite/relay_user_goal_policy.py`, `suite/relay_contact_escape.py`, `suite/relay_donor_staging.py` | Goal release, bounded contact escape and donor clearing |
 | `suite/relay_observation_state.py` | Privileged readonly state evidence |
 | `suite/relay_scene.py`, `suite/relay_underslung.py`, `suite/rigid_relay.py` | Geometry and retained builders |
