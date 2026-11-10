@@ -279,7 +279,10 @@ def argument_parser(*, prog=None):
         if name == 'run':
             p.add_argument('--engineering', action='store_true', help='Explicitly run an unqualified Claude engineering draft')
             p.add_argument('--durable', action='store_true',
-                           help='Run under the macOS user launchd service, so it outlives this terminal')
+                           help='Run under the macOS user launchd service with Interactive priority, so it outlives '
+                                'this terminal (the macOS default for a fresh batch)')
+            p.add_argument('--foreground', action='store_true',
+                           help='On macOS, run in this process at its own priority instead of the launchd service')
             p.add_argument('--continue', dest='continuing', action='store_true',
                            help='Continue a batch whose supervisor died; started runs continue once (docs/running/run-segments.md)')
     p = sub.add_parser('collect', help='Collect stopped native sessions, motion and evidence')
@@ -374,7 +377,10 @@ def main(argv=None):
                 emit(submit(config, args.output, queue=args.queue, engineering=args.engineering))
             else:
                 emit({'batch': str(prepare(args.output, config)), 'model_calls': 0})
-        elif args.command == 'run' and args.durable:
+        elif args.command == 'run' and (args.durable or (sys.platform == 'darwin' and not args.foreground
+                                                          and not args.continuing)):
+            # On macOS a fresh batch runs under launchd with ProcessType=Interactive by default.
+            if args.foreground: raise ValueError('--durable and --foreground are exclusive')
             if args.continuing: raise ValueError('Continue a batch in the foreground; --durable starts only fresh batches')
             from .durable import submit as submit_durable
             emit(submit_durable(args.batch, engineering=args.engineering))
