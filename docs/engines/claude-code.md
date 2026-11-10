@@ -1,14 +1,11 @@
-# Native Claude Code engine
+# Claude Code engine
 
-The unified integration retains the native Claude CLI/MCP implementation beside
-Codex. It does **not** admit scored Claude tasks. Current four-topology
-engineering entries can start real simulation and potentially billable inference
-only when explicitly invoked. Provider profiles are candidates, not compatibility
-certificates. Native permanent Worker engineering is documented in
-[standing teams](#standing-teams); full scored qualification remains a gate. See
-the [engine overview](README.md) for the component map, shared request IDs,
-recovery and reporting, [providers](providers.md) for the authentication matrix,
-and [the current acceptance ledger](../archive/unified-main.md).
+Claude Code runs every policy role as a native Claude CLI session with the robot tool over MCP,
+beside Codex and with the same inputs, rules, robot tool text and runtime. All four topologies
+run (centralized, adaptive, hierarchical, peer). A run needs passed precheck receipts for its
+profile and the pinned CLI version (2.1.316); see [Provider prechecks](#provider-prechecks).
+The [engine overview](README.md) has the component map, shared request IDs, recovery and
+reporting; [providers](README.md#providers) the authentication matrix.
 
 ## Current startup, time and finish contract
 
@@ -22,13 +19,11 @@ started task prompt (see [initial roles and START](#initial-roles-and-start)).
 Frozen `ready_barrier_v1` runs keep their historical READY/idle startup and must
 not be reinterpreted as direct-start experiments.
 
-The default task limit is 86,400 seconds from persisted START. A separately
-selected engineering stop does not rewrite that public limit. Normal policy
-turns have no separate default timeout; startup, RPC, tool waits and delegate
-fork setup still have their own bounds. Host creation time is not a second
-24-hour experiment clock. `run-engineering --startup-timeout-s` defaults to
-120 seconds; the unified TOML startup default is 600 seconds. Record the entry
-and its frozen settings rather than treating these as one parameter.
+The limit is 24 hours of active running time (`run_protocol.clock: active_time_v1`): outages,
+usage-limit pauses, host sleep and the gaps between segments do not count, and the world scores
+the run at the cutoff ([continuation](../running/continuation.md#time)). Normal policy turns have
+no separate timeout; startup, RPC, tool waits and delegate fork setup have their own bounds. The
+startup timeout is `batch.startup_timeout_s` in the configuration (600 s by default).
 
 The shared [policy rules](../../prompts/rules.md) require continued work and
 recovery while unfinished. Use `finish` after public evidence supports completion,
@@ -37,11 +32,9 @@ actions and delegation closure, and the private scorer evaluates the terminal
 world. Accepted finish does not imply success. Ending a CLI turn or returning a
 child does not itself finish the task. Dial retains unlock-once completion.
 
-Realtime MP4 is off by default. Observations and motion are still recorded.
-Legacy `prepare-draft --record-video` enables MP4 and requires FFmpeg/ffprobe;
-engineering sealing checks the stream and decodes its first frame. This is not
-full-file decode qualification. Requested video that cannot be verified requires
-review; expected absence when disabled is not a task failure.
+Real-time MP4 is off by default (`render.record_realtime_video`); observations and motion are
+always recorded. With it on, FFmpeg and ffprobe are required, and sealing checks the stream and
+decodes its first frame. Requested video that cannot be verified needs review.
 
 ## Installation
 
@@ -60,7 +53,7 @@ uv sync --locked --extra oracle
 claude --version
 .venv/bin/robofrontier bootstrap
 .venv/bin/robofrontier plan --engine claude --profile haiku --level 1 --min-arms --parallel 4
-.venv/bin/robofrontier prepare --engine claude --profile haiku --level 1 --min-arms --parallel 4 --render native --output runs/engineering/claude-current-l1
+.venv/bin/robofrontier prepare --engine claude --profile haiku --level 1 --min-arms --parallel 4 --render native --output runs/policy/claude-l1
 ```
 
 The renderer example is for macOS. On Linux select `--render nvidia` or
@@ -72,14 +65,14 @@ installation is `python -m robofrontier.batch.handoff setup-assets --archive
 ## Authentication
 
 The model catalog is `the `claude` section of `configs/models.json``; every profile and its
-credential is listed in the [authentication matrix](providers.md#authentication-matrix).
+credential is listed in the [authentication matrix](README.md#authentication-matrix).
 Create the ignored `.env` without replacing an existing file
 ([credentials file](README.md#credentials-file)), then edit it locally.
 
 `haiku` and `opus` use `ANTHROPIC_API_KEY`. Other API profiles use their
 catalog's credential variable; Qwen additionally uses
 `DASHSCOPE_ANTHROPIC_BASE_URL` matching the actual account/region (see
-[Claude-compatible endpoints](providers.md#claude-compatible-endpoints)).
+[Claude-compatible endpoints](README.md#claude-compatible-endpoints)).
 Existing process environment values take precedence. Keep keys out of chat,
 TOML and Git. API profiles pass only their selected credential/endpoint into the
 native CLI; `--bare` avoids reading native OAuth.
@@ -105,7 +98,7 @@ See [Anthropic's token instructions](https://code.claude.com/docs/en/authenticat
 ```sh
 robofrontier plan --engine claude
 robofrontier prepare --engine claude --render native \
-  --cases transport-a04-d1 --output runs/engineering/haiku-token-example
+  --cases transport-a04-d1 --output runs/policy/haiku-token-example
 ```
 
 The engine-only default applies when neither the user TOML nor the explicit
@@ -131,7 +124,7 @@ claude auth login --claudeai
 claude auth status --json
 robofrontier prepare --engine claude --profile haiku_subscription \
   --topology adaptive --render native --cases transport-a04-d1 \
-  --output runs/engineering/haiku-subscription-example
+  --output runs/policy/haiku-subscription-example
 ```
 
 `haiku_subscription` uses the default native login namespace. It requires the
@@ -189,7 +182,7 @@ directory as private and inspect it before sharing.
 ## Cost allowances and the shared ledger
 
 `--turn-budget-usd` and `--task-budget-usd` are optional and unset by default;
-new default engineering runs have no dollar ceiling. Without a turn allowance,
+new runs have no dollar ceiling. Without a turn allowance,
 `--max-budget-usd` is not injected into the Claude CLI. Reported cost is still
 retained. The run-local budget ledger is shared by the Adaptive Controller
 and its children; a child's fork is its first turn. Missing cost without a ceiling is recorded as
@@ -227,7 +220,7 @@ cost unknown. Neither an old stopped world's budget nor its outcome is repaired.
 Native modelUsage metadata remains unmodified and may contain cumulative usage;
 it is not an independent invoice or another amount to add to invocation cost.
 
-The genuine bounded engineering trial exposed both cumulative-cost duplication
+A bounded trial on 2026-10-28 exposed both cumulative-cost duplication
 and confusion about the native CLI ceiling. It completed eight physical actions
 and was stopped and sealed before repair. The counter regression uses the actual
 native CLI against a synthetic local provider: the sum of fresh text, image,
@@ -273,7 +266,7 @@ reference inputs remain PNG and retain their signed bytes; runtime camera
 observations use their separately frozen image profile. This distinction does
 not authorize rewriting source textures or old reference hashes.
 
-The 2026-10-28 offline Level 1 preparation covered twelve drafts. Three Mosaic
+The 2026-10-28 offline Level 1 preparation covered twelve runs. Three Mosaic
 scales each exposed a target image; three Dial scales each exposed three reference
 images. A real CLI/local synthetic model check confirmed exact image bytes for
 the smallest Mosaic and Dial cases through MCP. It did not test real model
@@ -314,7 +307,7 @@ with Landlock and is skipped elsewhere.
 
 General Claude `delegate-bind` remains closed. Transcript-prefix equality by
 itself cannot show that a trusted host created a child at the intended time or
-bound the correct MCP authority. The internal Adaptive engineering path claims
+bound the correct MCP authority. The Adaptive host claims
 a delegation, checks the parent's outstanding native tool call and binds the
 delegation to that unique unmatched call
 ([request binding](README.md#new-requests-queries-and-delegation)). It pins the
@@ -378,53 +371,17 @@ A returned child's authorized report is available to the Controller via
 The report is model-authored public evidence, not private evaluation. Missing
 return, mismatched references or an oversized report does not expose a body.
 
-## Verified native CLI observations, 2026-10-28
-
-The following local observations used Claude CLI 2.1.312. They are reproducibility
-facts for that version, not claims about every future CLI release.
-
-1. `--resume P --fork-session` produced a child transcript containing the parent
-   message prefix in the same order with the same UUID/content. `sessionId` and
-   `promptId` differed; there was no explicit `forkedFrom` field. This is history
-   matching, not independent identity or authority proof.
-2. Adding `--session-id C` returned the specified child UUID, permitting the host
-   to persist the intended child identity before launch.
-3. Fork creation requires a CLI turn. Codex can `thread/fork` before binding,
-   activation and a first prompt; Claude cannot verify a nonexistent child
-   transcript before its creation turn. With CLI 2.1.316 the child transcript
-   is written as that turn starts, before the model replies (the model request
-   itself can precede the end of the write). A fork taken at a pending tool call
-   adds two rows after the parent's: an error result for the unanswered call and
-   a short assistant reply, then the turn's prompt. The adaptive path therefore
-   makes the delegate message the fork's prompt and holds the child's tools
-   behind a PreToolUse hook passed in `--settings` until activation (`--bare`
-   skips hooks, so a gated turn uses `--setting-sources ''`).
-4. Child history can reference images in the parent's `tool-results/` directory.
-   Preserve that directory during execution and include required references in
-   collection; deleting it can break inherited visual history.
-5. `MCP_TOOL_TIMEOUT` is in milliseconds. A two-second limit rejected a six-second
-   sleep; a twenty-second limit allowed a four-second call. `wait_events` can wait
-   600 seconds, so the host sets 660,000 ms for transport allowance. The native
-   CLI's default timeout was not measured by those tests.
-6. With `--bare`, `--tools ''` and `--strict-mcp-config`, the loopback service
-   observed only the requested model and the configured robot tool. That finite
-   observation does not prove all possible network behavior or provider identity.
-7. Without explicit stdin redirection, `claude -p` waited three seconds and
-   warned. `run_turn` now passes `stdin=DEVNULL`.
-
 ## Standing teams
 
-Claude engineering execution supports all four shared collaboration modes.
+Claude runs support all four shared collaboration modes.
 `single` and `adaptive` retain their existing hosts. `controller-worker` and
 `worker-worker` use native independent Claude sessions, the same role-bound robot
 MCP, and the existing runtime's durable mailbox, permissions, action IDs, wake
 leases and private evaluator. No Codex session interface is fabricated and no
 standing Worker is represented as an Adaptive fork.
 
-These are **engineering entries**, not qualified scored Claude benchmarks. A
-configured provider/profile and a local synthetic test do not prove a real
-provider's capability, throughput, billing or task success. See the
-[acceptance ledger](../archive/unified-main.md) for current evidence.
+A configured provider and profile and a local synthetic test do not prove a real provider's
+capability, throughput, billing or task success; the precheck receipts are the gate.
 
 ### Select and prepare
 
@@ -436,7 +393,7 @@ the four minimum-arm Level 1 tasks without model calls:
   --topology controller-worker --level 1 --min-arms --parallel 2
 .venv/bin/robofrontier prepare --engine claude --profile haiku --render native \
   --topology controller-worker --level 1 --min-arms --parallel 2 \
-  --output runs/engineering/claude-standing-l1
+  --output runs/policy/claude-standing-l1
 ```
 
 Use `--render nvidia` on Linux NVIDIA or explicit `--render cpu` for Linux
@@ -448,13 +405,11 @@ settings. Pinned policy assets are installed automatically when needed.
 When authorized to spend against the selected credentials, execute:
 
 ```sh
-.venv/bin/robofrontier run runs/engineering/claude-standing-l1
+.venv/bin/robofrontier run runs/policy/claude-standing-l1
 ```
 
-Substitute `worker-worker` to prepare peer Workers. The underlying native
-`claude_prepare prepare-draft --topology` spellings remain `hierarchical` and
-`peer`; the unified names describe the same roles. Native `run-engineering` also
-supports those drafts. Neither entry admits formal scored execution. Provider
+Substitute `worker-worker` to prepare peer Workers; inside a run the topologies are named
+`hierarchical` and `peer`. Provider
 preflight remains a separate explicit operation; it is never a side effect of
 planning or preparation.
 
@@ -479,7 +434,7 @@ receives its own public task/skill/role prompt with an explicit started statemen
 Reading, model startup turns, observation, planning and subsequent communication
 are inside this clock. Initial model replies are not a READY gate.
 `ready` remains an optional capability query. Old frozen READY-barrier runs keep
-their previous behavior; new standing drafts require `direct_team_v3`.
+their previous behavior; new standing teams use `direct_team_v3`.
 
 The host never fills a Worker's plan or decides allocations. Shared collaboration
 rules describe standing local authority. Workers remain available after local
@@ -503,13 +458,11 @@ turns inside one team. All roles operate independently after START, subject to
 shared runtime authority and the provider. Native configuration is per task;
 each role has its own native session and transcript within that task's store.
 
-The task deadline is the persisted START plus the frozen limit, normally 24
-hours. A separately selected engineering stop does not silently shorten that
-public task definition. Status and stop use the same commands as other batches:
+The limit is 24 hours of active time, as for every run. Status and stop use the same commands as other batches:
 
 ```sh
-.venv/bin/robofrontier status runs/engineering/claude-standing-l1
-.venv/bin/robofrontier stop runs/engineering/claude-standing-l1
+.venv/bin/robofrontier status runs/policy/claude-standing-l1
+.venv/bin/robofrontier stop runs/policy/claude-standing-l1
 ```
 
 Stop first cancels every role's model turn and waits, then uses the existing
@@ -536,69 +489,23 @@ identify roles from runtime metadata, so no Controller is required in peer mode.
 The normal ZIP archive, restore and replay path also applies. See
 [evidence storage](../running/evidence-storage.md) for locations and retention.
 
-### Measured coverage
-
-The native loopback integration runs actual Claude CLI/MCP with a synthetic
-model endpoint and synthetic world. Both topologies verified independent native
-sessions, an authorized Worker action, mailbox messages, wake dispatch and
-continuation of the same sessions. A confirmed wake may already be `observed`
-when inspected; it is not required to remain transiently `sent`.
-
-An explicitly enabled real MuJoCo test then ran each topology on Transport
-A04-D1 for 20 seconds after START. Both exercised an RGB observation, a completed
-Worker A gripper operation, messages and resumed native roles. Both stopped with
-sealed physical state, no unresolved actions and an exited owner. The tests did
-not ask a genuine model to solve Transport or claim a success rate.
+## Run, status and stop
 
 ```sh
-PYTHONPATH=tests:scripts .venv/bin/python -m unittest \
-  test_claude_standing_team test_claude_standing_team_integration
-ROBOFRONTIER_PHYSICS_STANDING=1 PYTHONPATH=tests:scripts \
-  .venv/bin/python -m unittest test_claude_standing_physics_smoke
+.venv/bin/robofrontier run runs/policy/claude-l1            # under launchd on macOS
+.venv/bin/robofrontier status runs/policy/claude-l1
+.venv/bin/robofrontier stop runs/policy/claude-l1
+.venv/bin/robofrontier continue runs/policy/claude-l1       # continue stopped runs by hand
 ```
 
-The opt-in test needs installed current assets, a renderer and Claude CLI, but
-uses only a local synthetic endpoint. It retains stopped physical evidence.
-These scoped checks do not qualify all families/scales, concurrent subscription
-refresh, production providers, cluster hardware or formal scored execution.
+`run` makes paid model calls. `batch.parallel` runs at most that many runs at once. Optional
+per-turn and per-task cost allowances (CLI-reported cost, not billing) are off by default.
 
-## Engineering run, status and stop
-
-The unified entry uses frozen settings:
-
-```sh
-.venv/bin/robofrontier run runs/engineering/claude-current-l1
-.venv/bin/robofrontier status runs/engineering/claude-current-l1
-.venv/bin/robofrontier stop runs/engineering/claude-current-l1
-```
-
-Run is potentially billable; invoke only with explicit authorization. The
-engine-specific multi-profile entry remains available for engineering inspection:
-
-```sh
-.venv/bin/python -m robofrontier.batch.claude_prepare run-engineering RUN_DIR --parallel 2 --wall-limit-s 1200 --startup-timeout-s 600
-.venv/bin/python -m robofrontier.batch.claude_prepare status-engineering RUN_DIR
-.venv/bin/python -m robofrontier.batch.claude_prepare stop-engineering RUN_DIR
-```
-
-The first command is a dry plan unless `--confirm-engineering-spend` is added.
-Use optional `--turn-budget-usd`/`--task-budget-usd` only when an allowance is
-intended. An engineering wall stop is measured after START, excludes startup
-and sealing, and requests orderly stop rather than an exact provider cutoff.
-The shorter of the applicable persisted task deadline and engineering stop
-controls execution. Waiting longer for startup changes neither allowance nor
-physical/model qualification.
-
-The draft prepare command freezes inputs for engineering inspection only; it is
-not a scored batch. The engineering run/status/stop commands are experimental;
-the real-provider preflight and full runner still require qualification.
-
-The launcher validates a draft, claims it once, starts an independent physical
+The runner validates a prepared run, claims it once, starts an independent physical
 owner and supervises existing role sessions. It never automatically restarts a
 world or an uncertain task. Sealing must explicitly report no unresolved actions;
 process exit alone is insufficient. If finish ended the world, a readable private
-`evaluation.json` with boolean `task_success` is required for clean engineering
-closure. `task_success: false` may be a normally sealed unsuccessful task.
+`evaluation.json` with boolean `task_success` is required for a clean closure. `task_success: false` may be a normally sealed unsuccessful task.
 Missing/corrupt evaluation remains `needs_review`.
 
 Batch startup prechecks all tasks, respects concurrency and does not restart
@@ -608,7 +515,7 @@ claimed tasks. Useful status values include:
 | --- | --- |
 | `stopped_before_start` | Stop arrived before a task was launched. |
 | `stopped` | Stop skipped unstarted tasks or sealed active tasks. |
-| `closed` | Engineering batch closure, not successful task scoring. |
+| `closed` | Every run closed; not a statement about task success. |
 | `needs_review` | At least one task has unresolved execution/sealing/cost evidence; takes precedence over normal closure. |
 | `claim_without_status_needs_review` | A launch claim exists without a status file; do not treat it as a fresh unlaunched batch. |
 | `supervisor_lost_needs_review` | Supervisor loss needs inspection; claims remain and replay is refused. |
@@ -653,7 +560,7 @@ failure in the same pause, or a turn that failed for another reason within it
 resent turn reads its saved work and original call IDs. Runs frozen without the
 clock never resend.
 
-Such runs also have the 48-hour [wall backstop](../running/run-segments.md#wall-backstop).
+Such runs also have the 48-hour [wall backstop](../running/continuation.md#wall-backstop).
 The world stops the run; the supervisor waits for it to close, reports
 `ended_by: wall_backstop` and leaves the run `needs_review` (its result is not
 counted). If the world has not ended the run 150 s after the backstop, even
@@ -675,8 +582,8 @@ turns up to 30 seconds to finish their reply and accounting. It neither dispatch
 another turn nor extends physical task execution. Adaptive children and standing
 roles are included. An external STOP interrupts this cleanup promptly; a timeout,
 unknown turn or failed cost record remains review-required. A recorded normal
-world end is checked before treating an exited physical owner as a crash. Normal
-engineering closure requires readable terminal evaluation and drained native
+world end is checked before treating an exited physical owner as a crash. A normal
+closure requires readable terminal evaluation and drained native
 turns. The independent task score is never inferred from process closure.
 
 ## Reports, frozen inputs and provenance
@@ -690,32 +597,21 @@ audit reports declare `benchmark_qualified: false`; Markdown also labels the
 unqualified state. Task success and permission to claim a scored benchmark are
 different facts.
 
-New drafts freeze their actual shared imports `robofrontier/batch/prepare.py`
-(with the rest of `robofrontier/`), `benchmark_handoff.py` and `tasks.py`,
-alongside native engine code and inputs.
-Reprepare after source changes. Older drafts do not gain that check retroactively.
+A prepared run freezes its source (`robofrontier/`, with `batch/claude_prepare.py`) beside its
+inputs; prepare again after source changes.
 At historical Claude commit `85f9b91`, a merge preview against main `c8b4137` had
 no text conflicts; this was not a completed merge or behavioral proof. That
 branch descends from Codex handoff and brings its ancestors. Eight engine-neutral,
 ten benchmark and 24 Node dispatcher checks passed then; current integration
 must use its own source comparison and regressions.
 
-## Provider prechecks and historical evidence
+## Provider prechecks
 
-The following records preserve the conditions and limitations of earlier
-engineering work. Dates, costs and source commits describe those attempts; they
-are not qualification for every later profile, CLI, account or public protocol.
-Some original attempts used the historical READY barrier. New direct-start runs
-must use their own prepared inputs and evidence.
-
-After `uv sync --locked --extra oracle`, use:
+A Claude run starts only with passed basic and blocked-parent precheck receipts for its profile,
+recorded with this CLI version and model configuration (`engines/claude/claude_readiness.py`).
+`robofrontier preflight --confirm-spend --max-budget-usd N` runs the basic one. Offline checks:
 
 ```sh
-.venv/bin/python -m robofrontier.batch.claude_prepare models
-.venv/bin/python -m robofrontier.batch.claude_prepare doctor --models haiku opus kimi qwen glm deepseek
-.venv/bin/python -m robofrontier.batch.claude_prepare plan --models kimi --level 1 --min-arms --parallel 4
-.venv/bin/python -m robofrontier.batch.claude_prepare prepare-draft --models kimi --level 1 --min-arms --output runs/engineering/claude-draft
-.venv/bin/python -m robofrontier.batch.claude_prepare prepare-draft --models opus --level 1 --min-arms --record-video --output runs/engineering/claude-video-draft
 .venv/bin/python -m robofrontier.engines.claude.claude_offline_probe
 ```
 
@@ -735,7 +631,7 @@ image must be identified, and a resumed turn. The receipt is `receipt.json`
 in the output directory; it records CLI version, requested and reported model,
 cost and per-check results, never key values. A profile passes only if all
 three checks pass within the cap. Choose the intended profile explicitly for
-each engineering draft and obtain the relevant precheck evidence for that
+each run and obtain the relevant precheck evidence for that
 profile; a Haiku precheck does not establish Opus or other provider readiness.
 
 The image color is chosen randomly from six colors for each new precheck; the
@@ -792,131 +688,3 @@ receipt consistency: it cannot authenticate a receipt, distinguish accounts
 sharing the same profile, establish provider model identity, or authorize a
 scored benchmark. `formal_execution_available` remains false.
 
-### Recorded precheck and trial results
-
-First Haiku preflight record (historical, before the Opus checks below):
-
-- `haiku` (`claude-haiku-5-5`, CLI 2.1.312) passed on 2026-10-28 with a total
-  cost of $0.000541 under a $0.5 cap. Its receipt is local at
-  `runs/engineering/claude-precheck/haiku-20261028-194259/receipt.json`
-  (`runs/` is gitignored). This covers only that profile, CLI version and cap.
-- The first Haiku record did not establish Opus readiness; the later separately
-  authorized Opus checks are recorded below. Other providers remain unqualified.
-
-On 2026-10-28, the `opus` profile also passed both real-provider prechecks
-using CLI 2.1.312: text, image/tool round trip, resume, idle fork, and fork
-while the parent was blocked on an image call. The CLI reported $0.030570
-and $0.021293 respectively; these are estimates, not the provider invoice.
-The local receipts matched the profile and CLI in `claude_readiness`.
-They do not qualify a physical task or a scored run, and the Chinese profiles
-remain unverified. Receipts and transcripts are local run artifacts, not part
-of the Git handoff.
-
-A subsequent separately authorized, unscored Opus adaptive transport engineering
-trial reached READY and received two observation images, but the startup turn
-did not end before the 120-second startup timeout. The owner sealed and exited
-with no unresolved actions; no physical action had started. The interrupted CLI
-turn did not produce a complete cost report, so actual charges require checking
-the provider invoice. Its event stream showed continued thinking progress after
-the observation; this alone does not establish the cause or a remedy. Do not
-replay the claimed run or treat this as a qualified benchmark result.
-
-A separately authorized second Opus engineering trial used a 600-second startup
-timeout and a $0.20 CLI turn allowance. Before START, the CLI exited nonzero
-with `error_max_budget_usd` and reported $0.4755318 for the turn. This exceeds
-the requested per-turn allowance and is not a provider invoice; the ledger
-retained the cost as uncertain. The physical owner sealed and exited with no
-unresolved actions and no robot actions. This observation demonstrates that
-the CLI allowance is not a hard spending cap, and the trial does not qualify a
-scored benchmark or explain the earlier interrupted turn's actual cost.
-The final CLI event reported per-model aggregate `modelUsage`: 13,707 output
-tokens including 13,299 thinking tokens, 39,118 cache-creation input tokens,
-and 28,889 cache-read input tokens. Its separate `usage` field contained lower
-counts; it should not be mistaken for the aggregate. New summaries retain both
-fields and the result subtype as reported, without converting them to a bill.
-
-A separately authorized Haiku 5.5 adaptive transport trial reached START and
-made physical tool calls through the real CLI and provider. It reached the
-300-second wall limit without a finish call, then sealed and exited with no
-unresolved actions. The runtime recorded 14 completed physical actions and one
-failed action; two further move requests were rejected before execution. No
-delegate was created and no task-success evaluation was produced. The CLI
-reported $0.011251435 for the completed startup turn; the interrupted active
-turn had unknown cost, requiring provider billing review. This unscored trial
-demonstrates live observations and actions, not task completion or full
-adaptive qualification.
-
-### Fresh-clone checks
-
-On 2026-10-28, a fresh local clone at commit `aa0473d` independently created
-its Python environment with `uv sync --locked --extra oracle`, downloaded the
-published `handoff-20261028` asset archive, verified its SHA-256 and restored
-3,467 files. It planned and prepared the four minimum-arm Level 1 Opus drafts;
-all four frozen-input checks returned no changes. The Claude test suite ran
-104 tests successfully with two opt-in physical tests skipped. The clone came
-from the local branch, not GitHub, and no real provider or scored run was tested.
-The same clone subsequently passed the opt-in four-way physical smoke: four
-distinct MuJoCo owners overlapped, camera images reached a synthetic loopback
-model, each delegate completed its synthetic motion and returned control, and
-all four worlds sealed. This is an engineering integration check, not evidence
-of real model capability or scored benchmark qualification.
-
-At commit `0b81cb5`, a new local clone again installed its own dependencies,
-downloaded and SHA-256-verified the GitHub Release archive, and restored 3,467
-files. It prepared the four minimum-arm Level 1 Opus drafts and verified all
-four frozen inputs. Claude-focused discovery completed 123 tests with six
-skipped. This was a clone of the local branch, because the Claude branch was
-not yet published; it did not call a real provider or run a scored task.
-
-## Historical local integration and physics checks
-
-Early local synthetic model/robot checks verified native session launch, image
-forwarding, resume, fixed role connection, READY/START and deterministic
-scheduling. They did not prove provider compatibility or real physics. Two old
-execution/action tests initially lacked `mosaic/four-arm-10x10/assets`; restoring
-the exact main-worktree scene let them pass then. This does not establish all
-historical assets for a new clone.
-
-The optional physical checks below use real MuJoCo owners and Claude CLI, but
-only a loopback synthetic model with a synthetic key. They make no paid calls
-and do not measure model ability. Install current pinned assets and choose a
-working graphics environment first. The combined invocation is in
-[regression and qualification boundaries](README.md#regression-and-qualification-boundaries).
-
-```sh
-ROBOFRONTIER_PHYSICS_SMOKE=1 .venv/bin/python -m unittest discover -s tests -p 'test_claude_physics_smoke.py' -v
-ROBOFRONTIER_PHYSICS_BATCH=1 .venv/bin/python -m unittest discover -s tests -p 'test_claude_parallel_physics_smoke.py' -v
-ROBOFRONTIER_PHYSICS_FINISH=1 .venv/bin/python -m unittest discover -s tests -p 'test_claude_finish_physics_smoke.py' -v
-ROBOFRONTIER_PHYSICS_SIGNAL=1 .venv/bin/python -m unittest discover -s tests -p 'test_claude_signal_physics_smoke.py' -v
-```
-
-The single-run check defaults to minimum-arm Level 1 Transport; set
-`ROBOFRONTIER_PHYSICS_CASE` for another released case. It verifies images reaching
-the synthetic model, Adaptive delegation/return, a synthetic 5 mm A-arm movement,
-deadline stop, sealing and owner exit. On 2026-10-28, each minimum-arm Level 1
-family passed separately. Setting `ROBOFRONTIER_PHYSICS_VIDEO=1` additionally
-checks recorded stream/first-frame decode; the historical Transport check
-passed but did not decode the entire video.
-
-The four-way check verified four independent MuJoCo owners alive concurrently,
-images, child displacement/return and sealing. It passed at `9f8709d` and again
-at `2972dba` after prompt changes. Predetermined synthetic responses are not
-real model collaboration or provider concurrency/rate/billing evidence.
-
-The finish check deliberately ended an unfinished centralized Transport case.
-Private evaluation correctly reported failure, exported audit retained it and
-requested-model identity remained unverified. It checks failure closure and
-scorer isolation, not successful completion or scored eligibility.
-
-Single- and four-task SIGTERM checks verified supervisor exit and each owner
-seal/exit under the tested timing. After cancellation-reservation changes,
-`9d58b2a` passed both checks; its Claude group ran 127 tests with seven optional
-checks skipped. A separate supervisor-loss test used fake tasks, retained launch
-claims and refused rerun; it does not prove that real physical children stop
-or seal after supervisor loss. None of these tests covers every crash, provider
-error, interruption boundary or long-run concurrent task.
-
-Real-provider successful task completion, true multi-role stability, current
-subscription operation and formal scored qualification remain required. Use the
-integration ledger for newer source-specific acceptance; preserved historical
-counts and receipts do not certify changed code automatically.

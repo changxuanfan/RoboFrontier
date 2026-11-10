@@ -120,7 +120,7 @@ class AdaptiveIntegrationTests(unittest.TestCase):
             model=http.server.ThreadingHTTPServer(('127.0.0.1',0),StubModel)
             profile={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
                      'base_url':f'http://127.0.0.1:{model.server_port}'}
-            prompt=run/'public/inputs/claude-controller.md'; prompt.write_text((ROOT/'prompts/archive/claude/controller.md').read_text())
+            prompt=run/'public/inputs/claude-controller.md'; prompt.write_text((ROOT/'tests/fixtures/prompts/claude-controller.md').read_text())
             launch=run/'private/inputs/claude.json'; launch.write_text(json.dumps({'profile':profile}))
             manifest_path=run/'private/inputs/manifest.json'; manifest=json.loads(manifest_path.read_text())
             for path in (prompt,launch): manifest['input_sha256'][str(path.relative_to(run))]=hashlib.sha256(path.read_bytes()).hexdigest()

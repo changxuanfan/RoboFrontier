@@ -318,7 +318,7 @@ class RuntimeStore:
             result=self._delivery_value(messages,events,len(rows)-len(messages),len(signals)-len(events),
                                         delivery_id if messages or events else None)
             if (rows or signals) and not (messages or events):
-                raise ValueError('Queued notice cannot fit delivery budget; engineering review required')
+                raise ValueError('Queued notice cannot fit delivery budget; operator review required')
             if len(packed(result).encode())>cfg['max_batch_bytes']:
                 raise ValueError('Delivery budget cannot fit envelope metadata')
             if messages or events:

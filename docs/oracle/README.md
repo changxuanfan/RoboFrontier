@@ -21,8 +21,8 @@ Legacy native entries remain available with their original timing semantics.
 .venv/bin/robofrontier oracle run runs/oracle/r14-two-goals
 ```
 
-`--physics-profile realtime-v2` (or `realtime-v1`) freezes that physics profile into the
-prepared harness; without it an Oracle runs full physics. Plan is read-only. Prepare installs the pinned policy assets when needed and
+An Oracle runs on its own copy of each case (`benchmark/oracle/<case>/`), with the physics its
+recordings were made with; the release physics does not apply to it. Plan is read-only. Prepare installs the pinned policy assets when needed and
 verifies the selected task, workstation and every asset without advancing
 physics. It requires exactly one selected case and a clean committed checkout.
 Use another output directory for another attempt. Source is copied before native
@@ -258,5 +258,5 @@ Focused tests cover actual R14 serial/parallel endpoint equivalence, unchanged
 live state, worker initialization failures, frozen imports, revision mismatches,
 changed stock colors, protected goals, recovery ownership and uncertain actions.
 Passing these tests does not establish every full-case Oracle or a new physical
-release. See the [integration ledger](../archive/unified-main.md) for actual
+release. See the integration ledger (`docs/archive/unified-main.md`, in the [archive tag](../history.md)) for actual
 checks and remaining unified-entry and operational gates.

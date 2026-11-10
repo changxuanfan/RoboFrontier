@@ -22,7 +22,7 @@
           "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
             "path": "benchmark/transport/transport-a04-d1/public/task.json",
-            "sha256": "cad586a62f559535e4eb1a4ca36660bc4466f34e51a389c20063649be65504df"
+            "sha256": "396893b5bd4658c0d44c3992e04152cd22c149913456efac91b27d260aaf431f"
           }
         },
         {
@@ -38,7 +38,7 @@
           "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
             "path": "benchmark/transport/transport-a04-d2/public/task.json",
-            "sha256": "8270b77e3079919fda77b62e7d4d2ddcceb84ff16e4dd48fbae5677718a442fb"
+            "sha256": "5abacda3221f1237e223e1eb8441a78fb0f6207aed91d45b3d97d1c4d8ebbe94"
           }
         },
         {
@@ -54,7 +54,7 @@
           "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
             "path": "benchmark/transport/transport-a04-d3/public/task.json",
-            "sha256": "a24a0d62713b5d519c99c2091790e8b1dbdbe95c7664cda0bdf530a9977b6e89"
+            "sha256": "302262f4ef1cee68700dcef6590a29918e76af9829700a6704a100267e3a60ca"
           }
         },
         {
@@ -70,7 +70,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a08-d1/public/task.json",
-            "sha256": "62a14d27b0936e39642ae88f008833fd7ff5a247015a64844735eda795ebe241"
+            "sha256": "d0bd18c005d1fbb5f7e88e70cd97ff52a3de7f5812e6bcd04dfe4df65adb1c82"
           }
         },
         {
@@ -86,7 +86,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a08-d2/public/task.json",
-            "sha256": "3001629c3b883943363b8d8e35639a792c573be72b34545d04869c8ecabaeb19"
+            "sha256": "84cf3dbffbf1032043f834f80d94845aa04fe765425c24f10cb983fd9a3666a5"
           }
         },
         {
@@ -102,7 +102,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a08-d3/public/task.json",
-            "sha256": "6c6e6345512d2a9e62a8f88f5035eedcc7af4dfaba32ebd962028531b395e1d5"
+            "sha256": "d20ca968bffa2b11f78e308fa5d880a75f78685a12993590d1284eae23071d8d"
           }
         },
         {
@@ -118,7 +118,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a12-d1/public/task.json",
-            "sha256": "7c6994a0eebb9b426a2958e6f2c2eab4fca8d14997fd3d373b7daf0c231b8256"
+            "sha256": "4b4c17dad3d29ca3e0a357f3c508eda1ea2ce06e0a67718612232b2fa9e933e6"
           }
         },
         {
@@ -134,7 +134,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a12-d2/public/task.json",
-            "sha256": "e9a0611b52b15c63ca9c90e41c3f2f5a624e5fd6d2f95c7c341fe1adeb37d355"
+            "sha256": "a0f5dc83d239a95565035feace80e2ead34aa301311e04d3e4ffbb07e537edb2"
           }
         },
         {
@@ -150,7 +150,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a12-d3/public/task.json",
-            "sha256": "a66c7cface7b830dda791f5fba89764e24d1dcc13c3d0a8f90938f09dd9c60f9"
+            "sha256": "4324c3c0613ffeb32ac62fec281265bd0e2491d13e1e16749e1ae23e0de3c185"
           }
         }
       ],
@@ -336,7 +336,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/task.json",
-            "sha256": "4410140185bf9fc2e3a06a7180f8bceb738f362a7c64e6259005fecfd231e85b"
+            "sha256": "b05d2b2d262f240a43b1ecb6a407e99b097a0bf87993a231ecfc9edb70e06edd"
           }
         },
         {
@@ -357,7 +357,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/task.json",
-            "sha256": "6eeee0e811ce67712f727f07e3158827e5fdf11c2473c200d7f4aa54996be1c4"
+            "sha256": "3b3f9985e99e7f560c5dce3705e3710e6795fe915ecc33ef62ef14e959c00354"
           }
         },
         {
@@ -378,7 +378,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/task.json",
-            "sha256": "a31a13dde52da6c530a9adb71fae162b295a41b1ab4d8b61317847e1291ca711"
+            "sha256": "31d50a2fccc34fa866522a1225b031e9d5256e3bc3585aaf48e12eb8d207769b"
           }
         },
         {
@@ -399,7 +399,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/task.json",
-            "sha256": "3001b263c42b7e2bbd771d5f270c3e210a8e910fc2d3211b6663f9cb21c1aa3d"
+            "sha256": "5c59ef99dbf68191b4200279224165ff7722a2f921560c7ae147ffc1e6ab53de"
           }
         },
         {
@@ -420,7 +420,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/task.json",
-            "sha256": "a1684fa60015d657cfae7a6229ba11b558b21022824726dedc8e6c8fe1c4277a"
+            "sha256": "d01f24e674a132ad5553d5091b1023b3d522d5cf32c24f68146db2d16464969a"
           }
         },
         {
@@ -441,7 +441,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/task.json",
-            "sha256": "0958332aa79c662827994210a6836603c44a34ab85220677457b881a94f5d947"
+            "sha256": "c82d26faa8c9f4bedb80fc6baa414d239cae0005c90e6ccf10b406065a28245a"
           }
         },
         {
@@ -462,7 +462,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/task.json",
-            "sha256": "d644613d443588047c344b079b9669f57b63090b75b7dfa69d543f3d3333a675"
+            "sha256": "8e8cbe76e9e2425111c61016af08fc447a7fb03973b9a9d7bf1d0a37153885a3"
           }
         },
         {
@@ -483,7 +483,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/task.json",
-            "sha256": "7ab3324e66db57d0014d5cb5d2fd285b4099b2e3574a214bbded202c96578bc1"
+            "sha256": "2f4a5e220f4162b7aad91fb2bcf8d08c9591b55d104bc81bf665834e8997c490"
           }
         },
         {
@@ -504,7 +504,7 @@
           "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/task.json",
-            "sha256": "cc19edff6cac968f4bd10fdeda7c041ae49e1748c647641d2d87ddd916ec9cf8"
+            "sha256": "afa66b6888409d55d396a0524c051df91ef4e85e51f0753fe0256e6230ba504e"
           }
         }
       ],
@@ -712,7 +712,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a08-d1/public/task.json",
-            "sha256": "0cb723eff9b20eb164f30c0116f7b7cd20518fb20fd35659285361a1a3738904"
+            "sha256": "7db6d7bceca356ba919d50b76fbd8bee32d46b7462054a4e3421a57e3d48b8b9"
           }
         },
         {
@@ -728,7 +728,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a08-d2/public/task.json",
-            "sha256": "a9fa032e82ff484a59e3281be40b3381d9c03fc7f4a851f13fdf654cc47585f0"
+            "sha256": "9d09df9a71a2afa6aa393bd8658b45406a81481242c073dfa377a8769c957070"
           }
         },
         {
@@ -744,7 +744,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a08-d3/public/task.json",
-            "sha256": "65c7ebbe96463dc2191671f287b2b73b7d775d2a7f0ceed11bc2f58519cd5474"
+            "sha256": "9c0a191044081416b859e0319060910807a4c5788c6ea72a65b92594201f4771"
           }
         },
         {
@@ -760,7 +760,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a12-d1/public/task.json",
-            "sha256": "9758f688d50f3ee0e92d936fb89fbe10f36b38d2458f6f019184f9ff135aa7f8"
+            "sha256": "392ec51561070743099b228e7b977080a027f40537a51d8c8ae81e9e672ff5bb"
           }
         },
         {
@@ -776,7 +776,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a12-d2/public/task.json",
-            "sha256": "1192ef1bdebde1f3b513f519061ac648666e76a40a3827df6a68f33313b0eddf"
+            "sha256": "fe3ed48d1167ffd288f5d30539b86278c3b796b5a3a48f9cb72a72881dde8d7d"
           }
         },
         {
@@ -792,7 +792,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a12-d3/public/task.json",
-            "sha256": "25abb6d0194f0736f2919eff3980f46780939aef8fb33837572c2d7b44f48722"
+            "sha256": "cc4657842ecbfa6d261e2b01deb712f42c238d61abcf2022a94c2ac0270a5e17"
           }
         },
         {
@@ -808,7 +808,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a16-d1/public/task.json",
-            "sha256": "f45bfa58218df2c8b72b68926d5be9a4dda9914c372985a77e0676027337f968"
+            "sha256": "ea5f524e4998e099500e16ba58fe6059ee1008f14296698207797111ef3bcf76"
           }
         },
         {
@@ -824,7 +824,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a16-d2/public/task.json",
-            "sha256": "aadfaebbf3a6fdba7b9eec3e58a1210225d7df1ad6636e76d03f492732bcddfe"
+            "sha256": "939cc5e9f99e4cc94c8f46339af3b2bada449942651ac225f68085b1c8266b16"
           }
         },
         {
@@ -840,7 +840,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a16-d3/public/task.json",
-            "sha256": "54649ef38b1994f33d7cb27eba80e693304c5377b392ab00730d6c83bec36e5a"
+            "sha256": "5e60503c97b72190a25d07e09a06e98969ddd316dbc98e958b3739eb18f7e996"
           }
         }
       ],
@@ -1033,7 +1033,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n04-d1/public/task.json",
-            "sha256": "269ea9e5f0219fe2c71e29c7235ebd0c505068bbe173a4a345d1a8021db9d602"
+            "sha256": "198223522e85d5af50e42f0eaa160e209725d3899847c25c4e24d0a260caa829"
           }
         },
         {
@@ -1070,7 +1070,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n04-d2/public/task.json",
-            "sha256": "dd0b3e37296627d7047e4c1e55dc7473b912885e8af8f6604d574f85507a1324"
+            "sha256": "39d18c651c4d19f741e399df971f03b27aea0d3ad741a2cf6041f83814c9c25b"
           }
         },
         {
@@ -1107,7 +1107,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n04-d3/public/task.json",
-            "sha256": "c523dd89cc1c584a3f754cd1f8a6f33a9a2c95cfd81436e4a997fb60ce78bf10"
+            "sha256": "9ba7891f1bb59d11ed50df4ac85f00641808b6f9398cb38582bb75f9349d7537"
           }
         },
         {
@@ -1144,7 +1144,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n06-d1/public/task.json",
-            "sha256": "40217f880ee12846318448698e007a2ffb142b34715e6c16ddfd871d2e2bedf9"
+            "sha256": "df4c956607c47a2aea086dabb772b035e392d60f23c9ee05904b098ae9997516"
           }
         },
         {
@@ -1181,7 +1181,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n06-d2/public/task.json",
-            "sha256": "cec9d9894a497c4c464aebc02e45f71b3155ff4c82e196995a469324f3be8f13"
+            "sha256": "b19910ed6d25908016bc680d9564f8d1ddbac1a3070e72b53955f4833249439e"
           }
         },
         {
@@ -1218,7 +1218,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n06-d3/public/task.json",
-            "sha256": "0f82730fc54b1bad87009357f0120f998f771315238815b124a3d4ee78af9d4f"
+            "sha256": "9d2b1c70162827dbc28025d77a25d7395ece578d0760f0ed244d6f32f1b2ee82"
           }
         },
         {
@@ -1255,7 +1255,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n08-d1/public/task.json",
-            "sha256": "b15b2eeb257bdfe0c16be35c4528848111db3e6468d340effaca5a9427f28e85"
+            "sha256": "fbf17765a099c27fe0ef774a208101adac78a642d6e44dde22ec9e9456b2f45f"
           }
         },
         {
@@ -1292,7 +1292,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n08-d2/public/task.json",
-            "sha256": "1dcfdf51b53e84ed9734e5344a9e5a0fa62c9b4eee3f0371bccc034de20d68bc"
+            "sha256": "ce5b38f225fc816af98db5aff42da9bf0e1279616e7d7c633d339df3614342ec"
           }
         },
         {
@@ -1329,7 +1329,7 @@
           "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n08-d3/public/task.json",
-            "sha256": "bd7b02bf9e0823b2667c8bb53e90ff5d51ce04f441c050c1175c69a78b192141"
+            "sha256": "6a5f7ccfac3cc8968c9e2793d0651f69a993ca0dd2d1c56b7ea553164ea4d43e"
           }
         }
       ],
@@ -1565,6 +1565,6 @@
       ]
     }
   },
-  "release_id": "9c30c6ce8d7e9aee",
+  "release_id": "50d89e5a815bbb75",
   "frozen": null
 }

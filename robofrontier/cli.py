@@ -209,7 +209,7 @@ def _frozen_configuration(batch):
 def run(batch, *, continuing=False):
     """Run a prepared batch. `continuing` picks up a batch whose supervisor died: a run that
     had started continues in its next segment when its stop allows it, and unstarted runs start
-    (docs/running/run-segments.md)."""
+    (docs/running/continuation.md)."""
     config = _frozen_configuration(batch)
     if config['policy']['engine'] == 'claude':
         # Both engines need passed compatibility receipts; Codex checks its own per run.
@@ -264,7 +264,7 @@ def _lock_held(path):
 
 
 def continue_runs(batch, cases=None):
-    """Continue stopped runs of a batch by hand, as the same trials (docs/running/run-segments.md).
+    """Continue stopped runs of a batch by hand, as the same trials (docs/running/continuation.md).
 
     Any stop but an integrity abort may be continued, as often as needed: after an
     unexpected stop, an operator's STOP, the finish, the cutoff or the wall backstop. A
@@ -360,7 +360,7 @@ def argument_parser(*, prog=None):
             p.add_argument('--max-budget-usd', type=float)
     sub.add_parser('bootstrap', help='Restore and verify pinned policy assets; never calls a model')
     for name in ('run', 'continue', 'status', 'stop'):
-        p = sub.add_parser(name, help='Continue stopped runs by hand, as the same trials (docs/running/run-segments.md)'
+        p = sub.add_parser(name, help='Continue stopped runs by hand, as the same trials (docs/running/continuation.md)'
                            if name == 'continue' else None)
         p.add_argument('batch', type=Path)
         if name == 'continue':
@@ -375,7 +375,7 @@ def argument_parser(*, prog=None):
         if name == 'run':
             p.add_argument('--continue', dest='continuing', action='store_true',
                            help='Continue a batch whose supervisor died; a started run continues by itself once '
-                                '(docs/running/run-segments.md)')
+                                '(docs/running/continuation.md)')
     p = sub.add_parser('collect', help='Collect stopped native sessions, motion and evidence')
     p.add_argument('batch', type=Path)
     p.add_argument('--output', type=Path, required=True)

@@ -1,4 +1,4 @@
-"""A continued segment's Dial evaluator takes over trials and BEST (docs/running/run-segments.md)."""
+"""A continued segment's Dial evaluator takes over trials and BEST (docs/running/continuation.md)."""
 import math
 from types import SimpleNamespace
 import unittest

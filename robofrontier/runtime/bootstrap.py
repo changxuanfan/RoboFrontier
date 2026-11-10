@@ -38,7 +38,7 @@ DELEGATE = ('Your current runtime role is {{ACTOR}}, a temporary delegate, not a
             'entries since you were forked. Do not create delegates or other sessions, use administrative operations, modify the '
             'harness, read private evaluation data or finish the team run.\n')
 # Sent to each working role when the run continues after an unexpected exit
-# (docs/running/run-segments.md); hosts fill {{SIM_S}} and {{INTERRUPTED}} through fill_resume.
+# (docs/running/continuation.md); hosts fill {{SIM_S}} and {{INTERRUPTED}} through fill_resume.
 RESUME = ('The host stopped unexpectedly and has now restarted this trial. It is the same trial, continued: your '
           'session, work note, messages, workspace and skills.md are kept, and your role is unchanged. The physical '
           'world was rebuilt from the last recorded pose at sim time {{SIM_S}} s: robot and object poses are as '

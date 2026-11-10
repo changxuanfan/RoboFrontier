@@ -132,7 +132,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
         build_env(profile, base_env, config_directory(run, profile))
     if run_layout.path(run, 'stop', 'claude').exists(): raise ValueError('Run was stopped before launch')
     _check_shared_budget(run, topology, turn_budget_usd, total_budget_usd)
-    # A run continued after an unexpected exit (docs/running/run-segments.md) starts again only
+    # A run continued after an unexpected exit (docs/running/continuation.md) starts again only
     # from a prepared segment; its claim stays and its sessions are resumed.
     from robofrontier.runtime.store import RuntimeStore
     state_store = RuntimeStore(run / 'private/state/runtime.sqlite')

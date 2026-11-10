@@ -44,16 +44,31 @@ def check_names(names):
     if unknown: raise SystemExit('No such test module or folder: '+', '.join(unknown))
 
 
+def run(command, timeout, env=None):
+    """Run one test process in its own process group, its output in a file: a grandchild that
+    keeps a pipe open cannot hang the runner, and a timeout stops the whole group."""
+    import signal
+    import tempfile
+    with tempfile.TemporaryFile('w+') as log:
+        child = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT,
+                                 start_new_session=True, text=True)
+        try:
+            code = child.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            code = None
+        finally:
+            try: os.killpg(child.pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError): pass
+            child.wait()
+        log.seek(0)
+        out = log.read()
+    return (code == 0), out+('' if code is not None else '\nTimed out after %d s' % timeout)
+
+
 def run_python(module, timeout):
     began = time.monotonic()
     env = dict(os.environ, PYTHONPATH=os.pathsep.join(('tests', 'scripts')))
-    try:
-        done = subprocess.run([sys.executable, '-m', 'unittest', module], cwd=ROOT, env=env,
-                              capture_output=True, text=True, timeout=timeout)
-        out, ok = done.stderr+done.stdout, done.returncode == 0
-    except subprocess.TimeoutExpired as error:
-        out, ok = (error.stderr or b'').decode(errors='replace') if isinstance(error.stderr, bytes) else (error.stderr or ''), False
-        out += '\nTimed out after %d s' % timeout
+    ok, out = run([sys.executable, '-m', 'unittest', module], timeout, env)
     ran = re.search(r'Ran (\d+) test', out)
     return {'test': module, 'ok': ok, 'tests': int(ran.group(1)) if ran else 0,
             'seconds': round(time.monotonic()-began, 1), 'tail': '' if ok else out[-4000:]}
@@ -61,11 +76,7 @@ def run_python(module, timeout):
 
 def run_node(path, timeout):
     began = time.monotonic()
-    try:
-        done = subprocess.run(['node', '--test', str(path)], cwd=ROOT, capture_output=True, text=True, timeout=timeout)
-        out, ok = done.stdout+done.stderr, done.returncode == 0
-    except subprocess.TimeoutExpired:
-        out, ok = 'Timed out after %d s' % timeout, False
+    ok, out = run(['node', '--test', str(path)], timeout)
     passed = re.search(r'# pass (\d+)|ℹ pass (\d+)', out)
     count = int(next(g for g in passed.groups() if g)) if passed else 0
     return {'test': str(path.relative_to(ROOT)), 'ok': ok, 'tests': count,
@@ -78,18 +89,22 @@ def main(argv=None):
     parser.add_argument('--workers', type=int, default=os.cpu_count() or 4)
     parser.add_argument('--timeout-s', type=int, default=1800, help='Per module (default 1800)')
     parser.add_argument('--no-node', action='store_true', help='Skip the Node tests')
+    parser.add_argument('--skip', nargs='+', default=[], metavar='NAME', help='Leave out these modules or folders')
     parser.add_argument('--report', type=Path, help='Write the full result as JSON here')
     args = parser.parse_args(argv)
     began = time.monotonic()
     check_names(args.names)
-    jobs = [('py', m) for m in modules(args.names)] + ([] if args.no_node else [('js', p) for p in scripts(args.names)])
-    def run(job):
+    check_names(args.skip)
+    skipped = lambda name: any(name == n or name.startswith(n+'.') for n in args.skip)
+    jobs = [('py', m) for m in modules(args.names) if not skipped(m)]
+    jobs += [] if args.no_node else [('js', p) for p in scripts(args.names) if not skipped(dotted(p))]
+    def one(job):
         kind, name = job
         return run_python(name, args.timeout_s) if kind == 'py' else run_node(name, args.timeout_s)
     with ThreadPoolExecutor(max(1, args.workers)) as pool:
-        results = list(pool.map(run, jobs))
+        results = list(pool.map(one, jobs))
     first = [job for job, result in zip(jobs, results) if not result['ok']]
-    repeated = [r for r in map(run, first) if not r['ok']]
+    repeated = [r for r in map(one, first) if not r['ok']]
     summary = {'tests': sum(r['tests'] for r in results), 'files': len(results),
                'failed_in_parallel_only': sorted(str(j[1].relative_to(ROOT)) if j[0] == 'js' else j[1] for j in first
                                                  if not any(r['test'] == (str(j[1].relative_to(ROOT)) if j[0] == 'js' else j[1]) for r in repeated)),

@@ -124,7 +124,7 @@ not a security sandbox. Native state inspection followed by sending is not an
 atomic operation. Full physical crash/restart recovery is intentionally absent,
 not an unpassed feature to enable later without changing the protocol.
 
-Consult the [integration ledger](archive/unified-main.md) for actual test
+Consult the integration ledger (`docs/archive/unified-main.md`, in the [archive tag](history.md)) for actual test
 results, missing assets and native-engine qualification; this catalog is not a
 substitute. Architecture and operating instructions are in
 [architecture.md](architecture.md) and the [Meta runbook](meta-runbook.md).

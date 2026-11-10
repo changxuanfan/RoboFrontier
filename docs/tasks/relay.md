@@ -1,12 +1,28 @@
-# Relay tasks and entry points
+# Relay
 
-Relay has nine released cases. Historical Oracle records report completion of
-nine cases and 27 beams under the user's final-goal review, retaining failures,
-recovery and assistance labels. That statement is provenance, not a new run or
-qualification of changed physics. Use the exact frozen scene and task revision
-when comparing results.
+The team carries 1.2 m timbers (2, 3 or 4 of them, with 8, 12 or 16 arms) along a route of
+worktops from their starting positions to the painted GOAL. Carrying a timber in the air takes at
+least two arms. Every timber needs at least one qualified airborne handover: a new arm holds the
+timber for 0.2 s while at least two current holders keep it off the table, before one lets go.
+A timber that falls may be lifted again by the arms that held it when it fell; if another arm
+picks it up, its earlier handovers no longer count. A regrasp on the table is never a handover.
 
-## Released geometry
+| Level | Timber |
+| --- | --- |
+| 1 (`d1`) | A straight beam |
+| 2 (`d2`) | A 63° arc with a free-hanging 600 g wooden pendulum on its underside |
+| 3 (`d3`) | A 31.5° sprung elbow (±25° passive hinges) with the same pendulum |
+
+Layouts: a straight table (8 arms), a 90° arc (12) and a semicircle (16). A timber is done when
+at least 70 % of its centreline lies above GOAL, every arm has released it and it has had a
+qualified handover; stacking in GOAL is allowed.
+
+## Earlier revisions, Oracle evidence and tools
+
+The sections below keep the detail written while each revision was built; numbers such as
+R13 or R14 name those revisions.
+
+### Released geometry
 
 | Arms | Layout | Assemblies per case | Initial endpoint chord, L2/L3 |
 | --- | --- | --- | --- |
@@ -23,7 +39,7 @@ attaches directly to the timber underside 100 mm along it from the endpoint,
 without a mounting stem, and interlinks with the pendant's eye. The wooden shaft
 is 170 mm and its weight is 600 g. Frozen model geometry is authoritative.
 
-## Current policy completion and process records
+### Current policy completion and process records
 
 New policy runs use `terminal_outcome_v2`. Move every assembly from its own
 initial position toward the common GOAL; returning it to START is unnecessary.
@@ -73,7 +89,7 @@ new-run terminal overlay and freezes the corresponding public guidance. Do not
 publish the older clean-process vetoes as the current policy completion rule. Old
 recordings retain their original contract and native verdict.
 
-## Execution and reference code
+### Execution and reference code
 
 Use the [unified CLI](../unified-cli.md) for native model runs and the
 [Oracle interface](../oracle/README.md) for privileged references. Unified Oracle execution
@@ -94,7 +110,7 @@ nine-case batch runner, `scripts/run_relay_nine_oracles.py`, was removed on 2026
 | `suite/relay_scene.py`, `suite/relay_underslung.py`, `suite/rigid_relay.py` | Geometry and retained builders |
 | `relay_video_motion.py`, `relay_motion_edit.py` | Background-independent motion analysis and time mapping |
 
-## Historical data and handoff
+### Historical data and handoff
 
 The following local records are not included by Git clone and do not establish
 new current-source qualification:
@@ -107,7 +123,7 @@ new current-source qualification:
 - Retained dependencies and retired-source manifest: `runs/engineering/relay-cleanup-20261027/manifest.json`.
 
 Original 60-Hz streams, appearance events, failure/recovery/control-correction
-hashes, reports and videos remain evidence. See the [merge notes](../archive/plans/suite-v2/relay-merge-handoff.md) and the
+hashes, reports and videos remain evidence. See the merge notes (`docs/archive/plans/suite-v2/relay-merge-handoff.md`, in the [archive tag](../history.md)) and the
 [current task-family entry](README.md). Historical Factory presentations use
 independent per-table loops at 20x/30 fps; static neighboring tables do not imply
 simultaneous task completion.

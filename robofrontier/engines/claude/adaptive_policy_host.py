@@ -32,7 +32,7 @@ class AdaptivePolicyHost:
             launch=json.loads((self.run/'private/inputs/claude.json').read_text())
             if cfg.get('model')!=profile.get('model') or cfg.get('effort')!=profile.get('effort') or launch.get('profile')!=profile:
                 raise ValueError('Profile differs from frozen run')
-            # A run continued after an unexpected exit (docs/running/run-segments.md) keeps its sessions.
+            # A run continued after an unexpected exit (docs/running/continuation.md) keeps its sessions.
             self.resuming=resume; self.profile=profile; self.base_env=base_env; self.host_factory=host_factory
             if resume:
                 if self.store.get('lifecycle')!='resuming' or not self.store.agent('Controller')['thread_id']:

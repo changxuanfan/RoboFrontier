@@ -26,7 +26,7 @@ Current task inputs are selected through
 policy inputs have separate purposes and qualification records. New unified
 Oracle executions select current released scenes; Factory playback uses each
 recording's own frozen source. See [Oracle](oracle/README.md), [Factory](factory/replay.md)
-and the [integration ledger](archive/unified-main.md).
+and the integration ledger (`docs/archive/unified-main.md`, in the [archive tag](history.md)).
 
 ## Native engines and topologies
 
@@ -68,7 +68,7 @@ and original continuation behavior. Their inputs are not silently migrated.
 The policy limit is `task_wall_limit_s`, normally 86,400 seconds, of active
 running time saved in the run store; host stalls, pauses and network outages do
 not count. Runs frozen before that clock keep the persisted
-`start_at + task_wall_limit_s` deadline ([run segments](running/run-segments.md#time)). Preparation has a separate startup timeout. An external engineering
+`start_at + task_wall_limit_s` deadline ([run segments](running/continuation.md#time)). Preparation has a separate startup timeout. An external engineering
 stop is distinct from the public task limit. Oracle engineering elapsed limits
 include planning and review pauses; they are not a second policy START clock.
 
@@ -99,7 +99,7 @@ private/state/runtime.sqlite  Authoritative run-local execution database
 private/state/connections/    Role authentication and service addresses
 private/state/client-state/   Submitted requests, results and delivery receipts
 private/outputs/              Motion, events, exports, evaluation and sealing evidence
-private/inputs/segments/<k>/  Restore pose of segment k after an unexpected exit (docs/running/run-segments.md)
+private/inputs/segments/<k>/  Restore pose of segment k after an unexpected exit (docs/running/continuation.md)
 private/outputs/segments/<k>/ Segment k's own motion, video and post-mortem evaluation
 ```
 
@@ -254,7 +254,7 @@ are separate steps. Observations use JPEG 896 x 560, quality 85; offline video
 size is independent. Motion retains actual times, float32 poses, appearance
 events and XOR/ZIP compression. Compression after float32 conversion is
 bit-exact; float64-to-float32 conversion and PNG-to-JPEG migration are lossy and
-must be identified. See [evidence storage](archive/evidence-storage-validation-20261030.md).
+must be identified. See evidence storage (`docs/archive/evidence-storage-validation-20261030.md`, in the [archive tag](history.md)).
 
 Process memory, integral state, queues and model context are not a complete
 restartable physics checkpoint. Interruptions retain unknown actions and

@@ -14,8 +14,8 @@ on how to do it well.
 Policy inputs are the public task and family materials, permitted RGB and robot
 feedback, your work note, authorized messages and the reports referenced to you,
 and this run's shared lessons in `{{RUN_DIR}}/workspace/skills.md`. Public robot specifications and declared
-calibration are usable. Private evaluator state, scene source, engineering code,
-probes and recipes, other runs, other role connections and historical solutions
+calibration are usable. Private evaluator state, scene source, the benchmark's code,
+probes and recipes, other runs, other role connections and earlier solutions
 are not policy inputs. The rules, role instructions, Skills and task inputs are
 frozen for this run and read-only. You work in `{{RUN_DIR}}/workspace/`, the only place
 you can write: keep temporary files there, and add lessons to its `skills.md` as the

@@ -149,7 +149,7 @@ class SyncTests(unittest.TestCase):
         ident=next(i for i,v in s.store.actions().items() if v.get('batch_id')=='part-a')
         s.world.arms={'A':SimpleNamespace(job=ident,stopping=True,uncertainty_reported=True)}
         s.world.finished.append({'call_id':ident,'status':'uncertain',
-            'reason':'Stop did not settle; engineering review required',
+            'reason':'Stop did not settle; operator review required',
             'stop_reason':'Action timeout; stopped at current reference'})
         s.pump()
         self.assertEqual(s.store.get('lifecycle'),'running')

@@ -5,7 +5,7 @@ form of the repository README; the README now introduces the benchmark, and the
 [project page](https://changxuanfan.github.io/RoboFrontier/) shows tasks, videos and results.
 
 **Integration status:** the reviewed engineering integration and unified commands are
-published on `main`. Read the [acceptance ledger](archive/unified-main.md) for source-pinned
+published on `main`. Read the acceptance ledger (`docs/archive/unified-main.md`, in the [archive tag](history.md)) for source-pinned
 verification, follow-up repairs and open gates. Claude scored execution remains closed; all
 four Claude topologies have engineering entries. Full historical checks require legacy assets
 and closed recordings beyond the policy asset bundle; see the [testing guide](development/testing.md).
@@ -21,7 +21,7 @@ Model profiles are configuration choices, not universal provider compatibility c
 | Replay motion and render Factory backgrounds | [Factory workflow](factory/replay.md) |
 | Edit the full Factory camera plan and English video titles/subtitles | [Editable video project](factory/editorial.md) |
 | Browse the 36 current tasks and initial scenes | [Project page](https://changxuanfan.github.io/RoboFrontier/) |
-| See which integration gates have passed | [Acceptance and source provenance](archive/unified-main.md) |
+| See which integration gates have passed | Acceptance and source provenance (`docs/archive/unified-main.md`, in the [archive tag](history.md)) |
 | Read the policy's role and tool contract | [Robot collaboration skill](../prompts/skills/robot-collaboration/SKILL.md) |
 | Read completion and recovery rules | [Shared policy rules](../prompts/rules.md) |
 | Run privileged references and interpret recovery checks | [Oracle execution](oracle/README.md) and [recovery boundaries](oracle/recovery.md) |

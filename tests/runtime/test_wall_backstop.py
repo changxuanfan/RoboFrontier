@@ -42,7 +42,7 @@ class ProtocolTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             task_families.validate_policy_task(dict(new, run_protocol=dict(new['run_protocol'], wall_backstop_s=60)))
         from robofrontier.tasks.public import public_task
-        self.assertNotIn('wall_backstop_s', public_task(new)['run_protocol'])
+        self.assertNotIn('run_protocol', public_task(new))
 
     def test_the_world_owner_reads_the_frozen_backstop(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -290,7 +290,7 @@ class CodexBatchSummaryTests(unittest.TestCase):
                 'probe_version': preflight_probe.VERSION})
             write_json(batch/'batch.json', {'status': 'prepared_not_started', 'jobs': jobs,
                 'execution': {'codex_home_scope': 'task', 'startup_interval_s': 0}})
-            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'verify_inputs', return_value=[]), \
+            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'runs_root', return_value=root/'runs'), patch.object(benchmark, 'verify_inputs', return_value=[]), \
                     patch.object(benchmark, 'initialize_codex_home'), \
                     patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'), \
                     patch.object(benchmark.subprocess, 'run'), \

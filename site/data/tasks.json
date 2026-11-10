@@ -1,6 +1,6 @@
 {
  "schema": "robofrontier.site-tasks.v1",
- "release_sha256": "024f62c7f2c4cfe64d55148a4466a97bd7fc879950a81ccb1746c80db8ce87cc",
+ "release_sha256": "f1f255de39e9d99e370a57e985bfdb364839d3ff7c2f84d64ff741e3a1f4ceae",
  "families": {
   "transport": {
    "name": "Transport",
@@ -52,7 +52,7 @@
    "workload": 12,
    "unit": "targets",
    "level_note": "Release on the board",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
    "rules": [
     "Deliver the three requested source-identity items to each destination board. Station IDs identify inventory and destination orders, not exclusive robot ownership.",
     "Transfers may be direct airborne handovers or safe stable tabletop staging. There are no marked or mandatory intermediate regions, predefined buffer positions, prescribed routes or fixed transfer pairs. The planner chooses whether to wait, stage or hand over. Establish receiving support before releasing an airborne item.",
@@ -75,7 +75,7 @@
    "workload": 12,
    "unit": "targets",
    "level_note": "Insert blades into fixed blind slots",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
    "rules": [
     "Deliver the three requested source-identity items to each destination board. Station IDs identify inventory and destination orders, not exclusive robot ownership.",
     "Transfers may be direct airborne handovers or safe stable tabletop staging. There are no marked or mandatory intermediate regions, predefined buffer positions, prescribed routes or fixed transfer pairs. The planner chooses whether to wait, stage or hand over. Establish receiving support before releasing an airborne item.",
@@ -98,7 +98,7 @@
    "workload": 12,
    "unit": "targets",
    "level_note": "Insert into a spring-mounted moving board",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
    "rules": [
     "Deliver the three requested source-identity items to each destination board. Station IDs identify inventory and destination orders, not exclusive robot ownership.",
     "Transfers may be direct airborne handovers or safe stable tabletop staging. There are no marked or mandatory intermediate regions, predefined buffer positions, prescribed routes or fixed transfer pairs. The planner chooses whether to wait, stage or hand over. Establish receiving support before releasing an airborne item.",
@@ -121,7 +121,7 @@
    "workload": 24,
    "unit": "targets",
    "level_note": "Release on the board",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
    "rules": [
     "Deliver the three requested source-identity items to each destination board. Station IDs identify inventory and destination orders, not exclusive robot ownership.",
     "Transfers may be direct airborne handovers or safe stable tabletop staging. There are no marked or mandatory intermediate regions, predefined buffer positions, prescribed routes or fixed transfer pairs. The planner chooses whether to wait, stage or hand over. Establish receiving support before releasing an airborne item.",
@@ -144,7 +144,7 @@
    "workload": 24,
    "unit": "targets",
    "level_note": "Insert blades into fixed blind slots",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
    "rules": [
     "Deliver the three requested source-identity items to each destination board. Station IDs identify inventory and destination orders, not exclusive robot ownership.",
     "Transfers may be direct airborne handovers or safe stable tabletop staging. There are no marked or mandatory intermediate regions, predefined buffer positions, prescribed routes or fixed transfer pairs. The planner chooses whether to wait, stage or hand over. Establish receiving support before releasing an airborne item.",
@@ -167,7 +167,7 @@
    "workload": 24,
    "unit": "targets",
    "level_note": "Insert into a spring-mounted moving board",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
    "rules": [
     "Deliver the three requested source-identity items to each destination board. Station IDs identify inventory and destination orders, not exclusive robot ownership.",
     "Transfers may be direct airborne handovers or safe stable tabletop staging. There are no marked or mandatory intermediate regions, predefined buffer positions, prescribed routes or fixed transfer pairs. The planner chooses whether to wait, stage or hand over. Establish receiving support before releasing an airborne item.",
@@ -190,7 +190,7 @@
    "workload": 36,
    "unit": "targets",
    "level_note": "Release on the board",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
    "rules": [
     "Deliver the three requested source-identity items to each destination board. Station IDs identify inventory and destination orders, not exclusive robot ownership.",
     "Transfers may be direct airborne handovers or safe stable tabletop staging. There are no marked or mandatory intermediate regions, predefined buffer positions, prescribed routes or fixed transfer pairs. The planner chooses whether to wait, stage or hand over. Establish receiving support before releasing an airborne item.",
@@ -213,7 +213,7 @@
    "workload": 36,
    "unit": "targets",
    "level_note": "Insert blades into fixed blind slots",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
    "rules": [
     "Deliver the three requested source-identity items to each destination board. Station IDs identify inventory and destination orders, not exclusive robot ownership.",
     "Transfers may be direct airborne handovers or safe stable tabletop staging. There are no marked or mandatory intermediate regions, predefined buffer positions, prescribed routes or fixed transfer pairs. The planner chooses whether to wait, stage or hand over. Establish receiving support before releasing an airborne item.",
@@ -236,7 +236,7 @@
    "workload": 36,
    "unit": "targets",
    "level_note": "Insert into a spring-mounted moving board",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
    "rules": [
     "Deliver the three requested source-identity items to each destination board. Station IDs identify inventory and destination orders, not exclusive robot ownership.",
     "Transfers may be direct airborne handovers or safe stable tabletop staging. There are no marked or mandatory intermediate regions, predefined buffer positions, prescribed routes or fixed transfer pairs. The planner chooses whether to wait, stage or hand over. Establish receiving support before releasing an airborne item.",
@@ -259,13 +259,13 @@
    "workload": 72,
    "unit": "cells",
    "level_note": "Square pockets guide each cube",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
    "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
     "kind": "program",
@@ -281,13 +281,13 @@
    "workload": 72,
    "unit": "cells",
    "level_note": "Printed grid lines only",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
    "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
     "kind": "program",
@@ -303,13 +303,13 @@
    "workload": 72,
    "unit": "cells",
    "level_note": "No visible grid",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
    "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
     "kind": "program",
@@ -325,13 +325,13 @@
    "workload": 162,
    "unit": "cells",
    "level_note": "Square pockets guide each cube",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
    "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
     "kind": "assisted",
@@ -347,13 +347,13 @@
    "workload": 162,
    "unit": "cells",
    "level_note": "Printed grid lines only",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
    "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
     "kind": "assisted",
@@ -369,13 +369,13 @@
    "workload": 162,
    "unit": "cells",
    "level_note": "No visible grid",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
    "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
     "kind": "assisted",
@@ -391,13 +391,13 @@
    "workload": 288,
    "unit": "cells",
    "level_note": "Square pockets guide each cube",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
    "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
     "kind": "assisted",
@@ -413,13 +413,13 @@
    "workload": 288,
    "unit": "cells",
    "level_note": "Printed grid lines only",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
    "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
     "kind": "assisted",
@@ -435,13 +435,13 @@
    "workload": 288,
    "unit": "cells",
    "level_note": "No visible grid",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
    "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
     "kind": "assisted",
@@ -457,18 +457,17 @@
    "workload": 2,
    "unit": "timbers",
    "level_note": "Straight timber",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
    "rules": [
     "Move all 2 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
@@ -485,20 +484,19 @@
    "workload": 2,
    "unit": "timbers",
    "level_note": "63-degree arc timber with a pendant",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
    "rules": [
     "Move all 2 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
-    "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
+    "The initial endpoint chord is 1.15m. The underside fixed eye is 100 mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170 mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The rigid circular-arc timber subtends 63 degrees.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
@@ -515,20 +513,19 @@
    "workload": 2,
    "unit": "timbers",
    "level_note": "Deflected timber on passive springs",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
    "rules": [
     "Move all 2 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
-    "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
+    "The initial endpoint chord is 1.15m. The underside fixed eye is 100 mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170 mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
@@ -545,18 +542,17 @@
    "workload": 3,
    "unit": "timbers",
    "level_note": "Straight timber",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
    "rules": [
     "Move all 3 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
@@ -573,20 +569,19 @@
    "workload": 3,
    "unit": "timbers",
    "level_note": "63-degree arc timber with a pendant",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
    "rules": [
     "Move all 3 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
-    "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
+    "The initial endpoint chord is 1.15m. The underside fixed eye is 100 mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170 mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The rigid circular-arc timber subtends 63 degrees.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
@@ -603,20 +598,19 @@
    "workload": 3,
    "unit": "timbers",
    "level_note": "Deflected timber on passive springs",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
    "rules": [
     "Move all 3 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
-    "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
+    "The initial endpoint chord is 1.15m. The underside fixed eye is 100 mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170 mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
@@ -633,18 +627,17 @@
    "workload": 4,
    "unit": "timbers",
    "level_note": "Straight timber",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
    "rules": [
     "Move all 4 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
@@ -661,20 +654,19 @@
    "workload": 4,
    "unit": "timbers",
    "level_note": "63-degree arc timber with a pendant",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
    "rules": [
     "Move all 4 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
-    "The initial endpoint chord is 1.20m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
+    "The initial endpoint chord is 1.20m. The underside fixed eye is 100 mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170 mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The rigid circular-arc timber subtends 63 degrees.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
@@ -691,20 +683,19 @@
    "workload": 4,
    "unit": "timbers",
    "level_note": "Deflected timber on passive springs",
-   "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+   "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
    "rules": [
     "Move all 4 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
-    "The initial endpoint chord is 1.20m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
+    "The initial endpoint chord is 1.20m. The underside fixed eye is 100 mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170 mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
@@ -721,14 +712,14 @@
    "workload": 4,
    "unit": "dials",
    "level_note": "Fixed dial modules",
-   "objective": "Unlock the spring dial code by finding and simultaneously holding one correct nonzero input. Minimize execution time and valid attempts using only historical BEST feedback; preserve real grasps and required airborne support.",
+   "objective": "Unlock the code: find the correct nonzero input and hold it on every dial at once, using only the BEST record as feedback. How the robots share the work is your choice.",
    "rules": [
-    "The face has0,1,2,3,4,5 at60-degree intervals. Each private password digit is1..5;0 is an invalid initial position. Clockwise labels4 and5 may be reached as-120 and-60degrees; +180 and-180 are the same mark3.",
-    "BEST starts at0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
-    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within4degrees of a nonzero mark, actually grasped, and stable for0.25seconds. Green means a valid input, not a correct password.",
+    "The face has 0, 1, 2, 3, 4, 5 at 60-degree intervals. Each private password digit is 1..5; 0 is an invalid initial position. Clockwise labels 4 and 5 may be reached as -120 and -60 degrees; +180 and -180 are the same mark 3.",
+    "BEST starts at 0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
+    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within 4 degrees of a nonzero mark, actually grasped, and stable for 0.25 seconds. Green means a valid input, not a correct password.",
     "The BEST digit is bright only when READY is green. Otherwise its retained value stays visible in dim grey-brown, including while the amber lamp is qualifying. Brightness does not change the record or disclose current correctness.",
     "Only a complete valid input updates BEST. Off-mark, zero or lost grasp makes READY invalid while BEST remains. New stable configurations are evaluated automatically, including intermediate configurations during movement; bind a record change to an actually observed configuration, not an assumed target.",
-    "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
+    "L2/L3 require a separate robot to hold each blue handle with the whole module at least 20 mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
@@ -746,14 +737,14 @@
    "workload": 6,
    "unit": "dials",
    "level_note": "Fixed dial modules",
-   "objective": "Unlock the spring dial code by finding and simultaneously holding one correct nonzero input. Minimize execution time and valid attempts using only historical BEST feedback; preserve real grasps and required airborne support.",
+   "objective": "Unlock the code: find the correct nonzero input and hold it on every dial at once, using only the BEST record as feedback. How the robots share the work is your choice.",
    "rules": [
-    "The face has0,1,2,3,4,5 at60-degree intervals. Each private password digit is1..5;0 is an invalid initial position. Clockwise labels4 and5 may be reached as-120 and-60degrees; +180 and-180 are the same mark3.",
-    "BEST starts at0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
-    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within4degrees of a nonzero mark, actually grasped, and stable for0.25seconds. Green means a valid input, not a correct password.",
+    "The face has 0, 1, 2, 3, 4, 5 at 60-degree intervals. Each private password digit is 1..5; 0 is an invalid initial position. Clockwise labels 4 and 5 may be reached as -120 and -60 degrees; +180 and -180 are the same mark 3.",
+    "BEST starts at 0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
+    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within 4 degrees of a nonzero mark, actually grasped, and stable for 0.25 seconds. Green means a valid input, not a correct password.",
     "The BEST digit is bright only when READY is green. Otherwise its retained value stays visible in dim grey-brown, including while the amber lamp is qualifying. Brightness does not change the record or disclose current correctness.",
     "Only a complete valid input updates BEST. Off-mark, zero or lost grasp makes READY invalid while BEST remains. New stable configurations are evaluated automatically, including intermediate configurations during movement; bind a record change to an actually observed configuration, not an assumed target.",
-    "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
+    "L2/L3 require a separate robot to hold each blue handle with the whole module at least 20 mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
@@ -771,14 +762,14 @@
    "workload": 4,
    "unit": "dials",
    "level_note": "Lift each module: support and grasp",
-   "objective": "Unlock the spring dial code by finding and simultaneously holding one correct nonzero input. Minimize execution time and valid attempts using only historical BEST feedback; preserve real grasps and required airborne support.",
+   "objective": "Unlock the code: find the correct nonzero input and hold it on every dial at once, using only the BEST record as feedback. How the robots share the work is your choice.",
    "rules": [
-    "The face has0,1,2,3,4,5 at60-degree intervals. Each private password digit is1..5;0 is an invalid initial position. Clockwise labels4 and5 may be reached as-120 and-60degrees; +180 and-180 are the same mark3.",
-    "BEST starts at0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
-    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within4degrees of a nonzero mark, actually grasped, and stable for0.25seconds. Green means a valid input, not a correct password.",
+    "The face has 0, 1, 2, 3, 4, 5 at 60-degree intervals. Each private password digit is 1..5; 0 is an invalid initial position. Clockwise labels 4 and 5 may be reached as -120 and -60 degrees; +180 and -180 are the same mark 3.",
+    "BEST starts at 0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
+    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within 4 degrees of a nonzero mark, actually grasped, and stable for 0.25 seconds. Green means a valid input, not a correct password.",
     "The BEST digit is bright only when READY is green. Otherwise its retained value stays visible in dim grey-brown, including while the amber lamp is qualifying. Brightness does not change the record or disclose current correctness.",
     "Only a complete valid input updates BEST. Off-mark, zero or lost grasp makes READY invalid while BEST remains. New stable configurations are evaluated automatically, including intermediate configurations during movement; bind a record change to an actually observed configuration, not an assumed target.",
-    "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
+    "L2/L3 require a separate robot to hold each blue handle with the whole module at least 20 mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
@@ -796,14 +787,14 @@
    "workload": 4,
    "unit": "dials",
    "level_note": "Lifted modules with an eccentric crank",
-   "objective": "Unlock the spring dial code by finding and simultaneously holding one correct nonzero input. Minimize execution time and valid attempts using only historical BEST feedback; preserve real grasps and required airborne support.",
+   "objective": "Unlock the code: find the correct nonzero input and hold it on every dial at once, using only the BEST record as feedback. How the robots share the work is your choice.",
    "rules": [
-    "The face has0,1,2,3,4,5 at60-degree intervals. Each private password digit is1..5;0 is an invalid initial position. Clockwise labels4 and5 may be reached as-120 and-60degrees; +180 and-180 are the same mark3.",
-    "BEST starts at0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
-    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within4degrees of a nonzero mark, actually grasped, and stable for0.25seconds. Green means a valid input, not a correct password.",
+    "The face has 0, 1, 2, 3, 4, 5 at 60-degree intervals. Each private password digit is 1..5; 0 is an invalid initial position. Clockwise labels 4 and 5 may be reached as -120 and -60 degrees; +180 and -180 are the same mark 3.",
+    "BEST starts at 0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
+    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within 4 degrees of a nonzero mark, actually grasped, and stable for 0.25 seconds. Green means a valid input, not a correct password.",
     "The BEST digit is bright only when READY is green. Otherwise its retained value stays visible in dim grey-brown, including while the amber lamp is qualifying. Brightness does not change the record or disclose current correctness.",
     "Only a complete valid input updates BEST. Off-mark, zero or lost grasp makes READY invalid while BEST remains. New stable configurations are evaluated automatically, including intermediate configurations during movement; bind a record change to an actually observed configuration, not an assumed target.",
-    "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
+    "L2/L3 require a separate robot to hold each blue handle with the whole module at least 20 mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
@@ -821,14 +812,14 @@
    "workload": 8,
    "unit": "dials",
    "level_note": "Fixed dial modules",
-   "objective": "Unlock the spring dial code by finding and simultaneously holding one correct nonzero input. Minimize execution time and valid attempts using only historical BEST feedback; preserve real grasps and required airborne support.",
+   "objective": "Unlock the code: find the correct nonzero input and hold it on every dial at once, using only the BEST record as feedback. How the robots share the work is your choice.",
    "rules": [
-    "The face has0,1,2,3,4,5 at60-degree intervals. Each private password digit is1..5;0 is an invalid initial position. Clockwise labels4 and5 may be reached as-120 and-60degrees; +180 and-180 are the same mark3.",
-    "BEST starts at0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
-    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within4degrees of a nonzero mark, actually grasped, and stable for0.25seconds. Green means a valid input, not a correct password.",
+    "The face has 0, 1, 2, 3, 4, 5 at 60-degree intervals. Each private password digit is 1..5; 0 is an invalid initial position. Clockwise labels 4 and 5 may be reached as -120 and -60 degrees; +180 and -180 are the same mark 3.",
+    "BEST starts at 0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
+    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within 4 degrees of a nonzero mark, actually grasped, and stable for 0.25 seconds. Green means a valid input, not a correct password.",
     "The BEST digit is bright only when READY is green. Otherwise its retained value stays visible in dim grey-brown, including while the amber lamp is qualifying. Brightness does not change the record or disclose current correctness.",
     "Only a complete valid input updates BEST. Off-mark, zero or lost grasp makes READY invalid while BEST remains. New stable configurations are evaluated automatically, including intermediate configurations during movement; bind a record change to an actually observed configuration, not an assumed target.",
-    "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
+    "L2/L3 require a separate robot to hold each blue handle with the whole module at least 20 mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
@@ -846,14 +837,14 @@
    "workload": 6,
    "unit": "dials",
    "level_note": "Lift each module: support and grasp",
-   "objective": "Unlock the spring dial code by finding and simultaneously holding one correct nonzero input. Minimize execution time and valid attempts using only historical BEST feedback; preserve real grasps and required airborne support.",
+   "objective": "Unlock the code: find the correct nonzero input and hold it on every dial at once, using only the BEST record as feedback. How the robots share the work is your choice.",
    "rules": [
-    "The face has0,1,2,3,4,5 at60-degree intervals. Each private password digit is1..5;0 is an invalid initial position. Clockwise labels4 and5 may be reached as-120 and-60degrees; +180 and-180 are the same mark3.",
-    "BEST starts at0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
-    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within4degrees of a nonzero mark, actually grasped, and stable for0.25seconds. Green means a valid input, not a correct password.",
+    "The face has 0, 1, 2, 3, 4, 5 at 60-degree intervals. Each private password digit is 1..5; 0 is an invalid initial position. Clockwise labels 4 and 5 may be reached as -120 and -60 degrees; +180 and -180 are the same mark 3.",
+    "BEST starts at 0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
+    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within 4 degrees of a nonzero mark, actually grasped, and stable for 0.25 seconds. Green means a valid input, not a correct password.",
     "The BEST digit is bright only when READY is green. Otherwise its retained value stays visible in dim grey-brown, including while the amber lamp is qualifying. Brightness does not change the record or disclose current correctness.",
     "Only a complete valid input updates BEST. Off-mark, zero or lost grasp makes READY invalid while BEST remains. New stable configurations are evaluated automatically, including intermediate configurations during movement; bind a record change to an actually observed configuration, not an assumed target.",
-    "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
+    "L2/L3 require a separate robot to hold each blue handle with the whole module at least 20 mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
@@ -871,14 +862,14 @@
    "workload": 6,
    "unit": "dials",
    "level_note": "Lifted modules with an eccentric crank",
-   "objective": "Unlock the spring dial code by finding and simultaneously holding one correct nonzero input. Minimize execution time and valid attempts using only historical BEST feedback; preserve real grasps and required airborne support.",
+   "objective": "Unlock the code: find the correct nonzero input and hold it on every dial at once, using only the BEST record as feedback. How the robots share the work is your choice.",
    "rules": [
-    "The face has0,1,2,3,4,5 at60-degree intervals. Each private password digit is1..5;0 is an invalid initial position. Clockwise labels4 and5 may be reached as-120 and-60degrees; +180 and-180 are the same mark3.",
-    "BEST starts at0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
-    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within4degrees of a nonzero mark, actually grasped, and stable for0.25seconds. Green means a valid input, not a correct password.",
+    "The face has 0, 1, 2, 3, 4, 5 at 60-degree intervals. Each private password digit is 1..5; 0 is an invalid initial position. Clockwise labels 4 and 5 may be reached as -120 and -60 degrees; +180 and -180 are the same mark 3.",
+    "BEST starts at 0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
+    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within 4 degrees of a nonzero mark, actually grasped, and stable for 0.25 seconds. Green means a valid input, not a correct password.",
     "The BEST digit is bright only when READY is green. Otherwise its retained value stays visible in dim grey-brown, including while the amber lamp is qualifying. Brightness does not change the record or disclose current correctness.",
     "Only a complete valid input updates BEST. Off-mark, zero or lost grasp makes READY invalid while BEST remains. New stable configurations are evaluated automatically, including intermediate configurations during movement; bind a record change to an actually observed configuration, not an assumed target.",
-    "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
+    "L2/L3 require a separate robot to hold each blue handle with the whole module at least 20 mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
@@ -896,14 +887,14 @@
    "workload": 8,
    "unit": "dials",
    "level_note": "Lift each module: support and grasp",
-   "objective": "Unlock the spring dial code by finding and simultaneously holding one correct nonzero input. Minimize execution time and valid attempts using only historical BEST feedback; preserve real grasps and required airborne support.",
+   "objective": "Unlock the code: find the correct nonzero input and hold it on every dial at once, using only the BEST record as feedback. How the robots share the work is your choice.",
    "rules": [
-    "The face has0,1,2,3,4,5 at60-degree intervals. Each private password digit is1..5;0 is an invalid initial position. Clockwise labels4 and5 may be reached as-120 and-60degrees; +180 and-180 are the same mark3.",
-    "BEST starts at0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
-    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within4degrees of a nonzero mark, actually grasped, and stable for0.25seconds. Green means a valid input, not a correct password.",
+    "The face has 0, 1, 2, 3, 4, 5 at 60-degree intervals. Each private password digit is 1..5; 0 is an invalid initial position. Clockwise labels 4 and 5 may be reached as -120 and -60 degrees; +180 and -180 are the same mark 3.",
+    "BEST starts at 0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
+    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within 4 degrees of a nonzero mark, actually grasped, and stable for 0.25 seconds. Green means a valid input, not a correct password.",
     "The BEST digit is bright only when READY is green. Otherwise its retained value stays visible in dim grey-brown, including while the amber lamp is qualifying. Brightness does not change the record or disclose current correctness.",
     "Only a complete valid input updates BEST. Off-mark, zero or lost grasp makes READY invalid while BEST remains. New stable configurations are evaluated automatically, including intermediate configurations during movement; bind a record change to an actually observed configuration, not an assumed target.",
-    "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
+    "L2/L3 require a separate robot to hold each blue handle with the whole module at least 20 mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
@@ -921,14 +912,14 @@
    "workload": 8,
    "unit": "dials",
    "level_note": "Lifted modules with an eccentric crank",
-   "objective": "Unlock the spring dial code by finding and simultaneously holding one correct nonzero input. Minimize execution time and valid attempts using only historical BEST feedback; preserve real grasps and required airborne support.",
+   "objective": "Unlock the code: find the correct nonzero input and hold it on every dial at once, using only the BEST record as feedback. How the robots share the work is your choice.",
    "rules": [
-    "The face has0,1,2,3,4,5 at60-degree intervals. Each private password digit is1..5;0 is an invalid initial position. Clockwise labels4 and5 may be reached as-120 and-60degrees; +180 and-180 are the same mark3.",
-    "BEST starts at0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
-    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within4degrees of a nonzero mark, actually grasped, and stable for0.25seconds. Green means a valid input, not a correct password.",
+    "The face has 0, 1, 2, 3, 4, 5 at 60-degree intervals. Each private password digit is 1..5; 0 is an invalid initial position. Clockwise labels 4 and 5 may be reached as -120 and -60 degrees; +180 and -180 are the same mark 3.",
+    "BEST starts at 0 and shows the largest correct-count achieved by any one complete valid input in this episode. It is not the current correct-count. An unchanged record can mean equal or worse; never combine per-dial results from different attempts.",
+    "READY is grey when the current input is invalid, amber while qualifying and green after every dial is within 4 degrees of a nonzero mark, actually grasped, and stable for 0.25 seconds. Green means a valid input, not a correct password.",
     "The BEST digit is bright only when READY is green. Otherwise its retained value stays visible in dim grey-brown, including while the amber lamp is qualifying. Brightness does not change the record or disclose current correctness.",
     "Only a complete valid input updates BEST. Off-mark, zero or lost grasp makes READY invalid while BEST remains. New stable configurations are evaluated automatically, including intermediate configurations during movement; bind a record change to an actually observed configuration, not an assumed target.",
-    "L2/L3 require a separate robot to hold each blue handle with the whole module at least20mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
+    "L2/L3 require a separate robot to hold each blue handle with the whole module at least 20 mm clear of external supports. Maintain that support during red operation. A crank grip moves around the axle and may require coordinated translation.",
     "Unlock occurs only when all digits of one simultaneous valid input are correct. Success latches, while physical springs and support remain active. Inputs and actuation choices are Agent decisions.",
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],

@@ -30,7 +30,7 @@ class SharedBudgetTests(unittest.TestCase):
             finally: ledger.close()
 
     def test_capped_interrupted_turn_becomes_uncertain_and_blocks(self):
-        # docs/running/run-segments.md: under a cap a cut-off turn's unknown cost keeps blocking.
+        # docs/running/continuation.md: under a cap a cut-off turn's unknown cost keeps blocking.
         self.assertEqual(self.ledger.reserve('cut','A',.3),.3)
         snapshot=self.ledger.settle_interrupted()
         self.assertEqual(snapshot['status'],'uncertain')

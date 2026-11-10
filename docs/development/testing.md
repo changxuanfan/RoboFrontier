@@ -2,7 +2,7 @@
 
 Install the locked Python environment and Node.js before running these checks.
 The selected native CLIs are needed only by tests that explicitly exercise them.
-See the [acceptance ledger](../archive/unified-main.md) for exact results and limitations.
+See the acceptance ledger (`docs/archive/unified-main.md`, in the [archive tag](../history.md)) for exact results and limitations.
 
 ## Protocol checks
 

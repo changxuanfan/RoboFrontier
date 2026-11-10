@@ -62,7 +62,7 @@ FINAL = ('stop_requested', 'wall_limit', 'wall_backstop', 'world_ended', 'launch
 
 
 def _run_once_continued(runner, run_dir, base_env, continuing=False, **options):
-    """One run, continued once in a new segment after an unexpected stop (docs/running/run-segments.md).
+    """One run, continued once in a new segment after an unexpected stop (docs/running/continuation.md).
 
     With `continuing`, a run that had started before the batch process died is first
     prepared for its next segment; a run that never started starts normally.

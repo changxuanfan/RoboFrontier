@@ -1,20 +1,32 @@
-# BEST5 Dial: current specification and preserved evidence
+# Dial (BEST5)
 
-The current Dial family is **R11 BEST5**, with nine cases selected through
-`benchmark/release.json`. Original Oracle evidence includes eight
-programmatic witnesses and one assisted eight-dial Level 3 witness. Their success
-is historical evidence for their frozen source, not automatic qualification of
-later physics or harness revisions. Use the [unified CLI](../unified-cli.md) for
-new policy experiments and the [Oracle entry](../oracle/README.md) for new privileged
-reference executions.
+Each dial module has a knob with six marks (0–5, 60° apart) and a secret digit 1–5; the code is
+fixed per case. The team turns every knob to a nonzero mark and holds them all at once; the
+panel's BEST digit shows the largest number of correct dials any one complete valid input has
+had in the episode, and READY turns green when the current input is valid (every dial within 4°
+of a nonzero mark, grasped, still for 0.25 s). The task is solved when one held input is
+entirely correct.
 
-## Current catalogs and historical artifacts
+| Level | Modules |
+| --- | --- |
+| 1 (`d1`) | Gear dials on the table |
+| 2 (`d2`) | Free modules: a second arm holds each blue handle with the module 20 mm clear of every support |
+| 3 (`d3`) | As level 2, with a single-sided crank to turn |
+
+Scales: 4, 6 or 8 dials (4, 6, 8 arms at level 1; twice that at levels 2 and 3).
+
+## Earlier revisions, Oracle evidence and tools
+
+The sections below keep the detail written while each revision was built; numbers such as
+R13 or R14 name those revisions.
+
+### Current catalogs and historical artifacts
 
 | Content | Path |
 | --- | --- |
 | Nine-case model catalog | `benchmark/dial/catalog.json` |
 | Specification, defaults, frozen evidence registry | `benchmark/dial/best5-r11.json` |
-| Policy-specific guidance | `prompts/archive/tasks/dial-best5.md` |
+| Policy-specific guidance | `prompts/skills/dial/SKILL.md` (earlier: `prompts/archive/tasks/dial-best5.md` in the tag `archive/pre-cleanup-20261110`) |
 | Original shared integration requests | `benchmark/dial/integration-requests.json` |
 | Historical review package and progress-aware edits | `outputs/engineering/dial-family-current/` |
 | Delivered nine simple-background videos | `outputs/oracle/dial-nine-videos-20261027/` |
@@ -24,7 +36,7 @@ Output/recording paths are preserved provenance, not contents of a plain clone.
 New checkouts restore current pinned policy assets through `robofrontier bootstrap`.
 The optional Factory recording bundle is a separate resource.
 
-## Rules and completion
+### Rules and completion
 
 | Dials | Level 1 arms | Level 2 arms | Level 3 arms |
 | --- | --- | --- | --- |
@@ -63,7 +75,7 @@ Current Factory presentation uses source motion at 60 Hz, **10x at 30 fps**, and
 independent per-station looping with appearance reset. Legacy hold-final-state
 is still supported. Presentation time is not a policy or physics deadline.
 
-## Review and replay tools
+### Review and replay tools
 
 The family audit (`check_dial_family.py`), the policy-package checker
 (`build_dial_policy_package.py`) and the motion editor (`edit_dial_recording.py`) were removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
@@ -92,7 +104,7 @@ runner `run_best5_dial_batch.py` and the local diagnostic
 experiment entry is retired,
 while real model shoulder geometry remains. Historical readers serve old evidence.
 
-## Source edits and independent playback cursors
+### Source edits and independent playback cursors
 
 `dial_motion_edit.py` classifies original qpos, action progress, process events,
 and appearance events. It preserves valid inputs, support changes, failures,
@@ -110,7 +122,7 @@ Factory timeline updates all stations, then renders once under the independent
 presentation clock. Motion compression must preserve those states, timestamps,
 and events; it is separate from editorial interval removal.
 
-## Integration and evidence preservation
+### Integration and evidence preservation
 
 Dial-specific edit/render modules retain Dial names. The original integration
 requests avoided replacing generic rendering modules wholesale; shared changes
@@ -126,8 +138,8 @@ attempts, recovery provenance, private pairings, frozen source, and required
 assets. Delivered videos keep their actual edit/scene/frame maps; new manifests
 do not imply that old videos were rerendered.
 
-Historical detail is in the [Oracle continuation](../archive/history/dial-oracle-continuation-20261027.md),
-[old handoff](../archive/history/dial-oracle-handoff-20261026.md), and
-[render history](../archive/history/dial-motion-render-history-20261027.md). Their pauses,
+Historical detail is in the Oracle continuation (`docs/archive/history/dial-oracle-continuation-20261027.md`, in the [archive tag](../history.md)),
+old handoff (`docs/archive/history/dial-oracle-handoff-20261026.md`, in the [archive tag](../history.md)), and
+render history (`docs/archive/history/dial-motion-render-history-20261027.md`, in the [archive tag](../history.md)). Their pauses,
 pending tasks, and local paths are historical, not current operator instructions.
 Use current review receipts and the integration ledger for acceptance scope.

@@ -1,31 +1,33 @@
-# Frontier V2 tasks
+# The tasks
 
-Four families each have three scales and three levels, giving 36 cases.
-`benchmark/release.json` distinguishes `gpt` and `oracle` purposes.
+Four families, each at three scales (the number of arms) and three levels (how hard the
+mechanism is): 36 cases. The release (`benchmark/release.json`, with `release_id`) names every
+case's scene, its public task and family materials by hash; each case lives in
+`benchmark/<family>/<case>/`. A run receives only the public task (`public/task.json`), the
+family materials and the family Skill (`prompts/skills/<family>/SKILL.md`), never the scene file
+or the evaluator.
 
-| Family | GPT input | Oracle presentation | Speed | Specification/evidence |
+| Family | Cases | What the team does | Level 1 → 3 | Guide |
 | --- | --- | --- | --- | --- |
-| Transport | R14 physical half-holes | Original R13 frozen recordings; half-hole presentation | 20x | [Transport](transport.md) |
-| Mosaic | R14 nearby mixed colors | Original R13 color recordings | 30x | [Mosaic](mosaic.md) |
-| Relay | Each timber 70% over GOAL and released, stacking allowed | Each recording's own frozen source | 20x | [Relay](relay.md) |
-| Dial | R11 BEST5 | Original R11 recordings | 10x | [BEST5 Dial](dial-best5.md) |
+| Transport | `transport-a04/a08/a12-d1..d3` (4, 8, 12 arms; 12, 24, 36 items) | Deliver each requested cube or cylinder to its destination board | placed on the board → two blades into blind slots → the same on a spring-supported board | [Transport](transport.md) |
+| Mosaic | `mosaic-a04-6x12`, `a06-9x18`, `a08-12x24`, `d1..d3` (72, 162, 288 cubes) | Build a four-color Tulip pattern, one cube per cell | 70 mm pockets → printed lines → no visible grid | [Mosaic](mosaic.md) |
+| Relay | `relay-a08/a12/a16-d1..d3` (8, 12, 16 arms; 2, 3, 4 timbers) | Carry long timbers to GOAL with at least one airborne handover each | straight beam → arc with a hanging pendulum → sprung elbow with a pendulum | [Relay](relay.md) |
+| Dial | `dial-best5-n04/n06/n08-d1..d3` (4, 6, 8 dials) | Find and hold the code, with only a BEST-so-far record as feedback | gear dials → blue support held in the air → crank dials, support held | [Dial](dial-best5.md) |
 
-Transport R14 and Mosaic R15 are new inputs; R13 full Oracle results do not qualify
-them. Relay terminal-GOAL results and historical native acceptance are
-reported separately. Assisted and pure-program evidence retain their labels. The
-rolling-friction revision that changed Transport cylinders and Dial module
-disks/stems is described in
-[Transport: rolling-friction 0.03 revision](transport.md#rolling-friction-003-engineering-candidate-2026-10-29).
-Terminal scoring shared by all families is in
-[terminal scoring v2](../protocol.md#direct-controller-startup-and-terminal-scoring-v2).
+## What every case shares
 
-New runs freeze public material and use a source-bound evaluation/recording
-protocol; original task preview labels are not rewritten. See
-[policy preparation](../engines/codex.md#preflight-preparation-and-launch).
-Factory uses source-level edits, independent station loops and 30 fps,
-superseding the old play-once/stop instruction. See [Factory](../factory/README.md).
+- **Physics.** The release physics is in each scene file, and every action states its speed,
+  acceleration or force within the limits of a real Franka Panda ([physics](../physics.md)).
+- **Time.** 24 hours of active running time; outages, usage-limit pauses and host sleep do not
+  count. The policy is not told the limit ([continuation](../running/continuation.md#time)).
+- **Scoring.** Terminal: the world is scored when the team calls `finish` or at the cutoff,
+  after 1.5 s with every arm still. Process events (collisions, drops) are recorded beside the
+  score and do not veto it, except where a family's rule says so (Relay handovers)
+  ([protocol](../protocol.md)).
+- **Continuing.** A stopped run continues as the same trial, never a new attempt
+  ([continuation](../running/continuation.md)).
 
-Historical catalogs, generators and packages explain old experiments; they do
-not directly select the current release. The
-[earlier environment guide](../archive/history/frontier-v2-environments-before-cleanup-20261027.md)
-preserves revision history.
+The Oracle (a privileged reference that solved every case) ran on the scenes it was developed
+on, which are kept unchanged in `benchmark/oracle/<case>/`; see the [Oracle](../oracle/README.md).
+Earlier scene revisions and their records are in the tag `archive/pre-cleanup-20261110`
+([history](../history.md)).

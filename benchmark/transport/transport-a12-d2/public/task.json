@@ -1,7 +1,5 @@
 {
-  "kind": "frontier_suite",
   "id": "transport-a12-d2",
-  "suite_version": 2,
   "family": "transport",
   "level": 2,
   "arms": {
@@ -110,7 +108,7 @@
     "Cubes have 60 mm sides; cylinders have 60 mm diameter and height. Blades initially point up or sideways. Grasp, airborne reorientation, receiving grasp and subsequent insertion must form a feasible continuous sequence. Allocation, routes and independent concurrent work are planner choices; minimize unnecessary cycling, staging and regrasping while maintaining real support and collision clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
   ],
-  "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+  "objective": "Deliver every requested item to its place on its destination board, seated, released and still. How the robots share the work is your choice.",
   "observation_contract": {
     "initial_geometry_public": true,
     "live_object_truth_for_policy": false,
@@ -167,7 +165,6 @@
     "socket_close"
   ],
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",
-  "execution_readiness": "prepared_policy_trial",
   "initial_supplies": [
     {
       "source": "A",
@@ -248,7 +245,7 @@
     "cylinder_diameter_m": 0.06,
     "cylinder_height_m": 0.06,
     "cube_body_mass_kg": 0.16874999999999996,
-    "cube_material": "Solid wood; inherited nominal density",
+    "cube_material": "Solid wood",
     "cylinder_body_mass_kg": 0.13253594007331937,
     "blade_size_m": [
       0.0025,
@@ -262,14 +259,12 @@
     ],
     "slot_depth_m": 0.026,
     "board_thickness_m": 0.032,
-    "spring_board": null,
     "supplies": "Tabletop; no pedestals. Plug blades initially up/sideways. First six stock identities are cubes, subsequent identities are cylinders.",
     "board_size_m": [
       0.14300000000000002,
       0.396
     ],
     "board_material_density_kg_m3": 650.0,
-    "board_outward_shift_from_r10_m": 0.05,
     "target_cue_span_m": 0.08399999999999999,
     "target_cue_scale": 1.4,
     "target_center_pitch_m": 0.12,
@@ -1602,7 +1597,6 @@
       "fixed_world": true
     }
   ],
-  "scene_revision": 14,
   "family_materials": [
     "family/skill.md"
   ],

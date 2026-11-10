@@ -78,7 +78,7 @@ class Monitor:
         from .contact_episodes import ContactEpisodes
         self.contact_episodes = ContactEpisodes()
         self.motion_overlap_s=0.;self.any_motion_s=0.;self.robot_motion_s=0.;self.max_moving=0
-        # A continued segment appends to the same process log (docs/running/run-segments.md).
+        # A continued segment appends to the same process log (docs/running/continuation.md).
         self.log=Path(log_path).open('a' if append else 'w') if log_path else None;self.active=True
         self.log_format=log_format;self.snapshot_interval=PROCESS_LOG_FORMATS[log_format];self.last_event=None;self.logged_trials=0;self.final_logged=False
         if self.log and log_format!='full':
@@ -110,7 +110,7 @@ class Monitor:
         """A continued segment's evaluator takes over the Dial record at its restore frame.
 
         Trials, BEST and success are episode history, carried in the bound restore record
-        (docs/running/run-segments.md). A configuration already counted and held at that
+        (docs/running/continuation.md). A configuration already counted and held at that
         frame stays the same trial while it is held on; leaving and re-entering counts again.
         Blue support ready at that frame stays qualified, and red knobs held there are not new
         contacts, so the restart neither re-counts a held input nor records a violation.
@@ -498,7 +498,7 @@ class Relay:
 
         A timber held at the restore frame is re-established as airborne by the ordinary
         lift check, with the custody and drop state it had at that frame
-        (docs/running/run-segments.md).
+        (docs/running/continuation.md).
         """
         from ..runtime.segments import current_restore
         directory=getattr(self.mon.w,'directory',None)

@@ -122,7 +122,7 @@ class RuntimeService:
             self.store.recover_execution()
         except Exception as error:
             # The recovery transaction rolled back; the run is still recorded as interrupted
-            # and its unsettled calls stay as they were for engineering review.
+            # and its unsettled calls stay as they were for operator review.
             self.store.event('EXECUTION_RECOVERY_FAILED', 'Meta', {'reason': type(error).__name__+': '+str(error)})
 
     @property
@@ -497,7 +497,7 @@ class RuntimeService:
                 action=self.store.actions(actor).get(data['call_id'])
                 if not action or action['arm']!=robot:raise ValueError('Stop requires an own action on the selected robot')
                 if action['status']=='uncertain':
-                    if not action.get('isolated'):raise ValueError('Uncertain execution requires engineering review')
+                    if not action.get('isolated'):raise ValueError('Uncertain execution requires operator review')
                     diagnostic=self.isolated_diagnostics(action)
                     if diagnostic['controller_state']!='original_active':
                         self.respond(job,{'stop_requested':False,'original_call_id':data['call_id'],
@@ -691,7 +691,7 @@ class RuntimeService:
                 if result['status'] in ('stopping','uncertain'):
                     action=self.store.actions().get(job['id'],{})
                     arm=getattr(self.world,'arms',{}).get(action.get('arm'))
-                    locally_stopping=(result.get('reason') in ('Stop is still settling','Stop did not settle; engineering review required')
+                    locally_stopping=(result.get('reason') in ('Stop is still settling','Stop did not settle; operator review required')
                                       and arm is not None and arm.job==job['id'] and arm.stopping and arm.uncertainty_reported)
                     if locally_stopping:
                         diagnostics=result.get('stop_diagnostics') or self.stopping_diagnostics(action)

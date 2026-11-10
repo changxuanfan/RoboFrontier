@@ -72,7 +72,7 @@ class World:
         self.data=mujoco.MjData(self.model)
         mujoco.mj_resetDataKeyframe(self.model,self.data,self.model.key('initial').id);mujoco.mj_forward(self.model,self.data)
         from .segments import restore_world
-        # A continued run (docs/running/run-segments.md) rebuilds its world from the last recorded pose.
+        # A continued run (docs/running/continuation.md) rebuilds its world from the last recorded pose.
         segment_restore=restore_world(self.directory,self.task,self.model,self.data)
         if segment_restore:self.segment=segment_restore['segment'];mujoco.mj_forward(self.model,self.data)
         self.arms={a:Arm(self.model,self.data,a,initialized=True) for a in self.task['arms']}
@@ -442,7 +442,7 @@ class Service(RuntimeService):
             perf_file=self.directory/'private/outputs/cpu-performance.jsonl'
             while not self.shutdown and (not hasattr(self,'window') or not glfw.window_should_close(self.window)):
                 # The world closes by itself once its host is gone, so a crashed host
-                # leaves no orphan holding the world lock (docs/running/run-segments.md).
+                # leaves no orphan holding the world lock (docs/running/continuation.md).
                 if os.getppid()!=self.parent_pid:
                     self.store.event('HOST_LOST','Meta',{'parent_pid':self.parent_pid});break
                 now=time.monotonic();acc+=min(now-previous,.1);previous=now

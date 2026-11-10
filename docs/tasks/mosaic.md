@@ -1,10 +1,24 @@
-# Mosaic: current specification and delivery
+# Mosaic
 
-Mosaic has nine cases: 4, 6, or 8 arms with 6 x 12, 9 x 18, or 12 x 24 patterns,
-each at Levels 1, 2, and 3. All target cells must simultaneously contain distinct
-correctly colored cubes satisfying release, placement, orientation, and stability.
+The team builds a four-color Tulip pattern (cream, navy, coral, sage), background cells
+included, with one 60 mm cube per cell on a 71 mm pitch. The pattern matrix and the reference
+image are in world orientation (row 1 north). Stock allocations to stations do not restrict
+which arm uses an item.
 
-## Current selection and Legacy sources
+| Level | Grid | Scales |
+| --- | --- | --- |
+| 1 (`d1`) | 70 mm square pockets | 6×12 cells with 4 arms, 9×18 with 6, 12×24 with 8 |
+| 2 (`d2`) | 3 mm red printed lines | the same |
+| 3 (`d3`) | No visible grid | the same |
+
+Every cell needs the right color, inside its cell and released.
+
+## Earlier revisions, Oracle evidence and tools
+
+The sections below keep the detail written while each revision was built; numbers such as
+R13 or R14 name those revisions.
+
+### Current selection and Legacy sources
 
 New policy and unified Oracle executions select the current **R15** released
 scene through `benchmark/release.json`. R15 (2026-11-03) is R14 with a **71 mm**
@@ -31,7 +45,7 @@ Original non-English filenames stay in the immutable evidence, not current
 configuration strings. No historical file is renamed or rewritten.
 New R14 Oracle attempts have separate qualification; the old success does not
 transfer automatically. See [Oracle execution](../oracle/README.md) and the
-[integration ledger](../archive/unified-main.md).
+integration ledger (`docs/archive/unified-main.md`, in the [archive tag](../history.md)).
 
 At its original release, R14 changed stock color identities/RGB only: stock
 positions/count, total color inventory, target pattern, robots, tabletop, cameras,
@@ -42,7 +56,7 @@ same-color goals for about 70%-73% of each arm's nearby stock; this is design
 availability evidence, not a required assignment, complete carrying path,
 handover count, or parallel-efficiency result.
 
-## Static specification
+### Static specification
 
 | Arms | Pattern and goals per level | Outer table width x depth |
 | --- | --- | --- |
@@ -65,7 +79,7 @@ identify inventory origin without exclusive arm ownership.
 - **Level 3:** no visible grid; the declared pattern and coordinate system remain
   the placement reference.
 
-## Completion and process reporting
+### Completion and process reporting
 
 | Condition | Bound criterion |
 | --- | --- |
@@ -86,7 +100,7 @@ placement. End-point IK alone does not verify a complete safe or concurrent path
 The online policy changes the world through authorized actuators and real
 contacts, using permitted RGB, proprioception, and action feedback.
 
-## Current preparation and retained family commands
+### Current preparation and retained family commands
 
 Run `robofrontier bootstrap` to restore the pinned current assets, then use
 [unified preparation](../unified-cli.md). The historical delivery check and
@@ -109,15 +123,15 @@ A new policy run receives the public task, the target image and the current
 Mosaic skill, `prompts/skills/mosaic/SKILL.md`. The public task states the grid:
 its rules name the 71 mm pitch and 70 mm pockets, and its target gives the same
 numbers. The skill states no numbers; it says to work out the pocket clearance
-from the task. The release also lists `prompts/archive/tasks/mosaic-r15.md` (R14's
+from the task. Earlier releases listed `prompts/archive/tasks/mosaic-r15.md` (R14's
 supplement titled R15) as family guidance, which terminal runs do not deliver.
 R14 and R13 records keep their own supplements and the archived
-`prompts/archive/skills/mosaic-r13/SKILL.md`. Old prompts and builders remain
+`prompts/archive/skills/mosaic-r13/SKILL.md` (both in the tag `archive/pre-cleanup-20261110`). Old prompts and builders remain
 provenance for their review packages. Private pairings,
 joint witnesses, Oracle truth/actions/recovery experience, and engineering
 manifests must not enter a new policy's context.
 
-## Video, source edits, and Factory
+### Video, source edits, and Factory
 
 Historical videos are under `outputs/oracle/mosaic-continuation-20261026/videos`,
 with nine current-at-delivery videos at **30x, 30 fps** from original 60 Hz motion.
@@ -145,6 +159,6 @@ edit tables and the historical review of 135 candidates/five slow-motion
 segments remain preserved. Classification protects directed movement and semantic
 events; missing measured contact-force data cannot establish zero force. See
 [Factory design](../factory/README.md). The
-[Legacy merge handoff](../archive/plans/suite-v2/mosaic-merge-handoff.md) records the
+Legacy merge handoff (`docs/archive/plans/suite-v2/mosaic-merge-handoff.md`, in the [archive tag](../history.md)) records the
 original asset materialization, public-input loading, and shared merge gates;
 its pending-state statements do not override current integration evidence.

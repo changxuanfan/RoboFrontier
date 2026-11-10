@@ -69,7 +69,7 @@ def seal_run(store, timeout_s=30):
                         raise ValueError('Execution owner did not exit; run remains paused. '+(shutdown_error or ''))
                     time.sleep(.02)
         # The exclusive OS lock proves there is no physical owner to replay.
-        # Each segment of a continued run (docs/running/run-segments.md) is sealed on its own.
+        # Each segment of a continued run (docs/running/continuation.md) is sealed on its own.
         from .segments import output_dir
         segment_output=output_dir(run,store.get('segment',0));segment_output.mkdir(parents=True,exist_ok=True)
         report_path=segment_output/'seal.json'

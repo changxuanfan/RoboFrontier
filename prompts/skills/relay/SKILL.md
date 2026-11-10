@@ -27,8 +27,9 @@ Every timber needs a qualified airborne handover before it can count as complete
 plan one for each timber even when a single team could reach GOAL. Keep at least two
 current holders on the timber while the new arm takes hold, and hold that overlap for
 at least 0.2 seconds before a current holder lets go. Dragging or pushing a timber
-along the table does not count, and neither does a handover made after a drop until
-the last sending team has recovered the timber.
+along the table is never a handover. A timber that falls is lifted again by the arms
+that held it when it fell; if another arm picks it up, its earlier handovers no longer
+count, and it must be put down, lifted by those arms and handed over in the air again.
 
 ## At the goal
 

@@ -141,7 +141,7 @@ class AdaptiveForkSetup:
                         delegates.created(batch_id,child['actor'],ident,self.owner)
                 except Exception: pass
             try:
-                delegates.uncertain(batch_id,'Claude fork setup or child start requires engineering review',self.owner)
+                delegates.uncertain(batch_id,'Claude fork setup or child start requires operator review',self.owner)
             finally:
                 # Preserve paused state even if writing the delegation outcome fails.
                 self.store.put('dispatch_paused',True)

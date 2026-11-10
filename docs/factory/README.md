@@ -30,8 +30,8 @@ update themselves. The old static-image index is
 `outputs/robo-factory/v10-centered-labels-review/README.md`.
 
 The offline presentation model has no physical degrees of freedom or actuators.
-[V7 acceptance](../archive/history/robo-factory-v7-20261027.md) and the
-[V6 design record](../archive/history/robo-factory-before-integration-20261027.md) retain
+V7 acceptance (`docs/archive/history/robo-factory-v7-20261027.md`, in the [archive tag](../history.md)) and the
+V6 design record (`docs/archive/history/robo-factory-before-integration-20261027.md`, in the [archive tag](../history.md)) retain
 their original scopes.
 
 The design retains four walls, roof, structural beams, windows and doors, region

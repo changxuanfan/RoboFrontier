@@ -158,7 +158,7 @@ def execute(store, op, data, owner, now):
             print('call_id='+call_id,file=log,flush=True)
         return client_call(connection,'start',{},call_id,log_call_id=False)
     if op=='request-resume':
-        # A continued run (docs/running/run-segments.md): the owner resumes the prepared segment
+        # A continued run (docs/running/continuation.md): the owner resumes the prepared segment
         # and returns each working role's frozen resume message.
         from .pipeline_client import client_call
         connection=store.path.parent/'connections'/f"{cfg['manager']}.json"

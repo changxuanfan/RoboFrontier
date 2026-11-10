@@ -199,7 +199,7 @@ def freeze_public(task, directory, public, root=ROOT):
     projection = case['public_projection']
     if sha(root/projection['path']) != projection['sha256']:
         raise ValueError('Released public task changed')
-    own = {key: public[key] for key in ('run_protocol', 'observation_image') if key in public}
+    own = {key: public[key] for key in ('observation_image',) if key in public}
     public.clear(); public.update(read(root/projection['path'])); public.update(own)
     family_dir = directory/'public/inputs/family'
     family_dir.mkdir()

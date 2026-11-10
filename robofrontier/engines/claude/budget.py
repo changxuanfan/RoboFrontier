@@ -88,7 +88,7 @@ class BudgetLedger:
         with self.transaction(): return self._snapshot()
 
     def settle_interrupted(self):
-        """Before a run continues in a new segment (docs/running/run-segments.md): turns cut off by
+        """Before a run continues in a new segment (docs/running/continuation.md): turns cut off by
         the unexpected exit have ended, with an unknown cost. Without a task cap that cost
         cannot breach anything, so they become settled with no reported cost; under a cap
         they become uncertain and keep blocking, since the cut-off turn may have spent

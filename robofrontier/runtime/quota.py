@@ -5,7 +5,7 @@ minutes cannot help (codex_rpc.capacityFailure leaves it out). Instead the host 
 world to pause (runtime_cli quota-pause): physics and dispatch are held and the time is not
 counted, as in a network outage (egress_pause.WorldPause). The world resumes itself at the
 reset, and the host continues the failed turn once with the frozen quota notice. It is the
-same segment; no continuation is used. See docs/running/run-segments.md#usage-limit-pause.
+same segment; no continuation is used. See docs/running/continuation.md#usage-limit-pause.
 
     Claude Code: "You've hit your limit · resets 3pm (America/New_York)"
                  "You've hit your weekly limit · resets Nov 14, 9am (Asia/Shanghai)"

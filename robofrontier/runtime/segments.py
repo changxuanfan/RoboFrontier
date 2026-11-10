@@ -8,7 +8,7 @@ Why a segment ended decides what may follow (STOP_REASONS): an unexpected stop c
 by itself once; any stop but an integrity abort may be continued by hand
 (`robofrontier continue`), as often as needed. A continuation after the trial was scored
 (finish or cutoff) is marked `after_score`; the score stays the one recorded then.
-See docs/running/run-segments.md.
+See docs/running/continuation.md.
 """
 import fcntl
 import json

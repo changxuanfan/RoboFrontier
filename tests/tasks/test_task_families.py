@@ -75,10 +75,10 @@ class FamilyReleaseTests(unittest.TestCase):
                 self.assertNotIn('family_guidance', public)
                 if case.startswith('relay-'):
                     self.assertTrue(public['completion']['required_airborne_handover'])
-                    self.assertEqual(public['completion']['relay_completion_rule'], 'relay-airborne-handover-v1')
+                    self.assertNotIn('relay_completion_rule', public['completion'])
                     self.assertTrue(any('picks it up, none of that timber' in r for r in public['rules']))
                     self.assertFalse(any('never counts as transport' in r for r in public['rules']))
-                    self.assertEqual(public['completion']['rule_revision'], 'relay-timber-goal-70pct-v1')
+                    self.assertNotIn('rule_revision', public['completion'])
                 if case.startswith('transport-'):
                     self.assertFalse(public['completion']['acceptance']['process_compliance_required'])
                 if case.startswith('mosaic-'):

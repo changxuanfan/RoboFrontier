@@ -1,7 +1,7 @@
 # Unified command-line configuration
 
 This interface is being integrated on `integration/unified-main`. It has not yet
-replaced the GitHub default branch. See the [acceptance ledger](archive/unified-main.md)
+replaced the GitHub default branch. See the acceptance ledger (`docs/archive/unified-main.md`, in the [archive tag](history.md))
 for checks still required before publishing a unified release.
 
 ## Installation in this checkout
@@ -49,8 +49,9 @@ overrides its named settings; explicit CLI options override those settings.
 Unknown fields, incorrect types, non-finite intervals and invalid limits are
 errors. Credentials belong in `.env` or the environment, never in TOML.
 
-New settings use `schema_version=5`, with independent Factory and Oracle sections
-and an explicit Oracle evaluation mode. Frozen version 1, 2 and 3 configurations retain their exact shapes and hashes;
+New settings use `schema_version=9`: version 8 added `slurm.egress_pause_s`, version 9 the
+`[paths]` section (`runs_root`, where receipts, exports and caches go). Frozen configurations of
+every earlier version retain their exact shapes and hashes;
 new sections are not appended to archived configurations. New partial user TOML files
 can omit the version to inherit the current schema. A frozen configuration is
 evidence, not an operator settings template to overwrite.
@@ -76,7 +77,7 @@ physics steps, or model turns. It is not a provider rate-limit guarantee.
 | `policy.topology` | `single`, `controller-worker`, `worker-worker`, or `adaptive` |
 | `batch.parallel` | Maximum concurrent task hosts, from 1 to 36; no automatic reduction |
 | `batch.startup_interval_s` | Global interval within this batch supervisor, default 0.3 seconds |
-| `batch.task_wall_limit_s` | Per-task limit of active running time, default 86,400 seconds ([how it is counted](running/run-segments.md#time)) |
+| `batch.task_wall_limit_s` | Per-task limit of active running time, default 86,400 seconds ([how it is counted](running/continuation.md#time)) |
 | `batch.startup_timeout_s` | Owner readiness timeout; distinct from task time and transport acknowledgement timeouts |
 | `selection.families` / `cases` | Filters against the current release registry |
 | `selection.level` | 0 for every level, otherwise 1, 2 or 3 |
@@ -238,7 +239,13 @@ default dollar limits.
 .venv/bin/robofrontier run runs/policy/my-l1-batch
 .venv/bin/robofrontier status runs/policy/my-l1-batch
 .venv/bin/robofrontier stop runs/policy/my-l1-batch
+.venv/bin/robofrontier continue runs/policy/my-l1-batch [--cases CASE ...]
 ```
+
+`continue` continues stopped runs by hand as the same trials, as often as needed, also after
+their finish or cutoff (which keeps the score); an unexpected stop already continued once by
+itself ([continuation](running/continuation.md#continuing-by-hand)). Where a batch runs:
+[Mac](running/mac.md), [RunPod and plain Linux](running/runpod.md), [Slurm](running/slurm.md).
 
 `run` reads the frozen `effective-config.json`, verifies its fingerprint against
 batch metadata, and checks every task's immutable input inventory. Changing

@@ -1,15 +1,25 @@
-# Transport: current specification and evidence
+# Transport
 
-The current geometry is the **R14 half-opening** family, with nine cases in
-`benchmark/transport/catalog.json`. Specification and acceptance metadata
-are in `benchmark/transport/half-opening-r14.json`; policy guidance is
-`prompts/archive/tasks/transport.md`. New experiments use the released entries selected
-by `benchmark/release.json` and the [unified CLI](../unified-cli.md).
-The current policy asset lock also identifies the
-[rolling-friction revision](#rolling-friction-003-engineering-candidate-2026-10-29);
-R14 geometry alone does not prove equality of all physical parameters.
+The team delivers stock items (60 mm wooden cubes and cylinders) from per-station inventories to
+destination boards: three requested items per board, identified by source and by a printed
+color-and-shape cue. Any arm may handle any item; transfers are direct airborne handovers or
+stable tabletop staging, as the team chooses.
 
-## Geometry and objectives
+| Level | Board | Done when |
+| --- | --- | --- |
+| 1 (`d1`) | Flat board | The item is released on its target, upright and still for 1 s |
+| 2 (`d2`) | Fixed board with blind slots | Both flat blades of the item are inside the real slots, the item seated, released and still |
+| 3 (`d3`) | The same slots on a passive spring-supported board (z, roll, pitch) | As level 2, with the board still too |
+
+Scales: 4 arms and 12 items, 8 and 24, 12 and 36. Every item must be delivered; completed
+placements must be preserved.
+
+## Earlier revisions, Oracle evidence and tools
+
+The sections below keep the detail written while each revision was built; numbers such as
+R13 or R14 name those revisions.
+
+### Geometry and objectives
 
 | Property | Four arms | Eight arms | Twelve arms |
 | --- | --- | --- | --- |
@@ -53,7 +63,7 @@ result remains separately available. A recorded violation does not by itself
 stop the policy or prevent it from attempting recovery. Frozen historical
 Oracle evaluators retain their original criteria; their reports are not rewritten.
 
-## Historical evidence and current qualification
+### Historical evidence and current qualification
 
 The original nine R13 independent physical witnesses passed 216/216 placements:
 three frozen-program and six engineering-assisted runs. Their reports, failures,
@@ -68,9 +78,9 @@ execution. Later rolling-friction assets and commissioning attempts have their
 own fingerprints and evidence. Historical qualification must not be inherited
 by a changed scene, controller, or contact candidate. Current integration
 acceptance and outstanding full-task gates are in the
-[integration ledger](../archive/unified-main.md) and [Oracle guide](../oracle/README.md).
+integration ledger (`docs/archive/unified-main.md`, in the [archive tag](../history.md)) and [Oracle guide](../oracle/README.md).
 
-## Restore current assets or build a review package
+### Restore current assets or build a review package
 
 For a new checkout, run `robofrontier bootstrap`. It restores the pinned released
 assets without requiring historical Oracle folders. Policy preparation also
@@ -79,7 +89,7 @@ verifies needed assets automatically; no model is called during preparation.
 The historical family builder and review packager,
 `scripts/build_transport_policy_package.py`, was removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
 
-## Source edits and Factory replay
+### Source edits and Factory replay
 
 `robofrontier/media/edit_transport.py` consumes original states, actions,
 and process events; `transport_motion_signals.py` provides motion signals and
@@ -109,7 +119,7 @@ renderer distinguishes those sources instead of halving an R14 opening again.
 Use each recording's frozen geometry and contact parameters, not a replacement
 scene with a familiar family name. See the [Factory workflow](../factory/replay.md).
 
-## Preserved delivery locations
+### Preserved delivery locations
 
 These are historical paths relative to their original data root, not files
 promised by a fresh Git clone. Historical worktrees sometimes linked `runs/` and
@@ -131,7 +141,7 @@ and skipped 1,035,753 for presentation, projecting about 15 minutes 14 seconds
 across nine front views at 20x/30 fps. That calculation did not itself rerender
 the videos. One-off builders and prior plans remain historical provenance.
 
-## Rolling-friction 0.03 engineering candidate (2026-10-29)
+### Rolling-friction 0.03 engineering candidate (2026-10-29)
 
 This policy physics revision sets Transport cylinder collision geoms to
 `condim=6`, rolling friction `0.03`, and Dial module disk/stem collision geoms

@@ -64,7 +64,7 @@ class StandingTeamPolicyHost:
             if cfg.get('model') != profile.get('model') or cfg.get('effort') != profile.get('effort'):
                 raise ValueError('Profile differs from frozen runtime configuration')
             agents = {a: v for a, v in self.store.agents().items() if v['kind'] != 'manager'}
-            # A run continued after an unexpected exit (docs/running/run-segments.md) keeps every
+            # A run continued after an unexpected exit (docs/running/continuation.md) keeps every
             # role's session; any other bound or started world is never restarted.
             self.resuming = resume
             if resume:

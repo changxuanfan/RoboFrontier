@@ -170,7 +170,7 @@ class ClaudeSessionHost:
         """Start an initial or resumed turn, returning once thread launch is known.
 
         A failed thread start restores the previous state. Any uncertainty after
-        the worker starts blocks further turns and requires engineering review.
+        the worker starts blocks further turns and requires operator review.
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError('A nonempty prompt is required')
@@ -307,7 +307,7 @@ class ClaudeSessionHost:
 
     def adopt(self, session_id):
         """Continue an existing session of this role (a run continued after an unexpected
-        exit, docs/running/run-segments.md): the next turn resumes it instead of creating one."""
+        exit, docs/running/continuation.md): the next turn resumes it instead of creating one."""
         with self.lock:
             if self.state != 'new': raise ValueError('Only a new host can adopt a session')
             self.session_id = str(session_id); self.state = 'idle'

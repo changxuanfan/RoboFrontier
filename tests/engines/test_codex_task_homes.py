@@ -51,7 +51,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                 self.assertEqual(len(entered), 1)
                 launched.append(kwargs['env'])
                 return SimpleNamespace(pid=99999, wait=lambda: 1)
-            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'verify_inputs', return_value=[]), \
+            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'runs_root', return_value=root/'runs'), patch.object(benchmark, 'verify_inputs', return_value=[]), \
                     patch.object(benchmark, 'initialize_codex_home') as initialize, \
                     patch.object(benchmark.subprocess, 'run') as native_start, \
                     patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'), \
@@ -97,7 +97,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                 self.assertEqual(len(initialized), 3)
                 launched.append(kwargs['env']['CODEX_HOME'])
                 return SimpleNamespace(pid=99999, wait=lambda: 0)
-            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'verify_inputs', return_value=[]), \
+            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'runs_root', return_value=root/'runs'), patch.object(benchmark, 'verify_inputs', return_value=[]), \
                     patch.object(benchmark, 'initialize_codex_home', side_effect=initialize), \
                     patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'), \
                     patch.object(benchmark.subprocess, 'run'), \
@@ -141,7 +141,7 @@ class CodexTaskHomesTests(unittest.TestCase):
             def prepared(run_dir, reason):
                 run_layout.path(run_dir, 'stop', 'codex').touch()  # The operator stops right after.
                 return True, 'continuation prepared'
-            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'verify_inputs', return_value=[]), \
+            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'runs_root', return_value=root/'runs'), patch.object(benchmark, 'verify_inputs', return_value=[]), \
                     patch.object(benchmark, 'initialize_codex_home'), \
                     patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'), \
                     patch.object(benchmark.subprocess, 'run'), \

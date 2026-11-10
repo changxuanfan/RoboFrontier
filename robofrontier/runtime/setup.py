@@ -113,7 +113,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     # Meta is engineering, outside the policy team: its role file and runbook stay private.
     (directory/'private/inputs/meta').mkdir()
     runbook=(ROOT/'docs/meta-runbook.md').read_text()
-    for target in ('architecture.md','harness-v2-verification.md'):
+    for target in ('architecture.md','harness-verification.md'):
         runbook=runbook.replace(']('+target+')','](frozen-source/docs/'+target+')')
     runbook=runbook.replace('](../prompts/','](frozen-source/prompts/')
     (directory/'private/inputs/meta/meta-runbook.md').write_text(runbook)
@@ -154,7 +154,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     # engine's host never invalidates a prepared batch. Meta's dispatcher serves both.
     paths += [ROOT/'robofrontier/engines/codex/meta_dispatcher.js']
     paths += [ROOT/name for name in ENGINE_SCRIPTS[cfg.get('engine','codex')]]
-    paths += [ROOT/'docs'/name for name in ('meta-runbook.md','architecture.md','harness-v2-verification.md')]
+    paths += [ROOT/'docs'/name for name in ('meta-runbook.md','architecture.md','harness-verification.md')]
     source_hashes = {}
     for source in paths:
         if not source.is_file():

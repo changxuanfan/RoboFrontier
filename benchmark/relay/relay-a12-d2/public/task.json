@@ -1,7 +1,5 @@
 {
-  "kind": "frontier_suite",
   "id": "relay-a12-d2",
-  "suite_version": 2,
   "family": "relay",
   "level": 2,
   "arms": {
@@ -105,19 +103,18 @@
   "rules": [
     "Move all 3 numbered payload assemblies from their individual initial positions toward the common GOAL. START marks the route origin; returning scattered payloads to START is not required.",
     "Route regions and arrows indicate progress. Grasp points, handover locations, robot teams, allocation and execution order are planner choices. Independent work may run concurrently.",
-    "Airborne transport requires at least two actual beam grasps. Establish receiving support before releasing a sender. Every assembly must undergo a real qualified airborne handover; the receiving team may retain an existing holder.",
+    "Carrying a timber in the air takes at least two arms holding it. Every timber must have at least one qualified airborne handover (below); the receiving team may keep an arm that already holds it. Establish the receivers' hold before a sender lets go.",
     "Grasp the red timber, not a pendant, ring or shaft. Keep the whole assembly clear of table and floor during airborne transport, except for the allowed final GOAL landing.",
-    "Any final placement in GOAL is allowed, including cargo contact and stacking. Oracle packing centers and contact-free separation are not task requirements.",
+    "Any final placement in GOAL is allowed, including timbers touching or stacked on each other.",
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
-    "Drops and violations remain recorded. Only the last established sending team may recover a dropped assembly; a receiver cannot pick it up to bypass an airborne handover. No reset, respawn or history erasure.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
-    "The initial endpoint chord is 1.15m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
+    "The initial endpoint chord is 1.15m. The underside fixed eye is 100 mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170 mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
     "The rigid circular-arc timber subtends 63 degrees.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
-    "A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it dropped picks it up, none of that timber's handovers counts: put it down, let the arms that were holding it when it dropped lift it again, and hand it over again in the air.",
+    "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
   ],
-  "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+  "objective": "Carry every timber to GOAL with at least one airborne handover each, and release it there. How the robots share the work is your choice.",
   "observation_contract": {
     "initial_geometry_public": true,
     "live_object_truth_for_policy": false,
@@ -167,7 +164,6 @@
     "payload_03_weight_close"
   ],
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",
-  "execution_readiness": "prepared_policy_trial",
   "initial_supplies": [
     {
       "source": "A",
@@ -195,18 +191,10 @@
       0.045,
       0.045
     ],
-    "collision": "32 tangent convex segments; smooth visual sweep; analytic arc mass distributed over segments",
     "kind": "underslung_arc_closed_eye_wooden_pendulum",
-    "suspension": "Underside direct fixed eye, physically contact-linked free eye,170mm wooden shaft and600g weight; no bracket, cable or weld",
+    "suspension": "Underside direct fixed eye, physically contact-linked free eye, 170 mm wooden shaft and 600g weight; no bracket, cable or weld",
     "weight_mass_kg": 0.6,
     "suspended_mass_kg": 0.6253322169905657,
-    "weight_body_free": true,
-    "cable_model": null,
-    "cable_count": 0,
-    "beam_bodies": [
-      "payload"
-    ],
-    "tray": null,
     "rigid_suspension_profile": {
       "weight_mass_kg": 0.6,
       "weight_material": "Steel calibration-weight form; nominal manufactured mass, not a measured specimen",
@@ -219,9 +207,6 @@
       "beam_hinge_stiffness_nm_rad": 18.0,
       "beam_hinge_damping_nms_rad": 0.55,
       "beam_hinge_limit_rad": 0.4363323129985824,
-      "timestep_s": 0.002,
-      "contact_time_constant_s": 0.004,
-      "material_calibration_verified": false,
       "pendulum_shaft_material": "wood"
     },
     "initial_condition": "Table-supported tilted beam and directly mounted underside eye; independent wooden pendulum lies on tabletop. No added support fixtures.",
@@ -235,7 +220,6 @@
       ],
       "connection": "Closed contact-linked eyes; independent free weight body"
     },
-    "elastic_hinge": null,
     "minimum_supporting_robots": 2,
     "flexible_teams": true,
     "layout": "upper_arc_90_degrees",
@@ -250,12 +234,6 @@
     "payload_assemblies": [
       {
         "id": "payload_01",
-        "beam_body": "payload_01",
-        "beam_bodies": [
-          "payload_01"
-        ],
-        "weight_body": "payload_01_weight",
-        "tray_body": null,
         "source_region_id": "pickup_01",
         "initial_route_stage_id": "zone_01",
         "pickup_center_m": [
@@ -306,12 +284,6 @@
       },
       {
         "id": "payload_02",
-        "beam_body": "payload_02",
-        "beam_bodies": [
-          "payload_02"
-        ],
-        "weight_body": "payload_02_weight",
-        "tray_body": null,
         "source_region_id": "pickup_02",
         "initial_route_stage_id": "zone_03",
         "pickup_center_m": [
@@ -362,12 +334,6 @@
       },
       {
         "id": "payload_03",
-        "beam_body": "payload_03",
-        "beam_bodies": [
-          "payload_03"
-        ],
-        "weight_body": "payload_03_weight",
-        "tray_body": null,
         "source_region_id": "pickup_03",
         "initial_route_stage_id": "zone_05",
         "pickup_center_m": [
@@ -418,7 +384,6 @@
       }
     ],
     "initial_distribution": "Separate positions along the route; each travels rightward to the common destination",
-    "cable_to_cable_collision": false,
     "table_inner_diameter_m": 3.2,
     "layout_arc_degrees": 90,
     "outer_robot_ids": [
@@ -438,7 +403,6 @@
       "L"
     ],
     "presentation": {
-      "revision": 15,
       "endpoint_size_xy_m": [
         0.8,
         1.36
@@ -528,11 +492,7 @@
           ],
           "yaw_rad": -0.6632251157578452
         }
-      ],
-      "opening": "L2/L3 whole assembly yaw reversed by180 degrees; opening faces the original local route-forward direction",
-      "end_extensions": [],
-      "physics_scope": "R16 user-requested apparatus replacement; unchanged robot mounts, worktop, robot controllers, timestep and goal acceptance. Timber shape, suspension and L3 hinge direction follow the new declared geometry.",
-      "apparatus_revision": 16
+      ]
     },
     "bend_rise_m": 0.16216677177373798
   },
@@ -609,7 +569,6 @@
     }
   ],
   "completion": {
-    "rule_revision": "relay-timber-goal-70pct-v1",
     "boundary_tolerance_m": 0.05,
     "timber_inside_fraction_min": 0.7,
     "timber_goal_tolerance_m": 0.0,
@@ -623,8 +582,7 @@
     "allow_near_goal_release": true,
     "max_release_gap_m": 0.03,
     "release_height_reference": "lowest_assembly_part",
-    "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately.",
-    "relay_completion_rule": "relay-airborne-handover-v1"
+    "scope": "Every timber has had a qualified airborne handover, is at least 70% above painted GOAL and is released; other process events are reported separately."
   },
   "workspace_world_m": {
     "lower": [

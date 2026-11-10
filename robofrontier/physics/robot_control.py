@@ -529,7 +529,7 @@ class PandaArm:
             if self.stopping:
                 self.uncertainty_reported=True
                 self.stable=0;self.recovery_last_sample=now
-                return {'call_id':self.job,'status':'uncertain','reason':'Stop did not settle; engineering review required',
+                return {'call_id':self.job,'status':'uncertain','reason':'Stop did not settle; operator review required',
                         'stop_reason':self.stop_reason,**details}
             self.request_stop(now,'Action timeout; stopped at current reference',details)
         return None

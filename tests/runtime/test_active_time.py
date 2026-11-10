@@ -172,7 +172,7 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             task_families.validate_policy_task(dict(new, run_protocol=dict(new['run_protocol'], clock='START_wall_time')))
         from robofrontier.tasks.public import public_task
-        self.assertNotIn('clock', public_task(new)['run_protocol'])
+        self.assertNotIn('run_protocol', public_task(new))
 
     def store(self, run):
         from robofrontier.runtime.store import RuntimeStore

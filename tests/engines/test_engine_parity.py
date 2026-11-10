@@ -99,7 +99,7 @@ class EngineParityTests(unittest.TestCase):
             # The host keeps the wall limit; no policy input states it.
             private = json.loads((run/'private/inputs/task.json').read_text())['run_protocol']
             self.assertIn('total_wall_limit_s', private)
-            self.assertNotIn('total_wall_limit_s', json.loads((public/'task.json').read_text())['run_protocol'])
+            self.assertNotIn('run_protocol', json.loads((public/'task.json').read_text()))
             for path in list(public.rglob('*.md'))+list(public.rglob('*.json'))+[run/'private/inputs/bootstrap/Controller.md']:
                 self.assertNotIn('total_wall_limit_s', path.read_text(), path)
 

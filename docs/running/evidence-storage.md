@@ -3,8 +3,8 @@
 The unified Codex/Claude paths share stopped-evidence collection and archival.
 These commands make no model calls, advance no physics and change no score.
 Original task/session data remain available. For source-specific earlier checks,
-see the [2026-10-30 validation record](../archive/evidence-storage-validation-20261030.md);
-new integration evidence is in the [acceptance ledger](../archive/unified-main.md).
+see the 2026-10-30 validation record (`docs/archive/evidence-storage-validation-20261030.md`, in the [archive tag](../history.md));
+new integration evidence is in the acceptance ledger (`docs/archive/unified-main.md`, in the [archive tag](../history.md)).
 
 ## Original, collected and archived data
 

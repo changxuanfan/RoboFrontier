@@ -5,7 +5,7 @@ alive, validates the approximate pose restore on a private clone, ends any deleg
 whose native setup never started, prepares the next segment in the same run and runs
 the original frozen runner from the original source checkout. The same trial and the
 same native sessions continue; no physical call is replayed, no delegate is reforked,
-and the recovery is never repeated automatically (docs/running/claude-task-recovery.md).
+and the recovery is never repeated automatically (docs/running/continuation.md#claude-task-recovery).
 """
 import argparse
 import fcntl

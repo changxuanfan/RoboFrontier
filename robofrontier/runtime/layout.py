@@ -14,7 +14,7 @@ inputs (frozen), state (live; control files in state/control), outputs
 evidence and transcripts). A stopped run continues in the
 same directory; segment k >= 1 keeps its restore pose in
 private/inputs/segments/<k>/ and its process outputs in
-private/outputs/segments/<k>/ (docs/running/run-segments.md).
+private/outputs/segments/<k>/ (docs/running/continuation.md).
 """
 import argparse
 import json

@@ -34,7 +34,7 @@ class ClaudeDispatcher:
         if state not in ('active', 'idle', 'error'):
             self.admin('session-unavailable', {'actor': 'Controller', 'thread_id': observation['thread_id'],
                                                 'reason': 'Claude turn outcome unknown'})
-            self.admin('pause', {'reason': 'Claude session state requires engineering review'})
+            self.admin('pause', {'reason': 'Claude session state requires operator review'})
             return None
         item = {'actor': 'Controller', 'thread_id': observation['thread_id'],
                 'status': state, 'turn_id': observation['turn_id'], 'observed_at': time.time(),

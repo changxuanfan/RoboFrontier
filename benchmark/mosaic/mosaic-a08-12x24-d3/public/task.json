@@ -1,7 +1,5 @@
 {
-  "kind": "frontier_suite",
   "id": "mosaic-a08-12x24-d3",
-  "suite_version": 2,
   "family": "mosaic",
   "level": 3,
   "arms": {
@@ -71,13 +69,13 @@
     }
   },
   "rules": [
-    "Build the supplied Tulip reference, including background cells, one released cube per pixel.",
+    "Build the supplied Tulip pattern, background cells included: one released cube in each cell.",
     "Cube side is 60 mm and common cell-center pitch is 71 mm. L1 has 70 mm clear square pockets, L2 3 mm red printed lines, L3 no visible grid. The four colors are cream, navy, coral and sage. The target image matches world north-up, centered on the declared assembly origin.",
     "Stock allocations do not restrict which robot can use an item. Preserve completed placements and account for finger release/withdrawal clearance.",
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits.",
-    "The supplied pattern matrix and reference image already have their final world orientation; do not apply the historical rotation or mirror again."
+    "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
   ],
-  "objective": "Complete the declared assembly/transport task correctly and efficiently; allocation, local motion and collaboration are Agent choices.",
+  "objective": "Build the target pattern: one released cube in every cell, in the color the pattern gives. How the robots share the work is your choice.",
   "observation_contract": {
     "initial_geometry_public": true,
     "live_object_truth_for_policy": false,
@@ -115,7 +113,6 @@
     "assembly_04"
   ],
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",
-  "execution_readiness": "prepared_policy_trial",
   "initial_supplies": [
     {
       "source": "A",
@@ -1036,8 +1033,6 @@
       "wide_finger": null
     }
   },
-  "scene_revision": 15,
-  "source_scene_sha256": "3ef29947b51fe420b3e1bc516a8e3b512cc2e0f3568b3ec1f21c8169ed5c9547",
   "workspace_world_m": {
     "lower": [
       -1.8572946609406724,

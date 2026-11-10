@@ -45,10 +45,9 @@ All initial roles are bound before direct START. A new Single/Adaptive run
 starts its Controller; a standing team starts all bound initial roles under one
 task clock. Every role receives explicit started instructions. `ready` only
 queries capabilities and does not require another START. Frozen Legacy READY
-runs keep their original gate. All four native Claude modes remain explicitly
-unqualified engineering paths. Standing modes use distinct persistent native
-sessions, not Adaptive delegations; see the
-[standing-team guide](engines/claude-code.md#standing-teams). Formal scoring remains closed.
+runs keep their original gate. All four native Claude modes run once the profile has passed
+precheck receipts. Standing modes use distinct persistent native sessions, not Adaptive
+delegations; see the [standing-team guide](engines/claude-code.md#standing-teams).
 
 The default public task limit is 24 hours from persisted START. Do not replace
 it with a short engineering test duration in the public task. Use the explicit
@@ -198,8 +197,8 @@ Explicit committed-event export remains available:
 Stopped unified collection gathers task-associated native sessions and required
 motion/evidence, then optionally creates a verified ZIP. Original sources remain
 by default. Authentication stores are not evidence exports. See
-[verification boundaries](harness-v2-verification.md) and
-[storage validation](archive/evidence-storage-validation-20261030.md).
+[verification boundaries](harness-verification.md) and
+storage validation (`docs/archive/evidence-storage-validation-20261030.md`, in the [archive tag](history.md)).
 
 ## Adaptive native forks
 

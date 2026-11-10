@@ -340,7 +340,7 @@ def codes(args):
     print(f'{len(stored)} Dial codes')
 
 
-RUN_ONLY = ('run_protocol', 'observation_image')  # added to the public task by each run
+RUN_ONLY = ('observation_image',)  # added to the public task by each run
 
 
 def public(args):
@@ -370,6 +370,8 @@ def public(args):
                 if target.exists(): shutil.rmtree(target)
                 shutil.copytree(staged, target)
             for name in RUN_ONLY: received.pop(name, None)
+            from robofrontier.tasks.public import clean
+            received = clean(received)
             (target/'task.json').write_text(json.dumps(received, indent=2, ensure_ascii=False)+'\n')
             for stale in ('public-task.json',):
                 if (folder/stale).exists(): (folder/stale).unlink()

@@ -5,7 +5,7 @@ TOML. This guide explains the native Codex path, the retained
 `python -m scripts.benchmark` interface, and Luna execution on Linux CPU and
 Slurm. See the [Slurm guide](../running/slurm.md) for environment choices,
 the [engine overview](README.md) for what Codex shares with Claude and for
-[shared setup](README.md#shared-setup), and [providers](providers.md) for
+[shared setup](README.md#shared-setup), and [providers](README.md#providers) for
 catalogs, credentials and third-party endpoints.
 
 The engine lives in `robofrontier/engines/codex/`: `launch.py` builds the app-server
@@ -39,7 +39,7 @@ user's global Codex defaults or sign-in.
 
 Third-party Codex profiles (DeepSeek, Qwen, Zhipu, Kimi), their process-local
 `[model_providers]` configuration, endpoints and the dated catalog snapshot are in
-[providers: Codex Responses endpoints](providers.md#codex-responses-endpoints).
+[providers: Codex Responses endpoints](README.md#codex-responses-endpoints).
 
 ## Authentication and Codex homes
 
@@ -86,7 +86,7 @@ then verifies authenticated access and persistence in a new app-server process.
 That probe makes no model turn. A passing probe is separate from image/tool,
 compaction, fork, concurrency and task qualification. Concurrent subscription
 refresh/isolation remains a separate qualification boundary; see
-[qualification and limits](providers.md#qualification-and-limits).
+[qualification and limits](README.md#qualification-and-limits).
 
 New API runs isolate Codex homes per task. That task's Controller, snapshots,
 and delegates share its home to retain native lineage. Different tasks have
@@ -272,7 +272,7 @@ Local real-CLI checks use a synthetic Responses service without external billing
 
 A passed offline check is evidence for its exact protocol/version, not acceptance
 of every external provider or a formal task score. Current check scope is in the
-[integration ledger](../archive/unified-main.md). Role permissions and
+integration ledger (`docs/archive/unified-main.md`, in the [archive tag](../history.md)). Role permissions and
 authenticated tools define the benchmark interface; they are not a claim of
 operating-system containment against malicious policy code.
 

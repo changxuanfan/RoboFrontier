@@ -189,7 +189,7 @@ class BatchTests(unittest.TestCase):
         action_a=next(i for i,a in members if a['arm']=='A')
         self.s.world.arms={'A':SimpleNamespace(job=action_a,stopping=True,uncertainty_reported=True)}
         self.s.world.finished.append({'call_id':action_a,'status':'uncertain',
-            'reason':'Stop did not settle; engineering review required',
+            'reason':'Stop did not settle; operator review required',
             'stop_reason':'Action timeout; stopped at current reference'})
         self.s.pump()
         self.assertEqual(self.s.store.get('lifecycle'),'running')
