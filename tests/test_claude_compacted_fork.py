@@ -70,6 +70,33 @@ class CompactedForkTests(unittest.TestCase):
         self.assertEqual(copied_history_length(source, copied), 6)
         self.assertEqual(first_input(copied[copied_history_length(source, copied):]), 'delegate task')
 
+    def test_edited_file_display_path_and_background_task_notice_are_cli_rows(self):
+        # Observed in a real Opus run (2026-11-10): a compacted copy adds `displayPath` to an
+        # edited-file notice, and a parent with background commands gets their notice first.
+        from robofrontier.claude.provenance import copied_history_length
+        notice = {'type': 'edited_text_file', 'filename': '/run/workspace/handoff.md', 'snippet': '1\tplan'}
+        self.source[4]['attachment'] = dict(notice)
+        child = child_copy(self.source)
+        child[1]['attachment'] = dict(notice, displayPath='handoff.md')
+        child.append({'uuid': 'tasks', 'sessionId': CHILD, 'type': 'user', 'promptSource': 'system',
+                      'origin': {'kind': 'task-notification'},
+                      'message': {'role': 'user', 'content': '<task-notification>stopped</task-notification>'}})
+        child.append({'uuid': 'prompt', 'sessionId': CHILD, 'type': 'user', 'promptSource': 'sdk',
+                      'message': {'role': 'user', 'content': 'delegate task'}})
+        self.write(self.source, child)
+        source = history(transcript_rows(self.config, PARENT), PARENT)
+        copied = history(transcript_rows(self.config, CHILD), CHILD)
+        fork_provenance(PARENT, CHILD, self.config, at=source)
+        self.assertEqual(first_input(copied[copied_history_length(source, copied):]), 'delegate task')
+        for change in ('snippet', 'filename'):
+            with self.subTest(change=change):
+                child[1]['attachment'] = dict(notice, displayPath='handoff.md', **{change: 'tampered'})
+                self.write(self.source, child)
+                with self.assertRaises(ValueError): fork_provenance(PARENT, CHILD, self.config, at=source)
+        # A model-visible user message, even one shaped like a notice, is still the first input.
+        self.assertEqual(first_input([{'type': 'user', 'message': {'role': 'user', 'content': '<task-notification>x'}}]),
+                         '<task-notification>x')
+
     def test_tampered_missing_reordered_or_late_history_is_rejected(self):
         for mutation in ('summary', 'preserved_content', 'missing', 'reordered', 'parent_link',
                          'late', 'metadata', 'unknown_layout'):
