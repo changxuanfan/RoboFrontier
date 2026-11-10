@@ -7,7 +7,7 @@ from robofrontier.oracle import relay_oracle_v2 as ref
 
 class EmptyRecoveryTests(unittest.TestCase):
  def trial(self):
-  t=recorded_world();a=t.arms['G'];a.job=None;a.grasp_force=None;a.observe=Mock(return_value={'gripper_width_m':.08});t.held={'G':'payload_02'};t.execute=Mock();t.monitor.bilateral=Mock(return_value={'E','F'});t.monitor.relay_v2.states['payload_02']['custody']={'E','F'}
+  t=recorded_world();a=t.arms['G'];a.job=None;a.grasp_force=None;a.observe=Mock(return_value={'gripper_width_m':.08});t.held={'G':'payload_02'};t.execute=Mock();t.monitor.bilateral=Mock(return_value={'E','F'});t.monitor.relay.states['payload_02']['custody']={'E','F'}
   return t,t.data.qpos[a.qids].copy()
  def test_empty_move_uses_scratch_cache_and_clears_live_cache_only_after_feedback(self):
   t,q=self.trial();before=t.data.qpos.copy()
@@ -34,7 +34,7 @@ class EmptyRecoveryTests(unittest.TestCase):
   self.assertIn('G',t.held)
  def test_missing_receiver_support_or_outside_joint_goal_is_rejected(self):
   for support,delta in [({'E'},0.),({'E','F'},100.)]:
-   t,q=self.trial();t.monitor.bilateral.return_value=support;t.monitor.relay_v2.environment_contact=Mock(return_value=False)
+   t,q=self.trial();t.monitor.bilateral.return_value=support;t.monitor.relay.environment_contact=Mock(return_value=False)
    with patch.object(ref,'arm_payload_contact',return_value=False):
     with self.assertRaises(ValueError):ref.move_empty_robot(t,'payload_02','G',q+delta)
    t.execute.assert_not_called()

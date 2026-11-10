@@ -11,7 +11,7 @@ class ObservedReleaseTests(unittest.TestCase):
         t=recorded_world();arm=t.arms['G'];arm.grasp_force=None;arm.job=None
         q=t.data.qpos[arm.qids].copy();t.relay_release_plan={'G':[q,q+.01]}
         t.held={'G':'payload_02'};t.wait=Mock();t.event=Mock();t.pose_clear=Mock(return_value=True)
-        t.monitor.relay_v2.states['payload_02']['dropped']=False
+        t.monitor.relay.states['payload_02']['dropped']=False
         feedback=dict(status='failed',reason='Requested aperture exceeded',direction='opening',
                       target_width_m=.075,actual_width_m=.07997512744578888,target_width_reached=False)
         t.execute=Mock(side_effect=[{'G':feedback},{'G':dict(status='completed')}])

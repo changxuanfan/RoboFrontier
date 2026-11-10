@@ -55,7 +55,7 @@ class RelayLiveRecovery:
         for item in t.task['mechanism']['payload_assemblies']:
             ident=item['id'];body=t.data.body(ident)
             payloads[ident]=dict(position_m=body.xpos.tolist(),rotation=body.xmat.reshape(3,3).tolist(),
-                actual_support=sorted(t.monitor.bilateral(t.monitor.relay_v2.states[ident]['rod_geoms'],positive_force=True)),
+                actual_support=sorted(t.monitor.bilateral(t.monitor.relay.states[ident]['rod_geoms'],positive_force=True)),
                 state=result['payloads'][ident])
         from .relay_observation_state import native_kinematic_state
         write_json(self.directory/'observation.json',dict(world_id=self.world_id,sim_time_s=t.time,
@@ -87,9 +87,9 @@ class RelayLiveRecovery:
         if 'target_quaternion_wxyz' in request and op!='carry':raise ValueError('Payload orientation applies only to coupled carry')
         payload=request.get('payload');team=request.get('robots',[])
         if op not in {'wait','resume','stop'}:
-            if payload not in t.monitor.relay_v2.states:raise ValueError('Unknown payload')
+            if payload not in t.monitor.relay.states:raise ValueError('Unknown payload')
             if (len(team)!=1 if op=='move_empty' else len(team)<2) or len(set(team))!=len(team) or any(a not in t.arms for a in team):raise ValueError('Use one observed empty robot or an actual support team')
-            support=t.monitor.bilateral(t.monitor.relay_v2.states[payload]['rod_geoms'],positive_force=True)
+            support=t.monitor.bilateral(t.monitor.relay.states[payload]['rod_geoms'],positive_force=True)
             if op not in {'grasp','open','move_empty'} and not set(team)<=support:raise ValueError('Declared holders lack actual bilateral support')
         continuation=continuation_options(request.get('continuation',{}))
         if continuation and op!='handover':raise ValueError('Receiving continuation applies only to handover')
@@ -128,7 +128,7 @@ class RelayLiveRecovery:
                 ref.grasp(t,payload,receivers,offset);t.wait(.3);ref.release(t,payload,[robot for robot in team if robot not in receivers])
                 result['receivers']=receivers
             elif op=='grasp':
-                state=t.monitor.relay_v2.states[payload]
+                state=t.monitor.relay.states[payload]
                 if process_blocks(t) and state['dropped'] and not set(team)<=state['custody']:raise ValueError('Only original custody may recover a drop')
                 body=t.data.body(payload);offset=request.get('offset_m',.44)
                 continuing=set(team)&support
@@ -143,8 +143,8 @@ class RelayLiveRecovery:
                     exclude=(set(t.arms)-set(team))|continuing,retained=retained,departing=(),search_budget_s=60.)
                 ref.grasp(t,payload,selected,offset);result['holders']=selected
             elif op=='open':
-                state=t.monitor.relay_v2.states[payload]
-                supported=t.monitor.relay_v2.environment_contact(state['all_geoms'])
+                state=t.monitor.relay.states[payload]
+                supported=t.monitor.relay.environment_contact(state['all_geoms'])
                 from .relay_user_goal_policy import opening_supported
                 if not supported:supported=opening_supported(t,payload)
                 if not supported:raise ValueError('Opening recovery requires actual table or approved Goal support')

@@ -50,7 +50,7 @@ class RigidRelayTests(unittest.TestCase):
         source,task=self.source(8,3);m,d=source.model,source.data
         world=SimpleNamespace(model=m,data=d,task=task,arms={a:PandaArm(m,d,a) for a in task['arms']})
         mon=Monitor(world)
-        for ident,state in mon.relay_v2.states.items():
+        for ident,state in mon.relay.states.items():
             names={m.geom(g).name for g in state['rod_geoms']}
             self.assertEqual(names,{ident+'_beam_segment0',ident+'_beam_segment1'})
             self.assertTrue(any(m.geom(g).name==ident+'_weight_core' for g in state['all_geoms']))

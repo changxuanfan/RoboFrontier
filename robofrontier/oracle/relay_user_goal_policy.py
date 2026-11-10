@@ -14,7 +14,7 @@ def eligible_goal_cargo(t,data=None):
     goal=t.task['route'][-1];center=np.asarray(goal['center_m'])
     rotation=rz(goal['nominal_yaw_rad']);half=np.asarray(goal['half_size_m'])
     names=[]
-    for name,state in t.monitor.relay_v2.states.items():
+    for name,state in t.monitor.relay.states.items():
         lo=np.full(2,np.inf);hi=np.full(2,-np.inf)
         for gid in state['all_geoms']:
             frame=data.geom_xmat[gid].reshape(3,3);aabb=t.model.geom_aabb[gid]
@@ -32,7 +32,7 @@ def terminal_contact_names(t,ident,data=None):
 
 
 def opening_supported(t,ident):
-    relay=t.monitor.relay_v2;names=eligible_goal_cargo(t)
+    relay=t.monitor.relay;names=eligible_goal_cargo(t)
     if ident not in names:return False
     state=relay.states[ident]
     supported=ident in relay.supported_payloads(goal_only=True,require_all=False,inside_ids=set(names))
@@ -44,6 +44,6 @@ def opening_supported(t,ident):
 
 
 def final_support(t,ident,team):
-    state=t.monitor.relay_v2.states[ident]
+    state=t.monitor.relay.states[ident]
     return bool(set(team)<=t.monitor.bilateral(state['rod_geoms'],positive_force=True)
         and opening_supported(t,ident))

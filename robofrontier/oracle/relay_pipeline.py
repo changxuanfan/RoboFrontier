@@ -139,7 +139,7 @@ def plan_transfer(t,f,frontiers,flexible):
 def direct_terminal_plan(t,f,frontiers):
     """A qualified current team may finish without another nominal relay."""
     if not ref.goal_contact_allowed(t):return None
-    state=t.monitor.relay_v2.states[f.ident]
+    state=t.monitor.relay.states[f.ident]
     if ref.process_blocks(t) and (state['dropped'] or not state['transitions']):return None
     # Every Relay timber reaches GOAL only after a qualified airborne
     # handover, in every Oracle mode. A transition that only released hands
@@ -147,7 +147,7 @@ def direct_terminal_plan(t,f,frontiers):
     if not any(set(item['receivers'])-set(item['senders']) for item in state['transitions']):return None
     if not set(f.team)<=t.monitor.bilateral(state['rod_geoms'],positive_force=True):return None
     body=t.data.body(f.ident);actual=body.xpos.copy();r=body.xmat.reshape(3,3)
-    if t.monitor.relay_v2.inside(state):return actual,math.atan2(r[1,0],r[0,0])
+    if t.monitor.relay.inside(state):return actual,math.atan2(r[1,0],r[0,0])
     region=t.task['route'][-1];frame=rz(region['nominal_yaw_rad']);yaw=ref.payload_route_yaw(t,f.ident,region)
     nominal=(f.number-(len(frontiers)-1)/2)*.12-.045+packing_shift(t,f,frontiers)
     for shift in dict.fromkeys([nominal,0.,-.12,.12,-.24,.24]):
@@ -172,7 +172,7 @@ def simultaneous_carry_clear(t,requests):
         ends.append(t.relay_carry_endpoint)
     scratch=mujoco.MjData(t.model);moving={list(t.arms).index(a) for a in robots}
     owned={g:(request['ident'],set(request['team'])) for request in requests
-           for g in t.monitor.relay_v2.states[request['ident']]['all_geoms']}
+           for g in t.monitor.relay.states[request['ident']]['all_geoms']}
     # Per-load screens already check the nonlinear TCP interpolation. This
     # adds a joint sweep of every simultaneous arm and predicted payload.
     for fraction in np.linspace(0,1,11)[1:]:
@@ -180,7 +180,7 @@ def simultaneous_carry_clear(t,requests):
         for request,end in zip(requests,ends):
             for robot in request['team']:
                 arm=t.arms[robot];scratch.qpos[arm.qids]=(1-fraction)*t.data.qpos[arm.qids]+fraction*end['q'][robot]
-            state=t.monitor.relay_v2.states[request['ident']]
+            state=t.monitor.relay.states[request['ident']]
             for name in (request['ident'],state['assembly'].get('weight_body'),state['assembly'].get('tray_body')):
                 if not name:continue
                 joint=scratch.joint(name+'_free');old=t.data.joint(name+'_free').qpos;new=end['qpos'][t.model.jnt_qposadr[t.model.joint(name+'_free').id]:][:7]
@@ -232,7 +232,7 @@ def packing_shift(t,frontier,frontiers):
     for shift in [0.,-.06,-.12,.06,.12]:
         anchor=np.asarray(region['center_m'])+frame@np.array([nominal+shift,0,0])
         inside=True
-        for gid in t.monitor.relay_v2.states[frontier.ident]['all_geoms']:
+        for gid in t.monitor.relay.states[frontier.ident]['all_geoms']:
             rotation=t.data.geom_xmat[gid].reshape(3,3);bounds=t.model.geom_aabb[gid]
             center=anchor+relative@(t.data.geom_xpos[gid]+rotation@bounds[:3]-body.xpos)
             extent=abs(frame.T@relative@rotation)@bounds[3:]
@@ -253,7 +253,7 @@ def terminal_exit_preview(t,ident,team,endpoint):
 
 def carry_chunk(t,frontier):
     if frontier.following=='place':
-        relay=t.monitor.relay_v2;state=relay.states[frontier.ident]
+        relay=t.monitor.relay;state=relay.states[frontier.ident]
         support=t.monitor.bilateral(state['rod_geoms'],positive_force=True)
         if not (ref.process_blocks(t) and state['dropped']) and set(frontier.team)<=support and relay.inside(state):
             # The painted GOAL is the task condition. A private packing-center
@@ -301,7 +301,7 @@ def execute_carry_chunks(t,requests):
     t.event('relay_frontier_carry',payloads=[r['ident'] for r in selected],robots=list(commands))
     t.execute('relay-frontier-carry',commands)
     for request in selected:
-        state=t.monitor.relay_v2.states[request['ident']]
+        state=t.monitor.relay.states[request['ident']]
         if ref.support_lost(t,request['ident'],request['team']):raise RuntimeError('Physical support lost in concurrent carry '+request['ident'])
     return [request['ident'] for request in selected]
 
@@ -310,7 +310,7 @@ def install_motion_metrics(t):
     """Count observed supported movement of different loads at20ms windows."""
     if hasattr(t,'relay_motion_metrics'):return
     original=t.step;last=t.time
-    positions={ident:t.data.body(ident).xpos.copy() for ident in t.monitor.relay_v2.states}
+    positions={ident:t.data.body(ident).xpos.copy() for ident in t.monitor.relay.states}
     metrics=dict(multiple_payload_motion_sim_s=0.,any_payload_motion_sim_s=0.,payload_motion_sim_s={},peak_moving_payloads=0)
     t.relay_motion_metrics=metrics
     def step():
@@ -412,8 +412,8 @@ def solve(t,*,flexible=False,terminal_observer=None,handover_observer=None):
                     notify(f,'release_started');ref.release(t,f.ident,f.team,terminal=True)
                     f.phase='verify';f.recheck_since=t.time
                 elif f.phase in ('verify','recheck'):
-                    state=t.monitor.relay_v2.states[f.ident]
-                    if not t.monitor.relay_v2.inside(state) or (ref.process_blocks(t) and state['dropped']):raise RuntimeError('Released payload needs actual goal recovery '+f.ident)
+                    state=t.monitor.relay.states[f.ident]
+                    if not t.monitor.relay.inside(state) or (ref.process_blocks(t) and state['dropped']):raise RuntimeError('Released payload needs actual goal recovery '+f.ident)
                     # A released load that never satisfies final acceptance
                     # becomes a blocked scope, not an endless settle wait.
                     if f.recheck_since is not None and t.time-f.recheck_since>VERIFY_SETTLE_S+float(t.task['completion'].get('stable_duration_sim_s',1.)):

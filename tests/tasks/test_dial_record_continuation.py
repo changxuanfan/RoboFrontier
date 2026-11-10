@@ -7,7 +7,7 @@ from unittest.mock import patch
 import numpy as np
 
 from robofrontier.tasks.dial import DialFeedback
-from robofrontier.tasks.evaluate import CountFeedback, Monitor, SupportQualification
+from robofrontier.tasks.evaluate import Monitor, SupportQualification
 
 
 def held(symbols, step=60.):
@@ -52,29 +52,21 @@ class ContinuationTests(unittest.TestCase):
             Monitor.continue_dial_record(stub)
         self.assertEqual((game.queries, game.best, stub.carried_trials), (0, 0, 0))
 
-    def test_count_feedback_continues_its_trials(self):
-        game = CountFeedback((1, 2, 3, 1))
-        self.monitor(game, held((1, 2, 3, 3), 90.), {'valid_trials': 5, 'best': None, 'solved': False, 'input_ready': True})
-        self.play(game, 40., held((1, 2, 3, 3), 90.))
-        self.assertEqual(game.queries, 5)
-        self.play(game, 41., held((1, 2, 3, 2), 90.))
-        self.assertEqual(game.queries, 6)
-
 
 class SampledContinuationTests(unittest.TestCase):
     """The path a continued world really takes: fresh Monitor state, then Monitor.sample_dial.
 
     R holds the red rotor and B the blue stem of one Level 2 BEST dial, with symbol 2 set.
     """
-    def monitor(self, record, feedback=True, red=True):
+    def monitor(self, record, red=True):
         mon = Monitor.__new__(Monitor)
         spec = {'mode': 'best_so_far', 'symbol_count': 5, 'require_red_grasp': True, 'display_digits': 1}
         mon.task = {'level': 2, 'table_height_m': .4, 'dials': [{'id': 'd0'}],
-                    'mechanism': {'feedback': spec} if feedback else {},
+                    'mechanism': {'feedback': spec},
                     'run_protocol': {'evaluation_semantics': 'terminal_outcome_v2'}}
         mon.dials = mon.task['dials']; mon.robots = ['R', 'B']
         mon.m = SimpleNamespace(ngeom=6, geom=lambda name: SimpleNamespace(id=0), geom_rgba=np.zeros((6, 4)))
-        step = 60. if feedback else 90.
+        step = 60.
         mon.d = SimpleNamespace(time=40., qpos=np.radians([2*step]), qvel=np.zeros(1))
         mon.w = SimpleNamespace(directory='run', arms={'R': SimpleNamespace(job=None, job_op=None, dofs=[0], grasp_force=30.),
                                                        'B': SimpleNamespace(job=None, job_op=None, dofs=[0], grasp_force=70.)})
@@ -87,7 +79,7 @@ class SampledContinuationTests(unittest.TestCase):
                                 else (np.array([[2, 3]]), np.array([-1e-4])))
         mon.blue_qualification = [SupportQualification()]; mon.previous_red = set(); mon.unsupported_since = {}
         mon.holding_s = 0.; mon.minimum_clearance = np.full(1, math.inf); mon.violations = []; mon.carried_trials = 0
-        mon.game = DialFeedback((1,)) if feedback else CountFeedback((1,))
+        mon.game = DialFeedback((1,))
         with patch('robofrontier.runtime.segments.current_restore', lambda run: ({'evaluator': record}, None)):
             mon.continue_dial_record()
         return mon
@@ -124,11 +116,6 @@ class SampledContinuationTests(unittest.TestCase):
         self.play(mon, .1)
         self.assertEqual([v['kind'] for v in mon.violations], ['premature_red_contact'])
 
-    def test_count_feedback_publishes_its_readiness_so_a_held_input_carries(self):
-        mon = self.monitor({'valid_trials': 4, 'best': None, 'solved': False, 'input_ready': True, 'support_ready': [True]}, feedback=False)
-        result = self.play(mon, 1.2)
-        self.assertEqual(result['valid_trials'], 4)
-        self.assertTrue(result['input_ready'])
 
 
 class ProcessLogTests(unittest.TestCase):

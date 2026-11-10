@@ -15,7 +15,7 @@ class UserGoalPolicyTests(unittest.TestCase):
         mujoco.mj_forward(model,data)
         relay=SimpleNamespace(states={'cargo':{'all_geoms':[0],'rod_geoms':[0]}},
             supported_payloads=lambda **kwargs:set())
-        monitor=SimpleNamespace(relay_v2=relay,bilateral=lambda *args,**kw:{'A','B'},
+        monitor=SimpleNamespace(relay=relay,bilateral=lambda *args,**kw:{'A','B'},
             bottom=lambda geoms:.825)
         return SimpleNamespace(model=model,data=data,monitor=monitor,
             task={'table_height_m':.8,'completion':{'allow_goal_payload_contact':True},

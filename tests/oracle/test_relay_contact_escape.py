@@ -28,7 +28,7 @@ class ContactEscapeTests(unittest.TestCase):
             supported_payloads=lambda **kwargs:set())
         return SimpleNamespace(arms={'P':arm},held={'P':'cargo'},
             task={'mechanism':{'cross_section_m':[.045,.045]}},
-            monitor=SimpleNamespace(relay_v2=relay,bilateral=lambda *args,**kwargs:set(support)))
+            monitor=SimpleNamespace(relay=relay,bilateral=lambda *args,**kwargs:set(support)))
 
     def test_open_donor_does_not_count_itself_as_an_independent_receiver(self):
         with self.assertRaisesRegex(ValueError,'two actual receivers'):

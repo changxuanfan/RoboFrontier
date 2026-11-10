@@ -7,7 +7,7 @@ import unittest
 import mujoco
 import numpy as np
 from robofrontier.tasks.dial import DialFeedback,alphabet,paint_display,DIGIT_BRIGHT_RGB,DIGIT_DIM_RGB
-from robofrontier.tasks.evaluate import CountFeedback,Monitor
+from robofrontier.tasks.evaluate import Monitor
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -132,12 +132,6 @@ class BestFiveFeedbackTests(unittest.TestCase):
         self.assertEqual(alphabet({'mechanism':{'feedback':{'symbol_count':5}}}),(1,2,3,4,5))
         self.assertEqual(alphabet({'mechanism':{}}),(1,2,3))
 
-    def test_new_engine_current_mode_matches_legacy_normal_samples(self):
-        old=CountFeedback([1,2,3,1]);new=DialFeedback([1,2,3,1],symbol_count=3,mode='current')
-        for i in range(80):
-            angles=np.radians(([90]*4 if i<20 else [0]*4 if i<40 else [90,180,270,90]))
-            self.assertEqual(old.update(i*.02,angles,np.zeros(4),True),new.update(i*.02,angles,np.zeros(4),True))
-        self.assertEqual(old.queries,new.queries)
 
     def test_compiled_world_cannot_qualify_angles_without_robot_grasps(self):
         folder=ROOT/'benchmark/dial/dial-best5-n04-d1'

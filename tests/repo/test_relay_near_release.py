@@ -7,7 +7,7 @@ from tests.tasks.test_relay_descent_recovery import recorded_world
 
 class NearGoalReleaseTests(unittest.TestCase):
     def setUp(self):
-        self.t=recorded_world();self.relay=self.t.monitor.relay_v2
+        self.t=recorded_world();self.relay=self.t.monitor.relay
         self.ident='payload_02';self.relay.states={self.ident:self.relay.states[self.ident]}
         self.state=self.relay.states[self.ident]
         self.state.update(airborne=True,custody={'G','H'},transitions=[dict(senders=['E','F'],receivers=['G','H'])])

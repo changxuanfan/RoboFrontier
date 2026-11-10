@@ -2,7 +2,7 @@ from types import SimpleNamespace
 import unittest
 
 import numpy as np
-from robofrontier.tasks.evaluate_v2 import mosaic_candidates
+from robofrontier.tasks.evaluate import mosaic_candidates
 
 
 class MosaicSixMmTests(unittest.TestCase):

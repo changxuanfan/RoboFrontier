@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 from robofrontier.oracle.geometry import catalog,case_directory
 from robofrontier.tasks.public import make_task,public_task
-from robofrontier.tasks.evaluate import CountFeedback,SupportQualification
+from robofrontier.tasks.evaluate import SupportQualification
 from robofrontier.oracle.dial_oracle import Decoder
 from robofrontier.oracle.dial_oracle import Manipulator
 from types import SimpleNamespace
@@ -24,25 +24,6 @@ class SuiteContractTests(unittest.TestCase):
                     self.assertNotIn('objects',public);self.assertEqual(sum(s['count'] for s in public['initial_supplies']),len(task['objects']))
                 self.assertNotIn('private-code',json.dumps(public))
 
-    def test_feedback_scales_and_zero_invalidation(self):
-        for n in (4,6,8):
-            game=CountFeedback([1]*n)
-            for i in range(20):game.update(i*.02,np.full(n,np.pi),np.zeros(n),True)
-            self.assertEqual(game.display,0);self.assertEqual(game.queries,1)
-            game.update(.4,np.zeros(n),np.zeros(n),True);self.assertIsNone(game.display)
-            for i in range(21,42):game.update(i*.02,np.full(n,np.pi/2+.02),np.zeros(n),True)
-            self.assertEqual(game.display,n);self.assertTrue(game.won)
-            game.update(.84,np.zeros(n),np.zeros(n),False);self.assertEqual(game.display,n)
-
-    def test_display_accepts_in_band_vibration_but_restarts_after_leaving_the_band(self):
-        game=CountFeedback([2]*4)
-        for i in range(20):
-            t=i*.02;angles=np.full(4,np.pi/2+np.radians(1)*np.sin(2*np.pi*20*t));speeds=np.full(4,np.radians(1)*2*np.pi*20*np.cos(2*np.pi*20*t))
-            game.update(t,angles,speeds,True)
-        self.assertEqual(game.display,0)
-        game.update(.4,np.full(4,np.pi/2+np.radians(4.1)),np.zeros(4),True);self.assertIsNone(game.display)
-        for i in range(21,30):game.update(i*.02,np.full(4,np.pi/2),np.zeros(4),True)
-        self.assertIsNone(game.display)
 
     def test_decoder_uses_only_aggregate_counts(self):
         codes=list(product((1,2,3),repeat=4))+[(1,)*6,(3,)*8,(1,2,3,1,3,2),(3,1,2,2,1,3,2,1)]

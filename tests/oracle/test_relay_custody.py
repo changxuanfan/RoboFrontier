@@ -10,7 +10,7 @@ import numpy as np
 
 class RelayCustodyTests(unittest.TestCase):
     def setUp(self):
-        self.t=recorded_world();self.relay=self.t.monitor.relay_v2
+        self.t=recorded_world();self.relay=self.t.monitor.relay
         self.t.task['completion']['support_via_goal_payload']=False # Synthetic support stream below.
         self.relay.states={'payload_02':self.relay.states['payload_02']}
         self.support={'A','B'}

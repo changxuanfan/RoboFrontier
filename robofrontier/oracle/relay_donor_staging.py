@@ -15,7 +15,7 @@ def parked_donor_routes(t, ident, selected, donors, opening_width=.075):
     probe.screen_data=mujoco.MjData(t.screen_model)
     probe.held={a:p for a,p in t.held.items() if a not in donors}
     fingers={t.model.body(a+'_'+s).id for a in donors for s in ('left_finger','right_finger')}
-    timber=set(t.monitor.relay_v2.states[ident]['rod_geoms']);baseline={}
+    timber=set(t.monitor.relay.states[ident]['rod_geoms']);baseline={}
     for contact in t.data.contact:
         a,b=map(int,contact.geom)
         if ((a in timber and int(t.model.geom_bodyid[b]) in fingers) or

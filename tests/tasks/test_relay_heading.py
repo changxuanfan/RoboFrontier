@@ -67,7 +67,7 @@ class RelayHeadingTests(unittest.TestCase):
         for item in t.task['mechanism']['payload_assemblies']:item['initial_route_stage_id']=t.task['route'][0]['region_id']
         observer=lambda phase,*_:events.append(phase)
         def enter(*_):events.append('actual_place_entered');raise Captured()
-        with patch.object(ref,'choose_team',return_value=['E','F']),patch.object(ref,'grasp'),patch.object(ref,'carry_clear',return_value=True),patch.object(ref,'carry'),patch.object(t.monitor.relay_v2,'inside',return_value=True),patch.object(t.monitor,'bilateral',return_value={'E','F'}),patch.object(ref,'place',side_effect=enter),self.assertRaises(Captured):
+        with patch.object(ref,'choose_team',return_value=['E','F']),patch.object(ref,'grasp'),patch.object(ref,'carry_clear',return_value=True),patch.object(ref,'carry'),patch.object(t.monitor.relay,'inside',return_value=True),patch.object(t.monitor,'bilateral',return_value={'E','F'}),patch.object(ref,'place',side_effect=enter),self.assertRaises(Captured):
             ref.solve(t,payload_ids=['payload_02'],terminal_observer=observer)
         self.assertEqual(events,['preparation_started','prepared','placement_started','actual_place_entered'])
 

@@ -24,7 +24,7 @@ def target_contact_allowed(distance, initial_depth=None):
 
 
 def robot_cargo_contact(t, ident, robot):
-    owned=set(t.monitor.relay_v2.states[ident]['all_geoms'])
+    owned=set(t.monitor.relay.states[ident]['all_geoms'])
     return any(c.dist<=.0002 and any(int(a) in owned and
         t.model.body(int(t.model.geom_bodyid[int(b)])).name.startswith(robot+'_')
         for a,b in ((c.geom1,c.geom2),(c.geom2,c.geom1))) for c in t.data.contact)
@@ -39,7 +39,7 @@ def plan_open_contact_withdrawal(t, ident, robot, joint_rad, goal_names=None, ac
         raise ValueError('Contact withdrawal requires measured open jaws')
     if t.held.get(robot) not in (None,ident):
         raise ValueError('Contact withdrawal belongs to the actual cargo label')
-    relay=t.monitor.relay_v2;state=relay.states[ident]
+    relay=t.monitor.relay;state=relay.states[ident]
     accepted=None if goal_names is None else set(goal_names(t,ident))
     inside=relay.inside(state) if accepted is None else ident in accepted
     support=set(t.monitor.bilateral(state['rod_geoms'],positive_force=True)
@@ -105,7 +105,7 @@ def execute_open_contact_withdrawal(t, ident, robot, joint_rad, goal_names=None)
     arm=t.arms[robot]
     if arm.job is not None or arm.grasp_force is not None:
         raise RuntimeError('Contact withdrawal feedback is unresolved')
-    if any(robot_cargo_contact(t,name,robot) for name in t.monitor.relay_v2.states):
+    if any(robot_cargo_contact(t,name,robot) for name in t.monitor.relay.states):
         raise RuntimeError('Open withdrawal moved but cargo contact remains; inspect original feedback')
     # The existing empty-hand controller uses the same post-feedback cache rule.
     t.held.pop(robot,None)

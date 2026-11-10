@@ -81,7 +81,7 @@ RELAY_HANDOVER_DEFINITION = ('A handover qualifies only while the timber is off 
     'without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.')
 # A timber may be dropped or pushed. If a receiver picks a dropped timber up, none of its
 # handovers counts until the arms that were holding it when it fell lift it again and hand
-# it over again (evaluate_v2.Relay).
+# it over again (evaluate.Relay).
 RELAY_RECOVERY_RULE = ('A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it '
     'dropped picks it up, none of that timber\'s handovers counts: put it down, let the arms that were holding it when it '
     'dropped lift it again, and hand it over again in the air.')

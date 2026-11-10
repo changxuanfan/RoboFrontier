@@ -23,9 +23,9 @@ def bundle_manifest(directory):
 
 
 def environment_logic_manifest(source_hashes,task=None):
-    """Fingerprint both shared process rules and the v2 geometry evaluator."""
-    names=('robofrontier/tasks/evaluate.py','robofrontier/tasks/evaluate_v2.py')
-    if task and task.get('family')=='dial' and task.get('mechanism',{}).get('feedback'):
+    """Fingerprint the evaluator, and for Dial its game."""
+    names=('robofrontier/tasks/evaluate.py',)
+    if task and task.get('family')=='dial':
         names+=('robofrontier/tasks/dial.py',)
     code={name:source_hashes[name] for name in names}
     payload=json.dumps(code,sort_keys=True,separators=(',',':')).encode()

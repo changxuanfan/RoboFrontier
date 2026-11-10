@@ -102,7 +102,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         from robofrontier.oracle.relay_oracle_v2 import support_lost
         state=dict(dropped=True,rod_geoms={1})
         trial=NS(task=terminal_task(),wait=Mock(),
-                 monitor=NS(relay_v2=NS(states={'part':state}),bilateral=lambda *_,**__:{'A','B'}))
+                 monitor=NS(relay=NS(states={'part':state}),bilateral=lambda *_,**__:{'A','B'}))
         self.assertFalse(support_lost(trial,'part',['A','B']))
         trial.wait.assert_not_called();self.assertTrue(state['dropped'])
         trial.monitor.bilateral=lambda *_,**__:set()
@@ -227,13 +227,13 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
                  move_free=Mock(),pose_command=Mock(return_value=('move',{})),
                  home={a:(np.zeros(3),np.eye(3)) for a in ('A','B')},
                  home_q={a:np.zeros(7) for a in ('A','B')},
-                 monitor=NS(relay_v2=NS(states={'part':{'dropped':True}})))
+                 monitor=NS(relay=NS(states={'part':{'dropped':True}})))
         with patch.object(relay,'final_support',return_value=True), \
              patch.object(relay,'terminal_contact_names',return_value=['part']), \
              patch.object(relay,'withdrawal_target',return_value=(np.zeros(3),np.eye(3))):
             relay.release(trial,'part',['A','B'],terminal=True)
         self.assertEqual(trial.move_free.call_count,2)
-        self.assertTrue(trial.monitor.relay_v2.states['part']['dropped'])
+        self.assertTrue(trial.monitor.relay.states['part']['dropped'])
 
     def test_failed_socket_withdrawal_retains_phase_and_does_not_reopen(self):
         arm = NS(job=None, grasp_force=None, site=0)

@@ -56,7 +56,7 @@ class RelayReferenceTests(unittest.TestCase):
             arms={'O':SimpleNamespace(job=None,grasp_force=None),'P':object(),'H':object()},
             held={},execute=Mock(),monitor=SimpleNamespace(
                 bilateral=lambda *args,**kwargs:{'O','P'},
-                relay_v2=SimpleNamespace(states={'payload':{'rod_geoms':{1}}})))
+                relay=SimpleNamespace(states={'payload':{'rod_geoms':{1}}})))
         t._live_data=t.data
         self.assertFalse(clear_free_idle_blocker(t,'payload',['H','P'],[0,0,1.3],0.))
         t.execute.assert_not_called()
@@ -103,7 +103,7 @@ class RelayReferenceTests(unittest.TestCase):
             return ('move',{'target_m':point.tolist()})
         t=SimpleNamespace(data=data,arms={'A':SimpleNamespace(site=0),
             'B':SimpleNamespace(site=1)},pose_command=command,execute=Mock(),
-            monitor=SimpleNamespace(violations=[],relay_v2=SimpleNamespace(
+            monitor=SimpleNamespace(violations=[],relay=SimpleNamespace(
                 states={'payload':{'dropped':False}})))
         with patch('robofrontier.oracle.relay_oracle_v2.carry_clear',return_value=True) as screen:
             carry(t,'payload',['A','B'],np.array([.03,0.,1.3]),0.,target_rotation=rotation)
@@ -120,7 +120,7 @@ class RelayReferenceTests(unittest.TestCase):
         contact=SimpleNamespace(dist=-.0001,geom1=1,geom2=2)
         t=SimpleNamespace(model=SimpleNamespace(geom=lambda gid:SimpleNamespace(name=names[gid])),
                           data=SimpleNamespace(contact=[contact]),
-                          monitor=SimpleNamespace(relay_v2=relay,bilateral=lambda *args,**kwargs:{'A','B'}))
+                          monitor=SimpleNamespace(relay=relay,bilateral=lambda *args,**kwargs:{'A','B'}))
         self.assertFalse(final_support(t,'payload',('A','B')))
         contact.geom1=0
         self.assertTrue(final_support(t,'payload',('A','B')))
@@ -152,7 +152,7 @@ class RelayReferenceTests(unittest.TestCase):
         names={0:'payload_beam',1:'floor'}
         state={'all_geoms':{0},'rod_geoms':{0}}
         relay=SimpleNamespace(states={'payload':state},inside=lambda value:True)
-        t=SimpleNamespace(model=SimpleNamespace(geom=lambda gid:SimpleNamespace(name=names[gid])),data=SimpleNamespace(contact=[SimpleNamespace(dist=-.0001,geom1=0,geom2=1)]),monitor=SimpleNamespace(relay_v2=relay,bilateral=lambda *args,**kwargs:{'A','B'}))
+        t=SimpleNamespace(model=SimpleNamespace(geom=lambda gid:SimpleNamespace(name=names[gid])),data=SimpleNamespace(contact=[SimpleNamespace(dist=-.0001,geom1=0,geom2=1)]),monitor=SimpleNamespace(relay=relay,bilateral=lambda *args,**kwargs:{'A','B'}))
         self.assertFalse(final_support(t,'payload',('A','B')))
         names[1]='table_0'
         self.assertTrue(final_support(t,'payload',('A','B')))
@@ -168,7 +168,7 @@ class RelayReferenceTests(unittest.TestCase):
                                              'support_via_goal_payload':True}},
                           model=SimpleNamespace(geom=lambda gid:SimpleNamespace(name=names[gid])),
                           data=SimpleNamespace(contact=[contact]),
-                          monitor=SimpleNamespace(relay_v2=relay,bilateral=lambda *a,**k:{'A','B'}))
+                          monitor=SimpleNamespace(relay=relay,bilateral=lambda *a,**k:{'A','B'}))
         self.assertFalse(final_support(t,'payload',('A','B')))
         contact.geom1=0
         self.assertTrue(final_support(t,'payload',('A','B')))
@@ -186,7 +186,7 @@ class RelayReferenceTests(unittest.TestCase):
                                              'support_via_goal_payload':True}},
                           model=SimpleNamespace(geom=lambda gid:SimpleNamespace(name=names[gid])),
                           data=SimpleNamespace(contact=contacts),
-                          monitor=SimpleNamespace(relay_v2=relay,bilateral=lambda *a,**k:{'A','B'}))
+                          monitor=SimpleNamespace(relay=relay,bilateral=lambda *a,**k:{'A','B'}))
         self.assertTrue(final_support(t,'upper',('A','B')))
         # A free pendulum pedestal is not a settled wood-on-wood stack.
         contacts[1].geom1=3
@@ -200,7 +200,7 @@ class RelayReferenceTests(unittest.TestCase):
         t=SimpleNamespace(task={'table_height_m':.8,'completion':{'support_via_goal_payload':True}},
                           model=SimpleNamespace(geom=lambda gid:SimpleNamespace(name='weight' if gid==1 else 'table_0')),
                           data=SimpleNamespace(contact=[SimpleNamespace(dist=-.0001,geom1=1,geom2=2)]),
-                          monitor=SimpleNamespace(relay_v2=relay,bottom=lambda _:.815,
+                          monitor=SimpleNamespace(relay=relay,bottom=lambda _:.815,
                                                    bilateral=lambda *a,**k:{'A','B'}))
         self.assertTrue(final_support(t,'payload',('A','B')))
         t.monitor.bottom=lambda _:1.1
@@ -213,7 +213,7 @@ class RelayReferenceTests(unittest.TestCase):
         t=SimpleNamespace(task={'table_height_m':.8,'completion':{'support_via_goal_payload':True,
                           'allow_near_goal_release':True,'max_timber_release_gap_m':.02}},
                           data=SimpleNamespace(contact=[]),model=SimpleNamespace(),
-                          monitor=SimpleNamespace(relay_v2=relay,bottom=lambda _:.815,
+                          monitor=SimpleNamespace(relay=relay,bottom=lambda _:.815,
                                                    bilateral=lambda *a,**k:{'A','B'}))
         self.assertTrue(final_support(t,'payload',('A','B')))
         t.monitor.bottom=lambda _:1.1

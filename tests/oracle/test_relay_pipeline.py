@@ -23,7 +23,7 @@ class RelayPipelineTests(unittest.TestCase):
         data=mujoco.MjData(model);mujoco.mj_forward(model,data)
         states={name:dict(all_geoms=[int(model.body_geomadr[model.body(name).id])],assembly={}) for name in ['p1','p2']}
         return SimpleNamespace(model=model,data=data,task={'completion':{}},arms={a:SimpleNamespace(qids=np.array([],dtype=int)) for a in ['A','B']},
-            monitor=SimpleNamespace(geom_owner=np.full(model.ngeom,-1),relay_v2=SimpleNamespace(states=states)))
+            monitor=SimpleNamespace(geom_owner=np.full(model.ngeom,-1),relay=SimpleNamespace(states=states)))
 
     def requests(self,second):
         return [dict(ident='p1',team=['A'],point=np.array([.4,-.2,.5]),yaw=0.,rotation=np.eye(3)),
@@ -158,7 +158,7 @@ class RelayPipelineTests(unittest.TestCase):
         t=recorded_world();f=Frontier('payload_02',1,2,phase='plan',team=['G','H'])
         with patch.object(t.monitor,'bilateral',return_value={'G','H'}):
             self.assertIsNone(direct_terminal_plan(t,f,[f]))
-            t.monitor.relay_v2.states[f.ident]['transitions']=[dict(senders=['E','F'],receivers=['G','H'])]
+            t.monitor.relay.states[f.ident]['transitions']=[dict(senders=['E','F'],receivers=['G','H'])]
             plan=direct_terminal_plan(t,f,[f])
         self.assertIsNotNone(plan)
         np.testing.assert_array_equal(plan[0],t.data.body(f.ident).xpos)
@@ -174,7 +174,7 @@ class RelayPipelineTests(unittest.TestCase):
         t.wait=wait
         with tempfile.TemporaryDirectory() as folder:
             t.directory=Path(folder)
-            with patch.object(t.monitor,'result',return_value={'payloads':{}}),patch.object(t.monitor.relay_v2,'inside',return_value=True):
+            with patch.object(t.monitor,'result',return_value={'payloads':{}}),patch.object(t.monitor.relay,'inside',return_value=True):
                 with self.assertRaisesRegex(RuntimeError,'no admitted independent prefix.*did not satisfy final acceptance payload_02'):solve(t)
         f=t.relay_frontiers[0]
         self.assertIn('payload_02',f.blocked)
@@ -186,7 +186,7 @@ class RelayPipelineTests(unittest.TestCase):
         t.task.setdefault('run_protocol',{})['evaluation_semantics']='terminal_outcome_v2'
         t.oracle_protocol=dict(mode='task-reference')
         self.assertFalse(ref.process_blocks(t))
-        state=t.monitor.relay_v2.states[f.ident]
+        state=t.monitor.relay.states[f.ident]
         with patch.object(t.monitor,'bilateral',return_value={'G','H'}):
             state['transitions']=[]
             self.assertIsNone(direct_terminal_plan(t,f,[f]))

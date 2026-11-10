@@ -23,7 +23,7 @@ def payload_complete(trial,report):
 
 def support_lost(trial,ident,team):
  """A historical drop is not current support loss after legitimate recovery."""
- state=trial.monitor.relay_v2.states[ident]
+ state=trial.monitor.relay.states[ident]
  if process_blocks(trial):return bool(state['dropped'])
  if not team:return True
  if set(team)<=trial.monitor.bilateral(state['rod_geoms'],positive_force=True):return False
@@ -212,7 +212,7 @@ def grasp_load_moment(t,ident,offset):
  """
  body=t.data.body(ident);points=grasp_targets(t,ident,body.xpos,body.xmat.reshape(3,3),offset)
  line=points[1][0]-points[0][0];line/=max(np.linalg.norm(line),1e-9)
- ids={int(t.model.geom_bodyid[g]) for g in t.monitor.relay_v2.states[ident]['all_geoms']}
+ ids={int(t.model.geom_bodyid[g]) for g in t.monitor.relay.states[ident]['all_geoms']}
  moment=np.zeros(3)
  for bid in ids:
   moment+=np.cross(t.data.xipos[bid]-points[0][0],t.model.body_mass[bid]*t.model.opt.gravity)
@@ -276,7 +276,7 @@ def donor_exit_routes(t,ident,selected,donors,opening_width=.075):
  probe=copy(t);probe.live_preview=False;probe.data=mujoco.MjData(t.model);probe.data.qpos[:]=t.data.qpos
  probe.held={a:body for a,body in t.held.items() if a not in donors}
  finger_bodies={t.model.body(robot+'_'+s).id for robot in donors for s in ('left_finger','right_finger')}
- timber=set(t.monitor.relay_v2.states[ident]['rod_geoms']);baseline={}
+ timber=set(t.monitor.relay.states[ident]['rod_geoms']);baseline={}
  for contact in t.data.contact:
   a,b=map(int,contact.geom)
   if ((a in timber and int(t.model.geom_bodyid[b]) in finger_bodies)
@@ -448,9 +448,9 @@ def grasp(t,ident,team,offset):
  # Weighted apparatus needs more torsional holding margin, particularly
  # when a table-compatible grasp lies inward of the best-balanced station.
  # This is an ordinary allowed robot command, not a raised actuator limit.
- force=70. if t.monitor.relay_v2.states[ident]['assembly'].get('weight_body') else 50.
+ force=70. if t.monitor.relay.states[ident]['assembly'].get('weight_body') else 50.
  continuing={a for a in team if t.relay_grasp_plan[a].get('retained')}
- if continuing and not continuing<=t.monitor.bilateral(t.monitor.relay_v2.states[ident]['rod_geoms'],positive_force=True):raise RuntimeError('Retained holder lost actual beam support '+ident)
+ if continuing and not continuing<=t.monitor.bilateral(t.monitor.relay.states[ident]['rod_geoms'],positive_force=True):raise RuntimeError('Retained holder lost actual beam support '+ident)
  t.execute('relay-preshape',{a:('gripper',dict(mode='move',width_m=.065,speed_m_s=.06)) for a in team if a not in continuing})
  for a,(point,rotation) in zip(team,targets):
   if a in continuing:continue
@@ -464,7 +464,7 @@ def grasp(t,ident,team,offset):
   t.move(a,point,rotation,'receive-contact',precise=True)
   t.execute('relay-grasp',{a:('gripper',dict(mode='grasp',width_m=t.task['mechanism']['cross_section_m'][0],force_n=force,speed_m_s=.025,epsilon_inner_m=.006,epsilon_outer_m=.006))})
  t.wait(.30)
- support=t.monitor.bilateral(t.monitor.relay_v2.states[ident]['rod_geoms'],positive_force=True)
+ support=t.monitor.bilateral(t.monitor.relay.states[ident]['rod_geoms'],positive_force=True)
  if not set(team)<=support:raise RuntimeError('Physical two-arm support absent '+ident)
  for a in team:t.held[a]=ident
 
@@ -518,7 +518,7 @@ def clear_free_idle_blocker(t,ident,team,point,yaw,target_rotation=None):
  arm=t.arms[idle]
  if arm.job is not None or arm.grasp_force is not None or idle in t.held:return False
  if any(idle in t.monitor.bilateral(state['rod_geoms'],positive_force=True)
-        for state in t.monitor.relay_v2.states.values()):return False
+        for state in t.monitor.relay.states.values()):return False
  goal=idle_posture_candidate(t,ident,team,idle,point,yaw,target_rotation)
  if goal is None:return False
  t.event('reference_idle_posture_repair',robot=idle,payload=ident,
@@ -561,7 +561,7 @@ def support_approach_point(t,ident,point,yaw):
  truth, and neither live poses nor acceptance are changed.
  """
  root=t.data.body(ident);r0=root.xmat.reshape(3,3);relative=rz(yaw)@r0.T;lowest=float('inf')
- for gid in t.monitor.relay_v2.states[ident]['all_geoms']:
+ for gid in t.monitor.relay.states[ident]['all_geoms']:
   rotation=t.data.geom_xmat[gid].reshape(3,3);aabb=t.model.geom_aabb[gid]
   center=relative@(t.data.geom_xpos[gid]+rotation@aabb[:3]-root.xpos)
   extent=abs(relative@rotation)@aabb[3:];lowest=min(lowest,float(center[2]-extent[2]))
@@ -570,7 +570,7 @@ def support_approach_point(t,ident,point,yaw):
 
 
 def beam_table_contact(t,ident):
- state=t.monitor.relay_v2.states[ident]
+ state=t.monitor.relay.states[ident]
  owned=set(state['rod_geoms'])
  return any(contact.dist<=0 and any(int(a) in owned and (t.model.geom(int(b)).name or '').startswith('table_') for a,b in ((contact.geom1,contact.geom2),(contact.geom2,contact.geom1))) for contact in t.data.contact)
 
@@ -580,7 +580,7 @@ def goal_contact_allowed(t):
 
 
 def assembly_table_contact(t,ident):
- owned=set(t.monitor.relay_v2.states[ident]['all_geoms'])
+ owned=set(t.monitor.relay.states[ident]['all_geoms'])
  return any(contact.dist<=0 and any(int(a) in owned and (t.model.geom(int(b)).name or '').startswith('table_') for a,b in ((contact.geom1,contact.geom2),(contact.geom2,contact.geom1))) for contact in t.data.contact)
 
 
@@ -592,7 +592,7 @@ def grounded_timber(t,ident):
  assembly contact graph is useful benchmark evidence, but is not a sound
  release policy. Keep this manipulation gate separate from task acceptance.
  """
- relay=t.monitor.relay_v2
+ relay=t.monitor.relay
  eligible={name for name,state in relay.states.items() if relay.inside(state)}
  owner={int(gid):name for name in eligible for gid in relay.states[name]['rod_geoms']}
  edges={name:set() for name in eligible};ground=set()
@@ -614,7 +614,7 @@ def final_support(t,ident,team):
  if is_current(getattr(t,'task',{})):
   from .relay_user_goal_policy import final_support as current_support
   return current_support(t,ident,team)
- state=t.monitor.relay_v2.states[ident];relay=t.monitor.relay_v2
+ state=t.monitor.relay.states[ident];relay=t.monitor.relay
  # A pendant weight touching the table cannot certify that the timber no
  # longer depends on the open lower fingers. The user also accepts a short
  # final fall inside Goal: timber within20mm of the table may release once
@@ -642,13 +642,13 @@ def terminal_contact_names(t,ident,data=None):
   return current_contacts(t,ident,data)
  if not goal_contact_allowed(t):return []
  monitor=copy(t.monitor);monitor.d=t.data if data is None else data
- relay=copy(t.monitor.relay_v2);relay.mon=monitor
+ relay=copy(t.monitor.relay);relay.mon=monitor
  if not relay.inside(relay.states[ident]):return []
  return [name for name,state in relay.states.items() if relay.inside(state)]
 
 
 def allowed_terminal_payload_contact(t,ident,other,data):
- return any(name!=ident and other in t.monitor.relay_v2.states[name]['all_geoms']
+ return any(name!=ident and other in t.monitor.relay.states[name]['all_geoms']
             for name in terminal_contact_names(t,ident,data))
 
 
@@ -696,7 +696,7 @@ def landing_increment_clear(t,ident,team,dz):
  # contact-seeking terminal policy. Actual held/grasp control is unchanged.
  probe.held={}
  probe.data.qpos[:]=t.data.qpos;start={a:t.data.qpos[t.arms[a].qids].copy() for a in team};goals={};commands={}
- state=t.monitor.relay_v2.states[ident];owned=set(state['all_geoms'])
+ state=t.monitor.relay.states[ident];owned=set(state['all_geoms'])
  for robot in team:
   arm=t.arms[robot];point=t.data.site_xpos[arm.site].copy()+np.array([0,0,-dz]);rotation=t.data.site_xmat[arm.site].reshape(3,3).copy()
   q=screened_ik(t,robot,point,rotation,seed=start[robot])
@@ -734,7 +734,7 @@ def terminal_reposition_plan(t,ident,team):
  if t.task['level']!=1:return None
  body=t.data.body(ident);point=body.xpos.copy();rotation=body.xmat.reshape(3,3).copy()
  yaw=math.atan2(rotation[1,0],rotation[0,0]);table=t.task['table_height_m']
- gap=t.monitor.bottom(t.monitor.relay_v2.states[ident]['all_geoms'])-table
+ gap=t.monitor.bottom(t.monitor.relay.states[ident]['all_geoms'])-table
  if gap<=.01:return None
  for delta in ([0,-.02,0],[0,.02,0],[0,0,.03],[-.02,0,0],[.02,0,0]):
   target=point+delta
@@ -745,8 +745,8 @@ def terminal_reposition_plan(t,ident,team):
   mujoco.mj_forward(t.model,probe.data)
   for robot in team:probe.arms[robot].qref=probe.data.qpos[t.arms[robot].qids].copy()
   probe.monitor=copy(t.monitor);probe.monitor.d=probe.data;probe.monitor.w=probe
-  probe.monitor.relay_v2=copy(t.monitor.relay_v2);probe.monitor.relay_v2.mon=probe.monitor
-  if not probe.monitor.relay_v2.inside(probe.monitor.relay_v2.states[ident]):continue
+  probe.monitor.relay=copy(t.monitor.relay);probe.monitor.relay.mon=probe.monitor
+  if not probe.monitor.relay.inside(probe.monitor.relay.states[ident]):continue
   landing=target.copy();landing[2]-=gap+float(delta[2])-.01
   if not carry_clear(probe,ident,team,landing,yaw,target_rotation=rotation):continue
   if landing_increment_clear(probe,ident,team,.005) is None:continue
@@ -757,13 +757,13 @@ def terminal_reposition_plan(t,ident,team):
 
 def place(t,ident,team):
  """Stop at supported placement, rather than pressing a flexed root to z."""
- state=t.monitor.relay_v2.states[ident]
- if not t.monitor.relay_v2.inside(state):raise RuntimeError('Terminal descent requires entire apparatus inside final region')
+ state=t.monitor.relay.states[ident]
+ if not t.monitor.relay.inside(state):raise RuntimeError('Terminal descent requires entire apparatus inside final region')
  limit=math.ceil(max(0.,float(t.data.body(ident).xpos[2])-t.task['table_height_m']+.05)/.005)+1
  repairs=0
  for _ in range(limit):
   t.check_stop()
-  if not t.monitor.relay_v2.inside(state):raise RuntimeError('Apparatus left final region during terminal descent '+ident)
+  if not t.monitor.relay.inside(state):raise RuntimeError('Apparatus left final region during terminal descent '+ident)
   if final_support(t,ident,team):
    t.wait(.15)
    if final_support(t,ident,team):return
@@ -804,7 +804,7 @@ def carry_clear(t,ident,team,point,yaw,landing=False,target_rotation=None):
  body=t.data.body(ident);p0=body.xpos.copy();r0=body.xmat.reshape(3,3).copy();r1=carry_rotation(yaw,target_rotation)
  delta=rotation_vector(r1,r0);angle=float(np.linalg.norm(delta));axis=delta/angle if angle>1e-9 else np.array([0.,0,1.])
  offsets={a:(r0.T@(t.data.site_xpos[t.arms[a].site]-p0),r0.T@t.data.site_xmat[t.arms[a].site].reshape(3,3)) for a in team}
- assembly=t.monitor.relay_v2.states[ident];owned=set(assembly['all_geoms'])
+ assembly=t.monitor.relay.states[ident];owned=set(assembly['all_geoms'])
  suspended=set()
  if landing:
   for name in (assembly['assembly'].get('weight_body'),assembly['assembly'].get('tray_body')):
@@ -827,7 +827,7 @@ def carry_clear(t,ident,team,point,yaw,landing=False,target_rotation=None):
   mujoco.mj_forward(t.model,scratch)
   moving={list(t.arms).index(robot) for robot in team}
   permitted_names=terminal_contact_names(t,ident,scratch)
-  permitted_geoms={gid for name in permitted_names for gid in t.monitor.relay_v2.states[name]['all_geoms']}
+  permitted_geoms={gid for name in permitted_names for gid in t.monitor.relay.states[name]['all_geoms']}
   for contact in scratch.contact:
    if contact.dist>=-.0003:continue
    a,b=map(int,contact.geom)
@@ -876,7 +876,7 @@ def withdrawal_target(t,robot,ident,allowed_objects=()):
 
 
 def arm_payload_contact(t,ident,robot):
- owned=set(t.monitor.relay_v2.states[ident]['all_geoms'])
+ owned=set(t.monitor.relay.states[ident]['all_geoms'])
  return any(contact.dist<=.0002 and any(int(a) in owned and t.model.body(int(t.model.geom_bodyid[b])).name.startswith(robot+'_') for a,b in ((contact.geom1,contact.geom2),(contact.geom2,contact.geom1))) for contact in t.data.contact)
 
 
@@ -896,11 +896,11 @@ def move_empty_robot(t,ident,robot,joint_rad):
  if is_current(t.task) and arm_payload_contact(t,ident,robot):
   from .relay_contact_escape import execute_open_contact_withdrawal
   return execute_open_contact_withdrawal(t,ident,robot,joint_rad,goal_names=terminal_contact_names)
- if any(arm_payload_contact(t,name,robot) for name in t.monitor.relay_v2.states):raise ValueError('Robot still contacts cargo; review separation first')
- state=t.monitor.relay_v2.states[ident]
+ if any(arm_payload_contact(t,name,robot) for name in t.monitor.relay.states):raise ValueError('Robot still contacts cargo; review separation first')
+ state=t.monitor.relay.states[ident]
  def supported():
   current=t.monitor.bilateral(state['rod_geoms'],positive_force=True)-{robot}
-  return len(current&set(state['custody']))>=2 or t.monitor.relay_v2.environment_contact(state['all_geoms'])
+  return len(current&set(state['custody']))>=2 or t.monitor.relay.environment_contact(state['all_geoms'])
  if not supported():raise ValueError('Established receivers or actual environment support required')
  if goal.shape!=(7,) or not np.isfinite(goal).all() or np.any(goal<arm.ik.limits[:,0]) or np.any(goal>arm.ik.limits[:,1]):raise ValueError('Finite in-limit seven-joint target required')
  probe=copy(t);probe.live_preview=False;probe.data=mujoco.MjData(t.model);probe.data.qpos[:]=t.data.qpos;probe.screen_data=mujoco.MjData(t.screen_model);probe.held={a:p for a,p in t.held.items() if a!=robot}
@@ -912,11 +912,11 @@ def move_empty_robot(t,ident,robot,joint_rad):
  t.event('relay_empty_joint_route',robot=robot,payload=ident,joint_target=goal.tolist(),waypoints=len(path),scope='Measured open/separated donor; ordinary actuators, unchanged physics and cargo poses')
  for q in path[1:]:
   if not supported():raise RuntimeError('Independent support changed before empty-arm motion')
-  if any(arm_payload_contact(t,name,robot) for name in t.monitor.relay_v2.states):raise RuntimeError('Empty-arm separation changed before motion')
+  if any(arm_payload_contact(t,name,robot) for name in t.monitor.relay.states):raise RuntimeError('Empty-arm separation changed before motion')
   probe.data.qpos[:]=t.data.qpos;mujoco.mj_forward(t.model,probe.data)
   if not edge(t.data.qpos[arm.qids],q):raise RuntimeError('Actual scene changed before empty-arm motion')
   t.execute('recovery-empty-joint-move',{robot:('move',dict(joint_rad=q.tolist(),joint_speed_rad_s=.3))})
- if any(arm_payload_contact(t,name,robot) for name in t.monitor.relay_v2.states):raise RuntimeError('Empty motion ended with cargo contact; retain original held cache')
+ if any(arm_payload_contact(t,name,robot) for name in t.monitor.relay.states):raise RuntimeError('Empty motion ended with cargo contact; retain original held cache')
  t.held.pop(robot,None)
 
 
@@ -928,9 +928,9 @@ def terminal_recovery_state(t,ident,team):
  if active:
   t.relay_recovery_pending=dict(reason='Execution must be resolved before shared-load recovery',active_jobs=active)
   return False
- state=t.monitor.relay_v2.states[ident]
+ state=t.monitor.relay.states[ident]
  ok=bool(not (process_blocks(t) and (t.monitor.violations or state['dropped'] or not state['landed'] or not set(team)<=state['custody']))
-         and t.monitor.relay_v2.inside(state)
+         and t.monitor.relay.inside(state)
          and beam_table_contact(t,ident))
  if not ok:t.relay_recovery_pending=dict(reason='Actual beam/table/custody state does not admit this release recovery',payload=ident)
  return ok
@@ -1024,7 +1024,7 @@ def release(t,ident,team,terminal=False):
            reason='Known opening outcome, force/job ended and actual cargo contact absent; original call remains failed')
   t.held.pop(a,None)
  t.wait(.25)
- if process_blocks(t) and t.monitor.relay_v2.states[ident]['dropped']:raise RuntimeError('Independent receiver support lost at release '+ident)
+ if process_blocks(t) and t.monitor.relay.states[ident]['dropped']:raise RuntimeError('Independent receiver support lost at release '+ident)
  for a in team:
   if permitted:
    allowed=terminal_contact_names(t,ident)
@@ -1290,9 +1290,9 @@ def solve(t,payload_ids=None,terminal_observer=None,allow_partial_handover=False
    if handover_observer is not None:handover_observer(ident,prior_team,list(team),index)
   final=route[-1];rotation=rz(final['nominal_yaw_rad']);point=np.asarray(final['center_m'])+rotation@np.array([(number-(len(assemblies)-1)/2)*.12-.045,0,0]);point[2]=height
   carry(t,ident,team,point,payload_route_yaw(t,ident,final))
-  state=t.monitor.relay_v2.states[ident]
+  state=t.monitor.relay.states[ident]
   supported=set(team)<=set(t.monitor.bilateral(state['rod_geoms'],positive_force=True))
-  if not t.monitor.relay_v2.inside(state) or not supported or (process_blocks(t) and state['dropped']):
+  if not t.monitor.relay.inside(state) or not supported or (process_blocks(t) and state['dropped']):
    raise RuntimeError('Terminal preparation did not establish supported in-region readiness '+ident)
   if terminal_observer is not None:terminal_observer('prepared',ident,team)
   if terminal_observer is not None:terminal_observer('placement_started',ident,team)

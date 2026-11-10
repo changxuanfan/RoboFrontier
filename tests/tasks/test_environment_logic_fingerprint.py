@@ -3,14 +3,16 @@ from robofrontier.tasks.provenance import environment_logic_manifest
 
 
 class EnvironmentLogicFingerprintTests(unittest.TestCase):
-    def test_v2_geometry_changes_are_not_hidden_by_unchanged_shared_monitor(self):
-        shared='robofrontier/tasks/evaluate.py';geometry='robofrontier/tasks/evaluate_v2.py'
-        before=environment_logic_manifest({shared:'same',geometry:'before'})
-        after=environment_logic_manifest({shared:'same',geometry:'after'})
-        self.assertNotEqual(before['sha256'],after['sha256'])
-        self.assertEqual(before['sources'][shared],after['sources'][shared])
-        self.assertEqual(before['schema'],'robofrontier.environment-logic.v2')
-        self.assertEqual(before,environment_logic_manifest({geometry:'before',shared:'same','unrelated.py':'ignored'}))
+    def test_the_evaluator_and_the_dial_game_are_fingerprinted(self):
+        evaluator, game = 'robofrontier/tasks/evaluate.py', 'robofrontier/tasks/dial.py'
+        before = environment_logic_manifest({evaluator: 'before', game: 'same'})
+        after = environment_logic_manifest({evaluator: 'after', game: 'same'})
+        self.assertNotEqual(before['sha256'], after['sha256'])
+        self.assertEqual(before['schema'], 'robofrontier.environment-logic.v2')
+        self.assertEqual(before, environment_logic_manifest({evaluator: 'before', 'unrelated.py': 'ignored'}))
+        dial = {'family': 'dial'}
+        self.assertNotEqual(environment_logic_manifest({evaluator: 'x', game: 'a'}, dial)['sha256'],
+                            environment_logic_manifest({evaluator: 'x', game: 'b'}, dial)['sha256'])
 
 
-if __name__=='__main__':unittest.main()
+if __name__ == '__main__': unittest.main()
