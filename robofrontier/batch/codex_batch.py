@@ -113,7 +113,7 @@ def run_batch(folder, parallel, continuing=False):
     """Run a prepared batch; with `continuing`, pick up a batch whose supervisor died.
 
     Continuing never restarts a world: a run that had started continues in its next
-    segment, at most once (docs/running/run-segments.md); runs that never started start now.
+    segment by the stop table (docs/running/run-segments.md); runs that never started start now.
     """
     folder=Path(folder).resolve();batch=read(folder/'batch.json')
     expected='running' if continuing else 'prepared_not_started'

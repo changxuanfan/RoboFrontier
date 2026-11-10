@@ -50,7 +50,7 @@ credential_store = ""                # Subscription: private persistent director
 egress_mode = "direct"               # direct | mac-ssh (managed HTTP CONNECT over SSH)
 egress_root = ""                     # Private node-local relay state, separate from credentials and evidence
 egress_wait_s = 120                   # Admission wait after allocation; no task clock starts here
-egress_pause_s = 0                    # Explicit short-outage grace; 0 preserves immediate fencing
+egress_pause_s = 172800               # mac-ssh: how long a route outage may hold the world (the 48 h backstop); 0 fences at once
 
 [container]
 image = ""                           # Empty selects a tag from the committed source revision

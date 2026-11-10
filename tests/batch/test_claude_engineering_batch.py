@@ -62,22 +62,26 @@ class BatchTests(unittest.TestCase):
                       runner=lambda *a, **k: self.fail('must not launch'), verifier=lambda _: [], startup_interval_s=0)
         self.assertFalse(any(self.root.rglob('*claim*')))
 
-    def test_only_a_world_that_died_is_offered_a_continuation(self):
-        # A host stop at its own wall limit or on STOP is final, even when its seal is missing.
+    def test_every_unchosen_end_asks_the_stop_table(self):
+        # A host stop at its own wall limit, on STOP or after the world ended is final, even when
+        # its seal is missing; any other end (a dead world, a session error, a pause) asks.
         from unittest.mock import patch
         from robofrontier.batch import engineering_batch
         asked = []
         def fake_continue(run, reason):
             asked.append(reason); return False, 'not eligible in this test'
         with patch.object(engineering_batch, 'try_continue', fake_continue):
-            for reason in ('wall_limit', 'stop_requested', 'world_ended', 'dispatch_paused', 'session_error'):
+            for reason in engineering_batch.FINAL:
                 result = engineering_batch._run_once_continued(lambda *a, **k: {'reason': reason}, 'run', {})
                 self.assertEqual(result['segments'], [])
+            result = engineering_batch._run_once_continued(lambda *a, **k: {'status': 'finished', 'reason': 'x'}, 'run', {})
+            self.assertEqual(result['segments'], [])
             self.assertEqual(asked, [])
-            for reason in engineering_batch.WORLD_DIED:
+            unexpected = ('owner_unavailable', 'world_interrupted', 'dispatch_paused', 'session_error', 'supervisor_error')
+            for reason in unexpected:
                 result = engineering_batch._run_once_continued(lambda *a, **k: {'reason': reason}, 'run', {})
                 self.assertFalse(result['segments'][0]['continued'])
-            self.assertEqual(len(asked), len(engineering_batch.WORLD_DIED))
+            self.assertEqual(len(asked), len(unexpected))
 
     def test_parallel_limit_all_jobs_and_single_use(self):
         guard = threading.Lock(); counts = {'active':0, 'maximum':0, 'total':0}

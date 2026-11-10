@@ -145,8 +145,6 @@ def inspect(run, source, *, processes=None, own=False, upgrade_from=None):
         raise RecoveryBlocked('The original Claude runner still holds this run')
     with readonly(run) as store:
         if store.get('integrity_valid') is not True: raise RecoveryBlocked('Run integrity is not valid')
-        if store.get('segment', 0) >= run_segments.MAX_RETRIES and upgrade_from is None:
-            raise RecoveryBlocked('Run already continued once')
         lifecycle, physics = store.get('lifecycle'), store.get('physics_state')
         if not store.get('dispatch_paused'): raise RecoveryBlocked('Dispatch is not paused')
         live = not run_segments.owner_released(run)
@@ -276,7 +274,7 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
                                                             'plan': {k: plan[k] for k in ('segment', 'frame', 'sim_s', 'pose_sha256',
                                                                                           'failed_setups', 'remaining_s', 'role_threads')}})
                 record['failed_setups'] = fail_unstarted_reviews(store)
-                run_segments.prepare_retry(run, store, reason or REASON, sealed_host_failure=True, source_root=source,
+                run_segments.prepare_retry(run, store, reason or REASON, manual=True, source_root=source,
                                            manual_authorization=authorization)
                 if _ledger(store.db, plan['interrupted']) != plan['ledger_sha256']:
                     raise RecoveryBlocked('Original call ledger changed during preparation')

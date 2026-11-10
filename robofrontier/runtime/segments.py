@@ -1,8 +1,13 @@
-"""One run, several segments: after an unexpected exit the same run continues once.
+"""One run, several segments: a stopped run continues as the same trial.
 
 The continued segment is the same trial: same run directory, runtime database, workspace
 and model sessions. Only the physical world is new, rebuilt from the last recorded
-motion frame; the time the host was down does not count against the wall limit.
+motion frame; the time the host was down does not count against the limit.
+
+Why a segment ended decides what may follow (STOP_REASONS): an unexpected stop continues
+by itself once; any stop but an integrity abort may be continued by hand
+(`robofrontier continue`), as often as needed. A continuation after the trial was scored
+(finish or cutoff) is marked `after_score`; the score stays the one recorded then.
 See docs/running/run-segments.md.
 """
 import fcntl
@@ -15,7 +20,21 @@ import numpy as np
 from .layout import path as run_path
 from .setup import verify_inputs, write_json
 
-MAX_RETRIES = 1
+# Why a segment ended (stop_reason) and what may follow it. `automatic`: the batch continues
+# the run by itself (at most AUTOMATIC_CONTINUES times per run); `manual`: an operator may
+# continue it (`robofrontier continue`); `scored`: the trial's score was recorded at this stop.
+STOP_REASONS = {
+    'unexpected': {'automatic': True, 'manual': True, 'scored': False,
+                   'text': 'the host, its world or a model session stopped without finishing'},
+    'finish': {'automatic': False, 'manual': True, 'scored': True, 'text': 'the team finished'},
+    'cutoff': {'automatic': False, 'manual': True, 'scored': True, 'text': 'the time limit was reached'},
+    'wall_backstop': {'automatic': False, 'manual': True, 'scored': False,
+                      'text': 'stopped by the 48 h wall-time backstop'},
+    'operator_stop': {'automatic': False, 'manual': True, 'scored': False, 'text': 'an operator stopped it'},
+    'integrity_abort': {'automatic': False, 'manual': False, 'scored': False,
+                        'text': 'its frozen inputs failed the integrity check'},
+}
+AUTOMATIC_CONTINUES = 1
 MIN_REMAINING_S = 60.
 RESTORE_SCHEMA = 'robofrontier.segment-restore.v1'
 INTERRUPTED = ('Interrupted by an unexpected host exit; the world was restored from the last recorded pose. '
@@ -156,12 +175,13 @@ def _last_frame(run, segment):
     return reader, index, float(sim_s), pose
 
 
-# Events that only a normal end writes: the trial was over, so it never continues.
-NORMAL_END_EVENTS = ('POLICY_WALL_LIMIT', 'POLICY_BUDGET_CLOSED', 'TEAM_FINISH_PROPOSED')
+# Events that end a trial normally: a finish or the time limit.
+FINISH_EVENTS = ('TEAM_FINISH_PROPOSED',)
+CUTOFF_EVENTS = ('POLICY_WALL_LIMIT', 'POLICY_BUDGET_CLOSED')
+NORMAL_END_EVENTS = FINISH_EVENTS + CUTOFF_EVENTS
 
 
-BACKSTOP_REFUSAL = ('stopped by the 48 h wall-time backstop; continuing needs an explicit operator authorization '
-                    '(runtime_upgrade)')
+BACKSTOP_REFUSAL = ('stopped by the 48 h wall-time backstop; it continues only by hand (robofrontier continue)')
 
 
 def wall_backstopped(run):
@@ -171,15 +191,47 @@ def wall_backstopped(run):
     except (OSError, ValueError, AttributeError): return False
 
 
-def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None, manual_authorization=None):
+def _segment_started_at(store):
+    segments = store.get('segments') or []
+    return float(segments[-1].get('started_at') or 0.) if segments else 0.
+
+
+def stop_reason(run, store):
+    """Why the current segment ended, as a key of STOP_REASONS. Only this segment's events count,
+    so a run continued after its finish that then crashes stopped unexpectedly."""
+    since = _segment_started_at(store)
+    kinds = ('INTEGRITY_ABORT',) + NORMAL_END_EVENTS
+    events = {kind for (kind,) in store.db.execute(
+        'SELECT kind FROM events WHERE created >= ? AND kind IN (%s)' % ','.join('?' * len(kinds)), (since,) + kinds)}
+    if store.get('integrity_valid') is False or 'INTEGRITY_ABORT' in events: return 'integrity_abort'
+    if store.get('wall_backstop'): return 'wall_backstop'
+    if events & set(FINISH_EVENTS): return 'finish'
+    if events & set(CUTOFF_EVENTS): return 'cutoff'
+    if run_path(run, 'stop').exists(): return 'operator_stop'
+    return 'unexpected'
+
+
+def continuations(store):
+    """Every continuation of this run so far; runs from before the record count as automatic."""
+    recorded = store.get('continuations')
+    if recorded is not None: return recorded
+    return [{'segment': k, 'manual': False} for k in range(1, store.get('segment', 0) + 1)]
+
+
+def automatic_continues(store):
+    return sum(1 for c in continuations(store) if not c.get('manual'))
+
+
+def retry_eligibility(run, store, *, manual=False, source_root=None, manual_authorization=None):
     """(True, None) when this run may continue in a new segment, else (False, reason).
 
-    Only a world that really died, with time left, continues: a finish, the wall limit,
-    a budget close, STOP or a seal of a live world is a normal end. A preparation that
-    stopped part way may be completed again (see prepare_retry). The explicit
-    sealed_host_failure exception is reserved for the validated manual job-task
-    recovery entrypoint; automatic continuation never enables it. source_root
-    verifies the original immutable runtime rather than a development checkout."""
+    Automatic (the batch, after a host exits): only an unexpected stop, at most
+    AUTOMATIC_CONTINUES times per run, with time left, never after a continuation past the
+    score. Manual (`robofrontier continue`, or a recovery with a runtime-upgrade
+    authorization): any stop but an integrity abort, any number of times, also after the
+    finish, the cutoff or the wall backstop. Either way the world must be gone, the frozen
+    inputs unchanged and a motion frame recorded. source_root verifies the original
+    immutable runtime rather than a development checkout."""
     run = Path(run)
     if not supported(run): return False, 'run layout has no segments'
     journal = store.get('segment_journal')
@@ -187,40 +239,48 @@ def retry_eligibility(run, store, *, sealed_host_failure=False, source_root=None
         from .upgrade import validate_authorization
         try: validate_authorization(run, store, manual_authorization, source_root=source_root)
         except (ValueError, OSError, KeyError, TypeError) as error: return False, str(error)
-    # A run stopped by the wall backstop continues only on an operator's explicit authorization;
-    # the backstop's own stop (an ended world, sealed live) is then not a normal end.
-    backstop = bool(store.get('wall_backstop'))
-    if backstop and manual_authorization is None: return False, BACKSTOP_REFUSAL
-    if store.get('segment', 0) >= MAX_RETRIES and not journal and manual_authorization is None:
-        return False, 'already continued once'
+        manual = True
     lifecycle = store.get('lifecycle')
-    if lifecycle not in ('running', 'interrupted', 'recovery_required') and not (backstop and lifecycle == 'ended'):
-        return False, 'run ended normally or never started (' + str(lifecycle) + ')'
-    marks = ','.join('?' * (len(NORMAL_END_EVENTS) + 1))
-    events = {kind for (kind,) in store.db.execute(
-        'SELECT kind FROM events WHERE kind IN (%s)' % marks, ('INTEGRITY_ABORT',) + NORMAL_END_EVENTS)}
-    if store.get('integrity_valid') is False or 'INTEGRITY_ABORT' in events: return False, 'integrity abort'
-    if events & set(NORMAL_END_EVENTS): return False, 'run reached a normal end (' + ', '.join(sorted(events)) + ')'
-    # A seal of a live world is a normal end (stop, finish, a model-side failure); a seal
-    # made after the world had already died does not prevent continuing.
-    segment = store.get('segment', 0)
-    for (value,) in store.db.execute("SELECT value FROM events WHERE kind='RUN_SEALED'"):
-        sealed = json.loads(value)
-        report = sealed.get('report_ref') or ''
-        if (not sealed_host_failure and not backstop and sealed.get('owner_was_live', True)
-                and Path(report).resolve().parent == output_dir(run, segment).resolve()):
-            return False, 'run was sealed with its world alive'
-    if run_path(run, 'stop').exists(): return False, 'stop requested'
+    if lifecycle not in ('running', 'interrupted', 'recovery_required', 'ended'):
+        return False, 'run never started or is already prepared to continue (' + str(lifecycle) + ')'
+    if store.get('start_at') is None: return False, 'never started'
+    reason = stop_reason(run, store)
+    rule = STOP_REASONS[reason]
+    if not rule['manual']: return False, rule['text']
+    if not manual:
+        if reason == 'wall_backstop': return False, BACKSTOP_REFUSAL
+        if not rule['automatic']: return False, 'run reached a normal end or was stopped (' + rule['text'] + ')'
+        if store.get('after_score'): return False, 'a continuation after the score continues only by hand'
+        if automatic_continues(store) >= AUTOMATIC_CONTINUES and not journal:
+            return False, 'already continued automatically once; continue by hand (robofrontier continue)'
     # A preparation that stopped part way may have left its own restore files unverified.
     partial = 'input:'+input_dir(run, journal['segment']).relative_to(run).as_posix()+'/' if journal else None
     changed = [c for c in verify_inputs(run, source_root=source_root) if not (partial and c.startswith(partial))]
     if changed: return False, 'frozen inputs changed: ' + ', '.join(changed[:3])
     if not owner_released(run): return False, 'a process still owns the physical world'
-    if store.get('start_at') is None: return False, 'never started'
     ended_at = journal['ended_at'] if journal else None
-    if remaining_s(run, store, ended_at) < MIN_REMAINING_S: return False, 'less than %d s of the wall limit left' % MIN_REMAINING_S
-    if _last_frame(run, segment) is None: return False, 'no recorded motion frame'
+    if not manual and remaining_s(run, store, ended_at) < MIN_REMAINING_S:
+        return False, 'less than %d s of the limit left' % MIN_REMAINING_S
+    if _last_frame(run, store.get('segment', 0)) is None: return False, 'no recorded motion frame'
     return True, None
+
+
+# Score records kept aside when a run continues after its score.
+SCORED_FILES = ('evaluation.json', 'budget-cutoff.json', 'evaluation-window.json')
+
+
+def _keep_score(run, store, reason, segment):
+    """A continuation after the finish or the cutoff: the score stays the one recorded then."""
+    outputs = Path(run) / 'private/outputs'
+    kept = {}
+    for name in SCORED_FILES:
+        source, target = outputs / name, outputs / ('scored-' + name)
+        if source.is_file() and not target.exists():
+            target.write_bytes(source.read_bytes())
+        if target.is_file(): kept[name] = str(target.relative_to(run))
+    record = store.get('after_score') or {'reason': reason, 'from_segment': segment, 'files': kept}
+    store.put('after_score', record)
+    return record
 
 
 def _write_atomic(path, data):
@@ -228,25 +288,28 @@ def _write_atomic(path, data):
     temporary.write_bytes(data); temporary.replace(path)
 
 
-def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=None, manual_authorization=None):
-    """Turn an unexpectedly ended run into one that continues in the next segment.
+def prepare_retry(run, store, reason, *, manual=False, source_root=None, manual_authorization=None):
+    """Turn a stopped run into one that continues in the next segment.
 
-    `reason` names what ended the previous segment (for example the host exit code).
+    `reason` names what ended the previous segment (for example the host exit code);
+    `manual` is an operator's continuation (see retry_eligibility).
     The caller has already established that no host or world process is alive.
     Preparation follows a journal kept in the runtime database, so a preparation that
     stopped part way is completed by calling this again: it reuses the same segment,
     the same restore frame and end time, and uses no further continuation.
     """
     run = Path(run)
-    ok, why = retry_eligibility(run, store, sealed_host_failure=sealed_host_failure, source_root=source_root,
-                              manual_authorization=manual_authorization)
+    ok, why = retry_eligibility(run, store, manual=manual, source_root=source_root,
+                                manual_authorization=manual_authorization)
     if not ok: raise ValueError('Run cannot continue: ' + why)
+    manual = manual or manual_authorization is not None
     previous = store.get('segment', 0)
     journal = store.get('segment_journal')
     if not journal or journal.get('segment') != previous + 1:
         reader, index, sim_s, _ = _last_frame(run, previous)
         journal = {'segment': previous + 1, 'reason': reason, 'ended_at': last_activity(run, store),
-                   'source_frame': int(index), 'source_sim_s': sim_s, 'interrupted': None}
+                   'source_frame': int(index), 'source_sim_s': sim_s, 'interrupted': None,
+                   'stop': stop_reason(run, store), 'manual': manual}
         store.put('segment_journal', journal)
     segment, sim_s = journal['segment'], journal['source_sim_s']
     if journal['interrupted'] is None:
@@ -287,14 +350,23 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
         value = json.loads(connection.read_text())
         if value.pop('url', None) is not None:
             write_json(connection, value); connection.chmod(0o600)
+    stop = journal.get('stop') or 'unexpected'
+    after_score = None
+    if STOP_REASONS[stop]['scored'] or store.get('after_score'): after_score = _keep_score(run, store, stop, previous)
     # Last, so a preparation that stopped part way still sees the backstop stop it continues.
-    if store.get('wall_backstop'): _waive_backstop(run, store, manual_authorization)
+    if store.get('wall_backstop'): _waive_backstop(run, store, manual_authorization or 'manual continue')
+    if stop == 'operator_stop': run_path(run, 'stop').unlink(missing_ok=True)
     with store.transaction():
+        store.put('continuations', continuations(store) + [
+            {'segment': segment, 'manual': bool(journal.get('manual')), 'stop': stop, 'after_score': after_score is not None,
+             'at': time.time()}])
         segments = store.get('segments') or [{'index': 0, 'started_at': store.get('start_at')}]
         segments[-1].update(ended_at=journal['ended_at'], end_reason=journal['reason'])
         store.put('segments', segments)
         store.put('pending_segment', {'segment': segment, 'prepared_at': time.time(), 'previous_ended_at': journal['ended_at'],
-                                      'restored_sim_s': sim_s, 'interrupted': journal['interrupted']})
+                                      'restored_sim_s': sim_s, 'interrupted': journal['interrupted'],
+                                      'manual': bool(journal.get('manual')), 'stop': stop,
+                                      'after_score': after_score is not None})
         store.put('segment', segment)
         store.put('dispatch_paused', True)
         store.put('physics_state', 'stopped')
@@ -302,7 +374,9 @@ def prepare_retry(run, store, reason, *, sealed_host_failure=False, source_root=
         store.put('lifecycle', 'resuming')
         store.put('segment_journal', None)
         store.event('SEGMENT_PREPARED', 'Meta', {'segment': segment, 'reason': journal['reason'], 'restored_sim_s': sim_s,
-                                                 'source_frame': journal['source_frame'], 'interrupted': journal['interrupted']})
+                                                 'source_frame': journal['source_frame'], 'interrupted': journal['interrupted'],
+                                                 'manual': bool(journal.get('manual')), 'stop': stop,
+                                                 'after_score': after_score is not None})
     export(run, store)
     return note
 
@@ -322,6 +396,7 @@ def _waive_backstop(run, store, authorization):
         store.put('wall_backstop_waived', waived)
         store.put('wall_backstop', None)
         store.put('termination_reason', None)
+        store.put('pause_wall_s', 0.)  # the backstop counts again from now
         store.event('WALL_BACKSTOP_WAIVED', 'Meta', waived)
 
 
@@ -333,7 +408,8 @@ def begin_segment(store, now=None):
     downtime = max(0., now - pending['previous_ended_at'])
     store.put('downtime_s', store.get('downtime_s', 0.) + downtime)
     record = {'index': pending['segment'], 'started_at': now, 'downtime_s': downtime,
-              'restored_sim_s': pending['restored_sim_s'], 'interrupted': pending['interrupted']}
+              'restored_sim_s': pending['restored_sim_s'], 'interrupted': pending['interrupted'],
+              **{k: pending[k] for k in ('manual', 'stop', 'after_score') if k in pending}}
     store.put('segments', (store.get('segments') or []) + [record])
     store.put('pending_segment', None)
     store.event('SEGMENT_STARTED', 'Meta', record)
@@ -349,11 +425,20 @@ def resume_message(run, actor, record):
 def export(run, store):
     write_json(Path(run) / 'private/outputs/segments.json',
                {'segment': store.get('segment', 0), 'segments': store.get('segments') or [],
-                'downtime_s': store.get('downtime_s', 0.), 'pending': store.get('pending_segment')})
+                'downtime_s': store.get('downtime_s', 0.), 'pending': store.get('pending_segment'),
+                'continuations': continuations(store), 'after_score': store.get('after_score')})
+
+
+def continue_by_hand(run, reason='manual continue', source_root=None):
+    """Prepare an operator's continuation of one stopped run (robofrontier continue)."""
+    from .store import RuntimeStore
+    store = RuntimeStore(Path(run) / 'private/state/runtime.sqlite')
+    try: return prepare_retry(run, store, reason, manual=True, source_root=source_root)
+    finally: store.close()
 
 
 def try_continue(run, reason, wait_s=60., sleep=time.sleep):
-    """After a host exited abnormally: prepare the next segment if this run may continue.
+    """After a host exited: prepare the next segment if this run continues by itself.
 
     Waits up to `wait_s` for the world process to finish closing (it closes by itself once
     its host is gone). Returns (True, None) when a segment was prepared, else (False, why).

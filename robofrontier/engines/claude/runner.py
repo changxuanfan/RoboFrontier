@@ -20,7 +20,7 @@ import uuid
 import weakref
 from pathlib import Path
 from urllib.parse import urlsplit
-from robofrontier.engines.claude.recovery import api_error, capacity_code
+from robofrontier.engines.claude.recovery import api_error, capacity_code, usage_limit_of
 from robofrontier.engines.claude.native_home import config_directory
 from robofrontier.engines.claude.cost_state import amount, baseline, invocation_cost
 from robofrontier.batch.metrics import host_event
@@ -408,6 +408,7 @@ def summarize(lines):
         'reported_model': init.get('model'),
         'turn_status': turn,
         'capacity_error_code': capacity_code(events),
+        'usage_limit': usage_limit_of(events) if turn == 'failed' else None,
         'api_error': api_error(events),
         'result_subtype': (result or {}).get('subtype'),
         'num_turns': (result or {}).get('num_turns'),

@@ -59,6 +59,21 @@ MODEL_RESTART = ('Your model session was restarted after the model host stopped 
 # before it is sealed for review.
 MAX_MODEL_RESTARTS = 3
 NETWORK_RESUME = ('Network connectivity recovered after a recorded infrastructure pause. Your previous native turn is confirmed failed; this is a new continuation in the same session and the original live world. Read your saved work and inbox, inspect pending requests and original action IDs, and obtain fresh observations before choosing further work. Preserve completed results and submitted actions. Never replay an old request or infer that a failed model turn means its robot actions did not execute. Continue within your existing role and delegated scope; explicitly return when its agreed completion or documented failure boundary is reached.\n')
+# Sent to a role whose model turn failed on a confirmed capacity or rate limit, after the
+# host's wait (at most MAX_CAPACITY_RETRIES per session); the same on both engines. When the
+# retries are used up, both hosts pause the run (DISPATCH_PAUSED) instead of sending it again.
+CAPACITY_RESUME = ('Your previous model turn failed because of a capacity or rate limit and the host waited before '
+                   'this continuation. It is the same session and the same live world; nothing was reset or replayed. '
+                   'Read your inbox, check pending and job with the original IDs before acting again, and keep '
+                   'submitted actions and completed results. Then continue the task.\n')
+MAX_CAPACITY_RETRIES = 3
+# Sent once to a role whose turn failed on the plan's usage limit, after the world paused until
+# the reset and resumed (runtime/quota.py); the same on both engines.
+QUOTA_RESUME = ('Your previous model turn failed because the account\'s usage limit was reached. The trial was '
+                'paused until the limit reset; that time was not counted, and the world was held exactly as it was. '
+                'It is the same session and the same live world; nothing was reset or replayed. Read your inbox, '
+                'check pending and job with the original IDs before acting again, and keep submitted actions and '
+                'completed results. Then continue the task.\n')
 # What workspace/skills.md holds when a run is prepared.
 SKILLS_HEADER = ('# Run skills\nShared by all roles in this run. Rules and format: the "Run skills" section '
                  'of your Skill.\n')
@@ -151,9 +166,12 @@ def write_bootstraps(run):
         written.append(target)
     (folder / 'resume.md').write_text(RESUME)
     (folder / 'model-restart.md').write_text(MODEL_RESTART)
+    (folder / 'capacity-resume.md').write_text(CAPACITY_RESUME)
+    (folder / 'quota-resume.md').write_text(QUOTA_RESUME)
     notice=folder/'network-resume.md'
     notice.write_text(NETWORK_RESUME)
-    written += [folder / 'resume.md', folder / 'model-restart.md',notice]
+    written += [folder / 'resume.md', folder / 'model-restart.md', folder / 'capacity-resume.md',
+                folder / 'quota-resume.md', notice]
     return written
 
 

@@ -95,7 +95,7 @@ def inspect(run, manifest, source):
         try: os.kill(int(host['pid']), 0)
         except ProcessLookupError: pass
         else: raise RecoveryBlocked('Original host PID is still alive or has been reused')
-        ok, reason = run_segments.retry_eligibility(run, store, sealed_host_failure=True, source_root=source)
+        ok, reason = run_segments.retry_eligibility(run, store, manual=True, source_root=source)
         if not ok: raise RecoveryBlocked(reason)
         _, frame, sim_s, pose = run_segments._last_frame(run, store.get('segment', 0))
         holds = store.get('arm_holds') or {}
@@ -194,7 +194,7 @@ def execute(run, manifest, source, python, scratch, *, allocation_end):
             try:
                 store.event('MANUAL_TASK_RECOVERY', 'Meta', {'reason': 'sealed after task-channel loss', 'plan': plan})
                 run_segments.prepare_retry(run, store, 'manual recovery after closed task channel',
-                                           sealed_host_failure=True, source_root=source)
+                                           manual=True, source_root=source)
                 if _ledger(store.db) != plan['ledger_sha256']: raise RecoveryBlocked('Original call ledger changed during preparation')
             finally: store.close()
             grant = Path(manifest['recovery_directory'])/(plan['task_id']+'.json')

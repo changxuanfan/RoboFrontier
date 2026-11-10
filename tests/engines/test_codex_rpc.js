@@ -92,11 +92,13 @@ test('frozen legacy roles retain the readiness barrier and read their work after
   assert.match(prompt,/call robot work/);
   assert.doesNotMatch(prompt,/The experiment has STARTED and the task clock is running/);
 });
-test('capacity recovery resumes a started task without a READY barrier',async()=>{
+test('capacity recovery resumes a started task with the frozen capacity notice',async()=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'capacity-retry-'));
   try {
     const fakePython=path.join(dir,'python');
     fs.writeFileSync(fakePython,'#!/bin/sh\nprintf "false\\n"\n',{mode:0o755});
+    fs.mkdirSync(path.join(dir,'private/inputs/bootstrap'),{recursive:true});
+    fs.writeFileSync(path.join(dir,'private/inputs/bootstrap/capacity-resume.md'),'CAPACITY NOTICE');
     const prompts=[];
     const host={stopped:false,began:Date.now(),run:dir,cwd:dir,python:fakePython,
       actors:new Map([['thread','Controller']]),failures:new Map([['thread:turn',Date.now()-11000]]),retries:new Set(),
@@ -104,10 +106,8 @@ test('capacity recovery resumes a started task without a READY barrier',async()=
       observe:async()=>({thread:{status:{type:'systemError'}},latestTurn:{id:'turn',status:'failed',error:{message:'429 Too Many Requests'}}}),
       send:async(id,prompt)=>prompts.push(prompt),event:()=>{}};
     await PolicyHost.prototype.retryCapacity.call(host);
-    assert.equal(prompts.length,1);
-    assert.match(prompts[0],/The experiment has started/);
-    assert.match(prompts[0],/continue without waiting for another START/);
-    assert.doesNotMatch(prompts[0],/legacy startup barrier has not opened/);
+    // The frozen text, the same as the Claude host sends (runtime/bootstrap.py CAPACITY_RESUME).
+    assert.deepEqual(prompts,['CAPACITY NOTICE']);
     await PolicyHost.prototype.retryCapacity.call(host);
     assert.equal(prompts.length,1);
   } finally {fs.rmSync(dir,{recursive:true,force:true});}
@@ -122,6 +122,8 @@ test('capacity recovery stops after three consecutive retries and pauses for rev
   try {
     const fakePython=path.join(dir,'python');
     fs.writeFileSync(fakePython,'#!/bin/sh\nprintf "false\\n"\n',{mode:0o755});
+    fs.mkdirSync(path.join(dir,'private/inputs/bootstrap'),{recursive:true});
+    fs.writeFileSync(path.join(dir,'private/inputs/bootstrap/capacity-resume.md'),'CAPACITY NOTICE');
     const prompts=[],admin=[];let turn=0;
     const host={stopped:false,run:dir,cwd:dir,python:fakePython,actors:new Map([['thread','Controller']]),
       failures:new Map(),retries:new Set(),capacityAttempts:new Map([['thread',3]]),

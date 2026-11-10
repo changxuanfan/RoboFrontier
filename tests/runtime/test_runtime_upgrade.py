@@ -55,13 +55,13 @@ class RuntimeUpgradeTests(unittest.TestCase):
         self.assertEqual(parent.read_bytes(), self.original)
         self.assertEqual(verify_inputs(self.run), [])
         self.assertEqual(self.store.call('settled'), self.before)
-        self.assertEqual(run_segments.retry_eligibility(self.run, self.store), (False,'already continued once'))
+        self.assertEqual(run_segments.retry_eligibility(self.run, self.store), (False,'already continued automatically once; continue by hand (robofrontier continue)'))
         note = run_segments.prepare_retry(self.run, self.store, 'Authorized outage restore',
-                                         sealed_host_failure=True, manual_authorization=grant)
+                                         manual=True, manual_authorization=grant)
         self.assertEqual(note['segment'], 2)
         self.assertEqual(self.store.call('settled'), self.before)
         self.assertFalse(run_segments.retry_eligibility(self.run, self.store, manual_authorization=grant)[0])
-        self.assertEqual(run_segments.MAX_RETRIES, 1)
+        self.assertEqual(run_segments.AUTOMATIC_CONTINUES, 1)
 
     def test_unsettled_or_live_state_cannot_be_upgraded(self):
         self.store.begin_call('pending', 'Controller', 'move', {})

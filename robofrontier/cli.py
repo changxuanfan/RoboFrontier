@@ -208,7 +208,8 @@ def _frozen_configuration(batch):
 
 def run(batch, *, continuing=False):
     """Run a prepared batch. `continuing` picks up a batch whose supervisor died: a run that
-    had started continues once in its next segment and unstarted runs start (docs/running/run-segments.md)."""
+    had started continues in its next segment when its stop allows it, and unstarted runs start
+    (docs/running/run-segments.md)."""
     config = _frozen_configuration(batch)
     if config['policy']['engine'] == 'claude':
         # Both engines need passed compatibility receipts; Codex checks its own per run.
@@ -250,6 +251,66 @@ def run(batch, *, continuing=False):
             with Path(result['archive']).open('rb') as stream:
                 result['archive_sha256'] = hashlib.file_digest(stream, 'sha256').hexdigest()
     return result
+
+
+def _lock_held(path):
+    import fcntl
+    if not path.exists(): return False
+    with path.open('a+') as lock:
+        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError: return True
+        fcntl.flock(lock, fcntl.LOCK_UN)
+    return False
+
+
+def continue_runs(batch, cases=None):
+    """Continue stopped runs of a batch by hand, as the same trials (docs/running/run-segments.md).
+
+    Any stop but an integrity abort may be continued, as often as needed: after an
+    unexpected stop, an operator's STOP, the finish, the cutoff or the wall backstop. A
+    continuation after the finish or the cutoff keeps the score recorded then. Each named
+    run (default: every run that may continue) gets its next segment; the batch then runs
+    them like `run --continue`. Returns what was prepared and what was not, with why."""
+    from .runtime import segments
+    from .runtime.setup import write_json
+    batch = Path(batch).resolve()
+    config = _frozen_configuration(batch)
+    engine = config['policy']['engine']
+    lock = run_layout.batch_path(batch, 'engineering_lock' if engine == 'claude' else 'supervisor_lock')
+    if _lock_held(lock): raise ValueError('The batch is still running; stop it or wait before continuing runs')
+    document = json.loads((batch/'batch.json').read_text())
+    jobs = document['jobs']
+    if cases:
+        unknown = set(cases) - {job['case_id'] for job in jobs}
+        if unknown: raise ValueError('Not in this batch: '+', '.join(sorted(unknown)))
+        jobs = [job for job in jobs if job['case_id'] in cases]
+    prepared, refused = [], {}
+    for job in jobs:
+        run = Path(job['run_directory'])
+        from .runtime.store import RuntimeStore
+        store = RuntimeStore(run/'private/state/runtime.sqlite')
+        try:
+            ok, why = segments.retry_eligibility(run, store, manual=True)
+            if ok: segments.prepare_retry(run, store, 'manual continue', manual=True)
+        finally: store.close()
+        if ok: prepared.append(job['case_id'])
+        else: refused[job['case_id']] = why
+    if cases and refused:
+        raise ValueError('Cannot continue: '+'; '.join(f'{k}: {v}' for k, v in refused.items()))
+    if not prepared: return {'batch': str(batch), 'prepared': [], 'refused': refused}
+    # Reopen the batch for exactly these runs; the others keep their final status.
+    if engine == 'claude':
+        path = run_layout.batch_path(batch, 'engineering_status')
+        state = json.loads(path.read_text())
+        for job, entry in zip(document['jobs'], state['jobs']):
+            if job['case_id'] in prepared: entry['status'] = 'queued'
+        state['status'] = 'running'; write_json(path, state)
+    else:
+        for job in document['jobs']:
+            if job['case_id'] in prepared: job['status'] = 'prepared'
+        document['status'] = 'running'; write_json(batch/'batch.json', document)
+    run_layout.batch_path(batch, 'stop').unlink(missing_ok=True)
+    return {'batch': str(batch), 'prepared': prepared, 'refused': refused}
 
 
 def collect(batch, output):
@@ -298,18 +359,23 @@ def argument_parser(*, prog=None):
             p.add_argument('--smoke-only', action='store_true')
             p.add_argument('--max-budget-usd', type=float)
     sub.add_parser('bootstrap', help='Restore and verify pinned policy assets; never calls a model')
-    for name in ('run', 'status', 'stop'):
-        p = sub.add_parser(name)
+    for name in ('run', 'continue', 'status', 'stop'):
+        p = sub.add_parser(name, help='Continue stopped runs by hand, as the same trials (docs/running/run-segments.md)'
+                           if name == 'continue' else None)
         p.add_argument('batch', type=Path)
-        if name == 'run':
+        if name == 'continue':
+            p.add_argument('--cases', nargs='+', help='The runs to continue (default: every run that may continue)')
+        if name in ('run', 'continue'):
             p.add_argument('--durable', action='store_true',
                            help='Run as a background service that outlives this terminal: launchd with Interactive '
                                 'priority on macOS (the default there, a continuation included), a systemd user service '
                                 'or setsid daemon on Linux')
             p.add_argument('--foreground', action='store_true',
                            help='On macOS, run in this process at its own priority instead of the launchd service')
+        if name == 'run':
             p.add_argument('--continue', dest='continuing', action='store_true',
-                           help='Continue a batch whose supervisor died; started runs continue once (docs/running/run-segments.md)')
+                           help='Continue a batch whose supervisor died; a started run continues by itself once '
+                                '(docs/running/run-segments.md)')
     p = sub.add_parser('collect', help='Collect stopped native sessions, motion and evidence')
     p.add_argument('batch', type=Path)
     p.add_argument('--output', type=Path, required=True)
@@ -399,6 +465,19 @@ def main(argv=None):
                 from .runtime.policy_env import apply_default
                 apply_default()
                 emit({'batch': str(prepare(args.output, config)), 'model_calls': 0})
+        elif args.command == 'continue':
+            report = continue_runs(args.batch, args.cases)
+            if report['prepared']:
+                if args.durable or (sys.platform == 'darwin' and not args.foreground):
+                    if args.foreground: raise ValueError('--durable and --foreground are exclusive')
+                    if sys.platform == 'darwin': from .batch.mac import submit as submit_durable
+                    else: from .batch.linux import submit as submit_durable
+                    report['service'] = submit_durable(args.batch, continuing=True)
+                else:
+                    from robofrontier.batch.prepare import load_env
+                    load_env(ROOT/'.env')
+                    report['result'] = run(args.batch, continuing=True)
+            emit(report)
         elif args.command == 'run' and (args.durable or (sys.platform == 'darwin' and not args.foreground)):
             # On macOS a batch, a continuation included, runs under launchd with ProcessType=Interactive
             # by default, so it outlives the terminal or agent session that started it.

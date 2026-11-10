@@ -4,7 +4,7 @@ const path = require('node:path');
 const {execFile,execFileSync,exec:execShell,spawn} = require('node:child_process');
 const {promisify} = require('node:util');
 const execFileAsync = promisify(execFile), execAsync = promisify(execShell);
-const {CodexRpc,STARTUP_ACK_MS,capacityFailure,networkFailure,requireNoMcpServers} = require('./codex_rpc');
+const {CodexRpc,STARTUP_ACK_MS,capacityFailure,networkFailure,usageLimitFailure,requireNoMcpServers} = require('./codex_rpc');
 const {GatewayRpc} = require('./gateway_rpc');
 const fileTools = require('./tool_broker');
 const {runMetaDispatcher} = require('./meta_dispatcher');
@@ -241,6 +241,35 @@ class PolicyHost {
       this.event({event:'owner_exited',exit_code:this.owner.exitCode,signal:this.owner.signalCode});}
     return gone;
   }
+  // A turn that failed on the plan's usage limit (runtime/quota.py): ask the world to pause until
+  // the reset, then continue the turn once with the frozen quota notice, as the Claude host does
+  // (claude/recovery.py recover_quota). Returns true when the run was held for review.
+  async retryQuota(id,actor,t,snapshot) {
+    const key=id+':'+t.id,notice=frozenText(this.run,'quota-resume.md');
+    if(!notice||this.retries.has(key))return false;
+    this.quotaTurns??=new Map();
+    if(!this.quotaTurns.has(key)){
+      let limit={};
+      try{const {stdout}=await execFileAsync(this.python,['-m','robofrontier.runtime.quota',JSON.stringify(t.error)],{cwd:this.cwd});limit=JSON.parse(stdout)||{};}
+      catch{}
+      this.quotaTurns.set(key,Date.now()/1000);
+      await this.admin('quota-pause',{actor,thread_id:id,resets_at:limit.resets_at??null,text:limit.text||JSON.stringify(t.error).slice(0,500)});
+      this.event({event:'quota_pause_requested',actor,thread_id:id,failed_turn_id:t.id,resets_at:limit.resets_at??null});
+      return false;
+    }
+    const recovery=snapshot.egress_recovery;
+    if(!recovery||!String(recovery.claim||'').startsWith('quota-')||recovery.resumed_at<this.quotaTurns.get(key))return false;
+    const code="from robofrontier.runtime.store import RuntimeStore;from robofrontier.runtime.scheduling import blocks_model_recovery;import sys,json;s=RuntimeStore(sys.argv[1]);a=sys.argv[2];print(json.dumps(any(blocks_model_recovery(v) for v in s.actions(a).values()) or any(True for r in s.db.execute(\"SELECT 1 FROM calls WHERE actor=? AND status IN ('accepted','running','uncertain') AND op IN ('move','gripper','action_batch','delegate')\",(a,)))));s.close()";
+    const {stdout}=await execFileAsync(this.python,['-c',code,path.join(this.run,'private/state/runtime.sqlite'),actor],{cwd:this.cwd});
+    if(JSON.parse(stdout))return false;
+    const claim=await this.admin('network-recovery',{actor,thread_id:id,failed_turn_id:t.id,error_observed_at:this.quotaTurns.get(key)});
+    if(claim.review_required){this.retries.add(key);await this.admin('network-recovery-uncertain',{actor,thread_id:id});return true;}
+    if(!claim.allowed)return false;
+    this.retries.add(key);
+    try{await this.send(id,notice);this.event({event:'quota_continuation',actor,thread_id:id,failed_turn_id:t.id});}
+    catch{await this.admin('network-recovery-uncertain',{actor,thread_id:id});return true;}
+    return false;
+  }
   async retryCapacity() {
     if (this.stopped) return;
     const snapshot=await this.admin('snapshot');
@@ -249,6 +278,10 @@ class PolicyHost {
       const state=await this.observe(id),t=state.latestTurn;
       const role=snapshot.agents?.[actor];
       if(role?.kind==='delegate'&&role.delegation_state!=='active')continue;
+      if(state.thread.status.type==='systemError'&&t?.status==='failed'&&usageLimitFailure(t.error)){
+        if(await this.retryQuota(id,actor,t,snapshot))return;
+        continue;
+      }
       if(state.thread.status.type==='systemError'&&t?.status==='failed'&&snapshot.egress_recovery
           && !capacityFailure(t.error) && (!networkFailure(t.error)||this.networkFailures?.get(id+':'+t.id)===undefined||!frozenText(this.run,'network-resume.md'))){
         await this.admin('network-recovery-uncertain',{actor,thread_id:id});return;
@@ -272,6 +305,9 @@ class PolicyHost {
         continue;
       }
       if (state.thread.status.type!=='systemError' || t?.status!=='failed' || !capacityFailure(t.error)) continue;
+      // The same frozen text as the Claude host (runtime/bootstrap.py CAPACITY_RESUME).
+      const notice=frozenText(this.run,'capacity-resume.md');
+      if (!notice) continue;
       const key=id+':'+t.id;
       if (this.retries.has(key)) continue;
       this.capacityAttempts??=new Map();
@@ -293,8 +329,7 @@ class PolicyHost {
       if (JSON.parse(stdout)) continue;
       this.retries.add(key); // An unknown turn/start acknowledgement is never repeated.
       this.capacityAttempts.set(id,attempt+1);
-      const phase=snapshot.lifecycle==='running' ? 'The experiment has started: obtain any needed capability information and continue without waiting for another START.' : 'The legacy startup barrier has not opened; continue the existing startup instructions.';
-      await this.send(id,'The previous model turn failed because of a capacity or rate limit. Continue this task and its saved work. First inspect pending/job using original action IDs and read your inbox. Preserve submitted actions, the current world and the original deadline. '+phase);
+      await this.send(id,notice);
       this.event({event:'capacity_retry',thread_id:id,failed_turn_id:t.id,attempt:attempt+1});
     }
   }

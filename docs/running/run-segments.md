@@ -1,22 +1,30 @@
-# Continuing a run after an unexpected exit (run segments)
+# Continuing a stopped run (run segments)
 
-When a host, its world process or the whole batch exits unexpectedly, the run
-continues once, automatically. The continued part is **the same trial**: the
-same run directory, runtime database, workspace and model sessions, scored as
-usual. Only the physical world is new, rebuilt approximately from the last
-recorded motion frame. Both engines and all four topologies (centralized,
-adaptive, hierarchical, peer) continue the same way.
+A run that stops can continue. The continued part is **the same trial**: the same
+run directory, runtime database, workspace and model sessions. Only the physical
+world is new, rebuilt approximately from the last recorded motion frame. Both
+engines and all four topologies (centralized, adaptive, hierarchical, peer)
+continue the same way.
+
+- After an **unexpected** stop (a host, world or model session ended without a
+  finish, cutoff or STOP) the batch continues the run by itself, **once** per run.
+- After that, and after **any** other stop but an integrity abort, an operator
+  continues it by hand with `robofrontier continue`, as often as needed.
+- A continuation after the **finish** or the **cutoff** is marked `after_score`:
+  the score stays the one recorded at that stop, and the continued segment has no
+  time limit.
 
 ## Segments
 
-A run is one or more segments. The part before the exit is segment 0 and the
-continuation is segment 1; a run continues at most once
-(`run_segments.MAX_RETRIES`). The runtime database records:
+A run is one or more segments, numbered from 0. The runtime database records:
 
 - `segment`: the current segment number;
 - `segments`: one record per segment, with start and end times, the end
   reason, the restore source (segment, frame and simulation time), downtime and
-  the interrupted actions;
+  the interrupted actions, and for a continuation whether it was `manual`, the
+  `stop` it continued and whether it came `after_score`;
+- `continuations`: one entry per continuation (segment, manual, stop, after_score);
+- `after_score`: set once a continuation follows the finish or the cutoff;
 - `downtime_s`: total downtime;
 - `active_s`: active running time so far, for runs whose limit counts it (see
   [Time](#time)).
@@ -43,31 +51,55 @@ prepared before run-v6 never continue.
 
 ## When a run continues
 
-`run_segments.retry_eligibility` allows a continuation only when the world
-really died with time left:
+`run_segments.stop_reason` says why the current segment ended, from this segment's
+own records, and `run_segments.STOP_REASONS` what may follow:
 
-- the layout has segments and the run has not continued before;
-- the lifecycle is `running`, `interrupted` or `recovery_required`;
-- there is no normal end: no finish, wall limit or budget close event, no
-  STOP, and no seal made while the world was alive (a seal recorded after the
-  world had already died does not count);
-- the sources and frozen inputs are unchanged and there was no integrity abort;
+| Stop | How it is recognized | Continues by itself | By hand | Scored at this stop |
+| --- | --- | --- | --- | --- |
+| `unexpected` | none of the below: a dead host or world, a session error, a pause the host gave up on, a live seal after a model failure | once per run | yes | no |
+| `finish` | `TEAM_FINISH_PROPOSED` | no | yes, marked `after_score` | yes |
+| `cutoff` | `POLICY_WALL_LIMIT` or `POLICY_BUDGET_CLOSED` | no | yes, marked `after_score` | yes |
+| `wall_backstop` | `wall_backstop` in the runtime database | no | yes; the backstop counts again from then | no (needs review) |
+| `operator_stop` | the run's STOP marker | no | yes; the STOP marker is lifted | no |
+| `integrity_abort` | `integrity_valid` false or `INTEGRITY_ABORT` | no | no | no |
+
+`run_segments.retry_eligibility` also requires, either way:
+
+- the lifecycle is `running`, `interrupted`, `recovery_required` or `ended`
+  (not `prepared` or already `resuming`) and the run started;
+- the sources and frozen inputs are unchanged;
 - no process holds the world lock, so the old host and world are gone;
-- a motion frame was recorded;
-- more than 60 s of the wall limit remain, by the run's own clock (see
-  [Time](#time)): remaining active time, or for a frozen START-wall-time run the
-  wall time since START not counting downtime;
-- the run was not stopped by the [wall backstop](#wall-backstop), unless an
-  operator authorized the continuation explicitly.
+- a motion frame was recorded.
 
-The Codex batch asks after every host exit, clean or not, because a host whose
-world died seals the run and exits normally; the checks above tell the cases
-apart. The Claude batch asks only when its supervisor reported
-`owner_unavailable` or `world_interrupted`: a host stop at its own wall limit,
-on STOP or after a finish is final, even if its seal could not be recorded.
+A continuation by itself further needs more than 60 s of the limit left, by the
+run's own clock (see [Time](#time)), and none after a continuation past the score.
+
+The Codex batch asks after every host exit, clean or not, and the Claude batch
+after every supervisor end except its own wall limit, a STOP, a finished run or a
+launch failure; the stop table tells the cases apart.
 
 A world process closes by itself once its parent (the host) is gone, so a
 crashed host leaves no orphan holding the world lock.
+
+## Continuing by hand
+
+```sh
+.venv/bin/python -m robofrontier.cli continue BATCH                    # every run that may continue
+.venv/bin/python -m robofrontier.cli continue BATCH --cases dial-a07-d1 # only these
+```
+
+The batch must not be running. Each run gets its next segment
+(`run_segments.prepare_retry` with `manual`); the batch is reopened for exactly
+those runs (the others keep their final status) and runs them as
+`run --continue` does: under launchd on macOS by default, with `--durable` as a
+background service on Linux, or `--foreground` in this process. Named runs that
+cannot continue are refused with the reason; without `--cases`, they are listed
+under `refused`.
+
+A continuation after the finish or the cutoff copies `evaluation.json`,
+`budget-cutoff.json` and `evaluation-window.json` to `scored-*.json` first; a later
+finish may rewrite `evaluation.json`, the `scored-` copies stay. The world's budget
+guard and the Claude supervisor set no limit and no backstop for such a segment.
 
 ## How a run continues
 
@@ -110,8 +142,8 @@ with the same restore frame and end time, and uses no further continuation.
   and starts its host again (`robofrontier/batch/codex_batch.py` for Codex,
   `robofrontier/batch/engineering_batch.py` for Claude).
 - **The batch process died too:** the world processes close by themselves.
-  Then run the batch once more; started runs continue in their next segment and
-  unstarted runs start:
+  Then run the batch once more; started runs continue in their next segment (by
+  the same stop table) and unstarted runs start:
 
   ```sh
   .venv/bin/python -m robofrontier.cli run BATCH --continue
@@ -122,9 +154,9 @@ with the same restore frame and end time, and uses no further continuation.
   a Claude role resumes its session once it has no action in flight. Both send
   the frozen `model-restart.md` notice, at most 3 times per run
   (`MAX_MODEL_RESTARTS`).
-- **The host closed on review while the world stayed paused:** the batch hands
-  the task back as `needs_review` and nothing continues by itself. An operator
-  may continue it once by hand: [Claude](claude-task-recovery.md) or
+- **Any other stop:** nothing continues by itself; `robofrontier continue`
+  (above). A host that closed on review while its world stayed paused can also be
+  recovered in place: [Claude](claude-task-recovery.md) or
   [Codex](codex-task-recovery.md) task recovery.
 
 ## Testing single-arm recovery: fault injection
@@ -190,8 +222,8 @@ at the cutoff and when the owner closes. A continued segment or a restarted owne
 starts from the saved value; it never recomputes the deadline from wall time, so
 a sleep or crash is never counted again. The cutoff fires when `active_s` reaches
 the limit. `budget-cutoff.json` and `evaluation.json` record `active_s` /
-`budget_active_s` and the clock; a continuation needs at least 60 s of active
-time left (`run_segments.remaining_s`).
+`budget_active_s` and the clock; a continuation by itself needs at least 60 s of
+active time left (`run_segments.remaining_s`).
 
 `downtime_s` is still recorded (segment gaps and pauses) for reports; it no longer
 enters the limit. The public task does not state the clock, as it does not state
@@ -206,11 +238,13 @@ instead of sealing the paused run. The Codex host never had its own limit.
 Active time does not advance while a world is paused or its host is frozen, so it
 alone would never end a run held forever. New policy runs therefore also freeze
 `run_protocol.wall_backstop_s` (172,800 s, `task_families.WALL_BACKSTOP_S`;
-private, like the limit). If that much wall time has passed since START and the
+private, like the limit). The backstop counts wall time since START
+(`clock.backstop_elapsed`) **less every outage, egress and usage-limit pause**
+(`pause_wall_s` and the current `pause_since_wall` in the runtime database): such a
+wait is not the run's fault. If that much counted wall time has passed and the
 active-time cutoff has not fired, the world owner stops the run exactly like a
-cutoff (dispatch paused, arms braked, the run closed after the braking grace),
-even while an outage pause, egress pause or review hold holds the world: the
-pause is closed first and is not taken up again. The records differ, so the stop
+cutoff (dispatch paused, arms braked, the run closed after the braking grace), even
+during an operator pause or review hold. The records differ, so the stop
 is not a normal end:
 
 - a `POLICY_WALL_BACKSTOP` event (not `POLICY_WALL_LIMIT`) and
@@ -228,22 +262,23 @@ that did not close itself 150 s after the backstop) and the run's status is
 `metrics.compute` sets `excluded: wall_backstop` and `needs_review`; the
 `compute` command lists such runs as `EXCLUDED`.
 
-A backstopped run never continues automatically. It continues only with an
-explicit operator authorization from the stopped-runtime upgrade path
-(`runtime_upgrade`, the same `manual_authorization` as for a further segment),
-which accepts the backstop's ended world as a stopped segment. Its continuation
-moves the backstop's `budget-cutoff.json` and `evaluation.json` aside (with
+A backstopped run never continues by itself. It continues by hand
+(`robofrontier continue`, or the stopped-runtime upgrade path with its
+`manual_authorization`). Its continuation moves the backstop's `budget-cutoff.json` and `evaluation.json` aside (with
 `-wall-backstop-N` in their names), records `WALL_BACKSTOP_WAIVED`, and the
 backstop then counts again from that moment. Runs frozen without the field
 (every START-wall-time run, and active-time runs frozen before it) have no
 backstop.
 
-### Network-outage pause (local runs)
+### Network-outage pause
 
-A run off Slurm (a Mac or RunPod host) has no egress route to pause its world, so
-its world owner probes the engine's model API hosts
-(`robofrontier/runtime/outage.py`): Claude `api.anthropic.com`; Codex
-`chatgpt.com` and `auth.openai.com`, all of which must answer. A probe is a
+A run without a Slurm egress pause (a Mac, a RunPod host, or a Slurm job with direct
+egress) has no route watcher to pause its world, so its world owner probes the model
+API hosts (`robofrontier/runtime/outage.py`): the host of the run's profile
+`base_url` when it has one, else the engine's own, Claude `api.anthropic.com` and
+Codex `chatgpt.com` and `auth.openai.com`, all of which must answer. A Slurm job on
+the `mac-ssh` route keeps its egress pause (`slurm.egress_pause_s`, by default as
+long as the wall backstop). A probe is a
 verified TLS handshake on port 443 followed by an HTTP `HEAD /` that must get an
 answer (any status), every 5 s, with a 5 s timeout. A bare TCP connection is not
 enough: a local VPN tunnel accepts it even when its route to the API is gone, which
@@ -265,10 +300,40 @@ continues the same session and replays nothing; a second failure in the same
 pause, or a failure for another reason within it, holds the run for review.
 
 The probe pauses only a running trial (not before START or after the cutoff). It
-is off for Slurm runs (they keep the egress pause), for frozen START-wall-time
-runs, and with `ROBOFRONTIER_OUTAGE_PROBE=off` (the test suite sets this). A probe
+is off for runs with a Slurm egress pause, for frozen START-wall-time runs, and
+with `ROBOFRONTIER_OUTAGE_PROBE=off` (the test suite sets this). A pause has no
+time limit of its own. A probe
 that never succeeds, because the world process has no direct route out, never
 pauses: after 12 failures it stops and records `OUTAGE_PROBE_UNAVAILABLE`.
+
+### Usage-limit pause (every platform)
+
+A subscription's 5-hour or weekly limit lasts until its reset, so it is not retried
+like a short rate limit. When a model turn fails on it (`runtime/quota.py`: Claude
+Code's "You've hit your … limit · resets …" or "usage limit reached|<time>", Codex's
+`usageLimitExceeded` or "try again at/in …"), the host reads the reset time and asks
+the world to pause (`runtime_cli quota-pause`, `QUOTA_PAUSE_REQUESTED`). The world
+pauses exactly as in an outage (`QUOTA_PAUSED`): physics and dispatch held, original
+calls kept, the time counted neither as active time nor by the wall backstop. A second
+role's request joins the first (the later reset wins). The world resumes by itself a
+minute after the reset, or 30 minutes after pausing when no reset time was readable
+(`QUOTA_RESUMED`); an operator pause made meanwhile is kept (`QUOTA_HELD_FOR_REVIEW`).
+Then each role whose turn failed on the limit continues once in the same session with
+the frozen `quota-resume.md` (the network-continuation claim, one per role and pause);
+a limit hit again pauses again. It is the same segment: no continuation is used.
+
+The operator is told at the pause and the resume: a line in
+`private/outputs/notifications.jsonl` and, on macOS, a desktop notification
+(`ROBOFRONTIER_NO_NOTIFY=1` turns that off).
+
+### Capacity retries
+
+A short capacity or rate limit (HTTP 429, overloaded) is retried by the host itself in
+the same session, at most 3 times per role (`bootstrap.MAX_CAPACITY_RETRIES`), after
+10, 20 and 40 s plus a jitter, with the frozen `capacity-resume.md`; the same on both
+engines. When the retries are used up, both hosts pause dispatch
+(`DISPATCH_PAUSED`, "Model capacity recovery attempts exhausted"); the run then ends
+as an unexpected stop and continues by itself once (see the stop table).
 
 ### START wall time (frozen runs without `clock`)
 

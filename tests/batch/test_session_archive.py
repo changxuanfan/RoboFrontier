@@ -89,7 +89,7 @@ class SessionArchiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             run, home, sessions = finished_run(Path(tmp), lifecycle='interrupted')
             store = RuntimeStore(run/'private/state/runtime.sqlite')
-            store.put('start_at', time.time()-60); store.put('segment', run_segments.MAX_RETRIES); store.close()
+            store.put('start_at', time.time()-60); store.put('segment', run_segments.AUTOMATIC_CONTINUES); store.close()
             with patch.object(run_segments, '_last_frame', lambda run, segment: ('reader', 0, 1., 'pose')), \
                     patch('robofrontier.runtime.setup.verify_inputs', return_value=['source:robofrontier/edited.py']), \
                     patch.object(run_segments, 'verify_inputs', return_value=['source:robofrontier/edited.py'], create=True):

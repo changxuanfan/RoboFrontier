@@ -1,8 +1,10 @@
-"""Hold one live world through a temporary route outage, without replay.
+"""Hold one live world through a temporary route outage or a usage limit, without replay.
 
-Two sources pause the world the same way (physics and dispatch held, original calls kept,
-the paused time not counted): a Slurm egress pause marker, and on a local active-time run the
-network-outage monitor (robofrontier/runtime/outage.py), which probes the model API hosts.
+Three sources pause the world the same way (physics and dispatch held, original calls kept,
+the paused time counted neither as active time nor by the wall backstop): a Slurm egress pause
+marker; on a local active-time run the network-outage monitor (robofrontier/runtime/outage.py),
+which probes the model API hosts; and on every platform a host's request after a turn failed
+on the plan's usage limit (runtime/quota.py), held until the limit resets.
 """
 import json,os,time
 from pathlib import Path
@@ -22,6 +24,7 @@ class WorldPause:
         self.outage=None if self.path else outage
         self.prefix='OUTAGE' if self.outage is not None else 'EGRESS'
         self.outages=0
+        self.quotas=0;self.quota=None;self.quota_checked=None
 
     def ownership(self):
         return {'run_id':self.store.get('run_id'),'segment':self.store.get('segment',0),
@@ -66,6 +69,7 @@ class WorldPause:
         if self.claim is not None:
             elapsed=time.monotonic()-self.started
             if self.before['lifecycle']=='running':self.store.put('downtime_s',self.store.get('downtime_s',0.)+elapsed)
+            self.count_pause()
             self.store.event(self.prefix+'_PAUSE_CLOSED','Meta',{'paused_s':elapsed,'automatic_replays':0})
             self.claim=None
 
@@ -77,13 +81,23 @@ class WorldPause:
         self.receipts={r[0]:tuple(r) for r in self.store.db.execute("SELECT * FROM calls WHERE op IN ('move','gripper','action_batch') AND status IN ('completed','failed')")}
         with self.store.transaction():
             self.store.put('dispatch_paused',True);self.store.put('physics_state','paused_by_egress')
+            self.store.put('pause_since_wall',self.wall_started)
             self.event_seq=self.store.event(self.prefix+'_PAUSED','Meta',{**details,'claim':self.claim,'sim_time_s':float(self.world.time)})
         budget=getattr(self.service,'policy_budget',None)
         if budget is not None:budget.interrupt()
 
+    def count_pause(self):
+        """Add the pause that just ended to the wall time the backstop leaves out (clock.backstop_elapsed)."""
+        since=self.store.get('pause_since_wall')
+        if since is not None:
+            self.store.put('pause_wall_s',float(self.store.get('pause_wall_s',0.) or 0.)+max(0.,time.time()-since))
+            self.store.put('pause_since_wall',None)
+
     def sync(self):
         # A run stopped by the wall backstop is ending; no new pause holds its world (policy_probe).
         if self.claim is None and self.store.get('wall_backstop'):return False
+        held=self.sync_quota()
+        if held is not None:return held
         if not self.path:
             return self.sync_outage() if self.outage is not None else False
         if self.failed:return True
@@ -112,6 +126,30 @@ class WorldPause:
             return True
         if self.claim is None:return False
         return self.resume({'instance':self.instance})
+
+    def sync_quota(self):
+        """Pause for a usage limit a host reported, until it resets; None leaves the other sources."""
+        from .quota import resume_at
+        if self.quota is None:
+            if self.claim is not None:return None  # another pause holds the world; the request waits
+            now=time.monotonic()
+            if self.quota_checked is not None and 0<=now-self.quota_checked<1.:return None
+            self.quota_checked=now
+            request=self.store.get('quota_pause')
+            if not request or self.store.get('lifecycle')!='running' or self.store.get('physics_state')!='running':return None
+            self.quotas+=1;self.quota={**request,'paused_at':time.time(),'prefix':self.prefix};self.prefix='QUOTA'
+            self.begin('quota-%d'%self.quotas,{'resets_at':request.get('resets_at'),'resume_at':resume_at(self.quota),
+                                               'actor':request.get('actor')})
+            notify(self.service.directory,'Usage limit reached; the run is paused until %s'%_local(resume_at(self.quota)))
+            return True
+        if self.failed:return True
+        if time.time()<resume_at(self.quota):return True
+        request=self.quota;self.quota=None
+        held=self.resume({'resets_at':request.get('resets_at')})
+        self.store.put('quota_pause',None);self.prefix=request['prefix']
+        notify(self.service.directory,'Usage limit reset; the run resumed' if not held else
+               'Usage limit reset; the run stays paused for review')
+        return held
 
     def sync_outage(self):
         """Pause a running world while its model API is down; resume once it answers again."""
@@ -149,6 +187,7 @@ class WorldPause:
             self.store.put('physics_state','paused_by_user' if manual else self.prior_physics)
             self.store.event(self.prefix+('_HELD_FOR_REVIEW' if manual else '_RESUMED'),'Meta',
                              {**details,'claim':self.claim,'paused_s':elapsed,'automatic_replays':0})
+            self.count_pause()
             # The hosts' one network continuation per role and pause reads this (runtime_cli network-recovery).
             self.store.put('egress_recovery',{'instance':self.instance,'claim':self.claim,
                                             'paused_at':self.wall_started,'resumed_at':time.time()})
@@ -168,3 +207,20 @@ class WorldPause:
         if delegations:self.store.put('delegations',delegations)
         self.claim=None;self.operator_hold=manual
         return manual
+
+
+def _local(epoch):
+    return time.strftime('%Y-%m-%d %H:%M', time.localtime(epoch))
+
+
+def notify(run, text):
+    """Tell the operator: a line in the run's notifications log and, on macOS, a notification."""
+    import subprocess,sys
+    try:
+        with (Path(run)/'private/outputs/notifications.jsonl').open('a') as log:
+            log.write(json.dumps({'at':time.time(),'text':text})+'\n')
+    except OSError:pass
+    if sys.platform=='darwin' and not os.environ.get('ROBOFRONTIER_NO_NOTIFY'):
+        script='display notification %s with title "RoboFrontier"'%json.dumps(Path(run).name+': '+text)
+        try:subprocess.Popen(['osascript','-e',script],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        except OSError:pass

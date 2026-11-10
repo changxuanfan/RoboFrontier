@@ -17,7 +17,7 @@ import uuid
 
 from robofrontier.engines.claude.runner import PersistentSession, PreLaunchCancelled, policy_settings, run_turn
 from robofrontier.runtime.setup import verify_inputs, write_json
-from robofrontier.engines.claude.recovery import MAX_CAPACITY_RETRIES, recover, recover_model_loss, recover_network
+from robofrontier.engines.claude.recovery import MAX_CAPACITY_RETRIES, recover, recover_model_loss, recover_network, recover_quota
 from robofrontier.runtime import layout as run_layout
 
 ACTOR_NAME = re.compile(r'[A-Za-z][A-Za-z0-9_-]{0,63}')
@@ -120,9 +120,10 @@ class ClaudeSessionHost:
         host_event(self.run, event, actor=self.actor, session_id=self.session_id, turn_id=self.turn_id, **fields)
 
     def recover_capacity(self, store, now=None):
-        """Resume after a capacity failure, a lost CLI or a network outage; False leaves
-        ordinary handling."""
-        return recover(self, store, now) or recover_model_loss(self, store) or recover_network(self, store)
+        """Resume after a capacity failure, a lost CLI, a usage limit or a network outage; False
+        leaves ordinary handling."""
+        return (recover(self, store, now) or recover_model_loss(self, store) or recover_quota(self, store)
+                or recover_network(self, store))
 
     @classmethod
     def fork_delegate(cls, run_dir, actor, profile, base_env, *, budget_ledger, max_budget_usd, fork_from, gate,

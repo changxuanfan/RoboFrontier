@@ -76,6 +76,11 @@ function capacityFailure(error) {
     // A plan's usage limit lasts hours or days; retrying within a task cannot help.
     && !/insufficient[_ ]quota|billing|invalid[_ ]api[_ ]key|usage[_ ]limit|weekly[_ ]limit|monthly[_ ]limit/i.test(text);
 }
+// A plan's usage limit (runtime/quota.py LIMIT): the world pauses until it resets.
+function usageLimitFailure(error) {
+  const text = typeof error === 'string' ? error : JSON.stringify(error);
+  return /you'?ve hit your (?:\w+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|usageLimitExceeded|weekly limit|session limit/i.test(text||'');
+}
 function networkFailure(error){
   const info=error?.codexErrorInfo;
   if(!info||typeof info!=='object')return false;
@@ -93,4 +98,4 @@ async function requireNoMcpServers(rpc) {
       Object.values(servers).some(server=>!server || server.enabled!==false))
     throw new Error('Native benchmark requires inherited MCP servers to be disabled');
 }
-module.exports = {CodexRpc,RpcError,STARTUP_ACK_MS,capacityFailure,networkFailure,requireNoMcpServers};
+module.exports = {CodexRpc,RpcError,STARTUP_ACK_MS,capacityFailure,networkFailure,usageLimitFailure,requireNoMcpServers};

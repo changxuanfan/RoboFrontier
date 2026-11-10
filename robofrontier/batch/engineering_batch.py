@@ -55,12 +55,13 @@ def _jobs(folder):
     return jobs
 
 
-# Supervisor results that mean the physical world stopped under a live host.
-WORLD_DIED = ('owner_unavailable', 'world_interrupted')
+# Supervisor results that are a chosen end; any other end asks the stop table
+# (run_segments.retry_eligibility), which continues an unexpected stop once.
+FINAL = ('stop_requested', 'wall_limit', 'wall_backstop', 'world_ended', 'launch_error', 'startup_timeout')
 
 
 def _run_once_continued(runner, run_dir, base_env, continuing=False, **options):
-    """One run, continued once in a new segment after an unexpected exit (docs/running/run-segments.md).
+    """One run, continued once in a new segment after an unexpected stop (docs/running/run-segments.md).
 
     With `continuing`, a run that had started before the batch process died is first
     prepared for its next segment; a run that never started starts normally.
@@ -78,9 +79,9 @@ def _run_once_continued(runner, run_dir, base_env, continuing=False, **options):
                 return {'status': 'needs_review', 'reason': 'not_continued', 'segments': segments}
     while True:
         result = runner(run_dir, base_env, **options)
-        # Only a world that died continues. The host's own wall limit, a STOP, a finish or
-        # any other end it chose is final, even if its seal could not be recorded.
-        if result.get('reason') not in WORLD_DIED: break
+        # The host's own wall limit or a STOP is final, even if its seal could not be recorded;
+        # a finish, a cutoff and every other stop are told apart by the stop table.
+        if result.get('status') == 'finished' or result.get('reason') in FINAL: break
         continued, why = try_continue(run_dir, 'engine run ended: ' + str(result.get('reason')))
         segments.append({'reason': result.get('reason'), 'continued': continued, 'why': why})
         if not continued: break
@@ -163,7 +164,7 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
     """Run drafts once. Caller explicitly authorizes potential paid model calls.
 
     `continuing` picks up a batch whose process died: unfinished runs continue in their
-    next segment (at most once each) and runs that never started start now.
+    next segment (by the stop table, run_segments.STOP_REASONS) and runs that never started start now.
     """
     folder = Path(folder).resolve()
     if type(parallel) is not int or not 1 <= parallel <= 36: raise ValueError('Parallel must be 1..36')

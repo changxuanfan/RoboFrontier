@@ -56,8 +56,13 @@ class CentralizedSupervisor:
         """The world's own wall-limit guard has fired: it pauses dispatch, stops the arms and
         then ends the run, so a pause seen in between is that normal end, not a review stop."""
         if self._backstopped(): return True
+        if self._after_score(): return False
         db = getattr(self.policy.store, 'db', None)
         return bool(db and db.execute("SELECT 1 FROM events WHERE kind='POLICY_WALL_LIMIT' LIMIT 1").fetchone())
+
+    def _after_score(self):
+        """A continuation after the finish or the cutoff has no limit (run_segments.STOP_REASONS)."""
+        return bool(self.policy.store.get('after_score'))
 
     def _backstopped(self):
         """The world's wall backstop has fired: it ends the run the same way as the cutoff."""
@@ -66,14 +71,15 @@ class CentralizedSupervisor:
     def _backstop_overdue(self):
         """The world did not end the run at its wall backstop, even after the closing wait: a hung
         owner. The host ends it itself, with the same reason."""
-        if self.wall_backstop_s is None or self.policy.store.get('start_at') is None: return False
+        if self.wall_backstop_s is None or self.policy.store.get('start_at') is None or self._after_score(): return False
         # The active-time cutoff already fired: the run is closing at its limit, not the backstop.
         if not self._backstopped() and self._wall_limit_reached(): return False
-        from robofrontier.runtime.clock import backstop_since
-        return (self.wall_clock() - backstop_since(self.policy.store)
+        from robofrontier.runtime.clock import backstop_elapsed
+        return (backstop_elapsed(self.policy.store, self.wall_clock())
                 >= self.wall_backstop_s + ACTIVE_CLOSE_WAIT_S + self.seal_timeout_s)
 
     def _limit_reached(self, now, started_at):
+        if self._after_score(): return False
         if not self.active_time: return now - started_at >= self.wall_limit_s
         # The world's own guard fires at the limit; this is only a backstop if it did not.
         return float(self.policy.store.get('active_s', 0.) or 0.) >= self.wall_limit_s + ACTIVE_BACKSTOP_S

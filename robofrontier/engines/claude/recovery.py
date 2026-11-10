@@ -6,7 +6,8 @@ import time
 from robofrontier.engines.claude.provenance import history, transcript_rows
 from robofrontier.runtime import layout as run_layout
 
-MAX_CAPACITY_RETRIES = 3
+from robofrontier.runtime.bootstrap import MAX_CAPACITY_RETRIES
+EXHAUSTED_REASON = 'Model capacity recovery attempts exhausted'
 BASE_DELAY_SECONDS = 10
 MAX_DELAY_SECONDS = 60
 # The same policy as the Codex host (robofrontier/engines/codex/codex_policy_host.js): 10/20/40 s plus a
@@ -18,15 +19,31 @@ def capacity_delay(attempt, session_id):
     jitter = sum(map(ord, str(session_id))) % (JITTER_SECONDS*1000) / 1000
     return min(MAX_DELAY_SECONDS, BASE_DELAY_SECONDS * 2**attempt) + jitter
 CAPACITY_CODES = frozenset(('rate_limit', 'rate_limit_error', 'overloaded_error', 'server_overloaded'))
-CONTINUE_PROMPT = ('The previous model turn ended with a confirmed capacity or rate-limit error. '
-                   'Continue the same running task and saved work. Inspect pending and original job IDs '
-                   'before further actions; do not replay submitted motion or recreate delegates. '
-                   'The experiment has already STARTED; continue without another START. '
-                   'The original task deadline still applies.')
+
+
+def usage_limit_of(events):
+    """The plan usage limit a failed turn's API error message or result names (runtime/quota.py), or None.
+
+    Only the CLI's own error records count: an assistant message marked as an API error, and the
+    result record; never the model's text."""
+    from robofrontier.runtime.quota import usage_limit
+    texts = []
+    for event in events:
+        if event.get('type') == 'assistant' and event.get('isApiErrorMessage') is True:
+            for block in (event.get('message') or {}).get('content') or []:
+                if isinstance(block, dict) and isinstance(block.get('text'), str): texts.append(block['text'])
+        elif event.get('type') == 'result' and (event.get('is_error') or event.get('subtype') != 'success'):
+            if isinstance(event.get('result'), str): texts.append(event['result'])
+    for text in reversed(texts):
+        found = usage_limit(text)
+        if found: return found
+    return None
 
 
 def capacity_code(events):
-    """Only structured CLI/API error fields count, never model text or stderr."""
+    """Only structured CLI/API error fields count, never model text or stderr. A plan's usage
+    limit is not a capacity error: it waits for its reset (recover_quota)."""
+    if usage_limit_of(events): return None
     for event in reversed(events):
         if event.get('type') == 'assistant' and event.get('isApiErrorMessage') is True:
             code = event.get('error')
@@ -48,7 +65,17 @@ def recover(host, store, now=None):
     """
     now = time.monotonic() if now is None else now
     with host.lock:
-        if (host.state != 'error' or not host.retryable_capacity
+        if (host.state == 'error' and host.retryable_capacity and host.capacity_retry_count >= host.max_capacity_retries
+                and not getattr(host, 'capacity_exhausted', False) and store.get('lifecycle') == 'running'):
+            # Used up: pause the run, as the Codex host does (codex_policy_host.js retryCapacity).
+            from robofrontier.runtime.cli import execute
+            host.capacity_exhausted = True
+            execute(store, 'pause', {'reason': EXHAUSTED_REASON, 'actor': host.actor, 'thread_id': host.session_id},
+                    'claude-recovery', time.time())
+            host.event('capacity_recovery_exhausted', retries=host.capacity_retry_count)
+            return False
+        notice = host.run/'private/inputs/bootstrap/capacity-resume.md'
+        if (host.state != 'error' or not host.retryable_capacity or not notice.is_file()
                 or host.capacity_retry_count >= host.max_capacity_retries
                 or host.cancel_event.is_set() or run_layout.path(host.run, 'stop', 'claude').exists()
                 or store.get('lifecycle') != 'running' or store.get('dispatch_paused', False)):
@@ -78,7 +105,7 @@ def recover(host, store, now=None):
         host.state = 'idle'  # Proven failure; this is a resume, never a new session.
         host.event('capacity_retry', retry_number=host.capacity_retry_count)
         try:
-            host.send(CONTINUE_PROMPT)
+            host.send(notice.read_text())
         except Exception:
             host.state = 'unknown'
             raise
@@ -153,6 +180,56 @@ def failure_kind(summary):
     if summary.get('capacity_error_code'): return 'other'
     if summary.get('result_subtype') not in (None, 'success', 'error_during_execution'): return 'other'
     return None
+
+
+def recover_quota(host, store, now=None):
+    """A turn that failed on the plan's usage limit: the world pauses until the reset, then the
+    same session continues once with the frozen quota notice (runtime/quota.py), as the Codex
+    host does (codex_policy_host.js retryQuota). Returns True while asking, waiting or resending."""
+    from robofrontier.runtime.cli import execute
+    wall = time.time() if now is None else now
+    notice = host.run/'private/inputs/bootstrap/quota-resume.md'
+    with host.lock:
+        limit = ((host.last_result or {}).get('summary') or {}).get('usage_limit')
+        if (host.state != 'error' or not limit or not notice.is_file() or getattr(host, 'quota_handled', None) == host.turn_id
+                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop', 'claude').exists()
+                or store.get('lifecycle') != 'running'):
+            return False
+        ids = {'actor': host.actor, 'thread_id': host.session_id}
+        failed_at = getattr(host, 'failed_at', None) or wall
+        if getattr(host, 'quota_turn', None) != host.turn_id:
+            execute(store, 'quota-pause', {**ids, 'resets_at': limit.get('resets_at'), 'text': limit.get('text')}, host.actor, wall)
+            host.quota_turn = host.turn_id
+            host.event('quota_pause_requested', resets_at=limit.get('resets_at'), failed_turn_id=host.turn_id)
+            return True
+        recovery = store.get('egress_recovery')
+        if (store.get('quota_pause') or store.get('dispatch_paused', False) or not recovery
+                or not str(recovery.get('claim', '')).startswith('quota-') or recovery['resumed_at'] < failed_at):
+            return True  # the world is paused, or has not yet paused, for the limit
+        from robofrontier.runtime.scheduling import blocks_model_recovery
+        if (any(blocks_model_recovery(a) for a in store.actions(host.actor).values())
+                or store.db.execute("SELECT 1 FROM calls WHERE actor=? AND status IN ('accepted','running','uncertain') "
+                                    "AND op IN ('move','gripper','action_batch','delegate') LIMIT 1", (host.actor,)).fetchone()):
+            return True
+        claim = execute(store, 'network-recovery', {**ids, 'failed_turn_id': host.turn_id, 'error_observed_at': failed_at},
+                        host.actor, wall)
+        if claim.get('review_required'):
+            host.quota_handled = host.turn_id
+            execute(store, 'network-recovery-uncertain', ids, host.actor, wall)
+            host.event('quota_continuation_uncertain', failed_turn_id=host.turn_id)
+            return True
+        if not claim.get('allowed'): return False
+        failed_turn = host.turn_id
+        host.quota_handled = failed_turn
+        host.state = 'idle'  # Proven failure; the same session continues, never a new one.
+        try:
+            host.send(notice.read_text())
+        except Exception:
+            host.state = 'error'
+            execute(store, 'network-recovery-uncertain', ids, host.actor, wall)
+            return True
+        host.event('quota_continuation', failed_turn_id=failed_turn)
+        return True
 
 
 def _active_time(run):

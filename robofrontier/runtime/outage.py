@@ -1,8 +1,8 @@
 """Notice when a local run's model API is unreachable, so its world can pause (egress_pause).
 
-Runs that count active time (run_protocol clock active_time_v1) and run off Slurm (a Mac or
-RunPod host, where no egress route pauses the world) probe their engine's model API hosts
-from the world process with a verified HTTPS request (a bare TCP connect succeeds through a
+Runs that count active time (run_protocol clock active_time_v1) and have no Slurm egress pause
+(a Mac, a RunPod host, or a Slurm job with direct egress) probe the model API host the run's
+profile names (its `base_url`), or their engine's default hosts, from the world process with a verified HTTPS request (a bare TCP connect succeeds through a
 local VPN tunnel whose route is gone). After `FAILURES` consecutive failed probes the world pauses as for a
 Slurm egress outage; the first successful probe resumes it. Slurm runs keep their egress
 pause. See docs/running/run-segments.md#time.
@@ -125,16 +125,31 @@ class OutageMonitor:
         self.stopping.set()
 
 
-def monitor_for(task, config, probe=None):
+def model_hosts(run, engine):
+    """The model API hosts a run uses: its frozen profile's base_url host, else the engine's own."""
+    import json
+    from pathlib import Path
+    from urllib.parse import urlsplit
+    if run is not None:
+        try: profile = json.loads((Path(run)/'private/inputs'/(engine+'.json')).read_text()).get('profile') or {}
+        except (OSError, ValueError, AttributeError): profile = {}
+        host = urlsplit(profile.get('base_url') or '').hostname
+        if host: return (host,)
+    return ENGINE_HOSTS.get(engine)
+
+
+def monitor_for(task, config, probe=None, run=None):
     """The outage monitor a world should run, or None.
 
-    Only active-time runs off Slurm, with known engine hosts, and not switched off with
-    ROBOFRONTIER_OUTAGE_PROBE=off (the test suite does that)."""
+    Only active-time runs without a Slurm egress pause (which pauses the world itself), with
+    known model hosts, and not switched off with ROBOFRONTIER_OUTAGE_PROBE=off (the test suite
+    does that). A Slurm node without a direct route never reaches the hosts, so its probe never
+    pauses (UNARMED_GIVE_UP)."""
     from .clock import WALL_CLOCK, run_clock
     if run_clock(task.get('run_protocol') or {}) == WALL_CLOCK: return None
     if task.get('execution_readiness') != 'prepared_policy_trial': return None
-    if os.environ.get('ROBOFRONTIER_EGRESS_PAUSE_FILE') or os.environ.get('SLURM_JOB_ID'): return None
+    if os.environ.get('ROBOFRONTIER_EGRESS_PAUSE_FILE'): return None
     if os.environ.get(SWITCH, '').strip().lower() in ('off', '0', 'false', 'no'): return None
-    hosts = ENGINE_HOSTS.get((config or {}).get('engine', 'codex'))
+    hosts = model_hosts(run, (config or {}).get('engine', 'codex'))
     if not hosts: return None
     return OutageMonitor(hosts, probe or https_probe)

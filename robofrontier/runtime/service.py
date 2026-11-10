@@ -108,7 +108,7 @@ class RuntimeService:
         self.world = world_factory(self.directory, self.task)
         from .egress_pause import WorldPause
         from .outage import monitor_for
-        self.egress_pause = WorldPause(self, monitor_for(self.task, self.config))
+        self.egress_pause = WorldPause(self, monitor_for(self.task, self.config, run=self.directory))
         if self.egress_pause.outage is not None: self.egress_pause.outage.start()
         self.store.event('EXECUTION_OWNER_ATTACHED', 'Meta', {'segment': self.store.get('segment', 0)})
         if resuming:

@@ -186,7 +186,7 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         self.assertEqual(run_segments.retry_eligibility(run, store)[1], 'no recorded motion frame')
         self.assertEqual(run_segments.remaining_s(run, store), 86400 - 600)
         store.put('active_s', 86400 - run_segments.MIN_REMAINING_S / 2)
-        self.assertIn('of the wall limit left', run_segments.retry_eligibility(run, store)[1])
+        self.assertIn('of the limit left', run_segments.retry_eligibility(run, store)[1])
 
     def test_frozen_run_continuation_keeps_the_wall_formula(self):
         run = old_protocol_prepare('transport-a04-d1', self.root/'old'); store = self.store(run)
@@ -194,7 +194,7 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         store.put('start_at', 1000.); store.put('downtime_s', 25.); store.put('active_s', 5.)
         self.assertEqual(run_segments.used_s(run, store, ended_at=1600.), 575.)
         store.put('start_at', time.time() - 86400 + run_segments.MIN_REMAINING_S / 2)
-        self.assertIn('of the wall limit left', run_segments.retry_eligibility(run, store)[1])
+        self.assertIn('of the limit left', run_segments.retry_eligibility(run, store)[1])
 
 
 if __name__ == '__main__':

@@ -969,8 +969,9 @@ def main(argv=None):
     pipe.add_argument('--port', required=True, type=int)
     pipe.add_argument('--interface', required=True)
     args = parser.parse_args(argv)
-    if hasattr(args,'pause_grace_s') and not 0<=args.pause_grace_s<=600:
-        parser.error('pause-grace-s must be between 0 and 600')
+    from ..configuration import MAX_EGRESS_PAUSE_S
+    if hasattr(args,'pause_grace_s') and not 0<=args.pause_grace_s<=MAX_EGRESS_PAUSE_S:
+        parser.error('pause-grace-s must be between 0 and %d'%MAX_EGRESS_PAUSE_S)
     if args.command=='connect' and args.pause_grace_s and not args.engine:
         parser.error('--engine is required with --pause-grace-s')
     try:

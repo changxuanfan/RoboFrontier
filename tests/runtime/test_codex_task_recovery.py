@@ -50,7 +50,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(params, {'taskId': self.identity})
         return {'state': 'closed', 'pendingTools': 0, 'inflight': 0, 'recoveryUsed': False, 'threads': ['original-controller']}
 
-    def test_readonly_plan_retains_original_ledger_and_default_live_seal_rejection(self):
+    def test_readonly_plan_retains_original_ledger(self):
         before = recovery._ledger(self.store.db)
         events = self.store.db.execute('SELECT count(*) FROM events').fetchone()[0]
         with patch.object(recovery, 'gateway_call', side_effect=self.control):
@@ -59,7 +59,8 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(plan['ledger_sha256'], before)
         self.assertEqual(recovery._ledger(self.store.db), before)
         self.assertEqual(self.store.db.execute('SELECT count(*) FROM events').fetchone()[0], events)
-        self.assertEqual(recovery.run_segments.retry_eligibility(self.run, self.store)[1], 'run was sealed with its world alive')
+        # A live seal after a lost task channel is an unexpected stop (run_segments.STOP_REASONS).
+        self.assertEqual(recovery.run_segments.stop_reason(self.run, self.store), 'unexpected')
 
     def test_old_gateway_is_refused_without_preparing_a_segment_or_dispatching(self):
         before = recovery._ledger(self.store.db)

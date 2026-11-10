@@ -39,9 +39,20 @@ class OutageMonitorTests(unittest.TestCase):
             self.assertEqual(monitor_for(task, {'engine': 'claude'}).hosts, ('api.anthropic.com',))
             self.assertEqual(monitor_for(task, {'engine': 'codex'}).hosts, ('chatgpt.com', 'auth.openai.com'))
             self.assertIsNone(monitor_for({**task, 'run_protocol': {}}, {'engine': 'codex'}))
-            with patch.dict(os.environ, {'SLURM_JOB_ID': '1'}): self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
+            # A Slurm job with direct egress probes too; one with an egress pause does not.
+            with patch.dict(os.environ, {'SLURM_JOB_ID': '1'}): self.assertIsNotNone(monitor_for(task, {'engine': 'codex'}))
+            with patch.dict(os.environ, {'ROBOFRONTIER_EGRESS_PAUSE_FILE': '/x'}): self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
         with patch.dict(os.environ, {network_outage.SWITCH: 'off'}):
             self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
+
+    def test_a_profile_base_url_names_the_host_probed(self):
+        import json, tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as run:
+            (Path(run)/'private/inputs').mkdir(parents=True)
+            (Path(run)/'private/inputs/claude.json').write_text(json.dumps({'profile': {'base_url': 'https://api.example.org/v1'}}))
+            self.assertEqual(network_outage.model_hosts(run, 'claude'), ('api.example.org',))
+            self.assertEqual(network_outage.model_hosts(run, 'codex'), ('chatgpt.com', 'auth.openai.com'))
 
 
 class ProbeTests(unittest.TestCase):

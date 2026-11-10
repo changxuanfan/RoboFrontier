@@ -1,0 +1,77 @@
+"""A plan's usage limit is told apart from a short rate limit, and its reset time is read."""
+from datetime import datetime
+import unittest
+from zoneinfo import ZoneInfo
+
+from robofrontier.runtime.quota import MARGIN_S, RECHECK_S, resume_at, usage_limit
+
+NY = ZoneInfo('America/New_York')
+NOW = datetime(2026, 11, 10, 14, 31, tzinfo=NY).timestamp()
+
+
+class QuotaTests(unittest.TestCase):
+    def test_claude_reset_today_and_on_a_date(self):
+        found = usage_limit("You've hit your limit · resets 3pm (America/New_York)", NOW)
+        self.assertEqual(found['resets_at'], datetime(2026, 11, 10, 15, 0, tzinfo=NY).timestamp())
+        found = usage_limit("You've hit your weekly limit · resets Nov 14, 9am (America/New_York)", NOW)
+        self.assertEqual(found['resets_at'], datetime(2026, 11, 14, 9, 0, tzinfo=NY).timestamp())
+        # A time already past today is tomorrow's.
+        found = usage_limit("You've hit your session limit · resets 1:30pm (America/New_York)", NOW)
+        self.assertEqual(found['resets_at'], datetime(2026, 11, 11, 13, 30, tzinfo=NY).timestamp())
+
+    def test_older_claude_and_codex_texts(self):
+        self.assertEqual(usage_limit('Claude AI usage limit reached|1700000000', NOW)['resets_at'], None)  # far past
+        self.assertEqual(usage_limit('Claude AI usage limit reached|%d' % (NOW + 600), NOW)['resets_at'], NOW + 600)
+        found = usage_limit({'message': "You've hit your usage limit. Upgrade to Pro or try again in 2 days 4 hours."}, NOW)
+        self.assertEqual(found['resets_at'], NOW + 2 * 86400 + 4 * 3600)
+        found = usage_limit({'codexErrorInfo': {'usageLimitExceeded': {}}, 'message': 'limit'}, NOW)
+        self.assertEqual(found['resets_at'], None)
+
+    def test_a_rate_limit_is_not_a_plan_limit(self):
+        for text in ('rate_limit_error: 429 Too Many Requests', 'overloaded_error', 'server_overloaded'):
+            self.assertIsNone(usage_limit(text, NOW))
+
+    def test_the_world_resumes_after_the_reset_or_rechecks(self):
+        self.assertEqual(resume_at({'resets_at': NOW + 100, 'paused_at': NOW}), NOW + 100 + MARGIN_S)
+        self.assertEqual(resume_at({'resets_at': None, 'paused_at': NOW}), NOW + RECHECK_S)
+
+
+if __name__ == '__main__': unittest.main()
+
+
+import os
+import time
+from unittest.mock import patch
+
+from runtime import test_active_time as active
+
+
+class WorldQuotaPauseTests(active.Fixture):
+    """A host's quota-pause request holds the world until the reset, then it resumes by itself."""
+    def setUp(self):
+        super().setUp()
+        patcher = patch.dict(os.environ, {'ROBOFRONTIER_NO_NOTIFY': '1'}); patcher.start(); self.addCleanup(patcher.stop)
+        from robofrontier.runtime.egress_pause import WorldPause
+        self.s.egress_pause = WorldPause(self.s, None)
+        self.s.store.put('physics_state', 'running')
+
+    def test_held_until_the_reset_then_resumed_with_a_continuation_window(self):
+        from robofrontier.runtime.cli import execute
+        request = {'actor': 'Controller', 'thread_id': 'Controller', 'resets_at': time.time() + 100,
+                   'text': "You've hit your limit · resets 3pm"}
+        self.assertTrue(execute(self.s.store, 'quota-pause', request, 'host', time.time())['paused'])
+        # A second role's request joins the first.
+        execute(self.s.store, 'quota-pause', {**request, 'actor': 'A', 'thread_id': 'A'}, 'host', time.time())
+        self.s.pump()
+        self.assertEqual(self.s.store.get('physics_state'), 'paused_by_egress')
+        self.assertEqual(len(self.events('QUOTA_PAUSED')), 1)
+        self.s.pump(); self.assertEqual(self.events('QUOTA_RESUMED'), [])
+        self.s.egress_pause.quota['resets_at'] = time.time() - 120  # the reset has passed
+        self.s.pump()
+        self.assertEqual(len(self.events('QUOTA_RESUMED')), 1)
+        self.assertIsNone(self.s.store.get('quota_pause'))
+        self.assertEqual(self.s.store.get('egress_recovery')['claim'], 'quota-1')
+        self.assertEqual(self.s.store.get('physics_state'), 'running')
+        self.assertGreaterEqual(self.s.store.get('pause_wall_s'), 0.)
+        lines = (self.run/'private/outputs/notifications.jsonl').read_text().splitlines()
+        self.assertEqual(len(lines), 2)

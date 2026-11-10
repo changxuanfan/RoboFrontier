@@ -202,6 +202,21 @@ def execute(store, op, data, owner, now):
             store.put('egress_review_hold',True);store.put('dispatch_paused',True);store.put('physics_state','paused_for_review')
             store.event('NETWORK_CONTINUATION_UNCERTAIN',cfg['manager'],{'actor':data['actor'],'thread_id':data['thread_id'],'automatic_replays':0})
         return {'paused':True}
+    if op=='quota-pause':
+        # A role's turn failed on the plan's usage limit (runtime/quota.py): the world pauses
+        # itself until the reset (egress_pause.WorldPause). One request covers every role.
+        with store.transaction():
+            if store.get('lifecycle')!='running':return {'paused':False}
+            if store.agent(data['actor']).get('thread_id')!=data['thread_id']:raise ValueError('Quota pause has wrong role binding')
+            request=store.get('quota_pause');reset=data.get('resets_at')
+            if not isinstance(reset,(int,float)) or isinstance(reset,bool):reset=None
+            if request is None:
+                request={'requested_at':now,'resets_at':reset,'text':str(data.get('text',''))[:500],
+                         'actor':data['actor'],'thread_id':data['thread_id']}
+                store.put('quota_pause',request);store.event('QUOTA_PAUSE_REQUESTED',cfg['manager'],request)
+            elif reset is not None and (request.get('resets_at') is None or reset>request['resets_at']):
+                request['resets_at']=reset;store.put('quota_pause',request)
+            return {'paused':True,'request':request}
     if op=='pause':
         store.put('dispatch_paused',True);store.event('DISPATCH_PAUSED',cfg['manager'],data)
         return {'paused':True}
@@ -221,7 +236,7 @@ def main():
     p.add_argument('--owner',default='Meta')
     p.add_argument('op',choices=['snapshot','observe-sessions','request-start','request-resume','plan','claim','dispatch-result','pause','resume-dispatch','export','model-restart',
                                'delegate-claim','delegate-snapshot-bind','delegate-bind','delegate-activate','delegate-started','delegate-uncertain','session-unavailable','seal',
-                               'network-recovery','network-recovery-uncertain'])
+                               'network-recovery','network-recovery-uncertain','quota-pause'])
     p.add_argument('--data',default='{}')
     args=p.parse_args()
     path=args.run_dir.resolve()/'private/state/runtime.sqlite'

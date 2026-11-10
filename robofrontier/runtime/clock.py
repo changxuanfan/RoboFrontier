@@ -44,6 +44,15 @@ def backstop_since(store):
     return max(store.get('start_at'),waived.get('at') or 0.)
 
 
+def backstop_elapsed(store,wall_now):
+    """Wall seconds the backstop has counted: since backstop_since, less every outage, egress and
+    usage-limit pause (egress_pause.WorldPause), the current one included."""
+    since=backstop_since(store);paused=float(store.get('pause_wall_s',0.) or 0.)
+    current=store.get('pause_since_wall')
+    if current is not None:paused+=max(0.,wall_now-max(current,since))
+    return wall_now-since-paused
+
+
 def protocol(seconds=1200.,clock=WALL_CLOCK):
     return validate_protocol(dict(kind='bounded_policy_trial',authorization='explicit_user_request',
         wall_limit_s=seconds,clock=clock,oracle_readiness_claimed=False))
@@ -93,15 +102,21 @@ class BudgetGuard:
         self.wall_backstop_s=wall_backstop_s if self.active_clock else None;self.backstopped=False
         self.backstop_checked=None
 
+    @staticmethod
+    def after_score(store):
+        """A continuation after the finish or the cutoff (run_segments): it has no limit; the
+        score stays the one recorded then."""
+        return bool(store.get('after_score'))
+
     def backstop_due(self,store,wall_now):
         if self.wall_backstop_s is None or self.cutoff is not None or self.completed:return False
         if store.get('lifecycle')!='running' or store.get('start_at') is None:return False
-        return wall_now-backstop_since(store)>=self.wall_backstop_s
+        return backstop_elapsed(store,wall_now)>=self.wall_backstop_s
 
     def backstop_pending(self,service,wall_now=None):
         """The backstop is due or its stop is under way: it then runs even through a pause."""
         if self.backstopped:return not self.completed
-        if self.wall_backstop_s is None:return False
+        if self.wall_backstop_s is None or self.after_score(service.store):return False
         wall_now=time.time() if wall_now is None else wall_now
         # A held world's owner loops fast; the store is read at most once a second here.
         if self.backstop_checked is not None and 0<=wall_now-self.backstop_checked<1.:return False
@@ -144,7 +159,7 @@ class BudgetGuard:
         service.store.put('dispatch_paused',True);service.store.put('physics_state','paused_by_user')
         clock=dict(active_s=self.active,clock=self.protocol['clock']) if self.active_clock else {}
         if backstop:
-            wall=dict(wall_backstop_s=self.wall_backstop_s,wall_since_start_s=wall_now-backstop_since(service.store))
+            wall=dict(wall_backstop_s=self.wall_backstop_s,wall_since_start_s=backstop_elapsed(service.store,wall_now))
             service.store.put('wall_backstop',dict(wall,at=wall_now,segment=service.store.get('segment',0)))
             service.store.event('POLICY_WALL_BACKSTOP','Meta',dict(wall_limit_s=self.protocol['wall_limit_s'],
                 sim_time_s=cutoff_sim_s,**clock,**wall))
@@ -163,7 +178,7 @@ class BudgetGuard:
     def tick(self,service,wall_now=None,mono_now=None):
         wall_now=time.time() if wall_now is None else wall_now
         mono_now=time.monotonic() if mono_now is None else mono_now
-        if service.store.get('lifecycle')!='running' or self.completed:
+        if service.store.get('lifecycle')!='running' or self.completed or self.after_score(service.store):
             self.last_tick=None;return
         if self.active_clock:
             if self.cutoff is None:

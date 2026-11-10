@@ -25,27 +25,43 @@ class EligibilityTests(unittest.TestCase):
 
     def reason(self): return retry_eligibility(self.run, self.store)[1]
 
-    def test_each_normal_or_unsafe_end_blocks_a_retry(self):
+    def manual(self): return retry_eligibility(self.run, self.store, manual=True)[1]
+
+    def test_each_normal_or_unsafe_end_blocks_an_automatic_retry(self):
         self.assertEqual(self.reason(), 'no recorded motion frame')
-        self.store.put('segment', 1); self.assertEqual(self.reason(), 'already continued once'); self.store.put('segment', 0)
-        for lifecycle in ('prepared', 'ended', 'paused'):
+        self.store.put('segment', 1); self.assertIn('already continued automatically once', self.reason())
+        self.assertEqual(self.manual(), 'no recorded motion frame')
+        self.store.put('segment', 0)
+        for lifecycle in ('prepared', 'resuming', 'paused'):
             self.store.put('lifecycle', lifecycle)
-            self.assertIn('ended normally or never started', self.reason())
+            self.assertIn('never started or is already prepared', self.reason())
         self.store.put('lifecycle', 'running')
         run_path(self.run, 'stop').parent.mkdir(parents=True, exist_ok=True); run_path(self.run, 'stop').write_text('x')
-        self.assertEqual(self.reason(), 'stop requested'); run_path(self.run, 'stop').unlink()
+        self.assertIn('an operator stopped it', self.reason()); self.assertEqual(self.manual(), 'no recorded motion frame')
+        run_path(self.run, 'stop').unlink()
         self.store.event('POLICY_WALL_LIMIT', 'Meta', {}); self.assertTrue(self.reason().startswith('run reached a normal end'))
+        self.assertEqual(self.manual(), 'no recorded motion frame')
 
-    def test_a_finish_or_a_budget_close_never_continues(self):
-        # Two Haiku runs were once continued after their wall limit; any normal-end record blocks it.
-        for kind in ('TEAM_FINISH_PROPOSED', 'POLICY_BUDGET_CLOSED'):
+    def test_a_finish_or_a_budget_close_continues_only_by_hand(self):
+        # Two Haiku runs were once continued after their wall limit by themselves; never again.
+        for kind, stop in (('TEAM_FINISH_PROPOSED', 'finish'), ('POLICY_BUDGET_CLOSED', 'cutoff')):
             with self.subTest(kind=kind):
                 self.store.db.execute("DELETE FROM events WHERE kind IN ('TEAM_FINISH_PROPOSED','POLICY_BUDGET_CLOSED')")
                 self.store.event(kind, 'Meta', {})
-                self.assertIn(kind, self.reason())
+                self.assertEqual(run_segments.stop_reason(self.run, self.store), stop)
+                self.assertIn(run_segments.STOP_REASONS[stop]['text'], self.reason())
+                self.store.put('lifecycle', 'ended')
+                self.assertEqual(self.manual(), 'no recorded motion frame')
+                self.store.put('lifecycle', 'running')
+
+    def test_only_this_segments_events_decide_its_stop(self):
+        self.store.event('TEAM_FINISH_PROPOSED', 'Meta', {})
+        self.store.put('segments', [{'index': 0, 'started_at': 0.}, {'index': 1, 'started_at': time.time() + 5}])
+        self.assertEqual(run_segments.stop_reason(self.run, self.store), 'unexpected')
 
     def test_integrity_abort_and_changed_inputs_block_a_retry(self):
-        self.store.put('integrity_valid', False); self.assertEqual(self.reason(), 'integrity abort')
+        self.store.put('integrity_valid', False)
+        self.assertIn('integrity check', self.reason()); self.assertIn('integrity check', self.manual())
         self.store.put('integrity_valid', True)
         (self.run / 'public/inputs/rules.md').write_text('changed')
         self.assertTrue(self.reason().startswith('frozen inputs changed'))
@@ -54,23 +70,28 @@ class EligibilityTests(unittest.TestCase):
         with run_path(self.run, 'world_lock').open('a+') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             self.assertEqual(self.reason(), 'a process still owns the physical world')
+            self.assertEqual(self.manual(), 'a process still owns the physical world')
         limit = json.loads((self.run / 'private/inputs/task.json').read_text())['run_protocol']['total_wall_limit_s']
         # A new run counts active time (test_active_time covers the wall clock of frozen runs).
         self.store.put('start_at', time.time() - limit * 2)
         self.assertEqual(self.reason(), 'no recorded motion frame')
         self.store.put('active_s', limit - MIN_REMAINING_S / 2)
-        self.assertIn('of the wall limit left', self.reason())
+        self.assertIn('of the limit left', self.reason())
+        self.assertEqual(self.manual(), 'no recorded motion frame')
         self.store.put('active_s', limit - MIN_REMAINING_S * 2)
         self.assertEqual(self.reason(), 'no recorded motion frame')
 
-    def test_only_a_seal_of_a_live_world_counts_as_a_normal_end(self):
+    def test_a_seal_of_a_live_world_after_a_session_error_continues(self):
         report = str(self.run / 'private/outputs/seal.json')
-        # Under a symlinked root (macOS /var -> /private/var) the recorded path may be unresolved.
-        if report.startswith('/private/var/') and Path('/var').is_symlink(): report = report[len('/private'):]
-        self.store.event('RUN_SEALED', 'Meta', {'report_ref': report, 'owner_was_live': False})
-        self.assertEqual(self.reason(), 'no recorded motion frame')
         self.store.event('RUN_SEALED', 'Meta', {'report_ref': report, 'owner_was_live': True})
-        self.assertEqual(self.reason(), 'run was sealed with its world alive')
+        self.store.put('lifecycle', 'interrupted')
+        self.assertEqual(run_segments.stop_reason(self.run, self.store), 'unexpected')
+        self.assertEqual(self.reason(), 'no recorded motion frame')
+
+    def test_a_continuation_after_the_score_continues_again_only_by_hand(self):
+        self.store.put('after_score', {'reason': 'finish'})
+        self.assertIn('only by hand', self.reason())
+        self.assertEqual(self.manual(), 'no recorded motion frame')
 
     def test_process_statistics_combine_the_last_snapshot_of_each_segment(self):
         out = self.run / 'private/outputs'; header = {'schema': 'x', 'format': 'events-1s'}
@@ -166,7 +187,36 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(result['original_observed']['action_status'], 'running')
         self.assertEqual(result['reconciliation']['sim_time_s'], 12.5)
         self.assertEqual(self.store.get('pending_segment')['interrupted'], {'Controller': ['Controller-call_1']})
-        self.assertEqual(retry_eligibility(self.run, self.store), (False, 'already continued once'))
+        self.assertEqual(retry_eligibility(self.run, self.store)[0], False)
+        self.assertEqual(self.store.get('continuations')[-1]['manual'], False)
+
+    def test_a_continuation_after_the_finish_keeps_the_score_and_has_no_limit(self):
+        out = self.run/'private/outputs'
+        (out/'evaluation.json').write_text('{"task_success": true}')
+        self.store.event('TEAM_FINISH_PROPOSED', 'Meta', {}); self.store.put('lifecycle', 'ended')
+        with self.assertRaisesRegex(ValueError, 'normal end'):
+            run_segments.prepare_retry(self.run, self.store, 'automatic')
+        run_segments.prepare_retry(self.run, self.store, 'manual continue', manual=True)
+        self.assertEqual((out/'scored-evaluation.json').read_text(), '{"task_success": true}')
+        self.assertEqual(self.store.get('after_score')['reason'], 'finish')
+        self.assertEqual(self.store.get('pending_segment')['after_score'], True)
+        record = self.store.get('continuations')[-1]
+        self.assertEqual((record['manual'], record['stop'], record['after_score']), (True, 'finish', True))
+        from robofrontier.runtime.clock import BudgetGuard
+        self.assertTrue(BudgetGuard.after_score(self.store))
+        # A later finish rewrites evaluation.json; the scored copy stays.
+        (out/'evaluation.json').write_text('{"task_success": false}')
+        self.store.put('lifecycle', 'ended')
+        self.store.put('segments', self.store.get('segments')+[{'index': 1, 'started_at': time.time()}])
+        run_segments.prepare_retry(self.run, self.store, 'manual continue', manual=True)
+        self.assertEqual((out/'scored-evaluation.json').read_text(), '{"task_success": true}')
+        self.assertEqual(self.store.get('segment'), 2)
+
+    def test_continuing_an_operator_stop_by_hand_lifts_the_stop(self):
+        stop = run_path(self.run, 'stop'); stop.parent.mkdir(parents=True, exist_ok=True); stop.write_text('x')
+        run_segments.prepare_retry(self.run, self.store, 'manual continue', manual=True)
+        self.assertFalse(stop.exists())
+        self.assertIsNone(self.store.get('after_score'))
 
     def test_a_preparation_stopped_part_way_completes_in_the_same_segment(self):
         self.running_action('Controller-call_1')

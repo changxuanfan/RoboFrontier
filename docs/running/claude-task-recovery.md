@@ -27,7 +27,6 @@ The task may recover only if every one of these holds:
 - The run's runner lock is free and no native CLI process names one of its sessions.
 - No stop was requested and the task has not been recovered before.
 - Integrity is valid and the frozen inputs match `SOURCE`.
-- The run has not continued yet: a run continues at most once.
 - No call or physical action is unsettled, and no delegation is still being created.
 - Any delegation under review never started: every child is still `pending` and
   no child made a call.

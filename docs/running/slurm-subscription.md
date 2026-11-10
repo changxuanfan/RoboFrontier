@@ -127,8 +127,9 @@ old ABI masks on a newer local Linux kernel do not qualify an H800 allocation.
 
 ## Managed Mac egress
 
-Schema 7 adds an explicit job-scoped `mac-ssh` route. Schema 8 additionally permits
-an explicit `slurm.egress_pause_s` from 0 to 600; 0 retains immediate fencing.
+Schema 7 adds an explicit job-scoped `mac-ssh` route. Schema 8 adds
+`slurm.egress_pause_s`, how long a route outage may hold the world: by default 172,800 s
+(the 48 h wall backstop), as on every other platform; 0 fences at once.
 The Mac connector's `--pause-grace-s` must match that setting, and a positive grace
 also requires `--engine claude` or `--engine codex` (the job's engine). Older frozen schemas keep
 their exact configuration shape and do not acquire a new proxy automatically.

@@ -11,7 +11,7 @@ workspace/ (the policy's only writable folder and working directory, with one
 shared lessons file, skills.md) and private/. private/ is split by lifecycle:
 inputs (frozen), state (live; control files in state/control), outputs
 (results), logs and engine (CLI configuration, MCP configuration, per-turn
-evidence and transcripts). After an unexpected exit a run continues once in the
+evidence and transcripts). A stopped run continues in the
 same directory; segment k >= 1 keeps its restore pose in
 private/inputs/segments/<k>/ and its process outputs in
 private/outputs/segments/<k>/ (docs/running/run-segments.md).

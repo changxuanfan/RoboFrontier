@@ -117,6 +117,10 @@ def _configuration_shape(version):
     return shape
 
 
+# The longest a route outage may hold a Slurm world: the wall backstop (tasks.families.WALL_BACKSTOP_S).
+MAX_EGRESS_PAUSE_S = 172800
+
+
 def validate_configuration(config):
     version = config.get('schema_version')
     shape = _configuration_shape(version)
@@ -179,10 +183,10 @@ def validate_configuration(config):
     if version >= 7:
         choice('slurm', 'egress_mode', ('direct', 'mac-ssh'))
         if version >= 8:
-            if not 0 <= slurm['egress_pause_s'] <= 600:
-                raise ValueError('slurm.egress_pause_s must be between 0 and 600')
-            if slurm['egress_pause_s'] and slurm['egress_mode'] != 'mac-ssh':
-                raise ValueError('Short network pause requires mac-ssh egress')
+            # A route outage holds the world like any other outage, up to the wall backstop (E8);
+            # only the mac-ssh route has a pause of its own, direct egress uses the outage probe.
+            if not 0 <= slurm['egress_pause_s'] <= MAX_EGRESS_PAUSE_S:
+                raise ValueError('slurm.egress_pause_s must be between 0 and %d' % MAX_EGRESS_PAUSE_S)
         if not 1 <= slurm['egress_wait_s'] <= 3600:
             raise ValueError('slurm.egress_wait_s must be between 1 and 3600')
         if slurm['egress_mode'] == 'mac-ssh':

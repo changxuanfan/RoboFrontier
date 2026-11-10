@@ -55,7 +55,7 @@ class CapacityRecoveryTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 2)
         self.assertEqual(self.calls[1]['resume'], self.host.session_id)
         self.assertIsNone(self.calls[1]['session_id'])
-        self.assertIn('already STARTED', self.prompts[1])
+        self.assertEqual(self.prompts[1], (self.run/'private/inputs/bootstrap/capacity-resume.md').read_text())
         self.assertEqual(self.host.capacity_retry_count, 0)
 
     def test_unknown_execution_stop_or_paused_world_never_retries(self):
@@ -96,8 +96,12 @@ class CapacityRecoveryTests(unittest.TestCase):
             self.assertTrue(self.host.recover_capacity(self.store, now=n*100))
             self.assertTrue(self.host.recover_capacity(self.store, now=n*100+60))
             self.assertEqual(self.host.wait(3)['status'], 'error')
+        # Used up: the run pauses, as on Codex, and the frozen text was sent each time.
         self.assertFalse(self.host.recover_capacity(self.store, now=1000))
         self.assertEqual(len(self.calls), 4)
+        self.assertTrue(self.store.get('dispatch_paused'))
+        reason = self.store.db.execute("SELECT value FROM events WHERE kind='DISPATCH_PAUSED'").fetchone()[0]
+        self.assertIn('exhausted', reason)
 
     def test_unknown_capped_cost_blocks_but_uncapped_missing_cost_does_not(self):
         for capped in (True, False):

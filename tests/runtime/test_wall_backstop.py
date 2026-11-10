@@ -110,7 +110,7 @@ class GuardTests(active.Fixture):
 
 
 class PausedWorldTests(active.Fixture):
-    """The backstop ends even a world held by a network-outage pause that never resumes."""
+    """An outage, egress or usage-limit pause does not count toward the wall backstop (E8)."""
     def setUp(self):
         super().setUp()
         self.answers = []
@@ -119,22 +119,23 @@ class PausedWorldTests(active.Fixture):
         self.s.policy_budget = BudgetGuard(protocol(DAY, ACTIVE), wall_backstop_s=BACKSTOP)
         self.s.store.put('physics_state', 'running')
 
-    def test_a_held_world_is_stopped_and_closed(self):
+    def test_a_held_world_waits_and_its_pause_is_left_out_afterwards(self):
+        from robofrontier.runtime.clock import backstop_elapsed
         self.answers.extend([True, False, False, False])
         for _ in range(4): self.monitor.step()
         self.s.pump(); self.assertEqual(self.s.store.get('physics_state'), 'paused_by_egress')
-        self.s.pump(); self.assertEqual(self.events('POLICY_WALL_BACKSTOP'), [])
-        self.s.store.put('start_at', time.time() - BACKSTOP)
-        self.s.pump()  # read at most once a second while held
-        self.assertEqual(self.events('POLICY_WALL_BACKSTOP'), [])
-        self.s.policy_budget.backstop_checked -= 1.
+        now = time.time()
+        self.s.store.put('start_at', now - BACKSTOP)
+        self.s.store.put('pause_since_wall', now - BACKSTOP + 10)  # held for all but its first 10 s
+        self.s.policy_budget.backstop_checked = None
         self.s.pump()
-        self.assertEqual(len(self.events('OUTAGE_PAUSE_CLOSED')), 1)
-        self.assertEqual(len(self.events('POLICY_WALL_BACKSTOP')), 1)
-        self.assertEqual(self.s.store.get('termination_reason'), 'wall_backstop')
-        self.assertTrue(self.s.shutdown)
-        # The still-failing probe never pauses the ending world again.
-        self.assertFalse(self.s.egress_pause.sync())
+        self.assertEqual(self.events('POLICY_WALL_BACKSTOP'), [])
+        self.assertLess(backstop_elapsed(self.s.store, time.time()), 20)
+        self.answers.append(True); self.monitor.step(); self.s.pump()
+        self.assertEqual(len(self.events('OUTAGE_RESUMED')), 1)
+        self.assertIsNone(self.s.store.get('pause_since_wall'))
+        self.assertGreater(self.s.store.get('pause_wall_s'), BACKSTOP - 20)
+        self.assertLess(backstop_elapsed(self.s.store, time.time()), 20)
 
 
 class SupervisorTests(unittest.TestCase):

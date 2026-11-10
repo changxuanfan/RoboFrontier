@@ -102,13 +102,13 @@ The site's normal Slurm environment/spool protections still apply. Do not share
 
 Subscription caches are not staged by this entry. The Claude subscription token
 (`CLAUDE_CODE_OAUTH_TOKEN`, profile `haiku_subscription_token`) is long-lived and
-travels in the environment like an API key. Claude runs remain explicitly
-runs that need passed precheck receipts, as Codex runs need theirs. Where the cluster cannot
+travels in the environment like an API key. Claude runs need passed precheck receipts, as Codex runs need theirs. Where the cluster cannot
 reach Anthropic, Claude may use the managed Mac route (`slurm.egress_mode = "mac-ssh"`,
 see [Slurm subscriptions](slurm-subscription.md#managed-mac-egress)) without a
 credential store; the CLI then receives only that route's `HTTPS_PROXY`/`NO_PROXY`.
-With `slurm.egress_pause_s` above 0, start the Mac connector with `--engine claude`
-so outage detection probes `api.anthropic.com`, the host Claude actually uses.
+With `slurm.egress_pause_s` above 0 (the default, 172,800 s), start the Mac connector
+with `--engine claude` and the same `--pause-grace-s`, so outage detection probes
+`api.anthropic.com`, the host Claude actually uses.
 Claude's own Bash sandbox needs `bwrap` and `socat` on the compute-node PATH. On Linux
 it masks a denied folder with an empty tmpfs, so a Bash write there appears to succeed
 but is discarded with the sandbox; reads stay denied and nothing reaches the run.

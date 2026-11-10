@@ -19,6 +19,9 @@ def make_run(tmp):
     connection = run / 'private/state/connections/Controller.json'
     connection.parent.mkdir(parents=True)
     connection.write_text(json.dumps({'schema_version': 3, 'run_id': 'run', 'actor': 'Controller', 'token': 'fake'}))
+    from robofrontier.runtime.bootstrap import CAPACITY_RESUME
+    notice = run / 'private/inputs/bootstrap/capacity-resume.md'
+    notice.parent.mkdir(parents=True, exist_ok=True); notice.write_text(CAPACITY_RESUME)
     return run
 
 
