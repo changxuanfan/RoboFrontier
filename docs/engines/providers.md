@@ -185,7 +185,7 @@ robofrontier preflight --engine claude --profile haiku_subscription \
 
 CLI USD reports are estimates; subscription list-price equivalents are not
 provider invoices. Keep API spending, subscription quota and unknown outcomes
-separate. Claude task execution still requires `--engineering`; these profiles
+separate. Claude task execution requires passed precheck receipts; these profiles
 do not open formal scored eligibility. Local shared-home checks do not qualify
 Docker, Slurm, 36 simultaneous subscription tasks or every refresh boundary.
 The Slurm entry continues to accept API credentials only. See the [acceptance ledger](../archive/unified-main.md)

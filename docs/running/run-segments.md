@@ -114,7 +114,7 @@ with the same restore frame and end time, and uses no further continuation.
   unstarted runs start:
 
   ```sh
-  .venv/bin/python -m robofrontier.cli run BATCH --continue [--engineering]
+  .venv/bin/python -m robofrontier.cli run BATCH --continue
   ```
 
 - **Only the model process died while the world lives:** no segment; the world

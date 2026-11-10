@@ -448,7 +448,7 @@ settings. Pinned policy assets are installed automatically when needed.
 When authorized to spend against the selected credentials, execute:
 
 ```sh
-.venv/bin/robofrontier run runs/engineering/claude-standing-l1 --engineering
+.venv/bin/robofrontier run runs/engineering/claude-standing-l1
 ```
 
 Substitute `worker-worker` to prepare peer Workers. The underlying native
@@ -567,7 +567,7 @@ refresh, production providers, cluster hardware or formal scored execution.
 The unified entry uses frozen settings:
 
 ```sh
-.venv/bin/robofrontier run runs/engineering/claude-current-l1 --engineering
+.venv/bin/robofrontier run runs/engineering/claude-current-l1
 .venv/bin/robofrontier status runs/engineering/claude-current-l1
 .venv/bin/robofrontier stop runs/engineering/claude-current-l1
 ```

@@ -103,7 +103,7 @@ The site's normal Slurm environment/spool protections still apply. Do not share
 Subscription caches are not staged by this entry. The Claude subscription token
 (`CLAUDE_CODE_OAUTH_TOKEN`, profile `haiku_subscription_token`) is long-lived and
 travels in the environment like an API key. Claude runs remain explicitly
-unqualified engineering drafts and require --engineering. Where the cluster cannot
+runs that need passed precheck receipts, as Codex runs need theirs. Where the cluster cannot
 reach Anthropic, Claude may use the managed Mac route (`slurm.egress_mode = "mac-ssh"`,
 see [Slurm subscriptions](slurm-subscription.md#managed-mac-egress)) without a
 credential store; the CLI then receives only that route's `HTTPS_PROXY`/`NO_PROXY`.

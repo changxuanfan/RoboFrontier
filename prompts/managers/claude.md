@@ -1,9 +1,9 @@
-# Claude engineering batch manager prompt
+# Claude batch manager prompt
 
 Give this prompt to a coding agent with terminal and repository access. The
 outer session can use any model. Claude CLI and the frozen profile select the
-inner measured model. This native entry is for unqualified engineering drafts;
-it does not produce formally qualified benchmark scores. Read
+inner measured model. A Claude run needs passed precheck receipts for its
+profile and CLI version (`robofrontier preflight`). Read
 [handoff status](../../docs/engines/claude-code.md) before using it.
 
 ```text
@@ -60,7 +60,7 @@ Parameters:
    requested, checking FFmpeg/ffprobe first. Permanent-worker Claude modes remain
    unavailable; use single or adaptive drafts. Verify batch.json case/profile
    selection before execution. Retain an existing directory instead of reusing
-   it. An engineering draft is not a scored/preflight-qualified benchmark.
+   it.
 6. Run robofrontier.batch.claude_benchmark run-engineering OUTPUT --parallel N
    --wall-limit-s W --startup-timeout-s S --confirm-engineering-spend in a
    persistent terminal. Add --turn-budget-usd T or --task-budget-usd B only when
@@ -88,5 +88,5 @@ again on the target host instead of copying a prepared directory's absolute
 paths. `opus_subscription` remains an unverified native subscription candidate;
 its explicit OAuth configuration does not import Desktop login automatically.
 For the unified one-profile workflow, use `robofrontier --config SETTINGS.toml`
-with `policy.engine="claude"`, a Claude profile, and `run --engineering`; the
-native engineering-only qualification restriction still applies.
+with `policy.engine="claude"` and a Claude profile, then `robofrontier run`; it
+refuses a profile without passed precheck receipts.

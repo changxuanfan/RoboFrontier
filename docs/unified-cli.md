@@ -225,7 +225,7 @@ for role counts and the scoped checks. Formal scored qualification remains close
   --max-budget-usd 1 --confirm-spend
 .venv/bin/robofrontier prepare --engine claude --profile haiku --render native \
   --output runs/engineering/claude-l1 --level 1 --min-arms --parallel 4
-.venv/bin/robofrontier run runs/engineering/claude-l1 --engineering
+.venv/bin/robofrontier run runs/engineering/claude-l1
 ```
 
 Claude preflight's cost estimate is not an absolute provider billing cap. Normal

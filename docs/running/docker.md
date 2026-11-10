@@ -131,8 +131,8 @@ The run checks its frozen inputs, profile/catalog hashes and native CLI version
 before task execution. The container command uses the batch's frozen renderer,
 not the current host TOML default, when starting an existing batch.
 
-Claude runs remain engineering drafts. Select an actual Claude profile in TOML,
-perform its explicitly budgeted preflight, then pass run --engineering.
+A Claude run needs passed precheck receipts. Select an actual Claude profile in TOML,
+perform its explicitly budgeted preflight, then run the batch.
 All four Claude topologies have native engineering entries, including persistent
 Controller + Worker and Worker-Worker sessions. See the
 [standing-team guide](../engines/claude-code.md#standing-teams). Formal scored qualification
