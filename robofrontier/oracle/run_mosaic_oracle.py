@@ -20,7 +20,7 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from robofrontier.runtime.setup import load_harness,write_json
-from robofrontier.tasks.v2 import ROOT
+from robofrontier.io import ROOT
 from robofrontier.oracle.trial import Trial,ReferenceStopped
 from robofrontier.oracle.mosaic_run import MosaicReview,run_reference,require_known_idle
 from robofrontier.oracle.source_snapshot import reexec_entry,MARKER

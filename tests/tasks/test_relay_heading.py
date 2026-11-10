@@ -12,7 +12,7 @@ from robofrontier.physics.robot_control import PandaArm
 from robofrontier.oracle.trial import Trial
 from robofrontier.tasks.evaluate import Monitor
 from robofrontier.oracle import relay_oracle_v2 as ref
-from robofrontier.tasks.v2 import cases,directory
+from robofrontier.tasks.families import case_specs as cases, oracle_directory as directory
 from robofrontier.physics.workstation import Workstation
 
 

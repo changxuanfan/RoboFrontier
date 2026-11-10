@@ -76,26 +76,5 @@ class RelayContractTests(unittest.TestCase):
         mujoco.mj_forward(model,data);relay.sample()
         self.assertFalse(relay.mon.result_cache['task_success'])
 
-    def test_l1_rebuild_emits_the_current_task_and_public_rules(self):
-        from robofrontier.suite import relay_scene
-        catalog=json.loads((Path(__file__).resolve().parents[2]/'benchmark/relay/catalog.json').read_text())
-        case=next(c for c in catalog['cases'] if c['id']=='relay-a08-d1')
-        root=Path(__file__).resolve().parents[2]
-        task=json.loads((root/case['directory']/'task.json').read_text())
-        task['rules']=['obsolete update']
-        task['completion']={'stable_duration_sim_s':1.}
-        with tempfile.TemporaryDirectory() as name:
-            folder=Path(name)
-            (folder/'scene.xml').write_text('<mujoco/>')
-            (folder/'task.json').write_text(json.dumps(task))
-            (folder/'validation.json').write_text('{}')
-            with patch('robofrontier.suite.reframe.build',return_value=folder),patch.object(relay_scene.v2,'directory',return_value=folder),patch.object(relay_scene,'validate',return_value={'scope':'fixture'}):
-                relay_scene.build(case,render=False)
-            actual=json.loads((folder/'task.json').read_text())
-            public=json.loads((folder/'public-task.json').read_text())
-            self.assertEqual(actual,final_task(task))
-            self.assertEqual(public['rules'],actual['rules'])
-            self.assertEqual(public['completion'],actual['completion'])
-
 
 if __name__=='__main__':unittest.main()

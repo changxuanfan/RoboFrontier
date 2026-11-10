@@ -6,7 +6,9 @@ from types import SimpleNamespace
 import mujoco
 import numpy as np
 
-from robofrontier.tasks.v2 import cases,directory,public_task
+from historical_cases import cases
+from robofrontier.tasks.families import oracle_directory as directory
+from robofrontier.tasks.public import public_task
 from robofrontier.tasks.evaluate import Monitor
 from robofrontier.physics.robot_control import PandaArm
 from robofrontier.physics.workstation import Workstation

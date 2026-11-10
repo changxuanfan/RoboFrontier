@@ -41,7 +41,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertIsNone(wall_backstop_s({'wall_backstop_s': BACKSTOP}))  # no active clock, no backstop
         with self.assertRaises(ValueError):
             task_families.validate_policy_task(dict(new, run_protocol=dict(new['run_protocol'], wall_backstop_s=60)))
-        from robofrontier.tasks.v2 import public_task
+        from robofrontier.tasks.public import public_task
         self.assertNotIn('wall_backstop_s', public_task(new)['run_protocol'])
 
     def test_the_world_owner_reads_the_frozen_backstop(self):

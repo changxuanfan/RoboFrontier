@@ -126,6 +126,26 @@ def expected_protocol(case, protocol, release_sha256):
     return expected
 
 
+def case_specs(root=ROOT):
+    """Each released case's catalog row: id, family, level, arm count and scene revision."""
+    release = read(Path(root)/RELEASE)
+    return [row for family in release['families'].values() for row in read(Path(root)/family['catalog']['path'])['cases']]
+
+
+FOLDERS = {'transport': 'cube_transport', 'mosaic': 'mosaic', 'relay': 'beam_handoff', 'dial': 'spring_dial'}
+
+
+def oracle_directory(case, root=ROOT):
+    """The Oracle's copy of a released case: the scene its recordings were made with.
+
+    A case row naming an earlier scene revision resolves to that revision's folder,
+    where an Oracle recording of it was made (configs/environments)."""
+    if isinstance(case, str): return Path(root)/'benchmark/oracle'/case
+    revision = case.get('scene_revision', 1)
+    prefix = 'frontier-v2-' if revision == 1 else f'frontier-v2-r{revision}-'
+    return Path(root)/current_path(f"configs/environments/{FOLDERS[case['family']]}/{prefix}{case['id']}", root)
+
+
 def dial_code(case_id, root=ROOT):
     """The Dial case's fixed secret code, from the private part of the release."""
     codes = read(Path(root)/RELEASE).get('private', {}).get('dial_codes', {})

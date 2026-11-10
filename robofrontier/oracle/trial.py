@@ -130,7 +130,7 @@ class Trial:
         self.process_events=None
         if shared_motion:
             from ..media.motion_recording import MotionWriter
-            from .geometry import ROOT
+            from ..io import ROOT
             self.motion=MotionWriter(self.directory/'motion',self.scene,self.model,self.data,hz=record_hz,cache=ROOT/'runs/state-assets')
             from .process_log import OracleProcessLog
             self.process_events=OracleProcessLog(self.directory/'process.jsonl')

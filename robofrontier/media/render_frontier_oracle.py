@@ -16,10 +16,15 @@ from pathlib import Path
 import mujoco,numpy as np
 from PIL import Image,ImageDraw
 from robofrontier.tasks.evaluate import DIGITS
-from robofrontier.cube_transport import _font
 from robofrontier.runtime.setup import write_json
 from robofrontier.media.motion_recording import MotionReader,digest
 from robofrontier.media.replay_edit import ReplayEdit
+
+
+def _font(size):
+    from PIL import ImageFont
+    try: return ImageFont.truetype('/System/Library/Fonts/Helvetica.ttc', size)
+    except OSError: return ImageFont.load_default(size=size)
 
 
 def trial_report(directory):

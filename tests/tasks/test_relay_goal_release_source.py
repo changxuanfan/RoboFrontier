@@ -1,6 +1,6 @@
 """R17 changes the clarified release contract, preserving every physics input."""
 import hashlib,json,unittest
-from robofrontier.tasks.v2 import cases,directory
+from robofrontier.tasks.families import case_specs as cases, oracle_directory as directory
 
 class ReleaseSourceTests(unittest.TestCase):
     def test_six_new_contracts_have_identical_manufactured_physics(self):

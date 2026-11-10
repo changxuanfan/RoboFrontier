@@ -2,13 +2,13 @@
 import unittest
 import mujoco,numpy as np
 from robofrontier.physics.kinematics import RobotIK
-from robofrontier.oracle.geometry import catalog,case_directory
+from robofrontier.tasks.families import ROOT, resolve_case
 
 class RobotOnlyKinematicsTests(unittest.TestCase):
     def test_fk_and_jacobian_match_full_world_at_rotated_bases(self):
         rng=np.random.default_rng(818)
-        for case_id,robot in [('transport-a12-d3','H'),('relay-a16-d3','P'),('mosaic-a08-7x21-d1','B'),('dial-n08-d3','F')]:
-            case=next(c for c in catalog()['cases'] if c['id']==case_id);m=mujoco.MjModel.from_xml_path(str(case_directory(case)/'scene.xml'));d=mujoco.MjData(m);ik=RobotIK(m,robot+'_')
+        for case_id,robot in [('transport-a12-d3','H'),('relay-a16-d3','P'),('mosaic-a08-12x24-d3','B'),('dial-best5-n08-d3','F')]:
+            m=mujoco.MjModel.from_xml_path(str(ROOT/resolve_case(case_id)[2]['directory']/'scene.xml'));d=mujoco.MjData(m);ik=RobotIK(m,robot+'_')
             self.assertEqual(ik.kinematic_model.nq,7);self.assertEqual(ik.kinematic_model.ngeom,0);self.assertLess(ik.kinematic_model.nbody,13)
             for _ in range(6):
                 q=rng.uniform(*ik.limits.T);d.qpos[ik.qids]=q;mujoco.mj_kinematics(m,d);mujoco.mj_comPos(m,d);p,r=ik.pose(q)

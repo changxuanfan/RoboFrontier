@@ -39,7 +39,7 @@ def main():
     if a.owner_start and a.commission_transfers:raise ValueError('Owner-start is a full canonical episode, not commissioning')
     from robofrontier.runtime.setup import write_json,load_harness
     if not a.frozen:
-        from robofrontier.tasks.v2 import cases,directory
+        from robofrontier.tasks.families import case_specs as cases, oracle_directory as directory
         from robofrontier.oracle.source_snapshot import freeze_executor
         if subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip():raise RuntimeError('Commit the run source first')
         commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()

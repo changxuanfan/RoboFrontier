@@ -5,7 +5,7 @@ from unittest.mock import patch
 import numpy as np
 import mujoco
 from robofrontier.physics.workstation import Workstation
-from robofrontier.tasks.v2 import cases,directory
+from robofrontier.tasks.families import case_specs as cases, oracle_directory as directory
 from robofrontier.oracle.trial import Trial
 from robofrontier.tasks.evaluate import Monitor
 from robofrontier.physics.robot_control import PandaArm

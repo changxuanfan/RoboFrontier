@@ -6,11 +6,11 @@ from robofrontier.runtime.pipeline import World
 from robofrontier.physics.robot_control import PandaArm
 from robofrontier.tasks.evaluate import Monitor
 from robofrontier.oracle.trial import Trial
-from robofrontier.oracle.geometry import catalog,case_directory
+from robofrontier.tasks.families import oracle_directory
 
 class SuiteExecutionClockTests(unittest.TestCase):
     def test_reference_and_policy_loops_match_on_identical_commands(self):
-        scene=case_directory(next(c for c in catalog()['cases'] if c['id']=='transport-a04-d2'))
+        scene=oracle_directory('transport-a04-d2')
         with tempfile.TemporaryDirectory() as temp:
             t=Trial(scene,Path(temp)/'trial',frames=False);w=World.__new__(World)
             try:

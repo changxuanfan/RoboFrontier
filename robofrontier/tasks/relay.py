@@ -61,7 +61,7 @@ def final_task(task):
 
 def write_task(folder):
     """Replace task metadata atomically; never edit a shared cache inode."""
-    from .v2 import public_task
+    from .public import public_task
     folder = Path(folder)
     task = final_task(json.loads((folder / 'task.json').read_text()))
     for name, value in [('task.json', task), ('public-task.json', public_task(task))]:
@@ -88,7 +88,7 @@ def check_inputs(root, catalog):
             raise ValueError('Relay catalog/task/source identity mismatch: ' + case['id'])
         if task != final_task(task):
             raise ValueError('Task differs from the current Relay contract: ' + case['id'])
-        from .v2 import public_task
+        from .public import public_task
         if json.loads((folder / 'public-task.json').read_text()) != public_task(task):
             raise ValueError('Stale public Relay task: ' + case['id'])
         rows.append(dict(case_id=case['id'], scene_sha256=source.manifest['scene_sha256'],

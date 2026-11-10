@@ -84,9 +84,6 @@ Build or inspect released scenes; names are kept for provenance.
 
 | Script | Purpose |
 | --- | --- |
-| `check_mosaic_coverage_r12.py` | Exhaustive item/cell coverage with finite sampled geometric witnesses. |
-| `export_frontier_contact_sheets.py` | Export current initial scenes only: 72 renders and four readable contact sheets. |
-| `preview_suite_rockets.py` | Draft pixel targets only: no MuJoCo scene, robot motion or benchmark run. |
 
 ### Oracle runs and engineering
 

@@ -6,7 +6,8 @@ import unittest
 import mujoco
 import numpy as np
 
-from robofrontier.tasks.v2 import cases,directory
+from historical_cases import cases
+from robofrontier.tasks.families import oracle_directory as directory
 from robofrontier.physics.workstation import Workstation
 from robofrontier.oracle.relay_oracle_v2 import grasp_targets,cross_x
 

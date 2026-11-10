@@ -3,7 +3,8 @@ from unittest.mock import patch
 from pathlib import Path
 from types import SimpleNamespace
 import mujoco,numpy as np
-from robofrontier.tasks.v2 import cases,directory
+from historical_cases import cases
+from robofrontier.tasks.families import oracle_directory as directory
 from robofrontier.tasks.evaluate import Monitor
 from robofrontier.tasks.evaluate import placement_candidates
 from robofrontier.physics.robot_control import PandaArm,matrix_quat
