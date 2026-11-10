@@ -37,8 +37,8 @@ jobs:
       - name: Engine parity, run layout, segments and evidence storage
         run: |
           PYTHONPATH=tests:scripts .venv/bin/python -m unittest \
-            test_policy_env test_engine_parity test_run_layout test_run_segments test_session_archive test_process_log \
-            test_portable_scene test_durable test_claude_engineering_batch test_claude_standing_team
+            runtime.test_policy_env engines.test_engine_parity runtime.test_run_layout runtime.test_run_segments batch.test_session_archive tasks.test_process_log \
+            runtime.test_portable_scene batch.test_durable batch.test_claude_engineering_batch engines.test_claude_standing_team
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -63,8 +63,8 @@ jobs:
       - name: Analysis, scripts and records (no assets, no physics)
         run: |
           PYTHONPATH=tests:scripts .venv/bin/python -m unittest \
-            test_run_metrics test_run_analysis_atomic test_oracle_batch_summary test_communication_report \
-            test_policy_archive test_evidence_zip test_scripts_index test_script_checks test_workflows \
-            test_curate_repository test_build_policy_env test_codex_cli_check test_codex_launch_profiles \
-            test_render_policy_videos test_render_targets \
-            test_dial_entrypoints test_benchmark_handoff test_configs_readme test_pruned_paths
+            batch.test_run_metrics analysis.test_run_analysis_atomic repo.test_oracle_batch_summary repo.test_communication_report \
+            batch.test_policy_archive batch.test_evidence_zip repo.test_scripts_index repo.test_script_checks repo.test_workflows \
+            repo.test_curate_repository runtime.test_build_policy_env engines.test_codex_cli_check engines.test_codex_launch_profiles \
+            media.test_render_policy_videos media.test_render_targets \
+            media.test_dial_entrypoints batch.test_benchmark_handoff repo.test_configs_readme repo.test_pruned_paths

@@ -110,7 +110,7 @@ checkouts that existed when the batch was prepared.
 
 ## Validation
 
-`tests/test_claude_task_recovery.py` covers:
+`tests/runtime/test_claude_task_recovery.py` covers:
 
 - read-only inspection;
 - refusal of a live session, an unsettled call, a started delegate and a task the

@@ -345,7 +345,7 @@ Local checks (no login, scheduler, real provider or physical action):
 
 ```sh
 .venv/bin/python -m unittest tests.test_slurm_auth tests.test_codex_job_engine tests.test_slurm_gateway_native tests.test_slurm_job
-node --test tests/test_codex_job_gateway.js
+node --test tests/engines/test_codex_job_gateway.js
 ```
 
 The native fixture uses one installed Codex app-server, 36 concurrent parents,

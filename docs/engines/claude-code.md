@@ -307,7 +307,7 @@ also starts each stdio MCP server through the prefix, as one shell-quoted string
 the prefix runs exactly the run's own robot MCP strings unconfined and confines
 everything else. A Bash command never matches one, because Claude Code wraps it
 in its shell snapshot and an eval.
-`tests/test_claude_landlock.py` checks the actual confinement on a Linux host
+`tests/engines/test_claude_landlock.py` checks the actual confinement on a Linux host
 with Landlock and is skipped elsewhere.
 
 ### Trusted internal Adaptive fork
@@ -358,7 +358,7 @@ before fork-at-call setup keep their tool-free snapshot/fork records; only their
 metrics are read now.
 
 The native blocked-parent loopback test
-(`tests/test_claude_fork_boundary_integration.py`) forks a child while the parent
+(`tests/engines/test_claude_fork_boundary_integration.py`) forks a child while the parent
 waits on MCP: the model receives the parent's history up to the pending call,
 the CLI's own error result for that unanswered call, then the delegate message;
 the child's robot call waits until its gate opens, and a closed gate refuses it

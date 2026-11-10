@@ -313,7 +313,7 @@ Common offline checks:
 
 ```sh
 PYTHONPATH=tests:scripts .venv/bin/python -m unittest test_run_metrics test_run_report test_benchmark_collection test_policy_archive
-node --test tests/test_codex_rpc.js tests/test_tool_errors.js tests/test_codex_wall_limit.js
+node --test tests/engines/test_codex_rpc.js tests/engines/test_tool_errors.js tests/engines/test_codex_wall_limit.js
 ```
 
 Claude-specific checks:

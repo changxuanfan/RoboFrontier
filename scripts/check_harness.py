@@ -55,21 +55,21 @@ def main():
             from_binary_path=staticmethod(forbidden)
         guard=patch.multiple(mujoco,MjModel=NoPhysicsModel,MjData=forbidden,mj_step=forbidden,mj_forward=forbidden)
         guard.start()
-        modules=('test_action_batch','test_sync_groups','test_pipeline','test_pipeline_client',
-                 'test_runtime_store','test_run_setup','test_scheduling','test_centralized','test_delegation',
-                 'test_delegate_callbacks','test_private_evaluation','test_run_seal','test_run_report',
-                 'test_recording','test_harness_checker','test_policy_batch_viewer',
-                 'test_oracle_protocol','test_oracle_terminal_recovery')
+        modules=('runtime.test_action_batch','runtime.test_sync_groups','runtime.test_pipeline','runtime.test_pipeline_client',
+                 'runtime.test_runtime_store','runtime.test_run_setup','runtime.test_scheduling','runtime.test_centralized','runtime.test_delegation',
+                 'runtime.test_delegate_callbacks','tasks.test_private_evaluation','runtime.test_run_seal','batch.test_run_report',
+                 'media.test_recording','repo.test_harness_checker','repo.test_policy_batch_viewer',
+                 'oracle.test_oracle_protocol','oracle.test_oracle_terminal_recovery')
         suite=unittest.defaultTestLoader.loadTestsFromNames(modules)
     else:suite=unittest.defaultTestLoader.discover(str(ROOT/'tests'),pattern='test_*.py')
     try:result=unittest.TextTestRunner(verbosity=2).run(suite)
     finally:
         if guard:guard.stop()
-    node=subprocess.run(['node',str(ROOT/'tests/test_meta_dispatcher.cjs')],capture_output=True,text=True,cwd=ROOT)
+    node=subprocess.run(['node',str(ROOT/'tests/engines/test_meta_dispatcher.cjs')],capture_output=True,text=True,cwd=ROOT)
     print(node.stdout,end='');print(node.stderr,end='',file=sys.stderr)
     # Every Node host test (Codex RPC, preflight, restart, seal, wall limit, tool errors...).
     node_tests={}
-    for source in sorted((ROOT/'tests').glob('test_*.js')):
+    for source in sorted((ROOT/'tests').rglob('test_*.js')):
         ran=subprocess.run(['node','--test',str(source)],capture_output=True,text=True,cwd=ROOT)
         print(ran.stdout,end='');print(ran.stderr,end='',file=sys.stderr)
         node_tests[str(source.relative_to(ROOT))]=ran.returncode==0

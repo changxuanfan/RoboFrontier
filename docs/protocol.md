@@ -157,7 +157,7 @@ Offline checks (no paid model calls or physical simulation):
 
 ```sh
 PYTHONPATH=tests:. .venv/bin/python -m unittest tests.test_tool_errors tests.test_pipeline_client tests.test_runtime_store
-node --test tests/test_tool_errors.js
+node --test tests/engines/test_tool_errors.js
 # Claude branch additionally:
 PYTHONPATH=tests:. .venv/bin/python -m unittest tests.test_claude_tool_errors
 ```

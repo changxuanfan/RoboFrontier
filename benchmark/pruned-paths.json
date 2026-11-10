@@ -22,7 +22,8 @@
     "robofrontier/suite/oracle.py": "robofrontier/oracle/trial.py",
     "robofrontier/suite/oracle_recovery.py": "robofrontier/oracle/recovery.py",
     "robofrontier/suite/v2.py": "robofrontier/tasks/v2.py",
-    "scripts/render_frontier_oracle.py": "robofrontier/media/render_frontier_oracle.py"
+    "scripts/render_frontier_oracle.py": "robofrontier/media/render_frontier_oracle.py",
+    "tests/test_motion_edit.py": "tests/media/test_motion_edit.py"
   },
   "generated": [
     "docs/generated/"

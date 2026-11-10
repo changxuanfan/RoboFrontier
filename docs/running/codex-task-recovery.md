@@ -78,11 +78,11 @@ requires review; the entrypoint never automatically repeats it.
 
 ## Validation
 
-`tests/test_codex_task_recovery.py` covers read-only inspection, refusal of old
+`tests/runtime/test_codex_task_recovery.py` covers read-only inspection, refusal of old
 gateways and unsettled actions, unchanged completed receipts, and a real private
 Mosaic pose/grasp reconstruction without advancing physics. Gateway tests cover
 single-use authority, active-role refusal, retired sockets and peer containment.
-`tests/test_slurm_gateway_native.py` uses the real pinned CLI with synthetic
+`tests/engines/test_slurm_gateway_native.py` uses the real pinned CLI with synthetic
 loopback authentication and inference: 36 independent channels, a closed task
 rebound to its original native thread, resumed tools, another fork, transcript
 collection, unchanged peer access and one native credential owner. These tests
