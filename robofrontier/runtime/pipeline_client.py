@@ -95,23 +95,46 @@ def client_call(connection_path, op, data, call_id=None, timeout=DEFAULT_HTTP_TI
         fcntl.flock(lock,fcntl.LOCK_UN);lock.close()
 
 
+def answer(connection, op, data, call_id, quiet=True):
+    """One request as the command line answers it: (exit status, the JSON it prints)."""
+    try:
+        return 0, json.dumps(client_call(connection, op, data, call_id, log_call_id=not quiet), ensure_ascii=False)
+    except CallIdConflict:
+        return 1, json.dumps(conflict_error(call_id), ensure_ascii=False)
+    except (ValueError, OSError, urllib.error.URLError):
+        return 1, json.dumps(uncertain_error(call_id), ensure_ascii=False)
+
+
+def serve(connection):
+    """Answer requests for one role, one JSON line each, until stdin closes.
+
+    A request is {"call_id", "op", "data"}; the answer is {"status", "output"}, where output
+    is what one `pipeline_client` command would print and status its exit status. The Codex
+    host keeps one such process per role, so a robot call costs no Python start-up."""
+    for line in sys.stdin:
+        if not line.strip(): continue
+        try:
+            request = json.loads(line)
+            status, output = answer(connection, request['op'], request.get('data') or {}, request['call_id'])
+        except (ValueError, KeyError, TypeError):
+            status, output = 1, json.dumps(uncertain_error(None), ensure_ascii=False)
+        sys.stdout.write(json.dumps({'status': status, 'output': output}, ensure_ascii=False)+'\n'); sys.stdout.flush()
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--connection',type=Path,required=True)
+    p.add_argument('--serve',action='store_true',help='Answer JSON-line requests on stdin until it closes')
     p.add_argument('--call-id')
     p.add_argument('--quiet',action='store_true',help='JSON stdout only; errors still include the original call ID')
-    p.add_argument('op')
+    p.add_argument('op',nargs='?')
     p.add_argument('--data',default='{}')
     args=p.parse_args()
+    if args.serve:return serve(args.connection)
+    if args.op is None:p.error('op is required')
     call_id=args.call_id or uuid.uuid4().hex
-    try:
-        result=client_call(args.connection,args.op,json.loads(args.data),call_id,log_call_id=not args.quiet)
-        print(json.dumps(result,ensure_ascii=False))
-    except CallIdConflict:
-        print(json.dumps(conflict_error(call_id),ensure_ascii=False))
-        raise SystemExit(1)
-    except (ValueError,OSError,urllib.error.URLError):
-        print(json.dumps(uncertain_error(call_id),ensure_ascii=False))
-        raise SystemExit(1)
+    status,output=answer(args.connection,args.op,json.loads(args.data),call_id,quiet=args.quiet)
+    print(output)
+    if status:raise SystemExit(status)
 
 if __name__=='__main__':main()

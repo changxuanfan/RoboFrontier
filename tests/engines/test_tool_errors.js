@@ -41,9 +41,13 @@ test('omitted outer ID generates a distinct request ID and preserves action targ
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'rf-tool-id-'));
   try {
     const python=path.join(root,'python');
+    // A served client (pipeline_client --serve): one JSON request per line on stdin.
     const source=`#!/usr/bin/env node
-const a=process.argv.slice(2),id=a[a.indexOf('--call-id')+1],data=JSON.parse(a[a.indexOf('--data')+1]);
-process.stdout.write(JSON.stringify({call_id:id,execution:{call_id:data.call_id,status:'completed'}}));`;
+require('node:readline').createInterface({input:process.stdin}).on('line',line=>{
+  const r=JSON.parse(line);
+  const output=JSON.stringify({call_id:r.call_id,execution:{call_id:r.data.call_id,status:'completed'}});
+  process.stdout.write(JSON.stringify({status:0,output})+'\\n');
+});`;
     fs.writeFileSync(python,source,{mode:0o755});
     const events=[],host={launch:{},actors:new Map([['thread','Controller']]),run:root,cwd:root,python,event:x=>events.push(x)};
     const reply=await PolicyHost.prototype.runTool.call(host,'item/tool/call',{
@@ -56,5 +60,6 @@ process.stdout.write(JSON.stringify({call_id:id,execution:{call_id:data.call_id,
     assert.deepEqual(events.map(e=>e.event),['robot_tool_started','robot_tool_completed']);
     assert.equal(events[1].op,'job');
     assert.ok(events[1].duration_s>=0);
+    for (const client of host.clients.values()) client.close();
   } finally {fs.rmSync(root,{recursive:true,force:true});}
 });

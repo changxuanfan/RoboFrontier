@@ -57,6 +57,46 @@ function observationMime(data) {
 // One description for every engine's robot tool (engines/common/robot_tool.json).
 const robotTool = {type:'function',...require('../common/robot_tool.json')};
 
+// One persistent `pipeline_client --serve` per role, so a robot call costs no Python
+// start-up (0.2-0.8 s each). Requests go one at a time; if the process exits, its answer is
+// what it printed and its exit status, and the next request starts a new one.
+class ClientWorker {
+  constructor(python,cwd,connection) {
+    this.python=python;this.cwd=cwd;this.connection=connection;this.queue=Promise.resolve();
+  }
+  start() {
+    const child=spawn(this.python,['-m','robofrontier.runtime.pipeline_client','--serve','--connection',this.connection],
+      {cwd:this.cwd,stdio:['pipe','pipe','ignore']});
+    let buffer='';this.child=child;
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data',chunk=>{
+      buffer+=chunk;let newline;
+      while ((newline=buffer.indexOf('\n'))>=0) {
+        const line=buffer.slice(0,newline);let reply;
+        try {reply=JSON.parse(line);} catch {reply=null;}
+        if (!reply || typeof reply.status!=='number' || typeof reply.output!=='string') break;
+        buffer=buffer.slice(newline+1);
+        const resolve=this.waiting;this.waiting=null;if (resolve) resolve(reply);
+      }
+    });
+    child.on('close',code=>{
+      if (this.child===child) this.child=null;
+      const resolve=this.waiting;this.waiting=null;
+      if (resolve) resolve({status:code??1,output:buffer.trim()});
+    });
+    child.stdin.on('error',()=>{});
+  }
+  call(request) {
+    const next=this.queue.then(()=>new Promise(resolve=>{
+      if (!this.child) this.start();
+      this.waiting=resolve;this.child.stdin.write(JSON.stringify(request)+'\n');
+    }));
+    this.queue=next.catch(()=>{});
+    return next;
+  }
+  close() {if (this.child) this.child.stdin.end();}
+}
+
 class PolicyHost {
   constructor(run, cwd, python) {
     this.run=path.resolve(run); this.cwd=cwd; this.python=python;
@@ -111,12 +151,13 @@ class PolicyHost {
       a.data={...(a.data||{}),cameras:a.views||[]};
     // Native call IDs are scoped by actor and stable across transport retries.
     const callId=a.call_id || (actor+'-'+p.callId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,128);
-    const args=['-m','robofrontier.runtime.pipeline_client','--quiet','--connection',
-      path.join(this.run,'private/state/connections',actor+'.json'),'--call-id',callId,a.op,
-      '--data',JSON.stringify(a.data||{})];
     try {
-      const {stdout}=await execFileAsync(this.python,args,{cwd:this.cwd,maxBuffer:8*1024*1024});
-      const result=JSON.parse(stdout),contentItems=[{type:'inputText',text:JSON.stringify(result)}];
+      this.clients ??= new Map();
+      if (!this.clients.has(actor)) this.clients.set(actor,new ClientWorker(this.python,this.cwd,
+        path.join(this.run,'private/state/connections',actor+'.json')));
+      const reply=await this.clients.get(actor).call({call_id:callId,op:a.op,data:a.data||{}});
+      if (reply.status!==0) throw Object.assign(new Error('Robot client failed'),{stdout:reply.output});
+      const result=JSON.parse(reply.output),contentItems=[{type:'inputText',text:JSON.stringify(result)}];
       const observation=result.observation || result.original_result?.observation;
       for (const view of a.views||[]) {
         const file=observation?.images?.[view];
@@ -443,6 +484,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
           await this.rpc.call('turn/interrupt',{threadId:id,turnId:s.latestTurn.id});} catch {}
       }
       if (this.rpc) await this.rpc.close();
+      for (const client of (this.clients??new Map()).values()) client.close();
       // Codex has stopped writing: copy this run's threads into the run, verified. The home
       // keeps the originals so a continued segment can resume them (robofrontier.batch.session_archive).
       try {
@@ -464,4 +506,4 @@ if (require.main===module) {
   process.on('SIGTERM',()=>{host.stopped=true;});process.on('SIGINT',()=>{host.stopped=true;});
   host.runTask().then(r=>process.stdout.write(JSON.stringify(r)+'\n')).catch(e=>{process.stderr.write(e.stack+'\n');process.exitCode=1;});
 }
-module.exports={PolicyHost,robotTool,observationMime,pendingForkActor};
+module.exports={PolicyHost,ClientWorker,robotTool,observationMime,pendingForkActor};
