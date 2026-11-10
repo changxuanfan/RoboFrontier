@@ -157,9 +157,13 @@ EOF
   --output runs/policy/my-l1-batch --level 1 --min-arms --parallel 4
 ```
 
-On macOS, `robofrontier run BATCH --durable` submits a user launchd service with
-`ProcessType=Interactive` so explicitly launched benchmark work receives
-application-class CPU and I/O scheduling. This process classification does not
+On macOS, `robofrontier run BATCH` submits the batch as a user launchd job with
+`ProcessType=Interactive` by default (`--durable` says so explicitly), so benchmark work
+receives application-class CPU and I/O scheduling, keeps the Mac awake through `caffeinate`
+for the job's life, and outlives the terminal or the agent session that started it.
+`run BATCH --continue` does the same in a job of its own (`control/durable/continue-N/`).
+Follow it with `robofrontier status BATCH`. `--foreground` runs the supervisor in the
+current process at that process's own priority, as on Linux. This process classification does not
 force every thread to use the highest QoS. It applies to newly submitted services;
 changing source code does not reload an existing service. Keep active runs on
 their original source checkout and use a separate worktree for development,

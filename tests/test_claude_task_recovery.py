@@ -192,6 +192,29 @@ class ClaudeRecoveryTests(unittest.TestCase):
         self.assertEqual(self.store.get('segment'), 1)
 
 
+class DurableRecoveryTests(ClaudeRecoveryTests):
+    def test_macos_execute_submits_an_interactive_launchd_job_after_inspection(self):
+        jobs = []
+        with patch('sys.platform', 'darwin'), patch('robofrontier.durable.bootstrap',
+                                                     side_effect=lambda plist, folder, meta: jobs.append((plist, folder)) or {'label': plist['Label']}), \
+                patch('builtins.print'):
+            recovery.main(['--run-dir', str(self.run), '--source-root', str(ROOT), '--scratch', str(self.scratch), '--execute'])
+        (plist, folder), = jobs
+        command = plist['ProgramArguments']
+        self.assertEqual(command[:2], ['/usr/bin/caffeinate', '-ims'])
+        self.assertEqual(command[-1], '--foreground')
+        self.assertIn(str(self.run), command); self.assertEqual(plist['ProcessType'], 'Interactive')
+        self.assertTrue(Path(folder).is_relative_to(self.run/'private/state/control'))
+        self.assertEqual(self.store.get('segment', 0), 0)  # nothing ran yet
+
+    def test_an_ineligible_run_is_refused_before_any_job(self):
+        self.store.begin_call('uncertain-original', 'Controller', 'move', {'robot': 'B'})
+        with patch('sys.platform', 'darwin'), patch('robofrontier.durable.bootstrap') as bootstrap, patch('builtins.print'):
+            with self.assertRaises(SystemExit):
+                recovery.main(['--run-dir', str(self.run), '--source-root', str(ROOT), '--scratch', str(self.scratch), '--execute'])
+        bootstrap.assert_not_called()
+
+
 class HandbackTests(unittest.TestCase):
     def test_batch_waits_for_a_recovery_then_takes_its_outcome(self):
         with tempfile.TemporaryDirectory() as temporary:

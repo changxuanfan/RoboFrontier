@@ -43,8 +43,11 @@ python -m robofrontier.claude.recover_task --run-dir "$RUN" --source-root "$SOUR
   --python "$PYTHON" --scratch "$SCRATCH" --execute
 ```
 
-The command runs until the recovered task ends, so start it so that it outlives
-the terminal (for example under `nohup` and `caffeinate`). In order, it:
+On macOS, `--execute` first inspects the run, then submits itself as a user launchd job
+with Interactive priority under `caffeinate`, logged under
+`private/state/control/recovery-durable-<time>/`. It therefore outlives the terminal or the
+agent session that started it. `--foreground` runs it in the current process instead,
+as on Linux. In order, it:
 
 1. **Seals a live world.** A world that is still alive is sealed through its own
    shutdown (`run_seal.seal_run`): a final observation, then exit. It is never

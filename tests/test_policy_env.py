@@ -92,6 +92,50 @@ class AccessTableTests(Fixture):
         self.assertEqual(record['filesystem'][str(self.run_dir)], 'read')
 
 
+class DefaultTests(Fixture):
+    """robofrontier prepare uses the checked environment of the current locks by default on macOS."""
+    def place(self, receipt=True, **change):
+        from scripts.build_policy_env import identity
+        root = self.tmp/('policy-env-' + identity()); self.root.rename(root); self.root = root
+        if receipt:
+            manifest = policy_env.load(root)
+            check = {'passed': True, 'tree_sha256': manifest['tree_sha256'], 'platform': 'darwin', **change}
+            root.with_name(root.name + '.check.json').write_text(json.dumps(check))
+        return root
+
+    def default(self, system='darwin', **environment):
+        with patch.object(policy_env.os, 'environ', {policy_env.BASE_VAR: str(self.tmp), **environment}), \
+                patch('sys.platform', system):
+            return policy_env.default_root()
+
+    def test_the_checked_environment_of_the_current_locks_is_the_default(self):
+        root = self.place(); self.assertEqual(self.default(), root.resolve())
+
+    def test_a_missing_unchecked_or_failed_environment_refuses_with_build_steps(self):
+        with self.assertRaisesRegex(ValueError, 'not built.*build_policy_env'): self.default()
+        self.place(receipt=False)
+        with self.assertRaisesRegex(ValueError, 'no check receipt'): self.default()
+        self.root.with_name(self.root.name + '.check.json').write_text(json.dumps({'passed': False}))
+        with self.assertRaisesRegex(ValueError, 'did not pass'): self.default()
+
+    def test_other_hosts_keep_the_host_python_and_off_opts_out(self):
+        self.assertIsNone(self.default(system='linux'))
+        for value in ('off', 'OFF', 'none'):
+            with patch.object(policy_env.os, 'environ', {policy_env.ENV_VAR: value}):
+                self.assertIsNone(policy_env.selected())
+                self.assertIsNone(policy_env.apply_default())
+
+    def test_apply_default_names_it_for_preparation_only_when_unset(self):
+        root = self.place()
+        environment = {policy_env.BASE_VAR: str(self.tmp)}
+        with patch.object(policy_env.os, 'environ', environment), patch('sys.platform', 'darwin'):
+            self.assertEqual(policy_env.apply_default(), root.resolve())
+            self.assertEqual(environment[policy_env.ENV_VAR], str(root.resolve()))
+        chosen = {policy_env.ENV_VAR: str(self.tmp/'elsewhere')}
+        with patch.object(policy_env.os, 'environ', chosen), patch('sys.platform', 'darwin'):
+            self.assertEqual(policy_env.apply_default(), (self.tmp/'elsewhere').resolve())
+
+
 class ShellTests(Fixture):
     def test_shell_file_leaves_only_the_frozen_variables(self):
         values = policy_env.variables(self.root, self.run_dir)
