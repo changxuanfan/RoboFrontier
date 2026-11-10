@@ -255,7 +255,7 @@ class FactoryPlayback:
         if not expected or colour_compatible_signature(source)!=expected:
             raise ValueError('Replay source revision differs from factory workstation')
 
-    def configure_workstation(self,case_id,source,table_opening_scale=.5,translation_m=None,yaw_rad=None):
+    def configure_workstation(self,case_id,source,table_opening_scale=None,translation_m=None,yaw_rad=None):
         """Configure a visual-only instance; source recordings stay immutable.
 
         One rigid transform moves the whole workstation, including static table
@@ -263,6 +263,11 @@ class FactoryPlayback:
         Relative layout, geometry scale and qpos must remain source-compatible.
         """
         if case_id in self.presentations:raise ValueError('Workstation presentation is already configured')
+        if table_opening_scale is None:
+            # The run's own table, as the simple background shows it (media.table_presentation).
+            from ..media.table_presentation import display_opening_scale
+            task_file=Path(source.path)/'task.json' if getattr(source,'path',None) else None
+            table_opening_scale=display_opening_scale(json.loads(task_file.read_text()) if task_file and task_file.is_file() else None)
         if not 0<float(table_opening_scale)<=1:raise ValueError('Opening scale must be in (0,1]')
         entry=self.manifest['workstation_names'][case_id]
         self._check_source(case_id, source)

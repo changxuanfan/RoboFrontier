@@ -8,8 +8,8 @@ video needs --output outside the run, whose outputs are sealed evidence.
 
 Only kinematics and appearance events are restored. No commands, IK, contact
 solve or new physical integration are executed to manufacture a video.
-New renders halve an existing rectangular central table opening by default;
-use --table-opening-scale 1 for the original frozen tabletop presentation.
+Renders show the run's own table; only a Transport recording on R13 tables, whose central
+opening the released R14 tables halved, is shown halved (media.table_presentation).
 """
 import argparse,json,subprocess,time
 from pathlib import Path
@@ -52,7 +52,7 @@ def stationary_cut(recording,output):
     return write_cut(Path(output)/'stationary-cut.json',recording,times,keep,dict(moving_windows=int(moving.sum()),windows=len(moving)))
 
 
-def render(directory,views=('global','global_rear'),speed=None,every=None,output=None,table_opening_scale=.5,timeline=None,fps=30.,keep_idle=False,encoder_threads=1,edit_timeline=None,width=None,height=None):
+def render(directory,views=('global','global_rear'),speed=None,every=None,output=None,table_opening_scale=None,timeline=None,fps=30.,keep_idle=False,encoder_threads=1,edit_timeline=None,width=None,height=None):
     if timeline is not None and edit_timeline is not None:raise ValueError("Choose one edit reference")
     timeline=timeline or edit_timeline
     if encoder_threads<1:raise ValueError("Positive encoder thread count required")
@@ -73,7 +73,10 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
     width=width or 1280;height=height or (720 if report.get('policy_run') else 800)
     if digest(scene)!=report['scene_sha256']:raise ValueError('Trial scene checksum differs from physical report')
     model=mujoco.MjModel.from_xml_path(str(scene));data=mujoco.MjData(model)
-    from robofrontier.media.table_presentation import scale_rectangular_opening_for_render
+    from robofrontier.media.table_presentation import display_opening_scale, scale_rectangular_opening_for_render
+    if table_opening_scale is None:
+        source_task=scene.parent/'task.json'
+        table_opening_scale=display_opening_scale(json.loads(source_task.read_text()) if source_task.is_file() else None)
     presentation=scale_rectangular_opening_for_render(model,table_opening_scale)
     # Display only, as in the Factory: a letter label under a robot base slides out,
     # and block letters read upright.
@@ -171,5 +174,5 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('trial');p.add_argument('--speed',type=float,help='Default: 20, or a policy run family release speedup');p.add_argument('--fps',type=float,default=30);p.add_argument('--timeline','--edit-timeline',type=Path);p.add_argument('--keep-idle',action='store_true',help='Explicitly render the complete original clock');p.add_argument('--encoder-threads',type=int,default=1);p.add_argument('--every',type=int);p.add_argument('--output',type=Path);p.add_argument('--views',nargs='+',default=['global','global_rear']);p.add_argument('--table-opening-scale',type=float,default=.5,help='Offline presentation only; 1 preserves the original table');p.add_argument('--width',type=int);p.add_argument('--height',type=int);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('trial');p.add_argument('--speed',type=float,help='Default: 20, or a policy run family release speedup');p.add_argument('--fps',type=float,default=30);p.add_argument('--timeline','--edit-timeline',type=Path);p.add_argument('--keep-idle',action='store_true',help='Explicitly render the complete original clock');p.add_argument('--encoder-threads',type=int,default=1);p.add_argument('--every',type=int);p.add_argument('--output',type=Path);p.add_argument('--views',nargs='+',default=['global','global_rear']);p.add_argument('--table-opening-scale',type=float,help="Offline presentation only; default: the run's own table, halved only for R13 Transport recordings");p.add_argument('--width',type=int);p.add_argument('--height',type=int);a=p.parse_args()
     render(a.trial,a.views,a.speed,a.every,a.output,a.table_opening_scale,a.timeline,a.fps,a.keep_idle,a.encoder_threads,width=a.width,height=a.height)

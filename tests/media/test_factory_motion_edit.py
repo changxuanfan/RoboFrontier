@@ -36,7 +36,7 @@ class FactoryMotionEditTests(unittest.TestCase):
             path=Path(td)/'scene.xml';path.write_text(ET.tostring(root,encoding='unicode'))
             (path.parent/'manifest.json').write_text(json.dumps(dict(scene_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),placements=[dict(case_id='transport-test',translation_m=oldshift.tolist(),yaw_rad=0.)],workstation_names={'transport-test':dict(source_scene_sha256='source',body_names=bodies,geom_names=geoms)})))
             play=FactoryPlayback(path);before=source.data.qpos.copy()
-            config=play.configure_workstation('transport-test',source,translation_m=[-5.,2.,.6],yaw_rad=1.1)
+            config=play.configure_workstation('transport-test',source,table_opening_scale=.5,translation_m=[-5.,2.,.6],yaw_rad=1.1)
             self.assertEqual(config['table']['new_opening_m'],[1.,1.])
             q=before.copy();q[0]=.4;q[-7:-4]+=[.1,.2,.3]
             frame=play.apply('transport-test',source,q,2.)
