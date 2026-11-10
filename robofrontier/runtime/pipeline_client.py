@@ -17,9 +17,14 @@ from .tool_errors import CallIdConflict, conflict_error, is_conflict_error, unce
 # Allow the server to finish its bounded SQLite acquisition before its normal
 # 40-second response slice expires; explicit caller timeouts are unchanged.
 DEFAULT_HTTP_TIMEOUT_SECONDS = 45 + MAX_BEGIN_WAIT_SECONDS
+# A waiting robot action may take longer than an engine lets one tool call last (Claude Code
+# gives up at 660 s); after this long the call returns the action as still pending, under its
+# original call_id, for both engines alike. The action keeps running; `job` follows it.
+RETURN_PENDING_AFTER_S = 600.
 
 
-def client_call(connection_path, op, data, call_id=None, timeout=DEFAULT_HTTP_TIMEOUT_SECONDS, log_call_id=True):
+def client_call(connection_path, op, data, call_id=None, timeout=DEFAULT_HTTP_TIMEOUT_SECONDS, log_call_id=True,
+                return_pending_after_s=RETURN_PENDING_AFTER_S):
     connection_path=Path(connection_path).resolve()
     cfg=json.loads(connection_path.read_text())
     if cfg.get('schema_version')!=3:
@@ -61,6 +66,7 @@ def client_call(connection_path, op, data, call_id=None, timeout=DEFAULT_HTTP_TI
         # The service's wait deadline belongs to this original call, not each
         # HTTP slice. Reusing it does not register a new wait or reset its clock.
         wait_deadline=time.monotonic()+float(data.get('timeout_s',30))+timeout if op=='wait_events' else None
+        return_by=time.monotonic()+return_pending_after_s if return_pending_after_s is not None else None
         while True:
             try:
                 with urllib.request.urlopen(request,timeout=timeout) as response:result=json.load(response)
@@ -83,7 +89,12 @@ def client_call(connection_path, op, data, call_id=None, timeout=DEFAULT_HTTP_TI
             if op=='delegate':continue  # preserve the parent's fork boundary; original request only
             # The server slices HTTP waits at 40 s; a slow valid action may
             # span several slices. Reuse the durable ID, never resubmit motion.
-            if op in ('move','gripper','action_batch') and data.get('wait',True):continue
+            if op in ('move','gripper','action_batch') and data.get('wait',True):
+                if return_by is not None and time.monotonic()>=return_by:
+                    result={**result,'returned_while_pending':True,
+                            'note':'The action is still running under this call_id; query it with job, data.call_id = this call_id.'}
+                    break
+                continue
             if op!='wait_events' or time.monotonic()>=wait_deadline:break
         fcntl.flock(lock,fcntl.LOCK_EX)
         if result.get('execution_status') not in ('pending','running'):
