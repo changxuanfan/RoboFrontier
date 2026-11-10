@@ -12,7 +12,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier import oracle_workflow as workflow
+from robofrontier.oracle import workflow as workflow
 from older_configuration import without_later_options
 from robofrontier.configuration import load_configuration, validate_configuration
 
@@ -139,7 +139,7 @@ class OracleWorkflowTests(unittest.TestCase):
         self.assertIn('private/execution-protocol.json',manifest['input_sha256'])
 
     def test_configuration_and_executor_mutation_rejected_before_any_process(self):
-        for index, name in enumerate(('private/executor/robofrontier/suite/oracle.py', 'effective-config.json', 'private/execution-protocol.json')):
+        for index, name in enumerate(('private/executor/robofrontier/oracle/trial.py', 'effective-config.json', 'private/execution-protocol.json')):
             root = self.root/str(index)
             with patch.object(workflow, '_committed_source', return_value='test-source'):
                 workflow.prepare(root, self.config())

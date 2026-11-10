@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
 import numpy as np
-from robofrontier.suite.oracle import NoVerifiedJointIK,Trial,joint_edge_clear
+from robofrontier.oracle.trial import NoVerifiedJointIK,Trial,joint_edge_clear
 
 class OracleRouteSamplingTests(unittest.TestCase):
     def test_finer_sampling_catches_between_sample_intersection(self):

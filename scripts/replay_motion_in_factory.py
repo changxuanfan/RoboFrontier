@@ -6,13 +6,13 @@ geometry stay identical; materials/background and a rigid world placement may va
 import argparse,json
 from pathlib import Path
 import numpy as np
-from robofrontier.motion_recording import MotionReader
-from robofrontier.motion_timeline import sample_timeline,resolve_timeline
-from robofrontier.replay_edit import ReplayEdit
-from robofrontier.workstation import Workstation
+from robofrontier.media.motion_recording import MotionReader
+from robofrontier.media.motion_timeline import sample_timeline,resolve_timeline
+from robofrontier.media.replay_edit import ReplayEdit
+from robofrontier.physics.workstation import Workstation
 from robofrontier.factory.workstations import FactoryPlayback
 from robofrontier.factory.playback import current_scene
-from robofrontier.run_setup import write_json
+from robofrontier.runtime.setup import write_json
 
 
 def video_sample(stamp,deadline,rate=30):
@@ -22,7 +22,7 @@ def video_sample(stamp,deadline,rate=30):
 
 
 def replay(recording,factory,output,render=False,timeline=None,speed=20.,fps=30.,table_opening_scale=.5,translation_m=None,yaw_rad=None,max_frames=None,keep_idle=False,edit_timeline=None):
-    if render:raise ValueError('Factory video now uses Cycles: run python -m scripts.factory video')
+    if render:raise ValueError('Factory video now uses Cycles: run python -m robofrontier.factory.commands video')
     reader=MotionReader(recording);source=Workstation(reader.path/'source');output=Path(output)
     if timeline is not None and edit_timeline is not None:raise ValueError("Choose one edit reference")
     timeline=None if keep_idle else resolve_timeline(recording,timeline or edit_timeline)

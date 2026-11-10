@@ -5,8 +5,8 @@ from unittest.mock import patch
 import xml.etree.ElementTree as ET
 import mujoco,numpy as np
 from robofrontier.factory.workstations import FactoryPlayback,vec
-from robofrontier.robot_control import matrix_quat
-from robofrontier.workstation import Workstation
+from robofrontier.physics.robot_control import matrix_quat
+from robofrontier.physics.workstation import Workstation
 
 class FactoryMotionEditTests(unittest.TestCase):
     def test_half_table_and_all_static_dynamic_parts_share_one_rigid_frame(self):

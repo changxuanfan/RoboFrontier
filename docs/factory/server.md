@@ -237,10 +237,10 @@ Wait until every original writer has stopped. Import
 The published 36 case IDs are supported; Mosaic source display must be R14.
 Import rebuilds the relevant station from the recording's own frozen inputs and
 exports a new Blender asset; other desks become static background. Without
-`--keep-idle` or `--timeline` it keeps `robofrontier.motion_cut`'s meaningful
+`--keep-idle` or `--timeline` it keeps `robofrontier.media.motion_cut`'s meaningful
 motion and cuts idle stretches; `--keep-idle` keeps every recorded state (an
 all-retained edit), and `--timeline` follows a motion edit such as the
-`motion-cut.json` from `scripts/render_policy_videos.py`. Omitting `--speedup`
+`motion-cut.json` from `robofrontier/media/render.py`. Omitting `--speedup`
 plays at the family's release speedup. Import never infers task success or
 borrows an Oracle completion prefix. Missing source
 assets, an active recording, a task mismatch or failed motion validation cause

@@ -7,7 +7,7 @@ import tempfile
 import time
 import unittest
 
-from robofrontier.slurm_auth import CredentialError, CredentialLease, BorrowedAccess
+from robofrontier.batch.slurm_auth import CredentialError, CredentialLease, BorrowedAccess
 
 
 def auth(generation=0, account='fixture-account', subject='fixture-user'):
@@ -25,7 +25,7 @@ def private_json(path, value):
 
 class CredentialCustodyTests(unittest.TestCase):
     def test_migration_preserves_latest_generation_and_retires_old_refresh_store(self):
-        from robofrontier.slurm_auth import migrate_store
+        from robofrontier.batch.slurm_auth import migrate_store
         with CredentialLease(self.store,self.root/'first-home') as lease:
             private_json(lease.home/'auth.json',auth(7));lease.reconcile()
         current=(self.store/'current.json').read_bytes()
@@ -42,7 +42,7 @@ class CredentialCustodyTests(unittest.TestCase):
             self.assertEqual(json.loads(current)['auth'],json.loads((lease.home/'auth.json').read_text()))
 
     def test_migration_refuses_a_live_refresh_owner_without_copying_credentials(self):
-        from robofrontier.slurm_auth import migrate_store
+        from robofrontier.batch.slurm_auth import migrate_store
         destination=self.root/'durable-store'
         with CredentialLease(self.store,self.root/'owner'):
             with self.assertRaisesRegex(CredentialError,'leased'):
@@ -50,7 +50,7 @@ class CredentialCustodyTests(unittest.TestCase):
         self.assertFalse(destination.exists())
 
     def test_migration_does_not_replace_an_existing_destination(self):
-        from robofrontier.slurm_auth import migrate_store
+        from robofrontier.batch.slurm_auth import migrate_store
         with CredentialLease(self.store,self.root/'owner'):pass
         before=(self.store/'current.json').read_bytes()
         destination=self.root/'durable-store';destination.mkdir(mode=0o700)
@@ -138,7 +138,7 @@ class CredentialCustodyTests(unittest.TestCase):
 
     def test_a_bootstrap_lost_between_its_two_writes_leaves_a_usable_store(self):
         from unittest.mock import patch
-        from robofrontier import slurm_auth
+        from robofrontier.batch import slurm_auth
         original, writes = slurm_auth._atomic_private, []
         def lost_after_first(path, value):
             if writes: raise KeyboardInterrupt('job killed')

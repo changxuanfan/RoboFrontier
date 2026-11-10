@@ -1,9 +1,9 @@
 """Copy R16 geometry with the current L2/L3 task contract; physics is identical."""
 import hashlib,json,os,shutil
 from pathlib import Path
-from . import v2
-from ..run_setup import write_json
-from .relay_contract import RULE_REVISION,final_task
+from ..tasks import v2
+from ..runtime.setup import write_json
+from ..tasks.relay import RULE_REVISION,final_task
 
 
 def build(case,replace_draft=False,render=False):

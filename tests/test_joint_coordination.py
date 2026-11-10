@@ -2,8 +2,8 @@
 import unittest
 import numpy as np
 from test_motion_check import robot_fixture
-from robofrontier.task_config import load_harness
-from robofrontier.motion_check import JOINT_ACCEL_LIMIT
+from robofrontier.tasks.config import load_harness
+from robofrontier.physics.motion_check import JOINT_ACCEL_LIMIT
 
 class JointCoordinationTests(unittest.TestCase):
     def test_unequal_joint_travels_share_progress_and_respect_acceleration(self):

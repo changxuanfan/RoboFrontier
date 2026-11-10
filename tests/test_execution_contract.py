@@ -14,12 +14,12 @@ import numpy as np
 
 from fake_pipeline import FakeWorld, fake_capture
 from test_motion_check import robot_fixture
-from robofrontier.delegation import Delegations
-from robofrontier.pipeline import World
-from robofrontier.robot_control import matrix_quat
-from robofrontier.run_setup import prepare_run
-from robofrontier.runtime_service import RuntimeService
-from robofrontier.task_config import ROOT, load_harness
+from robofrontier.runtime.delegation import Delegations
+from robofrontier.runtime.pipeline import World
+from robofrontier.physics.robot_control import matrix_quat
+from robofrontier.runtime.setup import prepare_run
+from robofrontier.runtime.service import RuntimeService
+from robofrontier.tasks.config import ROOT, load_harness
 
 
 class TerminalServoTests(unittest.TestCase):
@@ -32,7 +32,7 @@ class TerminalServoTests(unittest.TestCase):
         self.assertGreaterEqual(cmd['timing']['timeout_sim_s'],30.0)
 
     def test_live_nonsettling_stop_reports_the_unmet_conditions(self):
-        from robofrontier.stop_diagnostics import stop_diagnostics
+        from robofrontier.runtime.stop_diagnostics import stop_diagnostics
         a=self.arm;cmd=self.world.validate_action('A','move',{'joint_rad':a.qref.tolist()},self.cfg)
         a.start('move',cmd,0);a.request_stop(.1,'Action timeout; stopped at current reference')
         a.velocity[:]=.02;self.world.data.qvel[a.dofs]=.04
@@ -66,7 +66,7 @@ class TerminalServoTests(unittest.TestCase):
         np.testing.assert_array_equal(before,w.data.qpos);self.assertIsNone(a.job)
 
     def test_a_move_without_ik_solution_reports_what_the_solver_found(self):
-        from robofrontier.robot_control import IKNoSolution, IK_MESSAGE, quat_matrix
+        from robofrontier.physics.robot_control import IKNoSolution, IK_MESSAGE, quat_matrix
         w=self.world;a=self.arm;before=w.data.qpos.copy()
         # Too far at that height with the current hand: the closest pose found falls short.
         with self.assertRaises(IKNoSolution) as caught:
@@ -147,7 +147,7 @@ class SettleCountTests(unittest.TestCase):
         self.world=robot_fixture();self.arm=self.world.arms['A'];self.cfg=load_harness()
 
     def profile(self,name):
-        from robofrontier.physics_profile import attach
+        from robofrontier.physics.profile import attach
         self.world.task={'family':'transport'};attach(self.world,{'physics_profile':name})
 
     def begin(self,op):
@@ -210,7 +210,7 @@ class SceneTopologyContractTests(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp=tempfile.TemporaryDirectory();cls.root=Path(cls.tmp.name)
         cls.worlds={}
-        from robofrontier.task_families import policy_task
+        from robofrontier.tasks.families import policy_task
         cls.mosaic_task=cls.root/'mosaic-task.json';cls.mosaic_task.write_text(json.dumps(policy_task('mosaic-a04-6x12-d1')))
         for name,task_path in [('transport',None),('mosaic',cls.mosaic_task)]:
             run=prepare_run(cls.root/('geometry-'+name),task_path)

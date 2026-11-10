@@ -11,7 +11,7 @@ import sys
 import tempfile
 
 from .configuration import ROOT, TOPOLOGIES, load_configuration, rendering_environment
-from . import policy_env, run_layout
+from .runtime import policy_env, layout as run_layout
 
 
 def _print(value):
@@ -45,7 +45,7 @@ def _catalog_file(config):
 
 def _policy_environment():
     """What `prepare` would freeze for policy scripts, without changing anything."""
-    from .policy_env import ENV_VAR, default_root, selected
+    from .runtime.policy_env import ENV_VAR, default_root, selected
     try:
         root = selected() if os.environ.get(ENV_VAR) else default_root()
     except ValueError as error:
@@ -54,7 +54,7 @@ def _policy_environment():
 
 
 def plan(config):
-    from robofrontier.benchmark_common import select_cases
+    from robofrontier.batch.prepare import select_cases
     selection = config['selection']
     selected = select_cases(selection['families'] or None, selection['cases'] or None,
                             selection['level'] or None, selection['min_arms'])
@@ -71,10 +71,10 @@ def plan(config):
 
 
 def prepare(output, config):
-    from robofrontier.codex.batch import prepare_batch
-    from scripts.benchmark_handoff import setup_assets
-    from robofrontier.benchmark_common import load_env
-    from .run_setup import write_json
+    from robofrontier.batch.codex_batch import prepare_batch
+    from robofrontier.batch.handoff import setup_assets
+    from robofrontier.batch.prepare import load_env
+    from .runtime.setup import write_json
     policy, selection = config['policy'], config['selection']
     load_env(ROOT/'.env')
     plan(config)  # Reject invalid model and selection before any installation.
@@ -92,7 +92,7 @@ def prepare(output, config):
                'record_realtime_video': config['render']['record_realtime_video']}
     with _catalog_file(config) as catalog:
         if policy['engine'] == 'claude':
-            from scripts.claude_benchmark import prepare_draft
+            from robofrontier.batch.claude_benchmark import prepare_draft
             result = prepare_draft(output, [policy['profile']], families=selection['families'] or None,
                                    cases=selection['cases'] or None, catalog=catalog,
                                    level=selection['level'] or None, min_arms=selection['min_arms'],
@@ -126,28 +126,28 @@ def prepare(output, config):
 
 def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=None):
     """Explicit paid connectivity check; preparation and planning never call it."""
-    from robofrontier.benchmark_common import load_env
+    from robofrontier.batch.prepare import load_env
     load_env(ROOT/'.env')
     policy = config['policy']
     if not confirm_spend:
         return {'status': 'not_run', 'model_calls': 0,
                 'reason': 'Add --confirm-spend to authorize real provider calls',
                 'engine': policy['engine'], 'profile': policy['profile']}
-    from .runtime_diagnostics import require_runtime
+    from .runtime.diagnostics import require_runtime
     require_runtime(config, render=False)
     with _catalog_file(config) as catalog:
         if policy['engine'] == 'claude':
             if max_budget_usd is None:
                 raise ValueError('Claude preflight requires an explicit --max-budget-usd estimate')
-            from scripts.claude_precheck import run_precheck
+            from robofrontier.engines.claude.preflight import run_precheck
             import uuid
             output = ROOT/'runs/engineering/claude-precheck'/uuid.uuid4().hex
             return run_precheck(policy['profile'], output, max_budget_usd, dict(os.environ),
                                 check_fork=not smoke_only, catalog=catalog)
-        from robofrontier.codex.launch import profile, launch_config, initialize_codex_home
+        from robofrontier.engines.codex.launch import profile, launch_config, initialize_codex_home
         selected = profile(policy['profile'], catalog)
         if config['runtime']['codex_home_scope'] == 'job':
-            from .slurm_job import subscription_environment, _local_storage
+            from .batch.slurm_job import subscription_environment, _local_storage
             # Explicitly authorized live preflight, inside an allocation, with
             # its own local credential owner and no physical task START.
             scratch = config['slurm']['scratch_root'] or os.environ.get('SLURM_TMPDIR')
@@ -156,7 +156,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             _local_storage(scratch)
             with tempfile.TemporaryDirectory(prefix='rf-pf-', dir=scratch) as temporary:
                 with subscription_environment(config, temporary, on_failure=lambda: None):
-                    command = [sys.executable, '-m', 'robofrontier.codex.batch', 'preflight', '--models', policy['profile'],
+                    command = [sys.executable, '-m', 'robofrontier.batch.codex_batch', 'preflight', '--models', policy['profile'],
                                '--model-config', str(catalog)]
                     if smoke_only:
                         command.append('--smoke-only')
@@ -173,14 +173,14 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             fingerprint = hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest()[:20]
             home = ROOT/'.robofrontier/preflight'/fingerprint
         else:
-            from robofrontier.codex.launch import codex_home
+            from robofrontier.engines.codex.launch import codex_home
             home = Path(config['runtime']['codex_home']).expanduser().resolve() if config['runtime']['codex_home'] else codex_home(env)
         home.mkdir(parents=True, exist_ok=True, mode=0o700)
         env['CODEX_HOME'] = str(home)
         folder = ROOT/'runs/engineering'/('model-smoke' if smoke_only else 'model-compatibility')/policy['profile']
         folder.mkdir(parents=True, exist_ok=True)
         initialize_codex_home(launch_config(selected, folder), folder, env=env)
-        command = [sys.executable, '-m', 'robofrontier.codex.batch', 'preflight', '--models', policy['profile'],
+        command = [sys.executable, '-m', 'robofrontier.batch.codex_batch', 'preflight', '--models', policy['profile'],
                    '--model-config', str(catalog)]
         if smoke_only:
             command.append('--smoke-only')
@@ -210,19 +210,19 @@ def run(batch, *, engineering=False, continuing=False):
     config = _frozen_configuration(batch)
     if config['policy']['engine'] == 'claude' and not engineering:
         raise ValueError('Claude runs remain unqualified; explicitly select run --engineering')
-    from .runtime_diagnostics import require_runtime
+    from .runtime.diagnostics import require_runtime
     require_runtime(config)
     environment = rendering_environment(config['render']['device'], platform.system(), os.environ)
     os.environ.clear()
     os.environ.update(environment)
     if config['policy']['engine'] == 'claude':
-        from .claude.engineering_batch import run_batch
+        from .batch.engineering_batch import run_batch
         state = run_batch(batch, dict(os.environ), parallel=config['batch']['parallel'],
                           startup_interval_s=config['batch']['startup_interval_s'],
                           startup_timeout_s=config['batch']['startup_timeout_s'],
                           wall_limit_s=config['batch']['task_wall_limit_s'], continuing=continuing)
     else:
-        from robofrontier.codex.batch import run_batch
+        from robofrontier.batch.codex_batch import run_batch
         run_batch(batch, config['batch']['parallel'], continuing=continuing)
         state = json.loads((Path(batch)/'batch.json').read_text())
     result = {'batch': str(Path(batch).resolve()), 'status': state['status']}
@@ -238,14 +238,14 @@ def run(batch, *, engineering=False, continuing=False):
 
 
 def collect(batch, output):
-    from scripts.collect_benchmark_batch import collect_batch
+    from robofrontier.batch.collect import collect_batch
     collect_batch(Path(batch), Path(output))
     return Path(output).resolve()
 
 
 def archive_collection(collection, output):
-    from scripts.archive_policy_batch import create
-    from .evidence_zip import pack
+    from robofrontier.batch.archive_policy_batch import create
+    from .batch.archive import pack
     output = Path(output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.rf-archive-', dir=output.parent) as temporary:
@@ -309,7 +309,7 @@ def argument_parser(*, prog=None):
     p.add_argument('arguments', nargs=argparse.REMAINDER)
     from .factory.workflow import add_arguments
     add_arguments(sub)
-    from .oracle_workflow import add_arguments as oracle_arguments
+    from .oracle.workflow import add_arguments as oracle_arguments
     oracle_arguments(sub)
     return parser
 
@@ -319,12 +319,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     def emit(value):
         if args.result_file:
-            from .run_setup import write_json
+            from .runtime.setup import write_json
             write_json(args.result_file, value)
         _print(value)
     try:
         if args.command == 'oracle':
-            from .oracle_workflow import execute
+            from .oracle.workflow import execute
             report = execute(args)
             emit(report)
             if args.oracle_action == 'run':
@@ -340,14 +340,14 @@ def main(argv=None):
             emit(report)
             return 0
         if args.command == 'container':
-            from .container_runtime import execute, validate_arguments
+            from .batch.container import execute, validate_arguments
             # Resolve help and invalid syntax before configuration, Docker or auth.
             arguments = validate_arguments(args.arguments)
             report = execute(arguments, load_configuration(args.config))
             emit(report)
             return report['exit_code']
         if args.command == 'bootstrap':
-            from scripts.benchmark_handoff import setup_assets
+            from robofrontier.batch.handoff import setup_assets
             emit(setup_assets())
             return 0
         if args.command in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
@@ -366,7 +366,7 @@ def main(argv=None):
             elif args.command == 'plan':
                 emit(plan(config))
             elif args.command == 'doctor':
-                from .runtime_diagnostics import inspect_runtime
+                from .runtime.diagnostics import inspect_runtime
                 report = inspect_runtime(config)
                 emit(report)
                 return 0 if report['passed'] else 2
@@ -376,30 +376,30 @@ def main(argv=None):
                 emit(report)
                 return 0 if report.get('passed') else 2
             elif args.command == 'slurm-submit':
-                from robofrontier.benchmark_common import load_env
-                from .slurm_job import submit
+                from robofrontier.batch.prepare import load_env
+                from .batch.slurm_job import submit
                 load_env(ROOT/'.env')
                 emit(submit(config, args.output, queue=args.queue, engineering=args.engineering))
             else:
                 # New runs use the frozen policy Python environment by default (policy_env.default_root).
-                from .policy_env import apply_default
+                from .runtime.policy_env import apply_default
                 apply_default()
                 emit({'batch': str(prepare(args.output, config)), 'model_calls': 0})
         elif args.command == 'run' and (args.durable or (sys.platform == 'darwin' and not args.foreground)):
             # On macOS a batch, a continuation included, runs under launchd with ProcessType=Interactive
             # by default, so it outlives the terminal or agent session that started it.
             if args.foreground: raise ValueError('--durable and --foreground are exclusive')
-            from .durable import submit as submit_durable
+            from .batch.mac import submit as submit_durable
             emit(submit_durable(args.batch, engineering=args.engineering, continuing=args.continuing))
         elif args.command == 'run':
-            from robofrontier.benchmark_common import load_env
+            from robofrontier.batch.prepare import load_env
             load_env(ROOT/'.env')
             emit(run(args.batch, engineering=args.engineering, continuing=args.continuing))
         elif args.command == 'status':
             # Read the supervisor's atomic snapshot, never open a writer's SQLite.
             snapshot = run_layout.batch_path(args.batch, 'engineering_status')
             state = json.loads((snapshot if snapshot.is_file() else args.batch/'batch.json').read_text())
-            from .durable import service_state
+            from .batch.mac import service_state
             durable = service_state(args.batch)
             emit({**state, 'durable': durable} if durable else state)
         elif args.command == 'stop':
@@ -420,7 +420,7 @@ def main(argv=None):
                 checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
             emit({'archive': str(archive), 'archive_sha256': checksum})
         elif args.command == 'extract':
-            from .evidence_zip import unpack
+            from .batch.archive import unpack
             emit(unpack(args.archive, args.output))
         return 0
     except (ValueError, OSError, KeyError) as error:

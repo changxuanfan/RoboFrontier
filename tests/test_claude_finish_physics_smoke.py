@@ -10,9 +10,9 @@ import threading
 import unittest
 
 from test_claude_adaptive_integration import StubModel
-from robofrontier.claude.engineering_run import run_engineering
-from scripts.claude_benchmark import prepare_draft
-from scripts.export_run_report import export
+from robofrontier.engines.claude.run import run_engineering
+from robofrontier.batch.claude_benchmark import prepare_draft
+from robofrontier.batch.report import export
 
 
 class FinishModel(StubModel):

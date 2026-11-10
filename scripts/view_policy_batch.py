@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 import re
 from urllib.parse import unquote, urlsplit
-from robofrontier import run_layout
+from robofrontier.runtime import layout as run_layout
 
 HTML='''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RoboFrontier run status</title>
 <style>body{margin:28px;background:#f4f6f8;color:#20313d;font:16px system-ui}.sub,footer{color:#60707b}.grid{display:grid;grid-template-columns:repeat(3,minmax(240px,1fr));gap:18px}.card{background:white;border:1px solid #dce4ea;border-radius:13px;padding:18px}.head{display:flex;justify-content:space-between;gap:10px}.badge{color:#00766c}img{width:100%;aspect-ratio:1.6;object-fit:contain;margin:12px 0;background:#edf1f4;border-radius:7px}.dim{color:#687883;font-size:13px}.actions{display:flex;gap:16px}a{color:#12659b}footer{margin-top:24px}@media(max-width:950px){.grid{grid-template-columns:repeat(2,minmax(230px,1fr))}}@media(max-width:600px){.grid{grid-template-columns:1fr}body{margin:16px}}</style>

@@ -11,9 +11,9 @@ import sqlite3
 import tempfile
 import unittest
 
-from robofrontier.run_analysis import atomic_v2, extract
-from robofrontier.run_analysis import metrics as M
-from robofrontier.run_analysis.archive import Run
+from robofrontier.analysis import atomic as atomic_v2, extract
+from robofrontier.analysis import metrics as M
+from robofrontier.analysis.archive import Run
 
 BASE = 1_000_000.0  # wall time = BASE + sim time
 

@@ -2,8 +2,8 @@
 import unittest
 import xml.etree.ElementTree as ET
 
-from robofrontier.benchmark_common import select_cases
-from robofrontier.task_families import ROOT
+from robofrontier.batch.prepare import select_cases
+from robofrontier.tasks.families import ROOT
 
 
 class RollingPhysicsCandidateTests(unittest.TestCase):

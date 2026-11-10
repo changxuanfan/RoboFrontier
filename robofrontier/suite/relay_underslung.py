@@ -9,11 +9,11 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
-from . import v2
+from ..tasks import v2
 from .rigid_relay import PROFILE, METAL, capsule, ring, spring_hinge
-from .scenes import cylinder,box,vector,rz
-from ..robot_control import matrix_quat,quat_matrix
-from ..run_setup import write_json
+from ..oracle.geometry import cylinder,box,vector,rz
+from ..physics.robot_control import matrix_quat,quat_matrix
+from ..runtime.setup import write_json
 
 REVISION=16
 SHAFT=.170
@@ -135,7 +135,7 @@ def fit_initial(model,data,task,hook_points):
 
 
 def build(case,replace_draft=False,render=True,source=None,destination=None):
-    from ..workstation import Workstation
+    from ..physics.workstation import Workstation
     if case['level']==1:raise ValueError('L1 is immutable; retain its existing source')
     source_case=dict(case,scene_revision=15 if case['arms']==12 else 13)
     source=Path(source) if source else v2.directory(source_case);frozen=Workstation(source)
@@ -208,7 +208,7 @@ def build(case,replace_draft=False,render=True,source=None,destination=None):
 
 
 def validate(folder,source=None):
-    from ..workstation import Workstation
+    from ..physics.workstation import Workstation
     w=Workstation(folder);m,d=w.model,w.data;mujoco.mj_forward(m,d);task=json.loads((Path(folder)/'task.json').read_text());issues=[]
     for contact in d.contact:
         if contact.dist<-.0002:
@@ -245,7 +245,7 @@ def linking_number(model,data,ident):
 
 def render_views(folder):
     from PIL import Image
-    w=__import__('robofrontier.workstation',fromlist=['Workstation']).Workstation(folder);m,d=w.model,w.data;mujoco.mj_forward(m,d);m.vis.global_.offwidth=1600;m.vis.global_.offheight=1000
+    w=__import__('robofrontier.physics.workstation',fromlist=['Workstation']).Workstation(folder);m,d=w.model,w.data;mujoco.mj_forward(m,d);m.vis.global_.offwidth=1600;m.vis.global_.offheight=1000
     with mujoco.Renderer(m,width=1600,height=1000,max_geom=max(5000,m.ngeom+1000)) as renderer:
         for camera in ['global','global_rear','top']:
             renderer.update_scene(d,camera=camera);Image.fromarray(renderer.render()).save(Path(folder)/('preview-'+camera+'.png'))

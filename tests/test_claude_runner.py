@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from robofrontier.claude.runner import build_command, build_env, gate_settings, run_turn, summarize, ROBOT_TOOL
+from robofrontier.engines.claude.runner import build_command, build_env, gate_settings, run_turn, summarize, ROBOT_TOOL
 
 PROFILE = {'provider': 'kimi', 'model': 'kimi-k3.1-pro', 'env_key': 'KIMI_API_KEY',
            'base_url': 'https://api.moonshot.cn/anthropic', 'effort': 'high'}
@@ -164,14 +164,14 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
         self.assertNotIn('ALL_PROXY', env); self.assertNotIn('ROBOFRONTIER_EGRESS_INSTANCE', env)
 
     def test_unconfigured_third_party_endpoint_never_launches_cli(self):
-        from scripts.claude_benchmark import profile
+        from robofrontier.batch.claude_benchmark import profile
         with patch.dict('os.environ', {}, clear=True):
             selected = profile('qwen')
         self.assertIsNone(selected['base_url'])  # Offline inspection is allowed.
         for base_url in (None, ''):
             with self.subTest(base_url=base_url), tempfile.TemporaryDirectory() as tmp:
                 selected['base_url'] = base_url
-                with patch('robofrontier.claude.runner.subprocess.Popen',
+                with patch('robofrontier.engines.claude.runner.subprocess.Popen',
                            side_effect=AssertionError('CLI launched without a provider endpoint')) as launch:
                     with self.assertRaisesRegex(ValueError, 'explicit base URL'):
                         run_turn(selected, selected['model'], selected['effort'], 'mcp.json', 'go',
@@ -278,7 +278,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             binary = fake_claude(tmp, 'time.sleep(1)\n')
             cancel = threading.Event()
             # Not set at the launch check, set at the first poll.
-            with patch('robofrontier.claude.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')), \
+            with patch('robofrontier.engines.claude.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')), \
                     patch.object(cancel, 'is_set', side_effect=[False] + [True] * 100):
                 record = run_turn(PROFILE, 'm', 'high', None, 'go', tmp, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
                                   binary=str(binary), timeout=5, cancel_event=cancel, enable_robot=False)
@@ -287,11 +287,11 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
 
     def test_closing_a_persistent_cli_tolerates_a_zombie_only_group(self):
         from unittest.mock import Mock
-        from robofrontier.claude.runner import _stop_process
+        from robofrontier.engines.claude.runner import _stop_process
         process = Mock(pid=12345)
         process.poll.return_value = None
         process.wait.side_effect = [subprocess.TimeoutExpired('claude', 10), 0]
-        with patch('robofrontier.claude.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')):
+        with patch('robofrontier.engines.claude.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')):
             _stop_process(process)
         self.assertEqual(process.wait.call_count, 2)
 
@@ -300,7 +300,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             run = Path(tmp) / 'run'; run.mkdir()
             config = run / 'mcp.json'; config.write_text('{}')
             cancel = threading.Event(); cancel.set()
-            with patch('robofrontier.claude.runner.subprocess.Popen') as spawn:
+            with patch('robofrontier.engines.claude.runner.subprocess.Popen') as spawn:
                 with self.assertRaisesRegex(InterruptedError, 'cancelled before launch'):
                     run_turn(PROFILE, 'm', 'high', config, 'go', run,
                              {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
@@ -357,8 +357,8 @@ class PolicySettingsTests(unittest.TestCase):
         (run/'private/inputs/policy-access.json').write_text(json.dumps(access))
 
     def test_denied_repository_files_beside_the_run_get_rules_that_cover_the_file_itself(self):
-        from robofrontier import policy_access
-        from robofrontier.claude.runner import policy_settings
+        from robofrontier.runtime import access as policy_access
+        from robofrontier.engines.claude.runner import policy_settings
         with tempfile.TemporaryDirectory() as tmp:
             repo, home, run = self.layout(tmp)
             self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
@@ -383,8 +383,8 @@ class PolicySettingsTests(unittest.TestCase):
         # The deny list is rendered once per CLI process; a run prepared later beside this
         # one must still have its private/ closed, so the denied folders holding the run get
         # patterns the CLI matches when a tool runs.
-        from robofrontier import policy_access
-        from robofrontier.claude.runner import policy_settings
+        from robofrontier.runtime import access as policy_access
+        from robofrontier.engines.claude.runner import policy_settings
         with tempfile.TemporaryDirectory() as tmp:
             repo, home, run = self.layout(tmp)
             self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
@@ -407,7 +407,7 @@ class PolicySettingsTests(unittest.TestCase):
             self.assertFalse(any('/**/private' in rule for rule in policy_settings(nested)['permissions']['deny']))
 
     def test_policy_env_table_renders_deny_and_allow_read(self):
-        from robofrontier.claude.runner import policy_settings
+        from robofrontier.engines.claude.runner import policy_settings
         with tempfile.TemporaryDirectory() as tmp:
             repo, home, run = self.layout(tmp)
             table = {'/': 'read', str(home): 'deny', str(repo): 'deny', str(run): 'deny', str(run/'public'): 'read',
@@ -422,8 +422,8 @@ class PolicySettingsTests(unittest.TestCase):
             self.assertIn('Read(//'+str(repo/'.env').lstrip('/')+')', settings['permissions']['deny'])
 
     def test_a_long_deny_list_reaches_the_cli_as_a_private_settings_file(self):
-        from robofrontier import policy_access
-        from robofrontier.run_layout import manifest_record
+        from robofrontier.runtime import access as policy_access
+        from robofrontier.runtime.layout import manifest_record
         with tempfile.TemporaryDirectory() as tmp:
             repo, home, run = self.layout(tmp)
             (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
@@ -454,9 +454,9 @@ print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 're
 
 
     def test_a_cli_lost_before_the_prompt_is_written_is_a_lost_cli_not_an_unknown_turn(self):
-        from robofrontier import policy_access
-        from robofrontier.claude.runner import PersistentSession
-        from robofrontier.run_layout import manifest_record
+        from robofrontier.runtime import access as policy_access
+        from robofrontier.engines.claude.runner import PersistentSession
+        from robofrontier.runtime.layout import manifest_record
         with tempfile.TemporaryDirectory() as tmp:
             repo, home, run = self.layout(tmp)
             (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))

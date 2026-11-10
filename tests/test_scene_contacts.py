@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 import unittest
 import mujoco
-from robofrontier.suite.evaluate import Monitor
+from robofrontier.tasks.evaluate import Monitor
 
 BOX_ON_TABLE = '''<mujoco><option timestep="0.002"/><worldbody>
 <geom name="table_top" type="plane" size="1 1 .1"/>

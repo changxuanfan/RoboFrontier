@@ -9,7 +9,7 @@ import threading
 import time
 import unittest
 
-from robofrontier.claude.engineering_batch import run_batch, status_batch, stop_batch
+from robofrontier.batch.engineering_batch import run_batch, status_batch, stop_batch
 
 
 class BatchTests(unittest.TestCase):
@@ -65,7 +65,7 @@ class BatchTests(unittest.TestCase):
     def test_only_a_world_that_died_is_offered_a_continuation(self):
         # A host stop at its own wall limit or on STOP is final, even when its seal is missing.
         from unittest.mock import patch
-        from robofrontier.claude import engineering_batch
+        from robofrontier.batch import engineering_batch
         asked = []
         def fake_continue(run, reason):
             asked.append(reason); return False, 'not eligible in this test'
@@ -126,11 +126,11 @@ class BatchTests(unittest.TestCase):
 
     def test_cli_accepts_omitted_cost_caps_and_wall_limit(self):
         from unittest.mock import patch
-        from scripts.claude_benchmark import main
+        from robofrontier.batch.claude_benchmark import main
         argv = ['claude_benchmark', 'run-engineering', str(self.root), '--parallel', '2',
                 '--confirm-engineering-spend']
-        with patch.object(sys, 'argv', argv), patch('scripts.claude_benchmark.load_env'), \
-             patch('robofrontier.claude.engineering_batch.run_batch', return_value={}) as launch, \
+        with patch.object(sys, 'argv', argv), patch('robofrontier.batch.claude_benchmark.load_env'), \
+             patch('robofrontier.batch.engineering_batch.run_batch', return_value={}) as launch, \
              patch('builtins.print'):
             main()
         options = launch.call_args.kwargs
@@ -153,8 +153,8 @@ class BatchTests(unittest.TestCase):
         ctx = multiprocessing.get_context('fork')
         entered = ctx.Event()
         def child():
-            from scripts.claude_benchmark import main
-            import robofrontier.claude.engineering_batch as batch_module
+            from robofrontier.batch.claude_benchmark import main
+            import robofrontier.batch.engineering_batch as batch_module
             original = batch_module.run_batch
             def runner(run, *args, **kwargs):
                 assert kwargs['startup_timeout_s'] == 321
@@ -252,7 +252,7 @@ class BatchTests(unittest.TestCase):
 
     def _assert_supervisor_loss(self, *, publish_starting):
         from unittest.mock import patch
-        from robofrontier.run_setup import write_json
+        from robofrontier.runtime.setup import write_json
         ctx = multiprocessing.get_context('fork')
         entered = ctx.Event()
         publication = ctx.Event()
@@ -271,7 +271,7 @@ class BatchTests(unittest.TestCase):
             if starting:
                 publication.set()
         def supervise():
-            with patch('robofrontier.claude.engineering_batch.write_json', publish):
+            with patch('robofrontier.batch.engineering_batch.write_json', publish):
                 self.run_case(runner, 1)
         process = ctx.Process(target=supervise)
         process.start()

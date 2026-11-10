@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from robofrontier import container_runtime as runtime
+from robofrontier.batch import container as runtime
 from robofrontier.configuration import load_configuration
 
 

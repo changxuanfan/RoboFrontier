@@ -1,13 +1,13 @@
 import unittest
-from scripts.run_relay_live_oracle import total_stop_requested
+from robofrontier.oracle.run_relay_live_oracle import total_stop_requested
 
 
 class RelayOwnerStopTests(unittest.TestCase):
     def test_terminal_stop_and_commission_boundary_never_enter_recovery(self):
         from types import SimpleNamespace
         from unittest.mock import Mock
-        from scripts.run_relay_live_oracle import attempt_with_recovery, CommissionComplete
-        from robofrontier.suite.oracle import ReferenceStopped
+        from robofrontier.oracle.run_relay_live_oracle import attempt_with_recovery, CommissionComplete
+        from robofrontier.oracle.trial import ReferenceStopped
         trial=SimpleNamespace(monitor=SimpleNamespace(violations=[]))
         for error in (ReferenceStopped('owner stop'),KeyboardInterrupt(),CommissionComplete()):
             with self.subTest(kind=type(error).__name__):
@@ -21,7 +21,7 @@ class RelayOwnerStopTests(unittest.TestCase):
     def test_ordinary_recoverable_fault_keeps_native_repair_but_violation_does_not(self):
         from types import SimpleNamespace
         from unittest.mock import Mock
-        from scripts.run_relay_live_oracle import attempt_with_recovery
+        from robofrontier.oracle.run_relay_live_oracle import attempt_with_recovery
         trial=SimpleNamespace(monitor=SimpleNamespace(violations=[]))
         error=RuntimeError('grasp needs forward repair')
         operation=Mock(side_effect=error)

@@ -18,12 +18,12 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier import policy_access
-from robofrontier.codex.job_engine import build_manifest, engine
-from robofrontier.codex.launch import launch_config, profile
-from robofrontier.codex.tool_backend import prepare as prepare_tools
-from robofrontier.run_setup import write_json
-from robofrontier.slurm_auth import CredentialLease, BorrowedAccess
+from robofrontier.runtime import access as policy_access
+from robofrontier.engines.codex.job_engine import build_manifest, engine
+from robofrontier.engines.codex.launch import launch_config, profile
+from robofrontier.engines.codex.tool_backend import prepare as prepare_tools
+from robofrontier.runtime.setup import write_json
+from robofrontier.batch.slurm_auth import CredentialLease, BorrowedAccess
 
 ROOT = Path(__file__).resolve().parents[1]
 

@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
-const {borrowedAuth}=require('../robofrontier/codex/borrowed_auth');
+const {borrowedAuth}=require('../robofrontier/engines/codex/borrowed_auth');
 function fixture(t){
   const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-access-'));t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
   const file=path.join(folder,'current.json');

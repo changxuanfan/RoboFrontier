@@ -33,9 +33,9 @@ provider/environment/header configuration did not make every image/tool field
 valid at a vendor endpoint. The snapshot linked the
 [Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-advanced).
 
-The engineering audit referenced [launch configuration](../../robofrontier/codex/launch.py),
+The engineering audit referenced [launch configuration](../../robofrontier/engines/codex/launch.py),
 [profiles](../../configs/models.json), [catalog seed](../../configs/codex-model-template.json)
-and [preflight](../../robofrontier/codex/codex_preflight.js). Those files can evolve; consult
+and [preflight](../../robofrontier/engines/codex/codex_preflight.js). Those files can evolve; consult
 Git history for the version behind this dated record. The raw catalog seed is
 not the generated provider catalog: launch overrides must be inspected too.
 

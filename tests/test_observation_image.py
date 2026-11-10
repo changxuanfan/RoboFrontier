@@ -7,10 +7,10 @@ from types import SimpleNamespace
 import mujoco
 from PIL import Image
 
-from robofrontier.observation_image import DEFAULT_PROFILE, LEGACY_PROFILE, observation_profile
-from robofrontier.pipeline import Service
-from robofrontier.run_setup import prepare_run, verify_inputs, write_json
-from robofrontier.task_config import load_harness
+from robofrontier.physics.observation_image import DEFAULT_PROFILE, LEGACY_PROFILE, observation_profile
+from robofrontier.runtime.pipeline import Service
+from robofrontier.runtime.setup import prepare_run, verify_inputs, write_json
+from robofrontier.tasks.config import load_harness
 
 
 class ObservationImageTests(unittest.TestCase):
@@ -51,7 +51,7 @@ class ObservationImageTests(unittest.TestCase):
                     image.load();self.assertEqual(image.size,size);self.assertEqual(image.format,fmt)
 
     def test_dial_calibration_copy_keeps_frozen_original(self):
-        from robofrontier.task_families import prepare
+        from robofrontier.tasks.families import prepare
         with tempfile.TemporaryDirectory() as tmp:
             run=prepare('dial-best5-n04-d1',Path(tmp)/'dial')
             public=json.loads((run/'public/inputs/task.json').read_text())

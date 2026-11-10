@@ -6,10 +6,10 @@ import unittest
 from unittest.mock import patch
 
 from test_claude_session_host import make_run, PROFILE
-from robofrontier.claude.session_host import ClaudeSessionHost
-from robofrontier.claude.runner import summarize
-from robofrontier.claude.budget import BudgetLedger
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.engines.claude.session_host import ClaudeSessionHost
+from robofrontier.engines.claude.runner import summarize
+from robofrontier.engines.claude.budget import BudgetLedger
+from robofrontier.runtime.store import RuntimeStore
 
 
 class CapacityRecoveryTests(unittest.TestCase):
@@ -45,7 +45,7 @@ class CapacityRecoveryTests(unittest.TestCase):
         self.fail_turn()
         self.assertTrue(self.host.recover_capacity(self.store, now=0))
         self.assertEqual(len(self.calls), 1)
-        from robofrontier.claude.recovery import capacity_delay
+        from robofrontier.engines.claude.recovery import capacity_delay
         delay = capacity_delay(0, self.host.session_id)
         self.assertTrue(10 <= delay < 15)
         self.assertTrue(self.host.recover_capacity(self.store, now=delay-.01))
@@ -121,9 +121,9 @@ class CapacityRecoveryTests(unittest.TestCase):
 
     def test_missing_native_history_or_other_terminal_reason_never_retries(self):
         self.fail_turn()
-        with patch('robofrontier.claude.recovery.transcript_rows', return_value=[]):
+        with patch('robofrontier.engines.claude.recovery.transcript_rows', return_value=[]):
             self.assertFalse(self.host.recover_capacity(self.store, now=0))
-        with patch('robofrontier.claude.recovery.transcript_rows', return_value=[{'uuid':'foreign','sessionId':'other'}]):
+        with patch('robofrontier.engines.claude.recovery.transcript_rows', return_value=[{'uuid':'foreign','sessionId':'other'}]):
             self.assertFalse(self.host.recover_capacity(self.store, now=0))
         original=self.runner
         def budget_error(*args, **kw):
@@ -172,7 +172,7 @@ class ModelLossTests(unittest.TestCase):
         self.assertEqual(self.store.get('model_restarts'), 1)
 
     def test_the_run_allowance_is_shared_and_never_exceeded(self):
-        from robofrontier.policy_bootstrap import MAX_MODEL_RESTARTS
+        from robofrontier.runtime.bootstrap import MAX_MODEL_RESTARTS
         for _ in range(MAX_MODEL_RESTARTS):
             self.assertIsNotNone(self.store.claim_model_restart('B', 'codex', MAX_MODEL_RESTARTS))
         self.host.send('task'); self.assertEqual(self.host.wait(3)['status'], 'error')

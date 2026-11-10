@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from robofrontier.suite.oracle_process_log import OracleProcessLog
+from robofrontier.oracle.process_log import OracleProcessLog
 
 class OracleProcessLogTests(unittest.TestCase):
     def test_acceptance_and_mutated_handover_history_survive_pose_jitter(self):

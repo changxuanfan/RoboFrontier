@@ -6,8 +6,8 @@ import unittest
 import mujoco
 import numpy as np
 
-from robofrontier.suite.v2 import ROOT,directory,public_task
-from robofrontier.workstation import Workstation
+from robofrontier.tasks.v2 import ROOT,directory,public_task
+from robofrontier.physics.workstation import Workstation
 
 
 class WorkstationReframeTests(unittest.TestCase):

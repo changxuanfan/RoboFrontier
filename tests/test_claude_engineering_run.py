@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.claude.engineering_run import run_engineering
+from robofrontier.engines.claude.run import run_engineering
 
 
 class Store:
@@ -38,7 +38,7 @@ class EngineeringRunTests(unittest.TestCase):
         (self.run / 'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'centralized'}))
         (self.run / 'private/state/connections/Meta.json').write_text('{}')
         self.env = {'FAKE_KEY': 'secret', 'PATH': '/bin'}
-        self.verify = patch('robofrontier.claude.engineering_run.verify_inputs', return_value=[])
+        self.verify = patch('robofrontier.engines.claude.run.verify_inputs', return_value=[])
         self.verify.start()
 
     def tearDown(self): self.verify.stop(); self.tmp.cleanup()
@@ -81,7 +81,7 @@ class EngineeringRunTests(unittest.TestCase):
             def run(self):
                 assert self.owner_alive()
                 return {'reason': 'world_ended', 'seal': {'sealed': True}}
-        with patch('robofrontier.claude.engineering_run.CentralizedSupervisor', Supervisor):
+        with patch('robofrontier.engines.claude.run.CentralizedSupervisor', Supervisor):
             result = run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
                                      policy_factory=Attached, owner_factory=lambda *a, **k: Owner(None))
         self.assertEqual(result['status'], 'needs_review')
@@ -144,7 +144,7 @@ class EngineeringRunTests(unittest.TestCase):
         class Supervisor:
             def __init__(self,*a,**k): pass
             def run(self): return {'reason':'wall_limit','seal':{'sealed':True,'unresolved_action_ids':[]}}
-        with patch('robofrontier.claude.engineering_run.CentralizedSupervisor',Supervisor):
+        with patch('robofrontier.engines.claude.run.CentralizedSupervisor',Supervisor):
             result=run_engineering(self.run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                    adaptive_policy_factory=adaptive,owner_factory=lambda *a,**k: ExitingOwner(None))
         self.assertTrue(result['seal']['sealed'])
@@ -164,7 +164,7 @@ class EngineeringRunTests(unittest.TestCase):
         class Supervisor:
             def __init__(self,*a,**k): pass
             def run(self): return {'reason':'world_ended','seal':{'sealed':True,'video':{'readable':False}}}
-        with patch('robofrontier.claude.engineering_run.CentralizedSupervisor', Supervisor):
+        with patch('robofrontier.engines.claude.run.CentralizedSupervisor', Supervisor):
             result=run_engineering(self.run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                    policy_factory=Attached,owner_factory=lambda *a,**k: ExitingOwner(None))
         self.assertTrue(result['video_required'])
@@ -189,7 +189,7 @@ class EngineeringRunTests(unittest.TestCase):
                         seal={'sealed':True}
                         if unresolved is not None: seal['unresolved_action_ids']=unresolved
                         return {'reason':'world_ended','seal':seal,'finish_turns_drained':True}
-                with patch('robofrontier.claude.engineering_run.CentralizedSupervisor', Supervisor):
+                with patch('robofrontier.engines.claude.run.CentralizedSupervisor', Supervisor):
                     result=run_engineering(run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                            policy_factory=Attached,owner_factory=lambda *a,**k: ExitingOwner(None))
                 self.assertEqual(result['status'], expected)
@@ -210,7 +210,7 @@ class EngineeringRunTests(unittest.TestCase):
                     def __init__(self,*a,**k): pass
                     def run(self): return {'reason':'world_ended','seal':{'sealed':True,'unresolved_action_ids':[]},
                                           'finish_turns_drained':True}
-                with patch('robofrontier.claude.engineering_run.CentralizedSupervisor',Supervisor):
+                with patch('robofrontier.engines.claude.run.CentralizedSupervisor',Supervisor):
                     result=run_engineering(run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                            policy_factory=Attached,owner_factory=lambda *a,**k: ExitingOwner(None))
                 self.assertTrue(result['evaluation_required'])

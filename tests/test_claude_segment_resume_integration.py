@@ -22,16 +22,16 @@ import unittest
 
 from test_claude_adaptive_integration import StubModel
 from test_run_segments_integration import wait_until
-from robofrontier.run_layout import path as run_path
-from robofrontier.run_segments import try_continue
-from robofrontier.runtime_store import RuntimeStore
-from robofrontier.scene_task import camera_names
-from scripts.claude_benchmark import prepare_draft
+from robofrontier.runtime.layout import path as run_path
+from robofrontier.runtime.segments import try_continue
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.tasks.scene import camera_names
+from robofrontier.batch.claude_benchmark import prepare_draft
 
 ROOT = Path(__file__).resolve().parents[1]
 CASE = 'mosaic-a04-6x12-d1'
 RESUME = 'The host stopped unexpectedly'
-CHILD = ('import json,os,sys;from robofrontier.claude.engineering_run import run_engineering;'
+CHILD = ('import json,os,sys;from robofrontier.engines.claude.run import run_engineering;'
          "env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'FAKE_KEY':'synthetic'};"
          'print(json.dumps(run_engineering(sys.argv[1],env,wall_limit_s=600,startup_timeout_s=90,poll_s=.1)))')
 

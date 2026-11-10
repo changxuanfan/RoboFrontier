@@ -9,10 +9,10 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier import run_segments
-from robofrontier.run_layout import path as run_path
-from robofrontier.run_segments import MIN_REMAINING_S, deadline, process_summary, retry_eligibility
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.runtime import segments as run_segments
+from robofrontier.runtime.layout import path as run_path
+from robofrontier.runtime.segments import MIN_REMAINING_S, deadline, process_summary, retry_eligibility
+from robofrontier.runtime.store import RuntimeStore
 from test_engine_parity import prepared
 
 

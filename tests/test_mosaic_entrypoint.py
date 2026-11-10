@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 class EntrypointTests(unittest.TestCase):
     def test_selection_rejects_mismatched_catalog_task_or_scene_before_world_creation(self):
-        from scripts import run_mosaic_oracle as entry
+        from robofrontier.oracle import run_mosaic_oracle as entry
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary);scene=root/'scene';scene.mkdir()
             xml=b'<mujoco/>';(scene/'scene.xml').write_bytes(xml)
@@ -40,7 +40,7 @@ class EntrypointTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         env = dict(os.environ)
         env.pop('PYTHONPATH', None)
-        script = root / 'scripts/run_mosaic_oracle.py'
+        script = root / 'robofrontier/oracle/run_mosaic_oracle.py'
         with tempfile.TemporaryDirectory() as directory:
             result = subprocess.check_output(
                 [sys.executable, '-c',
@@ -49,7 +49,7 @@ class EntrypointTests(unittest.TestCase):
         self.assertEqual(Path(result.strip()), root)
 
     def test_physics_thread_pool_is_explicit_and_recorded(self):
-        from scripts.run_mosaic_oracle import configure_physics_threads
+        from robofrontier.oracle.run_mosaic_oracle import configure_physics_threads
         trial = SimpleNamespace(data=object())
         with patch('mujoco.mju_threadpool') as attach:
             self.assertEqual(configure_physics_threads(trial, 0)['engine_worker_threads'], 0)

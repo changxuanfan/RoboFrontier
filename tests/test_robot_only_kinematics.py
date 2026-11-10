@@ -1,8 +1,8 @@
 """Reduced-chain FK/Jacobian must agree with the original full scene."""
 import unittest
 import mujoco,numpy as np
-from robofrontier.sim import RobotIK
-from robofrontier.suite.scenes import catalog,case_directory
+from robofrontier.physics.kinematics import RobotIK
+from robofrontier.oracle.geometry import catalog,case_directory
 
 class RobotOnlyKinematicsTests(unittest.TestCase):
     def test_fk_and_jacobian_match_full_world_at_rotated_bases(self):

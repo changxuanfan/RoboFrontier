@@ -2,7 +2,7 @@ import unittest
 import os
 from pathlib import Path
 import numpy as np
-from robofrontier.suite.transport_motion_edit import stationary_oscillation,rattle_in_quiet,raw_motion,Settings,TransportEdit
+from robofrontier.media.edit_transport import stationary_oscillation,rattle_in_quiet,raw_motion,Settings,TransportEdit
 
 DATA_ROOT=Path(os.environ.get('TRANSPORT_DATA_ROOT',Path(__file__).resolve().parents[1]))
 BATCH=DATA_ROOT/'runs/oracle/transport-continuation-20261026'
@@ -50,7 +50,7 @@ class SourceRattleTests(unittest.TestCase):
 class RecordedSlowRockingTests(unittest.TestCase):
     def test_slow_visible_h3_roll_needs_long_context_not_higher_amplitude_threshold(self):
         from pathlib import Path
-        from robofrontier.suite.transport_motion_signals import quaternion_path
+        from robofrontier.media.transport_motion_signals import quaternion_path
         path=BATCH/'engineering/transport-pre-gpt-20261027/h3-rattle-regression.npz'
         if not path.exists():self.skipTest('Private source regression sample is not materialized')
         with np.load(path,allow_pickle=False)as z:q=z['qpos']

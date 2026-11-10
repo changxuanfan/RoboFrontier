@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import mujoco
 
-from robofrontier.suite.relay_user_goal_policy import eligible_goal_cargo,final_support
+from robofrontier.oracle.relay_user_goal_policy import eligible_goal_cargo,final_support
 
 
 class UserGoalPolicyTests(unittest.TestCase):

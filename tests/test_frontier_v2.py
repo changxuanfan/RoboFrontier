@@ -11,10 +11,10 @@ from unittest.mock import patch
 import mujoco
 import numpy as np
 
-from robofrontier.robot_control import PandaArm, matrix_quat, quat_matrix
-from robofrontier.suite import v2
-from robofrontier.suite.scenes import catalog, case_directory
-from robofrontier.workstation import Workstation
+from robofrontier.physics.robot_control import PandaArm, matrix_quat, quat_matrix
+from robofrontier.tasks import v2
+from robofrontier.oracle.geometry import catalog, case_directory
+from robofrontier.physics.workstation import Workstation
 
 
 def load(case_id,revision=None):
@@ -162,9 +162,9 @@ class FrontierV2Tests(unittest.TestCase):
         self.assertAlmostEqual(PandaArm(standard,sd,'A').grip_max,.08)
 
     def test_reported_width_capability_follows_installed_hardware(self):
-        from robofrontier.pipeline import World
-        from robofrontier.observation_image import observation_profile
-        from robofrontier.run_setup import load_harness
+        from robofrontier.runtime.pipeline import World
+        from robofrontier.physics.observation_image import observation_profile
+        from robofrontier.runtime.setup import load_harness
         from types import SimpleNamespace
         for case_id,limits in [('transport-a04-d1',[0,.08]),('relay-a08-d1',[0,.08])]:
             _,m,d=load(case_id)
@@ -435,7 +435,7 @@ class FrontierV2Tests(unittest.TestCase):
                         np.testing.assert_allclose(quat_matrix(target['quaternion_wxyz']),rotation@quat_matrix(pose['quaternion_wxyz']),atol=1e-10)
 
     def test_legacy_scene_checksums_still_match(self):
-        from robofrontier.suite.tasks import make_task
+        from robofrontier.tasks.public import make_task
         for case in catalog()['cases']:
             folder=case_directory(case);task=make_task(folder)
             self.assertEqual(hashlib.sha256((folder/'scene.xml').read_bytes()).hexdigest(),task['scene_sha256'])

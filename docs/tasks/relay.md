@@ -65,10 +65,10 @@ Models may recover through ordinary robot actions. Reset,
 respawn, direct object-state writes, welds and history erasure are unavailable.
 See [shared START and scoring semantics](../protocol.md#direct-controller-startup-and-terminal-scoring-v2).
 
-`robofrontier/suite/relay_contract.py` defines the current
+`robofrontier/tasks/relay.py` defines the current
 `relay-timber-goal-70pct-v1` contract (and recognizes the earlier
-`relay-final-goal-50mm-v1`); `robofrontier/suite/relay_goal_fraction.py` measures
-the centreline fraction. `robofrontier/task_families.py` applies the
+`relay-final-goal-50mm-v1`); `robofrontier/tasks/relay_goal_fraction.py` measures
+the centreline fraction. `robofrontier/tasks/families.py` applies the
 new-run terminal overlay and freezes the corresponding public guidance. Do not
 publish the older clean-process vetoes as the current policy completion rule. Old
 recordings retain their original contract and native verdict.

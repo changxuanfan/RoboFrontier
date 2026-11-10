@@ -15,8 +15,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.claude.landlock_shell import abi
-from robofrontier.codex import tool_worker
+from robofrontier.engines.common.landlock import abi
+from robofrontier.engines.codex import tool_worker
 
 
 def fixture(base):
@@ -38,10 +38,10 @@ def fixture(base):
 
 
 def worker(run, request, version, *, output=None):
-    code = ('import sys;sys.path.insert(0,'+repr(str(Path(tool_worker.__file__).resolve().parents[2]))+');'
-            'from robofrontier.claude import landlock_shell as ll;'
+    code = ('import sys;sys.path.insert(0,'+repr(str(Path(tool_worker.__file__).resolve().parents[3]))+');'
+            'from robofrontier.engines.common import landlock as ll;'
             'assert ll.abi()>='+str(version)+';ll.abi=lambda:'+str(version)+';'
-            'from robofrontier.codex.tool_worker import main;main()')
+            'from robofrontier.engines.codex.tool_worker import main;main()')
     return subprocess.run([sys.executable, '-I', '-c', code, '--run-dir', str(run)],
                           input=json.dumps(request), text=True,
                           **({'capture_output': True} if output is None else {'stdout': output, 'stderr': subprocess.PIPE}),

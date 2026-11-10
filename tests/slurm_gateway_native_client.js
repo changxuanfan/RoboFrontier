@@ -1,8 +1,8 @@
 // Invoked only by the loopback native test with synthetic credentials.
 const assert=require('node:assert/strict'),fs=require('node:fs');
-const {GatewayRpc}=require('../robofrontier/codex/gateway_rpc');
-const {robotTool}=require('../robofrontier/codex/codex_policy_host');
-const fileTools=require('../robofrontier/codex/tool_broker');
+const {GatewayRpc}=require('../robofrontier/engines/codex/gateway_rpc');
+const {robotTool}=require('../robofrontier/engines/codex/codex_policy_host');
+const fileTools=require('../robofrontier/engines/codex/tool_broker');
 async function main(manifest){
   let toolCalls=0,completed=0;
   const clients=manifest.tasks.map(t=>{

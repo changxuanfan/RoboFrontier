@@ -15,7 +15,7 @@ import mujoco
 import numpy as np
 from PIL import Image
 
-from ..run_setup import write_json
+from ..runtime.setup import write_json
 
 
 def shift_metadata(value,delta):
@@ -35,8 +35,8 @@ def shift_metadata(value,delta):
 
 
 def build(case,replace_draft=False,render=True,transform=None):
-    from . import v2
-    from ..workstation import Workstation
+    from ..tasks import v2
+    from ..physics.workstation import Workstation
     source_case=deepcopy(case);source_case['scene_revision']=case['source_scene_revision']
     source=v2.directory(source_case);frozen=Workstation(source)
     env=json.loads((source/'environment.json').read_text())

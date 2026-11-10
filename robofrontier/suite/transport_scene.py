@@ -12,9 +12,9 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from . import v2
-from .scenes import box, prism_mesh
-from ..run_setup import write_json
+from ..tasks import v2
+from ..oracle.geometry import box, prism_mesh
+from ..runtime.setup import write_json
 
 BOARD_HALF = (.055*1.3, .16*1.3)
 CUE_SPAN = .060*1.4

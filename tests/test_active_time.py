@@ -7,10 +7,11 @@ import unittest
 from unittest.mock import patch
 
 from fake_pipeline import fake_capture
-from robofrontier import run_segments, task_families
-from robofrontier.policy_probe import BudgetGuard, protocol
-from robofrontier.run_setup import prepare_run
-from robofrontier.runtime_service import RuntimeService
+from robofrontier.runtime import segments as run_segments
+from robofrontier.tasks import families as task_families
+from robofrontier.runtime.clock import BudgetGuard, protocol
+from robofrontier.runtime.setup import prepare_run
+from robofrontier.runtime.service import RuntimeService
 from test_claude_supervisor import Dispatcher, Policy
 from test_policy_probe import BudgetWorld
 
@@ -119,7 +120,7 @@ class ActiveTimeTests(Fixture):
         guard = self.guard(persist_s=60.); self.s.policy_budget = guard
         self.ticks(guard, [0, .5]); self.assertIsNone(self.s.store.get('active_s'))
         path = self.s.store.path; self.s.close()
-        from robofrontier.runtime_store import RuntimeStore
+        from robofrontier.runtime.store import RuntimeStore
         store = RuntimeStore(path)
         try: self.assertEqual(store.get('active_s'), .5)
         finally: store.close()
@@ -132,7 +133,7 @@ class ActiveTimeTests(Fixture):
 
 class SupervisorActiveTimeTests(unittest.TestCase):
     def supervisor(self, policy, sleep, **kwargs):
-        from robofrontier.claude.supervisor import CentralizedSupervisor
+        from robofrontier.engines.claude.supervisor import CentralizedSupervisor
         self.now = 0
         def tick(seconds): self.now += seconds; sleep()
         policy.now = lambda: self.now
@@ -170,11 +171,11 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         task_families.validate_policy_task(old)
         with self.assertRaises(ValueError):
             task_families.validate_policy_task(dict(new, run_protocol=dict(new['run_protocol'], clock='START_wall_time')))
-        from robofrontier.suite.v2 import public_task
+        from robofrontier.tasks.v2 import public_task
         self.assertNotIn('clock', public_task(new)['run_protocol'])
 
     def store(self, run):
-        from robofrontier.runtime_store import RuntimeStore
+        from robofrontier.runtime.store import RuntimeStore
         store = RuntimeStore(run/'private/state/runtime.sqlite'); self.addCleanup(store.close)
         store.put('lifecycle', 'running'); return store
 

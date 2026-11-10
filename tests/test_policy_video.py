@@ -6,10 +6,10 @@ from pathlib import Path
 
 import numpy as np
 
-from robofrontier.motion_recording import MotionReader, MotionWriter
-from robofrontier.task_families import ROOT, RELEASE, resolve_case
-from robofrontier.workstation import Workstation
-from scripts import render_frontier_oracle as video
+from robofrontier.media.motion_recording import MotionReader, MotionWriter
+from robofrontier.tasks.families import ROOT, RELEASE, resolve_case
+from robofrontier.physics.workstation import Workstation
+from robofrontier.media import render_frontier_oracle as video
 
 
 class PolicyVideoTests(unittest.TestCase):
@@ -58,8 +58,8 @@ class PolicyVideoTests(unittest.TestCase):
             self.assertLess(cut['kept_source_frames'], cut['source_frames'])
 
     def test_a_dropped_video_frame_removes_the_states_it_stood_for(self):
-        from robofrontier.motion_cut import refine_with_video
-        from robofrontier.motion_timeline import sample_timeline
+        from robofrontier.media.motion_cut import refine_with_video
+        from robofrontier.media.motion_timeline import sample_timeline
         keep = np.ones(600, dtype=bool)
         selected = sample_timeline(keep, 30, 30, 30)
         video_keep = np.ones(len(selected), dtype=bool); video_keep[5:8] = False

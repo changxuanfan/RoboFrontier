@@ -12,10 +12,10 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from . import v2
-from .scenes import box, prism_mesh
-from ..robot_control import matrix_quat, quat_matrix
-from ..run_setup import write_json
+from ..tasks import v2
+from ..oracle.geometry import box, prism_mesh
+from ..physics.robot_control import matrix_quat, quat_matrix
+from ..runtime.setup import write_json
 
 HALF = .70
 PAINT = (.95, .93, .86, 1)
@@ -528,7 +528,7 @@ def build(case, replace_draft=False, render=True):
     folder = clone(case, replace_draft, render=False,
         transform=lambda root, env: revise(root, env, v2.directory(case), source_model))
     if case['level']==1 and case['scene_revision'] in (13,15):
-        from .relay_contract import write_task
+        from ..tasks.relay import write_task
         write_task(folder)
     result = validate(folder, source)
     saved = json.loads((folder/'validation.json').read_text())

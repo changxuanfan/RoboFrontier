@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier.suite.dial_feedback import DialFeedback
-from robofrontier.suite.evaluate import CountFeedback, Monitor, SupportQualification
+from robofrontier.tasks.dial import DialFeedback
+from robofrontier.tasks.evaluate import CountFeedback, Monitor, SupportQualification
 
 
 def held(symbols, step=60.):
@@ -18,7 +18,7 @@ class ContinuationTests(unittest.TestCase):
     def monitor(self, game, angles, record):
         stub = SimpleNamespace(w=SimpleNamespace(directory='run'), d=SimpleNamespace(qpos=np.array(angles), time=40.),
                                qids=list(range(len(angles))), game=game, carried_trials=0)
-        with patch('robofrontier.run_segments.current_restore', lambda run: ({'evaluator': record}, None)):
+        with patch('robofrontier.runtime.segments.current_restore', lambda run: ({'evaluator': record}, None)):
             Monitor.continue_dial_record(stub)
         return stub
 
@@ -48,7 +48,7 @@ class ContinuationTests(unittest.TestCase):
     def test_without_a_carried_record_the_evaluator_starts_empty(self):
         game = DialFeedback((1, 1, 1, 1))
         stub = SimpleNamespace(w=SimpleNamespace(directory='run'), game=game, carried_trials=0)
-        with patch('robofrontier.run_segments.current_restore', lambda run: None):
+        with patch('robofrontier.runtime.segments.current_restore', lambda run: None):
             Monitor.continue_dial_record(stub)
         self.assertEqual((game.queries, game.best, stub.carried_trials), (0, 0, 0))
 
@@ -88,13 +88,13 @@ class SampledContinuationTests(unittest.TestCase):
         mon.blue_qualification = [SupportQualification()]; mon.previous_red = set(); mon.unsupported_since = {}
         mon.holding_s = 0.; mon.minimum_clearance = np.full(1, math.inf); mon.violations = []; mon.carried_trials = 0
         mon.game = DialFeedback((1,)) if feedback else CountFeedback((1,))
-        with patch('robofrontier.run_segments.current_restore', lambda run: ({'evaluator': record}, None)):
+        with patch('robofrontier.runtime.segments.current_restore', lambda run: ({'evaluator': record}, None)):
             mon.continue_dial_record()
         return mon
 
     def play(self, mon, seconds, symbol=None):
         if symbol is not None: mon.d.qpos = np.radians([symbol*(60. if mon.task['mechanism'] else 90.)])
-        with patch('robofrontier.suite.dial_feedback.paint_display', lambda *args, **kwargs: None):
+        with patch('robofrontier.tasks.dial.paint_display', lambda *args, **kwargs: None):
             for _ in range(int(round(seconds/.02))):
                 mon.sample_dial(.02); mon.d.time += .02
         return mon.result_cache

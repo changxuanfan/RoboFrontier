@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.factory_video_frames import prune_frames
+from robofrontier.factory.blender.frames import prune_frames
 
 
 class FrameRetentionChecks(unittest.TestCase):

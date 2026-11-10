@@ -17,9 +17,9 @@ import tempfile
 import threading
 import unittest
 
-from robofrontier import policy_access
-from robofrontier.claude.runner import build_command, build_env, policy_settings, POLICY_TOOLS
-from robofrontier.run_layout import manifest_record
+from robofrontier.runtime import access as policy_access
+from robofrontier.engines.claude.runner import build_command, build_env, policy_settings, POLICY_TOOLS
+from robofrontier.runtime.layout import manifest_record
 
 
 def stub_model(steps, results, before=None):

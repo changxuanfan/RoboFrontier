@@ -17,11 +17,11 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from robofrontier.robot_control import PandaArm,matrix_quat,rotation_vector
-from robofrontier.run_setup import write_json
+from robofrontier.physics.robot_control import PandaArm,matrix_quat,rotation_vector
+from robofrontier.runtime.setup import write_json
 from robofrontier.suite.geometry_checks import owner_map
-from robofrontier.suite.mosaic_oracle_v2 import grasp_rotations
-from robofrontier.suite.v2 import ROOT
+from robofrontier.oracle.mosaic import grasp_rotations
+from robofrontier.tasks.v2 import ROOT
 
 OUT=ROOT/'runs/engineering/mosaic-r12-coverage-20261025'
 
@@ -294,7 +294,7 @@ if __name__=='__main__':
         if case['level']==3 and a.level is None:
             sibling=next(c for c in selected if c['level']==2)
             source=OUT/sibling['id']/'report.json'
-            from robofrontier.suite.v2 import physical_summary
+            from robofrontier.tasks.v2 import physical_summary
             ma=mujoco.MjModel.from_xml_path(str(ROOT/sibling['directory']/'scene.xml'))
             mb=mujoco.MjModel.from_xml_path(str(ROOT/case['directory']/'scene.xml'))
             ha=hashlib.sha256(json.dumps(physical_summary(ma),sort_keys=True,separators=(',',':')).encode()).hexdigest()

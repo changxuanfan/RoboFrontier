@@ -8,9 +8,9 @@ import unittest
 import mujoco
 import numpy as np
 
-from robofrontier.robot_control import PandaArm
-from robofrontier.suite import mosaic_parallel, placement_oracle
-from robofrontier.suite.mosaic_oracle_v2 import goal_endpoint_candidates, pickup_endpoint_candidates
+from robofrontier.physics.robot_control import PandaArm
+from robofrontier.oracle import mosaic_parallel, placement as placement_oracle
+from robofrontier.oracle.mosaic import goal_endpoint_candidates, pickup_endpoint_candidates
 
 
 class ParallelCoverageTests(unittest.TestCase):
@@ -59,8 +59,8 @@ class ParallelCoverageTests(unittest.TestCase):
 
     def test_nominal_failure_reuses_original_fallback(self):
         trial=SimpleNamespace(mosaic_planning_workers=4,task={'goals':[]},arms={})
-        with patch('robofrontier.suite.mosaic_parallel.nominal_goal_coverage',return_value=None), \
-             patch('robofrontier.suite.mosaic_oracle_v2.helpers.goal_coverage') as coverage:
+        with patch('robofrontier.oracle.mosaic_parallel.nominal_goal_coverage',return_value=None), \
+             patch('robofrontier.oracle.mosaic.helpers.goal_coverage') as coverage:
             self.assertEqual(goal_endpoint_candidates(trial),{})
             coverage.assert_not_called()
 

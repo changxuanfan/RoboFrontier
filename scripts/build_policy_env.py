@@ -27,7 +27,7 @@ import stat
 import subprocess
 import sys
 
-from robofrontier import policy_env
+from robofrontier.runtime import policy_env
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT/'configs/policy-env'

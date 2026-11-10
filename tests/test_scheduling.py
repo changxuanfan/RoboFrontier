@@ -1,9 +1,9 @@
 from pathlib import Path
 import tempfile
 import unittest
-from robofrontier.runtime_store import RuntimeStore
-from robofrontier.task_config import load_harness
-from robofrontier.scheduling import Scheduler, FakeSessionAdapter, dispatch_once
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.tasks.config import load_harness
+from robofrontier.runtime.scheduling import Scheduler, FakeSessionAdapter, dispatch_once
 
 class SchedulingTests(unittest.TestCase):
     def setUp(self):
@@ -199,7 +199,7 @@ class SchedulingTests(unittest.TestCase):
         self.assertEqual(adapter.sent[0]['actor'],'B')
         self.assertEqual(dispatch_once(self.s,adapter,'owner',101),[])
     def test_meta_dispatch_snapshot_does_not_need_business_notes(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         self.s.update_agent('A',note='private task planning text '*600)
         snapshot=execute(self.s,'snapshot',{},'owner',100)
         self.assertNotIn('note',snapshot['agents']['A'])

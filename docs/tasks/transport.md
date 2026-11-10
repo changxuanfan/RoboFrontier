@@ -81,7 +81,7 @@ The historical family builder and review packager,
 
 ## Source edits and Factory replay
 
-`robofrontier/suite/transport_motion_edit.py` consumes original states, actions,
+`robofrontier/media/edit_transport.py` consumes original states, actions,
 and process events; `transport_motion_signals.py` provides motion signals and
 optional visual checks. The removed `scripts/edit_transport_recordings.py`
 (2026-11-10) wrote `robofrontier.transport-source-edit.v1` edits without changing the original stream.

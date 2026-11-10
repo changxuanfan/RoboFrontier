@@ -9,9 +9,9 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
-from robofrontier.suite.relay_pipeline import simultaneous_carry_clear,carry_chunk,Frontier,packing_shift,solve,extra_prefix_plan,plan_transfer,route_progress,direct_terminal_plan
+from robofrontier.oracle.relay_pipeline import simultaneous_carry_clear,carry_chunk,Frontier,packing_shift,solve,extra_prefix_plan,plan_transfer,route_progress,direct_terminal_plan
 from tests.test_relay_descent_recovery import recorded_world
-from robofrontier.suite import relay_oracle_v2 as ref
+from robofrontier.oracle import relay_oracle_v2 as ref
 
 
 class RelayPipelineTests(unittest.TestCase):
@@ -35,13 +35,13 @@ class RelayPipelineTests(unittest.TestCase):
 
     def test_crossing_payloads_are_rejected_between_clear_endpoints(self):
         t=self.world();before=t.data.qpos.copy()
-        with patch('robofrontier.suite.relay_pipeline.ref.carry_clear',side_effect=self.screen):
+        with patch('robofrontier.oracle.relay_pipeline.ref.carry_clear',side_effect=self.screen):
             self.assertFalse(simultaneous_carry_clear(t,self.requests([0,-.8,.5])))
         np.testing.assert_array_equal(t.data.qpos,before)
 
     def test_spatially_separate_payloads_can_move_together(self):
         t=self.world()
-        with patch('robofrontier.suite.relay_pipeline.ref.carry_clear',side_effect=self.screen):
+        with patch('robofrontier.oracle.relay_pipeline.ref.carry_clear',side_effect=self.screen):
             self.assertTrue(simultaneous_carry_clear(t,self.requests([.4,.4,.5])))
 
     def test_same_robot_cannot_be_reserved_for_two_loads(self):
@@ -95,7 +95,7 @@ class RelayPipelineTests(unittest.TestCase):
         def plan(*args,**kwargs):order.append('plan');raise LookupError('Stop before further planning')
         with tempfile.TemporaryDirectory() as folder:
             t.directory=Path(folder)
-            with patch.object(t.monitor,'result',side_effect=lambda:result),patch('robofrontier.suite.relay_pipeline.ref.place',side_effect=lambda *a:order.append('place')),patch('robofrontier.suite.relay_pipeline.ref.release',side_effect=release),patch('robofrontier.suite.relay_pipeline.ref.handover_plan',side_effect=plan):
+            with patch.object(t.monitor,'result',side_effect=lambda:result),patch('robofrontier.oracle.relay_pipeline.ref.place',side_effect=lambda *a:order.append('place')),patch('robofrontier.oracle.relay_pipeline.ref.release',side_effect=release),patch('robofrontier.oracle.relay_pipeline.ref.handover_plan',side_effect=plan):
                 with self.assertRaises(LookupError):solve(t)
         self.assertEqual(order,['place','release','plan'])
 
@@ -108,7 +108,7 @@ class RelayPipelineTests(unittest.TestCase):
             order.append(name);raise LookupError('Stop at first enabled work')
         with tempfile.TemporaryDirectory() as folder:
             t.directory=Path(folder)
-            with patch.object(t.monitor,'result',return_value={'payloads':{}}),patch('robofrontier.suite.relay_pipeline.carry_chunk',return_value=None),patch('robofrontier.suite.relay_pipeline.ref.place',side_effect=lambda *a:record('place')),patch('robofrontier.suite.relay_pipeline.ref.handover_plan',side_effect=lambda *a,**k:record('plan')):
+            with patch.object(t.monitor,'result',return_value={'payloads':{}}),patch('robofrontier.oracle.relay_pipeline.carry_chunk',return_value=None),patch('robofrontier.oracle.relay_pipeline.ref.place',side_effect=lambda *a:record('place')),patch('robofrontier.oracle.relay_pipeline.ref.handover_plan',side_effect=lambda *a,**k:record('plan')):
                 with self.assertRaises(LookupError):solve(t)
         self.assertEqual(order,['place'])
 
@@ -121,7 +121,7 @@ class RelayPipelineTests(unittest.TestCase):
             order.append(name);raise LookupError('Stop before any physical action')
         with tempfile.TemporaryDirectory() as folder:
             t.directory=Path(folder)
-            with patch.object(t.monitor,'result',return_value={'payloads':{}}),patch('robofrontier.suite.relay_pipeline.ref.choose_team',side_effect=lambda *a,**k:first('receive')),patch('robofrontier.suite.relay_pipeline.ref.handover_plan',side_effect=lambda *a,**k:first('plan')):
+            with patch.object(t.monitor,'result',return_value={'payloads':{}}),patch('robofrontier.oracle.relay_pipeline.ref.choose_team',side_effect=lambda *a,**k:first('receive')),patch('robofrontier.oracle.relay_pipeline.ref.handover_plan',side_effect=lambda *a,**k:first('plan')):
                 with self.assertRaises(LookupError):solve(t)
         self.assertEqual(order,['receive'])
         step.assert_not_called()
@@ -133,7 +133,7 @@ class RelayPipelineTests(unittest.TestCase):
 
     def test_extra_anchor_is_private_and_preserves_actual_goal_and_state(self):
         t,f=self.upstream_holder();task=deepcopy(t.task);qpos=t.data.qpos.copy()
-        with patch('robofrontier.suite.relay_pipeline.ref.handover_plan',return_value=('finite','candidate')) as planner:
+        with patch('robofrontier.oracle.relay_pipeline.ref.handover_plan',return_value=('finite','candidate')) as planner:
             self.assertEqual(extra_prefix_plan(t,f,5.),('finite','candidate'))
         probe=planner.call_args.args[0]
         self.assertEqual(len(probe.task['route']),len(task['route'])+1)
@@ -143,7 +143,7 @@ class RelayPipelineTests(unittest.TestCase):
 
     def test_actual_upstream_custody_gets_a_useful_prefix_before_final_delivery(self):
         t,f=self.upstream_holder()
-        with patch('robofrontier.suite.relay_pipeline.ref.handover_plan',return_value=('finite','candidate')) as planner:
+        with patch('robofrontier.oracle.relay_pipeline.ref.handover_plan',return_value=('finite','candidate')) as planner:
             result,is_extra=plan_transfer(t,f,[f],False)
         self.assertTrue(is_extra);self.assertEqual(result,('finite','candidate'))
         self.assertEqual(planner.call_args.kwargs['lookahead_depth'],1)

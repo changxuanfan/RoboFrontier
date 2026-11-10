@@ -8,8 +8,8 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier.codex.job_engine import build_manifest
-from robofrontier.run_setup import write_json
+from robofrontier.engines.codex.job_engine import build_manifest
+from robofrontier.runtime.setup import write_json
 
 
 class JobManifestTests(unittest.TestCase):
@@ -73,9 +73,9 @@ class JobManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'frozen deny table'):
                 self.build()
 
-    @patch('robofrontier.codex.job_engine.require_pinned_cli', lambda env=None: None)
+    @patch('robofrontier.engines.codex.job_engine.require_pinned_cli', lambda env=None: None)
     def test_proxy_loss_terminates_only_the_owned_native_process_group(self):
-        from robofrontier.codex.job_engine import engine
+        from robofrontier.engines.codex.job_engine import engine
         self.private.mkdir(mode=0o700)
         native = subprocess.Popen
         def start(args, **options):
@@ -84,7 +84,7 @@ class JobManifestTests(unittest.TestCase):
             return native([sys.executable,'-c',code],**options)
         env={**os.environ,'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(self.private),
              'ROBOFRONTIER_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
-        with patch('robofrontier.codex.job_engine.subprocess.Popen',side_effect=start):
+        with patch('robofrontier.engines.codex.job_engine.subprocess.Popen',side_effect=start):
             with self.assertRaisesRegex(RuntimeError,'did not close cleanly'):
                 with engine(self.jobs,env=env,timeout_s=3) as (manifest,process):
                     (self.private/'EGRESS_ERROR').touch()
@@ -92,10 +92,10 @@ class JobManifestTests(unittest.TestCase):
                     while process.poll() is None and time.monotonic()<deadline:time.sleep(.05)
                     self.assertIsNotNone(process.poll())
 
-    @patch('robofrontier.codex.job_engine.require_pinned_cli', lambda env=None: None)
+    @patch('robofrontier.engines.codex.job_engine.require_pinned_cli', lambda env=None: None)
     def test_a_zombie_only_engine_group_does_not_abort_cleanup(self):
         # macOS answers killpg with EPERM once only zombies remain in the engine's group.
-        from robofrontier.codex import job_engine
+        from robofrontier.engines.codex import job_engine
         self.private.mkdir(mode=0o700)
         native = subprocess.Popen
         def start(args, **options):
@@ -106,9 +106,9 @@ class JobManifestTests(unittest.TestCase):
         env={**os.environ,'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(self.private),
              'ROBOFRONTIER_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
         exported = []
-        with patch('robofrontier.codex.job_engine.subprocess.Popen',side_effect=start), \
-                patch('robofrontier.codex.job_engine.os.killpg',side_effect=PermissionError(1,'Operation not permitted')) as killpg, \
-                patch('robofrontier.codex.job_engine.export_sessions',side_effect=lambda *a: exported.append(a)):
+        with patch('robofrontier.engines.codex.job_engine.subprocess.Popen',side_effect=start), \
+                patch('robofrontier.engines.codex.job_engine.os.killpg',side_effect=PermissionError(1,'Operation not permitted')) as killpg, \
+                patch('robofrontier.engines.codex.job_engine.export_sessions',side_effect=lambda *a: exported.append(a)):
             with job_engine.engine(self.jobs,env=env,timeout_s=3) as (manifest,process):
                 pass
         killpg.assert_called()

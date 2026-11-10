@@ -3,11 +3,11 @@ from unittest.mock import patch
 from pathlib import Path
 from types import SimpleNamespace
 import mujoco,numpy as np
-from robofrontier.suite.v2 import cases,directory
-from robofrontier.suite.evaluate import Monitor
-from robofrontier.suite.evaluate_v2 import placement_candidates
-from robofrontier.robot_control import PandaArm,matrix_quat
-from robofrontier.workstation import Workstation
+from robofrontier.tasks.v2 import cases,directory
+from robofrontier.tasks.evaluate import Monitor
+from robofrontier.tasks.evaluate_v2 import placement_candidates
+from robofrontier.physics.robot_control import PandaArm,matrix_quat
+from robofrontier.physics.workstation import Workstation
 
 class V2AcceptanceTests(unittest.TestCase):
  def setup_world(self,case_id):

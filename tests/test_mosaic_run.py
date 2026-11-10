@@ -20,7 +20,7 @@ class MosaicRunTests(unittest.TestCase):
         return payload
 
     def test_two_failures_resume_same_trial_without_closing_or_reparking(self):
-        from robofrontier.suite.mosaic_run import MosaicReview, run_reference
+        from robofrontier.oracle.mosaic_run import MosaicReview, run_reference
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);accepted={};trial.monitor.result=lambda:{'assignments':dict(accepted)}
             review=MosaicReview(trial,review_wall_s=1,publish=lambda:None)
@@ -37,7 +37,7 @@ class MosaicRunTests(unittest.TestCase):
             self.assertEqual(len(review.history),2);trial.close.assert_not_called()
 
     def test_productive_reviews_have_no_implicit_elapsed_or_round_limit(self):
-        from robofrontier.suite.mosaic_run import MosaicReview,run_reference
+        from robofrontier.oracle.mosaic_run import MosaicReview,run_reference
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);review=MosaicReview(trial,publish=lambda:None)
             self.assertIsNone(review.review_wall_s)
@@ -53,7 +53,7 @@ class MosaicRunTests(unittest.TestCase):
             trial.close.assert_not_called()
 
     def test_unknown_action_does_not_enter_recovery_or_replay(self):
-        from robofrontier.suite.mosaic_run import MosaicReview, run_reference
+        from robofrontier.oracle.mosaic_run import MosaicReview, run_reference
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);trial.arms['A'].job='original-id'
             review=MosaicReview(trial,publish=lambda:None)
@@ -62,7 +62,7 @@ class MosaicRunTests(unittest.TestCase):
             self.assertEqual(review.history,[]);trial.wait.assert_not_called()
 
     def test_known_idle_logic_error_keeps_the_same_owner_available_for_review(self):
-        from robofrontier.suite.mosaic_run import MosaicReview,run_reference
+        from robofrontier.oracle.mosaic_run import MosaicReview,run_reference
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);review=MosaicReview(trial,publish=lambda:None)
             self.request(review,'repair-logic',1)
@@ -73,7 +73,7 @@ class MosaicRunTests(unittest.TestCase):
             self.assertTrue(solver.call_args.kwargs['resume']);trial.close.assert_not_called()
 
     def test_violations_are_retained_and_never_resume(self):
-        from robofrontier.suite.mosaic_run import MosaicReview, run_reference
+        from robofrontier.oracle.mosaic_run import MosaicReview, run_reference
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);trial.monitor.violations.append({'kind':'collision'})
             review=MosaicReview(trial,publish=lambda:None)
@@ -81,7 +81,7 @@ class MosaicRunTests(unittest.TestCase):
             self.assertEqual(review.history,[]);self.assertTrue(trial.monitor.violations)
 
     def test_duplicate_request_returns_result_without_reexecuting(self):
-        from robofrontier.suite.mosaic_run import MosaicReview
+        from robofrontier.oracle.mosaic_run import MosaicReview
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);trial.execute=Mock(return_value={'A':{'status':'completed'}})
             review=MosaicReview(trial,publish=lambda:None);review.epoch=1
@@ -92,7 +92,7 @@ class MosaicRunTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'reused'):review.submit(changed)
 
     def test_wrong_world_or_stale_review_cannot_execute(self):
-        from robofrontier.suite.mosaic_run import MosaicReview
+        from robofrontier.oracle.mosaic_run import MosaicReview
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);trial.execute=Mock();review=MosaicReview(trial,publish=lambda:None);review.epoch=2
             payload=self.request(review,'old',1,'commands',batches=[{'A':['move',{}]}])
@@ -102,7 +102,7 @@ class MosaicRunTests(unittest.TestCase):
             trial.execute.assert_not_called()
 
     def test_failed_repair_stops_sequence_and_preserves_feedback(self):
-        from robofrontier.suite.mosaic_run import MosaicReview
+        from robofrontier.oracle.mosaic_run import MosaicReview
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);feedback={'A':{'status':'failed','call_id':'real-failure'}}
             trial.execute=Mock(return_value=feedback);review=MosaicReview(trial,publish=lambda:None);review.epoch=1
@@ -112,7 +112,7 @@ class MosaicRunTests(unittest.TestCase):
             self.assertEqual(trial.execute.call_count,1)
 
     def test_held_payload_cannot_be_silently_rematched(self):
-        from robofrontier.suite.mosaic_run import MosaicReview
+        from robofrontier.oracle.mosaic_run import MosaicReview
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);trial.held={'A':'cube'}
             review=MosaicReview(trial,publish=lambda:None);review.epoch=1
@@ -120,7 +120,7 @@ class MosaicRunTests(unittest.TestCase):
                 review.submit(self.request(review,'resume',1))
 
     def test_missing_hold_bookkeeping_does_not_release_a_force_held_gripper_for_rematching(self):
-        from robofrontier.suite.mosaic_run import MosaicReview
+        from robofrontier.oracle.mosaic_run import MosaicReview
         with tempfile.TemporaryDirectory() as directory:
             trial=self.trial(directory);trial.arms['A'].grasp_force=50.
             review=MosaicReview(trial,publish=lambda:None);review.epoch=1

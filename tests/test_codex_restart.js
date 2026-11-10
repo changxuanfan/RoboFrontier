@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {PolicyHost}=require('../robofrontier/codex/codex_policy_host');
+const {PolicyHost}=require('../robofrontier/engines/codex/codex_policy_host');
 
 test('a lost app-server is replaced and each working role resumes with the frozen notice',async()=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'rf-restart-'));

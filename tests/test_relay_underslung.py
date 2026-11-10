@@ -2,7 +2,7 @@
 import math,unittest
 import numpy as np
 from robofrontier.suite.relay_underslung import design, attachment_point, transverse_axis
-from scripts.verify_floating_dial_oracle import axis_rotation
+from robofrontier.oracle.verify_floating_dial_oracle import axis_rotation
 
 class UnderslungDesignTests(unittest.TestCase):
  def test_arm_specific_span_and_reduced_bending(self):
@@ -33,16 +33,16 @@ class UnderslungDesignTests(unittest.TestCase):
 class UnderslungBuiltSceneTests(unittest.TestCase):
  def scene(self,arms,level):
   import json,mujoco
-  from robofrontier.workstation import Workstation
-  from robofrontier.suite.v2 import cases,directory
+  from robofrontier.physics.workstation import Workstation
+  from robofrontier.tasks.v2 import cases,directory
   c=next(c for c in cases() if c['id']==f'relay-a{arms:02d}-d{level}')
   c=dict(c,scene_revision=16) # Manufactured geometry contract predates the r17 release clarification.
   self.assertEqual(c['scene_revision'],16);w=Workstation(directory(c));mujoco.mj_forward(w.model,w.data)
   return w,json.loads((w.path/'task.json').read_text())
  def test_all_six_are_contact_linked_and_preserve_robots_and_completion(self):
   import mujoco,json
-  from robofrontier.workstation import Workstation
-  from robofrontier.suite.v2 import cases,directory
+  from robofrontier.physics.workstation import Workstation
+  from robofrontier.tasks.v2 import cases,directory
   from robofrontier.suite.relay_underslung import linking_number
   for arms in [8,12,16]:
    for level in [2,3]:
@@ -59,7 +59,7 @@ class UnderslungBuiltSceneTests(unittest.TestCase):
       self.assertEqual(int(m.joint(i+'_weight_free').type[0]),mujoco.mjtJoint.mjJNT_FREE)
  def test_real_mujoco_hinge_axis_and_projection_match_the_manufactured_bearing(self):
   import mujoco
-  from robofrontier.robot_control import matrix_quat
+  from robofrontier.physics.robot_control import matrix_quat
   for arms in [8,12,16]:
    w,t=self.scene(arms,3);m,d=w.model,w.data;h=t['mechanism']['chord_m']/2;rise=t['mechanism']['bend_rise_m']
    for a in t['mechanism']['payload_assemblies']:
@@ -71,7 +71,7 @@ class UnderslungBuiltSceneTests(unittest.TestCase):
      housing=m.geom(ident+'_hinge_housing').id;np.testing.assert_allclose(d.geom_xmat[housing].reshape(3,3)[:,2],d.xaxis[joint.id],atol=1e-12)
  def test_current_grasp_geometry_follows_new_arc_and_refuses_outside_endpoints(self):
   from types import SimpleNamespace
-  from robofrontier.suite import relay_oracle_v2 as ref
+  from robofrontier.oracle import relay_oracle_v2 as ref
   w,t=self.scene(8,2);trial=SimpleNamespace(task=t,data=w.data);r=t['mechanism']['radius_m']
   self.assertAlmostEqual(ref.cross_x(t,0),r*(1-math.cos(math.radians(31.5))))
   with self.assertRaisesRegex(ValueError,'inside the timber'):ref.grasp_targets(trial,'payload_01',np.zeros(3),np.eye(3),.58)

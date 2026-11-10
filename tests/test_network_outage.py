@@ -4,10 +4,10 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier import network_outage
-from robofrontier.egress_pause import WorldPause
-from robofrontier.network_outage import OutageMonitor, monitor_for
-from robofrontier.policy_probe import BudgetGuard, protocol
+from robofrontier.runtime import outage as network_outage
+from robofrontier.runtime.egress_pause import WorldPause
+from robofrontier.runtime.outage import OutageMonitor, monitor_for
+from robofrontier.runtime.clock import BudgetGuard, protocol
 import test_active_time as active
 
 ACTIVE = active.ACTIVE

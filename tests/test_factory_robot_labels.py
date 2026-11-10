@@ -5,8 +5,8 @@ import mujoco
 import numpy as np
 
 from robofrontier.factory.labels import robot_label_moves, ROBOT_LABEL
-from robofrontier.task_families import ROOT, resolve_case
-from robofrontier.workstation import Workstation
+from robofrontier.tasks.families import ROOT, resolve_case
+from robofrontier.physics.workstation import Workstation
 
 
 class RobotLabelTests(unittest.TestCase):

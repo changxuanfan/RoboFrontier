@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier.task_families import ROOT,RELEASE,read
+from robofrontier.tasks.families import ROOT,RELEASE,read
 from robofrontier.factory.playback import StationTrack,FactoryTimeline,current_scene
 from robofrontier.factory.cameras import shots,camera_at
 from robofrontier.factory.bundle import resolved_release,read as read_bundle
@@ -84,7 +84,7 @@ class FactoryTimelineTests(unittest.TestCase):
 class ReleasedRecordingTests(unittest.TestCase):
     def test_a_recording_missing_from_this_host_is_named(self):
         import tempfile
-        from robofrontier.motion_recording import digest
+        from robofrontier.media.motion_recording import digest
         old='/Users/fanchangxuan/Repos/roomscript2/runs/oracle/relay-absent/relay-a08-d1/attempt-001/motion'
         with tempfile.TemporaryDirectory() as tmp:
             edit=Path(tmp)/'edit.json';edit.write_text('{}')

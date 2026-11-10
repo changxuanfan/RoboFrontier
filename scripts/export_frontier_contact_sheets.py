@@ -13,7 +13,7 @@ import mujoco
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from robofrontier.suite.scenes import ROOT, catalog, case_directory
+from robofrontier.oracle.geometry import ROOT, catalog, case_directory
 
 
 OUT = ROOT / 'docs/generated/frontier-suite/contact-sheets-20261024'

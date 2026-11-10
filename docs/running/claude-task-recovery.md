@@ -1,6 +1,6 @@
 # Recover one Claude engineering task
 
-`python -m robofrontier.claude.recover_task` continues one task of a Claude
+`python -m robofrontier.engines.claude.recover_task` continues one task of a Claude
 engineering batch whose host closed while its world was paused. It is the Claude
 counterpart of [Codex task recovery](codex-task-recovery.md). Its default mode
 only reports eligibility.
@@ -17,7 +17,7 @@ Run from any checkout, against the original one. `SOURCE` is the checkout the
 batch runs from, and `PYTHON` is its interpreter.
 
 ```sh
-python -m robofrontier.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" --python "$PYTHON"
+python -m robofrontier.engines.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" --python "$PYTHON"
 ```
 
 The task may recover only if every one of these holds:
@@ -39,7 +39,7 @@ The task may recover only if every one of these holds:
 table denies, for example `$RUN/private/engine/recovery-scratch`.
 
 ```sh
-python -m robofrontier.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" \
+python -m robofrontier.engines.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" \
   --python "$PYTHON" --scratch "$SCRATCH" --execute
 ```
 
@@ -92,7 +92,7 @@ given as `--python`, because the upgrade grants the policy read access to that
 environment.
 
 ```sh
-"$NEW/.venv/bin/python" -m robofrontier.claude.recover_task --run-dir "$RUN" \
+"$NEW/.venv/bin/python" -m robofrontier.engines.claude.recover_task --run-dir "$RUN" \
   --upgrade-from "$OLD" --source-root "$NEW" --python "$NEW/.venv/bin/python" \
   --scratch "$SCRATCH" --reason "Why the runtime changes" --execute
 ```

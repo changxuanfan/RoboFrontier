@@ -16,19 +16,19 @@ import tempfile
 import time
 import unittest
 
-from robofrontier.pipeline_client import client_call
-from robofrontier.run_layout import path as run_path
-from robofrontier.run_segments import motion_dirs, output_dir, owner_released, prepare_retry, retry_eligibility
-from robofrontier.run_setup import verify_inputs
-from robofrontier.runtime_store import RuntimeStore
-from robofrontier.scene_task import camera_names
+from robofrontier.runtime.pipeline_client import client_call
+from robofrontier.runtime.layout import path as run_path
+from robofrontier.runtime.segments import motion_dirs, output_dir, owner_released, prepare_retry, retry_eligibility
+from robofrontier.runtime.setup import verify_inputs
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.tasks.scene import camera_names
 from test_engine_parity import prepared
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def owner_command(run):
-    return [sys.executable, '-m', 'robofrontier.pipeline', '--run-dir', str(run), '--hidden']
+    return [sys.executable, '-m', 'robofrontier.runtime.pipeline', '--run-dir', str(run), '--hidden']
 
 
 def wait_until(check, timeout=120, message='condition'):

@@ -74,11 +74,11 @@ def main():
         print(ran.stdout,end='');print(ran.stderr,end='',file=sys.stderr)
         node_tests[str(source.relative_to(ROOT))]=ran.returncode==0
     js_syntax=[]
-    for source in sorted(p for folder in ('robofrontier/codex','scripts','tests') for p in (ROOT/folder).iterdir() if p.suffix in ('.js','.cjs')):
+    for source in sorted(p for folder in ('robofrontier','scripts','tests') for p in (ROOT/folder).rglob('*') if p.suffix in ('.js','.cjs')):
         parsed=subprocess.run(['node','--check',str(source)],capture_output=True,text=True,cwd=ROOT)
         js_syntax.append({'file':str(source.relative_to(ROOT)),'passed':parsed.returncode==0,'error':parsed.stderr or None})
     compilation=[]
-    for source in sorted(p for folder in ('robofrontier','robofrontier/codex','scripts','tests') for p in (ROOT/folder).glob('*.py')):
+    for source in sorted(p for folder in ('robofrontier','scripts','tests') for p in (ROOT/folder).rglob('*.py')):
         py_compile.compile(str(source),doraise=True);compilation.append(str(source.relative_to(ROOT)))
     # Parse the inline UI scripts without executing a browser or opening a port.
     ui_script="const fs=require('fs'),vm=require('vm');for(const f of process.argv.slice(1)){const s=fs.readFileSync(f,'utf8');for(const m of s.matchAll(/<script>([\\s\\S]*?)<\\/script>/g))new vm.Script(m[1]);}"
@@ -111,7 +111,7 @@ def main():
             'documentation_links':{'passed':not broken_links,'broken':broken_links},
             'skill_format':{'checked':validator is not None,'passed':validator.returncode==0 if validator else None,'interpreter':args.skill_python if validator else None},
             'compiled_modules':compilation,
-            'source_sha256':{str(f.relative_to(ROOT)):hashlib.sha256(f.read_bytes()).hexdigest() for f in (ROOT/'robofrontier').glob('*.py')},
+            'source_sha256':{str(f.relative_to(ROOT)):hashlib.sha256(f.read_bytes()).hexdigest() for f in (ROOT/'robofrontier').rglob('*.py')},
             'not_verified':['new live multi-agent MuJoCo policy trial','new live Codex adapter roundtrip','coordination/parallelism improvement']}
     if args.report:
         args.report.parent.mkdir(parents=True,exist_ok=True)

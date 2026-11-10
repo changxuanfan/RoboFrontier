@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 
-from robofrontier.suite.dial_pose_timeline import EditedMotion, PRESENTATION
+from robofrontier.media.dial_pose_timeline import EditedMotion, PRESENTATION
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,7 +22,7 @@ class DialEntrypointTests(unittest.TestCase):
     def test_old_three_digit_case_is_rejected_before_creating_a_world(self):
         with tempfile.TemporaryDirectory() as td:
             output=Path(td)/'unused'
-            result=subprocess.run([sys.executable,'-m','scripts.run_blind_dial_oracle',
+            result=subprocess.run([sys.executable,'-m','robofrontier.oracle.run_blind_dial_oracle',
                 '--case','dial-n04-d1','--output',str(output),'--codebook',str(Path(td)/'not-read.json')],
                 cwd=ROOT,capture_output=True,text=True)
             self.assertEqual(result.returncode,2)

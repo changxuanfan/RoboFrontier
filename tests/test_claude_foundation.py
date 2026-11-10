@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.claude_benchmark import doctor, plan, profile
-from robofrontier.claude.robot_mcp import RobotBridge, handle
+from robofrontier.batch.claude_benchmark import doctor, plan, profile
+from robofrontier.engines.claude.robot_mcp import RobotBridge, handle
 
 
 class ClaudeFoundationTests(unittest.TestCase):
@@ -18,11 +18,11 @@ class ClaudeFoundationTests(unittest.TestCase):
             catalog.write_text(json.dumps({'schema':'robofrontier.claude-models.v1','profiles':{
                 'fake':{'provider':'fake','model':'model','env_key':'FAKE_KEY',
                         'base_url_env':'FAKE_BASE','effort':'high'}}}))
-            from robofrontier.task_families import RELEASE
+            from robofrontier.tasks.families import RELEASE
             release=root/RELEASE; release.parent.mkdir(parents=True)
             release.write_text(json.dumps({'families':{}}))
             with patch.dict('os.environ',{'FAKE_KEY':'environment-secret'},clear=True), \
-                 patch('scripts.claude_benchmark.shutil.which',return_value=None):
+                 patch('robofrontier.batch.claude_benchmark.shutil.which',return_value=None):
                 result=doctor(['fake'],root=root,catalog=catalog)
                 self.assertTrue(result['profiles']['fake']['credential_set'])
                 self.assertTrue(result['profiles']['fake']['base_url_configured'])
@@ -160,8 +160,8 @@ class ClaudeFoundationTests(unittest.TestCase):
     def test_every_policy_runtime_op_is_exposed_and_admin_ops_are_not(self):
         # Codex forwards any op to the runtime; Claude's bridge must allow the same policy set.
         import re
-        from robofrontier.claude.robot_mcp import POLICY_OPS
-        source = (Path(__file__).parents[1] / 'robofrontier/runtime_service.py').read_text()
+        from robofrontier.engines.claude.robot_mcp import POLICY_OPS
+        source = (Path(__file__).parents[1] / 'robofrontier/runtime/service.py').read_text()
         ops = set(re.findall(r"op == '([a-z_]+)'", source))
         ops |= {o for group in re.findall(r"op in \(([^)]*)\)", source) for o in re.findall(r"'([a-z_]+)'", group)}
         admin = {'bind', 'start', 'resume', 'state', 'shutdown'}

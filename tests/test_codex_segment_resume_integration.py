@@ -20,12 +20,12 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier.run_layout import path as run_path
-from robofrontier.run_segments import try_continue
-from robofrontier.runtime_store import RuntimeStore
-from robofrontier.scene_task import camera_names
-from robofrontier.task_families import ROOT, prepare
-from robofrontier.codex.launch import hidden_skills, launch_config
+from robofrontier.runtime.layout import path as run_path
+from robofrontier.runtime.segments import try_continue
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.tasks.scene import camera_names
+from robofrontier.tasks.families import ROOT, prepare
+from robofrontier.engines.codex.launch import hidden_skills, launch_config
 from test_codex_policy_permissions import STUB
 from test_run_segments_integration import wait_until
 
@@ -95,7 +95,7 @@ class CodexSegmentResumeTests(unittest.TestCase):
             server = ThreadingHTTPServer(('127.0.0.1', 0), controller_stub(requests, steps))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             stub = dict(STUB, base_url='http://127.0.0.1:%d' % server.server_port)
-            with patch('robofrontier.codex.launch.hidden_skills', lambda: hidden_skills(home=home, repo=t)):
+            with patch('robofrontier.engines.codex.launch.hidden_skills', lambda: hidden_skills(home=home, repo=t)):
                 launch = launch_config(stub, run / 'private/inputs', run_dir=run)
             (run / 'private/inputs/codex.json').write_text(json.dumps(launch))
             import hashlib
@@ -106,7 +106,7 @@ class CodexSegmentResumeTests(unittest.TestCase):
             env = dict(os.environ, CODEX_HOME=str(t / 'codex-home'), HOME=str(home),
                        ROBOFRONTIER_OFFLINE_STUB_TOKEN='local-stub-no-credential')
             log = (t / 'host.log').open('a'); self.addCleanup(log.close)
-            command = ['node', str(ROOT / 'robofrontier/codex/codex_policy_host.js'), str(run), str(ROOT), sys.executable]
+            command = ['node', str(ROOT / 'robofrontier/engines/codex/codex_policy_host.js'), str(run), str(ROOT), sys.executable]
             try:
                 host = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=log)
                 wait_until(lambda: any(e.get('event') == 'robot_tool_started' and e.get('op') == 'move' for e in host_events(run)),
@@ -116,7 +116,7 @@ class CodexSegmentResumeTests(unittest.TestCase):
                     host.send_signal(signal.SIGKILL); host.wait()
                 else:
                     # The host notices, seals the run with its world already gone and exits.
-                    owners = subprocess.run(['pgrep', '-f', 'robofrontier.pipeline --run-dir ' + str(run)],
+                    owners = subprocess.run(['pgrep', '-f', 'robofrontier.runtime.pipeline --run-dir ' + str(run)],
                                             capture_output=True, text=True).stdout.split()
                     for pid in owners: os.kill(int(pid), signal.SIGKILL)
                     self.assertEqual(host.wait(timeout=120), 0, (t / 'host.log').read_text()[-2000:])
@@ -151,7 +151,7 @@ class CodexSegmentResumeTests(unittest.TestCase):
                 self.assertEqual(store.actions()[interrupted[0]]['status'], 'failed')
                 # STOP sealed the run: a sealed run never continues again.
                 self.assertTrue(any(e['kind'] == 'RUN_SEALED' for e in store.events(200)))
-                from robofrontier.run_segments import retry_eligibility
+                from robofrontier.runtime.segments import retry_eligibility
                 self.assertFalse(retry_eligibility(run, store)[0])
             finally: store.close()
 

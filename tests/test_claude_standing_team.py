@@ -9,11 +9,11 @@ import uuid
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.claude.budget import BudgetLedger
-from robofrontier.claude.standing_team import StandingTeamPolicyHost
-from robofrontier.run_setup import verify_inputs
-from robofrontier.runtime_service import RuntimeService
-from scripts.claude_benchmark import prepare_draft
+from robofrontier.engines.claude.budget import BudgetLedger
+from robofrontier.engines.claude.standing_team import StandingTeamPolicyHost
+from robofrontier.runtime.setup import verify_inputs
+from robofrontier.runtime.service import RuntimeService
+from robofrontier.batch.claude_benchmark import prepare_draft
 
 
 class RoleHost:
@@ -81,7 +81,7 @@ def standing_fixture(topology, *, factory=RoleHost, endpoint=None, env=None):
         policy = None
         try:
             policy = StandingTeamPolicyHost(run, profile, env or {}, ledger, host_factory=factory, client=call)
-            with patch('robofrontier.pipeline_client.client_call', call):
+            with patch('robofrontier.runtime.pipeline_client.client_call', call):
                 yield policy, service, call
         finally:
             if policy is not None:
@@ -202,7 +202,7 @@ class StandingTeamTests(unittest.TestCase):
             self.assertTrue(any(r['status'] == 'uncertain' for r in service.store.wake_rows()))
 
     def test_a_wake_refused_by_an_exhausted_task_budget_is_not_sent_and_pauses_for_the_budget(self):
-        from robofrontier.claude.budget import BudgetExhausted
+        from robofrontier.engines.claude.budget import BudgetExhausted
         with standing_fixture('peer') as (policy, service, call):
             policy.bind_and_bootstrap()
             for h in policy.hosts.values(): h.state = 'idle'

@@ -50,7 +50,7 @@ all swept robot volumes. Mesh sharing, repeated materials/textures and static
 batching are retained. A build uses assets inside its own output; source task
 assets remain unchanged.
 
-`scripts/render_factory_blender.py` accepts offline lighting and camera
+`robofrontier/factory/blender/render.py` accepts offline lighting and camera
 overrides (`--lighting-config`, `--camera-config`). Broad soft fill replaces
 discrete pools of light. Low-angle warm sunlight enters actual window openings;
 the exterior road was removed. Dark robot joints and shells, wooden task pieces
@@ -136,8 +136,8 @@ explicit `--release` with resolved paths for the selected scene. The batch's
 new output directories; these examples do not bootstrap historical local paths.
 
 ```sh
-.venv/bin/python -m scripts.factory build --output outputs/robo-factory/my-factory
-.venv/bin/python -m scripts.factory video \
+.venv/bin/python -m robofrontier.factory.commands build --output outputs/robo-factory/my-factory
+.venv/bin/python -m robofrontier.factory.commands video \
   --scene outputs/robo-factory/my-factory/scene.xml \
   --release RESOLVED_RELEASE_JSON --renderer cycles --camera orbit \
   --duration 8 --output outputs/robo-factory/my-cycles
@@ -168,7 +168,7 @@ Factory using the station's rigid transform. Its original field of view is
 preserved; the surrounding Factory and other stations remain visible:
 
 ```sh
-.venv/bin/python -m scripts.factory video \
+.venv/bin/python -m robofrontier.factory.commands video \
   --scene FACTORY_SCENE_XML --release RESOLVED_RELEASE_JSON \
   --camera desk-front --station transport-a04-d1 --duration 1 \
   --width 1920 --height 1080 --output outputs/robo-factory/my-desk-front
@@ -189,15 +189,15 @@ video, images and receipt; raw evidence is under
 Reuse the same poses for sample-count comparisons by separating export steps:
 
 ```sh
-.venv/bin/python -m scripts.export_factory_blender \
+.venv/bin/python -m robofrontier.factory.blender.export \
   --scene outputs/robo-factory/v9-workstations/scene.xml \
   --output outputs/robo-factory/my-blender
-.venv/bin/python -m scripts.factory poses \
+.venv/bin/python -m robofrontier.factory.commands poses \
   --scene outputs/robo-factory/v9-workstations/scene.xml \
   --release RESOLVED_RELEASE_JSON --duration 8 --camera orbit \
   --output outputs/robo-factory/my-poses
 /Applications/Blender.app/Contents/MacOS/Blender --background \
-  --python-exit-code 1 --python scripts/render_factory_blender.py -- \
+  --python-exit-code 1 --python robofrontier/factory/blender/render.py -- \
   --asset outputs/robo-factory/my-blender \
   --animation outputs/robo-factory/my-poses/animation.json \
   --output outputs/robo-factory/my-cycles --engine cycles \
@@ -321,8 +321,8 @@ and render directly (the desk camera exporter, `scripts/factory_desk_cameras.py`
 was removed on 2026-11-10; see the [cleanup log](../cleanup-20261110.md)):
 
 ```sh
-.venv/bin/python -m scripts.export_factory_blender --scene SCENE/scene.xml --output ASSET
-blender --background --python-exit-code 1 --python scripts/render_factory_blender.py -- \
+.venv/bin/python -m robofrontier.factory.blender.export --scene SCENE/scene.xml --output ASSET
+blender --background --python-exit-code 1 --python robofrontier/factory/blender/render.py -- \
   --asset ASSET --output DESK_OUTPUT --desk-cameras desk-cameras.json \
   --width 1280 --height 800 --samples 16 --profile fast
 ```

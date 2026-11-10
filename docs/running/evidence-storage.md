@@ -38,7 +38,7 @@ Use the actual Claude engineering batch path for Claude. The shared lower-level
 entry is also available:
 
 ```sh
-.venv/bin/python -m scripts.collect_benchmark_batch runs/policy/MY_BATCH \
+.venv/bin/python -m robofrontier.batch.collect runs/policy/MY_BATCH \
   --output runs/exports/MY_BATCH
 ```
 
@@ -88,7 +88,7 @@ For manual offline delivery:
   --output runs/archives/MY_BATCH.zip
 .venv/bin/robofrontier extract runs/archives/MY_BATCH.zip \
   --output runs/extracted/MY_BATCH
-.venv/bin/python -m scripts.archive_policy_batch restore runs/extracted/MY_BATCH \
+.venv/bin/python -m robofrontier.batch.archive_policy_batch restore runs/extracted/MY_BATCH \
   --output runs/restored/MY_BATCH
 ```
 
@@ -103,9 +103,9 @@ data, reconcile unknown actions or upgrade a score. This differs from the
 lower-level directory archive, which defaults to requiring complete collection:
 
 ```sh
-.venv/bin/python -m scripts.archive_policy_batch create runs/exports/MY_BATCH \
+.venv/bin/python -m robofrontier.batch.archive_policy_batch create runs/exports/MY_BATCH \
   --output runs/archives/MY_BATCH-directory
-.venv/bin/python -m scripts.archive_policy_batch verify runs/archives/MY_BATCH-directory
+.venv/bin/python -m robofrontier.batch.archive_policy_batch verify runs/archives/MY_BATCH-directory
 ```
 
 For reviewed stopped incomplete evidence, that lower-level `create` accepts
@@ -261,7 +261,7 @@ keeps sources by default and never converts an uncertain action into a replay.
 - `process_log: "events-60s"` (the policy harness default before 2026-11-09;
   runs frozen with it keep it): the same events, with snapshots every 60
   simulated seconds. A scene that records motion leaves poses out of its
-  snapshots, except the last; `robofrontier.motion_query.object_poses` reads them
+  snapshots, except the last; `robofrontier.analysis.motion_query.object_poses` reads them
   from the recording. Each Dial trial is written with its event.
 
 ## Session transcripts
@@ -276,7 +276,7 @@ those threads. Reports and collection read the run's copies first.
 Once a run is final and idle, archive it:
 
 ```sh
-.venv/bin/python -m robofrontier.session_archive archive RUN_DIR
+.venv/bin/python -m robofrontier.batch.session_archive archive RUN_DIR
 ```
 
 Each transcript becomes `.jsonl.xz` in place, and for Codex the home originals
@@ -289,9 +289,9 @@ resumes on the next call.
 
 ## Videos of policy runs
 
-`scripts/render_policy_videos.py` renders each run's simple-background video at
+`robofrontier/media/render.py` renders each run's simple-background video at
 1280 x 720 and its family speedup (Mosaic 30x). It first keeps only meaningful
-motion (`robofrontier/motion_cut.py`: directed arm, finger or object motion;
+motion (`robofrontier/media/motion_cut.py`: directed arm, finger or object motion;
 jitter, drift and settling are still), then checks the rendered frames and also
 drops any frame in which no view visibly changes, until no still stretch is
 longer than two frames. The resulting `motion-cut.json` maps to the recording's

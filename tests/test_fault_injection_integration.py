@@ -12,9 +12,9 @@ import tempfile
 import time
 import unittest
 
-from robofrontier.fault_injection import arm as arm_fault
-from robofrontier.pipeline_client import client_call
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.runtime.fault_injection import arm as arm_fault
+from robofrontier.runtime.pipeline_client import client_call
+from robofrontier.runtime.store import RuntimeStore
 from test_engine_parity import prepared
 from test_run_segments_integration import ROOT, owner_command, wait_until
 
@@ -78,7 +78,7 @@ class FaultInjectionTests(unittest.TestCase):
             with self.assertRaises(ValueError): arm_fault(run, 'Z', 1)
             self.assertEqual(arm_fault(run, '*', 2)['robot'], '*')
             with self.assertRaises(FileExistsError): arm_fault(run, arm, 3)
-            from robofrontier.pipeline import World
+            from robofrontier.runtime.pipeline import World
             from types import SimpleNamespace
             world = SimpleNamespace(directory=run, arms={a: SimpleNamespace() for a in ('A', 'B')})
             inject = lambda robot, ident: World.inject_fault(world, robot, ident, 'move')
@@ -86,7 +86,7 @@ class FaultInjectionTests(unittest.TestCase):
             self.assertEqual(inject('B', 'second')['arm'], 'B')
             self.assertIsNone(inject('A', 'third'))
             path = run / 'private/inputs/fault-injection.json'; path.write_text(path.read_text().replace('"move"', '"gripper"'))
-            from robofrontier.fault_injection import load
+            from robofrontier.runtime.fault_injection import load
             with self.assertRaises(ValueError): load(run)
 
 

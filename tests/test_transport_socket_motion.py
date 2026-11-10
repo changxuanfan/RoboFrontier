@@ -11,12 +11,12 @@ from unittest.mock import Mock, patch
 import mujoco
 import numpy as np
 
-from robofrontier.robot_control import PandaArm
-from robofrontier.suite.oracle import Trial
-from robofrontier.suite.evaluate import Monitor
-from robofrontier.suite import transport_socket_motion as socket
-from robofrontier.suite import transport_oracle_v2 as reference
-from robofrontier.suite.transport_unit_motion import insertion_grasps
+from robofrontier.physics.robot_control import PandaArm
+from robofrontier.oracle.trial import Trial
+from robofrontier.tasks.evaluate import Monitor
+from robofrontier.oracle import transport_socket_motion as socket
+from robofrontier.oracle import transport_oracle_v2 as reference
+from robofrontier.oracle.transport_unit_motion import insertion_grasps
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -44,7 +44,7 @@ class SocketMotionTests(unittest.TestCase):
         robot=fixture['robot'];arm=t.arms[robot]
         target=t.data.site_xpos[arm.site]+t.data.body(fixture['object']).xmat.reshape(3,3)[:,2]*.02
         rotation=t.data.site_xmat[arm.site].reshape(3,3)
-        from robofrontier.robot_control import matrix_quat
+        from robofrontier.physics.robot_control import matrix_quat
         envelope=socket.exit_contact_envelope(t,robot,fixture['object'],fixture['board'])
         self.assertTrue(any(value<-.0003 for value in envelope.values()))
         before=t.data.qpos.copy();socket.guard_contact_moves(t,fixture['board'])

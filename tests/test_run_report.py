@@ -1,5 +1,5 @@
 import unittest
-from export_run_report import occupancy
+from robofrontier.batch.report import occupancy
 
 
 class OccupancyTests(unittest.TestCase):

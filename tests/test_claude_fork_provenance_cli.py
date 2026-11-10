@@ -14,8 +14,8 @@ import tempfile
 import threading
 import unittest
 
-from scripts import claude_offline_probe as probe
-from robofrontier.claude.provenance import fork_provenance
+from robofrontier.engines.claude import claude_offline_probe as probe
+from robofrontier.engines.claude.provenance import fork_provenance
 
 ROOT = Path(__file__).resolve().parents[1]
 PARENT = '44444444-4444-4444-8444-444444444444'
@@ -44,7 +44,7 @@ class RealCliForkTests(unittest.TestCase):
                                     'url': 'http://127.0.0.1:%d' % self.world.server_port, 'token': 'fake'}))
         self.mcp = t / 'mcp.json'
         self.mcp.write_text(json.dumps({'mcpServers': {'robot': {
-            'command': sys.executable, 'args': ['-m', 'robofrontier.claude.robot_mcp', '--run-dir', str(self.run_dir),
+            'command': sys.executable, 'args': ['-m', 'robofrontier.engines.claude.robot_mcp', '--run-dir', str(self.run_dir),
                                                 '--connection', str(conn)], 'env': {'PYTHONPATH': str(ROOT)}}}}))
         self.env = {'PATH': os.environ.get('PATH', ''), 'HOME': str(t),
                     'ANTHROPIC_BASE_URL': 'http://127.0.0.1:%d' % self.server.server_port,

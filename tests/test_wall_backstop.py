@@ -9,12 +9,13 @@ import tempfile
 import time
 import unittest
 
-from robofrontier import run_segments, task_families
-from robofrontier.egress_pause import WorldPause
-from robofrontier.network_outage import OutageMonitor
-from robofrontier.policy_probe import BudgetGuard, backstop_since, protocol, wall_backstop_s
-from robofrontier.run_analysis import extract, metrics
-from robofrontier.runtime_service import RuntimeService
+from robofrontier.runtime import segments as run_segments
+from robofrontier.tasks import families as task_families
+from robofrontier.runtime.egress_pause import WorldPause
+from robofrontier.runtime.outage import OutageMonitor
+from robofrontier.runtime.clock import BudgetGuard, backstop_since, protocol, wall_backstop_s
+from robofrontier.analysis import extract, metrics
+from robofrontier.runtime.service import RuntimeService
 from fake_pipeline import fake_capture
 import test_active_time as active
 import test_claude_engineering_batch as engineering_batch
@@ -40,7 +41,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertIsNone(wall_backstop_s({'wall_backstop_s': BACKSTOP}))  # no active clock, no backstop
         with self.assertRaises(ValueError):
             task_families.validate_policy_task(dict(new, run_protocol=dict(new['run_protocol'], wall_backstop_s=60)))
-        from robofrontier.suite.v2 import public_task
+        from robofrontier.tasks.v2 import public_task
         self.assertNotIn('wall_backstop_s', public_task(new)['run_protocol'])
 
     def test_the_world_owner_reads_the_frozen_backstop(self):
@@ -141,7 +142,7 @@ class SupervisorTests(unittest.TestCase):
     running = active.SupervisorActiveTimeTests.running
 
     def test_a_world_held_past_the_backstop_is_ended_by_the_host(self):
-        from robofrontier.claude.supervisor import ACTIVE_CLOSE_WAIT_S
+        from robofrontier.engines.claude.supervisor import ACTIVE_CLOSE_WAIT_S
         p = self.running(dispatch_paused=True, physics_state='paused_by_egress', active_s=10.)
         result = self.supervisor(p, lambda: None, time_rule=ACTIVE, wall_backstop_s=100).run()
         self.assertEqual((result['reason'], result['wall_backstop']), ('wall_backstop', True))
@@ -157,7 +158,7 @@ class SupervisorTests(unittest.TestCase):
                          ('world_ended', 'wall_backstop', True))
 
     def test_not_after_the_active_time_cutoff_fired(self):
-        from robofrontier.claude.supervisor import CentralizedSupervisor
+        from robofrontier.engines.claude.supervisor import CentralizedSupervisor
         p = self.running(); p.store.data.update(lifecycle='running', start_at=0)
         supervisor = CentralizedSupervisor(p, lambda: True, time_rule=ACTIVE, wall_backstop_s=100,
                                            wall_clock=lambda: 10_000)
@@ -175,7 +176,7 @@ class ContinuationTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.run = task_families.prepare('transport-a04-d1', Path(self.tmp.name)/'run')
-        from robofrontier.runtime_store import RuntimeStore
+        from robofrontier.runtime.store import RuntimeStore
         self.store = RuntimeStore(self.run/'private/state/runtime.sqlite'); self.addCleanup(self.store.close)
         self.store.put('lifecycle', 'ended'); self.store.put('start_at', time.time() - BACKSTOP)
         self.store.put('wall_backstop', {'at': time.time(), 'segment': 0})
@@ -193,7 +194,7 @@ class ContinuationTests(unittest.TestCase):
         self.assertFalse(ok); self.assertNotEqual(why, run_segments.BACKSTOP_REFUSAL)
 
     def test_a_backstop_end_is_a_stopped_segment_for_the_upgrade_path(self):
-        from robofrontier import runtime_upgrade
+        from robofrontier.runtime import upgrade as runtime_upgrade
         self.store.put('physics_state', 'finished'); self.store.put('dispatch_paused', True)
         self.store.put('integrity_valid', True)
         # It gets past the lifecycle gate to the next check (the released world lock here).
@@ -268,9 +269,9 @@ class CodexBatchSummaryTests(unittest.TestCase):
         import hashlib, os
         from types import SimpleNamespace
         from unittest.mock import patch
-        from robofrontier import preflight_probe
-        from robofrontier.codex import batch as benchmark
-        from robofrontier.run_setup import write_json
+        from robofrontier.runtime import preflight_probe
+        from robofrontier.batch import codex_batch as benchmark
+        from robofrontier.runtime.setup import write_json
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary); batch = root/'batch'
             selected = {'provider': 'openai_api', 'env_key': 'RF_TEST_KEY'}

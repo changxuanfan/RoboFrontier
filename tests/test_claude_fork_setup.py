@@ -5,12 +5,12 @@ import threading
 import time
 import unittest
 
-from robofrontier import run_layout
-from robofrontier.claude.budget import BudgetLedger
-from robofrontier.claude.fork_setup import close_gate, create_fork, fork_gate, open_gate, pending_history
-from robofrontier.claude.session_host import ClaudeSessionHost
-from robofrontier.delegation import Delegations
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.runtime import layout as run_layout
+from robofrontier.engines.claude.budget import BudgetLedger
+from robofrontier.engines.claude.fork_setup import close_gate, create_fork, fork_gate, open_gate, pending_history
+from robofrontier.engines.claude.session_host import ClaudeSessionHost
+from robofrontier.runtime.delegation import Delegations
+from robofrontier.runtime.store import RuntimeStore
 
 PARENT='11111111-1111-4111-8111-111111111111'
 PROMPT='Your current runtime role is the delegate.\n'
@@ -125,7 +125,7 @@ class ForkSetupTests(unittest.TestCase):
         self.assertFalse(Path(self.gate()['open']).exists())
 
     def test_generated_delegate_id_is_bound_to_native_tool_use(self):
-        from robofrontier.claude.request_identity import bind_delegate
+        from robofrontier.engines.claude.request_identity import bind_delegate
         item = self.row['message']['content'][0]
         item['id'] = 'native-delegate'
         item['input'].pop('call_id')
@@ -134,7 +134,7 @@ class ForkSetupTests(unittest.TestCase):
         self.assertEqual(self.create()['status'], 'history_verified_gated')
 
     def test_ambiguous_native_delegation_is_rejected_before_submission(self):
-        from robofrontier.claude.request_identity import bind_delegate
+        from robofrontier.engines.claude.request_identity import bind_delegate
         item = self.row['message']['content'][0]
         item['id'] = 'native-1'; item['input'].pop('call_id')
         self.row['message']['content'].append({**item, 'id': 'native-2'})

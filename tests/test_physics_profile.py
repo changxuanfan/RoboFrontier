@@ -7,9 +7,9 @@ from types import SimpleNamespace
 import mujoco
 import numpy as np
 
-from robofrontier.physics_profile import PROFILES, SLEEP, IdleSleep, attach
-from robofrontier.motion_query import object_poses
-from robofrontier.task_config import load_harness
+from robofrontier.physics.profile import PROFILES, SLEEP, IdleSleep, attach
+from robofrontier.analysis.motion_query import object_poses
+from robofrontier.tasks.config import load_harness
 
 BOX = '''<mujoco><option timestep="0.002"/><worldbody><geom type="plane" size="1 1 .1"/>
 <body><freejoint/><geom type="box" size=".03 .03 .03" mass=".1" pos="0 0 .03"/></body></worldbody></mujoco>'''
@@ -77,7 +77,7 @@ class ProfileTests(unittest.TestCase):
         w.data.time = 30.;governor.before_step();self.assertTrue(w.model.opt.enableflags & SLEEP)
 
     def test_end_of_step_forward_restores_noslip(self):
-        from robofrontier.physics_profile import forward_after_step
+        from robofrontier.physics.profile import forward_after_step
         w = world();w.model.opt.noslip_iterations = 10
         forward_after_step(w)
         self.assertEqual(w.model.opt.noslip_iterations, 10)
@@ -114,8 +114,8 @@ class ProfileTests(unittest.TestCase):
                              (mujoco.mjtCone.mjCONE_ELLIPTIC, 1., 1e-9, 10))
 
     def test_oracle_trial_takes_the_profile_its_harness_names(self):
-        from robofrontier.suite.oracle import Trial
-        from robofrontier.task_families import resolve_case
+        from robofrontier.oracle.trial import Trial
+        from robofrontier.tasks.families import resolve_case
         _, _, case = resolve_case('transport-a04-d1', purpose='gpt')
         with tempfile.TemporaryDirectory() as folder:
             for name, cone in ((None, mujoco.mjtCone.mjCONE_PYRAMIDAL), ('realtime-v2', mujoco.mjtCone.mjCONE_ELLIPTIC)):
@@ -164,12 +164,13 @@ class SettleCountingTests(unittest.TestCase):
 
 
 class ControlFingerprintTests(unittest.TestCase):
-    NAMES = ('robot_control.py', 'sim.py', 'motion_check.py', 'task_config.py', 'pipeline.py', 'physics_profile.py')
-    HASHES = {'robofrontier/'+name: str(i)*64 for i, name in enumerate(NAMES)}
+    PATHS = ('physics/robot_control.py', 'physics/kinematics.py', 'physics/motion_check.py', 'tasks/config.py',
+             'runtime/pipeline.py', 'physics/profile.py')
+    HASHES = {'robofrontier/'+path: str(i)*64 for i, path in enumerate(PATHS)}
     CONFIG = {'action_timeout_sim_s': 30., 'allowed_tcp_speed_m_s': [.01, .15], 'default_tcp_speed_m_s': .06}
 
     def test_a_harness_without_profile_keeps_its_fingerprint(self):
-        from robofrontier.task_config import physical_control_fingerprint
+        from robofrontier.tasks.config import physical_control_fingerprint
         # Values computed by the function before profiles entered the fingerprint.
         self.assertEqual(physical_control_fingerprint(self.HASHES, self.CONFIG),
                          '8a87768b3d75495438dc8078f67dd2a839eb45c0b25fe457cbf07b9b32e6b686')
@@ -179,11 +180,11 @@ class ControlFingerprintTests(unittest.TestCase):
                          physical_control_fingerprint(self.HASHES, self.CONFIG))
 
     def test_each_profile_and_its_source_has_its_own_fingerprint(self):
-        from robofrontier.task_config import physical_control_fingerprint
+        from robofrontier.tasks.config import physical_control_fingerprint
         values = {name: physical_control_fingerprint(self.HASHES, {**self.CONFIG, 'physics_profile': name} if name else self.CONFIG)
                   for name in (None, 'realtime-v1', 'realtime-v2')}
         self.assertEqual(len(set(values.values())), 3)
-        edited = {**self.HASHES, 'robofrontier/physics_profile.py': 'f'*64}
+        edited = {**self.HASHES, 'robofrontier/physics/profile.py': 'f'*64}
         self.assertNotEqual(physical_control_fingerprint(edited, {**self.CONFIG, 'physics_profile': 'realtime-v2'}), values['realtime-v2'])
         self.assertEqual(physical_control_fingerprint(edited, self.CONFIG), values[None])
 
@@ -200,7 +201,7 @@ class ReleasedSceneContactTests(unittest.TestCase):
     EXPECTED = {'transport': (8, 0, 0, 6, 0), 'mosaic': (4, 0, 0, 0, 0), 'relay': (8, 80, 0, 8, 0), 'dial': (8, 0, 8, 4, 4)}
 
     def test_released_scene_names_match_the_contact_rule(self):
-        from robofrontier.physics_profile import HOOK, MODULE, ROBOT_JOINT, unify_contacts
+        from robofrontier.physics.profile import HOOK, MODULE, ROBOT_JOINT, unify_contacts
         for family, case in RELEASED.items():
             with self.subTest(case=case):
                 folder = Path('benchmark')/family/case

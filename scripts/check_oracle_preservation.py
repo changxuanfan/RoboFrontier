@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 import subprocess
 
-from robofrontier.task_families import ROOT,RELEASE,oracle_recording,read
-from robofrontier.run_setup import write_json
+from robofrontier.tasks.families import ROOT,RELEASE,oracle_recording,read
+from robofrontier.runtime.setup import write_json
 
 
 def check_historical():
@@ -88,7 +88,7 @@ def check():
             cache[key]=h.hexdigest()
         if cache[key]!=row['sha256']:failed.append(dict(path=name,error='changed'))
     bindings=[]
-    from robofrontier.task_families import resolve_case
+    from robofrontier.tasks.families import resolve_case
     for f in read(ROOT/RELEASE)['families'].values():
         for c in f['oracle']:
             resolve_case(c['id'],'oracle')

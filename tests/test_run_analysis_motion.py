@@ -13,9 +13,9 @@ import unittest
 
 import numpy as np
 
-from robofrontier.run_analysis import atomic_v2, extract, motion
-from robofrontier.run_analysis import metrics as M
-from robofrontier.run_analysis.archive import Run
+from robofrontier.analysis import atomic as atomic_v2, extract, motion
+from robofrontier.analysis import metrics as M
+from robofrontier.analysis.archive import Run
 from test_run_analysis_segments import BASE, Fixture, action, header, snap
 
 HZ = 30

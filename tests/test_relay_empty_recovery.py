@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import Mock,patch
 import numpy as np
 from tests.test_relay_descent_recovery import recorded_world
-from robofrontier.suite import relay_oracle_v2 as ref
+from robofrontier.oracle import relay_oracle_v2 as ref
 
 class EmptyRecoveryTests(unittest.TestCase):
  def trial(self):
@@ -12,7 +12,7 @@ class EmptyRecoveryTests(unittest.TestCase):
  def test_empty_move_uses_scratch_cache_and_clears_live_cache_only_after_feedback(self):
   t,q=self.trial();before=t.data.qpos.copy()
   def clear(probe,*args,**kwargs):self.assertNotIn('G',probe.held);self.assertIn('G',t.held);return True
-  with patch.object(ref,'arm_payload_contact',return_value=False),patch('robofrontier.suite.oracle.Trial.pose_clear',autospec=True,side_effect=clear):ref.move_empty_robot(t,'payload_02','G',q+.01)
+  with patch.object(ref,'arm_payload_contact',return_value=False),patch('robofrontier.oracle.trial.Trial.pose_clear',autospec=True,side_effect=clear):ref.move_empty_robot(t,'payload_02','G',q+.01)
   self.assertNotIn('G',t.held);t.execute.assert_called_once();np.testing.assert_array_equal(t.data.qpos,before)
  def test_actual_contact_or_force_control_never_counts_as_empty(self):
   for contact,force in [(True,None),(False,70.)]:
@@ -23,13 +23,13 @@ class EmptyRecoveryTests(unittest.TestCase):
    t.execute.assert_not_called();self.assertIn('G',t.held)
  def test_current_contact_uses_bounded_withdrawal_instead_of_the_empty_path(self):
   t,q=self.trial()
-  with patch.object(ref,'arm_payload_contact',return_value=True),patch('robofrontier.suite.relay_contact_escape.execute_open_contact_withdrawal') as escape:
+  with patch.object(ref,'arm_payload_contact',return_value=True),patch('robofrontier.oracle.relay_contact_escape.execute_open_contact_withdrawal') as escape:
    ref.move_empty_robot(t,'payload_02','G',q)
   escape.assert_called_once_with(t,'payload_02','G',q,goal_names=ref.terminal_contact_names)
   t.execute.assert_not_called()
  def test_motion_failure_retains_original_cache_and_is_not_reported_as_release(self):
   t,q=self.trial();t.execute.side_effect=RuntimeError('motor original failed')
-  with patch.object(ref,'arm_payload_contact',return_value=False),patch('robofrontier.suite.oracle.Trial.pose_clear',return_value=True):
+  with patch.object(ref,'arm_payload_contact',return_value=False),patch('robofrontier.oracle.trial.Trial.pose_clear',return_value=True):
    with self.assertRaisesRegex(RuntimeError,'motor original'):ref.move_empty_robot(t,'payload_02','G',q+.01)
   self.assertIn('G',t.held)
  def test_missing_receiver_support_or_outside_joint_goal_is_rejected(self):

@@ -5,12 +5,12 @@ import unittest
 
 from robofrontier.cli import _frozen_configuration, plan, prepare, preflight
 from robofrontier.configuration import load_configuration, rendering_environment
-from robofrontier.run_setup import verify_inputs
+from robofrontier.runtime.setup import verify_inputs
 
 
 class UnifiedConfigurationTests(unittest.TestCase):
     def test_claude_engine_defaults_to_setup_token_without_replacing_explicit_profiles(self):
-        from scripts.claude_benchmark import profile
+        from robofrontier.batch.claude_benchmark import profile
         config = load_configuration(overrides={'policy': {'engine': 'claude'}})
         self.assertEqual(config['policy']['profile'], 'haiku_subscription_token')
         self.assertEqual(plan(config)['model'], 'claude-haiku-5-5')

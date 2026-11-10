@@ -12,9 +12,9 @@ import unittest
 
 from test_claude_parallel_physics_smoke import CompactRequests
 from test_claude_standing_team_integration import StandingModel
-from robofrontier.claude.engineering_batch import run_batch
-from robofrontier.runtime_store import RuntimeStore
-from scripts.claude_benchmark import prepare_draft
+from robofrontier.batch.engineering_batch import run_batch
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.batch.claude_benchmark import prepare_draft
 
 
 class PhysicalStandingModel(StandingModel):

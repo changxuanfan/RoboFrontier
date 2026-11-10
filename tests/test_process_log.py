@@ -2,7 +2,7 @@ import io
 import json
 import unittest
 
-from robofrontier.suite.evaluate import CONTINUOUS_FIELDS, PROCESS_LOG_FORMATS, Monitor, event_fields
+from robofrontier.tasks.evaluate import CONTINUOUS_FIELDS, PROCESS_LOG_FORMATS, Monitor, event_fields
 
 
 class FakeData:

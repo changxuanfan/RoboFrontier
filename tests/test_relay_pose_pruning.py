@@ -4,7 +4,7 @@ from unittest.mock import patch
 import numpy as np
 
 from tests.test_relay_descent_recovery import recorded_world
-from robofrontier.suite import relay_oracle_v2 as ref
+from robofrontier.oracle import relay_oracle_v2 as ref
 
 
 class ReceiverPosePruningTests(unittest.TestCase):

@@ -58,7 +58,7 @@ Cloning the repository does not back up any of these. See
   `configs/environments/`, review it, then promote it into `benchmark/` with new
   hashes in `release.json`.
 - Frozen runs, recordings and review packages keep the paths they were made with.
-  Read them through `robofrontier.task_families.current_path`;
+  Read them through `robofrontier.tasks.families.current_path`;
   [benchmark/legacy-paths.json](../benchmark/legacy-paths.json) lists every move,
   of released inputs and of policy texts alike.
 - Store shared material once. A text or file that several cases use by design, such

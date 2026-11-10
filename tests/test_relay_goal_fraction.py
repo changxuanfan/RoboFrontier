@@ -4,8 +4,8 @@ from unittest.mock import patch
 import numpy as np
 import mujoco
 
-from robofrontier.suite.relay_goal_fraction import clipped_fraction, timber_fraction
-from robofrontier.suite.relay_contract import final_task, LEGACY_RULE_REVISION
+from robofrontier.tasks.relay_goal_fraction import clipped_fraction, timber_fraction
+from robofrontier.tasks.relay import final_task, LEGACY_RULE_REVISION
 from tests.test_relay_goal_support import GoalSupportTests
 
 
@@ -20,7 +20,7 @@ class GoalFractionTests(unittest.TestCase):
         mon.violation = lambda *args, **kwargs: None; mon.released = lambda geoms: True
         for state in relay.states.values(): state.update(airborne=True, landed=False, transitions=[])
         for fraction in (np.float64(.5), np.float64(.7), np.float64(.9)):
-            with patch('robofrontier.suite.relay_goal_fraction.timber_fraction', return_value=fraction):
+            with patch('robofrontier.tasks.relay_goal_fraction.timber_fraction', return_value=fraction):
                 relay.sample()
             json.dumps(mon.result_cache, allow_nan=False)
             for item in mon.result_cache['payloads'].values():

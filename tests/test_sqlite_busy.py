@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from robofrontier import sqlite_busy
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.runtime import sqlite_busy
+from robofrontier.runtime.store import RuntimeStore
 
 
 class SQLiteBusyTests(unittest.TestCase):
@@ -40,7 +40,7 @@ class SQLiteBusyTests(unittest.TestCase):
         try:
             with patch.object(sqlite_busy, 'RETRY_DELAY_SECONDS', .01), \
                  patch.object(sqlite_busy, 'MAX_BEGIN_ATTEMPTS', 12), \
-                 self.assertLogs('robofrontier.sqlite_busy', level='WARNING') as logs:
+                 self.assertLogs('robofrontier.runtime.sqlite_busy', level='WARNING') as logs:
                 with self.store.transaction():
                     calls.append('body')
                     self.store.db.execute('INSERT INTO meta VALUES (?,?)', ('test', '1'))
@@ -56,7 +56,7 @@ class SQLiteBusyTests(unittest.TestCase):
         self.other.execute('BEGIN IMMEDIATE')
         calls = []
         with patch.object(sqlite_busy, 'RETRY_DELAY_SECONDS', .001), \
-             self.assertLogs('robofrontier.sqlite_busy', level='WARNING') as logs:
+             self.assertLogs('robofrontier.runtime.sqlite_busy', level='WARNING') as logs:
             with self.assertRaises(sqlite3.OperationalError) as caught:
                 with self.store.transaction(): calls.append('body')
         self.assertEqual(caught.exception.sqlite_errorcode, sqlite3.SQLITE_BUSY)
@@ -95,9 +95,9 @@ class SQLiteBusyServiceTests(unittest.TestCase):
         import json
         from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
         from fake_pipeline import FakeWorld, fake_capture
-        from robofrontier.pipeline_client import client_call
-        from robofrontier.run_setup import prepare_run, write_json
-        from robofrontier.runtime_service import RuntimeService
+        from robofrontier.runtime.pipeline_client import client_call
+        from robofrontier.runtime.setup import prepare_run, write_json
+        from robofrontier.runtime.service import RuntimeService
 
         with tempfile.TemporaryDirectory() as tmp:
             run=prepare_run(Path(tmp)/'run')
@@ -120,7 +120,7 @@ class SQLiteBusyServiceTests(unittest.TestCase):
             try:
                 with patch.object(sqlite_busy,'MAX_BEGIN_ATTEMPTS',12), \
                      patch.object(sqlite_busy,'RETRY_DELAY_SECONDS',.01), \
-                     self.assertLogs('robofrontier.sqlite_busy',level='WARNING'):
+                     self.assertLogs('robofrontier.runtime.sqlite_busy',level='WARNING'):
                     result=client_call(conn,'observe',{'cameras':['global']},'one-call',log_call_id=False)
                 self.assertEqual(result['call_id'],'one-call')
                 self.assertIn('observation',result)

@@ -3,11 +3,11 @@ import json,math,unittest
 from types import SimpleNamespace
 import numpy as np
 import mujoco
-from robofrontier.suite.v2 import cases,directory
-from robofrontier.suite.evaluate import Monitor
-from robofrontier.suite.evaluate_v2 import placement_candidates
-from robofrontier.robot_control import matrix_quat
-from robofrontier.workstation import Workstation
+from robofrontier.tasks.v2 import cases,directory
+from robofrontier.tasks.evaluate import Monitor
+from robofrontier.tasks.evaluate_v2 import placement_candidates
+from robofrontier.physics.robot_control import matrix_quat
+from robofrontier.physics.workstation import Workstation
 from tests.fixtures.mosaic_scalar_reference import placement_candidates as scalar
 
 

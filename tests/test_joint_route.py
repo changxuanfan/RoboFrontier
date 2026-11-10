@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from robofrontier.suite.joint_route import connect_route
+from robofrontier.oracle.joint_route import connect_route
 
 class JointRouteTests(unittest.TestCase):
     def test_connects_around_a_barrier_and_keeps_every_shortcut_checked(self):

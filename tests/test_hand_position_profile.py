@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 import numpy as np
-from robofrontier.task_config import load_harness,physical_control_fingerprint
+from robofrontier.tasks.config import CONTROL_FILES,load_harness,physical_control_fingerprint
 from single_arm_scene import make_world
 
 
@@ -73,8 +73,7 @@ class HandPositionProfileTests(unittest.TestCase):
         with self.assertRaises(ValueError):a.configure_hand_position_servo('legacy')
 
     def test_driver_selection_changes_physical_control_fingerprint(self):
-        hashes={'robofrontier/'+name:'same-source' for name in
-                ('robot_control.py','sim.py','motion_check.py','task_config.py','pipeline.py')}
+        hashes={'robofrontier/'+path:'same-source' for path in CONTROL_FILES.values()}
         legacy={**self.cfg,'gripper_position_servo':'legacy'}
         self.assertNotEqual(physical_control_fingerprint(hashes,legacy),physical_control_fingerprint(hashes,self.cfg))
 

@@ -9,8 +9,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.run_analysis import extract, session_archive
-from robofrontier.run_analysis.archive import Run
+from robofrontier.analysis import extract, session_archive
+from robofrontier.analysis.archive import Run
 
 
 def stamp(s):
@@ -68,7 +68,7 @@ class ClaudeTokenTests(unittest.TestCase):
     """A request after the session's last reported result is counted, as run_metrics counts it."""
 
     def test_requests_after_the_last_reported_result_are_added(self):
-        from robofrontier import run_metrics
+        from robofrontier.batch import metrics as run_metrics
 
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         run = root / 'run'

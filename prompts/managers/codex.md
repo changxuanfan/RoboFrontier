@@ -36,7 +36,7 @@ existing authorization where applicable; a prompt example is not spend consent.
    runs remain with their original operators.
 2. Use robofrontier doctor with the requested engine/profile and render backend.
    It checks local prerequisites, not provider authentication or compatibility.
-   If .env is absent, scripts.benchmark_handoff init-env can create an empty
+   If .env is absent, robofrontier.batch.handoff init-env can create an empty
    template. Preserve existing credentials; report only missing variable names.
 3. Use robofrontier plan with the requested profile, effort, topology, selection
    and parallelism. Global --config precedes the subcommand. Report exact case

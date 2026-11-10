@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
-const {CodexRpc,STARTUP_ACK_MS,capacityFailure,networkFailure,requireNoMcpServers}=require('../robofrontier/codex/codex_rpc');
-const {PolicyHost,robotTool}=require('../robofrontier/codex/codex_policy_host');
+const {CodexRpc,STARTUP_ACK_MS,capacityFailure,networkFailure,requireNoMcpServers}=require('../robofrontier/engines/codex/codex_rpc');
+const {PolicyHost,robotTool}=require('../robofrontier/engines/codex/codex_policy_host');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const failedNetworkState={
   thread:{status:{type:'systemError'}},

@@ -5,7 +5,7 @@ import unittest
 import uuid
 from unittest.mock import patch
 
-from robofrontier.claude.runner import run_turn
+from robofrontier.engines.claude.runner import run_turn
 from test_claude_runner import fake_claude, PROFILE, SECRET
 
 
@@ -60,7 +60,7 @@ print(json.dumps({{'type':'result','subtype':'success','is_error':False,
             self.assertEqual(record['summary']['native_session_total_cost_usd'],.2)
 
     def test_unknown_native_model_cost_blocks_before_process_creation(self):
-        with tempfile.TemporaryDirectory() as tmp,patch('robofrontier.claude.runner.subprocess.Popen') as launch:
+        with tempfile.TemporaryDirectory() as tmp,patch('robofrontier.engines.claude.runner.subprocess.Popen') as launch:
             with self.assertRaisesRegex(ValueError,'unknown model cost'):
                 self.invoke(Path(tmp),unknown=True)
             launch.assert_not_called()

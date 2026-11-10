@@ -6,10 +6,10 @@ from types import SimpleNamespace
 import mujoco
 import numpy as np
 
-from robofrontier.suite.v2 import cases,directory,public_task
-from robofrontier.suite.evaluate import Monitor
-from robofrontier.robot_control import PandaArm
-from robofrontier.workstation import Workstation
+from robofrontier.tasks.v2 import cases,directory,public_task
+from robofrontier.tasks.evaluate import Monitor
+from robofrontier.physics.robot_control import PandaArm
+from robofrontier.physics.workstation import Workstation
 
 
 class RigidRelayTests(unittest.TestCase):

@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 from PIL import Image, ImageDraw
 
 from .cube_transport import ROOT, _font, build_xml, layout, xyz
-from .scene import vector
+from .io import vector
 
 DIRECTORY = ROOT/'configs/environments/mosaic/four-arm-10x10'
 # Explicit draft rather than treating the illustration's irregular cells as truth.

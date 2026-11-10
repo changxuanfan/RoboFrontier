@@ -2,7 +2,7 @@ from copy import deepcopy
 from types import SimpleNamespace
 import unittest
 
-from robofrontier.suite.mosaic_async import execute_plan
+from robofrontier.oracle.mosaic_async import execute_plan
 
 
 class TimedArm:

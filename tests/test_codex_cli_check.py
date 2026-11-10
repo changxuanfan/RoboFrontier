@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from scripts import check_codex_cli
+from robofrontier.engines.codex import check_codex_cli
 
 
 class CodexCliCheckTests(unittest.TestCase):

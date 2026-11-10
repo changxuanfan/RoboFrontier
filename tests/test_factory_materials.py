@@ -2,7 +2,7 @@
 import unittest
 import json
 import numpy as np
-from scripts.factory_blender_materials import resolve, robot_role, task_role
+from robofrontier.factory.blender.materials import resolve, robot_role, task_role
 
 
 class MaterialChecks(unittest.TestCase):
@@ -12,7 +12,7 @@ class MaterialChecks(unittest.TestCase):
         self.assertEqual(resolve(spec)['emission'], .05)
 
     def test_arrow_tips_keep_edges_and_clear_the_shaft(self):
-        from scripts.factory_mesh_detail import keeps_hard_edges, shares_shaft_surface, thicken_thin_axis
+        from robofrontier.factory.blender.factory_mesh_detail import keeps_hard_edges, shares_shaft_surface, thicken_thin_axis
         self.assertTrue(keeps_hard_edges('relay-a08-d1__relay_direction_01_tip'))
         self.assertTrue(keeps_hard_edges('dial-best5-n04-d2__D01_pointer_tip'))
         self.assertTrue(keeps_hard_edges('relay-a08-d2__payload_01_beam_surface'))
@@ -31,7 +31,7 @@ class MaterialChecks(unittest.TestCase):
 
     def test_recorded_pose_updates_each_changed_geom_independently(self):
         from types import SimpleNamespace
-        from scripts.factory_blender_materials import apply_recorded_appearance
+        from robofrontier.factory.blender.materials import apply_recorded_appearance
         def obj():
             return SimpleNamespace(material_slots=[SimpleNamespace(material='initial')])
         first, second, unchanged = obj(), obj(), obj()

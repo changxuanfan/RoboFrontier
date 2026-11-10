@@ -3,11 +3,11 @@ import json,unittest
 import mujoco
 from itertools import product
 import numpy as np
-from robofrontier.suite.scenes import catalog,case_directory
-from robofrontier.suite.tasks import make_task,public_task
-from robofrontier.suite.evaluate import CountFeedback,SupportQualification
-from robofrontier.suite.dial_oracle import Decoder
-from robofrontier.suite.dial_oracle import Manipulator
+from robofrontier.oracle.geometry import catalog,case_directory
+from robofrontier.tasks.public import make_task,public_task
+from robofrontier.tasks.evaluate import CountFeedback,SupportQualification
+from robofrontier.oracle.dial_oracle import Decoder
+from robofrontier.oracle.dial_oracle import Manipulator
 from types import SimpleNamespace
 
 class SuiteContractTests(unittest.TestCase):

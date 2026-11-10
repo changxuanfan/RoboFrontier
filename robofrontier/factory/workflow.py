@@ -42,7 +42,7 @@ def add_arguments(subparsers):
             command.add_argument('recording', type=Path)
             command.add_argument('--speedup', type=float)
             command.add_argument('--keep-idle', action='store_true', help='Keep stationary intervals instead of cutting them')
-            command.add_argument('--timeline', type=Path, help='motion-cut.json from scripts.render_policy_videos for this recording')
+            command.add_argument('--timeline', type=Path, help='motion-cut.json from robofrontier.media.render for this recording')
     edit = actions.add_parser('edit-video', help='Reuse a movie for text-only editorial changes; no scene identity claim')
     edit.add_argument('--project', type=Path, required=True)
     edit.add_argument('--input', type=Path, required=True)

@@ -6,7 +6,7 @@ import time
 import unittest
 
 import test_delegation as fixture
-from robofrontier.scheduling import Scheduler
+from robofrontier.runtime.scheduling import Scheduler
 
 
 class DelegateCallbackTests(unittest.TestCase):
@@ -122,7 +122,7 @@ class DelegateCallbackTests(unittest.TestCase):
         self.assertIn(a['actor'],[w['actor'] for w in wakes])
 
     def test_failed_native_turn_resumes_on_new_parent_request_with_terminal_evidence(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         a,b=self.start_children();now=time.time()
         self.s.send('Controller',[a['actor']],'Old instruction before failure','old-before-failure')
         observed={'actor':a['actor'],'thread_id':a['thread_id'],'status':'error',
@@ -143,7 +143,7 @@ class DelegateCallbackTests(unittest.TestCase):
                          'A recovery turn failing again must not silently repeat the same parent request')
 
     def test_error_recovery_requires_failed_turn_and_rechecks_before_send(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         a,b=self.start_children();now=time.time()
         def observed(status):
             execute(self.s,'observe-sessions',{'observations':[{'actor':a['actor'],'thread_id':a['thread_id'],
@@ -162,7 +162,7 @@ class DelegateCallbackTests(unittest.TestCase):
         self.assertIsNone(scheduler.claim(command['wake_id'],'manager',now))
 
     def test_failed_native_recovery_blocks_unresolved_physical_calls(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         a,b=self.start_children();now=time.time()
         execute(self.s,'observe-sessions',{'observations':[{'actor':a['actor'],'thread_id':a['thread_id'],
             'status':'error','turn_id':'failed-turn','turn_status':'failed','observed_at':now,
@@ -197,7 +197,7 @@ class DelegateCallbackTests(unittest.TestCase):
         self.assertEqual(self.d.owners()['A'],a['actor'])
 
     def test_session_observation_health_is_persistent_and_distinct_from_delivery(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         now=time.time()
         execute(self.s,'observe-sessions',{'cycle':7,'observations':[{'actor':'Controller','thread_id':'parent',
             'status':'idle','turn_id':'review','observed_at':now,'source':'codex.wait_threads'}]},'manager',now)

@@ -7,11 +7,12 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier import run_layout, session_archive
-from robofrontier.run_metrics import native_codex_sessions, native_subagent_calls, open_session
-from robofrontier.runtime_store import RuntimeStore
-from robofrontier.task_config import load_harness
-from scripts.collect_benchmark_batch import native_matches, session_name
+from robofrontier.runtime import layout as run_layout
+from robofrontier.batch import session_archive
+from robofrontier.batch.metrics import native_codex_sessions, native_subagent_calls, open_session
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.tasks.config import load_harness
+from robofrontier.batch.collect import native_matches, session_name
 
 THREAD = '01a19877-10bc-78a1-8113-bf51f6786dd5'
 SNAPSHOT = '01a19877-10bc-78a1-8113-bf51f6786dd6'
@@ -75,7 +76,7 @@ class SessionArchiveTests(unittest.TestCase):
             # Reports read the run's own copy first.
             self.assertEqual(native_codex_sessions(run, THREAD), [folder/sessions[0].name])
             # An interrupted run that may still continue is not archived without --final.
-            from robofrontier import run_segments
+            from robofrontier.runtime import segments as run_segments
             store = RuntimeStore(run/'private/state/runtime.sqlite'); store.put('start_at', time.time()-60); store.close()
             with patch.object(run_segments, '_last_frame', lambda run, segment: ('reader', 0, 1., 'pose')):
                 with self.assertRaisesRegex(ValueError, 'can still be continued'): session_archive.archive_run(run)
@@ -84,13 +85,13 @@ class SessionArchiveTests(unittest.TestCase):
             self.assertEqual(session_archive.archive_run(run)['archived'], 2)
 
     def test_a_continuable_run_needs_final_after_its_source_moved_on_or_its_retry_was_used(self):
-        from robofrontier import run_segments
+        from robofrontier.runtime import segments as run_segments
         with tempfile.TemporaryDirectory() as tmp:
             run, home, sessions = finished_run(Path(tmp), lifecycle='interrupted')
             store = RuntimeStore(run/'private/state/runtime.sqlite')
             store.put('start_at', time.time()-60); store.put('segment', run_segments.MAX_RETRIES); store.close()
             with patch.object(run_segments, '_last_frame', lambda run, segment: ('reader', 0, 1., 'pose')), \
-                    patch('robofrontier.run_setup.verify_inputs', return_value=['source:robofrontier/edited.py']), \
+                    patch('robofrontier.runtime.setup.verify_inputs', return_value=['source:robofrontier/edited.py']), \
                     patch.object(run_segments, 'verify_inputs', return_value=['source:robofrontier/edited.py'], create=True):
                 with self.assertRaisesRegex(ValueError, 'can still be continued'): session_archive.archive_run(run)
                 self.assertTrue(all(s.exists() for s in sessions))

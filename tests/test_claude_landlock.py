@@ -9,9 +9,9 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from robofrontier import run_layout
-from robofrontier.claude import landlock_shell
-from robofrontier.claude.runner import confine
+from robofrontier.runtime import layout as run_layout
+from robofrontier.engines.common import landlock as landlock_shell
+from robofrontier.engines.claude.runner import confine
 
 
 def tree(base):
@@ -160,13 +160,13 @@ class ConfineTests(unittest.TestCase):
             servers = run_layout.path(run, 'engine_mcp', 'claude'); servers.mkdir(parents=True, exist_ok=True)
             for actor in ('A', 'Controller'):
                 (servers/(actor+'.json')).write_text(json.dumps({'mcpServers': {'robot': {
-                    'command': '/v/bin/python', 'args': ['-m', 'robofrontier.claude.robot_mcp', '--connection',
+                    'command': '/v/bin/python', 'args': ['-m', 'robofrontier.engines.claude.robot_mcp', '--connection',
                                                          '/r un/%s.json' % actor], 'env': {}}}}))
             confine(run, settings, run/'private/engine/config')
             rules = json.loads((prefix.parent/'rules.json').read_text())
             self.assertEqual(rules['unconfined'], [
-                "/v/bin/python -m robofrontier.claude.robot_mcp --connection '/r un/A.json'",
-                "/v/bin/python -m robofrontier.claude.robot_mcp --connection '/r un/Controller.json'"])
+                "/v/bin/python -m robofrontier.engines.claude.robot_mcp --connection '/r un/A.json'",
+                "/v/bin/python -m robofrontier.engines.claude.robot_mcp --connection '/r un/Controller.json'"])
             with self.assertRaisesRegex(ValueError, 'Unknown Bash isolation'):
                 (run/'private/inputs/claude.json').write_text(json.dumps({'bash_isolation': 'none'}))
                 confine(run, settings, run/'private/engine/config')

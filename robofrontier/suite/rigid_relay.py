@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
-from .scenes import box, cylinder, vector
+from ..oracle.geometry import box, cylinder, vector
 
 
 PROFILE = dict(
@@ -111,8 +111,8 @@ def configure_hinge(beam, prefix, mode):
 
 
 def weight(root, folder, eye_world, rotation, level):
-    from .scenes import texture
-    from ..robot_control import matrix_quat
+    from ..oracle.geometry import texture
+    from ..physics.robot_control import matrix_quat
     body = ET.SubElement(root.find('worldbody'), 'body', name='weight',
                          pos=vector(eye_world), quat=vector(matrix_quat(rotation)))
     ET.SubElement(body, 'freejoint', name='weight_free')

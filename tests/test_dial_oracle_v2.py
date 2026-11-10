@@ -6,7 +6,7 @@ import mujoco
 import numpy as np
 import unittest
 from unittest.mock import patch
-from robofrontier.suite.dial_oracle_v2 import Decoder, grip_width, Manipulator, BaselineManipulator
+from robofrontier.oracle.dial_oracle_v2 import Decoder, grip_width, Manipulator, BaselineManipulator
 
 ROOT = Path(__file__).resolve().parents[1]
 

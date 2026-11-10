@@ -6,9 +6,9 @@ import time
 import unittest
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.run_setup import prepare_run
-from robofrontier.runtime_service import RuntimeService
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.runtime.setup import prepare_run
+from robofrontier.runtime.service import RuntimeService
+from robofrontier.runtime.store import RuntimeStore
 
 class PipelineTests(unittest.TestCase):
     def setUp(self):
@@ -37,7 +37,7 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(self.service.world.executed,[])
 
     def test_robot_requests_after_the_run_ended_fail_at_once_and_never_block_the_seal(self):
-        from robofrontier.run_seal import _unsettled
+        from robofrontier.runtime.seal import _unsettled
         self.start()
         # Queued while running, reached only after the run ended (the cutoff race).
         queued=self.service.accept('A','move',{'delta_m':[0,0,.01]},'queued-move')
@@ -266,11 +266,11 @@ class PipelineTests(unittest.TestCase):
         # than 30 seconds even at the computed deadline.
         last=self.service.last_integrity_check=1000.1
         interval=self.service.config['integrity_check_interval_s']
-        with patch('robofrontier.runtime_service.verify_inputs',return_value=[]) as verify:
-            with patch('robofrontier.runtime_service.time.monotonic',return_value=last+interval-1):
+        with patch('robofrontier.runtime.service.verify_inputs',return_value=[]) as verify:
+            with patch('robofrontier.runtime.service.time.monotonic',return_value=last+interval-1):
                 self.service.periodic()
             verify.assert_not_called()
-            with patch('robofrontier.runtime_service.time.monotonic',return_value=last+interval):
+            with patch('robofrontier.runtime.service.time.monotonic',return_value=last+interval):
                 self.service.periodic();self.service.periodic()
             self.assertEqual(verify.call_count,1)
 
@@ -449,9 +449,9 @@ class PipelineTests(unittest.TestCase):
     def test_team_separates_old_note_from_fresh_execution_without_new_checkpoint(self):
         from unittest.mock import patch
         self.start()
-        with patch('robofrontier.runtime_store.time.time',return_value=100):
+        with patch('robofrontier.runtime.store.time.time',return_value=100):
             self.call('B','checkpoint',{'state':'waiting','note':'waiting for authority'})
-        with patch('robofrontier.runtime_store.time.time',return_value=200):
+        with patch('robofrontier.runtime.store.time.time',return_value=200):
             self.call('B','gripper',{'state':'close','wait':False},'accepted-new-work')
         team=self.call('Controller','team')['result']
         worker=team['workers']['B']
@@ -470,10 +470,10 @@ class PipelineTests(unittest.TestCase):
     def test_agent_chosen_wait_can_span_transport_slices_and_pause_returns_immediately(self):
         from unittest.mock import patch
         self.start()
-        with patch('robofrontier.runtime_service.time.monotonic',return_value=0):
+        with patch('robofrontier.runtime.service.time.monotonic',return_value=0):
             wait=self.call('Controller','wait_events',{'timeout_s':120},'long-wait')
         self.assertFalse(wait['done'].is_set())
-        with patch('robofrontier.runtime_service.time.monotonic',return_value=31):
+        with patch('robofrontier.runtime.service.time.monotonic',return_value=31):
             self.service.pump()
         self.assertFalse(wait['done'].is_set())
         self.service.store.put('lifecycle','paused')
@@ -484,12 +484,12 @@ class PipelineTests(unittest.TestCase):
     def test_wait_retry_keeps_original_deadline(self):
         from unittest.mock import patch
         self.start()
-        with patch('robofrontier.runtime_service.time.monotonic',return_value=0):
+        with patch('robofrontier.runtime.service.time.monotonic',return_value=0):
             first=self.call('A','wait_events',{'timeout_s':120},'wait-id')
-        with patch('robofrontier.runtime_service.time.monotonic',return_value=80):
+        with patch('robofrontier.runtime.service.time.monotonic',return_value=80):
             self.assertIs(self.call('A','wait_events',{'timeout_s':120},'wait-id'),first)
             self.assertFalse(first['done'].is_set())
-        with patch('robofrontier.runtime_service.time.monotonic',return_value=120):
+        with patch('robofrontier.runtime.service.time.monotonic',return_value=120):
             self.service.pump()
         self.assertEqual(first['result']['wait_status'],'timeout')
 
@@ -515,9 +515,9 @@ class PipelineTests(unittest.TestCase):
         from unittest.mock import patch
         self.assertIn('error',self.call('A','wait_events',{})['result'])
         self.start()
-        with patch('robofrontier.runtime_service.time.monotonic',return_value=10):
+        with patch('robofrontier.runtime.service.time.monotonic',return_value=10):
             waiting=self.call('A','wait_events',{'timeout_s':5},'waiting')
-        with patch('robofrontier.runtime_service.time.monotonic',return_value=16):
+        with patch('robofrontier.runtime.service.time.monotonic',return_value=16):
             self.service.pump()
         self.assertEqual(waiting['result']['wait_status'],'timeout')
         self.assertEqual(self.call('A','wait_events',{'timeout_s':0})['result']['wait_status'],'timeout')
@@ -563,7 +563,7 @@ class PipelineTests(unittest.TestCase):
         finally:store.close()
 
     def test_peer_wait_is_addressed_and_has_no_coordinator(self):
-        from robofrontier.task_config import load_harness
+        from robofrontier.tasks.config import load_harness
         cfg=load_harness();cfg['topology']='peer'
         config=self.path.parent/'peer.json';config.write_text(json.dumps(cfg))
         run=prepare_run(self.path.parent/'peer',harness_path=config)
@@ -587,7 +587,7 @@ class PipelineTests(unittest.TestCase):
 
     def test_malformed_field_types_return_tool_errors_and_keep_the_owner_alive(self):
         """Any JSON value a model sends is answered as a tool error; none may end the shared world."""
-        from robofrontier.robot_ops import POLICY_OPS
+        from robofrontier.runtime.robot_ops import POLICY_OPS
         self.start()
         # FakeWorld has no screening; a real check answers asynchronously and catches its own errors.
         self.service.world.check_motion=lambda data,cfg:iter([{'assessment':'unknown','advisory_only':True}])

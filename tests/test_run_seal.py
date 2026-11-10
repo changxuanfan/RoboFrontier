@@ -9,10 +9,10 @@ import unittest
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld,fake_capture
-from robofrontier.run_setup import prepare_run,write_json
-from robofrontier.runtime_cli import execute
-from robofrontier.runtime_service import RuntimeService
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.runtime.setup import prepare_run,write_json
+from robofrontier.runtime.cli import execute
+from robofrontier.runtime.service import RuntimeService
+from robofrontier.runtime.store import RuntimeStore
 
 
 class SealTests(unittest.TestCase):
@@ -50,7 +50,7 @@ class SealTests(unittest.TestCase):
         path=self.run/'private/inputs/task.json';task=json.loads(path.read_text())
         task['recording_camera']='board';write_json(path,task)
         self.store.put('execution_owner_attached',True);self.store.put('lifecycle','ended')
-        with patch('robofrontier.run_seal.probe_video',return_value={'readable':True}) as probe:
+        with patch('robofrontier.runtime.seal.probe_video',return_value={'readable':True}) as probe:
             result=self.seal()
         expected=(self.run/'private/outputs/board-realtime.mp4').resolve()
         probe.assert_called_once_with(expected)

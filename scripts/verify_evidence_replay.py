@@ -16,10 +16,10 @@ import mujoco
 import numpy as np
 from PIL import Image
 
-from robofrontier.motion_recording import MotionReader
-from robofrontier.workstation import Workstation
-from scripts.collect_benchmark_batch import digest
-from scripts.archive_policy_batch import safe, verify_collection
+from robofrontier.media.motion_recording import MotionReader
+from robofrontier.physics.workstation import Workstation
+from robofrontier.batch.collect import digest
+from robofrontier.batch.archive_policy_batch import safe, verify_collection
 
 
 def simple_frames(recording, indices):

@@ -3,9 +3,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from robofrontier.claude.adaptive_policy_host import AdaptivePolicyHost
-from robofrontier.claude.budget import BudgetLedger
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.engines.claude.adaptive_policy_host import AdaptivePolicyHost
+from robofrontier.engines.claude.budget import BudgetLedger
+from robofrontier.runtime.store import RuntimeStore
 
 
 class FakeHost:

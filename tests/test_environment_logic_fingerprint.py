@@ -1,10 +1,10 @@
 import unittest
-from robofrontier.suite.provenance import environment_logic_manifest
+from robofrontier.tasks.provenance import environment_logic_manifest
 
 
 class EnvironmentLogicFingerprintTests(unittest.TestCase):
     def test_v2_geometry_changes_are_not_hidden_by_unchanged_shared_monitor(self):
-        shared='robofrontier/suite/evaluate.py';geometry='robofrontier/suite/evaluate_v2.py'
+        shared='robofrontier/tasks/evaluate.py';geometry='robofrontier/tasks/evaluate_v2.py'
         before=environment_logic_manifest({shared:'same',geometry:'before'})
         after=environment_logic_manifest({shared:'same',geometry:'after'})
         self.assertNotEqual(before['sha256'],after['sha256'])

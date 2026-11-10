@@ -27,4 +27,4 @@ ENV PATH="/opt/RoboFrontier/.venv/bin:${PATH}" \
     TMPDIR=/tmp/robofrontier \
     OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 # The CLI sets CPU OSMesa or NVIDIA EGL explicitly from frozen task settings.
-ENTRYPOINT ["python", "-m", "robofrontier.container_entrypoint"]
+ENTRYPOINT ["python", "-m", "robofrontier.batch.container_entrypoint"]

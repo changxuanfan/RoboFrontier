@@ -269,7 +269,7 @@ them into successful or qualified runs.
 .venv/bin/robofrontier collect runs/policy/my-l1-batch --output runs/exports/manual-collection
 .venv/bin/robofrontier archive runs/exports/manual-collection --output runs/exports/manual.zip
 .venv/bin/robofrontier extract runs/exports/manual.zip --output runs/restored/manual-archive
-.venv/bin/python -m scripts.archive_policy_batch restore runs/restored/manual-archive \
+.venv/bin/python -m robofrontier.batch.archive_policy_batch restore runs/restored/manual-archive \
   --output runs/restored/manual-evidence
 ```
 

@@ -8,7 +8,7 @@ import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts import claude_precheck as pc
+from robofrontier.engines.claude import preflight as pc
 
 FAKE_BODY = '''
 import urllib.request

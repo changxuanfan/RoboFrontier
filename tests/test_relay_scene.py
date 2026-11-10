@@ -12,10 +12,10 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from robofrontier.suite.v2 import ROOT, cases as current_cases, directory, rz
+from robofrontier.tasks.v2 import ROOT, cases as current_cases, directory, rz
 from robofrontier.suite.relay_scene import validate, subtract_convex, merge_convex_pieces, polygon_area
-from robofrontier.task_families import legacy_bytes
-from robofrontier.workstation import Workstation
+from robofrontier.tasks.families import legacy_bytes
+from robofrontier.physics.workstation import Workstation
 
 
 def cases():
@@ -53,7 +53,7 @@ with tempfile.TemporaryDirectory() as tmp:
     (tmp/'under/task.json').write_text(json.dumps({'arms': {'A': {}}, 'mechanism': {'payload_assemblies': []}}))
     model = SimpleNamespace(ngeom=0, nu=7, nplugin=0, opt=SimpleNamespace(timestep=.002))
     station = SimpleNamespace(model=model, data=SimpleNamespace(contact=[]))
-    with patch('robofrontier.workstation.Workstation', return_value=station), patch('mujoco.mj_forward'):
+    with patch('robofrontier.physics.workstation.Workstation', return_value=station), patch('mujoco.mj_forward'):
         try:
             relay_underslung.validate(tmp/'under')
             outcomes.append('underslung passed')
@@ -163,7 +163,7 @@ class RelaySceneTests(unittest.TestCase):
             if name in contract['fields_sha256']:
                 task=json.loads(payload)
                 if name.endswith('/task.json'):
-                    from robofrontier.suite.relay_contract import final_task
+                    from robofrontier.tasks.relay import final_task
                     self.assertEqual(task,final_task(task))
                 for key in ('rules','completion'):task.pop(key,None)
                 self.assertEqual(hashlib.sha256(json.dumps(task,sort_keys=True).encode()).hexdigest(),contract['fields_sha256'][name])

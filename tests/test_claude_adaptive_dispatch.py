@@ -5,9 +5,9 @@ import threading
 import time
 import unittest
 
-from robofrontier.claude.adaptive_dispatch import AdaptiveDispatcher
-from robofrontier.delegation import Delegations
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.engines.claude.adaptive_dispatch import AdaptiveDispatcher
+from robofrontier.runtime.delegation import Delegations
+from robofrontier.runtime.store import RuntimeStore
 
 
 class Host:
@@ -74,7 +74,7 @@ class AdaptiveDispatchTests(unittest.TestCase):
         self.assertEqual(len(host.sent),1)
 
     def test_a_wake_refused_by_an_exhausted_task_budget_is_not_sent_and_pauses(self):
-        from robofrontier.claude.budget import BudgetExhausted
+        from robofrontier.engines.claude.budget import BudgetExhausted
         host=self.setup.hosts[self.child]
         def refused(prompt): raise BudgetExhausted('Budget is exhausted or uncertain')
         host.send=refused

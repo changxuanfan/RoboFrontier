@@ -15,9 +15,9 @@ import threading
 import unittest
 
 from test_claude_adaptive_integration import StubModel
-from robofrontier.claude.engineering_run import run_engineering
-from robofrontier.runtime_store import RuntimeStore
-from scripts.claude_benchmark import prepare_draft
+from robofrontier.engines.claude.run import run_engineering
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.batch.claude_benchmark import prepare_draft
 
 
 class MotionModel(StubModel):

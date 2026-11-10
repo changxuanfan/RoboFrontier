@@ -162,7 +162,7 @@ class FactoryWorkflowTests(unittest.TestCase):
                 load_configuration(overrides={'factory': settings})
 
     def test_version_one_frozen_policy_configuration_remains_exact(self):
-        from robofrontier.run_setup import write_json
+        from robofrontier.runtime.setup import write_json
         import hashlib
         config = without_later_options(deepcopy(load_configuration()))
         del config['factory']

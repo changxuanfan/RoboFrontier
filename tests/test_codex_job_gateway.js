@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {JobGateway}=require('../robofrontier/codex/job_gateway');
-const {GatewayRpc}=require('../robofrontier/codex/gateway_rpc');
+const {JobGateway}=require('../robofrontier/engines/codex/job_gateway');
+const {GatewayRpc}=require('../robofrontier/engines/codex/gateway_rpc');
 
 function fixture(count=2){
   const tasks=Array.from({length:count},(_,i)=>({id:'task-'+i,run:'/runs/'+i,cwd:'/runs/'+i+'/workspace',

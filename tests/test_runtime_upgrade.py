@@ -9,9 +9,9 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier import run_segments, runtime_upgrade
-from robofrontier.run_setup import verify_inputs, write_json
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.runtime import segments as run_segments, upgrade as runtime_upgrade
+from robofrontier.runtime.setup import verify_inputs, write_json
+from robofrontier.runtime.store import RuntimeStore
 from test_engine_parity import prepared
 from test_run_segments import FakeReader
 
@@ -32,7 +32,7 @@ class RuntimeUpgradeTests(unittest.TestCase):
         self.before = self.store.call('settled')
         self.manifest = self.run/'private/inputs/manifest.json'
         value = json.loads(self.manifest.read_text())
-        name = 'robofrontier/egress_pause.py'
+        name = 'robofrontier/runtime/egress_pause.py'
         del value['source_sha256'][name]
         (self.run/'private/inputs/frozen-source'/name).unlink()
         notice = self.run/'private/inputs/bootstrap/network-resume.md'

@@ -8,7 +8,7 @@ import mujoco
 import numpy as np
 from PIL import Image
 
-from robofrontier.render_worker import RenderWorker, apply_state, render_images
+from robofrontier.physics.render_worker import RenderWorker, apply_state, render_images
 
 SCENE = '''<mujoco><visual><global offwidth="1280" offheight="800"/></visual><worldbody>
 <light pos="0 0 2"/><camera name="front" pos="0 -1 .5" xyaxes="1 0 0 0 .4 .9"/><geom type="plane" size="1 1 .1" rgba=".4 .5 .6 1"/>

@@ -8,7 +8,7 @@ from copy import copy
 import mujoco
 import numpy as np
 
-from robofrontier.suite import transport_oracle_v2 as reference
+from robofrontier.oracle import transport_oracle_v2 as reference
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -280,8 +280,8 @@ class TransportReferenceTests(unittest.TestCase):
                 current.held['A']='one'
                 raise RuntimeError('Payload not physically released before withdrawal A/one')
             assignments['g1' if name=='one' else 'g2']=name
-        with patch('robofrontier.suite.placement_oracle.clear_idle_arms') as clear, \
-             patch('robofrontier.suite.placement_oracle.deliver',side_effect=execute_job), \
+        with patch('robofrontier.oracle.placement.clear_idle_arms') as clear, \
+             patch('robofrontier.oracle.placement.deliver',side_effect=execute_job), \
              patch.object(reference,'_pickup_coverage',side_effect=coverage), \
              patch.object(reference,'_occupied_transport_robots',side_effect=lambda _:set(t.held)), \
              patch.object(reference,'_safe_transport_deferral',return_value=True), \
@@ -331,14 +331,14 @@ class TransportReferenceTests(unittest.TestCase):
         t=SimpleNamespace(task={'goals':[]},transport_goal_ids=None,
             actions=[{'label':'already_executed'}],held={},
             arms={'A':SimpleNamespace(grasp_force=None)})
-        with patch('robofrontier.suite.placement_oracle.clear_idle_arms') as clear:
+        with patch('robofrontier.oracle.placement.clear_idle_arms') as clear:
             with self.assertRaisesRegex(RuntimeError,'refusing a blanket robot reset'):
                 reference._forward_baseline(t)
         clear.assert_not_called()
 
     def test_forward_entry_does_not_overwrite_an_unresolved_action(self):
         t=SimpleNamespace(arms={'A':SimpleNamespace(job='unresolved',uncertainty_reported=True)})
-        with patch('robofrontier.suite.placement_oracle.clear_idle_arms') as clear:
+        with patch('robofrontier.oracle.placement.clear_idle_arms') as clear:
             with self.assertRaisesRegex(RuntimeError,'settled verified action results'):
                 reference._forward_baseline(t)
         clear.assert_not_called()
@@ -356,8 +356,8 @@ class TransportReferenceTests(unittest.TestCase):
             data=SimpleNamespace(body=lambda _:SimpleNamespace(xpos=np.zeros(3),xmat=np.eye(3))),
             monitor=SimpleNamespace(result=lambda:dict(assignments=dict(assignments),matched_goals=len(assignments))))
         def execute(current,name,*args):seen.append(name);assignments['g2']=name
-        with patch('robofrontier.suite.placement_oracle.clear_idle_arms') as clear, \
-             patch('robofrontier.suite.placement_oracle.deliver',side_effect=execute), \
+        with patch('robofrontier.oracle.placement.clear_idle_arms') as clear, \
+             patch('robofrontier.oracle.placement.deliver',side_effect=execute), \
              patch.object(reference,'_pickup_coverage',return_value={'one':['A'],'two':['B']}), \
              patch.object(reference,'_occupied_transport_robots',return_value=set()):
             result=reference._forward_baseline(t)
@@ -374,8 +374,8 @@ class TransportReferenceTests(unittest.TestCase):
             event=Mock(),wait=Mock(),check_stop=Mock(),
             data=SimpleNamespace(body=lambda _:SimpleNamespace(xpos=np.zeros(3),xmat=np.eye(3))),
             monitor=SimpleNamespace(result=lambda:{'assignments':{}}))
-        with patch('robofrontier.suite.placement_oracle.clear_idle_arms'), \
-             patch('robofrontier.suite.placement_oracle.deliver',side_effect=RuntimeError('No common reachable transit height A/one')), \
+        with patch('robofrontier.oracle.placement.clear_idle_arms'), \
+             patch('robofrontier.oracle.placement.deliver',side_effect=RuntimeError('No common reachable transit height A/one')), \
              patch.object(reference,'_pickup_coverage',return_value={'one':['A']}), \
              patch.object(reference,'_occupied_transport_robots',return_value=set()), \
              patch.object(reference,'_safe_transport_deferral',return_value=False):
@@ -465,7 +465,7 @@ class TransportReferenceTests(unittest.TestCase):
         t.place.assert_not_called()
 
     def test_radial_cylinder_grasp_does_not_follow_roll_clocking(self):
-        from robofrontier.suite.scenes import rz
+        from robofrontier.oracle.geometry import rz
         axis_x = np.array([[0.,0.,1.],[0.,1.,0.],[-1.,0.,0.]])
         up, frames = reference._pickup_frames('cylinder', axis_x)
         rolled_up, rolled_frames = reference._pickup_frames('cylinder', axis_x@rz(.73))
@@ -477,9 +477,9 @@ class TransportReferenceTests(unittest.TestCase):
             self.assertAlmostEqual(float(np.dot(a[:,1], axis_x[:,2])), 0.)
 
     def test_hand_prefilter_uses_proxy_geometry_and_preserves_source(self):
-        from robofrontier.workstation import Workstation
-        from robofrontier.suite.evaluate import Monitor
-        from robofrontier.robot_control import PandaArm
+        from robofrontier.physics.workstation import Workstation
+        from robofrontier.tasks.evaluate import Monitor
+        from robofrontier.physics.robot_control import PandaArm
         folder = ROOT / tasks()[0]['directory']
         source = Workstation(folder)
         source.frame()
@@ -502,9 +502,9 @@ class TransportReferenceTests(unittest.TestCase):
             reference._hand_geometry_clear(t, 'A', 'B', 'A_item1', point, tool, .06)
 
     def test_planning_copy_never_shares_live_state_or_held_map(self):
-        from robofrontier.workstation import Workstation
-        from robofrontier.suite.oracle import Trial
-        from robofrontier.robot_control import PandaArm
+        from robofrontier.physics.workstation import Workstation
+        from robofrontier.oracle.trial import Trial
+        from robofrontier.physics.robot_control import PandaArm
         folder = ROOT / tasks()[0]['directory']
         source = Workstation(folder)
         source.frame()
@@ -527,9 +527,9 @@ class TransportReferenceTests(unittest.TestCase):
             scratch.event('candidate')
 
     def test_socket_scratch_clearance_restores_and_never_edits_live_model(self):
-        from robofrontier.workstation import Workstation
-        from robofrontier.suite.evaluate import Monitor
-        from robofrontier.robot_control import PandaArm
+        from robofrontier.physics.workstation import Workstation
+        from robofrontier.tasks.evaluate import Monitor
+        from robofrontier.physics.robot_control import PandaArm
         case = next(c for c in tasks() if c['id'] == 'transport-a04-d2')
         folder = ROOT / case['directory']
         source = Workstation(folder)
@@ -615,7 +615,7 @@ class TransportReferenceTests(unittest.TestCase):
             donor_q=np.zeros(7),receiver_axis=0,receiver_sign=1,
             receiver_depth=.024,receiver_shift=0.,buffer_xy=np.zeros(2))
         with patch.object(reference,'plan_air_regrasp',return_value=plan), \
-             patch('robofrontier.suite.placement_oracle.park'):
+             patch('robofrontier.oracle.placement.park'):
             reference.regrasp_held_plug(t,'A','object')
         retreat = next(call for call in t.move_free.call_args_list
                        if len(call.args)>3 and call.args[3]=='regrasp-send-clear')
@@ -643,7 +643,7 @@ class TransportReferenceTests(unittest.TestCase):
             donor_q=np.zeros(7),receiver_axis=0,receiver_sign=1,
             receiver_depth=.024,receiver_shift=0.,buffer_xy=np.zeros(2))
         with patch.object(reference,'plan_air_regrasp',return_value=plan), \
-             patch('robofrontier.suite.placement_oracle.park') as park:
+             patch('robofrontier.oracle.placement.park') as park:
             receiver=reference.regrasp_held_plug(t,'A','object',keep_receiver_held=True)
         self.assertEqual(receiver,'B')
         self.assertEqual(t.held,{'B':'object'})

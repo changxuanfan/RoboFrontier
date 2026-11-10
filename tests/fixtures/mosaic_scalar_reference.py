@@ -3,7 +3,7 @@
 import math
 import numpy as np
 import mujoco
-from robofrontier.suite.evaluate import geom_extent
+from robofrontier.tasks.evaluate import geom_extent
 
 
 def placement_candidates(mon,positions,stable):

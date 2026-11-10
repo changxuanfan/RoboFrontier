@@ -3,8 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from robofrontier.claude.dispatch import ClaudeDispatcher
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.engines.claude.dispatch import ClaudeDispatcher
+from robofrontier.runtime.store import RuntimeStore
 
 
 class FakeHost:
@@ -64,7 +64,7 @@ class ClaudeDispatchTests(unittest.TestCase):
         self.assertIn('uncertain', [row['status'] for row in self.store.wake_rows()])
 
     def test_claude_delegate_binding_is_closed_until_verified(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         import time
         cfg = self.store.get('config'); cfg['topology'] = 'adaptive'; self.store.put('config', cfg)
         with self.assertRaisesRegex(ValueError, 'not yet qualified'):

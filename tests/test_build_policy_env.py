@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from robofrontier import policy_env
+from robofrontier.runtime import policy_env
 from scripts import build_policy_env
 
 

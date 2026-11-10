@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from robofrontier.relay_video_motion import classify_motion,image_motion_evidence
+from robofrontier.media.relay_video_motion import classify_motion,image_motion_evidence
 
 
 class ReplayMotionTests(unittest.TestCase):

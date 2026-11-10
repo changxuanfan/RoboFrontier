@@ -5,23 +5,23 @@ import tempfile
 import unittest
 import numpy as np
 import mujoco
-from robofrontier.suite.dial_best_worker import RecordDecoder
-from robofrontier.suite.dial_best_oracle import BestDecoder,BestManipulator,WORKER
-from robofrontier.suite.dial_hold_oracle import Channel
-from robofrontier.suite.dial_oracle import Manipulator
+from robofrontier.oracle.dial_best_worker import RecordDecoder
+from robofrontier.oracle.dial_best_oracle import BestDecoder,BestManipulator,WORKER
+from robofrontier.oracle.dial_hold_oracle import Channel
+from robofrontier.oracle.dial_oracle import Manipulator
 
 ROOT=Path(__file__).resolve().parents[1]
 
 
 class BestOracleTests(unittest.TestCase):
     def test_unlimited_run_keeps_progressing_but_explicit_stops_still_apply(self):
-        from scripts.run_blind_dial_oracle import make_stop_check
+        from robofrontier.oracle.run_blind_dial_oracle import make_stop_check
         from types import SimpleNamespace
         from unittest.mock import patch
         with tempfile.TemporaryDirectory() as tmp:
             output=Path(tmp)/'attempt';trial=SimpleNamespace(time=100000.,actions=range(100000))
             signal=[False]
-            with patch('scripts.run_blind_dial_oracle.time.monotonic',return_value=100000.):
+            with patch('robofrontier.oracle.run_blind_dial_oracle.time.monotonic',return_value=100000.):
                 unlimited=make_stop_check(trial,signal,output,0)
                 self.assertFalse(unlimited())
                 self.assertTrue(make_stop_check(trial,signal,output,0,wall_s=1)())
@@ -31,7 +31,7 @@ class BestOracleTests(unittest.TestCase):
                 (Path(tmp)/'STOP').touch();self.assertTrue(unlimited())
 
     def test_final_win_is_rechecked_after_cleanup(self):
-        from scripts.run_blind_dial_oracle import final_success
+        from robofrontier.oracle.run_blind_dial_oracle import final_success
         good=dict(passed=True,evaluation=dict(task_success=True,violations=[]),unresolved_robot_actions=[])
         self.assertTrue(final_success(good))
         self.assertFalse(final_success({**good,'evaluation':dict(task_success=False,violations=['late contact'])}))
@@ -60,8 +60,8 @@ class BestOracleTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'recovery budget'):m.maintain_holds([1])
 
     def test_live_monitor_uses_remote_evaluator_without_generating_parent_secret(self):
-        from robofrontier.suite.oracle import Trial
-        from robofrontier.suite.dial_best_oracle import BestMonitor
+        from robofrontier.oracle.trial import Trial
+        from robofrontier.oracle.dial_best_oracle import BestMonitor
         scene=ROOT/'benchmark/dial/dial-best5-n04-d1'
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);code=p/'private.json';code.write_text(json.dumps({'code_symbols':[1]*4}))
@@ -117,7 +117,7 @@ class BestOracleTests(unittest.TestCase):
     def test_isolated_evaluator_holds_history_and_does_not_return_current_score(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);code=p/'code.json';code.write_text(json.dumps({'code_symbols':[1]*4}))
-            c=Channel('evaluator',[code,ROOT/'benchmark/dial/dial-best5-n04-d1/task.json',ROOT/'robofrontier/suite/dial_feedback.py'],p/'eval.jsonl',worker=WORKER)
+            c=Channel('evaluator',[code,ROOT/'benchmark/dial/dial-best5-n04-d1/task.json',ROOT/'robofrontier/tasks/dial.py'],p/'eval.jsonl',worker=WORKER)
             try:
                 for i in range(15):r=c.call(dict(op='sample',t=i*.02,angles=np.radians([60,60,60,120]).tolist(),eligible=True))
                 self.assertEqual(set(r),{'display','won','queries','since','ready','input_valid','indicator'})

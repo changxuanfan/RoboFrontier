@@ -7,11 +7,11 @@ import unittest
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld,fake_capture
-from robofrontier.run_setup import prepare_run
-from robofrontier.runtime_service import RuntimeService
-from robofrontier.delegation import Delegations
-from robofrontier.scheduling import Scheduler
-from robofrontier.task_config import load_harness
+from robofrontier.runtime.setup import prepare_run
+from robofrontier.runtime.service import RuntimeService
+from robofrontier.runtime.delegation import Delegations
+from robofrontier.runtime.scheduling import Scheduler
+from robofrontier.tasks.config import load_harness
 
 
 class SyncTests(unittest.TestCase):
@@ -180,13 +180,13 @@ class SyncTests(unittest.TestCase):
         s=self.service();a=self.call(s,'A','action_batch',self.part('A'))
         self.call(s,'C','move',{'delta_m':[0,0,.01],'wait':False})
         self.assertIn('Resolve execution',self.call(s,'Meta','shutdown')['result']['error'])
-        from robofrontier.action_batch import groups
+        from robofrontier.runtime.action_batch import groups
         self.assertEqual(groups(s.store)['g']['state'],'collecting')
         self.assertNotIn('SYNC_GROUP_CANCELLED',[e['kind'] for e in s.store.events()])
         self.assertFalse(s.shutdown)
 
     def test_report_counts_actual_motion_not_cancelled_reservations(self):
-        from scripts.export_run_report import export
+        from robofrontier.batch.report import export
         s=self.service();a=self.call(s,'A','action_batch',self.part('A'))
         self.call(s,'A','stop',{'call_id':a['id']})
         self.call(s,'C','move',{'delta_m':[0,0,.01],'wait':False});s.world.complete('C');s.pump()

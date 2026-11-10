@@ -8,11 +8,11 @@ from unittest.mock import Mock, patch
 import mujoco
 import numpy as np
 
-from robofrontier.robot_control import PandaArm
-from robofrontier.suite.oracle import Trial
-from robofrontier.suite.evaluate import Monitor
-from robofrontier.suite import relay_oracle_v2 as ref
-from robofrontier.suite.v2 import cases,directory
+from robofrontier.physics.robot_control import PandaArm
+from robofrontier.oracle.trial import Trial
+from robofrontier.tasks.evaluate import Monitor
+from robofrontier.oracle import relay_oracle_v2 as ref
+from robofrontier.tasks.v2 import cases,directory
 
 
 def recorded_world(fixture_name='relay_terminal_local_branch.json'):

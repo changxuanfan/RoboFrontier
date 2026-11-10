@@ -3,9 +3,9 @@ import json,os,sys,tempfile,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 from tests.fake_pipeline import FakeWorld,fake_capture
-from robofrontier.run_setup import prepare_run
-from robofrontier.runtime_service import RuntimeService
-from robofrontier.slurm_proxy import atomic
+from robofrontier.runtime.setup import prepare_run
+from robofrontier.runtime.service import RuntimeService
+from robofrontier.batch.slurm_proxy import atomic
 
 class SteppingWorld(FakeWorld):
     def step(self): self.time += .02
@@ -62,7 +62,7 @@ class EgressPauseTests(unittest.TestCase):
         self.assertFalse(self.service.step_physics());self.assertTrue(self.service.shutdown)
 
     def test_network_continuation_waits_for_original_receipt_and_claims_only_once(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         self.call('A','gripper',{'state':'close','wait':False},'original-before-network')
         self.pause();self.marker.unlink();self.service.pump()
         data={'actor':'A','thread_id':'thread-A','failed_turn_id':'failed-native-turn','error_observed_at':time.time()}
@@ -77,7 +77,7 @@ class EgressPauseTests(unittest.TestCase):
 
     def test_world_that_missed_a_short_resume_continues_the_pause_unfenced(self):
         # B-12: the watcher resumed and re-paused between two reads of this world.
-        from robofrontier.slurm_proxy import pause_marker
+        from robofrontier.batch.slurm_proxy import pause_marker
         world=self.service.world;self.service.step_physics();sim=world.time;watcher='w'*32
         atomic(self.marker,pause_marker('123','a'*32,watcher,1,'first-pause'));self.service.pump()
         time.sleep(.02)
@@ -93,7 +93,7 @@ class EgressPauseTests(unittest.TestCase):
         self.assertGreaterEqual(self.service.store.get('downtime_s'),.02)
 
     def test_new_claim_from_another_watcher_or_an_older_pause_still_fences(self):
-        from robofrontier.slurm_proxy import pause_marker
+        from robofrontier.batch.slurm_proxy import pause_marker
         for watcher,pause_id in (('x'*32,2),('w'*32,1),('w'*32,'2')):
             with self.subTest(watcher=watcher,pause_id=pause_id):
                 self.setUp()
@@ -105,7 +105,7 @@ class EgressPauseTests(unittest.TestCase):
 @unittest.skipUnless(sys.platform=='linux','MuJoCo qualification runs on allocated Linux CPU')
 class RealPhysicsPauseTests(unittest.TestCase):
     def test_qpos_qvel_and_sim_time_remain_exactly_frozen_in_original_world(self):
-        from robofrontier.pipeline import World
+        from robofrontier.runtime.pipeline import World
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder).resolve();private=root/'engine';private.mkdir(mode=0o700)
             run=root/'run';prepare_run(run);marker=private/'EGRESS_PAUSED'

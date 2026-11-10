@@ -146,7 +146,7 @@ Run local checks before a paid test:
 
 ```sh
 .venv/bin/robofrontier doctor --engine codex --profile kimi --render native
-.venv/bin/python -m scripts.check_codex_cli --output runs/engineering/local-cli-check
+.venv/bin/python -m robofrontier.engines.codex.check_codex_cli --output runs/engineering/local-cli-check
 .venv/bin/robofrontier plan --engine codex --profile kimi --level 1 --min-arms --parallel 4
 ```
 

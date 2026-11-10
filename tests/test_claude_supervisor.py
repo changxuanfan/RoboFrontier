@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from robofrontier.claude.supervisor import CentralizedSupervisor
+from robofrontier.engines.claude.supervisor import CentralizedSupervisor
 
 
 class Store:
@@ -221,7 +221,7 @@ class SupervisorTests(unittest.TestCase):
     def test_owner_loss_and_stop_before_binding_still_try_seal(self):
         p = Policy()
         supervisor = CentralizedSupervisor(p, lambda: False)
-        with patch('robofrontier.run_seal.seal_run', return_value={'sealed': True}) as seal:
+        with patch('robofrontier.runtime.seal.seal_run', return_value={'sealed': True}) as seal:
             result = supervisor.run()
         self.assertEqual(result['reason'], 'owner_unavailable')
         self.assertEqual(p.binds, 0); seal.assert_called_once()

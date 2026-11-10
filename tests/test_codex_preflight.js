@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {preflight}=require('../robofrontier/codex/codex_preflight');
+const {preflight}=require('../robofrontier/engines/codex/codex_preflight');
 function fakeRpc({badParent=false,badChild=false,badImage=false,noFork=false,inheritedMcp=false,onThreadStart=()=>{},onFork=()=>{}}={}) {
   return class {
     constructor(args,handlers){this.handlers=handlers;}

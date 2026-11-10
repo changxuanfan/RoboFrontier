@@ -1,6 +1,6 @@
 // Fake native/session/runtime adapter only. No Codex or MuJoCo connection.
 const assert = require('node:assert/strict');
-const {runMetaDispatcher} = require('../scripts/meta_dispatcher.js');
+const {runMetaDispatcher} = require('../robofrontier/engines/codex/meta_dispatcher.js');
 const response = value => ({content:[{type:'text',text:JSON.stringify(value)}]});
 async function scenario({busy=false,failSend=false,wrongThread=false}={}) {
   const calls=[];let sendCount=0;

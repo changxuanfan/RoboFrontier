@@ -5,8 +5,8 @@ Use the unified `robofrontier` command for new experiments. Start with the root
 [component map](../docs/engines/README.md#component-map). The unified CLI selects a native
 Codex or Claude runner; it does not turn one engine into the other.
 
-For a lower-level module, run `.venv/bin/python -m scripts.MODULE` from the
-repository root. Keep existing module names when reproducing historical evidence.
+For a lower-level module, run `.venv/bin/python -m scripts.MODULE` (or the dotted
+package module named in the table) from the repository root. Keep existing module names when reproducing historical evidence.
 
 | Entry | Purpose and scope |
 | --- | --- |
@@ -17,16 +17,16 @@ repository root. Keep existing module names when reproducing historical evidence
 | `robofrontier slurm-submit` | Freeze a submission and optionally queue node-local execution with verified stage-out |
 | `robofrontier factory/oracle` | Replay frozen motion in Factory, or explicitly run privileged reference execution; neither is a policy benchmark launch |
 | `benchmark models/plan/preflight/prepare/run/status/stop` | Native Codex interface retained for compatibility, with model selection, task filters, provider checks, concurrency, and START-based task limits |
-| `claude_benchmark` | Native Claude draft, provider-check, and explicitly unqualified engineering interface; see the [Claude guide](../docs/engines/claude-code.md) |
-| `benchmark_handoff doctor/init-env/assets/restore` | Inspect handoff prerequisites, create a private local environment file, and export/restore assets with SHA verification |
-| `check_codex_cli` | Exercise the real Codex CLI's tools, images, and forks against a local Responses stub, without external model calls |
+| `robofrontier.batch.claude_benchmark` | Native Claude draft, provider-check, and explicitly unqualified engineering interface; see the [Claude guide](../docs/engines/claude-code.md) |
+| `robofrontier.batch.handoff doctor/init-env/assets/restore` | Inspect handoff prerequisites, create a private local environment file, and export/restore assets with SHA verification |
+| `robofrontier.engines.codex.check_codex_cli` | Exercise the real Codex CLI's tools, images, and forks against a local Responses stub, without external model calls |
 | `curate_repository` | Plan and verify data cleanup while protecting frozen source recordings |
-| `tasks list/check/prepare/prepare-batch` | Audit current release selection and inputs, or use the retained lower-level preparation interface |
-| `factory build/video/poses` | Low-level scene construction, public pose export, and Cycles video; requires an explicitly matching source |
+| `robofrontier.batch.tasks list/check/prepare/prepare-batch` | Audit current release selection and inputs, or use the retained lower-level preparation interface |
+| `robofrontier.factory.commands build/video/poses` | Low-level scene construction, public pose export, and Cycles video; requires an explicitly matching source |
 | `check_harness` | Run the offline Python, JavaScript, documentation, and protocol regression inventory; historical fixtures may require separate assets |
 | `check_oracle_preservation` | Check the preservation manifest and frozen Oracle source bindings |
-| `run_analysis extract/compute/dial-turns/atomic-v2/session-archive` | Offline analysis of archived runs: timing, outcomes and atomic-step failure rates (version 2 step rules in `robofrontier/run_analysis/atomic_v2.py`); data root, run list and outputs are arguments, and no run data lives in the repository |
-| `export_factory_blender`, `render_factory_blender` | Export and render Cycles scenes, reuse fixed-camera frames, and compare sampled source poses |
+| `run_analysis extract/compute/dial-turns/atomic-v2/session-archive` | Offline analysis of archived runs: timing, outcomes and atomic-step failure rates (version 2 step rules in `robofrontier/analysis/atomic.py`); data root, run list and outputs are arguments, and no run data lives in the repository |
+| `robofrontier/factory/blender/export.py`, `render.py` (inside Blender) | Export and render Cycles scenes, reuse fixed-camera frames, and compare sampled source poses |
 | `site_media encode/montage/stills/explainer` | Encode task videos to 720p with posters and a verified manifest, build the family montages, README stills and the README benchmark figure |
 | `site_film short/film/web/banner` | Cut the film and its short teaser from the raw Robo World render with motion graphics in the page's style, and derive the page hero loop, README teaser and banner |
 | `site_data tasks/media/readme-gallery` | Generate the project page's task and video indexes and fill the README task gallery |
@@ -37,25 +37,13 @@ Run a Python module with `.venv/bin/python -m scripts.NAME` from the repository 
 
 ### Benchmark engines and runs
 
-Native Codex and Claude hosts, preparation and provider checks. `robofrontier` calls these. The Codex batch runner and Node host (`codex_policy_host.js`, `codex_rpc.js`, `codex_preflight.js`, `codex_initialize.js`) are in `robofrontier/codex/`.
+Native Codex and Claude hosts, preparation and provider checks. `robofrontier` calls these. The Codex batch runner and Node host (`codex_policy_host.js`, `codex_rpc.js`, `codex_preflight.js`, `codex_initialize.js`) are in `robofrontier/engines/codex/`.
 
 | Script | Purpose |
 | --- | --- |
-| `benchmark.py` | Entry point for `python -m scripts.benchmark`; the Codex engine lives in `robofrontier/codex/`. |
-| `benchmark_handoff.py` | Inspect a checkout and transfer only the runtime assets needed by policy tasks. |
-| `check_codex_broker.py` | Exercise the installed Codex tool inventory, denials and roles against a LOCAL stub. |
-| `check_codex_cli.py` | Exercise installed Codex RPC, images, dynamic tools and forks against a LOCAL stub. |
-| `check_codex_snapshot.py` | Exercise snapshot forks and per-child prompts with a local Responses stub. |
-| `claude_benchmark.py` | Claude planning, offline readiness, and unscored engineering runs. |
-| `claude_blocked_precheck.py` | Paid, bounded Claude fork precheck at a blocked synthetic robot tool call. |
-| `claude_offline_probe.py` | Exercise Claude CLI against local simulated model and robot servers. |
-| `claude_precheck.py` | Real Claude precheck for one model profile under an explicit spend cap. |
-| `claude_readiness.py` | Compare Claude precheck receipts with current configuration. |
-| `create_pipeline_run.py` | Prepare a run only: no GUI, model calls, session creation or robot actions. |
-| `meta_dispatcher.js` | Loaded by Meta into functions.exec. |
+| `benchmark.py` | Entry point for `python -m scripts.benchmark`; the Codex engine lives in `robofrontier/engines/codex/`. |
 | `build_policy_env.py` | Build the read-only Python environment and offline package store for policy scripts, once per host. |
 | `check_policy_env.py` | Before a batch, check an environment and each engine's sandbox with stub models; no provider is contacted. |
-| `tasks.py` | List released tasks, audit their inputs, or prepare isolated policy runs. |
 
 ### Evidence, reports and viewers
 
@@ -63,10 +51,7 @@ Read finished runs; none starts a model or physics.
 
 | Script | Purpose |
 | --- | --- |
-| `archive_policy_batch.py` | Losslessly archive stopped benchmark evidence. |
-| `collect_benchmark_batch.py` | Collect stopped Codex/Claude benchmark evidence without inference or source edits. |
 | `communication_report.py` | Summarize recorded multi-role communication without inferring model intent. |
-| `export_run_report.py` | Read-only audit of a finished v3 run. |
 | `run_analysis.py` | Extract archived runs and compute timing, outcomes and atomic-step metrics; data root, run list and outputs are arguments. |
 | `summarize_oracle_batch.py` | Read-only summary of complete Oracle results, pilots and ongoing attempts. |
 | `verify_evidence_replay.py` | Compare restored evidence, all motion states/events and sampled renders. |
@@ -89,22 +74,7 @@ Offline presentation of recorded motion; never steps task physics.
 
 | Script | Purpose |
 | --- | --- |
-| `export_factory_blender.py` | Export compiled visual geometry for offline Blender. |
-| `factory.py` | Build, view, audit or render all released Oracle workstations in one factory. |
-| `factory_blender_materials.py` | Explicit presentation materials. |
-| `factory_blender_objects.py` | Retain exact rigid body frames with shared meshes and isolated material slots. |
-| `factory_mesh_detail.py` | Per-mesh corrections for shapes that smooth shading or coincident faces would spoil. |
-| `factory_mesh_rotation.py` | Compare animated mesh rotations in the exported asset's coordinate frame. |
-| `factory_primitive_uv.py` | Match primitive face texture coordinates to MuJoCo. |
-| `factory_capsule.py` | Build capsule geometry from MuJoCo's radius and half-length. |
-| `factory_video_frames.py` | Discard reproducible animation PNGs only after successful video validation. |
-| `mosaic_visual_motion.py` | Detect visible scene changes while ignoring the replay's clock overlay. |
-| `promo_preview.py` | Generate sampled factory-tour poses. |
-| `render_factory_blender.py` | Run with Blender --background --python SCRIPT -- --asset DIR --output DIR. |
-| `render_frontier_oracle.py` | Render stored physical configurations, including the shared chunked format. |
-| `render_policy_videos.py` | Render policy runs at 720p with only meaningful motion, checked frame by frame; writes the motion-cut.json Factory import reads. |
 | `replay_motion_in_factory.py` | Replay immutable source states and optional scene-independent cuts in a factory. |
-| `slurm_factory.sbatch` | Submitted by `robofrontier factory submit --queue`; no account or site-specific paths. |
 
 ### Task builders, previews and viewers
 
@@ -122,11 +92,6 @@ Privileged reference execution and its diagnostics. A name with `oracle`, `commi
 
 | Script | Purpose |
 | --- | --- |
-| `run_blind_dial_oracle.py` | One frozen R11 BEST5 physical Oracle. |
-| `run_mosaic_oracle.py` | Frozen Mosaic Oracle with bounded live review. |
-| `run_relay_live_oracle.py` | One continuous committed Relay Oracle with a live, typed recovery boundary. |
-| `run_transport_full_oracle.py` | Frozen R13 full-order transport Oracle, with exclusive physics ownership. |
-| `verify_floating_dial_oracle.py` | Oracle engineering trial: one Panda holds the blue handle while another turns the red dial. |
 
 `create_pipeline_run` remains a Legacy interface for historical tasks and
 explicit configurations. `meta_dispatcher.js` executes frozen Meta operations;

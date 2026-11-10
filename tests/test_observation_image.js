@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {PolicyHost,observationMime}=require('../robofrontier/codex/codex_policy_host');
+const {PolicyHost,observationMime}=require('../robofrontier/engines/codex/codex_policy_host');
 const png=Buffer.from([137,80,78,71,13,10,26,10,1]);
 const jpg=Buffer.from([255,216,255,224,1]);
 test('observation MIME uses image bytes and supports old PNG and new JPEG',()=>{

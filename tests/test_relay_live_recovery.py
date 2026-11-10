@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock,patch
 import numpy as np
-from robofrontier.suite.relay_live_recovery import RelayLiveRecovery
+from robofrontier.oracle.relay_live_recovery import RelayLiveRecovery
 
 class RelayLiveRecoveryTests(unittest.TestCase):
     def setUp(self):
@@ -19,13 +19,13 @@ class RelayLiveRecoveryTests(unittest.TestCase):
         self.request=dict(id='repair-1',world_id=self.recovery.world_id,op='carry',payload='p',robots=['G','H'],target_m=[1.3,0,1.2],review='finite reviewed move',assisted=True)
     def tearDown(self):self.tmp.cleanup()
     def test_known_rejection_retains_world_and_failed_request_history(self):
-        with patch('robofrontier.suite.relay_live_recovery.ref.carry',side_effect=RuntimeError('guard rejection')):
+        with patch('robofrontier.oracle.relay_live_recovery.ref.carry',side_effect=RuntimeError('guard rejection')):
             result=self.recovery.process(self.request)
         self.assertEqual(result['status'],'failed');self.assertIn('guard rejection',result['error'])
         self.t.close.assert_not_called();self.assertTrue(self.recovery.assisted)
         self.assertTrue((self.recovery.directory/'accepted/repair-1.json').exists())
     def test_duplicate_id_returns_feedback_without_repeating_motion(self):
-        with patch('robofrontier.suite.relay_live_recovery.ref.carry') as carry:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.carry') as carry:
             first=self.recovery.process(self.request);second=self.recovery.process(self.request)
         self.assertEqual(first,second);self.assertEqual(carry.call_count,1)
         with self.assertRaises(ValueError):self.recovery.process(dict(self.request,target_m=[1.5,0,1.2]))
@@ -38,7 +38,7 @@ class RelayLiveRecoveryTests(unittest.TestCase):
         self.t.task={'run_protocol':{'evaluation_semantics':'terminal_outcome_v2'}}
         event={'kind':'robot_contact','sim_time_s':.5}
         self.t.monitor.violations=[event]
-        with patch('robofrontier.suite.relay_live_recovery.ref.carry') as carry:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.carry') as carry:
             result=self.recovery.process(self.request)
         self.assertEqual(result['status'],'completed')
         self.assertEqual(self.t.monitor.violations,[event]);carry.assert_called_once()
@@ -54,8 +54,8 @@ class RelayLiveRecoveryTests(unittest.TestCase):
         self.t.monitor.relay_v2.states['p'].update(dropped=True,custody={'former'})
         self.t.monitor.bilateral=lambda *_,**__:set()
         self.t.data.body=lambda _:SimpleNamespace(xpos=np.array([0.,0.,1.]),xmat=np.eye(3))
-        with patch('robofrontier.suite.relay_live_recovery.ref.choose_team',return_value=['G','H']), \
-             patch('robofrontier.suite.relay_live_recovery.ref.grasp') as grasp:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.choose_team',return_value=['G','H']), \
+             patch('robofrontier.oracle.relay_live_recovery.ref.grasp') as grasp:
             result=self.recovery.process(dict(self.request,op='grasp'))
         self.assertEqual(result['status'],'completed');grasp.assert_called_once()
         self.assertTrue(self.t.monitor.relay_v2.states['p']['dropped'])
@@ -69,7 +69,7 @@ class RelayLiveRecoveryTests(unittest.TestCase):
         self.t.arms['I']=SimpleNamespace(job=None);self.t.wait=Mock()
         continuation=dict(future_region=[0.,0.,1.2],future_waypoints=[[[.2,0.,1.2],0.]])
         request=dict(self.request,op='handover',retained_side=0,continuation=continuation)
-        with patch('robofrontier.suite.relay_live_recovery.ref.choose_team',return_value=['G','I']) as choose,patch('robofrontier.suite.relay_live_recovery.ref.grasp'),patch('robofrontier.suite.relay_live_recovery.ref.release') as release:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.choose_team',return_value=['G','I']) as choose,patch('robofrontier.oracle.relay_live_recovery.ref.grasp'),patch('robofrontier.oracle.relay_live_recovery.ref.release') as release:
             result=self.recovery.process(request)
         self.assertEqual(result['status'],'completed')
         self.assertEqual(choose.call_args.kwargs['retained'],{0:'G'})
@@ -84,14 +84,14 @@ class RelayLiveRecoveryTests(unittest.TestCase):
         self.t.execute=Mock();self.t.held={'G':'p','H':'p'}
         self.t.monitor.relay_v2.states['p']['all_geoms']={1}
         self.t.monitor.relay_v2.environment_contact=lambda _:True
-        with patch('robofrontier.suite.relay_live_recovery.ref.arm_payload_contact',return_value=False) as contact:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.arm_payload_contact',return_value=False) as contact:
             result=self.recovery.process(dict(self.request,op='open'))
         self.assertEqual(result['status'],'completed');self.assertEqual(self.t.held,{})
         self.assertEqual([call.args[1:] for call in contact.call_args_list],[('p','G'),('p','H')])
 
     def test_single_empty_robot_joint_request_is_typed_and_not_replayed(self):
         request=dict(self.request,op='move_empty',robots=['G'],joint_rad=[0.]*7)
-        with patch('robofrontier.suite.relay_live_recovery.ref.move_empty_robot') as move:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.move_empty_robot') as move:
             first=self.recovery.process(request);second=self.recovery.process(request)
         self.assertEqual(first['status'],'completed');self.assertEqual(first,second)
         move.assert_called_once_with(self.t,'p','G',[0.]*7)
@@ -102,7 +102,7 @@ class RelayLiveRecoveryTests(unittest.TestCase):
         self.t.execute=Mock();self.t.held={'G':'p','H':'p'}
         self.t.monitor.relay_v2.states['p']['all_geoms']={1}
         self.t.monitor.relay_v2.environment_contact=lambda _:False
-        with patch('robofrontier.suite.relay_user_goal_policy.opening_supported',return_value=True),patch('robofrontier.suite.relay_live_recovery.ref.arm_payload_contact',return_value=True):
+        with patch('robofrontier.oracle.relay_user_goal_policy.opening_supported',return_value=True),patch('robofrontier.oracle.relay_live_recovery.ref.arm_payload_contact',return_value=True):
             result=self.recovery.process(dict(self.request,op='open'))
         self.assertEqual(result['status'],'completed')
         self.assertEqual(self.t.execute.call_args.args[1]['G'][1]['width_m'],.08)
@@ -117,7 +117,7 @@ class RelayLiveRecoveryTests(unittest.TestCase):
 
     def test_cooperative_roll_is_a_normal_carry_orientation_not_a_pose_write(self):
         request=dict(self.request,target_quaternion_wxyz=[np.sqrt(.5),0,np.sqrt(.5),0])
-        with patch('robofrontier.suite.relay_live_recovery.ref.carry') as carry:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.carry') as carry:
             result=self.recovery.process(request)
         self.assertEqual(result['status'],'completed')
         np.testing.assert_allclose(carry.call_args.kwargs['target_rotation'],[[0,0,1],[0,1,0],[-1,0,0]],atol=1e-12)
@@ -127,7 +127,7 @@ class RelayLiveRecoveryTests(unittest.TestCase):
         requests=[dict(self.request,target_quaternion_wxyz=[2,0,0,0]),
                   dict(self.request,target_quaternion_wxyz=[1,0,0]),
                   dict(self.request,target_quaternion_wxyz=[1,0,0,0],retain_attitude=True)]
-        with patch('robofrontier.suite.relay_live_recovery.ref.carry') as carry:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.carry') as carry:
             for index,request in enumerate(requests):
                 result=self.recovery.process(dict(request,id='bad-roll-'+str(index)))
                 self.assertEqual(result['status'],'failed')
@@ -147,7 +147,7 @@ class RelayLiveRecoveryTests(unittest.TestCase):
         self.t.arms['H'].site=0
         self.t.data=SimpleNamespace(site_xpos=np.array([[0.,-.48,1.2]]),
             body=lambda _:SimpleNamespace(xpos=np.array([0.,0.,1.2]),xmat=np.eye(3)))
-        with patch('robofrontier.suite.relay_live_recovery.ref.choose_team',return_value=['H','G']) as choose,patch('robofrontier.suite.relay_live_recovery.ref.grasp') as grasp:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.choose_team',return_value=['H','G']) as choose,patch('robofrontier.oracle.relay_live_recovery.ref.grasp') as grasp:
             result=self.recovery.process(dict(self.request,op='grasp'))
         self.assertEqual(result['status'],'completed')
         self.assertEqual(choose.call_args.kwargs['retained'],{0:'H'})
@@ -157,7 +157,7 @@ class RelayLiveRecoveryTests(unittest.TestCase):
 
     def test_healthy_pair_is_not_reopened_by_recovery_grasp(self):
         self.t.monitor.relay_v2.states['p'].update(dropped=False,custody={'G','H'})
-        with patch('robofrontier.suite.relay_live_recovery.ref.grasp') as grasp:
+        with patch('robofrontier.oracle.relay_live_recovery.ref.grasp') as grasp:
             result=self.recovery.process(dict(self.request,op='grasp'))
         self.assertEqual(result['status'],'failed')
         grasp.assert_not_called()
@@ -178,7 +178,7 @@ class RelayLiveRecoveryTests(unittest.TestCase):
             self.assertEqual(request['id'],'new-owner');state['done']=True
             return {'status':'completed'}
         self.t.step=step
-        with patch.object(self.recovery,'process',side_effect=process),patch('robofrontier.suite.relay_live_recovery.time.monotonic',side_effect=clock),patch('robofrontier.suite.relay_live_recovery.time.sleep'):
+        with patch.object(self.recovery,'process',side_effect=process),patch('robofrontier.oracle.relay_live_recovery.time.monotonic',side_effect=clock),patch('robofrontier.oracle.relay_live_recovery.time.sleep'):
             self.assertEqual(self.recovery.wait_for_repair(RuntimeError('retained world')),'complete')
         self.assertLessEqual(state['steps'],25)
 

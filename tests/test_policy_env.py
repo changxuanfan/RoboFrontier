@@ -14,10 +14,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier import policy_access, policy_bootstrap, policy_env
-from robofrontier.claude.runner import confine, policy_settings
-from robofrontier.codex.launch import launch_config
-from robofrontier.run_layout import manifest_record
+from robofrontier.runtime import access as policy_access, bootstrap as policy_bootstrap, policy_env
+from robofrontier.engines.claude.runner import confine, policy_settings
+from robofrontier.engines.codex.launch import launch_config
+from robofrontier.runtime.layout import manifest_record
 from scripts import check_policy_env
 
 CHECKED = [{'engine': 'codex', 'tool_backend': 'landlock-v1', 'cli': 'codex-cli 0.165.0'},
@@ -140,7 +140,7 @@ class AccessTableTests(Fixture):
             policy_env.require_combination('codex', 'native')
 
     def test_preparing_a_batch_refuses_a_combination_the_check_did_not_run(self):
-        from robofrontier.codex.batch import prepare_batch
+        from robofrontier.batch.codex_batch import prepare_batch
         with patch.dict(os.environ, {policy_env.ENV_VAR: str(self.root)}):
             with self.assertRaisesRegex(ValueError, 'has not checked.*native'):
                 prepare_batch(self.tmp/'batch', ['astra'], cases=['dial-best5-n04-d1'])
@@ -264,7 +264,7 @@ class RenderingTests(Fixture):
         record = self.freeze()
         out = self.tmp/'out'
         out.mkdir()
-        with patch('robofrontier.codex.launch.hidden_skills', lambda: []):
+        with patch('robofrontier.engines.codex.launch.hidden_skills', lambda: []):
             args = launch_config(STUB, out, run_dir=self.run_dir)['args']
         settings = [args[i + 1] for i, value in enumerate(args) if value == '-c']
         for expected in ('allow_login_shell=false', 'shell_environment_policy.inherit="none"',
@@ -330,7 +330,7 @@ class PinnedCliTests(unittest.TestCase):
         return {'PATH': folder + ':/usr/bin:/bin'}
 
     def test_only_the_pinned_codex_cli_is_accepted(self):
-        from robofrontier.codex.job_engine import ROOT as source, require_pinned_cli
+        from robofrontier.engines.codex.job_engine import ROOT as source, require_pinned_cli
         pinned = re.search(r'CODEX_VERSION=(\S+)', (Path(source)/'docker/Dockerfile').read_text()).group(1)
         with tempfile.TemporaryDirectory() as folder:
             require_pinned_cli(self.cli(folder, 'codex-cli ' + pinned))
@@ -341,7 +341,7 @@ class PinnedCliTests(unittest.TestCase):
 
     def test_a_hung_cli_or_an_unpinned_dockerfile_is_refused_clearly(self):
         import time
-        from robofrontier.codex import job_engine
+        from robofrontier.engines.codex import job_engine
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'codex'
             path.write_text('#!/bin/sh\nsleep 60\n')

@@ -7,10 +7,10 @@ import unittest
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.run_setup import prepare_run
-from robofrontier.runtime_service import RuntimeService
-from robofrontier.task_config import load_harness
-from robofrontier.delegation import Delegations
+from robofrontier.runtime.setup import prepare_run
+from robofrontier.runtime.service import RuntimeService
+from robofrontier.tasks.config import load_harness
+from robofrontier.runtime.delegation import Delegations
 
 
 class DelegationTests(unittest.TestCase):
@@ -166,7 +166,7 @@ class DelegationTests(unittest.TestCase):
 
     def test_report_write_failure_keeps_ownership_and_sends_no_completion(self):
         self.delegate();child=self.activate()[0]['actor']
-        with patch('robofrontier.run_setup.write_json',side_effect=OSError('synthetic disk failure')):
+        with patch('robofrontier.runtime.setup.write_json',side_effect=OSError('synthetic disk failure')):
             reply=self.call(child,'return_task',{'outcome':'completed','result':'evidence'})['result']
         self.assertIn('error',reply)
         self.assertEqual(self.d.owners()['A'],child)
@@ -196,10 +196,10 @@ class DelegationTests(unittest.TestCase):
         self.assertFalse(self.service.store.get('dispatch_paused',False))
 
     def test_known_native_id_survives_provenance_failure_without_authorization(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         self.delegate();self.d.claim('batch','manager');a=self.d.batch('batch')['children'][0]['actor']
         tid='11111111-1111-4111-8111-111111111111'
-        with patch('robofrontier.runtime_cli.fork_provenance',side_effect=ValueError('lineage unavailable')):
+        with patch('robofrontier.runtime.cli.fork_provenance',side_effect=ValueError('lineage unavailable')):
             with self.assertRaises(ValueError):
                 execute(self.service.store,'delegate-bind',{'id':'batch','actor':a,'thread_id':tid},'manager',time.time())
         self.assertEqual(self.service.store.agent(a)['thread_id'],tid)
@@ -208,27 +208,27 @@ class DelegationTests(unittest.TestCase):
         self.assertIn('error',self.call(a,'gripper',{'robot':'A','state':'open'})['result'])
 
     def test_snapshot_lineage_and_children_require_same_snapshot_boundary(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         self.delegate(('A','B'));self.d.claim('batch','manager')
         children=self.d.batch('batch')['children']
         snapshot='22222222-2222-4222-8222-222222222222'
         anchor={'source_thread_id':'parent','source_ordinal':13,'source_sha256':'controller-cut'}
-        with patch('robofrontier.runtime_cli.fork_provenance',return_value=anchor):
+        with patch('robofrontier.runtime.cli.fork_provenance',return_value=anchor):
             execute(self.service.store,'delegate-snapshot-bind',{'id':'batch','thread_id':snapshot},'manager',time.time())
         self.assertEqual(self.d.batch('batch')['snapshot_provenance'],anchor)
         for i, child in enumerate(children):
             proof={'source_thread_id':snapshot,'source_ordinal':17,'source_sha256':'snapshot-cut'}
-            with patch('robofrontier.runtime_cli.fork_provenance',return_value=proof) as read:
+            with patch('robofrontier.runtime.cli.fork_provenance',return_value=proof) as read:
                 execute(self.service.store,'delegate-bind',{'id':'batch','actor':child['actor'],'thread_id':'child-'+str(i)},'manager',time.time())
                 read.assert_called_once_with(snapshot,'child-'+str(i))
         self.d.activate('batch','manager')
         self.assertEqual(self.d.batch('batch')['status'],'active')
 
     def test_snapshot_id_persists_on_failed_lineage_and_cannot_activate(self):
-        from robofrontier.runtime_cli import execute
+        from robofrontier.runtime.cli import execute
         self.delegate();self.d.claim('batch','manager')
         snapshot='22222222-2222-4222-8222-222222222222'
-        with patch('robofrontier.runtime_cli.fork_provenance',side_effect=ValueError('lineage unavailable')):
+        with patch('robofrontier.runtime.cli.fork_provenance',side_effect=ValueError('lineage unavailable')):
             with self.assertRaisesRegex(ValueError,'lineage unavailable'):
                 execute(self.service.store,'delegate-snapshot-bind',{'id':'batch','thread_id':snapshot},'manager',time.time())
         self.assertEqual(self.d.batch('batch')['snapshot_thread_id'],snapshot)
@@ -265,8 +265,8 @@ class DelegationTests(unittest.TestCase):
         self.assertIn('error',self.call('Controller','send',{'to':[child],'text':'new work'})['result'])
 
     def test_missing_native_status_invalidates_previously_fresh_idle_claim(self):
-        from robofrontier.runtime_cli import execute
-        from robofrontier.scheduling import Scheduler
+        from robofrontier.runtime.cli import execute
+        from robofrontier.runtime.scheduling import Scheduler
         s=self.service.store;now=time.time()
         command=Scheduler(s).plan('manager',now)[0]
         execute(s,'session-unavailable',{'actor':'Controller','thread_id':'parent','reason':'no authoritative poll'},'manager',now)

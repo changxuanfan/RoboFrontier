@@ -5,9 +5,9 @@ import threading
 import unittest
 
 import test_claude_fork_setup as fixtures
-from robofrontier.claude.adaptive_setup import AdaptiveForkSetup, child_prompt
-from robofrontier.claude.budget import BudgetLedger
-from robofrontier.claude.session_host import ClaudeSessionHost
+from robofrontier.engines.claude.adaptive_setup import AdaptiveForkSetup, child_prompt
+from robofrontier.engines.claude.budget import BudgetLedger
+from robofrontier.engines.claude.session_host import ClaudeSessionHost
 
 
 class AdaptiveSetupTests(unittest.TestCase):

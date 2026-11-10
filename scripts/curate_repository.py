@@ -5,8 +5,8 @@ import json
 from pathlib import Path
 import shutil
 
-from robofrontier.run_setup import write_json
-from robofrontier.task_families import current_path
+from robofrontier.runtime.setup import write_json
+from robofrontier.tasks.families import current_path
 
 
 def strings(value):

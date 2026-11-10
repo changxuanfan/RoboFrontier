@@ -74,7 +74,7 @@ Released files are not edited in place. A new revision is generated under
 as its source stay in `configs/environments/` as provenance.
 
 Frozen runs, Oracle recordings, review packages and the asset archive name files
-by their earlier paths. `robofrontier.task_families.current_path` translates those names
+by their earlier paths. `robofrontier.tasks.families.current_path` translates those names
 through `legacy-paths.json`, and `legacy_bytes` returns a moved file's original bytes.
 Suite manifests, parameter histories and provenance records also name earlier case
 folders that were removed from the tree; `pruned-paths.json` lists them, and each is

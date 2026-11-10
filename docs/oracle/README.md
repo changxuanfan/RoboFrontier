@@ -154,7 +154,7 @@ old executor with its historical inputs when reproducing a legacy result.
 Start with an explicitly partial engineering check:
 
 ```sh
-.venv/bin/python scripts/run_mosaic_oracle.py \
+.venv/bin/python robofrontier/oracle/run_mosaic_oracle.py \
   --case mosaic-a04-6x12-d1 \
   --output runs/oracle/my-r14-commissioning \
   --planning-workers 4 --physics-workers 0 \

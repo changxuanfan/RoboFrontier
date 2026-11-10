@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import mujoco
 import numpy as np
 
-from robofrontier.suite.relay_observation_state import native_kinematic_state
+from robofrontier.oracle.relay_observation_state import native_kinematic_state
 
 
 class NativeObservationTests(unittest.TestCase):

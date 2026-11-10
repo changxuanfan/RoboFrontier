@@ -15,7 +15,7 @@ import tempfile
 import threading
 import unittest
 
-from robofrontier.desktop_robot_mcp import SERVER, DesktopRobotBridge, bound_role, calling_thread
+from robofrontier.engines.codex.desktop_robot_mcp import SERVER, DesktopRobotBridge, bound_role, calling_thread
 
 ROOT = Path(__file__).resolve().parents[1]
 THREAD = '01a19877-10bc-78a1-8113-bf51f6786dd5'
@@ -80,7 +80,7 @@ class FakeService(BaseHTTPRequestHandler):
 
 
 DRIVER = r'''
-const fs=require('fs'),{execFileSync}=require('child_process'),{CodexRpc}=require(process.argv[1]+'/robofrontier/codex/codex_rpc');
+const fs=require('fs'),{execFileSync}=require('child_process'),{CodexRpc}=require(process.argv[1]+'/robofrontier/engines/codex/codex_rpc');
 const out=process.argv[2],launch=JSON.parse(fs.readFileSync(out+'/launch.json')),run=fs.readFileSync(out+'/run.txt','utf8');
 process.env.ROBOFRONTIER_OFFLINE_STUB_TOKEN='local-stub-no-credential';
 (async()=>{let done;
@@ -103,7 +103,7 @@ await rpc.close();})().catch(e=>{console.error(e.stack);process.exit(1);});'''
 class AppServerDesktopToolTests(unittest.TestCase):
     def test_bound_thread_operates_its_role_and_unbound_thread_is_refused(self):
         from test_codex_policy_permissions import STUB, OUTPUT_TYPES, responses_stub
-        from robofrontier.codex.launch import launch_config
+        from robofrontier.engines.codex.launch import launch_config
         from PIL import Image
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp).resolve(); runs = t / 'runs'
@@ -124,7 +124,7 @@ class AppServerDesktopToolTests(unittest.TestCase):
                 launch = launch_config(dict(STUB, base_url='http://127.0.0.1:%d' % model.server_port), out)
                 prefix = 'mcp_servers.%s.' % SERVER
                 launch['args'] += ['-c', prefix + 'command=' + json.dumps(sys.executable),
-                                   '-c', prefix + 'args=' + json.dumps(['-m', 'robofrontier.desktop_robot_mcp', '--runs-root', str(runs)]),
+                                   '-c', prefix + 'args=' + json.dumps(['-m', 'robofrontier.engines.codex.desktop_robot_mcp', '--runs-root', str(runs)]),
                                    '-c', prefix + 'env={PYTHONPATH=' + json.dumps(str(ROOT)) + '}',
                                    '-c', prefix + 'default_tools_approval_mode="approve"']
                 (out / 'launch.json').write_text(json.dumps(launch)); (out / 'run.txt').write_text(str(run))

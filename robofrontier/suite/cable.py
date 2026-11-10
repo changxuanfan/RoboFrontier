@@ -21,8 +21,8 @@ def rotation_to_z(direction):
 
 
 def install(root,parent,parent_p,parent_r,points,target_site,name,profile=None):
-    from ..robot_control import matrix_quat
-    from .scenes import vector
+    from ..physics.robot_control import matrix_quat
+    from ..oracle.geometry import vector
     cfg=dict(PROFILE if profile is None else profile);n=len(points)-1
     length=float(sum(np.linalg.norm(b-a) for a,b in zip(points,points[1:])))
     if n!=cfg['segments'] or not math.isclose(length,cfg['length_m'],abs_tol=1e-9):raise ValueError('Cable geometry/profile mismatch')

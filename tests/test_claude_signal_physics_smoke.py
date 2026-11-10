@@ -14,8 +14,8 @@ import time
 import unittest
 
 from test_claude_physics_smoke import MotionModel
-from robofrontier.claude.engineering_batch import status_batch
-from scripts.claude_benchmark import prepare_draft
+from robofrontier.batch.engineering_batch import status_batch
+from robofrontier.batch.claude_benchmark import prepare_draft
 
 
 @unittest.skipUnless(os.environ.get('ROBOFRONTIER_PHYSICS_SIGNAL') == '1' and shutil.which('claude'),
@@ -51,7 +51,7 @@ class SignalPhysicsSmokeTests(unittest.TestCase):
                 manifest.write_text(json.dumps(frozen))
             env={key:os.environ[key] for key in ('PATH','HOME','LANG','LC_ALL','TMPDIR','DISPLAY','MUJOCO_GL') if key in os.environ}
             env['FAKE_KEY']='synthetic'
-            cmd=[sys.executable,'-m','scripts.claude_benchmark','run-engineering',str(batch),
+            cmd=[sys.executable,'-m','robofrontier.batch.claude_benchmark','run-engineering',str(batch),
                  '--parallel',str(len(jobs)),'--turn-budget-usd','.5','--task-budget-usd','2',
                  '--wall-limit-s','120','--confirm-engineering-spend']
             with (directory/'supervisor.log').open('w') as log:

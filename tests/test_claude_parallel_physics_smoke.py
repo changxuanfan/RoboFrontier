@@ -11,9 +11,9 @@ import time
 import unittest
 
 from test_claude_physics_smoke import MotionModel
-from robofrontier.claude.engineering_batch import run_batch, status_batch
-from robofrontier.runtime_store import RuntimeStore
-from scripts.claude_benchmark import prepare_draft
+from robofrontier.batch.engineering_batch import run_batch, status_batch
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.batch.claude_benchmark import prepare_draft
 
 
 class CompactRequests(list):

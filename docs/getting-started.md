@@ -60,9 +60,9 @@ For an offline machine, download the archive named by the checked-in asset lock
 on a connected machine, transfer it, and run:
 
 ```sh
-.venv/bin/python -m scripts.benchmark_handoff setup-assets \
+.venv/bin/python -m robofrontier.batch.handoff setup-assets \
   --archive /path/to/the-pinned-policy-assets.tar.gz
-.venv/bin/python -m scripts.tasks check --purpose gpt --assets
+.venv/bin/python -m robofrontier.batch.tasks check --purpose gpt --assets
 ```
 
 Do not substitute a similarly named asset package or rebuild missing labels

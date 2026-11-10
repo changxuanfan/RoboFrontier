@@ -6,10 +6,10 @@ import time
 import unittest
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.run_setup import prepare_run
-from robofrontier.runtime_service import RuntimeService
-from robofrontier.runtime_store import RuntimeStore
-from robofrontier.task_config import load_harness
+from robofrontier.runtime.setup import prepare_run
+from robofrontier.runtime.service import RuntimeService
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.tasks.config import load_harness
 
 
 class CentralizedTests(unittest.TestCase):

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from scripts.archive_policy_batch import create, verify, verify_collection, transform_session, read_object
+from robofrontier.batch.archive_policy_batch import create, verify, verify_collection, transform_session, read_object
 
 
 class PolicyArchiveTest(unittest.TestCase):
@@ -28,7 +28,7 @@ class PolicyArchiveTest(unittest.TestCase):
                     result=verify_collection(*args,**kwargs)
                     session.write_bytes(b'{"late":true}\n')
                     return result
-                with patch('scripts.archive_policy_batch.verify_collection',side_effect=validated):
+                with patch('robofrontier.batch.archive_policy_batch.verify_collection',side_effect=validated):
                     with self.assertRaises(ValueError):create(source,root/'archive')
                 self.assertFalse((root/'archive').exists())
 

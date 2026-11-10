@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from robofrontier import runtime_diagnostics as diagnostics
+from robofrontier.runtime import diagnostics as diagnostics
 from robofrontier.configuration import load_configuration
 
 
@@ -73,7 +73,7 @@ class RuntimeDiagnosticTests(unittest.TestCase):
         from robofrontier.cli import run
         with patch('robofrontier.cli._frozen_configuration', return_value=self.config), \
                 patch.object(diagnostics, 'require_runtime', side_effect=ValueError('no sandbox')), \
-                patch('robofrontier.codex.batch.run_batch') as launch:
+                patch('robofrontier.batch.codex_batch.run_batch') as launch:
             with self.assertRaisesRegex(ValueError, 'no sandbox'):
                 run(Path('runs/test'))
         launch.assert_not_called()

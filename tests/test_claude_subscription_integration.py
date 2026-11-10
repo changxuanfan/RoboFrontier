@@ -10,9 +10,9 @@ import unittest
 import uuid
 from unittest.mock import patch
 
-from robofrontier.claude.runner import build_command, build_env, run_turn
-from scripts import claude_precheck, claude_blocked_precheck
-from scripts.claude_benchmark import profile as load_profile
+from robofrontier.engines.claude.runner import build_command, build_env, run_turn
+from robofrontier.engines.claude import preflight as claude_precheck, claude_blocked_precheck
+from robofrontier.batch.claude_benchmark import profile as load_profile
 from test_claude_precheck_integration import PrecheckModel
 
 
@@ -70,7 +70,7 @@ class SubscriptionTests(unittest.TestCase):
                          'base_url':f'http://127.0.0.1:{server.server_port}'}
                 env={'PATH':os.environ['PATH'],'CLAUDE_CODE_OAUTH_TOKEN':'synthetic-token'}
                 session=str(uuid.uuid4())
-                with patch('robofrontier.claude.runner._oauth_endpoint_allowed',return_value=True):
+                with patch('robofrontier.engines.claude.runner._oauth_endpoint_allowed',return_value=True):
                     record=run_turn(profile,profile['model'],profile['effort'],None,'Reply READY',run,env,
                                     session_id=session,timeout=30,max_budget_usd=.5,enable_robot=False)
                 self.assertEqual(record['summary']['turn_status'],'ended',record)
@@ -95,7 +95,7 @@ class SubscriptionTests(unittest.TestCase):
                 with patch.object(claude_precheck.preflight_probe,'choose',return_value=('green','red')), \
                      patch.object(claude_precheck,'profile',return_value=profile), \
                      patch.object(claude_blocked_precheck,'profile',return_value=profile), \
-                     patch('robofrontier.claude.runner._oauth_endpoint_allowed',return_value=True):
+                     patch('robofrontier.engines.claude.runner._oauth_endpoint_allowed',return_value=True):
                     basic=claude_precheck.run_precheck('synthetic',Path(tmp)/'basic',2,env,check_fork=True)
                     blocked=claude_blocked_precheck.run_blocked_precheck('synthetic',Path(tmp)/'blocked',2,env)
                 self.assertTrue(basic['passed'],{'basic':basic,'requests':[[t.get('name') for t in x.get('tools',[])] for x in OAuthModel.requests]})

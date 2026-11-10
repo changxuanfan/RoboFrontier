@@ -4,12 +4,12 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 import mujoco
-from robofrontier.workstation import Workstation
-from robofrontier.suite.v2 import cases,directory
-from robofrontier.suite.oracle import Trial
-from robofrontier.suite.evaluate import Monitor
-from robofrontier.robot_control import PandaArm
-from robofrontier.suite import relay_oracle_v2 as ref
+from robofrontier.physics.workstation import Workstation
+from robofrontier.tasks.v2 import cases,directory
+from robofrontier.oracle.trial import Trial
+from robofrontier.tasks.evaluate import Monitor
+from robofrontier.physics.robot_control import PandaArm
+from robofrontier.oracle import relay_oracle_v2 as ref
 
 class Captured(Exception):pass
 

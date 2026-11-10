@@ -6,12 +6,12 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier import runtime_cli
-from robofrontier.claude.provenance import fork_provenance, transcript_rows
-from robofrontier.run_setup import prepare_run, verify_inputs
-from robofrontier.runtime_store import RuntimeStore
-from robofrontier.task_config import ROOT, load_harness
-from scripts.export_run_report import model_evidence
+from robofrontier.runtime import cli as runtime_cli
+from robofrontier.engines.claude.provenance import fork_provenance, transcript_rows
+from robofrontier.runtime.setup import prepare_run, verify_inputs
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.tasks.config import ROOT, load_harness
+from robofrontier.batch.report import model_evidence
 
 PARENT = '11111111-1111-4111-8111-111111111111'
 CHILD = '22222222-2222-4222-8222-222222222222'
@@ -76,18 +76,20 @@ class EngineTests(unittest.TestCase):
         claude = prepare_run(self.root / 'claude-run', harness_path=harness_file(self.root, 'claude'))
         frozen = lambda run: {p.relative_to(run / 'private/inputs/frozen-source').as_posix()
                               for p in (run / 'private/inputs/frozen-source').rglob('*') if p.suffix in ('.py', '.js')}
-        self.assertIn('robofrontier/codex/codex_policy_host.js', frozen(codex))
-        self.assertNotIn('scripts/claude_benchmark.py', frozen(codex))
-        self.assertIn('scripts/claude_benchmark.py', frozen(claude))
-        self.assertFalse({'robofrontier/codex/codex_policy_host.js', 'robofrontier/codex/codex_rpc.js'} & frozen(claude))
-        self.assertTrue({'robofrontier/benchmark_common.py', 'scripts/benchmark_handoff.py', 'scripts/tasks.py'} <= frozen(claude))
-        self.assertIn('scripts/meta_dispatcher.js', frozen(claude))
-        self.assertTrue((claude / 'private/inputs/frozen-source/robofrontier/claude/provenance.py').is_file())
+        self.assertIn('robofrontier/engines/codex/codex_policy_host.js', frozen(codex))
+        # All package code is frozen for either engine; only the Codex Node host files
+        # outside Python are engine-specific.
+        self.assertIn('robofrontier/batch/claude_benchmark.py', frozen(codex))
+        self.assertIn('robofrontier/batch/claude_benchmark.py', frozen(claude))
+        self.assertFalse({'robofrontier/engines/codex/codex_policy_host.js', 'robofrontier/engines/codex/codex_rpc.js'} & frozen(claude))
+        self.assertTrue({'robofrontier/batch/prepare.py', 'robofrontier/batch/handoff.py', 'robofrontier/batch/tasks.py'} <= frozen(claude))
+        self.assertIn('robofrontier/engines/codex/meta_dispatcher.js', frozen(claude))
+        self.assertTrue((claude / 'private/inputs/frozen-source/robofrontier/engines/claude/provenance.py').is_file())
         self.assertEqual(json.loads((codex / 'private/inputs/manifest.json').read_text())['engine'], 'codex')
         self.assertEqual(json.loads((claude / 'private/inputs/manifest.json').read_text())['engine'], 'claude')
         self.assertEqual(verify_inputs(claude), [])
-        (claude/'private/inputs/frozen-source/robofrontier/benchmark_common.py').write_text('# changed shared helper')
-        self.assertIn('frozen:robofrontier/benchmark_common.py',verify_inputs(claude))
+        (claude/'private/inputs/frozen-source/robofrontier/batch/prepare.py').write_text('# changed shared helper')
+        self.assertIn('frozen:robofrontier/batch/prepare.py',verify_inputs(claude))
 
     def test_claude_report_never_uses_matching_codex_session_as_model_proof(self):
         home=self.root/'home'; sessions=home/'.codex/sessions'; sessions.mkdir(parents=True)
@@ -167,7 +169,7 @@ class ClaudeProvenanceTests(unittest.TestCase):
             store.initialize('fake', load_harness(harness_file(self.tmp.name, 'claude')), ['A'])
             self.assertEqual(runtime_cli.native_fork_provenance(store, PARENT, CHILD)['engine'], 'claude')
             store.put('config', load_harness())
-            with patch('robofrontier.runtime_cli.fork_provenance', return_value={'codex': True}) as codex:
+            with patch('robofrontier.runtime.cli.fork_provenance', return_value={'codex': True}) as codex:
                 self.assertEqual(runtime_cli.native_fork_provenance(store, PARENT, CHILD), {'codex': True})
             codex.assert_called_once_with(PARENT, CHILD)
         finally:

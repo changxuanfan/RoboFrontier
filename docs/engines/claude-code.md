@@ -66,7 +66,7 @@ claude --version
 The renderer example is for macOS. On Linux select `--render nvidia` or
 `--render cpu`. Preparation restores pinned assets automatically, creates no
 world or model session and does not authorize inference. Offline asset
-installation is `python -m scripts.benchmark_handoff setup-assets --archive
+installation is `python -m robofrontier.batch.handoff setup-assets --archive
 /path/to/archive` (see [policy assets](README.md#policy-assets)).
 
 ## Authentication
@@ -260,7 +260,7 @@ never automatically start another turn. A host's lifecycle result is not a task
 score. Public bootstrap text is packaged from allowlisted frozen inputs because
 policy file-reading tools are disabled.
 
-`robofrontier.claude.robot_mcp` is an experimental role-bound MCP server. Its
+`robofrontier.engines.claude.robot_mcp` is an experimental role-bound MCP server. Its
 offline probe checks Claude CLI tool discovery, simulated tool-image forwarding and
 fork history against local stub servers. It does not validate real provider image
 handling, trusted session provenance, dynamic delegation or production physical
@@ -286,7 +286,7 @@ ROBOFRONTIER_MOSAIC_IMAGE=1 .venv/bin/python -m unittest discover -s tests -p 't
 ### Bash isolation
 
 Permission rules confine the file tools; a separate layer confines Bash. Both come
-from the run's frozen access table (`robofrontier/policy_access.py`). Preparation
+from the run's frozen access table (`robofrontier/runtime/access.py`). Preparation
 freezes the Bash layer in `private/inputs/claude.json` as `bash_isolation`, chosen
 on the host that will run it (`landlock_shell.choose`):
 
@@ -576,9 +576,9 @@ Run is potentially billable; invoke only with explicit authorization. The
 engine-specific multi-profile entry remains available for engineering inspection:
 
 ```sh
-.venv/bin/python -m scripts.claude_benchmark run-engineering RUN_DIR --parallel 2 --wall-limit-s 1200 --startup-timeout-s 600
-.venv/bin/python -m scripts.claude_benchmark status-engineering RUN_DIR
-.venv/bin/python -m scripts.claude_benchmark stop-engineering RUN_DIR
+.venv/bin/python -m robofrontier.batch.claude_benchmark run-engineering RUN_DIR --parallel 2 --wall-limit-s 1200 --startup-timeout-s 600
+.venv/bin/python -m robofrontier.batch.claude_benchmark status-engineering RUN_DIR
+.venv/bin/python -m robofrontier.batch.claude_benchmark stop-engineering RUN_DIR
 ```
 
 The first command is a dry plan unless `--confirm-engineering-spend` is added.
@@ -681,7 +681,7 @@ turns. The independent task score is never inferred from process closure.
 
 ## Reports, frozen inputs and provenance
 
-`scripts.export_run_report` reads only the current Claude run's role/turn
+`robofrontier.batch.report` reads only the current Claude run's role/turn
 summaries, not unrelated Codex homes (see
 [reports and metric definitions](README.md#reports-and-metric-definitions)). A
 CLI-reported model name remains an observation; `all_requested_models_verified`
@@ -690,7 +690,7 @@ audit reports declare `benchmark_qualified: false`; Markdown also labels the
 unqualified state. Task success and permission to claim a scored benchmark are
 different facts.
 
-New drafts freeze their actual shared imports `robofrontier/benchmark_common.py`
+New drafts freeze their actual shared imports `robofrontier/batch/prepare.py`
 (with the rest of `robofrontier/`), `benchmark_handoff.py` and `tasks.py`,
 alongside native engine code and inputs.
 Reprepare after source changes. Older drafts do not gain that check retroactively.
@@ -711,12 +711,12 @@ must use their own prepared inputs and evidence.
 After `uv sync --locked --extra oracle`, use:
 
 ```sh
-.venv/bin/python -m scripts.claude_benchmark models
-.venv/bin/python -m scripts.claude_benchmark doctor --models haiku opus kimi qwen glm deepseek
-.venv/bin/python -m scripts.claude_benchmark plan --models kimi --level 1 --min-arms --parallel 4
-.venv/bin/python -m scripts.claude_benchmark prepare-draft --models kimi --level 1 --min-arms --output runs/engineering/claude-draft
-.venv/bin/python -m scripts.claude_benchmark prepare-draft --models opus --level 1 --min-arms --record-video --output runs/engineering/claude-video-draft
-.venv/bin/python -m scripts.claude_offline_probe
+.venv/bin/python -m robofrontier.batch.claude_benchmark models
+.venv/bin/python -m robofrontier.batch.claude_benchmark doctor --models haiku opus kimi qwen glm deepseek
+.venv/bin/python -m robofrontier.batch.claude_benchmark plan --models kimi --level 1 --min-arms --parallel 4
+.venv/bin/python -m robofrontier.batch.claude_benchmark prepare-draft --models kimi --level 1 --min-arms --output runs/engineering/claude-draft
+.venv/bin/python -m robofrontier.batch.claude_benchmark prepare-draft --models opus --level 1 --min-arms --record-video --output runs/engineering/claude-video-draft
+.venv/bin/python -m robofrontier.engines.claude.claude_offline_probe
 ```
 
 ### Text, image and resume precheck
@@ -724,9 +724,9 @@ After `uv sync --locked --extra oracle`, use:
 Real precheck (spends money; needs a credential and an explicit cap):
 
 ```sh
-.venv/bin/python -m scripts.claude_precheck --profile haiku --max-budget-usd 0.5
-.venv/bin/python -m scripts.claude_precheck --profile haiku --max-budget-usd 0.5 --confirm-spend
-.venv/bin/python -m scripts.claude_precheck --profile haiku --max-budget-usd 0.5 --check-fork --confirm-spend
+.venv/bin/python -m robofrontier.engines.claude.preflight --profile haiku --max-budget-usd 0.5
+.venv/bin/python -m robofrontier.engines.claude.preflight --profile haiku --max-budget-usd 0.5 --confirm-spend
+.venv/bin/python -m robofrontier.engines.claude.preflight --profile haiku --max-budget-usd 0.5 --check-fork --confirm-spend
 ```
 
 Without `--confirm-spend` it only prints the plan. With it, it makes three
@@ -763,8 +763,8 @@ The cap is based on CLI-reported cost and is not a provider billing limit.
 For an additional paid check of the adaptive fork boundary:
 
 ```sh
-.venv/bin/python -m scripts.claude_blocked_precheck --profile opus --max-budget-usd 1
-.venv/bin/python -m scripts.claude_blocked_precheck --profile opus --max-budget-usd 1 --confirm-spend
+.venv/bin/python -m robofrontier.engines.claude.claude_blocked_precheck --profile opus --max-budget-usd 1
+.venv/bin/python -m robofrontier.engines.claude.claude_blocked_precheck --profile opus --max-budget-usd 1 --confirm-spend
 ```
 
 It uses a synthetic local robot service and three CLI turns: initialize the
@@ -783,7 +783,7 @@ After obtaining both real receipts, compare them with the current profile and
 CLI version without making model calls:
 
 ```sh
-.venv/bin/python -m scripts.claude_readiness --profile opus --precheck /path/to/receipt.json --blocked-precheck /path/to/blocked/receipt.json
+.venv/bin/python -m robofrontier.engines.claude.claude_readiness --profile opus --precheck /path/to/receipt.json --blocked-precheck /path/to/blocked/receipt.json
 ```
 
 This checks required observations, session relationships, cost completeness,

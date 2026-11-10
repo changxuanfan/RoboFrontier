@@ -8,10 +8,10 @@ from unittest.mock import Mock, patch
 import mujoco
 import numpy as np
 
-from robofrontier.robot_control import PandaArm
-from robofrontier.suite.oracle import Trial
-from robofrontier.suite.evaluate import Monitor
-from robofrontier.suite import transport_full_oracle as full
+from robofrontier.physics.robot_control import PandaArm
+from robofrontier.oracle.trial import Trial
+from robofrontier.tasks.evaluate import Monitor
+from robofrontier.oracle import transport_full_oracle as full
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -42,7 +42,7 @@ def recorded_frontier(fixture_name='transport_air_frontier.json'):
 
 class TransferCoverageTests(unittest.TestCase):
     def test_loaded_placement_tries_another_ik_seed_after_near_endpoint_collision(self):
-        from robofrontier.task_config import load_harness
+        from robofrontier.tasks.config import load_harness
         fixture=json.loads((ROOT/'tests/fixtures/transport_placement_seed_frontier.json').read_text())
         import hashlib
         self.assertEqual(hashlib.sha256((ROOT/fixture['scene']/'scene.xml').read_bytes()).hexdigest(),fixture['source_scene_sha256'])
@@ -71,7 +71,7 @@ class TransferCoverageTests(unittest.TestCase):
         np.testing.assert_array_equal(t.model.geom_margin,margin)
 
     def test_failed_raised_transits_keep_the_grasp_offset_for_other_rotations(self):
-        from robofrontier.suite.oracle import PlacementPlanningError
+        from robofrontier.oracle.trial import PlacementPlanningError
         t=recorded_frontier('transport_placement_seed_frontier.json')
         t.reference_inter_robot_clearance_m=.006
         t.arms['D'].qref=t.data.qpos[t.arms['D'].qids].copy()
@@ -89,8 +89,8 @@ class TransferCoverageTests(unittest.TestCase):
         np.testing.assert_array_equal(t.data.qpos,before)
 
     def test_contact_approach_executes_a_controller_admissible_ik_continuation(self):
-        from robofrontier.suite import transport_oracle_v2 as ref
-        from robofrontier.task_config import load_harness
+        from robofrontier.oracle import transport_oracle_v2 as ref
+        from robofrontier.tasks.config import load_harness
         fixture=json.loads((ROOT/'tests/fixtures/transport_regrasp_contact_frontier.json').read_text())
         import hashlib
         self.assertEqual(hashlib.sha256((ROOT/fixture['scene']/'scene.xml').read_bytes()).hexdigest(),fixture['scene_sha256'])
@@ -138,7 +138,7 @@ class TransferCoverageTests(unittest.TestCase):
 
     def test_empty_receiver_can_withdraw_from_existing_positive_close_clearance(self):
         from types import SimpleNamespace
-        from robofrontier.suite.transport_runtime import sampled_motion_admission
+        from robofrontier.oracle.transport_runtime import sampled_motion_admission
         fixture=json.loads((ROOT/'tests/fixtures/transport_clearance_escape.json').read_text())
         t=recorded_frontier('transport_clearance_escape.json')
         for r in t.held:t.arms[r].grasp_force=70.
@@ -175,7 +175,7 @@ class TransferCoverageTests(unittest.TestCase):
 
     def test_small_clear_retained_load_move_remains_admissible(self):
         from types import SimpleNamespace
-        from robofrontier.suite.transport_runtime import sampled_motion_admission
+        from robofrontier.oracle.transport_runtime import sampled_motion_admission
         t=recorded_frontier()
         for r in t.held:t.arms[r].grasp_force=70.
         runtime=SimpleNamespace(t=t,running={},jobs={r:dict(object=name,robots={r}) for r,name in t.held.items()})
@@ -186,7 +186,7 @@ class TransferCoverageTests(unittest.TestCase):
 
     def test_receiver_cartesian_approach_does_not_cut_through_sender_wrist(self):
         from types import SimpleNamespace
-        from robofrontier.suite.transport_runtime import sampled_motion_admission
+        from robofrontier.oracle.transport_runtime import sampled_motion_admission
         f=json.loads((ROOT/'tests/fixtures/transport_tcp_wrist_sweep.json').read_text())
         t=recorded_frontier('transport_tcp_wrist_sweep.json')
         for r in t.held:t.arms[r].grasp_force=70.
@@ -195,8 +195,8 @@ class TransferCoverageTests(unittest.TestCase):
         self.assertFalse(sampled_motion_admission(dict(commands=f['request']),runtime))
 
     def test_intermediate_receiver_needs_next_transfer_not_final_board_reach(self):
-        from robofrontier.suite import transport_oracle_v2 as ref
-        from robofrontier.robot_control import matrix_quat
+        from robofrontier.oracle import transport_oracle_v2 as ref
+        from robofrontier.physics.robot_control import matrix_quat
         t=recorded_frontier()
         plan=ref.plan_air_regrasp(t,'A','A_item2',planning_budget_s=3.,allowed_receivers=['C'],
             candidate_centers=full.handover_centers(t,'A',['C']),receiver_tilt_deg=-90.,
@@ -224,7 +224,7 @@ class TransferCoverageTests(unittest.TestCase):
         t=SimpleNamespace(task=dict(level=2),event=Mock())
         runtime=SimpleNamespace(leases={'B':'other'},running={},settled=lambda _:True)
         job=dict(id='slot',path=['A'],object='item',goal=dict(board='board'),receiver_candidates=['A','B'])
-        with patch.object(full,'goal_pose',return_value=(np.zeros(3),np.eye(3))),patch.object(full,'goal_coverage',return_value=['A','B']),patch('robofrontier.suite.transport_unit_motion.direct_grasp_candidate',return_value=(None,{})) as planner:
+        with patch.object(full,'goal_pose',return_value=(np.zeros(3),np.eye(3))),patch.object(full,'goal_coverage',return_value=['A','B']),patch('robofrontier.oracle.transport_unit_motion.direct_grasp_candidate',return_value=(None,{})) as planner:
             # C being free is not sufficient if only B is a suitable receiver.
             self.assertIsNone(full.pickup_resources(t,runtime,job))
             self.assertIsNone(full.pickup_resources(t,runtime,job))
@@ -234,13 +234,13 @@ class TransferCoverageTests(unittest.TestCase):
             self.assertEqual(planner.call_count,1)
             runtime.leases.clear()
             self.assertEqual(full.pickup_resources(t,runtime,job),{'A','B'})
-        with patch.object(full,'goal_pose',return_value=(np.zeros(3),np.eye(3))),patch('robofrontier.suite.transport_unit_motion.direct_grasp_candidate',return_value=({},{})):
+        with patch.object(full,'goal_pose',return_value=(np.zeros(3),np.eye(3))),patch('robofrontier.oracle.transport_unit_motion.direct_grasp_candidate',return_value=({},{})):
             job.pop('grasp_check_revision');runtime.leases={'B':'other'}
             self.assertEqual(full.pickup_resources(t,runtime,job),{'A'})
 
     def test_independent_progress_can_reach_other_arms_finished_pose(self):
         from types import SimpleNamespace
-        from robofrontier.suite.transport_runtime import sampled_motion_admission
+        from robofrontier.oracle.transport_runtime import sampled_motion_admission
         fixture=json.loads((ROOT/'tests/fixtures/transport_async_sweep.json').read_text())
         t=recorded_frontier('transport_async_sweep.json')
         for r in t.held:t.arms[r].grasp_force=70.

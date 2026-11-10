@@ -1,7 +1,7 @@
 """Static engineering probes on scratch data, never runtime robot commands."""
 import mujoco
 import numpy as np
-from ..robot_control import matrix_quat,quat_matrix
+from ..physics.robot_control import matrix_quat,quat_matrix
 
 
 def owner_map(model,robots):

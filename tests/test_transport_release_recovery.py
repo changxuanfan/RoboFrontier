@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import Mock,patch
 import numpy as np
 
-from robofrontier.suite import transport_oracle_v2 as ref
+from robofrontier.oracle import transport_oracle_v2 as ref
 
 
 class ReleaseUnloadingTests(unittest.TestCase):

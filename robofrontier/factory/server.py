@@ -21,11 +21,10 @@ PLAN_SCHEMA = 'robofrontier.factory-render-plan.v1'
 
 
 def code_hashes():
-    files = set((ROOT/'robofrontier').glob('*.py'))
-    for package in ('suite', 'factory'):
-        files.update((ROOT/'robofrontier'/package).glob('*.py'))
-    files.update((ROOT/'scripts').glob('*factory*.py'))
-    files.add(ROOT/'scripts/promo_preview.py')
+    # The code a Factory render runs: Factory itself, media edits, task and physics models.
+    files = {ROOT/'robofrontier/io.py'}
+    for package in ('factory', 'media', 'tasks', 'physics'):
+        files.update((ROOT/'robofrontier'/package).rglob('*.py'))
     return {p.relative_to(ROOT).as_posix():digest(p) for p in sorted(files) if p.is_file()}
 
 
@@ -71,16 +70,16 @@ def import_motion(data_root, recording, output, speedup=None, keep_idle=False, t
 
     Other desks are static background. The desk shows the states kept by timeline,
     a motion-edit of this recording such as the motion-cut.json that
-    scripts/render_policy_videos.py checked on the simple background; without one
-    it keeps robofrontier.motion_cut's meaningful motion, and with keep_idle every
+    robofrontier/media/render.py checked on the simple background; without one
+    it keeps robofrontier.media.motion_cut's meaningful motion, and with keep_idle every
     state. Speedup None plays at the family's release speedup. This is not an
     Oracle edit or a benchmark qualification, and changes no source evidence.
     """
     import numpy as np
     from .scene import build_factory
     from .workstations import compose
-    from ..motion_recording import MotionReader
-    from scripts.export_factory_blender import export as export_blender
+    from ..media.motion_recording import MotionReader
+    from robofrontier.factory.blender.export import export as export_blender
     from .bundle import export as export_bundle
     data_root, recording, output=Path(data_root).resolve(),Path(recording).resolve(),Path(output).resolve()
     verify(data_root)
@@ -118,12 +117,12 @@ def import_motion(data_root, recording, output, speedup=None, keep_idle=False, t
             raise ValueError('Recorded motion clock differs')
         keep=np.ones(len(times),dtype=bool)
         if timeline is not None:
-            from ..motion_timeline import MotionTimeline
+            from ..media.motion_timeline import MotionTimeline
             cut=MotionTimeline(timeline,reader)
             if not np.array_equal(cut.times,times):raise ValueError('Timeline clock differs from the recording')
             keep=cut.keep.astype(bool).copy()
         elif not keep_idle:
-            from ..motion_cut import meaningful_keep
+            from ..media.motion_cut import meaningful_keep
             keep=meaningful_keep(recording)[1]
         np.savez_compressed(edit_dir/'selection.npz',source_time_s=times,keep=keep)
         write(edit_dir/'edit.json',dict(schema='robofrontier.station-edit.v2',case_id=spec['id'],
@@ -143,9 +142,9 @@ def import_motion(data_root, recording, output, speedup=None, keep_idle=False, t
 def prepare(data_root, output, families=None, levels=None, views=('front', 'side'), cases=None,
             duration_s=None, width=1920, height=1080, samples=64, mode='desks', device=None,
             effective_configuration=None, asset_lock_sha256=None, project=None):
-    from ..motion_recording import MotionReader
-    from ..station_edit import StationEdit
-    from ..task_families import oracle_recording
+    from ..media.motion_recording import MotionReader
+    from ..media.station_edit import StationEdit
+    from ..tasks.families import oracle_recording
     initial_code=code_hashes()
     data_root, output = Path(data_root).resolve(), Path(output).resolve()
     verified = verify(data_root)
@@ -362,7 +361,7 @@ def run_job(plan_path, index, blender=None, scratch=None):
                     raise subprocess.CalledProcessError(code,argv)
         try:
             if plan['mode']=='promo':
-                arguments = [sys.executable,'-m','scripts.promo_preview','--output',work/'poses',
+                arguments = [sys.executable,'-m','robofrontier.factory.tour','--output',work/'poses',
                     '--scene',plan['scene'],'--cameras',plan['cameras'],'--release',path.parent/'release.json',
                     '--duration',str(job['frames']/plan['fps']),'--preview-fps','30']
                 if 'editorial' in plan:
@@ -370,7 +369,7 @@ def run_job(plan_path, index, blender=None, scratch=None):
                     arguments.extend(['--camera-plan', inside(path.parent/'editorial', project['camera_plan'])])
                 command(arguments)
             else:
-                command([sys.executable,'-m','scripts.factory','poses','--scene',plan['scene'],
+                command([sys.executable,'-m','robofrontier.factory.commands','poses','--scene',plan['scene'],
                     '--release',path.parent/'release.json','--output',work/'poses',
                     '--duration',str((job['frames']-.5)/plan['fps']),
                     '--camera','desk-'+job['view'],'--station',job['case_id'],
@@ -378,7 +377,7 @@ def run_job(plan_path, index, blender=None, scratch=None):
             animation = read(work/'poses/animation.json')
             if len(animation['frames']) != job['frames']:
                 raise ValueError('Exported pose count differs from plan')
-            argv=[executable,'--background','--python-exit-code','1','--python',ROOT/'scripts/render_factory_blender.py','--',
+            argv=[executable,'--background','--python-exit-code','1','--python',ROOT/'robofrontier/factory/blender/render.py','--',
                 '--asset',plan['asset'],'--animation',work/'poses/animation.json','--output',work/'render',
                 '--engine','cycles','--profile','fast','--device',plan['device'],
                 '--width',str(plan['width']),'--height',str(plan['height']),'--samples',str(plan['samples']),
@@ -481,7 +480,7 @@ def submit(plan_path, partition, parallel=1, cpus=20, memory='64G', wall_time='2
         '--cpus-per-task',str(cpus),'--mem',memory,'--time',wall_time,'--no-requeue','--signal=B:TERM@'+str(stop_warning_s),
         '--array',f'0-{len(plan["jobs"])-1}%{parallel}','--output',str(logs/'%A_%a.out'),
         '--chdir',str(ROOT),'--export=ALL,RF_FACTORY_PYTHON='+sys.executable,
-        str(ROOT/'scripts/slurm_factory.sbatch'),str(path),'--blender',blender_path(blender)]
+        str(ROOT/'robofrontier/factory/slurm_factory.sbatch'),str(path),'--blender',blender_path(blender)]
     options=[]
     for name,value in (('partition',partition),('account',account),('qos',qos)):
         if value:options.extend(['--'+name,value])

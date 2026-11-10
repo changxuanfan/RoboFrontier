@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from robofrontier.suite.placement_oracle import pickup_coverage
+from robofrontier.oracle.placement import pickup_coverage
 
 
 class PickupCoverageTests(unittest.TestCase):

@@ -1,8 +1,8 @@
 // Real native CLI, production role-bound broker, synthetic provider only.
 const fs=require('node:fs'),path=require('node:path');
-const {CodexRpc}=require('../robofrontier/codex/codex_rpc');
-const {PolicyHost,robotTool}=require('../robofrontier/codex/codex_policy_host');
-const broker=require('../robofrontier/codex/tool_broker');
+const {CodexRpc}=require('../robofrontier/engines/codex/codex_rpc');
+const {PolicyHost,robotTool}=require('../robofrontier/engines/codex/codex_policy_host');
+const broker=require('../robofrontier/engines/codex/tool_broker');
 const out=process.argv[2],launch=JSON.parse(fs.readFileSync(path.join(out,'launch.json')));
 const host=Object.create(PolicyHost.prototype);
 Object.assign(host,{run:launch.tool_probe.run_dir,python:launch.python,launch,actors:new Map(),event:()=>{}});

@@ -11,7 +11,7 @@ import zipfile
 from unittest.mock import patch
 
 from robofrontier.configuration import load_configuration
-from robofrontier import slurm_job as slurm
+from robofrontier.batch import slurm_job as slurm
 
 
 class SlurmJobTests(unittest.TestCase):
@@ -38,7 +38,7 @@ class SlurmJobTests(unittest.TestCase):
         self.local.parent.mkdir()
 
     def prepare(self):
-        with patch('scripts.benchmark_handoff.ensure_asset_archive', return_value=self.asset):
+        with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
             return slurm.submit(self.config, self.submission, root=self.repo)
 
     def stage(self):
@@ -68,7 +68,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_dirty_tracked_source_is_rejected_before_snapshot(self):
         (self.repo/'robofrontier/__init__.py').write_text('changed')
-        with patch('scripts.benchmark_handoff.ensure_asset_archive') as assets:
+        with patch('robofrontier.batch.handoff.ensure_asset_archive') as assets:
             with self.assertRaisesRegex(ValueError, 'Commit tracked changes'):
                 slurm.submit(self.config, self.submission, root=self.repo)
             assets.assert_not_called()
@@ -213,7 +213,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_a_fence_failing_on_exit_keeps_the_collected_archive(self):
         from contextlib import contextmanager
-        from robofrontier.slurm_proxy import EgressError
+        from robofrontier.batch.slurm_proxy import EgressError
         self.stage()
         source = (self.local/'source').resolve()
         archive = source/'runs/exports/collected.zip'
@@ -282,7 +282,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertEqual(self.config['batch']['task_wall_limit_s'], 86400)
 
     def test_subscription_submission_is_one_allocation_serialized_by_credential_stream(self):
-        from robofrontier.codex.job_engine import fingerprint
+        from robofrontier.engines.codex.job_engine import fingerprint
         self.config = load_configuration(overrides={
             'policy': {'profile': 'luna_subscription'},
             'runtime': {'codex_home_scope': 'job', 'codex_tool_backend': 'landlock-v1'},
@@ -324,14 +324,14 @@ class SlurmJobTests(unittest.TestCase):
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay), 'egress_pause_s': 120}})
         with self.assertRaisesRegex(ValueError, '--engineering'):
             self.prepare()
-        with patch('scripts.benchmark_handoff.ensure_asset_archive', return_value=self.asset):
+        with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
             slurm.submit(self.config, self.submission, root=self.repo, engineering=True)
         manifest, _ = slurm._verify_submission(self.submission)
         self.assertEqual((manifest['credential_env'], manifest['auth_mode']), ('CLAUDE_CODE_OAUTH_TOKEN', 'api'))
         self.assertNotIn('--dependency=singleton', slurm.queue_command(self.config['slurm'], self.submission))
         self.config['slurm']['egress_root'] = str(self.repo/'egress')
         with self.assertRaisesRegex(ValueError, 'egress state outside'):
-            with patch('scripts.benchmark_handoff.ensure_asset_archive', return_value=self.asset):
+            with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
                 slurm.submit(self.config, self.root/'second', root=self.repo, engineering=True)
         # Only Claude carries a token this way; Codex keeps the job-scoped subscription store.
         with self.assertRaisesRegex(ValueError, 'Mac egress requires'):
@@ -351,7 +351,7 @@ class SlurmJobTests(unittest.TestCase):
             yield
         stops = []
         with patch.object(slurm.platform, 'system', return_value='Linux'), \
-                patch.dict(os.environ, {'SLURM_JOB_ID': '123'}), patch('robofrontier.slurm_proxy.environment', route):
+                patch.dict(os.environ, {'SLURM_JOB_ID': '123'}), patch('robofrontier.batch.slurm_proxy.environment', route):
             before = dict(os.environ)
             with slurm.subscription_environment(config, self.local, on_failure=lambda: stops.append(1)):
                 self.assertEqual(Path(seen['private']), (self.local/'engine').resolve())

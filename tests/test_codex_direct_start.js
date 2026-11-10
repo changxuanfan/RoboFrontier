@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict');
-const {PolicyHost}=require('../robofrontier/codex/codex_policy_host');
+const {PolicyHost}=require('../robofrontier/engines/codex/codex_policy_host');
 
 function fixture() {
   const operations=[];

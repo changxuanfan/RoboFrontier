@@ -1,6 +1,6 @@
 import unittest
 import mujoco
-from robofrontier.physics_health import require_valid_step
+from robofrontier.physics.health import require_valid_step
 class PhysicsHealthTests(unittest.TestCase):
  def setUp(self):
   self.m=mujoco.MjModel.from_xml_string('<mujoco><worldbody><body><freejoint/><geom type="sphere" size=".01" mass="1"/></body></worldbody></mujoco>');self.d=mujoco.MjData(self.m)

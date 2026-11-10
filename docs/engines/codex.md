@@ -8,12 +8,12 @@ the [engine overview](README.md) for what Codex shares with Claude and for
 [shared setup](README.md#shared-setup), and [providers](providers.md) for
 catalogs, credentials and third-party endpoints.
 
-The engine lives in `robofrontier/codex/`: `launch.py` builds the app-server
+The engine lives in `robofrontier/engines/codex/`: `launch.py` builds the app-server
 configuration and native home, `batch.py` prepares and supervises batches (and
 backs `python -m scripts.benchmark`), and the Node `codex_policy_host.js`,
 `codex_rpc.js`, `codex_preflight.js` and `codex_initialize.js` drive app-server.
 Selection and `.env` loading shared with Claude are in
-`robofrontier/benchmark_common.py`.
+`robofrontier/batch/prepare.py`.
 
 Each model/case has an independent run, MuJoCo world, SQLite state, authenticated
 connections, policy history, and work notes. Adaptive is the default: only its
@@ -130,7 +130,7 @@ receipts are not interchangeable. Run the installed-CLI protocol/adversarial tes
 without external inference using:
 
 ```sh
-.venv/bin/python -m scripts.check_codex_broker --output runs/engineering/NEW_BROKER_CHECK
+.venv/bin/python -m robofrontier.engines.codex.check_codex_broker --output runs/engineering/NEW_BROKER_CHECK
 ```
 
 This test inspects the actual model tool inventory, rejects forged native calls,
@@ -255,7 +255,7 @@ rather than assuming the interactive default covers every session. See the
 [official app-server guide](https://developers.openai.com/codex/app-server/).
 
 Threads that Codex Desktop creates cannot receive the CLI host's dynamic `robot`
-tool. `python -m robofrontier.desktop_robot_mcp` is one global MCP stdio server
+tool. `python -m robofrontier.engines.codex.desktop_robot_mcp` is one global MCP stdio server
 that gives them the same role API: it maps the calling thread, which Codex puts in
 each call's `_meta`, to the role bound to that thread in a run's runtime database.
 The model never names its role or sees a connection file. Print the entry for the
@@ -266,8 +266,8 @@ under `runs/`) and register it once. The entry sets
 Local real-CLI checks use a synthetic Responses service without external billing:
 
 ```sh
-.venv/bin/python -m scripts.check_codex_cli --output runs/engineering/NEW_CLI_CHECK
-.venv/bin/python -m scripts.check_codex_snapshot
+.venv/bin/python -m robofrontier.engines.codex.check_codex_cli --output runs/engineering/NEW_CLI_CHECK
+.venv/bin/python -m robofrontier.engines.codex.check_codex_snapshot
 ```
 
 A passed offline check is evidence for its exact protocol/version, not acceptance

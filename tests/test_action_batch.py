@@ -7,11 +7,11 @@ import unittest
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.run_setup import prepare_run
-from robofrontier.runtime_service import RuntimeService
-from robofrontier.runtime_store import RuntimeStore
-from robofrontier.task_config import load_harness
-from robofrontier.scheduling import Scheduler
+from robofrontier.runtime.setup import prepare_run
+from robofrontier.runtime.service import RuntimeService
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.tasks.config import load_harness
+from robofrontier.runtime.scheduling import Scheduler
 
 
 class BatchTests(unittest.TestCase):

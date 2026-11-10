@@ -4,15 +4,15 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.run_setup import verify_inputs
-from robofrontier.task_families import (ROOT, RELEASE, read, resolve_case,
+from robofrontier.runtime.setup import verify_inputs
+from robofrontier.tasks.families import (ROOT, RELEASE, read, resolve_case,
     policy_task, validate_policy_task, validate_frozen_policy, prepare)
 
 
 class FamilyReleaseTests(unittest.TestCase):
     def test_asset_audit_detects_missing_changed_and_unsafe_paths(self):
         import hashlib
-        from scripts.tasks import check_case_assets
+        from robofrontier.batch.tasks import check_case_assets
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);scene=root/'scene';(scene/'assets').mkdir(parents=True)
             file=scene/'assets/a';file.write_bytes(b'original')
@@ -118,7 +118,7 @@ class FamilyReleaseTests(unittest.TestCase):
                     validate_frozen_policy(task, run)
 
     def test_each_family_starts_frozen_evaluator_and_recording_without_steps(self):
-        from robofrontier.pipeline import World
+        from robofrontier.runtime.pipeline import World
         cases = ['transport-a04-d1', 'mosaic-a04-6x12-d1',
                  'relay-a08-d1', 'dial-best5-n04-d1']
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
@@ -135,8 +135,8 @@ class FamilyReleaseTests(unittest.TestCase):
                         world.close()
 
     def test_policy_harness_records_motion_at_its_frozen_rate(self):
-        from robofrontier.pipeline import World
-        from robofrontier.task_config import load_harness
+        from robofrontier.runtime.pipeline import World
+        from robofrontier.tasks.config import load_harness
         self.assertEqual(read(ROOT/'configs/harnesses/policy.json')['motion_hz'], 30)
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
             run = prepare('mosaic-a04-6x12-d1', Path(tmp)/'run', harness=ROOT/'configs/harnesses/policy.json')
@@ -171,7 +171,7 @@ class FamilyReleaseTests(unittest.TestCase):
                 with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'process log format'):
                     load_harness(bad)
             # Every Monitor format, and only those, is accepted (task_config keeps the list literal).
-            from robofrontier.suite.evaluate import PROCESS_LOG_FORMATS
+            from robofrontier.tasks.evaluate import PROCESS_LOG_FORMATS
             self.assertEqual(sorted(PROCESS_LOG_FORMATS), ['events-10s', 'events-1s', 'events-60s', 'full'])
             for value in PROCESS_LOG_FORMATS:
                 bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'process_log': value}))
@@ -183,7 +183,7 @@ class ReleaseRecordTests(unittest.TestCase):
     def test_the_release_pins_no_harness_and_the_asset_pin_follows_it(self):
         # Each run freezes its own harness.json and harness_sha256; the release's own
         # harness pin went stale on 2026-10-28 and nothing enforced it.
-        from robofrontier.task_families import sha
+        from robofrontier.tasks.families import sha
         self.assertNotIn('harness', sorted(read(ROOT/RELEASE)))
         assets = read(ROOT/'configs/policy-assets.json')
         self.assertEqual(assets['release_sha256'], sha(ROOT/RELEASE))
@@ -198,7 +198,7 @@ class OracleRecordingTests(unittest.TestCase):
     NEW = 'runs/oracle/relay-test/relay-a08-d1/attempt-001/motion'
 
     def test_every_released_recording_maps_into_the_checkout(self):
-        from robofrontier.task_families import current_path
+        from robofrontier.tasks.families import current_path
         for family in read(ROOT/RELEASE)['families'].values():
             for row in family['oracle']:
                 with self.subTest(case=row['id']):
@@ -206,7 +206,7 @@ class OracleRecordingTests(unittest.TestCase):
 
     def test_a_recording_resolves_under_root_or_is_named_when_missing(self):
         import re
-        from robofrontier.task_families import oracle_recording
+        from robofrontier.tasks.families import oracle_recording
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             with self.assertRaisesRegex(FileNotFoundError, 'not on this host: '+re.escape(self.OLD)):

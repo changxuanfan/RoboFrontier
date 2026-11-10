@@ -146,7 +146,7 @@ class EditorialTests(unittest.TestCase):
         def fake_process(argv, **kwargs):
             output = Path(argv[argv.index('--output')+1])
             output.mkdir(parents=True)
-            if 'scripts.promo_preview' in argv:
+            if 'robofrontier.factory.tour' in argv:
                 bundle.write(output/'animation.json',{'frames':[{}, {}, {}]})
             else:
                 (output/'factory.mp4').write_bytes(b'raw')

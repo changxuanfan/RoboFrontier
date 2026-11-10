@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from tests.test_relay_descent_recovery import recorded_world
-from robofrontier.suite import relay_oracle_v2 as ref
+from robofrontier.oracle import relay_oracle_v2 as ref
 
 
 class ObservedReleaseTests(unittest.TestCase):

@@ -2,9 +2,9 @@ import hashlib,json,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
 import mujoco,numpy as np
-from robofrontier.motion_recording import MotionWriter,MotionReader
-from robofrontier.workstation import Workstation
-from robofrontier.task_families import ROOT,resolve_case
+from robofrontier.media.motion_recording import MotionWriter,MotionReader
+from robofrontier.physics.workstation import Workstation
+from robofrontier.tasks.families import ROOT,resolve_case
 
 class MotionRecordingTests(unittest.TestCase):
     def test_video_cadence_does_not_accumulate_sample_phase_error(self):
@@ -38,7 +38,7 @@ class MotionRecordingTests(unittest.TestCase):
                 self.assertEqual(t,frames[i][0]);np.testing.assert_array_equal(q,frames[i][1])
             for invalid in [[-1],[len(frames)],[2,1],[0,0],[]]:
                 with self.assertRaises(ValueError):list(reader.selected_frames(invalid))
-            from robofrontier.motion_timeline import write_timeline,MotionTimeline
+            from robofrontier.media.motion_timeline import write_timeline,MotionTimeline
             timeline=Path(td)/'edit.json'
             write_timeline(timeline,path,times,[0,len(frames)-1],[True,True],{})
             edit=MotionTimeline(timeline,reader)
@@ -66,8 +66,8 @@ class MotionRecordingTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'checksum'):list(MotionReader(path).frames())
 
     def test_frozen_policy_scene_retains_canonical_source_for_shared_recorder(self):
-        from robofrontier.scene_task import freeze_scene
-        from robofrontier.pipeline import World
+        from robofrontier.tasks.scene import freeze_scene
+        from robofrontier.runtime.pipeline import World
         with tempfile.TemporaryDirectory() as td:
             path=Path(td);(path/'public/inputs').mkdir(parents=True)
             task=freeze_scene(json.loads((self.source/'task.json').read_text()),path)

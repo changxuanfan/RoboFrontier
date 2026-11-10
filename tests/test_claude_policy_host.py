@@ -3,8 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from robofrontier.claude.policy_host import CentralizedPolicyHost
-from robofrontier.runtime_store import RuntimeStore
+from robofrontier.engines.claude.policy_host import CentralizedPolicyHost
+from robofrontier.runtime.store import RuntimeStore
 
 
 class FakeHost:

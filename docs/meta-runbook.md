@@ -79,7 +79,7 @@ reviewing a Legacy run; never rewrite its prepared inputs to a new protocol.
 The Legacy preparation entries remain:
 
 ```sh
-uv run python scripts/create_pipeline_run.py runs/NEW --task TASK.json
+uv run python robofrontier/runtime/create_pipeline_run.py runs/NEW --task TASK.json
 uv run python scripts/check_harness.py --report runs/engineering-check.json
 ```
 
@@ -89,7 +89,7 @@ role and Skill. The manager reads its private runbook and role. Old prepared
 packages are not automatically converted by current services.
 
 After authorization, start the single physical owner with
-`python -m robofrontier.pipeline --run-dir runs/NEW`. Create the independent
+`python -m robofrontier.runtime.pipeline --run-dir runs/NEW`. Create the independent
 native policy sessions and bind their real thread IDs. For frozen
 `ready_barrier_v1` only, policies read their inputs, call READY and yield. The
 service requires all initial roles READY/bound with fresh actual idle platform
@@ -104,7 +104,7 @@ Inside the manager's tool environment, load the run's frozen dispatcher:
 // @exec: {"yield_time_ms": 1000, "max_output_tokens": 2000}
 const quote = s => "'" + s.replaceAll("'", String.fromCharCode(39,92,39,39)) + "'";
 const source = await tools.exec_command({
-  cmd: "cat " + quote(RUN_DIRECTORY + "/private/inputs/frozen-source/scripts/meta_dispatcher.js"),
+  cmd: "cat " + quote(RUN_DIRECTORY + "/private/inputs/frozen-source/robofrontier/engines/codex/meta_dispatcher.js"),
   workdir: REPOSITORY, max_output_tokens: 12000
 });
 if (source.exit_code !== 0) throw new Error("dispatcher unavailable");
@@ -171,7 +171,7 @@ Use the unified stop/collection flow for its managed batches. For an existing
 Legacy pipeline, the engineering sealing entry remains:
 
 ```sh
-.venv/bin/python -m robofrontier.runtime_cli --run-dir runs/EXISTING seal --data '{"timeout_s":30}'
+.venv/bin/python -m robofrontier.runtime.cli --run-dir runs/EXISTING seal --data '{"timeout_s":30}'
 ```
 
 Sealing blocks new actions, waits for existing execution, requests fresh final
@@ -192,7 +192,7 @@ A manager cleanup timeout is not an agent planning/action budget.
 Explicit committed-event export remains available:
 
 ```sh
-.venv/bin/python -m robofrontier.runtime_cli --run-dir runs/EXISTING export --data '{"path":"ABSOLUTE_OUTPUT.jsonl"}'
+.venv/bin/python -m robofrontier.runtime.cli --run-dir runs/EXISTING export --data '{"path":"ABSOLUTE_OUTPUT.jsonl"}'
 ```
 
 Stopped unified collection gathers task-associated native sessions and required

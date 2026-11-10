@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from scripts.factory_capsule import capsule_vertices
+from robofrontier.factory.blender.factory_capsule import capsule_vertices
 
 
 def unit_sphere(rings):
@@ -35,7 +35,7 @@ class CapsuleTests(unittest.TestCase):
             capsule_vertices(unit_sphere(12), .01, .0415)
 
     def test_renderer_template_has_no_equator_vertices(self):
-        source = (Path(__file__).parents[1] / 'scripts/render_factory_blender.py').read_text()
+        source = (Path(__file__).parents[1] / 'robofrontier/factory/blender/render.py').read_text()
         self.assertIn('create_uvsphere(bm,u_segments=24,v_segments=13', source)
 
 

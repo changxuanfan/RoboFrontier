@@ -17,8 +17,8 @@ import mujoco
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from .scene import ROOT, vector
-from .sim import RobotIK
+from .io import ROOT, vector
+from .physics.kinematics import RobotIK
 
 COLLECTION = 'cube_transport_cylinders'
 

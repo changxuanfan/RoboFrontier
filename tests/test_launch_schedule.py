@@ -3,7 +3,7 @@ import threading
 import time
 import unittest
 
-from robofrontier.launch_schedule import LaunchSchedule
+from robofrontier.batch.launch_schedule import LaunchSchedule
 
 
 class LaunchScheduleTests(unittest.TestCase):

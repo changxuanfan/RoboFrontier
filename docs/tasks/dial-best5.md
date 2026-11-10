@@ -81,7 +81,7 @@ or mesh geometry. Private evidence indexes are engineering-only.
 Simple-background rendering (`render_dial_oracle.py`, also removed on
 2026-11-10) used the frozen source and edit. Current
 [Factory commands](../factory/replay.md) provide the complex-background Cycles path;
-`python -m scripts.factory video` remains the lower-level entry. The historical
+`python -m robofrontier.factory.commands video` remains the lower-level entry. The historical
 Classic final-video entry is retired; source frames and delivered videos remain.
 
 `run_blind_dial_oracle.py` is an explicit Legacy engineering Oracle entry using

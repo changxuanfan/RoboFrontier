@@ -7,7 +7,7 @@ import time
 import unittest
 
 import numpy as np
-from robofrontier.recording import Video
+from robofrontier.media.live_video import Video
 
 
 @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'),'FFmpeg tools required')

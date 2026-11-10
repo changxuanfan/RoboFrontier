@@ -13,9 +13,9 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from robofrontier.pipeline import World
-from robofrontier.robot_control import PandaArm
-from robofrontier.scene import ROOT, vector
+from robofrontier.runtime.pipeline import World
+from robofrontier.physics.robot_control import PandaArm
+from robofrontier.io import ROOT, vector
 
 TABLE_HEIGHT_M = .4
 CUBE_HALF_M = .02

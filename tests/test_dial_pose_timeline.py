@@ -7,9 +7,9 @@ from unittest.mock import Mock, patch
 import mujoco
 import numpy as np
 
-from robofrontier.suite.dial_pose_timeline import EditedMotion, IdleSettings, build_edit, idle_mask, playback_speed
-from robofrontier.motion_recording import MotionWriter
-from robofrontier.workstation import Workstation
+from robofrontier.media.dial_pose_timeline import EditedMotion, IdleSettings, build_edit, idle_mask, playback_speed
+from robofrontier.media.motion_recording import MotionWriter
+from robofrontier.physics.workstation import Workstation
 
 
 class MotionEditTests(unittest.TestCase):
@@ -100,7 +100,7 @@ class MotionEditTests(unittest.TestCase):
 
     def test_factory_translation_yaw_preserve_every_visible_geometry(self):
         from robofrontier.factory.workstations import FactoryPlayback, compose
-        from robofrontier.robot_control import quat_matrix
+        from robofrontier.physics.robot_control import quat_matrix
         root = Path(__file__).resolve().parents[1]
         case = json.loads((root/'benchmark/dial/catalog.json').read_text())['cases'][0]
         source = Workstation(root/case['directory'])

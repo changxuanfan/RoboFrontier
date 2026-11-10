@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from robofrontier.run_metrics import export_metrics, native_codex_sessions, native_subagent_calls, run_skills, usage
+from robofrontier.batch.metrics import export_metrics, native_codex_sessions, native_subagent_calls, run_skills, usage
 
 
 class RunMetricTests(unittest.TestCase):
@@ -129,7 +129,7 @@ class RunMetricTests(unittest.TestCase):
 
     def _claude_transcripts(self, tmp, files):
         from datetime import datetime, timezone
-        from robofrontier import run_layout
+        from robofrontier.runtime import layout as run_layout
         def stamp(at): return datetime.fromtimestamp(at,timezone.utc).isoformat().replace('+00:00','Z')
         root=run_layout.path(tmp,'engine_config','claude')/'projects/p'
         for name,(session,records) in files.items():
@@ -227,8 +227,8 @@ class RunMetricTests(unittest.TestCase):
 
 class RunEvidenceTests(unittest.TestCase):
     def test_run_skills_lists_each_heading_of_the_shared_lessons_file(self):
-        from robofrontier.policy_bootstrap import SKILLS_HEADER
-        from robofrontier.run_layout import manifest_record
+        from robofrontier.runtime.bootstrap import SKILLS_HEADER
+        from robofrontier.runtime.layout import manifest_record
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp); (run/'private/inputs').mkdir(parents=True)
             self.assertEqual(run_skills(run), [])  # A legacy run has no lessons file.
@@ -249,7 +249,7 @@ class RunEvidenceTests(unittest.TestCase):
                  'revisions': [{'rev': None, 'role': None, 'change': 'a loose revision'}]}])
 
     def test_a_linked_or_special_skills_file_is_reported_and_never_read(self):
-        from robofrontier.run_layout import manifest_record
+        from robofrontier.runtime.layout import manifest_record
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp)/'run'; (run/'private/inputs/meta').mkdir(parents=True); (run/'workspace').mkdir()
             (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('codex')))
@@ -298,7 +298,7 @@ class TranscriptCostTests(unittest.TestCase):
                                'long_prompt_input': 2.0, 'long_prompt_output': 20.0}}}
 
     def run_with(self, root, messages):
-        from robofrontier import run_layout
+        from robofrontier.runtime import layout as run_layout
         run = Path(root)/'run'; (run/'private/inputs').mkdir(parents=True)
         (run/'private/inputs/manifest.json').write_text(json.dumps({'engine': 'claude', **run_layout.manifest_record('claude')}))
         projects = run_layout.path(run, 'engine_config', 'claude')/'projects/p'; (projects/'s/subagents').mkdir(parents=True)
@@ -308,7 +308,7 @@ class TranscriptCostTests(unittest.TestCase):
         return run
 
     def test_each_request_is_priced_once_at_its_prompt_tier(self):
-        from robofrontier.run_metrics import claude_transcript_cost
+        from robofrontier.batch.metrics import claude_transcript_cost
         small = {'id': 'a', 'model': 'm', 'usage': {'input_tokens': 100, 'cache_read_input_tokens': 200, 'output_tokens': 10,
                  'cache_creation_input_tokens': 400, 'cache_creation': {'ephemeral_5m_input_tokens': 400, 'ephemeral_1h_input_tokens': 0}}}
         large = {'id': 'b', 'model': 'm', 'usage': {'input_tokens': 2000, 'output_tokens': 100}}
@@ -326,7 +326,7 @@ class TranscriptCostTests(unittest.TestCase):
             self.assertIsNone(result['estimated_cost_usd']); self.assertEqual(result['unpriced_models'], ['third-party'])
 
     def test_the_catalog_prices_the_anthropic_models_it_uses(self):
-        from robofrontier.run_metrics import claude_pricing
+        from robofrontier.batch.metrics import claude_pricing
         prices = claude_pricing()['models']
         self.assertEqual((prices['claude-haiku-5-5']['input'], prices['claude-haiku-5-5']['output']), (0.10, 0.50))
 

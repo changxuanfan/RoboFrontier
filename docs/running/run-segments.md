@@ -107,8 +107,8 @@ with the same restore frame and end time, and uses no further continuation.
 
 - **A host or world exits while the batch process lives:** the batch runner
   checks after every run and, if the run may continue, prepares its next segment
-  and starts its host again (`robofrontier/codex/batch.py` for Codex,
-  `robofrontier/claude/engineering_batch.py` for Claude).
+  and starts its host again (`robofrontier/batch/codex_batch.py` for Codex,
+  `robofrontier/batch/engineering_batch.py` for Claude).
 - **The batch process died too:** the world processes close by themselves.
   Then run the batch once more; started runs continue in their next segment and
   unstarted runs start:
@@ -129,7 +129,7 @@ with the same restore frame and end time, and uses no further continuation.
 
 ## Testing single-arm recovery: fault injection
 
-`python -m robofrontier.fault_injection RUN --robot ARM|'*' --action-index N`
+`python -m robofrontier.runtime.fault_injection RUN --robot ARM|'*' --action-index N`
 freezes one fault before the run starts: the N-th independent action of that arm
 (or of any arm, with `*`) times out quickly and, once stopping, stays unsettled
 for a set time, so it becomes an uncertain action with local recovery, and
@@ -242,7 +242,7 @@ backstop.
 
 A run off Slurm (a Mac or RunPod host) has no egress route to pause its world, so
 its world owner probes the engine's model API hosts
-(`robofrontier/network_outage.py`): Claude `api.anthropic.com`; Codex
+(`robofrontier/runtime/outage.py`): Claude `api.anthropic.com`; Codex
 `chatgpt.com` and `auth.openai.com`, all of which must answer. A probe is a
 verified TLS handshake on port 443 followed by an HTTP `HEAD /` that must get an
 answer (any status), every 5 s, with a 5 s timeout. A bare TCP connection is not

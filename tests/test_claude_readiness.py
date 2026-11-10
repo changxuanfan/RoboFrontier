@@ -9,9 +9,9 @@ import unittest
 import uuid
 from unittest.mock import patch
 
-from robofrontier.claude.profile_identity import fingerprint
-from scripts.claude_readiness import BASIC, BLOCKED, check_receipts
-from scripts import claude_precheck, claude_blocked_precheck
+from robofrontier.engines.claude.profile_identity import fingerprint
+from robofrontier.engines.claude.claude_readiness import BASIC, BLOCKED, check_receipts
+from robofrontier.engines.claude import preflight as claude_precheck, claude_blocked_precheck
 from test_claude_precheck_integration import PrecheckModel
 
 

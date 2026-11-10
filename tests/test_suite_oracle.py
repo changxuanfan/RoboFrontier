@@ -3,8 +3,8 @@ import tempfile,unittest
 from pathlib import Path
 import numpy as np
 import mujoco
-from robofrontier.suite.oracle import Trial
-from robofrontier.suite.scenes import ROOT,catalog,case_directory,rz
+from robofrontier.oracle.trial import Trial
+from robofrontier.oracle.geometry import ROOT,catalog,case_directory,rz
 
 def fixture():return case_directory(next(c for c in catalog()['cases'] if c['id']=='transport-a04-d2'))
 
@@ -82,7 +82,7 @@ class SuiteOracleContactTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             t=Trial(case_directory(case),Path(temp)/'trial',frames=False)
             try:
-                from robofrontier.robot_control import matrix_quat
+                from robofrontier.physics.robot_control import matrix_quat
                 r=np.array([[0,0,1.],[0,1,0],[-1.,0,0]])
                 t.data.joint('C_yellow_1_free').qpos[3:]=matrix_quat(r)
                 mujoco.mj_forward(t.model,t.data);t.wait(.6);t.pick('C','C_yellow_1',height=.020)

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import unittest
 import numpy as np
 
-from robofrontier.suite.transport_grasp_safety import PickupSupportLost, guarded_pickup_lift
+from robofrontier.oracle.transport_grasp_safety import PickupSupportLost, guarded_pickup_lift
 
 
 class GuardedPickupTests(unittest.TestCase):

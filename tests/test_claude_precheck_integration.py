@@ -11,8 +11,8 @@ import unittest
 import uuid
 from unittest.mock import patch
 
-from scripts import claude_precheck
-from robofrontier.claude.runner import build_command,build_env
+from robofrontier.engines.claude import preflight as claude_precheck
+from robofrontier.engines.claude.runner import build_command,build_env
 from test_claude_adaptive_integration import StubModel
 
 

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from robofrontier.suite.transport_recovery import EngineeringRecovery
+from robofrontier.oracle.transport_recovery import EngineeringRecovery
 
 
 class EngineeringRecoveryTests(unittest.TestCase):
@@ -66,7 +66,7 @@ class EngineeringRecoveryTests(unittest.TestCase):
             self.assertEqual(t.arms['B'].job,'still-running-42')
 
     def test_explicit_review_preparation_keeps_empty_actor_reservation(self):
-        from robofrontier.suite.transport_runtime import PreparationComplete
+        from robofrontier.oracle.transport_runtime import PreparationComplete
         with TemporaryDirectory() as tmp:
             handler=EngineeringRecovery(tmp,on_review=Mock())
             old=dict(status='failed',goal=dict(goal_id='slot'),object='item',robots={'A'})
@@ -97,7 +97,7 @@ class EngineeringRecoveryTests(unittest.TestCase):
                 data=SimpleNamespace(body=lambda _:SimpleNamespace(xpos=[0.,0.,.8])),
                 stations={r:dict(base_position_m=[0.,0.,.8]) for r in 'AB'},
                 monitor=SimpleNamespace(result=lambda:dict(assignments={})),finger_contacts=lambda r,n:r=='A')
-            with patch('robofrontier.suite.transport_recovery.goal_coverage',return_value=['B']),patch('robofrontier.suite.transport_recovery.candidate_graph',return_value={'A':['B'],'B':['A']}):
+            with patch('robofrontier.oracle.transport_recovery.goal_coverage',return_value=['B']),patch('robofrontier.oracle.transport_recovery.candidate_graph',return_value={'A':['B'],'B':['A']}):
                 with self.assertRaisesRegex(ValueError,'available.*route'):handler._retry(t,runtime,'old',{})
                 runtime.recover.assert_not_called();self.assertEqual(old['robots'],{'A','B'})
                 runtime.leases.pop('B');handler._retry(t,runtime,'old',{})
@@ -113,7 +113,7 @@ class EngineeringRecoveryTests(unittest.TestCase):
             freeze.assert_called_once_with(t,runtime);runtime.step.assert_not_called()
 
     def test_lost_inventory_stops_before_any_recovery_admission(self):
-        from robofrontier.suite.transport_inventory import UnreachableTransportInventory
+        from robofrontier.oracle.transport_inventory import UnreachableTransportInventory
         with TemporaryDirectory() as tmp:
             handler=EngineeringRecovery(tmp,inventory_check=lambda _: [dict(object='lost',position_m=[44,0,.03])])
             handler.observation=Mock();t=SimpleNamespace(motion=None,event=Mock());runtime=SimpleNamespace(recover=Mock())
@@ -150,7 +150,7 @@ class EngineeringRecoveryTests(unittest.TestCase):
             self.assertEqual(runtime.recover.call_args.args[2],{'J','L'})
 
     def test_preparation_returns_to_a_recoverable_frontier_without_resuming_goal(self):
-        from robofrontier.suite.transport_runtime import PreparationComplete
+        from robofrontier.oracle.transport_runtime import PreparationComplete
         with TemporaryDirectory() as tmp:
             handler=EngineeringRecovery(tmp)
             old=dict(status='failed',goal=dict(goal_id='slot'),object='item',robots={'A'})
@@ -158,13 +158,13 @@ class EngineeringRecoveryTests(unittest.TestCase):
             t=SimpleNamespace(arms={'A':SimpleNamespace(grasp_force=None)},held={},execute=Mock())
             handler._retry(t,runtime,'old',dict(robots=['A'],resume_goal=False,
                 steps=[dict(robot='A',operation='gripper',parameters=dict(mode='move',width_m=.072))]))
-            with patch('robofrontier.suite.transport_recovery.execute_job') as execute_goal:
+            with patch('robofrontier.oracle.transport_recovery.execute_job') as execute_goal:
                 with self.assertRaises(PreparationComplete):runtime.recover.call_args.args[3]()
                 execute_goal.assert_not_called()
             t.execute.assert_called_once()
 
     def test_preparation_clears_only_a_released_contact_free_carrier_hint(self):
-        from robofrontier.suite.transport_runtime import PreparationComplete
+        from robofrontier.oracle.transport_runtime import PreparationComplete
         with TemporaryDirectory() as tmp:
             handler=EngineeringRecovery(tmp)
             old=dict(status='failed',goal=dict(goal_id='slot'),object='item',robots=set('ABC'))
@@ -172,7 +172,7 @@ class EngineeringRecoveryTests(unittest.TestCase):
             t=SimpleNamespace(arms={r:SimpleNamespace(grasp_force=50. if r=='B' else None) for r in 'ABC'},
                 held={r:'item' for r in 'ABC'},event=Mock())
             handler._retry(t,runtime,'old',dict(robots=list('ABC'),resume_goal=False))
-            with patch('robofrontier.suite.transport_recovery._robot_payload_contacts',side_effect=lambda _,r,n:r=='C'):
+            with patch('robofrontier.oracle.transport_recovery._robot_payload_contacts',side_effect=lambda _,r,n:r=='C'):
                 with self.assertRaises(PreparationComplete):runtime.recover.call_args.args[3]()
             self.assertEqual(t.held,{'B':'item','C':'item'})
 

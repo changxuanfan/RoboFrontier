@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict');
-const {pendingForkActor}=require('../robofrontier/codex/codex_policy_host');
+const {pendingForkActor}=require('../robofrontier/engines/codex/codex_policy_host');
 
 test('a new fork maps to the batch being created, never to a stale batch left for review',()=>{
   const snapshot={delegations:[

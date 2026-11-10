@@ -9,10 +9,10 @@ import threading
 import unittest
 from types import SimpleNamespace
 
-from robofrontier.pipeline_client import client_call
-from robofrontier.runtime_store import RuntimeStore
-from robofrontier.task_config import load_harness
-from robofrontier.tool_errors import CallIdConflict, conflict_error
+from robofrontier.runtime.pipeline_client import client_call
+from robofrontier.runtime.store import RuntimeStore
+from robofrontier.tasks.config import load_harness
+from robofrontier.runtime.tool_errors import CallIdConflict, conflict_error
 
 
 class ToolErrorTests(unittest.TestCase):
@@ -65,7 +65,7 @@ class ToolErrorTests(unittest.TestCase):
         self.server.shutdown();self.server.server_close();self.store.close();self.tmp.cleanup()
 
     def cli(self, actor, op, data, call_id):
-        return subprocess.run([sys.executable,'-m','robofrontier.pipeline_client','--quiet',
+        return subprocess.run([sys.executable,'-m','robofrontier.runtime.pipeline_client','--quiet',
             '--connection',str(self.connections[actor]),'--call-id',call_id,op,'--data',json.dumps(data)],
             capture_output=True,text=True,timeout=10)
 
@@ -155,7 +155,7 @@ class ToolErrorTests(unittest.TestCase):
         self.assertEqual(client_call(self.connections['A'],'pending',{},log_call_id=False)['pending'],[])
 
     def test_production_http_handler_returns_typed_conflict_without_world(self):
-        from robofrontier.pipeline import Service
+        from robofrontier.runtime.pipeline import Service
         def accept(actor,op,data,call_id,ack):
             self.store.begin_call(call_id,actor,op,data)
             done=threading.Event();done.set()

@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from robofrontier.codex.launch import profile, launch_config
+from robofrontier.engines.codex.launch import profile, launch_config
 
 
 class CodexLaunchProfileTests(unittest.TestCase):

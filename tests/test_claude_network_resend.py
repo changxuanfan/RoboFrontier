@@ -7,12 +7,12 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier.claude import recovery
-from robofrontier.claude.runner import summarize
-from robofrontier.claude.session_host import ClaudeSessionHost
-from robofrontier.egress_pause import WorldPause
-from robofrontier.network_outage import OutageMonitor
-from robofrontier.policy_probe import BudgetGuard, protocol
+from robofrontier.engines.claude import recovery
+from robofrontier.engines.claude.runner import summarize
+from robofrontier.engines.claude.session_host import ClaudeSessionHost
+from robofrontier.runtime.egress_pause import WorldPause
+from robofrontier.runtime.outage import OutageMonitor
+from robofrontier.runtime.clock import BudgetGuard, protocol
 from test_claude_session_host import PROFILE
 import test_active_time as active
 

@@ -1,6 +1,6 @@
 """R17 changes the clarified release contract, preserving every physics input."""
 import hashlib,json,unittest
-from robofrontier.suite.v2 import cases,directory
+from robofrontier.tasks.v2 import cases,directory
 
 class ReleaseSourceTests(unittest.TestCase):
     def test_six_new_contracts_have_identical_manufactured_physics(self):
@@ -20,7 +20,7 @@ class ReleaseSourceTests(unittest.TestCase):
         for case in cases():
             if case['family']=='relay' and case['level']==1:
                 self.assertEqual(case['scene_revision'],15 if case['arms']==12 else 13)
-                from robofrontier.suite.relay_contract import is_current
+                from robofrontier.tasks.relay import is_current
                 self.assertTrue(is_current(json.loads((directory(case)/'task.json').read_text())))
 
 if __name__=='__main__':unittest.main()

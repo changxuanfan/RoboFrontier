@@ -9,8 +9,8 @@ import unittest
 import zipfile
 
 from robofrontier.cli import archive_collection
-from robofrontier.evidence_zip import unpack
-from scripts.archive_policy_batch import verify
+from robofrontier.batch.archive import unpack
+from robofrontier.batch.archive_policy_batch import verify
 
 
 class EvidenceZipTests(unittest.TestCase):

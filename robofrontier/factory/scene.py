@@ -709,7 +709,7 @@ class _Builder:
         if not settings.get('enabled'):return
         import mujoco
         from .workstations import placements
-        from ..workstation import Workstation
+        from ..physics.workstation import Workstation
         catalog_path=ROOT/settings['catalog'];catalog=json.loads(catalog_path.read_text())
         self.dressing_catalog_sha256=_hash(catalog_path)
         plan=placements(catalog,self.cfg['regions'],ROOT)

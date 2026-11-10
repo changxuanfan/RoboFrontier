@@ -5,13 +5,13 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
-from robofrontier.suite.dial_oracle_v2 import Manipulator
-from robofrontier.suite.mosaic_run import require_known_idle
-from robofrontier.suite.mosaic_oracle_v2 import check_process
-from robofrontier.suite.oracle import ProcessViolation, Trial
-from robofrontier.suite.transport_grasp_safety import requires_contact_recovery
-from robofrontier.suite.transport_socket_motion import SocketPlanningError
-from robofrontier.suite.transport_socket_motion import exit_contact_allowed, exit_contact_envelope, finish_socket_release, sample_clear
+from robofrontier.oracle.dial_oracle_v2 import Manipulator
+from robofrontier.oracle.mosaic_run import require_known_idle
+from robofrontier.oracle.mosaic import check_process
+from robofrontier.oracle.trial import ProcessViolation, Trial
+from robofrontier.oracle.transport_grasp_safety import requires_contact_recovery
+from robofrontier.oracle.transport_socket_motion import SocketPlanningError
+from robofrontier.oracle.transport_socket_motion import exit_contact_allowed, exit_contact_envelope, finish_socket_release, sample_clear
 
 
 def terminal_task():
@@ -20,7 +20,7 @@ def terminal_task():
 
 class OracleTerminalRecoveryTests(unittest.TestCase):
     def test_dial_regrasp_uses_measured_stem_projection_with_unchanged_tolerance(self):
-        from robofrontier.suite.dial_best_oracle import BestManipulator
+        from robofrontier.oracle.dial_best_oracle import BestManipulator
         angle=.008
         stem_rotation=np.array([[1.,0.,0.],[0.,np.cos(angle),-np.sin(angle)],
                                 [0.,np.sin(angle),np.cos(angle)]])
@@ -77,7 +77,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         manipulator.t = trial
         manipulator.grips = {'dial': {'robot': 'A'}}
         manipulator.red_geoms = lambda _: {1}
-        with patch('robofrontier.suite.oracle.joint_edge_clear',
+        with patch('robofrontier.oracle.trial.joint_edge_clear',
                    side_effect=lambda start, end, check, step: check(end)):
             manipulator.clear_released_crank({'id': 'dial'}, np.zeros(3), np.eye(3))
         trial.pose_clear.assert_called()
@@ -91,7 +91,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
             manipulator.clear_released_crank({'id':'dial'},np.zeros(3),np.eye(3))
 
     def test_dial_actuator_does_not_reject_a_retained_historical_event(self):
-        from robofrontier.suite.dial_oracle import Manipulator as BaseManipulator
+        from robofrontier.oracle.dial_oracle import Manipulator as BaseManipulator
         manipulator=object.__new__(BaseManipulator)
         manipulator.t=NS(task=terminal_task(),monitor=NS(violations=[{'kind':'contact'}]))
         self.assertFalse(manipulator.rule_failure())
@@ -99,7 +99,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         self.assertTrue(manipulator.rule_failure())
 
     def test_relay_drop_history_does_not_override_current_measured_support(self):
-        from robofrontier.suite.relay_oracle_v2 import support_lost
+        from robofrontier.oracle.relay_oracle_v2 import support_lost
         state=dict(dropped=True,rod_geoms={1})
         trial=NS(task=terminal_task(),wait=Mock(),
                  monitor=NS(relay_v2=NS(states={'part':state}),bilateral=lambda *_,**__:{'A','B'}))
@@ -110,7 +110,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         trial.wait.assert_called_once_with(.12)
 
     def test_relay_frontier_uses_terminal_per_payload_outcome(self):
-        from robofrontier.suite import relay_pipeline
+        from robofrontier.oracle import relay_pipeline
         frontier=relay_pipeline.Frontier('part',0,0,phase='verify')
         trial=NS(task=terminal_task(),relay_frontiers=[frontier],
                  monitor=NS(result=lambda:{'payloads':{'part':{'completed':False,'terminal_goal_met':True}}}))
@@ -126,7 +126,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         self.assertTrue(requires_contact_recovery(error))
 
     def test_mosaic_replans_a_displaced_goal_without_reusing_a_still_matched_item(self):
-        from robofrontier.suite.mosaic_oracle_v2 import protected_remaining_inputs
+        from robofrontier.oracle.mosaic import protected_remaining_inputs
         task=terminal_task();task['goals']=[{'goal_id':name} for name in ('lost','kept','todo')]
         trial=NS(task=task,event=Mock(),env={'objects':[{'id':name} for name in ('a','b','c')]},
                  monitor=NS(result=lambda:{'assignments':{'kept':'b'}}))
@@ -136,16 +136,16 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         self.assertEqual(current,{'kept':'b'});trial.event.assert_called_once()
 
     def test_relay_known_opening_undershoot_needs_real_separation(self):
-        from robofrontier.suite.relay_oracle_v2 import observed_wider_release
+        from robofrontier.oracle.relay_oracle_v2 import observed_wider_release
         trial=NS(task=terminal_task(),arms={'A':NS(job=None,grasp_force=None)})
         feedback=dict(status='failed',reason='Requested opening not reached',direction='opening',actual_width_m=.066)
-        with patch('robofrontier.suite.relay_oracle_v2.arm_payload_contact',return_value=False):
+        with patch('robofrontier.oracle.relay_oracle_v2.arm_payload_contact',return_value=False):
             self.assertTrue(observed_wider_release(trial,'part','A',feedback,.072))
             self.assertFalse(observed_wider_release(trial,'part','A',dict(feedback,status='uncertain'),.072))
             trial.task={}
             self.assertFalse(observed_wider_release(trial,'part','A',feedback,.072))
         trial.task=terminal_task()
-        with patch('robofrontier.suite.relay_oracle_v2.arm_payload_contact',return_value=True):
+        with patch('robofrontier.oracle.relay_oracle_v2.arm_payload_contact',return_value=True):
             self.assertFalse(observed_wider_release(trial,'part','A',feedback,.072))
 
     def test_contact_exit_does_not_allow_new_pairs_or_deeper_penetration(self):
@@ -207,7 +207,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         json.dumps(trial.socket_release_phases,allow_nan=False)
 
     def test_mosaic_can_reconcile_real_release_without_a_preferred_opening(self):
-        from robofrontier.suite.mosaic_run import MosaicReview
+        from robofrontier.oracle.mosaic_run import MosaicReview
         trial=NS(task=terminal_task(),held={'A':'part'},
                  arms={'A':NS(grasp_force=None,observe=lambda:{'gripper_width_m':.02})},
                  monitor=NS(released=lambda _:True,geoms={'part':{1}},velocity=lambda _:np.zeros(6)),
@@ -219,7 +219,7 @@ class OracleTerminalRecoveryTests(unittest.TestCase):
         self.assertNotIn('A',trial.held)
 
     def test_relay_terminal_release_uses_current_support_not_old_drop_flag(self):
-        from robofrontier.suite import relay_oracle_v2 as relay
+        from robofrontier.oracle import relay_oracle_v2 as relay
         task=terminal_task();task.update(completion={'allow_goal_payload_contact':True},
                                          mechanism={'cross_section_m':[.03,.03]})
         trial=NS(task=task,held={'A':'part','B':'part'},wait=Mock(),event=Mock(),

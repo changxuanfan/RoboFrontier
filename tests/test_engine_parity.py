@@ -5,9 +5,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier import policy_access, policy_bootstrap
-from robofrontier.task_config import ROOT
-from robofrontier.task_families import prepare
+from robofrontier.runtime import access as policy_access, bootstrap as policy_bootstrap
+from robofrontier.tasks.config import ROOT
+from robofrontier.tasks.families import prepare
 
 HARNESS = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
 STARTUP = {'centralized': 'direct_controller_v2', 'adaptive': 'direct_controller_v2',
@@ -60,7 +60,7 @@ class EngineParityTests(unittest.TestCase):
             self.assertEqual(policy_access.mode(access['filesystem'], run/'workspace/notes.md'), 'write')
             self.assertEqual(policy_access.mode(access['filesystem'], run/'public/inputs/task.json'), 'read')
             self.assertEqual(policy_access.mode(access['filesystem'], run/'private/inputs/task.json'), 'deny')
-            self.assertEqual(policy_access.mode(access['filesystem'], ROOT/'robofrontier/pipeline.py'), 'deny')
+            self.assertEqual(policy_access.mode(access['filesystem'], ROOT/'robofrontier/runtime/pipeline.py'), 'deny')
             self.assertFalse(access['network'])
             self.assertFalse(access['web_search'])
 
@@ -154,7 +154,7 @@ class EngineRenderingTests(unittest.TestCase):
         return prepare('transport-a04-d1', Path(tmp)/engine, path)
 
     def test_claude_policy_turns_get_confined_file_tools_and_the_frozen_system_prompt(self):
-        from robofrontier.claude.runner import build_command, policy_settings, policy_system_prompt, policy_cwd
+        from robofrontier.engines.claude.runner import build_command, policy_settings, policy_system_prompt, policy_cwd
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
             run = self.prepared(tmp, 'claude')
             settings = policy_settings(run)
@@ -194,7 +194,7 @@ class EngineRenderingTests(unittest.TestCase):
             self.assertIn('PreToolUse', forked['hooks'])
 
     def test_codex_runs_under_the_frozen_permission_profile_without_web_search(self):
-        from robofrontier.codex.launch import launch_config, profile
+        from robofrontier.engines.codex.launch import launch_config, profile
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
             run = self.prepared(tmp, 'codex')
             launch = launch_config(profile('luna'), run/'private/inputs', run)

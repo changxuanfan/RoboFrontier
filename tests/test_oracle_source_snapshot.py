@@ -6,7 +6,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import unittest
-from robofrontier.suite.source_snapshot import freeze_executor,replace_option
+from robofrontier.oracle.source_snapshot import freeze_executor,replace_option
 
 
 class OracleSourceSnapshotTests(unittest.TestCase):

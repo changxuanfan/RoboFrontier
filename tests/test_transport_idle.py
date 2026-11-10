@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from robofrontier.suite.transport_motion_signals import signal_flags,quaternion_path,changed_tiles
+from robofrontier.media.transport_motion_signals import signal_flags,quaternion_path,changed_tiles
 
 class IdleClassificationTests(unittest.TestCase):
     def setUp(self):self.dt=1/60;self.t=np.arange(0,80,self.dt)
@@ -45,16 +45,16 @@ class RecordedIdleRegressionTests(unittest.TestCase):
         t=np.arange(0,120,1/60);active,_,_=signal_flags(t*.000002,1/60,2e-5,.06)
         self.assertFalse(active[120:-120].any())
     def test_bounded_wander_during_quiet_is_removed(self):
-        from robofrontier.suite.transport_motion_signals import bounded_rattle
+        from robofrontier.media.transport_motion_signals import bounded_rattle
         t=np.arange(0,600,1/60);x=np.c_[.008*np.sin(2*np.pi*.4*t)+.001*np.sin(.02*t),np.zeros((len(t),5))]
         mask=bounded_rattle(x,1/60,[2e-5]*3+[5e-4]*3,[.06]*3+[np.pi]*3);self.assertGreater(mask.mean(),.99)
     def test_progressive_arrival_before_repeated_jitter_is_preserved(self):
-        from robofrontier.suite.transport_motion_signals import bounded_rattle
+        from robofrontier.media.transport_motion_signals import bounded_rattle
         t=np.arange(0,120,1/60);moving=np.maximum(0,.01-.0025*t);y=np.where(t<4,moving,.002*np.sin(2*np.pi*(t-4)));x=np.c_[y,np.zeros((len(t),5))]
         mask=bounded_rattle(x,1/60,[2e-5]*3+[5e-4]*3,[.06]*3+[np.pi]*3)
         self.assertFalse(mask[t<4].any());self.assertGreater(mask[t>10].mean(),.9)
     def test_drift_in_another_coordinate_prevents_rattle_deletion(self):
-        from robofrontier.suite.transport_motion_signals import bounded_rattle
+        from robofrontier.media.transport_motion_signals import bounded_rattle
         t=np.arange(0,120,1/60);x=np.c_[.008*np.sin(2*np.pi*.4*t),t*.0001,np.zeros((len(t),4))]
         self.assertFalse(bounded_rattle(x,1/60,[2e-5]*3+[5e-4]*3,[.06]*3+[np.pi]*3).any())
 
@@ -62,7 +62,7 @@ class CachePerformanceTests(unittest.TestCase):
     def test_npz_arrays_are_materialized_once_and_detached_from_file(self):
         import tempfile
         from pathlib import Path
-        from robofrontier.suite.transport_motion_signals import load_state_cache
+        from robofrontier.media.transport_motion_signals import load_state_cache
         with tempfile.TemporaryDirectory()as directory:
             path=Path(directory)/'cache.npz';np.savez_compressed(path,qpos=np.arange(20).reshape(5,4),keep=np.array([True,False]))
             cached=load_state_cache(path);path.unlink()
@@ -72,7 +72,7 @@ class ProjectionIntegrationTests(unittest.TestCase):
     def test_current_mujoco_light_api_and_jitter_projection(self):
         import tempfile
         from pathlib import Path
-        from robofrontier.suite.transport_motion_signals import JitterRegions
+        from robofrontier.media.transport_motion_signals import JitterRegions
         with tempfile.TemporaryDirectory()as directory:
             p=Path(directory);(p/'scene.xml').write_text('<mujoco><worldbody><light pos="0 -1 3" dir="0 0 -1"/><camera name="global" pos="0 -3 2" xyaxes="1 0 0 0 .5 .866"/><body name="osc" pos="0 0 1"><freejoint/><geom type="sphere" size=".03" mass=".1"/></body></worldbody></mujoco>')
             projector=JitterRegions(p,['body:osc'],320,200);q=np.array([0.,0.,1.,1.,0.,0.,0.])

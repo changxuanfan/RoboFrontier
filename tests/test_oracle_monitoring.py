@@ -6,7 +6,7 @@ from unittest import TestCase,main
 from unittest.mock import patch
 
 import numpy as np
-from robofrontier.suite.oracle import Trial
+from robofrontier.oracle.trial import Trial
 
 
 class Renderer:
@@ -24,7 +24,7 @@ class OracleMonitoringTests(TestCase):
         with TemporaryDirectory() as directory:
             t.directory=Path(directory)
             for stamp in range(1,9):
-                with patch('robofrontier.suite.oracle.time.monotonic',return_value=float(stamp)):
+                with patch('robofrontier.oracle.trial.time.monotonic',return_value=float(stamp)):
                     t._heartbeat('action_start')
             self.assertEqual(t.renderer.frames,2)
             self.assertEqual(t.last_preview,6.)

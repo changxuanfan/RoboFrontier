@@ -99,7 +99,7 @@ def captions(path, duration):
 
 def camera_plan(path, duration=None):
     """Validate editable position/target/FOV waypoints and derive native masks."""
-    from scripts.promo_preview import make_camera
+    from robofrontier.factory.tour import make_camera
     rows = bundle.read(path)
     if not isinstance(rows, list) or len(rows) < 4 or len(rows) > 10000:
         raise ValueError('Editorial camera plan needs at least four waypoints')
@@ -207,7 +207,7 @@ def load(path, data_root=None):
 
 def _create_verified(data_root, output):
     """Internal: caller has just verified the full Factory bundle."""
-    from scripts.promo_preview import plan
+    from robofrontier.factory.tour import plan
     data_root, output = Path(data_root).resolve(), Path(output).resolve()
     if output.exists():
         raise FileExistsError('Choose a new editable project directory')

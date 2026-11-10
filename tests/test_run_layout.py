@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 
-from robofrontier import run_layout
+from robofrontier.runtime import layout as run_layout
 
 
 class RunLayoutTests(unittest.TestCase):
@@ -78,7 +78,7 @@ class RunLayoutTests(unittest.TestCase):
 
     def test_the_node_hosts_read_the_same_paths_from_the_command_line(self):
         self.manifest({'engine': 'codex', **run_layout.manifest_record('codex')})
-        out = subprocess.run([sys.executable, '-m', 'robofrontier.run_layout', str(self.run)],
+        out = subprocess.run([sys.executable, '-m', 'robofrontier.runtime.layout', str(self.run)],
                              capture_output=True, text=True, check=True).stdout
         value = json.loads(out)
         self.assertEqual(value['layout'], 'run-v6')

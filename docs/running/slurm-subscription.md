@@ -43,7 +43,7 @@ not update a running or already prepared experiment to this backend.
 ## Provisioning and renewal
 
 An initialized stopped stream can move with
-`robofrontier.slurm_auth.migrate_store(source, destination)`. Both refresh leases
+`robofrontier.batch.slurm_auth.migrate_store(source, destination)`. Both refresh leases
 are exclusive during the transfer. The destination parent must already be private;
 the destination must be new. The latest generation is fsynced and verified before
 the source's current cache and obsolete bootstrap are removed. The old initialized
@@ -148,9 +148,9 @@ egress_wait_s = 120
 After the allocation is RUNNING, the operator keeps this command on the Mac:
 
 ```sh
-python -m robofrontier.slurm_proxy connect \
+python -m robofrontier.batch.slurm_proxy connect \
   --ssh-host CLUSTER_SSH_ALIAS --job-id EXISTING_JOB_ID \
-  --remote-script /CLUSTER/CHECKOUT/robofrontier/slurm_proxy.py \
+  --remote-script /CLUSTER/CHECKOUT/robofrontier/batch/slurm_proxy.py \
   --state-root /ABSOLUTE/PRIVATE/robofrontier-egress \
   --remote-python /CLUSTER/PYTHON/bin/python3.12 \
   --srun /CLUSTER/SLURM/bin/srun \
@@ -246,7 +246,7 @@ round trip or a failed upstream probe pauses admission. The Mac probes TLS
 connectivity to the hosts the job's engine uses: `api.anthropic.com` for
 `--engine claude`; `chatgpt.com` and `auth.openai.com` for `--engine codex`
 (all of them must answer). These come from the same table in
-`robofrontier/slurm_proxy.py` (`ENGINE_ROUTES`) that decides which destinations
+`robofrontier/batch/slurm_proxy.py` (`ENGINE_ROUTES`) that decides which destinations
 the relay forwards, and the private Mac status lists them. Probes run every
 four seconds (each host bounded to three seconds); only three consecutive failed
 probes mark the route down, and one successful probe marks it up again. A failed
@@ -288,7 +288,7 @@ into already frozen historical trials. Admission explicitly rejects historical
 tasks whose frozen runtime lacks the pause/dispatcher/RPC support.
 
 A stopped historical run can acquire support only through an explicit operator
-runtime upgrade (`robofrontier.runtime_upgrade.upgrade`), after its clean seal,
+runtime upgrade (`robofrontier.runtime.upgrade.upgrade`), after its clean seal,
 settled action ledger, native transcript custody and absence of live hosts have
 been checked. Hold its supervisor/recovery locks. The upgrade archives the parent
 manifest and frozen source under `private/inputs/runtime-upgrades/<next segment>`;

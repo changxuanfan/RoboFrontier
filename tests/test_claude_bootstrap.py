@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from robofrontier.claude.bootstrap import bootstrap_prompt
+from robofrontier.engines.claude.bootstrap import bootstrap_prompt
 
 
 class BootstrapTests(unittest.TestCase):

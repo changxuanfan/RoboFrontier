@@ -77,9 +77,9 @@ the bundle's reviewed 30 fps rather than inventing new source samples.
 `import_speedup` applies only to a newly imported recording; `0` (the default)
 uses the family's release speedup, as on the simple background (Mosaic 30x).
 Import keeps only meaningful motion: pass `--timeline` with the `motion-cut.json`
-that `scripts/render_policy_videos.py` wrote for the run, so the Factory video
+that `robofrontier/media/render.py` wrote for the run, so the Factory video
 shows exactly the states of the checked simple-background video. Without it,
-import applies the same motion rule (`robofrontier/motion_cut.py`): an arm joint,
+import applies the same motion rule (`robofrontier/media/motion_cut.py`): an arm joint,
 finger or object must move in one direction, so jitter, drift and settling count
 as still, however visible. `--keep-idle` keeps the full clock. Existing release recordings retain the
 release's reviewed cadence and station edits. A speedup is

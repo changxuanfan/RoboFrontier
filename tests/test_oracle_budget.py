@@ -5,7 +5,7 @@ from unittest.mock import patch
 import json
 from types import SimpleNamespace
 
-from robofrontier.suite.oracle_budget import ExplicitPauseBudget
+from robofrontier.oracle.budget import ExplicitPauseBudget
 
 
 class PauseBudgetTests(unittest.TestCase):
@@ -21,7 +21,7 @@ class PauseBudgetTests(unittest.TestCase):
             self.assertIsNotNone(budget.paused_at);self.assertEqual(checks,[True])
 
     def test_full_task_has_no_default_episode_deadline(self):
-        from scripts.run_transport_full_oracle import parse_args
+        from robofrontier.oracle.run_transport_full_oracle import parse_args
         args=parse_args(['--case','transport-a12-d1','--output','unused'])
         self.assertIsNone(args.wall_s)
         self.assertIsNone(args.sim_s)
@@ -52,7 +52,7 @@ class PauseBudgetTests(unittest.TestCase):
             root=Path(directory);budget=ExplicitPauseBudget(root)
             (root/'control.json').write_text(json.dumps(dict(paused=True)))
             stopped=[False]
-            with patch('robofrontier.suite.oracle_budget.time.sleep',side_effect=lambda _:stopped.__setitem__(0,True)):
+            with patch('robofrontier.oracle.budget.time.sleep',side_effect=lambda _:stopped.__setitem__(0,True)):
                 self.assertTrue(budget.gate(lambda:stopped[0]))
             self.assertIsNotNone(budget.paused_at)
             self.assertTrue(json.loads((root/'pause-status.json').read_text())['paused'])

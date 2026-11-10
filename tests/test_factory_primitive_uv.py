@@ -1,6 +1,6 @@
 """The same local top-face points must sample the same source image as MuJoCo."""
 import unittest
-from scripts.factory_primitive_uv import primitive_uv
+from robofrontier.factory.blender.factory_primitive_uv import primitive_uv
 
 
 class PrimitiveUVTests(unittest.TestCase):

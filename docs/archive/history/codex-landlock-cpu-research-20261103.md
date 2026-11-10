@@ -54,7 +54,7 @@ This establishes that real subscription inference can use the restricted broker 
 
 ## Why Claude runs and native Codex commands do not
 
-RoboFrontier already selects `landlock-v1` for Claude when bubblewrap cannot create namespaces. It builds `CLAUDE_CODE_SHELL_PREFIX` from the frozen access table. This is project-supplied confinement of model Bash commands; it does not sandbox the trusted Claude process or its robot MCP service. See [Claude confinement](../../../robofrontier/claude/runner.py), [Landlock implementation](../../../robofrontier/claude/landlock_shell.py), and [engine documentation](../../engines/claude-code.md).
+RoboFrontier already selects `landlock-v1` for Claude when bubblewrap cannot create namespaces. It builds `CLAUDE_CODE_SHELL_PREFIX` from the frozen access table. This is project-supplied confinement of model Bash commands; it does not sandbox the trusted Claude process or its robot MCP service. See [Claude confinement](../../../robofrontier/engines/claude/runner.py), [Landlock implementation](../../../robofrontier/engines/common/landlock.py), and [engine documentation](../../engines/claude-code.md).
 
 Codex's native Linux backend deliberately rejects legacy Landlock for a filesystem-restricted policy because it cannot isolate app-server sockets. The exact version's check is in [linux_run_main.rs, lines 380–387](https://github.com/openai/codex/blob/360319d8dee62d87e2d59fc0c21805d79519cfed/codex-rs/linux-sandbox/src/linux_run_main.rs#L380-L387). [Official permissions guidance](https://learn.chatgpt.com/docs/permissions) documents this limitation. Changing that check or silently disabling the native sandbox would not establish an equivalent boundary.
 

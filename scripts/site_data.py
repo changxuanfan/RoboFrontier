@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 import re
 
-from robofrontier.task_config import ROOT
+from robofrontier.tasks.config import ROOT
 
 SITE = ROOT / 'site/data'
 
@@ -73,8 +73,8 @@ def workload(case):
 
 def tasks():
     import tempfile
-    from robofrontier.task_config import public_task
-    from robofrontier.task_families import RELEASE, freeze_public, policy_task
+    from robofrontier.tasks.config import public_task
+    from robofrontier.tasks.families import RELEASE, freeze_public, policy_task
     payload = (ROOT / RELEASE).read_bytes()
     release = json.loads(payload)
     references = oracle(release)

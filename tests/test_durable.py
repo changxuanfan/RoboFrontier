@@ -5,7 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier import durable, run_layout
+from robofrontier.batch import mac as durable
+from robofrontier.runtime import layout as run_layout
 
 
 class DurableTests(unittest.TestCase):
@@ -55,9 +56,9 @@ class RunDefaultTests(unittest.TestCase):
 
     def dispatch(self, argv, platform):
         from robofrontier import cli
-        with patch('sys.platform', platform), patch('robofrontier.durable.submit', return_value={'label': 'x'}) as submit, \
+        with patch('sys.platform', platform), patch('robofrontier.batch.mac.submit', return_value={'label': 'x'}) as submit, \
                 patch('robofrontier.cli.run', return_value={'status': 'ok'}) as run, \
-                patch('robofrontier.benchmark_common.load_env'), patch('builtins.print'):
+                patch('robofrontier.batch.prepare.load_env'), patch('builtins.print'):
             cli.main(argv)
         return submit, run
 

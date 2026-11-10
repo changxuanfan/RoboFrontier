@@ -6,10 +6,10 @@ from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
-from robofrontier.claude.runner import build_command, build_env, run_turn
+from robofrontier.engines.claude.runner import build_command, build_env, run_turn
 from test_claude_runner import fake_claude
-from robofrontier.claude.native_home import config_directory
-from scripts.claude_benchmark import profile
+from robofrontier.engines.claude.native_home import config_directory
+from robofrontier.batch.claude_benchmark import profile
 
 
 class NativeLoginTests(unittest.TestCase):
@@ -30,7 +30,7 @@ class NativeLoginTests(unittest.TestCase):
                 build_env(selected, {'HOME':str(home)}, home)
 
     def test_runtime_verifies_fork_history_in_the_frozen_native_home(self):
-        from robofrontier.runtime_cli import native_fork_provenance
+        from robofrontier.runtime.cli import native_fork_provenance
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); home = root/'native'; project = home/'projects/task'
             project.mkdir(parents=True)

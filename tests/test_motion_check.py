@@ -9,10 +9,10 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from robofrontier.motion_check import RobotGeometry, prepare_check, robot_state
-from robofrontier.pipeline import Arm, World
-from robofrontier.task_config import ROOT, load_harness
-from robofrontier.observation_image import observation_profile
+from robofrontier.physics.motion_check import RobotGeometry, prepare_check, robot_state
+from robofrontier.runtime.pipeline import Arm, World
+from robofrontier.tasks.config import ROOT, load_harness
+from robofrontier.physics.observation_image import observation_profile
 
 
 def robot_fixture(separation=.65,arm_count=2,base_offset=0.):

@@ -2,7 +2,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
 import numpy as np
-from robofrontier.suite.mosaic_concurrency import dependencies,ready_scopes
+from robofrontier.oracle.mosaic_concurrency import dependencies,ready_scopes
 
 
 class ConcurrencyPlanningTests(unittest.TestCase):
@@ -25,7 +25,7 @@ class ConcurrencyPlanningTests(unittest.TestCase):
         self.assertEqual(dependencies(jobs),[[],[0]])
 
     def test_incremental_frontier_matches_dependencies_across_out_of_order_completions(self):
-        from robofrontier.suite.mosaic_concurrency import ReadyFrontier
+        from robofrontier.oracle.mosaic_concurrency import ReadyFrontier
         pred=[[],[0],[],[2],[1,3]];frontier=ReadyFrontier(pred)
         self.assertEqual(set(frontier.claim_ready()),{0,2})
         frontier.complete(2)
@@ -42,7 +42,7 @@ class ConcurrencyPlanningTests(unittest.TestCase):
         self.assertEqual(dependencies(jobs),[[],[0]])
 
     def test_operation_completion_is_not_premature_goal_completion(self):
-        from robofrontier.suite.mosaic_concurrency import execute_plan
+        from robofrontier.oracle.mosaic_concurrency import execute_plan
         accepted={};batches=[]
         t=SimpleNamespace(physical_control_sha256='control',environment_logic_sha256='logic',
             source_bundle={'sha256':'scene'},task={'id':'test','goals':[{},{}]},held={},

@@ -13,9 +13,9 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier import slurm_proxy as proxy
+from robofrontier.batch import slurm_proxy as proxy
 from robofrontier.configuration import load_configuration
-from robofrontier.policy_access import record, mode
+from robofrontier.runtime.access import record, mode
 
 
 class DestinationTests(unittest.TestCase):

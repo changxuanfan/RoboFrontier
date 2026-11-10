@@ -11,10 +11,10 @@ import tempfile
 import threading
 import unittest
 
-from robofrontier.claude.runner import run_turn
-from robofrontier.run_setup import verify_inputs
-from robofrontier.task_config import ROOT
-from scripts.claude_benchmark import prepare_draft
+from robofrontier.engines.claude.runner import run_turn
+from robofrontier.runtime.setup import verify_inputs
+from robofrontier.tasks.config import ROOT
+from robofrontier.batch.claude_benchmark import prepare_draft
 from test_claude_adaptive_integration import StubModel
 
 
@@ -52,7 +52,7 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
                 run=batch/'opus'/case
                 mcp=run/'private/mosaic-check-mcp.json'
                 mcp.write_text(json.dumps({'mcpServers':{'robot':{'command':sys.executable,
-                    'args':['-m','robofrontier.claude.robot_mcp','--run-dir',str(run),
+                    'args':['-m','robofrontier.engines.claude.robot_mcp','--run-dir',str(run),
                             '--connection',str(run/'private/state/connections/Controller.json')],
                     'env':{'PYTHONPATH':str(ROOT)}}}}))
                 profile={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
@@ -93,7 +93,7 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
                 ReferenceModel.image_names=names
                 mcp=run/'private/reference-check-mcp.json'
                 mcp.write_text(json.dumps({'mcpServers':{'robot':{'command':sys.executable,
-                    'args':['-m','robofrontier.claude.robot_mcp','--run-dir',str(run),
+                    'args':['-m','robofrontier.engines.claude.robot_mcp','--run-dir',str(run),
                             '--connection',str(run/'private/state/connections/Controller.json')],
                     'env':{'PYTHONPATH':str(ROOT)}}}}))
                 profile={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',

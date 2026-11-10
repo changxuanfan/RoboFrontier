@@ -1,7 +1,7 @@
 import unittest,tempfile
 from pathlib import Path
 import numpy as np
-from robofrontier.motion_timeline import lift_video_mask,sample_timeline,register_timeline,resolve_timeline
+from robofrontier.media.motion_timeline import lift_video_mask,sample_timeline,register_timeline,resolve_timeline
 
 class MotionTimelineTests(unittest.TestCase):
     def test_registered_default_is_resolved_and_checksum_protected(self):

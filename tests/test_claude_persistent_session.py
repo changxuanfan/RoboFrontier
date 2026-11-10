@@ -12,9 +12,9 @@ import threading
 import time
 import unittest
 
-from robofrontier import policy_access
-from robofrontier.claude.runner import PersistentSession
-from robofrontier.run_layout import manifest_record
+from robofrontier.runtime import access as policy_access
+from robofrontier.engines.claude.runner import PersistentSession
+from robofrontier.runtime.layout import manifest_record
 
 SESSION = '44444444-4444-4444-8444-444444444444'
 CHILD = '55555555-5555-4555-8555-555555555555'

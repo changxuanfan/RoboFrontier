@@ -3,9 +3,9 @@ from pathlib import Path
 from unittest.mock import patch
 import numpy as np
 from robofrontier.factory.workstations import FactoryPlayback
-from robofrontier.motion_recording import MotionWriter,MotionReader
-from robofrontier.workstation import Workstation
-from robofrontier.task_families import ROOT,RELEASE,read
+from robofrontier.media.motion_recording import MotionWriter,MotionReader
+from robofrontier.physics.workstation import Workstation
+from robofrontier.tasks.families import ROOT,RELEASE,read
 from robofrontier.factory.playback import current_scene
 
 class FactoryRecordedReplayTests(unittest.TestCase):
@@ -30,9 +30,9 @@ class FactoryRecordedReplayTests(unittest.TestCase):
    with self.assertRaisesRegex(ValueError,'source revision differs'):play.apply(reader.meta['case_id'],frozen,q,stamp)
 
  def test_shared_edit_replays_same_poses_and_skipped_appearance_without_physics(self):
-  from robofrontier.motion_edit import build_timeline
+  from robofrontier.media.edit import build_timeline
   from scripts.replay_motion_in_factory import replay
-  from robofrontier.robot_control import quat_matrix
+  from robofrontier.physics.robot_control import quat_matrix
   scene=current_scene()
   if not scene.exists():self.skipTest('Generated factory not present')
   source=Workstation(ROOT/read(ROOT/RELEASE)['families']['dial']['oracle'][2]['directory'])

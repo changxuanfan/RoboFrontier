@@ -1,5 +1,5 @@
 import hashlib
-from robofrontier import preflight_probe
+from robofrontier.runtime import preflight_probe
 import json
 import os
 from pathlib import Path
@@ -9,15 +9,15 @@ import unittest
 from unittest.mock import patch
 from contextlib import contextmanager
 
-from robofrontier.codex import batch as benchmark
-from robofrontier.codex import launch
-from robofrontier.run_setup import write_json
+from robofrontier.batch import codex_batch as benchmark
+from robofrontier.engines.codex import launch
+from robofrontier.runtime.setup import write_json
 
 
 class CodexTaskHomesTests(unittest.TestCase):
     def test_job_scope_uses_one_engine_distinct_channels_and_never_redispatches_a_failed_host(self):
-        from robofrontier.codex.job_engine import fingerprint as gateway_fingerprint
-        from robofrontier.codex.tool_backend import fingerprint as backend_fingerprint
+        from robofrontier.engines.codex.job_engine import fingerprint as gateway_fingerprint
+        from robofrontier.engines.codex.tool_backend import fingerprint as backend_fingerprint
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
             folder, private = root/'batch', root/'engine'
@@ -57,7 +57,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                     patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'), \
                     patch.object(benchmark.subprocess, 'Popen', side_effect=host), \
                     patch.object(benchmark, 'try_continue') as redispatch, \
-                    patch('robofrontier.codex.job_engine.engine', side_effect=engine), \
+                    patch('robofrontier.engines.codex.job_engine.engine', side_effect=engine), \
                     patch.dict(os.environ, {'SLURM_JOB_ID': 'fixture-only', 'CODEX_HOME': str(home),
                                             'ROBOFRONTIER_JOB_PRIVATE_ROOT': str(private)}):
                 benchmark.run_batch(folder, 3)
@@ -117,7 +117,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                     self.assertNotIn(b'never-persist-this', path.read_bytes())
 
     def test_a_stop_after_a_continuation_was_prepared_needs_review(self):
-        from robofrontier import run_layout
+        from robofrontier.runtime import layout as run_layout
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             batch = root/'batch'

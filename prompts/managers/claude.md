@@ -31,14 +31,14 @@ Parameters:
 1. Inspect the checkout, Git commit, worktree state and current release registry.
    Report scene versions. Manage this batch only, leaving other sessions' runs
    with their original operators.
-2. Run scripts.claude_benchmark doctor for the selected profiles, CLI and assets.
+2. Run robofrontier.batch.claude_benchmark doctor for the selected profiles, CLI and assets.
    Report missing credential variable names only. If .env is absent, copy the
    empty .env.example template with mode 0600; preserve existing .env and
    credentials. Doctor establishes no account/provider compatibility claim.
-3. Run scripts.claude_benchmark plan with the requested models, families, level,
+3. Run robofrontier.batch.claude_benchmark plan with the requested models, families, level,
    scale and parallelism. Pass --min-arms only when requested. Report each exact
    case, arm count and inner model. For mode=plan, stop here.
-4. For mode=precheck, use scripts.claude_precheck --profile PROFILE
+4. For mode=precheck, use robofrontier.engines.claude.preflight --profile PROFILE
    --max-budget-usd BUDGET --confirm-spend for each selected profile only when
    real provider spend has been authorized and a positive precheck estimate is
    specified. Add --check-fork when requested. Keep every receipt and report its
@@ -47,21 +47,21 @@ Parameters:
    This checks text, native image/tool round trips and continuation. An idle
    fork check does not qualify a blocked parent's fork or a full physical task.
    When check_blocked_fork=true and its additional spend is authorized, run
-   scripts.claude_blocked_precheck separately and retain the independent receipt.
-   scripts.claude_readiness checks whether both receipts match the profile and
+   robofrontier.engines.claude.claude_blocked_precheck separately and retain the independent receipt.
+   robofrontier.engines.claude.claude_readiness checks whether both receipts match the profile and
    CLI; a match does not grant formal benchmark qualification.
 5. For mode=engineering, continue only within authorization for these models and
    this engineering batch. Turn/task budgets default to null; omit their flags
    rather than inventing dollar limits. Explicit limits must be positive. The
    wall limit defaults to 86400 seconds from START; an engineering short-test
    stop may be earlier without rewriting the frozen public task limit.
-   Prepare a new directory using scripts.claude_benchmark prepare-draft with
+   Prepare a new directory using robofrontier.batch.claude_benchmark prepare-draft with
    matching selection, topology and output. Add --record-video only when
    requested, checking FFmpeg/ffprobe first. Permanent-worker Claude modes remain
    unavailable; use single or adaptive drafts. Verify batch.json case/profile
    selection before execution. Retain an existing directory instead of reusing
    it. An engineering draft is not a scored/preflight-qualified benchmark.
-6. Run scripts.claude_benchmark run-engineering OUTPUT --parallel N
+6. Run robofrontier.batch.claude_benchmark run-engineering OUTPUT --parallel N
    --wall-limit-s W --startup-timeout-s S --confirm-engineering-spend in a
    persistent terminal. Add --turn-budget-usd T or --task-budget-usd B only when
    explicitly set. Startup timeout bounds owner startup and the policy startup

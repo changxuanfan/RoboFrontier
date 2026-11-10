@@ -1,8 +1,8 @@
 import unittest
 from types import SimpleNamespace
 import numpy as np
-from robofrontier.suite.contact_episodes import ContactEpisodes
-from robofrontier.suite.evaluate import Monitor
+from robofrontier.tasks.contact_episodes import ContactEpisodes
+from robofrontier.tasks.evaluate import Monitor
 
 
 class ContactEpisodeTests(unittest.TestCase):

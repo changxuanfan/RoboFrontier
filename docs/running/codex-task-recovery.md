@@ -1,6 +1,6 @@
 # Recover one managed Codex task
 
-`python -m robofrontier.codex.recover_task` is an explicit, single-task entrypoint.
+`python -m robofrontier.engines.codex.recover_task` is an explicit, single-task entrypoint.
 Its default mode only reports eligibility. It does not restart the allocation,
 the shared native app-server, another task, or the batch supervisor. The same
 native process remains the sole subscription refresh owner.
@@ -20,7 +20,7 @@ renderer and filesystem layout available. `SOURCE` is the original immutable
 runtime, not the synchronized development checkout. `PYTHON` is its interpreter.
 
 ```sh
-python -m robofrontier.codex.recover_task \
+python -m robofrontier.engines.codex.recover_task \
   --run-dir "$RUN" \
   --engine-manifest "$ENGINE/control/manifest.json" \
   --source-root "$SOURCE" \
@@ -42,7 +42,7 @@ table. Supply the actual allocation expiry as Unix seconds. Execution refuses
 an allocation too short for the remaining budget plus closure time.
 
 ```sh
-python -m robofrontier.codex.recover_task \
+python -m robofrontier.engines.codex.recover_task \
   --run-dir "$RUN" \
   --engine-manifest "$ENGINE/control/manifest.json" \
   --source-root "$SOURCE" \

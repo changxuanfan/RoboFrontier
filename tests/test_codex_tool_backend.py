@@ -12,12 +12,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.claude.landlock_shell import abi
-from robofrontier.codex import tool_backend
-from robofrontier.codex.launch import launch_config
+from robofrontier.engines.common.landlock import abi
+from robofrontier.engines.codex import tool_backend
+from robofrontier.engines.codex.launch import launch_config
 from robofrontier.configuration import load_configuration
-from robofrontier.policy_access import record, mode
-from robofrontier.run_setup import write_json
+from robofrontier.runtime.access import record, mode
+from robofrontier.runtime.setup import write_json
 
 
 def fixture(base, name):
@@ -34,7 +34,7 @@ def fixture(base, name):
 class WorkerRequestTests(unittest.TestCase):
     def test_any_command_the_broker_admits_reaches_the_worker_whole_however_it_is_escaped(self):
         import io
-        from robofrontier.codex import tool_worker
+        from robofrontier.engines.codex import tool_worker
         # JSON.stringify escapes these as the broker sends them: newline as two bytes, control as six.
         for command in ('a\n'*60000, '\x01'*131000, 'x'*131000):
             data = json.dumps({'tool': 'policy_exec', 'command': command}).encode()
@@ -142,7 +142,7 @@ const broker=require(process.argv[1]),run=process.argv[2],python=process.argv[3]
         with tempfile.TemporaryDirectory() as temporary:
             run = fixture(Path(temporary).resolve(), 'regular-output')
             with (run/'private/secret').open('a') as output:
-                result = subprocess.run([sys.executable, '-I', '-m', 'robofrontier.codex.tool_worker',
+                result = subprocess.run([sys.executable, '-I', '-m', 'robofrontier.engines.codex.tool_worker',
                     '--run-dir', str(run)], input=json.dumps({'tool':'policy_exec','command':'printf BAD'}),
                     stdout=output, stderr=subprocess.PIPE, text=True, timeout=15)
             self.assertNotEqual(result.returncode, 0)
@@ -203,7 +203,7 @@ print('IPC_AND_FD_OK')
 '''.replace('FD_VALUE', str(secret.fileno()))
                 (run/'public/check.py').write_text(script)
                 command = shlex.join([sys.executable, str(run/'public/check.py')])
-                result = subprocess.run([sys.executable, '-I', '-m', 'robofrontier.codex.tool_worker',
+                result = subprocess.run([sys.executable, '-I', '-m', 'robofrontier.engines.codex.tool_worker',
                     '--run-dir', str(run)], input=json.dumps({'tool':'policy_exec','command':command}),
                     env={**os.environ, 'WORKER_FAKE_SECRET':'FAKE_CANARY'}, pass_fds=(secret.fileno(),),
                     text=True, capture_output=True, timeout=15)

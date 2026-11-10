@@ -10,8 +10,8 @@ import unittest
 
 from test_claude_adaptive_integration import StubModel
 from test_claude_standing_team import standing_fixture
-from robofrontier import run_layout
-from robofrontier.claude.session_host import ClaudeSessionHost
+from robofrontier.runtime import layout as run_layout
+from robofrontier.engines.claude.session_host import ClaudeSessionHost
 
 POST_IDLE_PROMPT = 'RF_NATIVE_POST_IDLE_MAIL'
 POST_IDLE_MESSAGE = 'Synthetic post-idle milestone from A'

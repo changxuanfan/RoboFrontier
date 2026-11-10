@@ -5,8 +5,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from robofrontier.suite.oracle import Trial
-from robofrontier.suite.oracle_recovery import OracleRecovery, RecoverablePlanError
+from robofrontier.oracle.trial import Trial
+from robofrontier.oracle.recovery import OracleRecovery, RecoverablePlanError
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -6,7 +6,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from robofrontier.claude.budget import BudgetLedger
+from robofrontier.engines.claude.budget import BudgetLedger
 
 
 class SharedBudgetTests(unittest.TestCase):
@@ -39,7 +39,7 @@ class SharedBudgetTests(unittest.TestCase):
             self.ledger.reserve('next','A',.3)
 
     def test_an_exhausted_cap_refuses_with_its_own_error(self):
-        from robofrontier.claude.budget import BudgetExhausted
+        from robofrontier.engines.claude.budget import BudgetExhausted
         self.assertEqual(self.ledger.reserve('all','A'),1.0)
         with self.assertRaises(BudgetExhausted):
             self.ledger.reserve('next','B',.3)
@@ -49,7 +49,7 @@ class SharedBudgetTests(unittest.TestCase):
         self.assertNotIsInstance(caught.exception,BudgetExhausted)
 
     def test_busy_budget_reservation_waits_and_is_recorded_once(self):
-        from robofrontier import sqlite_busy
+        from robofrontier.runtime import sqlite_busy
         self.assertEqual(self.ledger.db.execute('PRAGMA busy_timeout').fetchone()[0],30000)
         self.ledger.db.execute('PRAGMA busy_timeout=20')
         other=sqlite3.connect(self.path,isolation_level=None,check_same_thread=False)
@@ -58,7 +58,7 @@ class SharedBudgetTests(unittest.TestCase):
         try:
             with patch.object(sqlite_busy,'MAX_BEGIN_ATTEMPTS',12), \
                  patch.object(sqlite_busy,'RETRY_DELAY_SECONDS',.01), \
-                 self.assertLogs('robofrontier.sqlite_busy',level='WARNING'):
+                 self.assertLogs('robofrontier.runtime.sqlite_busy',level='WARNING'):
                 self.assertEqual(self.ledger.reserve('turn','Controller',.3),.3)
             rows=self.ledger.snapshot()['reservations']
             self.assertEqual(len(rows),1)

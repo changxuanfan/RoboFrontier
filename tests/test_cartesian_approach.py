@@ -2,8 +2,8 @@
 import tempfile,unittest
 from pathlib import Path
 import mujoco,numpy as np
-from robofrontier.suite.oracle import Trial
-from robofrontier.suite.scenes import catalog,case_directory
+from robofrontier.oracle.trial import Trial
+from robofrontier.oracle.geometry import catalog,case_directory
 
 class CartesianApproachTests(unittest.TestCase):
     def test_near_singular_vertical_approach_does_not_knock_stock_aside(self):

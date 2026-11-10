@@ -15,9 +15,9 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 from PIL import Image,ImageDraw,ImageFont
-from ..robot_control import matrix_quat,quat_matrix
-from ..workstation import Workstation
-from ..run_setup import write_json
+from ..physics.robot_control import matrix_quat,quat_matrix
+from ..physics.workstation import Workstation
+from ..runtime.setup import write_json
 from .labels import place_label, region_title
 
 
@@ -180,7 +180,7 @@ def compose(shell,catalog_path,output,table_opening_scale=None,source_overrides=
     # enum names are mjGEOM_BOX etc; conversion strips mjGEOM_.
     for place in plan:
         source=Workstation((source_overrides or {}).get(place['case_id'],root_dir/place['source_directory']));source.frame();m,d=source.model,source.data;amap=assets.import_source(source)
-        from ..suite.table_presentation import scale_rectangular_opening_for_render
+        from ..media.table_presentation import scale_rectangular_opening_for_render
         if place['family']=='transport':
             item=next(c for c in catalog['cases'] if c['id']==place['case_id'])
             scale_rectangular_opening_for_render(m,item.get('table_opening_scale',1.) if table_opening_scale is None else table_opening_scale)
@@ -281,7 +281,7 @@ class FactoryPlayback:
                 self.data.mocap_pos[mid]=delta@(self.data.mocap_pos[mid]-old_shift)+shift
                 self.data.mocap_quat[mid]=matrix_quat(delta@quat_matrix(self.data.mocap_quat[mid]))
         place['translation_m']=shift.tolist();place['yaw_rad']=yaw
-        from ..suite.table_presentation import scale_rectangular_opening_for_render
+        from ..media.table_presentation import scale_rectangular_opening_for_render
         table=scale_rectangular_opening_for_render(source.model,table_opening_scale)
         if table:
             for name in table['table_geoms']:

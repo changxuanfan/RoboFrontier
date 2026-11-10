@@ -1,6 +1,6 @@
 import unittest
 
-from robofrontier.render_backend import validate_backend
+from robofrontier.physics.render_backend import validate_backend
 
 
 class RenderBackendTests(unittest.TestCase):

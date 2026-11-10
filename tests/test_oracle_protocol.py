@@ -9,7 +9,7 @@ from types import SimpleNamespace as NS
 import unittest
 from unittest.mock import patch
 
-from robofrontier.suite import oracle_protocol as protocol
+from robofrontier.oracle import protocol as protocol
 
 
 class OracleProtocolTests(unittest.TestCase):
@@ -49,7 +49,7 @@ class OracleProtocolTests(unittest.TestCase):
         self.assertEqual(self.task['run_protocol']['evaluation_semantics'],'legacy')
 
     def test_relay_oracle_task_requires_the_airborne_handover_rule(self):
-        from robofrontier.task_families import RELAY_HANDOVER_RULE
+        from robofrontier.tasks.families import RELAY_HANDOVER_RULE
         for family, required, expected in (('relay', True, RELAY_HANDOVER_RULE), ('relay', False, None),
                                            ('transport', True, None), ('mosaic', None, None), ('dial', None, None)):
             with self.subTest(family=family, required=required):

@@ -5,9 +5,9 @@ import unittest
 
 import numpy as np
 
-from robofrontier.task_config import load_harness
+from robofrontier.tasks.config import load_harness
 from single_arm_scene import make_world
-from robofrontier.robot_control import matrix_quat,rotation_vector
+from robofrontier.physics.robot_control import matrix_quat,rotation_vector
 
 
 class GripperPhysicsTests(unittest.TestCase):

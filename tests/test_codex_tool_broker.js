@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
-const {PolicyHost}=require('../robofrontier/codex/codex_policy_host');
-const broker=require('../robofrontier/codex/tool_broker');
+const {PolicyHost}=require('../robofrontier/engines/codex/codex_policy_host');
+const broker=require('../robofrontier/engines/codex/tool_broker');
 test('file tools reject unbound roles before accessing files',async()=>{
   const host=Object.create(PolicyHost.prototype);
   host.launch={tool_backend:'landlock-v1'};host.actors=new Map();

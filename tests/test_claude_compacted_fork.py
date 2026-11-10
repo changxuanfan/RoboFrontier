@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from robofrontier.claude.provenance import first_input, fork_provenance, history, transcript_rows
+from robofrontier.engines.claude.provenance import first_input, fork_provenance, history, transcript_rows
 
 PARENT = '44444444-4444-4444-8444-444444444444'
 CHILD = '55555555-5555-4555-8555-555555555555'
@@ -58,7 +58,7 @@ class CompactedForkTests(unittest.TestCase):
             (self.folder/(sid+'.jsonl')).write_text(''.join(json.dumps(r)+'\n' for r in rows))
 
     def test_compacted_fork_keeps_boundary_and_child_input(self):
-        from robofrontier.claude.provenance import copied_history_length
+        from robofrontier.engines.claude.provenance import copied_history_length
         child = child_copy(self.source)
         child.append({'uuid': 'prompt', 'sessionId': CHILD, 'type': 'user',
                       'message': {'role': 'user', 'content': 'delegate task'}})
@@ -73,7 +73,7 @@ class CompactedForkTests(unittest.TestCase):
     def test_edited_file_display_path_and_background_task_notice_are_cli_rows(self):
         # Observed in a real Opus run (2026-11-10): a compacted copy adds `displayPath` to an
         # edited-file notice, and a parent with background commands gets their notice first.
-        from robofrontier.claude.provenance import copied_history_length
+        from robofrontier.engines.claude.provenance import copied_history_length
         notice = {'type': 'edited_text_file', 'filename': '/run/workspace/handoff.md', 'snippet': '1\tplan'}
         self.source[4]['attachment'] = dict(notice)
         child = child_copy(self.source)
@@ -100,7 +100,7 @@ class CompactedForkTests(unittest.TestCase):
     def test_uncompacted_copy_of_a_parent_that_changed_directory(self):
         # Observed 2026-11-10: the parent had cd'd into workspace/tools; the copy carried the
         # fork's launch directory on every row and nothing else differed.
-        from robofrontier.claude.provenance import copied_history_length
+        from robofrontier.engines.claude.provenance import copied_history_length
         parent = [row('a', 'user', None, message={'role': 'user', 'content': 'task'}),
                   row('b', 'assistant', 'a', cwd='/run/workspace/tools', message={'role': 'assistant', 'content': 'delegate'})]
         child = [dict(r, sessionId=CHILD, promptId='child', cwd='/run/workspace') for r in parent]
@@ -115,7 +115,7 @@ class CompactedForkTests(unittest.TestCase):
         with self.assertRaises(ValueError): fork_provenance(PARENT, CHILD, self.config, at=source)
 
     def test_uncompacted_copy_with_a_rerendered_edited_file_notice(self):
-        from robofrontier.claude.provenance import copied_history_length
+        from robofrontier.engines.claude.provenance import copied_history_length
         notice = {'type': 'edited_text_file', 'filename': '/run/workspace/skills.md', 'snippet': ''}
         parent = [row('a', 'user', None, message={'role': 'user', 'content': 'task'}),
                   row('n', 'attachment', 'a', attachment=dict(notice))]
@@ -131,7 +131,7 @@ class CompactedForkTests(unittest.TestCase):
     def test_compacted_copy_orders_a_split_assistant_message_as_its_metadata(self):
         # Observed 2026-11-10: three tool calls of one response were preserved; the file
         # interleaves call/result, the metadata and the copy list calls first.
-        from robofrontier.claude.provenance import copied_history_length
+        from robofrontier.engines.claude.provenance import copied_history_length
         old = row('old', 'user', None, message={'role': 'user', 'content': 'old'})
         calls = [row('c%d' % i, 'assistant', None, message={'role': 'assistant', 'content': 'call %d' % i}) for i in range(3)]
         results = [row('r%d' % i, 'user', None, message={'role': 'user', 'content': 'result %d' % i}) for i in range(3)]
@@ -166,7 +166,7 @@ class CompactedForkTests(unittest.TestCase):
     def test_a_fork_may_keep_only_some_api_retry_notices(self):
         # Observed 2026-11-10 after a network outage: the parent had 11 retry notices, the
         # fork kept 6; a row that hung from a dropped notice hangs from its kept ancestor.
-        from robofrontier.claude.provenance import copied_history_length
+        from robofrontier.engines.claude.provenance import copied_history_length
         retry = lambda ident, parent: row(ident, 'system', parent, subtype='api_error', source='request_retry', retryAttempt=1)
         parent = [row('a', 'user', None, message={'role': 'user', 'content': 'task'}),
                   retry('x1', 'a'), retry('x2', 'x1'),

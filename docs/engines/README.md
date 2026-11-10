@@ -70,7 +70,7 @@ verified on the execution machine.
 ```sh
 uv sync --locked --extra oracle
 .venv/bin/robofrontier bootstrap
-.venv/bin/python -m scripts.benchmark_handoff init-env
+.venv/bin/python -m robofrontier.batch.handoff init-env
 ```
 
 ### Credentials file
@@ -114,7 +114,7 @@ texture, alter an expected fingerprint, or silently substitute another asset
 revision. For an offline machine, transfer the pinned package and run:
 
 ```sh
-.venv/bin/python -m scripts.benchmark_handoff setup-assets \
+.venv/bin/python -m robofrontier.batch.handoff setup-assets \
   --archive /path/to/policy-assets-rolling003-20261029.tar.gz
 ```
 
@@ -128,12 +128,12 @@ not downloaded by ordinary policy bootstrap.
 
 | Component | Native Codex | Native Claude Code | Qualification boundary |
 | --- | --- | --- | --- |
-| Provider/model catalog | `configs/models.json`; launch configuration writes `codex.json` | `configs/claude-models.json`; `scripts/claude_benchmark.py` | Profiles alone do not establish provider compatibility. |
+| Provider/model catalog | `configs/models.json`; launch configuration writes `codex.json` | `configs/claude-models.json`; `robofrontier/batch/claude_benchmark.py` | Profiles alone do not establish provider compatibility. |
 | Task selection/freeze | `benchmark_common.select_cases`, shared preparation | Same selection/preparation; `engine: claude` in new harness/manifest | Shared tasks, separate engine qualification. |
-| One policy turn | app-server `turn/start` | `claude -p`, `robofrontier/claude/runner.py` | Native turn lifecycle is not task success. |
+| One policy turn | app-server `turn/start` | `claude -p`, `robofrontier/engines/claude/runner.py` | Native turn lifecycle is not task success. |
 | Robot tools | app-server dynamic `robot` tool | Role-bound MCP in `robot_mcp.py` | Actual provider image handling requires its own evidence. |
-| Per-task host | `robofrontier/codex/codex_policy_host.js` | `policy_host.py`, `adaptive_policy_host.py`, `standing_team.py` | All four Claude topologies remain engineering only. |
-| Scheduling | `scripts/meta_dispatcher.js` | `dispatch.py`, `adaptive_dispatch.py`, `standing_team.py` | Both use shared deterministic runtime rules; Claude engineering does not run through a fabricated Codex tool object. |
+| Per-task host | `robofrontier/engines/codex/codex_policy_host.js` | `policy_host.py`, `adaptive_policy_host.py`, `standing_team.py` | All four Claude topologies remain engineering only. |
+| Scheduling | `robofrontier/engines/codex/meta_dispatcher.js` | `dispatch.py`, `adaptive_dispatch.py`, `standing_team.py` | Both use shared deterministic runtime rules; Claude engineering does not run through a fabricated Codex tool object. |
 | Session observation source | `codex.wait_threads`, `codex.app-server` | `claude.host` | `SESSION_SOURCES` is restricted by selected engine. |
 | Fork history | Native ordinal/prefix hashes in the task's Codex home | Native transcript UUID sequence/content in `provenance.py` | Prefix equality alone does not establish trusted creation or role authority. |
 | Source freeze | Benchmark launch and native host/RPC scripts | Claude launcher/catalog and imported shared Python modules | Current freeze checks do not retroactively protect old drafts. |
@@ -145,13 +145,13 @@ not downloaded by ordinary policy bootstrap.
 
 | Area | Files | Responsibility |
 | --- | --- | --- |
-| Claude tool IDs | `robofrontier/claude/robot_mcp.py` | Generate/return new request IDs, retain an ID across retransmission of the same MCP request, and return structured conflict/uncertain errors |
+| Claude tool IDs | `robofrontier/engines/claude/robot_mcp.py` | Generate/return new request IDs, retain an ID across retransmission of the same MCP request, and return structured conflict/uncertain errors |
 | Claude delegation identity | `request_identity.py`, `fork_setup.py` | Bind the generated delegation ID to one unmatched native tool call, then fork each child at that call and verify its copied history |
 | Public tool instructions | `prompts/archive/claude/controller.md`, `prompts/skills/robot-collaboration/references/tools.md` | Distinguish new requests, status queries and retries of uncertain requests; retain explicit-ID compatibility |
 | Claude provider errors | `recovery.py`, `runner.py`, `session_host.py` | Recognize structured capacity failures and retain original-session recovery, backoff and retry evidence |
 | Claude scheduling | `supervisor.py`, `dispatch.py`, `adaptive_dispatch.py`, `standing_team.py` | Recover within the existing deadline; a recovering role does not claim ordinary wakes while other runnable roles continue |
-| Shared reporting | `robofrontier/run_metrics.py`, `scripts/export_run_report.py` | Emit common `host_metrics`; resolve isolated Codex homes and collected session maps |
-| Host timing | `robofrontier/codex/codex_policy_host.js`, Claude `runner.py` and `robot_mcp.py` | Record turn/tool/fork setup intervals without adding another image Base64 log |
+| Shared reporting | `robofrontier/batch/metrics.py`, `robofrontier/batch/report.py` | Emit common `host_metrics`; resolve isolated Codex homes and collected session maps |
+| Host timing | `robofrontier/engines/codex/codex_policy_host.js`, Claude `runner.py` and `robot_mcp.py` | Record turn/tool/fork setup intervals without adding another image Base64 log |
 
 The engine-specific modules remain native implementations. Both engines fork a
 delegate at the parent's pending `delegate` call and give it the same frozen
@@ -212,7 +212,7 @@ Synthetic error tests cannot establish every real provider failure behavior.
 After all writers stop, run in the original execution environment:
 
 ```sh
-.venv/bin/python -m scripts.export_run_report RUN_DIR
+.venv/bin/python -m robofrontier.batch.report RUN_DIR
 ```
 
 The output is `RUN_DIR/private/outputs/report.json`; common statistics are in

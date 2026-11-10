@@ -1,7 +1,7 @@
 import unittest
 import mujoco
 import numpy as np
-from robofrontier.suite.table_presentation import scale_rectangular_opening_for_render
+from robofrontier.media.table_presentation import scale_rectangular_opening_for_render
 
 
 class TablePresentationTests(unittest.TestCase):

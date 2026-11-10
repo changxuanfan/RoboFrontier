@@ -232,7 +232,7 @@ def export(output, scene, release, cameras, asset, source_root):
                     if field not in spec:
                         continue
                     if field == 'recording':
-                        from ..task_families import oracle_recording
+                        from ..tasks.families import oracle_recording
                         original = oracle_recording(spec[field], source_root).resolve()
                     else:
                         original = (source_root/spec[field]).resolve()

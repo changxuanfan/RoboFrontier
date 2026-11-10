@@ -1,6 +1,6 @@
 // Real native cold resume, only against the synthetic loopback fixture.
 const assert=require('node:assert/strict'),fs=require('node:fs');
-const {GatewayRpc}=require('../robofrontier/codex/gateway_rpc');
+const {GatewayRpc}=require('../robofrontier/engines/codex/gateway_rpc');
 async function main(manifest){
   let tools=0;const clients=[];
   try{

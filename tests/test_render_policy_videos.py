@@ -6,7 +6,7 @@ from unittest import mock
 
 import numpy as np
 
-from scripts import render_policy_videos as script
+from robofrontier.media import render as script
 
 
 class RenderPolicyVideosTests(unittest.TestCase):
