@@ -299,7 +299,25 @@ def wait_for_recoveries(jobs, sleep=time.sleep):
             job['status'] = 'closed' if record.get('phase') == 'closed' else 'needs_review'
 
 
-def main():
+def submit_durable(args):
+    """Run this same recovery as a one-shot macOS launchd job with Interactive priority, so it
+    outlives the terminal or agent session that started it (robofrontier.durable)."""
+    from robofrontier import durable
+    run = Path(args.run_dir).resolve()
+    # Absolute paths: the job starts in this checkout, not in the caller's directory.
+    argv = ['--run-dir', run, '--source-root', Path(args.source_root).resolve(), '--python', Path(args.python).absolute(),
+            '--scratch', Path(args.scratch).resolve(), '--execute']
+    if args.upgrade_from is not None: argv += ['--upgrade-from', Path(args.upgrade_from).resolve(), '--reason', args.reason]
+    tag = hashlib.sha256(str(run).encode()).hexdigest()[:16]
+    stamp = time.strftime('%Y%m%dT%H%M%S')
+    folder = run/'private/state/control'/('recovery-durable-'+stamp)
+    command = [str(Path(sys.executable).absolute()), '-m', 'robofrontier.claude.recover_task', *argv, '--foreground']
+    plist = durable.job('org.robofrontier.recovery.%s.%s' % (tag, stamp), command, folder,
+                        Path(__file__).resolve().parents[2], durable.passed_environment())
+    return durable.bootstrap(plist, folder, {'run': str(run), 'recovery': True})
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run-dir', type=Path, required=True)
     parser.add_argument('--source-root', type=Path, required=True)
@@ -308,8 +326,16 @@ def main():
     parser.add_argument('--execute', action='store_true')
     parser.add_argument('--upgrade-from', type=Path, help='The checkout the run is frozen on, to upgrade it to --source-root')
     parser.add_argument('--reason', help='Why the runtime is upgraded (required with --upgrade-from)')
-    args = parser.parse_args()
+    parser.add_argument('--foreground', action='store_true',
+                        help='On macOS, run --execute in this process instead of a launchd job (the default)')
+    args = parser.parse_args(argv)
     try:
+        if args.execute and sys.platform == 'darwin' and not args.foreground:
+            if not args.scratch: parser.error('--execute requires --scratch')
+            inspect(args.run_dir, args.source_root, upgrade_from=args.upgrade_from)  # refuse before submitting
+            if args.upgrade_from is not None and not (args.reason or '').strip(): parser.error('--upgrade-from requires --reason')
+            print(json.dumps({'eligible': True, 'submitted': submit_durable(args)}, default=str))
+            return
         if args.execute:
             if not args.scratch: parser.error('--execute requires --scratch')
             result = execute(args.run_dir, args.source_root, args.python, args.scratch,

@@ -1,9 +1,14 @@
 # Policy Python environment
 
-Policy scripts can use one frozen Python environment instead of whatever the host has. A run
-uses it only when the trusted launcher sets `ROBOFRONTIER_POLICY_ENV` during `prepare`; every
-other run, and every run already prepared, keeps its earlier behavior. It is tested on macOS,
-and preparation refuses other hosts until they have been tested through each engine's sandbox.
+Policy scripts use one frozen Python environment instead of whatever the host has. On macOS
+`robofrontier prepare` uses it by default: the environment built from the current locks under
+`/Users/Shared/robofrontier` (or `ROBOFRONTIER_POLICY_ENV_BASE`) that passed its check.
+Preparation refuses when that one is missing, unchecked or failed, rather than falling back to
+the host's Python. `ROBOFRONTIER_POLICY_ENV=PATH` picks another environment, and
+`ROBOFRONTIER_POLICY_ENV=off` keeps the host's Python for a run. `robofrontier plan` shows the
+choice as `policy_environment`. Runs already prepared keep what they froze. Other hosts keep
+the host's Python, and naming an environment there is refused, until they have been tested
+through each engine's sandbox.
 
 ## Use it
 
@@ -21,10 +26,12 @@ provider and uses no credential:
 .venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id>
 ```
 
-Prepare with the flag:
+Prepare as usual; the default applies. To name another environment, or to keep the host's
+Python:
 
 ```sh
 ROBOFRONTIER_POLICY_ENV=/Users/Shared/robofrontier/policy-env-<id> .venv/bin/robofrontier prepare ...
+ROBOFRONTIER_POLICY_ENV=off .venv/bin/robofrontier prepare ...
 ```
 
 ## What a run gets
