@@ -154,7 +154,7 @@ def prepare(output, config, *, codebook=None):
     output.mkdir(parents=True, exist_ok=False)
     private = output/'private'
     private.mkdir(mode=0o700)
-    harness = load_harness(ROOT/'configs/harness-frontier-v2-servo2.json')
+    harness = load_harness(ROOT/'configs/harnesses/oracle.json')
     harness['observation_image_profile'] = config['render']['observation_profile']
     write_json(private/'harness.json', harness)
     catalog['cases'] = [{**native[0], 'directory': str(scene)}]

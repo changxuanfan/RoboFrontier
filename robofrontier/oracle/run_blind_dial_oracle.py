@@ -75,7 +75,7 @@ def main():
     a=p.parse_args();root=Path(__file__).resolve().parents[2]
     if any(not math.isfinite(x) or x<0 for x in (a.wall_s,a.sim_s,a.actions,a.guesses)):p.error('Budgets must be nonnegative; zero disables the budget')
     from robofrontier.oracle.source_snapshot import reexec_entry
-    harness=a.harness or root/'configs/harness-frontier-v2-servo2.json'
+    harness=a.harness or root/'configs/harnesses/oracle.json'
     catalog=root/'benchmark/dial/catalog.json'
     reexec_entry(root,a.output,Path(__file__),sys.argv[1:],harness,catalog)
     from robofrontier.oracle.trial import Trial

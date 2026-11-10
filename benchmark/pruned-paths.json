@@ -24,7 +24,8 @@
     "robofrontier/suite/oracle.py": "robofrontier/oracle/trial.py",
     "robofrontier/suite/oracle_recovery.py": "robofrontier/oracle/recovery.py",
     "scripts/render_frontier_oracle.py": "robofrontier/media/render_frontier_oracle.py",
-    "tests/test_motion_edit.py": "tests/media/test_motion_edit.py"
+    "tests/test_motion_edit.py": "tests/media/test_motion_edit.py",
+    "configs/harness-frontier-v2-servo2.json": "configs/harnesses/oracle.json"
   },
   "generated": [
     "docs/generated/"

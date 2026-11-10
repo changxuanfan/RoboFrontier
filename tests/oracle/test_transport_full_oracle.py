@@ -47,7 +47,7 @@ class TransferCoverageTests(unittest.TestCase):
         import hashlib
         self.assertEqual(hashlib.sha256((ROOT/fixture['scene']/'scene.xml').read_bytes()).hexdigest(),fixture['source_scene_sha256'])
         t=recorded_frontier('transport_placement_seed_frontier.json')
-        t.cfg=load_harness(ROOT/'configs/harness-frontier-v2-servo2.json')
+        t.cfg=load_harness(ROOT/'configs/harnesses/oracle.json')
         t.reference_inter_robot_clearance_m=.006
         robot=fixture['carrier'];goal=next(g for g in t.task['goals'] if g['goal_id']==fixture['goal_id'])
         # The live planner's first seed follows its current holding posture.
@@ -95,7 +95,7 @@ class TransferCoverageTests(unittest.TestCase):
         import hashlib
         self.assertEqual(hashlib.sha256((ROOT/fixture['scene']/'scene.xml').read_bytes()).hexdigest(),fixture['scene_sha256'])
         t=recorded_frontier('transport_regrasp_contact_frontier.json')
-        t.cfg=load_harness(ROOT/'configs/harness-frontier-v2-servo2.json')
+        t.cfg=load_harness(ROOT/'configs/harnesses/oracle.json')
         robot=fixture['robot'];arm=t.arms[robot];arm.qref=np.array(fixture['approach_joint_rad'])
         executed=[]
         def projected_execute(label,commands,allow_failure=False):

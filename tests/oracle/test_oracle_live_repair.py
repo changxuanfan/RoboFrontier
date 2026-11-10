@@ -17,7 +17,7 @@ class LiveRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(__file__).resolve().parents[2]
             scene=root/'benchmark/dial/dial-best5-n06-d3'
-            cfg=json.loads((root/'configs/harness-frontier-v2-servo2.json').read_text())
+            cfg=json.loads((root/'configs/harnesses/oracle.json').read_text())
             t=Trial(scene,Path(tmp)/'world',frames=False,controller_cfg=cfg)
             m=BestManipulator(t);entry=m.dials[3];m.lift([entry])
             m.grasp([entry],[1]*len(m.dials))

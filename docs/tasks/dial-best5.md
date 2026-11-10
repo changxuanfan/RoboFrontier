@@ -85,7 +85,7 @@ Simple-background rendering (`render_dial_oracle.py`, also removed on
 Classic final-video entry is retired; source frames and delivered videos remain.
 
 `run_blind_dial_oracle.py` is an explicit Legacy engineering Oracle entry using
-R11 and `configs/harness-frontier-v2-servo2.json`. Its native no-budget behavior
+R11 and `configs/harnesses/oracle.json`. Its native no-budget behavior
 is not the unified Oracle's default 24-hour engineering deadline. The batch
 runner `run_best5_dial_batch.py` and the local diagnostic
 `commission_best5_dials.py` were removed on 2026-11-10. The shoulder-clamp
