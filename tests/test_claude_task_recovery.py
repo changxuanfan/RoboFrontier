@@ -167,6 +167,38 @@ class ClaudeRecoveryTests(unittest.TestCase):
         from robofrontier import runtime_upgrade
         with self.assertRaises(ValueError): runtime_upgrade.validate_authorization(run, store, result['authorization'])
 
+    def test_a_world_that_closed_by_itself_continues_and_fails_its_unfinished_action(self):
+        # Observed 2026-11-10: an operator pause found an arm still stopping; the seal timed out,
+        # the host left and the world closed itself, leaving the action uncertain.
+        self.store.begin_call('stopping', 'Controller', 'move', {'robot': self.robots[0]})
+        self.store.db.execute("INSERT INTO actions VALUES ('stopping','Controller','uncertain',?)",
+                              (json.dumps({'action_id': 'stopping', 'arm': self.robots[0], 'status': 'uncertain', 'local_recovery': True}),))
+        self.store.db.commit()
+        self.world.close()
+        self.store.put('lifecycle', 'interrupted'); self.store.put('physics_state', 'stopped')
+        plan = recovery.inspect(self.run, ROOT)
+        self.assertFalse(plan['world_live']); self.assertEqual(plan['interrupted'], ['stopping'])
+        before = recovery._ledger(self.store.db, ['stopping'])
+        store, run = self.store, self.run
+        class Host:
+            pid = 99999995
+            def wait(self):
+                store.put('segments', [{'index': 0}, {'index': 1}]); store.put('lifecycle', 'ended')
+                write_json(run_layout.path(run, 'engineering_status', 'claude'), {'status': 'finished', 'reason': 'world_ended'})
+                return 0
+        with patch.object(recovery, 'validate_physical_restore', return_value={'verified': True, 'physics_steps': 0}):
+            result = recovery.execute(self.run, ROOT, Path(os.sys.executable), self.scratch, launcher=lambda *a, **k: Host())
+        self.assertEqual(result['phase'], 'closed')
+        seal = json.loads((self.run/'private/outputs/seal.json').read_text())
+        self.assertIs(seal['owner_was_live'], False); self.assertEqual(seal['unresolved_action_ids'], ['stopping'])
+        self.assertEqual(self.store.actions()['stopping']['status'], 'failed')
+        self.assertEqual(recovery._ledger(self.store.db, ['stopping']), before)
+        self.assertEqual(self.store.get('segment'), 1)
+
+    def test_a_live_world_still_needs_every_action_settled(self):
+        self.store.begin_call('running', 'Controller', 'move', {'robot': self.robots[0]})
+        with self.assertRaisesRegex(recovery.RecoveryBlocked, 'unsettled'): recovery.inspect(self.run, ROOT)
+
     def test_a_failed_check_leaves_no_segment(self):
         with patch.object(recovery, 'validate_physical_restore', side_effect=recovery.RecoveryBlocked('restore failed')):
             with self.assertRaises(recovery.RecoveryBlocked):

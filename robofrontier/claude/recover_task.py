@@ -32,10 +32,14 @@ FAILED_SETUP = ('Manual recovery: native delegate setup never started; its robot
                 'No fork was repeated.')
 
 
-def _ledger(db):
-    """The task's own calls and actions; the seal's observe/shutdown calls are not task calls."""
-    rows = [list(row) for row in db.execute("SELECT * FROM calls WHERE NOT (actor='Meta' AND id LIKE 'seal-%') ORDER BY id")]
-    actions = [list(row) for row in db.execute('SELECT * FROM actions ORDER BY id')]
+def _ledger(db, interrupted=()):
+    """The task's own calls and actions; the seal's observe/shutdown calls are not task calls.
+    `interrupted`: unfinished calls/actions of a world that closed by itself, which the next
+    segment settles as failed."""
+    skip = set(interrupted)
+    rows = [list(row) for row in db.execute("SELECT * FROM calls WHERE NOT (actor='Meta' AND id LIKE 'seal-%') ORDER BY id")
+            if row[0] not in skip]
+    actions = [list(row) for row in db.execute('SELECT * FROM actions ORDER BY id') if row[0] not in skip]
     return hashlib.sha256(json.dumps([rows, actions], sort_keys=True).encode()).hexdigest()
 
 
@@ -150,10 +154,13 @@ def inspect(run, source, *, processes=None, own=False, upgrade_from=None):
             raise RecoveryBlocked('A live world must be running and paused')
         if not live and (lifecycle != 'interrupted' or physics != 'stopped'):
             raise RecoveryBlocked('A closed world must be sealed as interrupted')
-        if store.db.execute("SELECT 1 FROM calls WHERE status IN ('accepted','running','uncertain') LIMIT 1").fetchone():
-            raise RecoveryBlocked('An original call is unsettled; never redispatch it')
-        if store.db.execute("SELECT 1 FROM actions WHERE status NOT IN ('completed','failed') LIMIT 1").fetchone():
-            raise RecoveryBlocked('An original physical action is unsettled')
+        unsettled = sorted({row[0] for row in store.db.execute("SELECT id FROM calls WHERE status IN ('accepted','running','uncertain')")}
+                           | {row[0] for row in store.db.execute("SELECT id FROM actions WHERE status NOT IN ('completed','failed')")})
+        # A live world must settle everything before it is sealed. A world that closed by itself
+        # (its host was lost) leaves its unfinished actions to the next segment, which fails them
+        # without replay (run_segments.prepare_retry).
+        if live and unsettled:
+            raise RecoveryBlocked('An original call or physical action is unsettled; never redispatch it')
         delegations = store.get('delegations', {}) or {}
         if any(b['status'] == 'creating' for b in delegations.values()):
             raise RecoveryBlocked('A delegation is still being created')
@@ -175,7 +182,8 @@ def inspect(run, source, *, processes=None, own=False, upgrade_from=None):
                 'frozen_source': str(frozen), 'source': str(source),
                 'segment': store.get('segment', 0)+1, 'frame': frame, 'sim_s': sim_s,
                 'pose_sha256': hashlib.sha256(pose.tobytes()).hexdigest(), 'held_arms': sorted(holds),
-                'ledger_sha256': _ledger(store.db), 'role_threads': threads, 'failed_setups': reviews,
+                'ledger_sha256': _ledger(store.db, unsettled), 'role_threads': threads, 'failed_setups': reviews,
+                'interrupted': [] if live else unsettled,
                 'remaining_s': remaining, 'robot_owners': store.get('robot_owners'),
                 'restore': 'Approximate: last recorded qpos, zero velocity, recent completed grasp holds'}
 
@@ -223,6 +231,17 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
                   'pid': os.getpid(), 'at': time.time()}
         write_json(status_path, record)
         try:
+            sealed_report = run_segments.output_dir(run, plan['segment']-1)/'seal.json'
+            if not plan['world_live'] and not sealed_report.exists():
+                # The world closed by itself before its seal finished: record that seal now (no
+                # world is started and nothing is replayed; run_seal.seal_run on a free lock).
+                if seal is None: from robofrontier.run_seal import seal_run as seal
+                store = RuntimeStore(run/'private/state/runtime.sqlite')
+                try: record['seal'] = seal(store, 0)
+                finally: store.close()
+                again = inspect(run, source, own=True, upgrade_from=upgrade_from)
+                if again['ledger_sha256'] != plan['ledger_sha256'] or again['interrupted'] != plan['interrupted']:
+                    raise RecoveryBlocked('Call ledger changed while sealing the closed world')
             if plan['world_live']:
                 # The paused world is closed by its own shutdown; never killed, never replayed.
                 if seal is None: from robofrontier.run_seal import seal_run as seal
@@ -259,7 +278,8 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
                 record['failed_setups'] = fail_unstarted_reviews(store)
                 run_segments.prepare_retry(run, store, reason or REASON, sealed_host_failure=True, source_root=source,
                                            manual_authorization=authorization)
-                if _ledger(store.db) != plan['ledger_sha256']: raise RecoveryBlocked('Original call ledger changed during preparation')
+                if _ledger(store.db, plan['interrupted']) != plan['ledger_sha256']:
+                    raise RecoveryBlocked('Original call ledger changed during preparation')
                 record['robot_owners'] = store.get('robot_owners')
             finally: store.close()
             record['phase'] = 'host_started'; write_json(status_path, record)
