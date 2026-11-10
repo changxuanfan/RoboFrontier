@@ -18,6 +18,19 @@ It starts no native policy session and calls no model/provider. Its passing
 result does not qualify actual robot dynamics, native provider behavior or
 multi-agent task solving.
 
+## Every test, in parallel
+
+```sh
+.venv/bin/python -m scripts.run_tests                     # one worker per CPU
+.venv/bin/python -m scripts.run_tests runtime engines.test_codex_quota --workers 4
+```
+
+Each `tests/**/test_*.py` module runs in its own process and each `tests/**/test_*.js` with
+`node --test`; a failed module runs once more alone, and only a repeated failure counts. Tests
+that start a world open a hidden GLFW window: on macOS the screen must be unlocked (the window
+service does not answer otherwise), on Linux use a display such as `xvfb-run -a`. CI's
+`all-tests` job runs it that way.
+
 ## Full local discovery
 
 ```sh

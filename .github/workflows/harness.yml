@@ -1,10 +1,10 @@
 name: Harness
 
-# Offline harness checks: the protocol contract without physics plus every Node host
-# test (check_harness), and both engines' frozen inputs and access rules, run layout,
-# segments and evidence storage; a second job runs the paper-statistics, analysis and
-# operator-script tests without scene assets. No model is called; installed-CLI tests
-# skip when a CLI is absent.
+# Offline checks. harness: the protocol contract without physics plus every Node host test
+# (check_harness), and both engines' frozen inputs and access rules, run layout, segments and
+# evidence storage. all-tests: every Python and Node test. analysis-and-scripts: the
+# paper-statistics, analysis and operator-script tests without scene assets. No model is
+# called; installed-CLI tests skip when a CLI is absent.
 on:
   pull_request:
   push:
@@ -44,6 +44,43 @@ jobs:
         with:
           name: harness-protocol
           path: harness-protocol.json
+          if-no-files-found: ignore
+
+  # Every Python and Node test, with the scene assets and a virtual display for the simulation's
+  # window (MuJoCo renders through GLFW on Mesa's software OpenGL). No model is called; tests of
+  # an installed engine CLI skip without one.
+  all-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install the display, OpenGL and video libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 \
+            libosmesa6 libxrandr2 libxinerama1 libxcursor1 libxi6 ffmpeg
+      - name: Install locked Python dependencies
+        run: |
+          python -m pip install uv==0.9.28
+          uv sync --locked
+      - name: Restore pinned policy assets
+        run: .venv/bin/python -m robofrontier.cli bootstrap
+      - name: Every test
+        env:
+          ROBOFRONTIER_OUTAGE_PROBE: 'off'
+          ROBOFRONTIER_NO_NOTIFY: '1'
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" .venv/bin/python -m scripts.run_tests --workers 4 --report all-tests.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: all-tests
+          path: all-tests.json
           if-no-files-found: ignore
 
   # Paper statistics, run analysis, operator scripts and config/record consistency.

@@ -65,6 +65,7 @@ Read finished runs; none starts a model or physics.
 | `build_release.py` | Write the release's physics into every released scene and start each scene at rest; rewrites the release index. |
 | `validate_physics.py` | Check the release physics and Franka limits on the released scenes: rest, carrying, placing, pushing, collisions, Relay handover, Dial turning and step time. |
 | `check_harness.py` | Offline checks: fake services, robot/contact physics and real encoder recovery. |
+| `run_tests.py` | Run every Python and Node test in parallel, rerunning a failed module alone; CI's all-tests job. |
 | `check_oracle_preservation.py` | Verify protected historical bytes with inode-aware hashing. |
 
 ### Factory, replay and video
