@@ -111,16 +111,23 @@ def fail_unstarted_reviews(store):
     return failed
 
 
-def inspect(run, source, *, processes=None, own=False):
-    """Read-only eligibility. `own`: the caller holds this run's recovery lock."""
+def inspect(run, source, *, processes=None, own=False, upgrade_from=None):
+    """Read-only eligibility. `own`: the caller holds this run's recovery lock.
+
+    `upgrade_from`: the checkout the run is frozen on, when `source` is a newer runtime it is
+    to be upgraded to (runtime_upgrade). Only that explicit operator path continues a run that
+    has already continued or was recovered before."""
     run, source = Path(run).resolve(), Path(source).resolve()
+    frozen = Path(upgrade_from).resolve() if upgrade_from is not None else source
     folder, index = _batch(run)
     previous = run/'private/state/control/recovery.json'
     if previous.exists():
         record = json.loads(previous.read_text())
         # An attempt that stopped at a check before changing the run may be tried again;
         # one that prepared the segment, or is still running, never is.
-        if record.get('prepared') or not _lock_free(previous.parent/'recovery.lock') and not own:
+        if not own and not _lock_free(previous.parent/'recovery.lock'):
+            raise RecoveryBlocked('A recovery of this run is in progress')
+        if record.get('prepared') and (upgrade_from is None or record.get('phase') not in ('closed', 'needs_review')):
             raise RecoveryBlocked('This run was already recovered once; never repeat it automatically')
     if run_layout.batch_path(folder, 'stop').exists() or run_layout.path(run, 'stop', 'claude').exists():
         raise RecoveryBlocked('Stop requested')
@@ -134,7 +141,8 @@ def inspect(run, source, *, processes=None, own=False):
         raise RecoveryBlocked('The original Claude runner still holds this run')
     with readonly(run) as store:
         if store.get('integrity_valid') is not True: raise RecoveryBlocked('Run integrity is not valid')
-        if store.get('segment', 0) >= run_segments.MAX_RETRIES: raise RecoveryBlocked('Run already continued once')
+        if store.get('segment', 0) >= run_segments.MAX_RETRIES and upgrade_from is None:
+            raise RecoveryBlocked('Run already continued once')
         lifecycle, physics = store.get('lifecycle'), store.get('physics_state')
         if not store.get('dispatch_paused'): raise RecoveryBlocked('Dispatch is not paused')
         live = not run_segments.owner_released(run)
@@ -161,9 +169,10 @@ def inspect(run, source, *, processes=None, own=False):
         holds = store.get('arm_holds') or {}
         if any(not 0 <= sim_s-hold.get('sim_s', -1e9) <= run_segments.HOLD_MAX_AGE_S for hold in holds.values()):
             raise RecoveryBlocked('A recorded grasp is too old to restore safely')
-        changed = verify_inputs(run, source_root=source)
+        changed = verify_inputs(run, source_root=frozen)
         if changed: raise RecoveryBlocked('Frozen inputs changed: '+', '.join(changed[:3]))
         return {'run': str(run), 'batch': str(folder), 'job_reason': job['reason'], 'world_live': live,
+                'frozen_source': str(frozen), 'source': str(source),
                 'segment': store.get('segment', 0)+1, 'frame': frame, 'sim_s': sim_s,
                 'pose_sha256': hashlib.sha256(pose.tobytes()).hexdigest(), 'held_arms': sorted(holds),
                 'ledger_sha256': _ledger(store.db), 'role_threads': threads, 'failed_setups': reviews,
@@ -189,8 +198,14 @@ print(json.dumps(result, default=str))
 """
 
 
-def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Popen):
+def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Popen, upgrade_from=None, reason=None):
     run, source, python = Path(run).resolve(), Path(source).resolve(), Path(python).absolute()
+    if upgrade_from is not None:
+        if not isinstance(reason, str) or not reason.strip(): raise RecoveryBlocked('A runtime upgrade needs a stated reason')
+        # The upgrade grants policy read access to this interpreter's environment, which must be
+        # the one the continued runner uses.
+        if Path(sys.prefix).absolute() != python.parent.parent:
+            raise RecoveryBlocked('Run the upgrade with the interpreter given as --python')
     from robofrontier.policy_access import mode
     scratch = Path(scratch).resolve(); info = scratch.stat()
     access = json.loads((run/'private/inputs/policy-access.json').read_text())
@@ -200,7 +215,7 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
     control = run/'private/state/control'; control.mkdir(parents=True, exist_ok=True)
     with (control/'recovery.lock').open('a+') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        plan = inspect(run, source, own=True)  # this process now holds the recovery lock
+        plan = inspect(run, source, own=True, upgrade_from=upgrade_from)  # this process now holds the recovery lock
         status_path = control/'recovery.json'
         earlier = [json.loads(status_path.read_text())] if status_path.exists() else []
         earlier = (earlier[0].pop('earlier_attempts', []) + earlier) if earlier else []
@@ -215,33 +230,42 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
                 try: record['seal'] = seal(store, 60)
                 finally: store.close()
                 if not run_segments.owner_released(run): raise RecoveryBlocked('The world did not release its lock')
-                sealed = inspect(run, source, own=True)
+                sealed = inspect(run, source, own=True, upgrade_from=upgrade_from)
                 if sealed['ledger_sha256'] != plan['ledger_sha256']: raise RecoveryBlocked('Call ledger changed while sealing')
                 plan = {**sealed, 'world_live': True}
                 record.update(plan, phase='validating', earlier_attempts=earlier); write_json(status_path, record)
             record['physical_check'] = validate_physical_restore(run, source, python, scratch, plan)
-            again = inspect(run, source, own=True)
+            again = inspect(run, source, own=True, upgrade_from=upgrade_from)
             if {k: v for k, v in again.items() if k != 'world_live'} != {k: v for k, v in plan.items() if k != 'world_live'}:
                 raise RecoveryBlocked('Task changed during validation')
-            backup = scratch/('runtime-before-recovery-'+time.strftime('%Y%m%dT%H%M%S')+'.sqlite')
+            backup = scratch/('runtime-before-segment-%d-%d.sqlite' % (plan['segment'], time.time_ns()//1000000))
             backup.touch(mode=0o600, exist_ok=False)
             with readonly(run) as old, sqlite3.connect(backup) as destination: old.db.backup(destination)
             record['backup'] = str(backup)
             store = RuntimeStore(run/'private/state/runtime.sqlite')
             try:
-                store.event('MANUAL_TASK_RECOVERY', 'Meta', {'reason': REASON, 'engine': 'claude',
+                record['prepared'] = True; write_json(status_path, record)
+                authorization = None
+                if upgrade_from is not None:
+                    from robofrontier import runtime_upgrade
+                    authorization = runtime_upgrade.upgrade(run, store, previous_source=Path(upgrade_from).resolve(),
+                                                            reason=reason, expected_segment=plan['segment']-1,
+                                                            expected_ledger=runtime_upgrade.ledger(store), source=source)
+                    record['authorization'] = authorization; write_json(status_path, record)
+                store.event('MANUAL_TASK_RECOVERY', 'Meta', {'reason': reason or REASON, 'engine': 'claude',
+                                                            'authorization': authorization,
                                                             'plan': {k: plan[k] for k in ('segment', 'frame', 'sim_s', 'pose_sha256',
                                                                                           'failed_setups', 'remaining_s', 'role_threads')}})
-                record['prepared'] = True; write_json(status_path, record)
                 record['failed_setups'] = fail_unstarted_reviews(store)
-                run_segments.prepare_retry(run, store, REASON, sealed_host_failure=True, source_root=source)
+                run_segments.prepare_retry(run, store, reason or REASON, sealed_host_failure=True, source_root=source,
+                                           manual_authorization=authorization)
                 if _ledger(store.db) != plan['ledger_sha256']: raise RecoveryBlocked('Original call ledger changed during preparation')
                 record['robot_owners'] = store.get('robot_owners')
             finally: store.close()
             record['phase'] = 'host_started'; write_json(status_path, record)
             log_path = run/'private/logs/recovery-runner.log'
             with log_path.open('a') as log:
-                # The original frozen runner and physics from the original checkout.
+                # The frozen runner and physics from the run's checkout (the upgraded one after an upgrade).
                 host = launcher([str(python), '-I', '-c', RUNNER, str(source), plan['batch'], str(run)],
                                 cwd=source, stdout=log, stderr=log, stdin=subprocess.DEVNULL)
                 record['host_pid'] = host.pid; write_json(status_path, record)
@@ -282,12 +306,15 @@ def main():
     parser.add_argument('--python', type=Path, default=Path(sys.executable))
     parser.add_argument('--scratch', type=Path)
     parser.add_argument('--execute', action='store_true')
+    parser.add_argument('--upgrade-from', type=Path, help='The checkout the run is frozen on, to upgrade it to --source-root')
+    parser.add_argument('--reason', help='Why the runtime is upgraded (required with --upgrade-from)')
     args = parser.parse_args()
     try:
         if args.execute:
             if not args.scratch: parser.error('--execute requires --scratch')
-            result = execute(args.run_dir, args.source_root, args.python, args.scratch)
-        else: result = inspect(args.run_dir, args.source_root)
+            result = execute(args.run_dir, args.source_root, args.python, args.scratch,
+                             upgrade_from=args.upgrade_from, reason=args.reason)
+        else: result = inspect(args.run_dir, args.source_root, upgrade_from=args.upgrade_from)
         print(json.dumps({'eligible': True, **result}, default=str))
         if args.execute and result['phase'] != 'closed': raise SystemExit(1)
     except (RecoveryBlocked, OSError, ValueError) as error:
