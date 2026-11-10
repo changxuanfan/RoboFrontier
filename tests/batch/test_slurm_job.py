@@ -322,17 +322,15 @@ class SlurmJobTests(unittest.TestCase):
         self.config = load_configuration(overrides={
             'schema_version': 8, 'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay), 'egress_pause_s': 120}})
-        with self.assertRaisesRegex(ValueError, '--engineering'):
-            self.prepare()
         with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
-            slurm.submit(self.config, self.submission, root=self.repo, engineering=True)
+            slurm.submit(self.config, self.submission, root=self.repo)
         manifest, _ = slurm._verify_submission(self.submission)
         self.assertEqual((manifest['credential_env'], manifest['auth_mode']), ('CLAUDE_CODE_OAUTH_TOKEN', 'api'))
         self.assertNotIn('--dependency=singleton', slurm.queue_command(self.config['slurm'], self.submission))
         self.config['slurm']['egress_root'] = str(self.repo/'egress')
         with self.assertRaisesRegex(ValueError, 'egress state outside'):
             with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
-                slurm.submit(self.config, self.root/'second', root=self.repo, engineering=True)
+                slurm.submit(self.config, self.root/'second', root=self.repo)
         # Only Claude carries a token this way; Codex keeps the job-scoped subscription store.
         with self.assertRaisesRegex(ValueError, 'Mac egress requires'):
             load_configuration(overrides={'schema_version': 8, 'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay)}})

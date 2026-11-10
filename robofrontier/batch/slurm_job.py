@@ -181,7 +181,7 @@ exit "$step_status"
 '''
 
 
-def submit(config, output, *, queue=False, engineering=False, root=ROOT):
+def submit(config, output, *, queue=False, root=ROOT):
     """Freeze a single-use submission; optionally submit it to the queue."""
     from ..cli import _catalog, plan
     from robofrontier.batch.handoff import ensure_asset_archive
@@ -197,8 +197,6 @@ def submit(config, output, *, queue=False, engineering=False, root=ROOT):
     if not config['evidence']['auto_collect'] or not config['evidence']['auto_archive']:
         raise ValueError('Slurm requires automatic collection and ZIP archiving')
     policy = config['policy']
-    if policy['engine'] == 'claude' and not engineering:
-        raise ValueError('Claude Slurm execution requires --engineering')
     selected = _catalog(config)['profiles'][policy['profile']]
     if subscription:
         if selected.get('provider') != 'openai' or selected.get('env_key'):
@@ -258,7 +256,7 @@ def submit(config, output, *, queue=False, engineering=False, root=ROOT):
         (staged/'job.sbatch').write_text(_script(output, python, config['slurm']))
         files['job.sbatch'] = checksum(staged/'job.sbatch')
         write_json(staged/'submission.json', {'schema': 'robofrontier.slurm-submission.v1',
-            'commit': commit, 'sha256': files, 'engine': policy['engine'], 'engineering': engineering,
+            'commit': commit, 'sha256': files, 'engine': policy['engine'],
             'credential_env': selected.get('env_key'), 'auth_mode': 'subscription' if subscription else 'api',
             'model_calls_during_preparation': 0,
             'python': str(python), 'status': 'prepared_not_queued'})
@@ -300,7 +298,7 @@ def stage(submission, local):
         _copy_verified(submission/'provider-report.json', receipt)
     write_json(local/'config.json', config)
     write_json(local/'local-job.json', {'schema': 'robofrontier.slurm-local.v1', 'submission': str(submission),
-        'job_id': os.environ['SLURM_JOB_ID'], 'filesystem': kind, 'engineering': manifest['engineering'],
+        'job_id': os.environ['SLURM_JOB_ID'], 'filesystem': kind,
         'commit': manifest['commit'], 'status': 'staged'})
     return {'local': str(local), 'status': 'staged'}
 
@@ -321,7 +319,7 @@ def execute(local):
                 request_stop(local)
                 result = {'status': 'stopped_before_start'}
             else:
-                result = run(ROOT/'runs/policy/batch', engineering=document['engineering'])
+                result = run(ROOT/'runs/policy/batch')
             # Persist the result (naming any verified archive) before leaving the managed
             # route/credential context, whose exit raises when its fence fired.
             write_json(path, result)

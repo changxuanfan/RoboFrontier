@@ -66,8 +66,7 @@ def plan(config):
             'startup_interval_s': config['batch']['startup_interval_s'],
             'task_wall_limit_s': config['batch']['task_wall_limit_s'],
             'task_count': len(selected), 'jobs': selected, 'policy_environment': _policy_environment(),
-            'qualification': 'Claude engineering only' if policy['engine'] == 'claude'
-                else 'Requires a matching live provider compatibility receipt'}
+            'qualification': 'Requires matching live provider compatibility receipts (robofrontier preflight)'}
 
 
 def prepare(output, config):
@@ -207,12 +206,14 @@ def _frozen_configuration(batch):
     return config
 
 
-def run(batch, *, engineering=False, continuing=False):
+def run(batch, *, continuing=False):
     """Run a prepared batch. `continuing` picks up a batch whose supervisor died: a run that
     had started continues once in its next segment and unstarted runs start (docs/running/run-segments.md)."""
     config = _frozen_configuration(batch)
-    if config['policy']['engine'] == 'claude' and not engineering:
-        raise ValueError('Claude runs remain unqualified; explicitly select run --engineering')
+    if config['policy']['engine'] == 'claude':
+        # Both engines need passed compatibility receipts; Codex checks its own per run.
+        from .engines.claude.claude_readiness import require_ready
+        require_ready(config['policy']['profile'])
     from .runtime.diagnostics import require_runtime
     from .runtime import versions
     require_runtime(config)
@@ -286,7 +287,6 @@ def argument_parser(*, prog=None):
         elif name == 'slurm-submit':
             p.add_argument('--output', type=Path, required=True)
             p.add_argument('--queue', action='store_true', help='Submit to sbatch; otherwise only freeze a submission')
-            p.add_argument('--engineering', action='store_true', help='Authorize an unqualified Claude engineering draft')
         elif name == 'preflight':
             p.add_argument('--confirm-spend', action='store_true')
             p.add_argument('--smoke-only', action='store_true')
@@ -296,7 +296,6 @@ def argument_parser(*, prog=None):
         p = sub.add_parser(name)
         p.add_argument('batch', type=Path)
         if name == 'run':
-            p.add_argument('--engineering', action='store_true', help='Explicitly run an unqualified Claude engineering draft')
             p.add_argument('--durable', action='store_true',
                            help='Run under the macOS user launchd service with Interactive priority, so it outlives '
                                 'this terminal (the macOS default, a continuation included)')
@@ -387,7 +386,7 @@ def main(argv=None):
                 from robofrontier.batch.prepare import load_env
                 from .batch.slurm_job import submit
                 load_env(ROOT/'.env')
-                emit(submit(config, args.output, queue=args.queue, engineering=args.engineering))
+                emit(submit(config, args.output, queue=args.queue))
             else:
                 # New runs use the frozen policy Python environment by default (policy_env.default_root).
                 from .runtime.policy_env import apply_default
@@ -398,11 +397,11 @@ def main(argv=None):
             # by default, so it outlives the terminal or agent session that started it.
             if args.foreground: raise ValueError('--durable and --foreground are exclusive')
             from .batch.mac import submit as submit_durable
-            emit(submit_durable(args.batch, engineering=args.engineering, continuing=args.continuing))
+            emit(submit_durable(args.batch, continuing=args.continuing))
         elif args.command == 'run':
             from robofrontier.batch.prepare import load_env
             load_env(ROOT/'.env')
-            emit(run(args.batch, engineering=args.engineering, continuing=args.continuing))
+            emit(run(args.batch, continuing=args.continuing))
         elif args.command == 'status':
             # Read the supervisor's atomic snapshot, never open a writer's SQLite.
             snapshot = run_layout.batch_path(args.batch, 'engineering_status')

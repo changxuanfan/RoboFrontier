@@ -14,9 +14,9 @@ class DurableTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             batch = Path(tmp)
             (batch/'batch.json').write_text(json.dumps({'status': 'prepared_not_started', 'jobs': [], **run_layout.batch_record()}))
-            plist = durable.service(batch, engineering=True, python='/py', environment={'PATH': '/bin'})
+            plist = durable.service(batch, python='/py', environment={'PATH': '/bin'})
             self.assertEqual(plist['ProgramArguments'], [durable.CAFFEINATE, '-ims', '/py', '-m', 'robofrontier.cli', 'run', str(batch),
-                                                         '--foreground', '--engineering'])
+                                                         '--foreground'])
             self.assertTrue(plist['StandardOutPath'].startswith(str(batch/'control/durable')))
             self.assertFalse(plist['KeepAlive'])
             self.assertFalse(any('KEY' in k or 'TOKEN' in k for k in durable.PASSED_ENVIRONMENT))
@@ -42,7 +42,7 @@ class DurableTests(unittest.TestCase):
             launchctl.return_value.returncode = 0
             batch = Path(tmp)
             (batch/'batch.json').write_text(json.dumps({'status': 'running', 'jobs': [], **run_layout.batch_record()}))
-            labels = [durable.submit(batch, engineering=True, continuing=True)['label'] for _ in range(2)]
+            labels = [durable.submit(batch, continuing=True)['label'] for _ in range(2)]
             base = durable.service_label(batch.resolve())
             self.assertEqual(labels, [base+'.continue-1', base+'.continue-2'])
             with (batch/'control/durable/continue-2/service.plist').open('rb') as source:
@@ -63,13 +63,13 @@ class RunDefaultTests(unittest.TestCase):
         return submit, run
 
     def test_macos_defaults_to_the_interactive_service(self):
-        submit, run = self.dispatch(['run', 'runs/x', '--engineering'], 'darwin')
-        submit.assert_called_once_with(Path('runs/x'), engineering=True, continuing=False)
+        submit, run = self.dispatch(['run', 'runs/x'], 'darwin')
+        submit.assert_called_once_with(Path('runs/x'), continuing=False)
         run.assert_not_called()
 
     def test_macos_continues_under_the_interactive_service_too(self):
-        submit, run = self.dispatch(['run', 'runs/x', '--continue', '--engineering'], 'darwin')
-        submit.assert_called_once_with(Path('runs/x'), engineering=True, continuing=True)
+        submit, run = self.dispatch(['run', 'runs/x', '--continue'], 'darwin')
+        submit.assert_called_once_with(Path('runs/x'), continuing=True)
         run.assert_not_called()
 
     def test_foreground_and_linux_run_in_this_process(self):

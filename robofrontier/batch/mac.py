@@ -29,11 +29,11 @@ def service_label(batch):
     return 'org.robofrontier.batch.' + hashlib.sha256(str(batch).encode()).hexdigest()[:16]
 
 
-def service(batch, *, engineering, python, environment, continuing=False, label=None, folder=None):
+def service(batch, *, python, environment, continuing=False, label=None, folder=None):
     folder = folder or run_layout.batch_path(batch, 'durable')
     # The service itself runs in the foreground; otherwise it would submit itself again.
     command = ([str(python), '-m', 'robofrontier.cli', 'run', str(batch), '--foreground']
-               + (['--continue'] if continuing else []) + (['--engineering'] if engineering else []))
+               + (['--continue'] if continuing else []))
     return job(label or service_label(batch), command, folder, ROOT, environment)
 
 
@@ -72,7 +72,7 @@ def passed_environment():
     return {key: os.environ[key] for key in PASSED_ENVIRONMENT if key in os.environ}
 
 
-def submit(batch, *, engineering=False, continuing=False):
+def submit(batch, *, continuing=False):
     """Run a batch under launchd. A fresh batch is submitted once; a continuation of a batch
     whose supervisor died gets its own job (`run --continue` checks it may continue)."""
     if sys.platform != 'darwin':
@@ -85,9 +85,9 @@ def submit(batch, *, engineering=False, continuing=False):
     if continuing:
         number = 1 + sum(1 for p in folder.glob('continue-*') if p.is_dir()) if folder.is_dir() else 1
         folder, label = folder/('continue-%d' % number), label+'.continue-%d' % number
-    plist = service(batch, engineering=engineering, python=Path(sys.executable).absolute(), environment=passed_environment(),
+    plist = service(batch, python=Path(sys.executable).absolute(), environment=passed_environment(),
                     continuing=continuing, label=label, folder=folder)
-    return bootstrap(plist, folder, {'batch': str(batch), 'engineering': engineering, 'continuing': continuing})
+    return bootstrap(plist, folder, {'batch': str(batch), 'continuing': continuing})
 
 
 def service_state(batch):

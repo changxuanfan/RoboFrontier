@@ -84,8 +84,39 @@ def check_receipts(name, basic_path, blocked_path, *, selected=None, version=Non
     checks['blocked_sessions']=_uuid(parent) and _uuid(child) and parent!=child
     return {'profile':name,'requested_model':selected['model'],'claude_version':version,
             'precheck_evidence_matches':all(checks.values()),'checks':checks,
-            'formal_execution_available':False,'model_calls':0,
-            'note':'Local receipt consistency only; not proof of provider identity, physical task success, billing, or scored qualification.'}
+            'model_calls':0,
+            'note':'Local receipt consistency only; not proof of provider identity, physical task success or billing.'}
+
+
+PRECHECKS = 'runs/engineering/claude-precheck'
+BLOCKED_PRECHECKS = 'runs/engineering/claude-blocked-precheck'
+
+
+def latest_receipts(name, root=ROOT):
+    """The newest basic and blocked precheck receipts of a profile on this host."""
+    def newest(folder, schema):
+        found = []
+        for path in Path(root, folder).glob('*/receipt.json'):
+            receipt = _read(path)
+            if receipt and receipt.get('schema') == schema and receipt.get('profile') == name:
+                found.append((receipt.get('finished_at') or path.stat().st_mtime, path))
+        return max(found)[1] if found else None
+    return (newest(PRECHECKS, 'robofrontier.claude-precheck.v1'),
+            newest(BLOCKED_PRECHECKS, 'robofrontier.claude-blocked-precheck.v1'))
+
+
+def require_ready(name, root=ROOT, **kwargs):
+    """Refuse a Claude run without passed precheck receipts for this profile, CLI version and
+    model configuration, as a Codex run needs its compatibility receipt (E5)."""
+    basic, blocked = latest_receipts(name, root)
+    if basic is None or blocked is None:
+        raise ValueError(f'No Claude precheck receipts for {name}; run `robofrontier preflight --confirm-spend` '
+                         'and the blocked precheck first')
+    result = check_receipts(name, basic, blocked, **kwargs)
+    if not result['precheck_evidence_matches']:
+        failed = sorted(k for k, v in result['checks'].items() if not v)
+        raise ValueError(f'Claude precheck receipts for {name} do not match this CLI and profile: '+', '.join(failed))
+    return dict(result, basic_receipt=str(basic), blocked_receipt=str(blocked))
 
 
 def main():

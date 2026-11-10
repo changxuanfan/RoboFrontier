@@ -148,7 +148,6 @@ def _ensure_image(image, commit, root, *, rebuild=False):
 def _batch_argument(arguments):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('batch')
-    parser.add_argument('--engineering', action='store_true')
     parsed, _ = parser.parse_known_args(arguments[1:])
     path = Path(parsed.batch)
     if path.is_absolute() or not path.parts or path.parts[0] != 'runs' or '..' in path.parts:

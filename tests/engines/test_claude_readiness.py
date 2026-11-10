@@ -36,7 +36,6 @@ class ReadinessTests(unittest.TestCase):
     def test_matching_receipts_are_consistent_but_not_formally_qualified(self):
         result=self.check()
         self.assertTrue(result['precheck_evidence_matches'],result)
-        self.assertFalse(result['formal_execution_available'])
         self.assertEqual(result['model_calls'],0)
     def test_configuration_cli_missing_check_and_budget_fail_closed(self):
         for target,key,value in ((self.basic,'profile_sha256','changed'),(self.basic,'claude_version','changed'),
@@ -80,4 +79,16 @@ class ReadinessTests(unittest.TestCase):
             server.shutdown();server.server_close()
 
 
-if __name__=='__main__':unittest.main()
+
+
+class RequireReadyTests(unittest.TestCase):
+    def test_a_claude_run_without_receipts_is_refused(self):
+        import tempfile
+        from robofrontier.engines.claude.claude_readiness import require_ready
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaisesRegex(ValueError, 'No Claude precheck receipts'):
+                require_ready('haiku', root=root)
+
+
+if __name__ == '__main__':
+    unittest.main()
