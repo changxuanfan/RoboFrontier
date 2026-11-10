@@ -1,8 +1,8 @@
 {
   "schema": "robofrontier.transport-half-opening-check.v1",
   "case_id": "transport-a04-d3",
-  "source_scene_sha256": "143fe5a77c285f9eb5c448be92cb2610b648fa779a3e26fb88a80a7701facdb8",
-  "variant_scene_sha256": "143fe5a77c285f9eb5c448be92cb2610b648fa779a3e26fb88a80a7701facdb8",
+  "source_scene_sha256": "52e2db3f48c3f15bff6a65b2df694fc01e89fe4dc5af2d4fac5582308c17db85",
+  "variant_scene_sha256": "52e2db3f48c3f15bff6a65b2df694fc01e89fe4dc5af2d4fac5582308c17db85",
   "original_geometry": {
     "tabletop_z_m": 0.8,
     "outer_bounds_xy_m": [

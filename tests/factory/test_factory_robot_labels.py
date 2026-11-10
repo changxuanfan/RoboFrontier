@@ -49,31 +49,20 @@ class RobotLabelTests(unittest.TestCase):
             np.testing.assert_allclose(world.model.geom_quat[gid], move['quat_wxyz'], atol=1e-9)
             self.assertEqual(world.model.geom_contype[gid], 0)  # display only, no contact
 
-    def test_block_letters_read_upright_in_videos_only(self):
-        from robofrontier.factory.labels import apply_display_labels, item_print_turns, place_robot_labels
-        source = ROOT/resolve_case('transport-a04-d2')[2]['directory']
-        before = hashlib.sha256((source/'scene.xml').read_bytes()).hexdigest()
-        world = Workstation(source); world.frame()
-        model, data = world.model, world.data
-        original = model.geom_quat.copy()
-        place_robot_labels(model, data, dict(family='transport'))  # a run keeps its printed letters
-        turns = item_print_turns(model)
-        self.assertTrue(turns)
-        self.assertTrue(all(name.endswith('_print1') for name in turns))
-        for name in turns:
-            np.testing.assert_allclose(model.geom_quat[model.geom(name).id], original[model.geom(name).id])
-        apply_display_labels(model, data)
-        for gid in range(model.ngeom):
-            name = model.geom(gid).name
-            if '_print' not in name or '_item' not in name:
-                continue
-            axes = np.zeros(9)
-            mujoco.mju_quat2Mat(axes, model.geom_quat[gid])
-            axes = axes.reshape(3, 3)
-            if abs(axes[2, 2]) < .5:  # a side face: the letter's top is the block's top
-                self.assertGreater(axes[2, 1], .5, name)
-        self.assertEqual(item_print_turns(model), {})  # already upright, nothing left to turn
-        self.assertEqual(hashlib.sha256((source/'scene.xml').read_bytes()).hexdigest(), before)
+    def test_released_block_letters_read_upright(self):
+        for case in ('transport-a04-d2', 'transport-a12-d3'):
+            world = Workstation(ROOT/resolve_case(case)[2]['directory']); model = world.model
+            sides = 0
+            for gid in range(model.ngeom):
+                name = model.geom(gid).name
+                if '_print' not in name or '_item' not in name:
+                    continue
+                axes = np.zeros(9)
+                mujoco.mju_quat2Mat(axes, model.geom_quat[gid])
+                axes = axes.reshape(3, 3)
+                if abs(axes[2, 2]) < .5:  # a side face: the letter's top is the block's top
+                    self.assertGreater(axes[2, 1], .5, name); sides += 1
+            self.assertGreater(sides, 0)
 
     def test_mosaic_labels_leave_the_robot_bases(self):
         self.check('mosaic-a04-6x12-d1')

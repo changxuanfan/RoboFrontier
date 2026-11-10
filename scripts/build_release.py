@@ -6,6 +6,7 @@ run again on its own output.
 
     python -m scripts.build_release physics   # contact and solver settings into every scene.xml
     python -m scripts.build_release settle    # start every scene at rest under that physics
+    python -m scripts.build_release letters   # print Transport block letters upright
     python -m scripts.build_release check     # the scenes already carry them
 
 See docs/physics.md for the values and where they come from.
@@ -279,6 +280,35 @@ def settle(args):
     print(f'{changed} scenes now start at rest')
 
 
+ITEM_PRINT = re.compile(r'[A-Z]{1,2}_item\d+_print\d+')
+
+
+def letters(args):
+    """Turn each Transport block letter printed upside down on a side face by half a turn,
+    so its top points at the block's top. The prints are display geoms without contact."""
+    changed = 0
+    for folder in cases():
+        text = (folder/'scene.xml').read_text(); root = ET.fromstring(text); model = compile_scene(folder)
+        elements = {e.get('name'): e for e in geom_elements(root) if e.get('name')}
+        turned = 0
+        for g in range(model.ngeom):
+            name = model.geom(g).name or ''
+            if not ITEM_PRINT.fullmatch(name): continue
+            matrix = np.zeros(9); mujoco.mju_quat2Mat(matrix, model.geom_quat[g]); matrix = matrix.reshape(3, 3)
+            if abs(matrix[2, 2]) < .5 and matrix[2, 1] < -.5:
+                quat = np.zeros(4); mujoco.mju_mulQuat(quat, model.geom_quat[g], np.array([0., 0., 0., 1.]))
+                element = elements[name]
+                for key in ('euler', 'axisangle', 'xyaxes', 'zaxis'): element.attrib.pop(key, None)
+                element.set('quat', ' '.join(number(v) for v in quat)); turned += 1
+        if not turned: continue
+        before = file_sha256(folder/'scene.xml')
+        ET.indent(root, '  '); (folder/'scene.xml').write_text(ET.tostring(root, encoding='unicode')+'\n')
+        replace_hashes(folder, {before: file_sha256(folder/'scene.xml')}); changed += 1
+        print(f'{folder.name}: {turned} letters turned upright', flush=True)
+    index_release(); pin_asset_release()
+    print(f'{changed} scenes changed')
+
+
 def check(args):
     bad = {folder.name: p for folder in cases() if (p := check_physics(folder))}
     print(json.dumps(bad or 'all scenes carry the release physics', indent=1))
@@ -289,6 +319,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest='step', required=True)
     sub.add_parser('physics').set_defaults(run=physics)
+    sub.add_parser('letters').set_defaults(run=letters)
     step = sub.add_parser('settle'); step.add_argument('--cases', nargs='*'); step.set_defaults(run=settle)
     sub.add_parser('check').set_defaults(run=check)
     args = parser.parse_args(argv)

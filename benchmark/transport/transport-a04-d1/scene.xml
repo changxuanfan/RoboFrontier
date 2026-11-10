@@ -701,21 +701,21 @@
       <freejoint name="A_item1_free" />
       <geom name="A_item1_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.85 0.12 0.12 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="A_item1_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item1_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="A_item1_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item1_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="A_item1_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item1_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="A_item1_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item1_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="A_item2" pos="0.0 -0.482 0.8300000000000001" quat="0.7071067811865476 0.0 0.0 0.7071067811865475">
       <freejoint name="A_item2_free" />
       <geom name="A_item2_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.85 0.12 0.12 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="A_item2_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item2_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="A_item2_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item2_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="A_item2_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item2_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="A_item2_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item2_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="A_item3" pos="-0.25 -0.582 0.8300000000000001" quat="0.7071067811865476 0.0 0.0 0.7071067811865475">
       <freejoint name="A_item3_free" />
       <geom name="A_item3_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.85 0.12 0.12 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="A_item3_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item3_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="A_item3_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item3_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="A_item3_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item3_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="A_item3_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="A_item3_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="board_B" pos="0.302 -6.123233995736766e-18 0.803" quat="6.123233995736766e-17 0.0 0.0 1.0">
@@ -734,21 +734,21 @@
       <freejoint name="B_item1_free" />
       <geom name="B_item1_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.06 0.34 0.77 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="B_item1_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item1_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="B_item1_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item1_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="B_item1_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item1_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="B_item1_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item1_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="B_item2" pos="0.482 0.0 0.8300000000000001" quat="6.123233995736766e-17 0.0 0.0 1.0">
       <freejoint name="B_item2_free" />
       <geom name="B_item2_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.06 0.34 0.77 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="B_item2_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item2_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="B_item2_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item2_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="B_item2_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item2_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="B_item2_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item2_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="B_item3" pos="0.582 -0.25 0.8300000000000001" quat="6.123233995736766e-17 0.0 0.0 1.0">
       <freejoint name="B_item3_free" />
       <geom name="B_item3_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.06 0.34 0.77 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="B_item3_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item3_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="B_item3_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item3_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="B_item3_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item3_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="B_item3_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="B_item3_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="board_C" pos="-3.061616997868383e-18 0.302 0.803" quat="0.7071067811865476 0.0 0.0 -0.7071067811865475">
@@ -767,21 +767,21 @@
       <freejoint name="C_item1_free" />
       <geom name="C_item1_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.98 0.74 0.1 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="C_item1_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item1_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="C_item1_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item1_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="C_item1_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item1_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="C_item1_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item1_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="C_item2" pos="0.0 0.482 0.8300000000000001" quat="0.7071067811865476 0.0 0.0 -0.7071067811865475">
       <freejoint name="C_item2_free" />
       <geom name="C_item2_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.98 0.74 0.1 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="C_item2_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item2_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="C_item2_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item2_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="C_item2_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item2_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="C_item2_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item2_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="C_item3" pos="0.25 0.582 0.8300000000000001" quat="0.7071067811865476 0.0 0.0 -0.7071067811865475">
       <freejoint name="C_item3_free" />
       <geom name="C_item3_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.98 0.74 0.1 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="C_item3_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item3_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="C_item3_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item3_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="C_item3_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item3_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="C_item3_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="C_item3_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="board_D" pos="-0.302 0.0 0.803" quat="1.0 0.0 0.0 0.0">
@@ -800,21 +800,21 @@
       <freejoint name="D_item1_free" />
       <geom name="D_item1_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.95 0.95 0.91 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="D_item1_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item1_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="D_item1_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item1_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="D_item1_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item1_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="D_item1_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item1_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="D_item2" pos="-0.482 0.0 0.8300000000000001" quat="1.0 0.0 0.0 0.0">
       <freejoint name="D_item2_free" />
       <geom name="D_item2_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.95 0.95 0.91 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="D_item2_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item2_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="D_item2_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item2_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="D_item2_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item2_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="D_item2_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item2_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <body name="D_item3" pos="-0.582 0.25 0.8300000000000001" quat="1.0 0.0 0.0 0.0">
       <freejoint name="D_item3_free" />
       <geom name="D_item3_geom" type="box" pos="0.0 0.0 0.0" size="0.03 0.03 0.03" rgba="0.95 0.95 0.91 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" mass="0.16874999999999996" />
       <geom name="D_item3_print0" type="box" pos="0.0 0.0 0.030199999999999998" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item3_identity" quat="1.0 0.0 0.0 0.0" contype="0" conaffinity="0" mass="0" />
-      <geom name="D_item3_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item3_identity" quat="0.7071067811865476 -0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
+      <geom name="D_item3_print1" type="box" pos="0.0 0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item3_identity" quat="0.0 0.0 0.7071067811865475 0.7071067811865476" contype="0" conaffinity="0" mass="0" />
       <geom name="D_item3_print2" type="box" pos="0.0 -0.030199999999999998 0.0" size="0.012 0.012 0.0001" rgba="0.945 0.937 0.91 1.0" material="D_item3_identity" quat="0.7071067811865476 0.7071067811865475 0.0 0.0" contype="0" conaffinity="0" mass="0" />
     </body>
     <camera name="board_A_close" pos="0.4 0.118 1.42" xyaxes="-0.679041981617427 0.7340994395864077 0.0 -0.5392958109397864 -0.49884862511930234 0.6784615519831464" fovy="38" />

@@ -75,7 +75,7 @@ def render(directory,views=('global','global_rear'),speed=None,every=None,output
     from robofrontier.factory.labels import apply_display_labels
     if mujoco.mj_name2id(model,mujoco.mjtObj.mjOBJ_KEY,'initial')>=0:mujoco.mj_resetDataKeyframe(model,data,model.key('initial').id)
     family=json.loads((scene.parent/'task.json').read_text()).get('family') if (scene.parent/'task.json').is_file() else None
-    mujoco.mj_kinematics(model,data);label_moves,print_turns=apply_display_labels(model,data,avoid_objects=family!='mosaic')
+    mujoco.mj_kinematics(model,data);label_moves=apply_display_labels(model,data,avoid_objects=family!='mosaic')
     shared=(directory/'motion/stream.json').exists();events=None;event=None
     if shared:
         reader=MotionReader(directory/'motion')

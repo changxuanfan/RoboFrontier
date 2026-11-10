@@ -186,8 +186,8 @@ def compose(shell,catalog_path,output,table_opening_scale=None,source_overrides=
             scale_rectangular_opening_for_render(m,item.get('table_opening_scale',1.) if table_opening_scale is None else table_opening_scale)
             mujoco.mj_kinematics(m,d)
         # Display only: a letter label under a robot base slides out towards the table edge.
-        from .labels import item_print_turns,robot_label_moves
-        label_moves=robot_label_moves(m,d,avoid_objects=place['family']!='mosaic');print_turns=item_print_turns(m)
+        from .labels import robot_label_moves
+        label_moves=robot_label_moves(m,d,avoid_objects=place['family']!='mosaic')
         t=np.asarray(place['translation_m']);yaw=place['yaw_rad'];c,s=math.cos(yaw),math.sin(yaw);rotation=np.array([[c,-s,0],[s,c,0],[0,0,1.]])
         prefix=place['case_id']+'__';bodymap={};geommap={};animated=set(source.manifest['motion_recording_contract']['dynamic_bodies'])
         for bid in range(m.nbody):
@@ -203,7 +203,6 @@ def compose(shell,catalog_path,output,table_opening_scale=None,source_overrides=
                 entry=source.manifest['geometries'][g];local_r=quat_matrix(m.geom_quat[g]);local_p=m.geom_pos[g].copy();typ=int(m.geom_type[g])
                 if not bid and entry['id'] in label_moves:
                     local_p[:2]=label_moves[entry['id']]['to_xy'];local_r=quat_matrix(label_moves[entry['id']]['quat_wxyz'])
-                if entry['id'] in print_turns:local_r=quat_matrix(print_turns[entry['id']])
                 kwargs=dict(name=prefix+entry['id'],type=types[typ],size=vec(m.geom_size[g]),pos=vec(local_p),quat=vec(matrix_quat(local_r)),
                     rgba=vec(m.geom_rgba[g]),contype='0',conaffinity='0',mass='0',group='0')
                 if typ==mujoco.mjtGeom.mjGEOM_MESH:
@@ -214,7 +213,7 @@ def compose(shell,catalog_path,output,table_opening_scale=None,source_overrides=
                     if root.find("asset/material[@name='factory_bench_wood']") is not None:kwargs['material']='factory_bench_wood'
                 ET.SubElement(body,'geom',**kwargs);geommap[entry['id']]=kwargs['name']
         mapping[place['case_id']]=dict(body_names=bodymap,geom_names=geommap,source_scene_sha256=source.manifest['scene_sha256'], colour_compatible_sha256=colour_compatible_signature(source),
-            robot_labels_moved=label_moves,item_prints_turned=print_turns)
+            robot_labels_moved=label_moves)
     # Area names stay centered on their upper edge. Furniture placement must
     # reserve this space; never shift a title to work around a supply cart.
     for region in shell_manifest['regions']:
