@@ -26,6 +26,8 @@ class FakeWorld:
     def abort_actions(self,reason):
         values=[{'call_id':call_id,'status':'failed','reason':reason} for call_id in self.running.values()]
         self.running.clear();return values
+    arms={}  # no physical arms: finish's settle before scoring only advances time
+    def step(self):self.time+=.02
     def evaluate(self):return {'scope':'fake executor only; not a robot score'}
 
 def fake_capture(cameras):

@@ -139,24 +139,23 @@ class BudgetGuard:
 
     def begin_cutoff(self,service,wall_now,mono_now,backstop=False):
         """Score now, pause dispatch, stop the arms; the run closes after the braking grace."""
-        self.cutoff=mono_now;self.cutoff_evaluation=service.world.evaluate();self.backstopped=backstop
+        self.cutoff=mono_now;self.backstopped=backstop;cutoff_sim_s=float(service.world.time)
+        self.cutoff_evaluation=service.settled_evaluation()
         service.store.put('dispatch_paused',True);service.store.put('physics_state','paused_by_user')
         clock=dict(active_s=self.active,clock=self.protocol['clock']) if self.active_clock else {}
         if backstop:
             wall=dict(wall_backstop_s=self.wall_backstop_s,wall_since_start_s=wall_now-backstop_since(service.store))
             service.store.put('wall_backstop',dict(wall,at=wall_now,segment=service.store.get('segment',0)))
             service.store.event('POLICY_WALL_BACKSTOP','Meta',dict(wall_limit_s=self.protocol['wall_limit_s'],
-                sim_time_s=float(service.world.time),**clock,**wall))
+                sim_time_s=cutoff_sim_s,**clock,**wall))
         else:
-            service.store.event('POLICY_WALL_LIMIT','Meta',dict(wall_limit_s=self.protocol['wall_limit_s'],sim_time_s=float(service.world.time),**clock))
+            service.store.event('POLICY_WALL_LIMIT','Meta',dict(wall_limit_s=self.protocol['wall_limit_s'],sim_time_s=cutoff_sim_s,**clock))
         from .action_batch import cancel_collecting
-        cancel_collecting(service.store,'policy_wall_limit',float(service.world.time))
+        cancel_collecting(service.store,'policy_wall_limit',cutoff_sim_s)
         for actor in service.policy_roles:
             service.store.signal(actor,dict(event='policy_wall_limit',text='The trial budget has ended. Stop new work; retain real action outcomes and end this native turn.'))
-        for robot,arm in service.world.arms.items():
-            if arm.job is not None:service.world.request_stop(robot,arm.job)
         write_json(service.directory/'private/outputs/budget-cutoff.json',dict(
-            protocol=self.protocol,cutoff_unix_s=wall_now,sim_time_s=float(service.world.time),
+            protocol=self.protocol,cutoff_unix_s=wall_now,sim_time_s=cutoff_sim_s,
             **({'active_s':self.active,'active_time_stalls':self.stalls} if self.active_clock else {}),
             **({'wall_backstop':True,'needs_review':True,'wall_backstop_s':self.wall_backstop_s} if backstop else {}),
             evaluation=self.cutoff_evaluation))

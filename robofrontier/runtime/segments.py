@@ -444,7 +444,7 @@ def relay_record(run, cutoff=None):
                 if handover not in entry['handovers']: entry['handovers'].append(handover)
             entry['drops'] = max(entry['drops'], int(item.get('drops') or 0))
             # Who held it and whether it lay dropped, at the end of the latest segment.
-            for key in ('custody', 'dropped'):
+            for key in ('custody', 'dropped', 'handovers_valid_from_s'):
                 if key in item: entry[key] = item[key]
     return payloads or None
 

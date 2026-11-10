@@ -22,6 +22,10 @@ from .stop_diagnostics import stop_diagnostics
 from ..tasks.config import action_limits, execution_timing
 
 
+# Finish and the budget cutoff score after the world has run this long with every arm still.
+SCORING_SETTLE_S = 1.5
+
+
 class RuntimeService:
     def __init__(self, directory, world_factory, capture, video_factory=None):
         self.store = None
@@ -606,7 +610,7 @@ class RuntimeService:
                 self.store.put('physics_state', 'finished')
                 self.store.event('TEAM_FINISH_PROPOSED', actor, {'note':data.get('note',''), 'sim_time_s':float(self.world.time)})
                 self.stop_video()
-                write_json(self.directory/'private/outputs/evaluation.json', self.world.evaluate())
+                write_json(self.directory/'private/outputs/evaluation.json', self.settled_evaluation())
                 self.save_evaluation_evidence('evaluation-window.json')
                 self.respond(job, {'ended': True, 'note':'Private evaluation is not policy feedback'})
                 self.export_records()
@@ -629,6 +633,17 @@ class RuntimeService:
             self.respond(job, {'error': str(error), **({'ik_detail': detail} if detail is not None else {})})
         if job['result'] is not None:
             job['done'].set()
+
+    def settled_evaluation(self):
+        """The score once the world has come to rest: every moving arm is stopped, then the
+        world runs SCORING_SETTLE_S of simulation with the arms holding still. A piece set down
+        just before the end is then counted once it rests, as Mosaic and Transport require
+        it to stay still for a second."""
+        for robot,arm in self.world.arms.items():
+            if arm.job is not None:self.world.request_stop(robot,arm.job)
+        start=float(self.world.time)
+        for _ in range(round(SCORING_SETTLE_S/.02)):self.world.step()
+        return {**self.world.evaluate(),'scored_after_settle_sim_s':round(float(self.world.time)-start,3)}
 
     def step_physics(self):
         """Advance the original world only while its route is admitted."""

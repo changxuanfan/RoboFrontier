@@ -102,7 +102,7 @@ class Relay:
             beam_ids={monitor.m.body(n).id for n in item.get('beam_bodies',[ident])}
             rod=[g for g in all_geoms if monitor.m.geom_bodyid[g] in beam_ids
                  and ('_beam' in (monitor.m.geom(g).name or ''))]
-            self.states[ident]=dict(assembly=item,all_geoms=all_geoms,rod_geoms=rod,airborne=False,custody=set(),candidate=set(),candidate_since={},overlap_since=None,qualified=set(),gap_since=None,dropped=False,drops=0,transitions=[],goal_since=None,landed=False,spill=False,goal_release_ready=False,goal_release_active=False)
+            self.states[ident]=dict(assembly=item,all_geoms=all_geoms,rod_geoms=rod,airborne=False,custody=set(),candidate=set(),candidate_since={},overlap_since=None,qualified=set(),gap_since=None,dropped=False,drops=0,transitions=[],valid_from=0.,goal_since=None,landed=False,spill=False,goal_release_ready=False,goal_release_active=False)
         self.payload_components={};self.geom_component={}
         for ident,state in self.states.items():
             names=[ident]+[state['assembly'][key] for key in ('weight_body','tray_body') if state['assembly'].get(key)]
@@ -158,7 +158,8 @@ class Relay:
         record=found[0].get('evaluator',{}).get('relay_payloads') if found else None
         for ident,item in (record or {}).items():
             if ident not in self.states:continue
-            self.states[ident].update(transitions=list(item['handovers']),drops=int(item['drops']))
+            self.states[ident].update(transitions=list(item['handovers']),drops=int(item['drops']),
+                                      valid_from=item.get('handovers_valid_from_s',0.))
             if len(item.get('custody') or [])>=2:
                 self.states[ident].update(carried_custody=set(item['custody']),carried_dropped=bool(item.get('dropped')))
     def sample(self):
@@ -240,10 +241,15 @@ class Relay:
                 gap=state['gap_since'] is not None and t-state['gap_since']>.20 and not allowed_release
                 if (bad_contact or gap) and not state['dropped']:state['dropped']=True;state['drops']+=1
                 if state['dropped']:
-                    if support-state['custody']:mon.violation('receiver_recovered_drop',key=ident)
+                    if support-state['custody']:
+                        # A receiver that picks a dropped timber up voids its handovers
+                        # (RELAY_RECOVERY_RULE): none counts, earlier or later, until the team
+                        # that held it at the drop lifts it again and hands it over.
+                        mon.violation('receiver_recovered_drop',key=ident);state['valid_from']=None
                     if len(support&state['custody'])>=2 and clear:
                         # Receiver evidence from before the drop does not carry over the drop.
                         state.update(dropped=False,gap_since=None,qualified=set(),candidate=set(),candidate_since={},overlap_since=None)
+                        if state['valid_from'] is None:state['valid_from']=t
             if a.get('tray_body'):
                 tray=mon.d.body(a['tray_body']);weight=mon.d.body(a['weight_body']);delta=tray.xmat.reshape(3,3).T@(weight.xpos-tray.xpos);spec=mon.task['mechanism']['tray']
                 if np.linalg.norm(delta[:2])>(spec['outer_diameter_m']-spec['weight_diameter_m'])/2+.002 or delta[2]<spec['weight_height_m']/2-.005 or delta[2]>.075:
@@ -251,7 +257,8 @@ class Relay:
             moving_names=list(dict.fromkeys(a.get('beam_bodies',[ident])+[name for name in (a.get('weight_body'),a.get('tray_body')) if name]))
             velocities=[mon.velocity(mon.m.body(name).id) for name in moving_names]
             stable=current_contract or all(np.linalg.norm(v[3:])<.01 and np.linalg.norm(v[:3])<.1 for v in velocities)
-            handover_ok=not mon.task['completion'].get('required_airborne_handover',False) or any(map(self.is_handover,state['transitions']))
+            counted=[tr for tr in state['transitions'] if self.is_handover(tr) and state['valid_from'] is not None and tr.get('sim_time_s',0.)>=state['valid_from']-1e-9]
+            handover_ok=not mon.task['completion'].get('required_airborne_handover',False) or bool(counted)
             done=state['landed'] and inside and on_table and mon.released(all_g) and stable and not state['dropped'] and not state['spill'] and handover_ok
             state['goal_since']=(t if state['goal_since'] is None else state['goal_since']) if done else None
             qualified=state['goal_since'] is not None and t-state['goal_since']>=mon.task['completion']['stable_duration_sim_s']
@@ -268,11 +275,11 @@ class Relay:
                 terminal=bool(fraction >= mon.task['completion']['timber_inside_fraction_min'] and mon.released(all_g))
             else:
                 terminal=inside and on_table and mon.released(all_g)
-            handover_met=any(map(self.is_handover,state['transitions']))
+            handover_met=bool(counted)
             handover_required=mon.task.get('run_protocol',{}).get('relay_completion_rule') is not None
             terminal=bool(terminal and (handover_met or not handover_required))
             terminal_completed+=int(terminal)
-            completed+=int(qualified);reports[ident]=dict(completed=qualified,terminal_goal_met=terminal,airborne=state['airborne'],drops=state['drops'],dropped=state['dropped'],custody=sorted(state['custody']),support=sorted(support),goal_table_support=on_table,handovers=state['transitions'],spill=state['spill'])
+            completed+=int(qualified);reports[ident]=dict(completed=qualified,terminal_goal_met=terminal,airborne=state['airborne'],drops=state['drops'],dropped=state['dropped'],custody=sorted(state['custody']),support=sorted(support),goal_table_support=on_table,handovers=state['transitions'],handovers_valid_from_s=state['valid_from'],spill=state['spill'])
             if handover_required:reports[ident].update(airborne_handover_met=handover_met,handover_protocol=self.HANDOVER_PROTOCOL)
             if fraction_contract:
                 reports[ident].update(timber_inside_fraction=fraction,

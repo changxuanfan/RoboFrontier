@@ -78,7 +78,13 @@ def resolve_case(case_id, purpose='gpt', root=ROOT):
 RELAY_HANDOVER_RULE = 'relay-airborne-handover-v1'
 RELAY_HANDOVER_DEFINITION = ('A handover qualifies only while the timber is off the table and at least two current holders '
     'keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL '
-    'without a qualified handover is not complete. Pushing or dragging a timber along the table never counts as transport.')
+    'without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.')
+# A timber may be dropped or pushed. If a receiver picks a dropped timber up, none of its
+# handovers counts until the arms that were holding it when it fell lift it again and hand
+# it over again (evaluate_v2.Relay).
+RELAY_RECOVERY_RULE = ('A timber may be dropped, pushed or dragged. If an arm that was not holding a timber when it '
+    'dropped picks it up, none of that timber\'s handovers counts: put it down, let the arms that were holding it when it '
+    'dropped lift it again, and hand it over again in the air.')
 
 
 # New policy runs count their wall limit as active running time (policy_probe.BudgetGuard):
@@ -207,7 +213,7 @@ def freeze_public(task, directory, public, root=ROOT):
         removed = ('Inside GOAL, original qualified holders',) if handover_rule else (
             'Airborne transport requires', 'Inside GOAL, original qualified holders', 'Drops and violations remain recorded.')
         public['rules'] = [rule for rule in rules if not rule.startswith(removed)]
-        if handover_rule: public['rules'].append(RELAY_HANDOVER_DEFINITION)
+        if handover_rule: public['rules'] += [RELAY_HANDOVER_DEFINITION, RELAY_RECOVERY_RULE]
         public['rules'].append('Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history.')
         public['completion']['required_airborne_handover'] = handover_rule
         if handover_rule:

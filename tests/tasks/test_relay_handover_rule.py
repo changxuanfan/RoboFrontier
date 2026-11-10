@@ -163,6 +163,48 @@ class AirborneHandoverTests(unittest.TestCase):
         self.assertIn('unverified_handover', s.mon.violations)
 
 
+class DropRecoveryTests(unittest.TestCase):
+    """A receiver that picks up a dropped timber voids its handovers (task_families.RELAY_RECOVERY_RULE)."""
+    def handed_over_then_dropped(self):
+        s = Scenario(inside=False).lifted()
+        s.run({'A', 'B', 'C'}, .3).run({'B', 'C'}, .1)
+        self.assertTrue(s.state()['transitions'][-1]['airborne'])
+        s.run({'B', 'C'}, .04, grounded=True).run(set(), .1)
+        self.assertTrue(s.state()['dropped'])
+        return s
+
+    def test_a_receiver_lift_voids_the_earlier_handover(self):
+        s = self.handed_over_then_dropped()
+        s.run({'D', 'E'}, .1, grounded=True).run({'D', 'E'}, .3, grounded=False)
+        s.run({'D', 'E'}, .1, inside=True).run(set(), .1, grounded=True)
+        self.assertIsNone(s.result['payloads']['p1']['handovers_valid_from_s'])
+        self.assertFalse(s.result['payloads']['p1']['airborne_handover_met'])
+        self.assertFalse(s.result['payloads']['p1']['terminal_goal_met'])
+
+    def test_the_holders_lift_and_a_new_handover_restore_it(self):
+        s = self.handed_over_then_dropped()
+        s.run({'D', 'E'}, .1, grounded=True).run({'D', 'E'}, .2, grounded=False)
+        s.run(set(), .1, grounded=True)
+        s.run({'B', 'C'}, .1, grounded=True).run({'B', 'C'}, .1, grounded=False)
+        self.assertFalse(s.state()['dropped'])
+        restored = s.state()['valid_from']
+        self.assertIsNotNone(restored)
+        s.run(set(), .0)
+        self.assertFalse(s.result['payloads']['p1']['airborne_handover_met'])  # the old handover stays void
+        s.run({'B', 'C', 'D'}, .3).run({'C', 'D'}, .1)
+        s.run({'C', 'D'}, .1, inside=True).run(set(), .1, grounded=True)
+        self.assertGreaterEqual(s.result['payloads']['p1']['handovers'][-1]['sim_time_s'], restored)
+        self.assertTrue(s.result['payloads']['p1']['airborne_handover_met'])
+        self.assertTrue(s.result['payloads']['p1']['terminal_goal_met'])
+
+    def test_a_drop_lifted_again_by_its_holders_keeps_the_handover(self):
+        s = self.handed_over_then_dropped()
+        s.run({'B', 'C'}, .1, grounded=True).run({'B', 'C'}, .1, grounded=False)
+        s.run({'B', 'C'}, .1, inside=True).run(set(), .1, grounded=True)
+        self.assertEqual(s.result['payloads']['p1']['handovers_valid_from_s'], 0.)
+        self.assertTrue(s.result['payloads']['p1']['airborne_handover_met'])
+
+
 class ProtocolTests(unittest.TestCase):
     def test_only_relay_tasks_carry_the_rule(self):
         self.assertEqual(policy_task('relay-a08-d1')['run_protocol']['relay_completion_rule'], RELAY_HANDOVER_RULE)
