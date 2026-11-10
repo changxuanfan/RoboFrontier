@@ -1,0 +1,15 @@
+{
+  "name": "robot",
+  "description": "Call the robot API of the role bound to this session. For a new request omit the outer call_id; the host generates it and returns it as call_id. For job, put the original action's ID in data.call_id. To retry an uncertain request, send its original call_id with the identical op and data. views selects the RGB images returned. Calls in one reply run in order, each after the previous one has returned; to move several arms at the same time, use one action_batch, or submit each action with wait:false and then wait_events.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "op": {"type": "string"},
+      "data": {"type": "object"},
+      "call_id": {"type": "string", "description": "Omit for a new request. To retry an uncertain request, use its original ID with the identical op and data."},
+      "views": {"type": "array", "items": {"type": "string"}}
+    },
+    "required": ["op", "data"],
+    "additionalProperties": false
+  }
+}

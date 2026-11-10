@@ -28,16 +28,8 @@ from robofrontier.runtime.tool_errors import CallIdConflict, conflict_error, unc
 
 ROOT = Path(__file__).resolve().parents[3]
 SERVER = 'robofrontier_robot'
-TOOL = {
-    'name': 'robot',
-    'description': ('Call the robot API of the role bound to this session. Omit outer call_id for a new request; '
-                    'the host derives and returns it. For job, put the original action ID in data.call_id and omit '
-                    'the outer call_id. Retry an uncertain request only with its original outer ID and identical op and data.'),
-    'inputSchema': {'type': 'object', 'properties': {
-        'op': {'type': 'string'}, 'data': {'type': 'object'},
-        'call_id': {'type': 'string'}, 'views': {'type': 'array', 'items': {'type': 'string'}}},
-        'required': ['op', 'data'], 'additionalProperties': False},
-}
+# One description for every engine's robot tool (engines/common/robot_tool.json).
+TOOL = json.loads((Path(__file__).resolve().parents[1]/'common/robot_tool.json').read_text())
 # Same policy surface as the CLI robot tool; administrative methods stay with Meta.
 from robofrontier.runtime.robot_ops import POLICY_OPS, check_request
 MAX_RUN_DEPTH = 6

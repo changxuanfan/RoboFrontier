@@ -54,10 +54,8 @@ function observationMime(data) {
   if (data.length>=3 && data[0]===255 && data[1]===216 && data[2]===255) return 'image/jpeg';
   throw new Error('Observation is not PNG or JPEG');
 }
-const robotTool = {type:'function',name:'robot',description:
-  'Call your assigned RoboFrontier role API. For a new request omit outer call_id; its generated request ID is returned as call_id. For job, data.call_id is the original action ID, not the new request ID. Selected views return RGB images.',
-  inputSchema:{type:'object',properties:{op:{type:'string'},data:{type:'object'},
-    call_id:{type:'string',description:'Optional request ID. Omit for a new request. To retry an uncertain request, use its original ID and identical op and data.'},views:{type:'array',items:{type:'string'}}},required:['op','data']}};
+// One description for every engine's robot tool (engines/common/robot_tool.json).
+const robotTool = {type:'function',...require('../common/robot_tool.json')};
 
 class PolicyHost {
   constructor(run, cwd, python) {
@@ -85,7 +83,17 @@ class PolicyHost {
       '--run-dir',this.run,op,'--data',JSON.stringify(data)],{cwd:this.cwd,maxBuffer:8*1024*1024});
     return JSON.parse(stdout);
   }
-  async toolRequest(method,p) {
+  // Calls of one role run one at a time, in the order they arrive from the pipe, which is
+  // the order of the model's reply; Claude Code runs a reply's calls in order too. A model
+  // moves several arms at once with one action_batch, or with wait:false and wait_events.
+  toolRequest(method,p) {
+    this.toolQueues ??= new Map(); this.toolSequence ??= 0;
+    const sequence=++this.toolSequence, previous=this.toolQueues.get(p.threadId)||Promise.resolve();
+    const current=previous.catch(()=>{}).then(()=>this.runTool(method,p,sequence));
+    this.toolQueues.set(p.threadId,current);
+    return current;
+  }
+  async runTool(method,p,sequence) {
     if (method!=='item/tool/call') throw new Error('Unsupported host tool');
     const actor=this.actors.get(p.threadId); if (!actor) throw new Error('Unbound policy role');
     const a=typeof p.arguments==='string'?JSON.parse(p.arguments):p.arguments;
@@ -98,7 +106,7 @@ class PolicyHost {
     }
     if (p.tool!=='robot') throw new Error('Unsupported host tool');
     const toolStarted=Date.now();
-    this.event({event:'robot_tool_started',actor,thread_id:p.threadId,op:a.op,call_id:p.callId});
+    this.event({event:'robot_tool_started',actor,thread_id:p.threadId,op:a.op,call_id:p.callId,sequence});
     if (['move','gripper','action_batch'].includes(a.op) && a.data?.cameras===undefined)
       a.data={...(a.data||{}),cameras:a.views||[]};
     // Native call IDs are scoped by actor and stable across transport retries.

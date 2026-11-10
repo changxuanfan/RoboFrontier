@@ -15,16 +15,8 @@ from robofrontier.runtime.tool_errors import CallIdConflict, conflict_error, unc
 from robofrontier.engines.claude.request_identity import bind_delegate, fingerprint
 from robofrontier.batch.metrics import host_event
 
-TOOL = {
-    'name': 'robot',
-    'description': ('Call the robot API bound to this role. Omit outer call_id for a new request; '
-                    'the host generates and returns it. For job, put the original action ID in data.call_id '
-                    'and omit the outer call_id. Retry an uncertain request only with its original outer ID and identical op and data.'),
-    'inputSchema': {'type': 'object', 'properties': {
-        'op': {'type': 'string'}, 'data': {'type': 'object'},
-        'call_id': {'type': 'string'}, 'views': {'type': 'array', 'items': {'type': 'string'}}},
-        'required': ['op', 'data'], 'additionalProperties': False},
-}
+# One description for every engine's robot tool (engines/common/robot_tool.json).
+TOOL = json.loads((Path(__file__).resolve().parents[1]/'common/robot_tool.json').read_text())
 # Administrative methods are never made available through the policy connection.
 from robofrontier.runtime.robot_ops import POLICY_OPS, check_request
 
