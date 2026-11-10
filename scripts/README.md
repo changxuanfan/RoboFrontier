@@ -64,6 +64,8 @@ Read finished runs; none starts a model or physics.
 | `site_media.py` | Encode project page videos, family montages and README stills. |
 | `site_film.py` | Cut the RoboFrontier film and its short teaser from the raw Robo World render, with motion graphics drawn in the project page's style. |
 | `site_data.py` | Generate `site/data/` indexes and the README task gallery. |
+| `build_release.py` | Write the release's physics into every released scene and start each scene at rest; rewrites the release index. |
+| `validate_physics.py` | Check the release physics and Franka limits on the released scenes: rest, carrying, placing, pushing, collisions, Relay handover, Dial turning and step time. |
 | `check_harness.py` | Offline checks: fake services, robot/contact physics and real encoder recovery. |
 | `check_oracle_preservation.py` | Verify protected historical bytes with inode-aware hashing. |
 | `curate_repository.py` | Plan/apply user-requested generated-data cleanup, with pinned-source guards. |

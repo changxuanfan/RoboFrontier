@@ -5,6 +5,7 @@ Each step changes the files under benchmark/<family>/<case>/ in place and is saf
 run again on its own output.
 
     python -m scripts.build_release physics   # contact and solver settings into every scene.xml
+    python -m scripts.build_release settle    # start every scene at rest under that physics
     python -m scripts.build_release check     # the scenes already carry them
 
 See docs/physics.md for the values and where they come from.
@@ -21,6 +22,7 @@ import mujoco
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 BENCHMARK = ROOT/'benchmark'
 FAMILIES = ('transport', 'mosaic', 'relay', 'dial')
 
@@ -202,6 +204,8 @@ def index_release():
             projection = case.get('public_projection')
             if projection: projection['sha256'] = file_sha256(ROOT/projection['path'])
     path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
+    from scripts import site_data
+    site_data.tasks()  # the project page's task index records the release hash
 
 
 def physics(args):
@@ -226,6 +230,55 @@ def pin_asset_release():
     path.write_text(json.dumps(config, indent=2)+'\n')
 
 
+SETTLE_S = 40.          # longer than Relay's 30 s weight settle
+REST_SPEED = 1e-4       # m/s or rad/s: every free and hinged part of the scene below this
+
+
+def settle_case(folder):
+    """Run the scene with its arms holding still until nothing else moves, and return the
+    resting coordinates of every joint that is not a robot's, with the largest change."""
+    import tempfile
+    from robofrontier.tasks.families import prepare
+    from robofrontier.runtime.pipeline import World
+    task_id = json.loads((folder/'task.json').read_text())['id']
+    with tempfile.TemporaryDirectory(prefix='rf-settle-') as temporary:
+        run = Path(temporary)/'run'; prepare(task_id, run)
+        world = World(run, json.loads((run/'private/inputs/task.json').read_text()))
+        model, data = world.model, world.data
+        world.physics_profile = None; model.opt.enableflags &= ~int(mujoco.mjtEnableBit.mjENBL_SLEEP)
+        scene = [j for j in range(model.njnt) if not ROBOT_JOINT.fullmatch(model.joint(j).name or '')]
+        qpos = [a for j in scene for a in range(model.jnt_qposadr[j], model.jnt_qposadr[j]+{0: 7, 1: 4}.get(int(model.jnt_type[j]), 1))]
+        dofs = [a for j in scene for a in range(model.jnt_dofadr[j], model.jnt_dofadr[j]+{0: 6, 1: 3}.get(int(model.jnt_type[j]), 1))]
+        start = data.qpos[qpos].copy(); still = 0
+        for _ in range(int(SETTLE_S/.02)):
+            world.step()
+            still = still+1 if np.max(np.abs(data.qvel[dofs]), initial=0.) < REST_SPEED else 0
+            if still >= 50 and data.time > 5.: break
+        free = [j for j in scene if int(model.jnt_type[j]) == 0]
+        moved = max([float(np.linalg.norm(data.qpos[model.jnt_qposadr[j]:model.jnt_qposadr[j]+3]-start[qpos.index(model.jnt_qposadr[j]):qpos.index(model.jnt_qposadr[j])+3])) for j in free] or [0.])
+        return dict(zip(qpos, data.qpos[qpos].tolist())), moved, float(data.time), still >= 50
+
+
+def settle(args):
+    """Write each scene's resting pose into its initial keyframe, so a run starts at rest
+    (the Relay timbers with hanging weights moved 4 to 9 mm in their first seconds)."""
+    changed = 0
+    for folder in cases():
+        if args.cases and folder.name not in args.cases: continue
+        rest, moved, seconds, settled = settle_case(folder)
+        if not settled: raise SystemExit(f'{folder.name}: still moving after {seconds:.0f} s')
+        if moved < 1e-5: continue
+        text = (folder/'scene.xml').read_text(); root = ET.fromstring(text)
+        key = root.find("keyframe/key[@name='initial']"); values = key.get('qpos').split()
+        for address, value in rest.items(): values[address] = repr(float(value))
+        before = file_sha256(folder/'scene.xml'); key.set('qpos', ' '.join(values))
+        ET.indent(root, '  '); (folder/'scene.xml').write_text(ET.tostring(root, encoding='unicode')+'\n')
+        replace_hashes(folder, {before: file_sha256(folder/'scene.xml')}); changed += 1
+        print(f'{folder.name}: moved {moved*1000:.3f} mm before rest ({seconds:.1f} s)', flush=True)
+    index_release(); pin_asset_release()
+    print(f'{changed} scenes now start at rest')
+
+
 def check(args):
     bad = {folder.name: p for folder in cases() if (p := check_physics(folder))}
     print(json.dumps(bad or 'all scenes carry the release physics', indent=1))
@@ -236,6 +289,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest='step', required=True)
     sub.add_parser('physics').set_defaults(run=physics)
+    step = sub.add_parser('settle'); step.add_argument('--cases', nargs='*'); step.set_defaults(run=settle)
     sub.add_parser('check').set_defaults(run=check)
     args = parser.parse_args(argv)
     return args.run(args) or 0
