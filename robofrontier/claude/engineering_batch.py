@@ -247,6 +247,13 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
                     except Exception as error:
                         state['jobs'][index].update(status='needs_review', error_type=type(error).__name__)
                     write_json(state_path, state)
+        # A task recovered by hand (robofrontier/claude/recover_task.py) closes before the batch does.
+        from robofrontier.claude.recover_task import wait_for_recoveries
+        waiting = [{'run_directory': jobs[local]['run_directory'], 'status': state['jobs'][index]['status']}
+                   for local, index in enumerate(positions)]
+        wait_for_recoveries(waiting)
+        for entry, index in zip(waiting, positions):
+            if 'recovery' in entry: state['jobs'][index].update(status=entry['status'], recovery=entry['recovery'])
         if any(j['status'] == 'needs_review' for j in state['jobs']):
             state['status'] = 'needs_review'
         elif any(j['status'] == 'stopped_before_start' or j.get('reason') == 'stop_requested'

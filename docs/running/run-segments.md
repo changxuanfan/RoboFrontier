@@ -122,6 +122,10 @@ with the same restore frame and end time, and uses no further continuation.
   a Claude role resumes its session once it has no action in flight. Both send
   the frozen `model-restart.md` notice, at most 3 times per run
   (`MAX_MODEL_RESTARTS`).
+- **The host closed on review while the world stayed paused:** the batch hands
+  the task back as `needs_review` and nothing continues by itself. An operator
+  may continue it once by hand: [Claude](claude-task-recovery.md) or
+  [Codex](codex-task-recovery.md) task recovery.
 
 ## Testing single-arm recovery: fault injection
 
