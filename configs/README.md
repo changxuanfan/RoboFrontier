@@ -1,45 +1,28 @@
-# Configuration and frozen inputs
+# Configuration
 
-The released tasks are in [`../benchmark/`](../benchmark/README.md). For a new run, start with [`../robofrontier.toml`](../robofrontier.toml), not a
-legacy family JSON. The unified loader
-resolves repository defaults, a partial operator TOML, and explicit CLI overrides
-in that order. It rejects unknown fields and freezes the effective configuration
-into a new batch. Changing settings does not change an already prepared batch.
-See the [configuration and CLI guide](../docs/unified-cli.md).
+Settings for new runs start in [`../robofrontier.toml`](../robofrontier.toml). The loader layers
+the repository defaults, a partial site TOML (`--config`) and command-line options, in that
+order, rejects unknown fields, and freezes the result into each new batch; changing a setting
+never changes a prepared batch. The released tasks are in [`../benchmark/`](../benchmark/README.md);
+the commands are in the [CLI guide](../docs/unified-cli.md).
 
-| Path | Purpose |
+| Path | What it is |
 | --- | --- |
-| `models.json` | Every model profile, one section per engine (`engines.codex`, `engines.claude`, which also holds Claude transcript prices); a run freezes its engine's section. Codex's model metadata template is `robofrontier/engines/codex/model_template.json` |
-| `harness.json` | Default runtime harness, used when a task names none |
-| `harnesses/policy.json` | Native shared runtime/tool defaults for policy runs; model fields are baseline native settings, not overrides of a frozen unified profile |
-| `harness-frontier-v2.json`, `harnesses/oracle.json` | The first is the Frontier V2 harness historical suites name by file. The first differs from `harness.json` in `topology` and `action_timeout_sim_s` (15 s, the earlier default; `harness.json` now allows 30 s). `harnesses/oracle.json` (formerly `harness-frontier-v2-servo2.json`) is the Oracle's, with its own model and effort fields |
-| `policy-assets.json` | Pinned policy asset archive and integrity inventory used by automatic bootstrap/preparation |
-| `factory-assets.json` | Independent R14 Factory recording release, split sizes and SHA-256 fingerprints; it does not change policy scene selection |
+| `models.json` | Every model profile, one section per engine (`engines.codex`, `engines.claude`, which also holds Claude transcript prices). A run freezes its engine's section |
+| `harnesses/policy.json` | The policy runtime's settings (topology, timeouts, observation images); no speeds or forces, which every action states |
+| `harnesses/oracle.json` | The Oracle's harness, with its own model and effort fields |
+| `harness.json` | The runtime harness a task without one uses (tests rely on its hierarchical topology) |
+| `policy-env/` | The frozen policy Python environment: inputs and locks (`core`, `store`, `all`) |
+| `policy-assets.json` | The pinned policy asset archive and its inventory, restored by `robofrontier bootstrap` |
+| `factory-assets.json` | The Factory recording release: split sizes and SHA-256 fingerprints |
 | `backgrounds/robo_factory.json` | Factory appearance, layout and shared visual resources |
-| `patterns/` | Tulip pattern parameters used by the Frontier V2 scene builder |
-| `retention.json` | What `scripts/curate_repository.py` keeps: Oracle sources, released inputs, final media and selected policy evidence; `skip_runs` names the `runs/` data roots it never proposes (batches and policy runs are always kept) |
-| `examples/luna-l3-cpu.toml` | CPU Slurm example for the four maximum-arm Level 3 tasks |
-| `environments/` | Scene revisions before release, the earlier revisions released cases and Oracle recordings name as sources, and scenes the tests open |
-| `suites/` | Generated catalogs of earlier collections; `frontier-current-oracle.json` is the 36-station Oracle layout used by the Factory |
+| `evaluations/private/` | Private Dial evaluator inputs the Oracle's records name |
+| `examples/mac.toml`, `slurm.toml`, `runpod.toml` | A starting site TOML for each platform |
 
-The remaining family registries, catalogs, harness JSON and older task configs
-preserve the original experiments' version identities. Legacy
-`suites/frontier-v2.json` and general generators do not replace purpose-specific
-selection in [`../benchmark/release.json`](../benchmark/release.json). Compatibility evidence does not change
-an original fingerprint, establish equivalent old/new Relay scoring, or authorize
-applying new physical properties to an archived recording.
+Credentials belong in the ignored `.env` or the environment, never in these files. Choosing a
+model name alone does not establish provider compatibility: a run needs passed preflight
+receipts for its profile.
 
-Keep credentials in the ignored `.env` or environment, never in these files.
-API and subscription authentication belong to the selected native engine and
-profile; choosing a model name alone does not establish provider compatibility.
-Observation rendering, offline Factory rendering, model service timing, task
-START timing and scheduler allocation lifetime have separate settings. Their
-names and precedence are documented in the unified guide rather than inferred
-from an old native script's defaults.
-
-Editable Factory camera/title/subtitle projects are presentation inputs, not
-policy settings. The shipped project is
-[`tour-project.json`](../assets/robo_factory/tour-project.json); use the
-[editorial commands](../docs/factory/editorial.md) to make and freeze a working
-copy. Do not manually replace asset hashes or rewrite frozen motion to make a
-different input appear to match the release.
+Editable Factory camera and title projects are presentation inputs, not policy settings; the
+shipped one is [`tour-project.json`](../assets/robo_factory/tour-project.json) (see the
+[editorial commands](../docs/factory/editorial.md)).

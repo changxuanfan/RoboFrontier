@@ -19,7 +19,6 @@ package module named in the table) from the repository root. Keep existing modul
 | `benchmark models/plan/preflight/prepare/run/status/stop` | Native Codex interface retained for compatibility, with model selection, task filters, provider checks, concurrency, and START-based task limits |
 | `robofrontier.batch.handoff doctor/init-env/assets/restore` | Inspect handoff prerequisites, create a private local environment file, and export/restore assets with SHA verification |
 | `robofrontier.engines.codex.check_codex_cli` | Exercise the real Codex CLI's tools, images, and forks against a local Responses stub, without external model calls |
-| `curate_repository` | Plan and verify data cleanup while protecting frozen source recordings |
 | `robofrontier.batch.tasks list/check/prepare/prepare-batch` | Audit current release selection and inputs, or use the retained lower-level preparation interface |
 | `robofrontier.factory.commands build/video/poses` | Low-level scene construction, public pose export, and Cycles video; requires an explicitly matching source |
 | `check_harness` | Run the offline Python, JavaScript, documentation, and protocol regression inventory; historical fixtures may require separate assets |
@@ -67,7 +66,6 @@ Read finished runs; none starts a model or physics.
 | `validate_physics.py` | Check the release physics and Franka limits on the released scenes: rest, carrying, placing, pushing, collisions, Relay handover, Dial turning and step time. |
 | `check_harness.py` | Offline checks: fake services, robot/contact physics and real encoder recovery. |
 | `check_oracle_preservation.py` | Verify protected historical bytes with inode-aware hashing. |
-| `curate_repository.py` | Plan/apply user-requested generated-data cleanup, with pinned-source guards. |
 
 ### Factory, replay and video
 

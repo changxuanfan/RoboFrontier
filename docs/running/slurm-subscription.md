@@ -8,7 +8,7 @@ does not qualify it for cluster/provider execution.
 
 ## One allocation, independent tasks
 
-The [example configuration](../../configs/slurm-luna-subscription.example.toml)
+The [example configuration](../../configs/examples/slurm.toml)
 selects exactly `gpt-6-luna`, high effort, adaptive, 36 concurrent tasks and one
 NVIDIA GPU. A submission is one `sbatch`, one node and one `srun` step, not 36
 Slurm jobs. The allocation runs one managed-auth Codex app-server through a

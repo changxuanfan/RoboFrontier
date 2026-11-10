@@ -1,0 +1,21 @@
+# A Mac: Claude Code with a subscription token, the four level-1 cases with the fewest arms.
+# Runs go under launchd with Interactive priority and caffeinate; closing the lid still sleeps
+# the Mac. Copy to an untracked site TOML.
+schema_version = 9
+
+[policy]
+engine = "claude"
+profile = "haiku_subscription_token"
+effort = "high"
+topology = "adaptive"
+
+[batch]
+parallel = 4
+task_wall_limit_s = 86400.0
+
+[selection]
+level = 1
+min_arms = true
+
+[render]
+device = "native"

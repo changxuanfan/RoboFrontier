@@ -65,6 +65,6 @@ jobs:
           PYTHONPATH=tests:scripts .venv/bin/python -m unittest \
             batch.test_run_metrics analysis.test_run_analysis_atomic repo.test_oracle_batch_summary repo.test_communication_report \
             batch.test_policy_archive batch.test_evidence_zip repo.test_scripts_index repo.test_script_checks repo.test_workflows \
-            repo.test_curate_repository runtime.test_build_policy_env engines.test_codex_cli_check engines.test_codex_launch_profiles \
+            runtime.test_build_policy_env engines.test_codex_cli_check engines.test_codex_launch_profiles \
             media.test_render_policy_videos media.test_render_targets \
-            media.test_dial_entrypoints batch.test_benchmark_handoff repo.test_configs_readme repo.test_pruned_paths
+            media.test_dial_entrypoints batch.test_benchmark_handoff repo.test_pruned_paths

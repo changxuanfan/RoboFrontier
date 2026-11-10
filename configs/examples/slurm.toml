@@ -1,5 +1,6 @@
-# Planning example only. No login or job is performed by reading this file.
-schema_version = 8
+# Slurm, Codex subscription, one job of 36 runs. Planning example only: reading it logs in to
+# nothing and submits nothing. Copy it to an untracked site TOML and review the resources.
+schema_version = 9
 
 [policy]
 engine = "codex"
@@ -25,12 +26,11 @@ auth_mode = "subscription"
 # Replace with a canonical private directory on durable operator storage.
 # Only a reference is frozen at submission; no credentials are copied then.
 credential_store = "/ABSOLUTE/PRIVATE/robofrontier-luna"
-# Enable only with a live Mac relay for the allocated job; the reference carries
-# no proxy password, endpoint snapshot or native Codex credential.
+# The Mac route, for clusters that cannot reach the model API themselves; the Mac must stay
+# on. The reference carries no proxy password, endpoint snapshot or native credential.
 # egress_mode = "mac-ssh"
 # egress_root = "/ABSOLUTE/PRIVATE/robofrontier-egress"
 # egress_wait_s = 120
-# egress_pause_s = 120
 gpus = 1
 # Initial resource requests, not measured concurrency guarantees. Confirm the
 # site's definition of an allocated CPU and the node's available resources.

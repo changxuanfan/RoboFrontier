@@ -241,5 +241,5 @@ releasing an allocation manually. If stage-out fails, preserve the reported
 node-local directory and ask the site administrator about its retention policy.
 
 The old sbatch entries, which created active databases in shared storage, are
-retired. The four-task engineering selection is available as [`luna-l3-cpu.toml`](../../configs/examples/luna-l3-cpu.toml);
+retired. The four-task level-3 selection is in [`runpod.toml`](../../configs/examples/runpod.toml);
 copy it to an untracked site TOML and review the allocation settings first.

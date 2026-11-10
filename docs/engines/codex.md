@@ -103,7 +103,7 @@ native traces without exporting authentication/config/state databases.
 
 Select `runtime.codex_tool_backend = "landlock-v1"` explicitly on Linux when the
 container cannot run the native namespace sandbox. The default remains `native`.
-The [Sol L3 CPU example](../../configs/examples/sol61-l3-cpu.toml) uses this backend
+The [RunPod example](../../configs/examples/runpod.toml) uses this backend
 with subscription authentication, four tasks, high effort and a 24-hour task limit.
 Keep the dedicated authentication home outside collected evidence.
 
@@ -407,11 +407,11 @@ The old sbatch entries and their `RF_BATCH_OUTPUT`, `RF_WALL_LIMIT_S` and
 
 ### Four maximum-arm Level 3 tasks
 
-Copy [`configs/examples/luna-l3-cpu.toml`](../../configs/examples/luna-l3-cpu.toml) to
+Copy [`configs/examples/runpod.toml`](../../configs/examples/runpod.toml) to
 an untracked site TOML and review partition/account/CPU/memory/scratch settings:
 
 ```sh
-cp configs/examples/luna-l3-cpu.toml l3-cpu-site.toml
+cp configs/examples/runpod.toml l3-cpu-site.toml
 .venv/bin/robofrontier --config l3-cpu-site.toml plan
 ```
 
