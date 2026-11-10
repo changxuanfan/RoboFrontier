@@ -643,7 +643,12 @@ class RuntimeService:
             if arm.job is not None:self.world.request_stop(robot,arm.job)
         start=float(self.world.time)
         for _ in range(round(SCORING_SETTLE_S/.02)):self.world.step()
-        return {**self.world.evaluate(),'scored_after_settle_sim_s':round(float(self.world.time)-start,3)}
+        result={**self.world.evaluate(),'scored_after_settle_sim_s':round(float(self.world.time)-start,3)}
+        budget=getattr(self,'policy_budget',None);directory=getattr(self,'directory',None)
+        if directory is not None:
+            from ..batch.metrics import simulation_speed
+            result['speed']=simulation_speed(directory,start,getattr(budget,'active',None),getattr(budget,'stalls',None))
+        return result
 
     def step_physics(self):
         """Advance the original world only while its route is admitted."""

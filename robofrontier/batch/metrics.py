@@ -323,6 +323,36 @@ def claude_transcript_cost(run, pricing=None):
             'basis': 'Transcript token usage at list price ('+pricing.get('source', 'no price source')+'); an estimate, not a provider bill'}
 
 
+SPEED_WINDOW_S = 600.
+
+
+def simulation_speed(run, sim_s, active_s=None, stalls=None):
+    """How fast the world ran: simulation time over active time, and the slowest 10 minutes.
+
+    The windows come from the world's performance log (one cumulative step count every 5 s
+    of wall time), so a window that held an outage pause also counts as slow. Recorded for
+    comparing hosts; a slow run is never stopped for it."""
+    rows = []
+    for path in sorted(Path(run).glob('private/outputs/**/cpu-performance.jsonl')):
+        for line in path.read_text(errors='replace').splitlines():
+            try: row = json.loads(line)
+            except ValueError: continue
+            if isinstance(row, dict) and isinstance(row.get('at'), (int, float)) and isinstance(row.get('world_steps'), int):
+                rows.append((row['at'], row['world_steps'], str(path)))
+    worst = None
+    for name in sorted({r[2] for r in rows}):
+        series = [(at, steps) for at, steps, source in rows if source == name]
+        j = 0
+        for i in range(len(series)):
+            while j < len(series) and series[j][0]-series[i][0] < SPEED_WINDOW_S: j += 1
+            if j < len(series):
+                ratio = (series[j][1]-series[i][1])*.02/(series[j][0]-series[i][0])
+                worst = ratio if worst is None else min(worst, ratio)
+    return {'sim_s': round(float(sim_s), 3), 'active_s': None if active_s is None else round(float(active_s), 3),
+            'speed_ratio': round(float(sim_s)/active_s, 4) if active_s else None,
+            'active_time_stalls': stalls, 'slowest_10min_speed_ratio': None if worst is None else round(worst, 4)}
+
+
 def export_metrics(run, engine):
     """Count actual host events, including setup; deduplicate terminal event identities."""
     events = _records(run_layout.path(run, 'host_log', engine))

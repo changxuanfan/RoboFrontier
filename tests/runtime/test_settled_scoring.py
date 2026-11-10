@@ -23,6 +23,21 @@ class SettledScoringTests(unittest.TestCase):
         self.assertAlmostEqual(service.world.evaluated_at, 10.+SCORING_SETTLE_S)
         self.assertEqual(result, {'task_success': True, 'scored_after_settle_sim_s': SCORING_SETTLE_S})
 
+    def test_the_score_records_how_fast_the_world_ran(self):
+        import json, tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder)/'private/outputs/cpu-performance.jsonl'; log.parent.mkdir(parents=True)
+            # 20 minutes at real time, then 10 minutes at half speed.
+            rows = [{'at': t, 'world_steps': int(t/.02)} for t in range(0, 1201, 5)]
+            rows += [{'at': 1200+t, 'world_steps': int(1200/.02+t/.04)} for t in range(5, 601, 5)]
+            log.write_text(''.join(json.dumps(r)+'\n' for r in rows))
+            service = RuntimeService.__new__(RuntimeService); service.world = World(); service.directory = Path(folder)
+            service.policy_budget = SimpleNamespace(active=20., stalls=2)
+            speed = service.settled_evaluation()['speed']
+        self.assertEqual((speed['sim_s'], speed['active_s'], speed['speed_ratio'], speed['active_time_stalls']), (10., 20., .5, 2))
+        self.assertAlmostEqual(speed['slowest_10min_speed_ratio'], .5, places=2)
+
 
 if __name__ == '__main__':
     unittest.main()
