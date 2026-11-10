@@ -25,7 +25,7 @@ class PipelineTests(unittest.TestCase):
         self.service.pump()
         return job
     def start(self):
-        for actor in ('Controller','A','B','C'):
+        for actor in ('Controller','A','B','C','D'):
             self.call(actor,'ready')
             self.call('Meta','bind',{'actor':actor,'thread_id':'thread-'+actor})
             self.service.store.observe_session(actor,'idle','turn-'+actor,time.time(),'codex.wait_threads')
@@ -99,13 +99,13 @@ class PipelineTests(unittest.TestCase):
 
     def test_ready_delivers_the_adapter_summary_to_every_policy_role(self):
         from unittest.mock import Mock
-        facts={'adapter':'synthetic','robots':['A','B','C'],'capabilities':'test fixture'}
+        facts={'adapter':'synthetic','robots':['A','B','C','D'],'capabilities':'test fixture'}
         self.service.world.robot_facts=Mock(return_value=facts)
         self.service.capture=Mock(side_effect=AssertionError('READY must not take a fresh observation'))
-        for actor in ('Controller','A','B','C'):
+        for actor in ('Controller','A','B','C','D'):
             result=self.call(actor,'ready')['result']
             self.assertTrue(result['ready']);self.assertEqual(result['robot_facts'],facts)
-        self.assertEqual(self.service.world.robot_facts.call_count,4)
+        self.assertEqual(self.service.world.robot_facts.call_count,5)
         self.assertEqual(self.service.store.actions(),{})
 
     def test_unavailable_robot_summary_cannot_register_a_false_ready(self):
@@ -176,7 +176,7 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Unknown delivery'):
             self.call('B','work',ack=a['delivery_id'])
     def test_ready_gate_is_actual_idle_observation(self):
-        for a in ('Controller','A','B','C'):self.call(a,'ready')
+        for a in ('Controller','A','B','C','D'):self.call(a,'ready')
         self.assertIn('error',self.call('Meta','start')['result'])
         self.assertFalse(self.service.started)
     def test_parallel_arms_same_arm_exclusion_and_idempotent_retry(self):
@@ -571,7 +571,7 @@ class PipelineTests(unittest.TestCase):
         def call(actor,op,data,key):
             job=service.accept(actor,op,data,key);service.pump();return job
         try:
-            for actor in ('A','B','C'):
+            for actor in ('A','B','C','D'):
                 call(actor,'ready',{},'ready-'+actor)
                 call('Meta','bind',{'actor':actor,'thread_id':'peer-'+actor},'bind-'+actor)
                 service.store.observe_session(actor,'idle','turn-'+actor,time.time(),'codex.wait_threads')
@@ -617,7 +617,7 @@ class PipelineTests(unittest.TestCase):
         from types import SimpleNamespace
         store=self.service.store
         # A fresh world's arm: no live job and no stop (stop_diagnostics would refuse it).
-        self.service.world.arms={a:SimpleNamespace(job=None,stopping=False,data=object()) for a in ('A','B','C')}
+        self.service.world.arms={a:SimpleNamespace(job=None,stopping=False,data=object()) for a in ('A','B','C','D')}
         self.start()
         for ident,end in (('segment-move',lambda:store.interrupt_for_segment('Interrupted by an unexpected host exit',5.)),
                           ('abort-move',lambda:store.finish_action('abort-move','failed',6.,'Engineering inputs changed'))):

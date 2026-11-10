@@ -127,8 +127,11 @@ class NetworkResendTests(active.Fixture):
         self.assertTrue(self.recover()); self.host.wait(3); self.assertEqual(len(self.calls), 2)
 
     def test_runs_frozen_without_the_active_clock_are_unchanged(self):
+        # A run frozen before the active-time clock has none in its protocol: the
+        # real check reads START wall time.
+        path = self.run/'private/inputs/task.json'
+        task = json.loads(path.read_text()); task['run_protocol'].pop('clock', None); path.write_text(json.dumps(task))
         self.outage(); self.fail(NETWORK); self.probe(True)
-        # The fixture's task has no clock: the real check reads START wall time.
         self.assertFalse(recovery._active_time(self.run))
         self.assertFalse(self.host.recover_capacity(self.s.store))
         self.assertFalse(self.recover(clock='START_wall_time'))

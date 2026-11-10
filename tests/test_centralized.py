@@ -42,9 +42,9 @@ class CentralizedTests(unittest.TestCase):
     def test_one_policy_context_and_explicit_robot_selection(self):
         self.assertEqual(set(self.service.store.agents()), {'Meta', 'Controller'})
         roles = json.loads((self.run/'public/inputs/roles.json').read_text())
-        self.assertEqual(roles['roles']['Controller']['robots'], ['A','B','C'])
+        self.assertEqual(roles['roles']['Controller']['robots'], ['A','B','C','D'])
         ready = self.call('Controller', 'ready')['result']
-        self.assertEqual(ready['controlled_robots'], ['A','B','C'])
+        self.assertEqual(ready['controlled_robots'], ['A','B','C','D'])
         self.assertIn('error', self.call('Controller', 'move', {'robot':'A','target_m':[.4,0,.6]})['result'])
         self.assertEqual(self.service.world.executed, [])
 

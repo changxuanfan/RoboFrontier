@@ -55,7 +55,7 @@ def main():
             from_binary_path=staticmethod(forbidden)
         guard=patch.multiple(mujoco,MjModel=NoPhysicsModel,MjData=forbidden,mj_step=forbidden,mj_forward=forbidden)
         guard.start()
-        modules=('test_action_batch','test_sync_groups','test_beam_policy','test_spring_dial','test_spring_dial_policy','test_pipeline','test_pipeline_client',
+        modules=('test_action_batch','test_sync_groups','test_pipeline','test_pipeline_client',
                  'test_runtime_store','test_run_setup','test_scheduling','test_centralized','test_delegation',
                  'test_delegate_callbacks','test_private_evaluation','test_run_seal','test_run_report',
                  'test_recording','test_harness_checker','test_policy_batch_viewer',

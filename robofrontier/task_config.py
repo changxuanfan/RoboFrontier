@@ -1,13 +1,11 @@
 """One task definition feeds both the scene and public task instructions."""
-from copy import deepcopy
 import json
 import math
 from pathlib import Path
-import re
 import hashlib
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_TASK = ROOT / 'configs/tasks/three-arm-v1.json'
+DEFAULT_CASE = 'transport-a04-d1'  # The smallest released case; tests and bare prepare_run use it.
 DEFAULT_HARNESS = ROOT / 'configs/harness.json'
 
 
@@ -60,66 +58,16 @@ def panda_control_profile(config):
 
 
 def load_task(path=None):
-    task = json.loads(Path(path or DEFAULT_TASK).read_text())
-    if task.get('scene_asset'):
-        if task.get('kind')=='frontier_suite':
-            from .suite.tasks import validate
-            return validate(task)
-        if task.get('kind')=='spring_dial':
-            from .spring_dial_task import validate_spring_task
-            return validate_spring_task(task)
-        if task.get('kind')=='beam_handoff':
-            from .beam_task import validate_beam_task
-            return validate_beam_task(task)
-        from .scene_task import validate_scene_task
-        return validate_scene_task(task)
-    for key in ('table_height_m','cube_size_m','cube_mass_kg'):
-        if not math.isfinite(float(task[key])) or task[key]<=0:raise ValueError('Invalid physical task parameter: '+key)
-    if len(task['contact_friction'])!=3 or any(not math.isfinite(float(x)) or x<0 for x in task['contact_friction']):raise ValueError('Invalid friction')
-    if not isinstance(task['noslip_iterations'],int) or task['noslip_iterations']<0:raise ValueError('Invalid NoSlip count')
-    arms = task['arms']
-    if not arms or any(not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', a) for a in arms):
-        raise ValueError('Arm identifiers must be simple names')
-    if {'Meta', 'Coordinator', 'Controller', 'research'} & set(arms):
-        raise ValueError('Arm name conflicts with reserved role')
-    if not all(math.isfinite(float(y)) for y in arms.values()):
-        raise ValueError('Non-finite base position')
-    if set(task['goals']) != set(arms):
-        raise ValueError('Each arm must have goals')
-    names = set()
-    for obj in task['objects']:
-        if obj['id'] in names or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', obj['id']):
-            raise ValueError('Duplicate/invalid object id')
-        names.add(obj['id'])
-        if obj['region'] not in arms or obj['color'] not in ('gray','blue','red','green') or obj['pattern'] not in ('plain','dots','checker'):
-            raise ValueError('Unsupported object attributes')
-        check_position(obj['initial_position_m'])
-    for goals in task['goals'].values():
-        slots = set()
-        for goal in goals:
-            if goal['slot'] in slots:
-                raise ValueError('Duplicate slot within arm')
-            slots.add(goal['slot'])
-            check_position(goal['position_m'])
-            if not goal['requires'] or set(goal['requires']) - {'color','pattern','region'}:
-                raise ValueError('Goal requires color/pattern/source region predicates')
-    # Each goal needs a different available object. This checks inventory only,
-    # not transport feasibility, geometry or a particular execution order.
-    matched = {}
-    goals = [g for values in task['goals'].values() for g in values]
-    def assign(index, seen):
-        for obj in task['objects']:
-            name = obj['id']
-            if name in seen or not all(obj.get(k)==v for k,v in goals[index]['requires'].items()):
-                continue
-            seen.add(name)
-            if name not in matched or assign(matched[name], seen):
-                matched[name] = index
-                return True
-        return False
-    if not all(assign(i, set()) for i in range(len(goals))):
-        raise ValueError('Goal inventory cannot be fulfilled by distinct objects')
-    return task
+    """A released task (kind frontier_suite); by default the policy task of DEFAULT_CASE."""
+    if path is None:
+        from .task_families import policy_task
+        task = policy_task(DEFAULT_CASE)
+    else:
+        task = json.loads(Path(path).read_text())
+    if task.get('kind') != 'frontier_suite' or not task.get('scene_asset'):
+        raise ValueError('Only released tasks (kind frontier_suite) are supported')
+    from .suite.tasks import validate
+    return validate(task)
 
 
 def check_position(value):
@@ -128,22 +76,8 @@ def check_position(value):
 
 
 def public_task(task):
-    if task.get('kind')=='frontier_suite':
-        from .suite.tasks import public_task as project
-        return project(task)
-    if task.get('kind')=='spring_dial':
-        from .spring_dial_task import public_spring_task
-        return public_spring_task(task)
-    if task.get('kind')=='beam_handoff':
-        from .beam_task import public_beam_task
-        return public_beam_task(task)
-    result = deepcopy(task)
-    result.pop('scene_asset', None)
-    result.pop('scene_sha256', None)
-    if not result['observation_contract']['initial_positions_public']:
-        for obj in result['objects']:
-            obj.pop('initial_position_m', None)
-    return result
+    from .suite.tasks import public_task as project
+    return project(task)
 
 
 def load_harness(path=None):

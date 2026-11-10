@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from robofrontier.run_setup import prepare_run,verify_inputs
-from robofrontier.task_config import load_task,load_harness
+from robofrontier.task_config import ROOT,load_task,load_harness
 from robofrontier.runtime_store import RuntimeStore
 
 class SetupTests(unittest.TestCase):
@@ -13,7 +13,7 @@ class SetupTests(unittest.TestCase):
     def test_prepare_is_offline_and_copies_task_roles_skill_and_source(self):
         run=prepare_run(self.root/'run')
         self.assertEqual(verify_inputs(run),[])
-        self.assertEqual(json.loads((run/'public/inputs/task.json').read_text())['goals'],load_task()['goals'])
+        self.assertEqual(json.loads((run/'public/inputs/task.json').read_text())['id'],load_task()['id'])
         # New runs show letter labels where their videos do.
         self.assertEqual(json.loads((run/'private/inputs/harness.json').read_text())['robot_labels'],'beside-robot-v1')
         store=RuntimeStore(run/'private/state/runtime.sqlite')
@@ -51,17 +51,10 @@ class SetupTests(unittest.TestCase):
         self.assertIn('input:public/inputs/task.json',verify_inputs(run))
     def test_private_scene_or_harness_tamper_is_also_detected(self):
         run=prepare_run(self.root/'run')
-        p=run/'private/inputs/task.json';v=json.loads(p.read_text());v['cube_mass_kg']=.9;p.write_text(json.dumps(v))
+        p=run/'private/inputs/task.json';v=json.loads(p.read_text());v['level']=3;p.write_text(json.dumps(v))
         self.assertIn('private:task.json',verify_inputs(run))
-    def test_public_positions_can_be_withheld_without_changing_private_scene_input(self):
-        task=load_task();task['observation_contract']['initial_positions_public']=False
-        p=self.root/'task.json';p.write_text(json.dumps(task))
-        run=prepare_run(self.root/'run',p)
-        public=json.loads((run/'public/inputs/task.json').read_text());private=json.loads((run/'private/inputs/task.json').read_text())
-        self.assertNotIn('initial_position_m',public['objects'][0])
-        self.assertIn('initial_position_m',private['objects'][0])
     def test_invalid_task_rejected_before_directory_creation(self):
-        task=load_task();task['objects'][0]['initial_position_m']=[float('nan'),0,0]
+        task=load_task();task['scene_sha256']='0'*64
         p=self.root/'bad.json';p.write_text(json.dumps(task))
         with self.assertRaises(ValueError):prepare_run(self.root/'run',p)
         self.assertFalse((self.root/'run').exists())
@@ -99,21 +92,15 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(old.read_bytes(),before)
         self.assertFalse((run/'private/state').exists())
 
-    def test_six_workers_prepare_with_same_skill_in_both_topologies(self):
-        task=load_task();sample=task['objects'][0]
-        task['arms']={name:(i-2.5)*.65 for i,name in enumerate('ABCDEF')}
-        task['objects']=[{**sample,'id':name+'_gray','region':name,
-                          'initial_position_m':[.42,y,.42]} for name,y in task['arms'].items()]
-        task['goals']={name:[{'slot':'one','position_m':[.57,y,.42],
-                             'requires':{'color':'gray'}}] for name,y in task['arms'].items()}
-        p=self.root/'six.json';p.write_text(json.dumps(task))
+    def test_eight_workers_prepare_with_same_skill_in_both_topologies(self):
+        p=ROOT/'benchmark/transport/transport-a08-d1/task.json'
         skill=(Path(__file__).resolve().parents[1]/'prompts/skills/robot-collaboration/SKILL.md').read_bytes()
         for topology in ('hierarchical','peer'):
             cfg=load_harness();cfg['topology']=topology
             c=self.root/(topology+'.json');c.write_text(json.dumps(cfg))
             run=prepare_run(self.root/topology,p,c)
             roles=json.loads((run/'public/inputs/roles.json').read_text())['roles']
-            self.assertEqual(sum(v['kind']=='worker' for v in roles.values()),6)
+            self.assertEqual(sum(v['kind']=='worker' for v in roles.values()),8)
             self.assertEqual('Controller' in roles,topology=='hierarchical')
             self.assertEqual((run/'public/inputs/skill/SKILL.md').read_bytes(),skill)
             self.assertEqual(verify_inputs(run),[])

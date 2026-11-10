@@ -1,26 +1,20 @@
-"""Action contract, authority, scratch-state and generated-scene regressions."""
-from collections import defaultdict
-import copy
+"""Action contract, authority and scratch-state regressions."""
 import json
 from pathlib import Path
 import tempfile
 import time
-from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-import mujoco
 import numpy as np
 
 from fake_pipeline import FakeWorld, fake_capture
 from test_motion_check import robot_fixture
-from robofrontier.pipeline import World
 from robofrontier.robot_control import quat_matrix, matrix_quat, rotation_vector, advance_rotation
 from robofrontier.motion_check import RobotGeometry, prepare_check, state_id
-from robofrontier.run_setup import prepare_run, verify_inputs
+from robofrontier.run_setup import prepare_run
 from robofrontier.runtime_service import RuntimeService
-from robofrontier.task_config import ROOT, load_task, load_harness
-from robofrontier.scene_task import evaluate_shared
+from robofrontier.task_config import load_harness
 
 
 class ActionContractTests(unittest.TestCase):
@@ -127,7 +121,7 @@ class StopProtocolTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.run=Path(self.tmp.name)/'run';prepare_run(self.run)
         self.service=RuntimeService(self.run,FakeWorld,fake_capture);self.count=0
-        for actor in ('Controller','A','B','C'):
+        for actor in ('Controller','A','B','C','D'):
             self.call(actor,'ready');self.call('Meta','bind',{'actor':actor,'thread_id':actor})
             self.service.store.observe_session(actor,'idle',actor,time.time(),'codex.wait_threads')
         self.call('Meta','start')
@@ -186,39 +180,3 @@ class StopProtocolTests(unittest.TestCase):
         self.assertEqual(json.loads(saved['parameters'])['mode'],'grasp')
         self.assertEqual(json.loads(saved['parameters'])['force_n'],50)
 
-
-class GeneratedSceneTests(unittest.TestCase):
-    def test_frozen_scene_four_arm_shared_goals_and_no_implicit_start(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            run=Path(tmp)/'run';prepare_run(run,ROOT/'configs/tasks/mosaic-four-arm-v1.json')
-            self.assertEqual(verify_inputs(run),[])
-            public=json.loads((run/'public/inputs/task.json').read_text())
-            self.assertNotIn('scene_asset',public);self.assertNotIn('goals',public)
-            self.assertEqual(len(public['shared_goals']),100);self.assertEqual(len(public['arms']),4)
-            self.assertIn('board_top',public['cameras']);self.assertTrue((run/'public/inputs/initial-top.json').exists())
-            task=json.loads((run/'private/inputs/task.json').read_text())
-            with patch('mujoco.mj_step',side_effect=AssertionError('Loading a scene is not starting a trial')):
-                world=World(run,task)
-            facts=world.robot_facts(load_harness())
-            self.assertEqual(facts['robots']['B']['base_pose_world']['position_m'],[.65,0.,.4])
-            self.assertEqual(facts['robots']['A']['tcp_command_bounds_world_m']['lower'],[-.8,-.8,.405])
-            self.assertFalse(facts['shared_capabilities']['force_control'])
-            self.assertEqual(len(facts['camera_configuration']['cameras']),12)
-            texture=run/'private/inputs/scene/assets/grid.png';texture.write_bytes(texture.read_bytes()+b'x')
-            self.assertIn('input:private/inputs/scene/assets/grid.png',verify_inputs(run))
-
-    def test_shared_evaluation_requires_alignment_release_and_full_window(self):
-        task=load_task(ROOT/'configs/tasks/mosaic-four-arm-v1.json');pools=defaultdict(list)
-        for obj in task['objects']:pools[obj['color']].append(obj['id'])
-        states={}
-        for goal in task['shared_goals']:
-            states[pools[goal['requires']['color']].pop()]={'position_m':goal['position_m'],'linear_velocity_m_s':[0,0,0],
-                'released':True,'table_supported':True,'axis_alignment_error_rad':0}
-        samples=[{'time_s':i*.02,'objects':copy.deepcopy(states)} for i in range(51)]
-        world=SimpleNamespace(task=task,evaluation_samples=samples)
-        self.assertTrue(evaluate_shared(world)['all_goals_met'])
-        key=next(iter(states))
-        for sample in samples:sample['objects'][key]['axis_alignment_error_rad']=.2
-        self.assertEqual(evaluate_shared(world)['matched_goals'],99)
-        world.evaluation_samples=samples[1:]
-        self.assertFalse(evaluate_shared(world)['all_goals_met'])

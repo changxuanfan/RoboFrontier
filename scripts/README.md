@@ -112,11 +112,8 @@ Build or inspect released scenes; names are kept for provenance.
 
 | Script | Purpose |
 | --- | --- |
-| `build_floating_spring_dial.py` | Build a two-arm MuJoCo preview with one movable spring-dial module. |
-| `build_mosaic.py` | Generate the four-arm shared-table mosaic environment. |
 | `check_mosaic_coverage_r12.py` | Exhaustive item/cell coverage with finite sampled geometric witnesses. |
 | `export_frontier_contact_sheets.py` | Export current initial scenes only: 72 renders and four readable contact sheets. |
-| `generate_cube_transport.py` | Generate offline 3..12-arm scenes, order seeds, references and RGB previews. |
 | `preview_suite_rockets.py` | Draft pixel targets only: no MuJoCo scene, robot motion or benchmark run. |
 
 ### Oracle runs and engineering
@@ -130,7 +127,6 @@ Privileged reference execution and its diagnostics. A name with `oracle`, `commi
 | `run_relay_live_oracle.py` | One continuous committed Relay Oracle with a live, typed recovery boundary. |
 | `run_transport_full_oracle.py` | Frozen R13 full-order transport Oracle, with exclusive physics ownership. |
 | `verify_floating_dial_oracle.py` | Oracle engineering trial: one Panda holds the blue handle while another turns the red dial. |
-| `verify_transport_objects.py` | Engineering-only known-pose grasp/place fixtures. |
 
 `create_pipeline_run` remains a Legacy interface for historical tasks and
 explicit configurations. `meta_dispatcher.js` executes frozen Meta operations;

@@ -23,7 +23,6 @@ See the [configuration and CLI guide](../docs/unified-cli.md).
 | `examples/luna-l3-cpu.toml` | CPU Slurm example for the four maximum-arm Level 3 tasks |
 | `environments/` | Scene revisions before release, the earlier revisions released cases and Oracle recordings name as sources, and scenes the tests open |
 | `suites/` | Generated catalogs of earlier collections; `frontier-current-oracle.json` is the 36-station Oracle layout used by the Factory |
-| `tasks/` | Task files of the original single-scene pipeline and the cube-transport v4 seeds |
 
 The remaining family registries, catalogs, harness JSON and older task configs
 preserve the original experiments' version identities. Legacy

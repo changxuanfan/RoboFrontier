@@ -67,5 +67,4 @@ jobs:
             test_policy_archive test_evidence_zip test_scripts_index test_script_checks test_workflows \
             test_curate_repository test_build_policy_env test_codex_cli_check test_codex_launch_profiles \
             test_render_policy_videos test_render_targets \
-            test_generate_cube_transport test_dial_entrypoints test_benchmark_handoff test_configs_readme \
-            test_cube_transport_seeds test_pruned_paths
+            test_dial_entrypoints test_benchmark_handoff test_configs_readme test_pruned_paths

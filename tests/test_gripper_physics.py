@@ -5,8 +5,8 @@ import unittest
 
 import numpy as np
 
-from robofrontier.pipeline import World
-from robofrontier.task_config import load_task,load_harness
+from robofrontier.task_config import load_harness
+from single_arm_scene import make_world
 from robofrontier.robot_control import matrix_quat,rotation_vector
 
 
@@ -17,9 +17,7 @@ class GripperPhysicsTests(unittest.TestCase):
     def tearDown(self):self.temp.cleanup()
 
     def world(self,cube_y):
-        task=load_task();task.update(arms={'B':0.},goals={'B':[]},noslip_iterations=10)
-        task['objects']=[{'id':'cube','region':'B','color':'green','pattern':'plain','initial_position_m':[.42,cube_y,.42]}]
-        return World(Path(self.temp.name),task)
+        return make_world(Path(self.temp.name),{'cube':[.42,cube_y,.42]})
 
     def command(self,w,op,data):
         command=w.validate_action('B',op,data,self.cfg);w.start_action('B','test',command)

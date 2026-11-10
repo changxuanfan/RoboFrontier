@@ -53,11 +53,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     cfg.setdefault('robot_labels', 'beside-robot-v1')
     image_profile = observation_profile(cfg)
     puzzle=None;puzzle_relative=None
-    if task.get('kind')=='spring_dial':
-        from .spring_dial_task import private_code,CODE_PATH
-        puzzle=private_code(private_puzzle_path)
-        puzzle_relative=CODE_PATH
-    elif task.get('kind')=='frontier_suite' and task.get('family')=='dial':
+    if task.get('family')=='dial':
         n=len(task['dials'])
         from .suite.dial_feedback import alphabet
         values_allowed=alphabet(task)
@@ -66,14 +62,13 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         if set(puzzle)!={'code_symbols'} or not isinstance(values,list) or len(values)!=n or any(type(x) is not int or x not in values_allowed for x in values):raise ValueError('Expected one configured private nonzero symbol per suite dial')
         puzzle_relative=Path('private/inputs/suite-code.json')
     elif private_puzzle_path is not None:
-        raise ValueError('Private puzzle input applies only to spring_dial')
+        raise ValueError('Private puzzle input applies only to Dial')
     directory.mkdir(parents=True)
     for name in ('public/inputs/roles', 'public/observations', 'public/results', 'private/inputs',
                  'private/state/connections', 'private/state/client-state', 'private/outputs', *run_layout.FOLDERS):
         (directory/name).mkdir(parents=True)
-    if task.get('scene_asset'):
-        from .scene_task import freeze_scene
-        task=freeze_scene(task,directory)
+    from .scene_task import freeze_scene
+    task=freeze_scene(task,directory)
     write_json(directory/'private/inputs/task.json', task)
     if puzzle is not None:
         write_json(directory/puzzle_relative,puzzle)

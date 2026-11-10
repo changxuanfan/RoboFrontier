@@ -79,7 +79,7 @@ reviewing a Legacy run; never rewrite its prepared inputs to a new protocol.
 The Legacy preparation entries remain:
 
 ```sh
-uv run python scripts/create_pipeline_run.py runs/NEW --task configs/tasks/three-arm-v1.json
+uv run python scripts/create_pipeline_run.py runs/NEW --task TASK.json
 uv run python scripts/check_harness.py --report runs/engineering-check.json
 ```
 

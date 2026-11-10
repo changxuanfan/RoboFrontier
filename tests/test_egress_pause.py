@@ -19,7 +19,7 @@ class EgressPauseTests(unittest.TestCase):
         self.env.start();self.addCleanup(self.env.stop)
         self.service=RuntimeService(self.run,SteppingWorld,fake_capture);self.addCleanup(self.service.close)
         self.counter=0
-        for actor in ('Controller','A','B','C'):
+        for actor in ('Controller','A','B','C','D'):
             self.call(actor,'ready');self.call('Meta','bind',{'actor':actor,'thread_id':'thread-'+actor})
             self.service.store.observe_session(actor,'idle','turn-'+actor,time.time(),'codex.wait_threads')
         self.call('Meta','start')
@@ -112,7 +112,7 @@ class RealPhysicsPauseTests(unittest.TestCase):
             with patch.dict(os.environ,{'ROBOFRONTIER_EGRESS_PAUSE_FILE':str(marker),'ROBOFRONTIER_EGRESS_INSTANCE':'a'*32,'SLURM_JOB_ID':'123'}):
                 service=RuntimeService(run,World,fake_capture)
                 try:
-                    for i,actor in enumerate(('Controller','A','B','C')):
+                    for i,actor in enumerate(('Controller','A','B','C','D')):
                         for op,data in [('ready',{}),('bind',{'actor':actor,'thread_id':'fixture-'+actor})]:
                             job=service.accept('Meta' if op=='bind' else actor,op,data,actor+op);service.pump()
                             self.assertNotIn('error',job['result'])

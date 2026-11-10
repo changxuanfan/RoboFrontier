@@ -17,7 +17,8 @@ from PIL import Image
 from robofrontier.robot_control import PandaArm, matrix_quat, rotation_vector
 from robofrontier.scene import ROOT
 from robofrontier.task_config import load_harness
-from scripts.build_floating_spring_dial import DEFAULT_DIRECTORY
+
+DEFAULT_DIRECTORY = ROOT / 'configs/environments/spring_dial/floating-module-01'
 
 
 DEFAULT_OUTPUT = ROOT / "runs/floating-dial-oracle-20261023/attempt-01"

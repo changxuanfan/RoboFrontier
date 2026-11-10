@@ -7,7 +7,6 @@ import argparse
 import copy
 import hashlib
 import json
-import math
 import os
 import queue
 import secrets
@@ -22,9 +21,9 @@ from pathlib import Path
 import glfw
 import mujoco
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
-from .scene import ROOT, vector
+from .scene import ROOT
 from .sim import RobotIK
 from .recording import Video
 
@@ -37,129 +36,9 @@ from .runtime_service import RuntimeService
 from .motion_check import (CONTROL_DT, JOINT_SPEED_LIMIT, JOINT_ACCEL_LIMIT,
                            TRACKING_LIMIT, RobotGeometry, prepare_check, state_id)
 
-_DEFAULT_TASK = load_task()
-ARMS = _DEFAULT_TASK['arms']
-OBJECTS = [(o['id'],o['color'],o['pattern'],o['region'],o['initial_position_m'][1]-ARMS[o['region']]) for o in _DEFAULT_TASK['objects']]
-COLORS = {"gray": (.65,.67,.70,1), "blue": (.08,.32,.95,1),
-          "red": (.9,.08,.08,1), "green": (.08,.7,.2,1)}
-TASK = {a:[g['requires'] for g in goals] for a,goals in _DEFAULT_TASK['goals'].items()}
-
-
 def atomic_json(path, value):
     from .run_setup import write_json
     write_json(path,value)
-
-
-def camera(world, name, position, target, fovy=48):
-    z = np.array(position, dtype=float)-np.array(target)
-    z /= np.linalg.norm(z)
-    x = np.cross([0,0,1], z); x /= np.linalg.norm(x)
-    y = np.cross(z,x)
-    ET.SubElement(world, 'camera', name=name, pos=vector(position),
-                  xyaxes=vector([*x,*y]), fovy=str(fovy))
-
-
-def build_world(directory, task=None):
-    task = task or load_task()
-    arms = task["arms"]
-    objects = task["objects"]
-    height = task["table_height_m"]
-    half = task["cube_size_m"] / 2
-    directory = Path(directory)
-    asset_dir = directory/'private/outputs/scene-assets'
-    asset_dir.mkdir(parents=True, exist_ok=True)
-    root = ET.parse(ROOT/'vendor/panda/panda.xml').getroot()
-    root.set('model', 'RoboFrontier shared pipeline')
-    root.find('compiler').set('meshdir', str(ROOT/'vendor/panda/assets'))
-    root.remove(root.find('keyframe'))
-    root.find('option').attrib.update(timestep='.002', gravity='0 0 -9.81',
-        integrator='implicitfast', solver='Newton', iterations='100', noslip_iterations=str(task['noslip_iterations']))
-    visual = ET.SubElement(root,'visual')
-    ET.SubElement(visual,'global',offwidth='1280',offheight='800')
-    ET.SubElement(visual,'headlight',ambient='.35 .35 .35',diffuse='.7 .7 .7')
-    ET.SubElement(root, 'statistic', center='.35 0 .65', extent='2.5')
-    world = root.find('worldbody')
-    original = copy.deepcopy(world.find('body'))
-    world.clear()
-    sections = {}
-    for tag in ('tendon','equality','actuator','contact'):
-        section = root.find(tag)
-        sections[tag] = list(copy.deepcopy(section))
-        section.clear()
-    named = {e.get('name') for e in original.iter() if e.get('name')}
-    for children in sections.values():
-        named.update(e.get('name') for child in children for e in child.iter() if e.get('name'))
-    def renamed(element, prefix):
-        element=copy.deepcopy(element)
-        for e in element.iter():
-            for key,value in list(e.attrib.items()):
-                if (key == 'name' or key in ('joint','joint1','joint2','tendon','body1','body2')) and value in named:
-                    e.set(key,prefix+value)
-        return element
-    for arm, base_y in arms.items():
-        body=renamed(original,arm+'_'); body.set('pos',vector([0,base_y,height]))
-        # The rail's 0..40 mm range is unchanged. Firmer limit constraints keep
-        # an off-centre contact from crossing the fingers and wedging their
-        # collision meshes; friction, actuator force and NoSlip stay unchanged.
-        for suffix in ('finger_joint1','finger_joint2'):
-            joint=body.find(f".//joint[@name='{arm}_{suffix}']")
-            joint.set('solreflimit','0.004 1')
-            joint.set('solimplimit','0.99 0.999 0.0001 0.5 2')
-        hand=body.find(f".//body[@name='{arm}_hand']")
-        ET.SubElement(hand,'site',name=arm+'_tcp',pos='0 0 .1029',size='.004',rgba='1 .8 0 1')
-        world.append(body)
-        for tag,children in sections.items():
-            for child in children: root.find(tag).append(renamed(child,arm+'_'))
-    ET.SubElement(world,'light',pos='.2 0 3',dir='0 0 -1',diffuse='.85 .85 .85')
-    ET.SubElement(world,'geom',name='floor',type='plane',size='4 4 .1',rgba='.13 .16 .20 1')
-    ET.SubElement(world,'geom',name='table',type='box',pos=vector([.30,(min(arms.values())+max(arms.values()))/2,height-.025]),size=vector([.52,(max(arms.values())-min(arms.values()))/2+.47,.025]),
-                  rgba='.45 .36 .27 1',friction=vector(task['contact_friction']),condim='4')
-    asset=root.find('asset')
-    for arm,y in arms.items():
-        for i,goal in enumerate(task['goals'][arm]):
-            xyz=goal['position_m']
-            ET.SubElement(world,'geom',name=f'{arm}_slot{i+1}',type='box',size='.032 .032 .0003',
-                          pos=vector([xyz[0],xyz[1],height+.0004]),rgba='.86 .83 .62 1',contype='0',conaffinity='0')
-        for dy in (-.325,.325):
-            ET.SubElement(world,'geom',type='box',size='.40 .001 .0003',pos=vector([.35,y+dy,height+.0004]),
-                          rgba='.25 .55 .95 1',contype='0',conaffinity='0')
-        # Static public station label, no state leakage.
-        im=Image.new('RGB',(256,128),(65,75,90)); d=ImageDraw.Draw(im)
-        try: font=ImageFont.truetype('/System/Library/Fonts/Helvetica.ttc',90)
-        except OSError: font=ImageFont.load_default()
-        d.text((85,12),arm,font=font,fill='white')
-        p=asset_dir/f'label_{arm}.png'; im.save(p)
-        ET.SubElement(asset,'texture',name='label_'+arm,type='2d',file=str(p))
-        ET.SubElement(asset,'material',name='label_'+arm,texture='label_'+arm)
-        ET.SubElement(world,'geom',type='box',size='.045 .07 .0003',pos=vector([.16,y,height+.0005]),
-                      material='label_'+arm,contype='0',conaffinity='0')
-        camera(world,arm+'_front',[1.35,y,1.3],[.40,y,.46],45)
-        camera(world,arm+'_side',[.8,y-.95,1.15],[.4,y,.47],45)
-    for obj in objects:
-        name,color,pattern,arm = (obj[k] for k in ('id','color','pattern','region'))
-        attrs={'rgba':vector(COLORS[color])}
-        if pattern!='plain':
-            im=Image.new('RGB',(128,128),tuple(int(v*255) for v in COLORS[color][:3])); d=ImageDraw.Draw(im)
-            if pattern=='checker':
-                for i in range(4):
-                    for j in range(4):
-                        if (i+j)%2==0:d.rectangle((i*32,j*32,i*32+31,j*32+31),fill=(220,230,255))
-            else:
-                for i in range(4):
-                    for j in range(4): d.ellipse((i*32+8,j*32+8,i*32+22,j*32+22),fill='white')
-            p=asset_dir/(name+'.png');im.save(p)
-            ET.SubElement(asset,'texture',name=name,type='cube',file=str(p))
-            ET.SubElement(asset,'material',name=name,texture=name)
-            attrs={'material':name,'rgba':'1 1 1 1'}
-        body=ET.SubElement(world,'body',name=name,pos=vector(obj['initial_position_m']))
-        ET.SubElement(body,'freejoint',name=name+'_free')
-        ET.SubElement(body,'geom',name=name+'_geom',type='box',size=vector([half]*3),mass=str(task['cube_mass_kg']),
-                      friction=vector(task['contact_friction']),condim='4',**attrs)
-    camera(world,'global',[2.3,0,2.65],[.25,0,.5],51)
-    camera(world,'global_side',[1.6,-2.4,2.3],[.3,0,.5],51)
-    xml=ET.tostring(root,encoding='unicode')
-    return mujoco.MjModel.from_xml_string(xml),xml
-
 
 
 def portable_xml(xml,folder):
@@ -183,50 +62,39 @@ class World:
     def __init__(self,directory,task=None):
         self.directory=Path(directory);self.task=task or load_task();segment_restore=None
         self.command_bounds=copy.deepcopy(self.task.get('workspace_world_m'))
-        if self.task.get('scene_asset'):
-            from collections import deque
-            folder=self.directory/Path(self.task['scene_asset']).parent
-            root=ET.parse(self.directory/self.task['scene_asset']).getroot()
-            compiler=root.find('compiler')
-            compiler.set('meshdir',str((folder/compiler.get('meshdir','')).resolve()) if (folder/'workstation.json').exists() else str(folder/'model-assets'))
-            for texture in root.findall('asset/texture'):
-                if texture.get('file'):texture.set('file',str(folder/texture.get('file')))
-            self.xml=ET.tostring(root,encoding='unicode');self.model=mujoco.MjModel.from_xml_string(self.xml)
-            self.data=mujoco.MjData(self.model)
-            mujoco.mj_resetDataKeyframe(self.model,self.data,self.model.key('initial').id);mujoco.mj_forward(self.model,self.data)
-            from .run_segments import restore_world
-            # A continued run (docs/running/run-segments.md) rebuilds its world from the last recorded pose.
-            segment_restore=restore_world(self.directory,self.task,self.model,self.data)
-            if segment_restore:self.segment=segment_restore['segment'];mujoco.mj_forward(self.model,self.data)
-            self.arms={a:Arm(self.model,self.data,a,initialized=True) for a in self.task['arms']}
-            if segment_restore:
-                # Reinitialize references to measured positions. No old action
-                # or force-controlled grasp is inferred or replayed.
-                for arm in self.arms.values():
-                    arm.qref=self.data.qpos[arm.qids].copy();self.data.ctrl[arm.act]=arm.qref
-                    control=arm.width_to_grip(arm.observe()['gripper_width_m'])
-                    arm.gripper=control;arm.grip_goal=control;self.data.ctrl[arm.grip]=control
-            self.evaluation_samples=deque(maxlen=math.ceil(self.task['completion']['stable_duration_sim_s']/.02)+3)
-            self.object_names={o['id'] for o in self.task['objects']}
-            self.robot_bodies={b for ids in RobotGeometry(self.model,self.arms).bodies.values() for b in ids}
-        else:
-            self.model,self.xml=build_world(self.directory,self.task);self.data=mujoco.MjData(self.model)
-            self.arms={a:Arm(self.model,self.data,a,y) for a,y in self.task['arms'].items()}
-            mujoco.mj_forward(self.model,self.data)
-            for _ in range(500):mujoco.mj_step(self.model,self.data)
-            self.data.time=0
+        folder=self.directory/Path(self.task['scene_asset']).parent
+        root=ET.parse(self.directory/self.task['scene_asset']).getroot()
+        compiler=root.find('compiler')
+        compiler.set('meshdir',str((folder/compiler.get('meshdir','')).resolve()) if (folder/'workstation.json').exists() else str(folder/'model-assets'))
+        for texture in root.findall('asset/texture'):
+            if texture.get('file'):texture.set('file',str(folder/texture.get('file')))
+        self.xml=ET.tostring(root,encoding='unicode');self.model=mujoco.MjModel.from_xml_string(self.xml)
+        self.data=mujoco.MjData(self.model)
+        mujoco.mj_resetDataKeyframe(self.model,self.data,self.model.key('initial').id);mujoco.mj_forward(self.model,self.data)
+        from .run_segments import restore_world
+        # A continued run (docs/running/run-segments.md) rebuilds its world from the last recorded pose.
+        segment_restore=restore_world(self.directory,self.task,self.model,self.data)
+        if segment_restore:self.segment=segment_restore['segment'];mujoco.mj_forward(self.model,self.data)
+        self.arms={a:Arm(self.model,self.data,a,initialized=True) for a in self.task['arms']}
+        if segment_restore:
+            # Reinitialize references to measured positions. No old action
+            # or force-controlled grasp is inferred or replayed.
+            for arm in self.arms.values():
+                arm.qref=self.data.qpos[arm.qids].copy();self.data.ctrl[arm.act]=arm.qref
+                control=arm.width_to_grip(arm.observe()['gripper_width_m'])
+                arm.gripper=control;arm.grip_goal=control;self.data.ctrl[arm.grip]=control
         mujoco.mj_forward(self.model,self.data)
         hand_cfg=self.directory/'private/inputs/harness.json'
         frozen_cfg=json.loads(hand_cfg.read_text()) if hand_cfg.exists() else {}
         from .physics_profile import attach
         self.physics_profile=attach(self,frozen_cfg)
         self.observation_image=observation_profile(frozen_cfg)
-        if self.task.get('scene_asset') and frozen_cfg.get('robot_labels')=='beside-robot-v1':
+        if frozen_cfg.get('robot_labels')=='beside-robot-v1':
             from .factory.labels import place_robot_labels
             place_robot_labels(self.model,self.data,self.task)
         profile=frozen_cfg.get('gripper_position_servo','legacy')
         for arm in self.arms.values():arm.configure_hand_position_servo(profile)
-        if self.task.get('scene_asset') and segment_restore:
+        if segment_restore:
             # Only recent, independently logged completed grasps are
             # approximated. This is not restoration of actuator history.
             holds=segment_restore.get('held_grasps',{})
@@ -248,10 +116,7 @@ class World:
                 self.model.actuator_forcerange[arm.grip]=[-ceiling,ceiling]
                 self.model.actuator_ctrlrange[arm.grip]=[-ceiling,ceiling]
                 self.data.ctrl[arm.grip]=-min(force,ceiling-1e-6)
-        self.beam_sampler=None;self.spring_sampler=None;self.suite_sampler=None;self.motion_recorder=None
-        if self.task.get('kind')=='spring_dial':
-            from .spring_dial import update_display
-            update_display(self.model,dict(ready=False,correct_count=None,won=False))
+        self.suite_sampler=None;self.motion_recorder=None
         output=self.directory/'private/outputs';output.mkdir(parents=True,exist_ok=True)
         (output/'scene.xml').write_text(portable_xml(self.xml,output))
 
@@ -337,18 +202,11 @@ class World:
             from .physics_health import require_valid_step
             require_valid_step(self.data,before)
             if getattr(self,'suite_sampler',None) is not None:self.suite_sampler.physical_step()
-            if getattr(self,'beam_sampler',None) is not None:self.beam_sampler.check_collisions()
-            if getattr(self,'spring_sampler',None) is not None:self.spring_sampler.sample()
             if getattr(self,'motion_recorder',None) is not None and not self.motion_recorder.closed:self.motion_recorder.capture(self.data)
         if getattr(self,'physics_profile_active',False):
             from .physics_profile import forward_after_step
             forward_after_step(self)
         else:mujoco.mj_forward(self.model,self.data)
-        if getattr(self,'beam_sampler',None) is not None:
-            self.beam_sampler.sample()
-        elif self.task.get('kind')=='shared_grid':
-            from .scene_task import sample_shared
-            sample_shared(self)
 
     def start_trial(self):
         if self.task.get('execution_readiness')=='environment_preview_only':
@@ -373,25 +231,14 @@ class World:
                 folder=output_dir(self.directory,self.segment);folder.mkdir(parents=True,exist_ok=True)
                 self.motion_recorder=MotionWriter(folder/'motion',source,self.model,self.data,hz=hz,
                                                   cache=ROOT/'runs/state-assets')
-        if self.task.get('kind')=='spring_dial':
-            from .spring_dial_task import SpringDialSampler
-            self.spring_sampler=SpringDialSampler(self)
-        if self.task.get('kind')=='beam_handoff':
-            from .beam_task import BeamSampler
-            self.beam_sampler=BeamSampler(self)
-            self.beam_sampler.sample()
 
     def end_trial(self):
         if getattr(self,'suite_sampler',None) is not None:self.suite_sampler.finish()
-        sampler=getattr(self,'spring_sampler',None)
-        if sampler is not None:sampler.finish()
         if getattr(self,'motion_recorder',None) is not None:self.motion_recorder.close(self.data)
 
     def close(self):
         if getattr(self,'motion_recorder',None) is not None and not self.motion_recorder.closed:self.motion_recorder.close(self.data,status='interrupted')
         if getattr(self,'suite_sampler',None) is not None:self.suite_sampler.close()
-        if getattr(self,'beam_sampler',None) is not None:self.beam_sampler.close()
-        if getattr(self,'spring_sampler',None) is not None:self.spring_sampler.close()
 
     def validate_action(self,actor,op,p,cfg):
         lower,upper=self.tcp_command_bounds(actor,cfg)
@@ -434,37 +281,13 @@ class World:
     def evaluation_evidence(self):
         """Private bounded final window, for audit only; never policy feedback."""
         if getattr(self,'suite_sampler',None) is not None:return {'result':self.suite_sampler.result(),'process_ref':'private/outputs/suite-process.jsonl'}
-        if getattr(self,'spring_sampler',None) is not None:
-            return {'result':self.spring_sampler.result(),'process_ref':'private/outputs/spring-dial-process.jsonl'}
-        if getattr(self,'beam_sampler',None) is not None:return self.beam_sampler.evaluator.result()
-        samples=getattr(self,'evaluation_samples',None)
-        return None if samples is None else {'samples':copy.deepcopy(list(samples)),
-            'scope':'Private final sampled physics window; not a restart checkpoint or policy observation'}
+        return None
 
     def evaluate(self):
         if self.task.get('kind')=='frontier_suite':
             if self.suite_sampler is None:return {'all_goals_met':False,'task_success':False,'scope':'Trial not started'}
             return self.suite_sampler.result()
-        if self.task.get('kind')=='spring_dial':
-            if self.spring_sampler is None:return {'all_goals_met':False,'task_success':False,'scope':'Trial not started'}
-            return self.spring_sampler.result()
-        if self.task.get('kind')=='beam_handoff':
-            if self.beam_sampler is None:return {'all_goals_met':False,'scope':'Trial not started'}
-            return self.beam_sampler.evaluator.result()
-        if self.task.get('scene_asset'):
-            from .scene_task import evaluate_shared
-            return evaluate_shared(self)
-        goals={};done=True
-        for actor,slots in self.task['goals'].items():
-            goals[actor]=[]
-            for slot in slots:
-                hits=[]
-                for obj in self.task['objects']:
-                    pos=self.data.body(obj['id']).xpos;delta=np.abs(pos-np.array(slot['position_m']))
-                    ev=self.task['evaluation']
-                    if delta[0]<ev['xy_tolerance_m'] and delta[1]<ev['xy_tolerance_m'] and delta[2]<ev['z_tolerance_m'] and all(obj.get(k)==v for k,v in slot['requires'].items()):hits.append(obj['id'])
-                goals[actor].append(hits);done=done and len(hits)==1
-        return {'all_goals_met':bool(done),'slots':goals,'sim_time_s':self.time}
+        raise ValueError('Unsupported task kind: '+str(self.task.get('kind')))
 
 
 class Service(RuntimeService):

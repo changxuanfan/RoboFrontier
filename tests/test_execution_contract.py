@@ -210,7 +210,9 @@ class SceneTopologyContractTests(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp=tempfile.TemporaryDirectory();cls.root=Path(cls.tmp.name)
         cls.worlds={}
-        for name,task_path in [('transport',None),('mosaic',ROOT/'configs/tasks/mosaic-four-arm-v1.json')]:
+        from robofrontier.task_families import policy_task
+        cls.mosaic_task=cls.root/'mosaic-task.json';cls.mosaic_task.write_text(json.dumps(policy_task('mosaic-a04-6x12-d1')))
+        for name,task_path in [('transport',None),('mosaic',cls.mosaic_task)]:
             run=prepare_run(cls.root/('geometry-'+name),task_path)
             task=json.loads((run/'private/inputs/task.json').read_text())
             cls.worlds[name]=World(run,task)
@@ -235,7 +237,7 @@ class SceneTopologyContractTests(unittest.TestCase):
                 self.finished.append({'call_id':call,'status':'failed','reason':'stopped_by_agent'})
         cfg=load_harness();cfg['topology']=mode
         path=self.root/(scene+'-'+mode+'.json');path.write_text(json.dumps(cfg))
-        task_path=ROOT/'configs/tasks/mosaic-four-arm-v1.json' if scene=='mosaic' else None
+        task_path=self.mosaic_task if scene=='mosaic' else None
         run=prepare_run(self.root/(scene+'-'+mode),task_path,path)
         s=RuntimeService(run,ContractWorld,fake_capture);n=[0]
         def call(actor,op,data=None,identity=None):

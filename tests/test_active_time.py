@@ -35,7 +35,7 @@ class Fixture(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.run = Path(self.tmp.name).resolve()/'run'; prepare_run(self.run)
         self.s = RuntimeService(self.run, StepWorld, fake_capture); self.addCleanup(self.s.close)
-        for actor in ('Controller', 'A', 'B', 'C'):
+        for actor in ('Controller', 'A', 'B', 'C', 'D'):
             self.s.store.update_agent(actor, ready=True, thread_id=actor)
         self.s.store.start(); self.start = self.s.store.get('start_at')
 

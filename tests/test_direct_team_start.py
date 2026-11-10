@@ -34,7 +34,7 @@ class DirectTeamStartTests(unittest.TestCase):
             with self.subTest(topology=topology), tempfile.TemporaryDirectory() as temporary:
                 service, call = self.make_service(Path(temporary), topology)
                 policy = {a: v for a, v in service.store.agents().items() if v['kind'] != 'manager'}
-                self.assertEqual(set(policy), {'Controller', 'A', 'B', 'C'} if topology == 'hierarchical' else {'A', 'B', 'C'})
+                self.assertEqual(set(policy), {'Controller', 'A', 'B', 'C', 'D'} if topology == 'hierarchical' else {'A', 'B', 'C', 'D'})
                 self.assertIn('error', call('A', 'gripper', {'state': 'close', 'wait': False}))
                 self.assertEqual(service.world.executed, [])
                 self.assertIn('error', call('Meta', 'start'))
@@ -69,7 +69,7 @@ class DirectTeamStartTests(unittest.TestCase):
                 service, call = self.make_service(Path(temporary), 'peer')
                 videos = []
                 service.video_factory = lambda: videos.append(1)
-                for actor in ('A', 'B', 'C'):
+                for actor in ('A', 'B', 'C', 'D'):
                     call('Meta', 'bind', {'actor': actor, 'thread_id': 'thread-'+actor})
                 started = []
                 service.world.start_trial = lambda: started.append(1)
@@ -82,12 +82,12 @@ class DirectTeamStartTests(unittest.TestCase):
                 self.assertIsNone(service.store.get('start_at'))
                 self.assertNotIn('START', [e['kind'] for e in service.store.events()])
                 self.assertEqual((videos, started), ([], []))
-                self.assertEqual({service.store.agent(a)['work_state'] for a in ('A', 'B', 'C')} & {'continue'}, set())
+                self.assertEqual({service.store.agent(a)['work_state'] for a in ('A', 'B', 'C', 'D')} & {'continue'}, set())
 
     def test_duplicate_native_session_cannot_bind_two_initial_roles_at_start(self):
         with tempfile.TemporaryDirectory() as temporary:
             service, call = self.make_service(Path(temporary), 'peer')
-            for actor in ('A', 'B', 'C'):
+            for actor in ('A', 'B', 'C', 'D'):
                 call('Meta', 'bind', {'actor': actor, 'thread_id': 'same-thread'})
             response = call('Meta', 'start')
             self.assertIn('distinct session', response['error'])

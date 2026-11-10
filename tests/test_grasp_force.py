@@ -7,8 +7,8 @@ from unittest.mock import patch
 import mujoco
 import numpy as np
 
-from robofrontier.pipeline import World
-from robofrontier.task_config import load_task,load_harness
+from robofrontier.task_config import load_harness
+from single_arm_scene import make_world
 from robofrontier.motion_check import prepare_check,state_id
 from test_motion_check import robot_fixture
 
@@ -20,9 +20,7 @@ class GraspForceTests(unittest.TestCase):
     def tearDown(self):self.tmp.cleanup()
 
     def world(self, cube=True):
-        task=load_task();task.update(arms={'B':0.},goals={'B':[]},noslip_iterations=10)
-        task['objects']=([{'id':'cube','region':'B','color':'green','pattern':'plain','initial_position_m':[.42,0.,.42]}] if cube else [])
-        return World(Path(self.tmp.name),task)
+        return make_world(Path(self.tmp.name),{'cube':[.42,0.,.42]} if cube else {})
 
     def execute(self,w,op,p):
         command=w.validate_action('B',op,p,self.cfg);w.start_action('B','test',command)

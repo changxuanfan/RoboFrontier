@@ -5,8 +5,8 @@ from tempfile import TemporaryDirectory
 import unittest
 
 import numpy as np
-from robofrontier.pipeline import World
-from robofrontier.task_config import load_harness,load_task,physical_control_fingerprint
+from robofrontier.task_config import load_harness,physical_control_fingerprint
+from single_arm_scene import make_world
 
 
 class HandPositionProfileTests(unittest.TestCase):
@@ -18,11 +18,7 @@ class HandPositionProfileTests(unittest.TestCase):
 
     def world(self,profile='pd1000-v1'):
         cfg={**self.cfg,'gripper_position_servo':profile}
-        path=self.directory/'private/inputs/harness.json';path.parent.mkdir(parents=True,exist_ok=True)
-        path.write_text(json.dumps(cfg))
-        task=load_task();task.update(arms={'B':0.},goals={'B':[]},noslip_iterations=10)
-        task['objects']=[dict(id='cube',region='B',color='green',pattern='plain',initial_position_m=[.42,0.,.42])]
-        return World(self.directory,task)
+        return make_world(self.directory,harness=cfg)
 
     def command(self,w,op,parameters):
         command=w.validate_action('B',op,parameters,self.cfg);w.start_action('B','profile-'+op,command)
