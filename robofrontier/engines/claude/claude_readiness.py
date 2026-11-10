@@ -88,15 +88,19 @@ def check_receipts(name, basic_path, blocked_path, *, selected=None, version=Non
             'note':'Local receipt consistency only; not proof of provider identity, physical task success or billing.'}
 
 
-PRECHECKS = 'runs/engineering/claude-precheck'
-BLOCKED_PRECHECKS = 'runs/engineering/claude-blocked-precheck'
+PRECHECKS = 'engineering/claude-precheck'
+BLOCKED_PRECHECKS = 'engineering/claude-blocked-precheck'
 
 
-def latest_receipts(name, root=ROOT):
-    """The newest basic and blocked precheck receipts of a profile on this host."""
+def latest_receipts(name, runs=None):
+    """The newest basic and blocked precheck receipts of a profile on this host, under the runs
+    root (configuration.runs_root)."""
+    if runs is None:
+        from robofrontier.configuration import runs_root
+        runs = runs_root()
     def newest(folder, schema):
         found = []
-        for path in Path(root, folder).glob('*/receipt.json'):
+        for path in Path(runs, folder).glob('*/receipt.json'):
             receipt = _read(path)
             if receipt and receipt.get('schema') == schema and receipt.get('profile') == name:
                 found.append((receipt.get('finished_at') or path.stat().st_mtime, path))
@@ -105,10 +109,10 @@ def latest_receipts(name, root=ROOT):
             newest(BLOCKED_PRECHECKS, 'robofrontier.claude-blocked-precheck.v1'))
 
 
-def require_ready(name, root=ROOT, **kwargs):
+def require_ready(name, runs=None, **kwargs):
     """Refuse a Claude run without passed precheck receipts for this profile, CLI version and
     model configuration, as a Codex run needs its compatibility receipt (E5)."""
-    basic, blocked = latest_receipts(name, root)
+    basic, blocked = latest_receipts(name, runs)
     if basic is None or blocked is None:
         raise ValueError(f'No Claude precheck receipts for {name}; run `robofrontier preflight --confirm-spend` '
                          'and the blocked precheck first')

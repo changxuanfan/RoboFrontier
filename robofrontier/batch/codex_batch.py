@@ -17,6 +17,7 @@ from robofrontier.batch.prepare import load_env, select_cases
 from robofrontier.engines.codex.launch import codex_home, initialize_codex_home, launch_config, profile
 from robofrontier.tasks.families import ROOT, read, prepare
 from robofrontier.runtime.setup import write_json, verify_inputs
+from robofrontier.configuration import runs_root
 from robofrontier.runtime.segments import try_continue, wall_backstopped
 
 
@@ -148,7 +149,7 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
         if verify_inputs(run):raise ValueError('Prepared code/inputs changed; prepare a new batch')
         key=launch['profile'].get('env_key')
         if key and not os.environ.get(key):raise ValueError('Missing credential environment variable: '+key)
-        receipt=ROOT/'runs/engineering/model-compatibility'/job['profile']/'report.json'
+        receipt=runs_root()/'engineering/model-compatibility'/job['profile']/'report.json'
         if not receipt.is_file():raise ValueError('Run benchmark preflight for '+job['profile']+' before scored trials')
         checked=read(receipt)
         expected=__import__('hashlib').sha256(json.dumps(launch['profile'],sort_keys=True).encode()).hexdigest()
@@ -324,7 +325,7 @@ def main():
             key=selected.get('env_key')
             if key and not os.environ.get(key):raise ValueError('Set '+key+' before live preflight')
             scope='model-smoke' if args.smoke_only else 'model-compatibility'
-            target=ROOT/'runs/engineering'/scope/name;target.mkdir(parents=True,exist_ok=True)
+            target=runs_root()/'engineering'/scope/name;target.mkdir(parents=True,exist_ok=True)
             write_json(target/'launch.json',launch_config(selected,target))
             # A failed/interrupted new check must not leave an older pass usable
             # under the new provider/model fingerprint.

@@ -24,6 +24,7 @@ import numpy as np
 from PIL import Image
 
 from ..io import ROOT
+from ..configuration import runs_root
 from ..physics.kinematics import RobotIK
 from ..media.live_video import Video
 
@@ -226,7 +227,7 @@ class World:
                 from .segments import output_dir
                 folder=output_dir(self.directory,self.segment);folder.mkdir(parents=True,exist_ok=True)
                 self.motion_recorder=MotionWriter(folder/'motion',source,self.model,self.data,hz=hz,
-                                                  cache=ROOT/'runs/state-assets')
+                                                  cache=runs_root()/'state-assets')
 
     def end_trial(self):
         if getattr(self,'suite_sampler',None) is not None:self.suite_sampler.finish()

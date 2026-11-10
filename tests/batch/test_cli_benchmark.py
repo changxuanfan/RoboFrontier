@@ -100,7 +100,8 @@ class CliBenchmarkTests(unittest.TestCase):
             target=Path(tmp)/'runs/engineering/model-compatibility/astra'
             target.mkdir(parents=True)
             (target/'report.json').write_text(json.dumps({'passed':True,'profile_sha256':'old'}))
-            with patch.object(benchmark,'ROOT',Path(tmp)),patch.object(benchmark,'profile',return_value=selected),\
+            with patch.object(benchmark,'ROOT',Path(tmp)),patch.object(benchmark,'runs_root',return_value=Path(tmp)/'runs'),\
+                    patch.object(benchmark,'profile',return_value=selected),\
                     patch.object(benchmark,'launch_config',return_value={}),\
                     patch('sys.argv',['benchmark','preflight','--models','astra']),\
                     patch.dict(os.environ),\
@@ -154,7 +155,8 @@ class CliBenchmarkTests(unittest.TestCase):
             profile_hash=hashlib.sha256(json.dumps(launch['profile'],sort_keys=True).encode()).hexdigest()
             receipt.write_text(json.dumps({'passed':True,'profile_sha256':profile_hash,
                                            'catalog_sha256':'old','codex_version':'old'}))
-            with patch.object(benchmark,'ROOT',root),patch.object(benchmark,'verify_inputs',return_value=[]),\
+            with patch.object(benchmark,'ROOT',root),patch.object(benchmark,'runs_root',return_value=root/'runs'),\
+                    patch.object(benchmark,'verify_inputs',return_value=[]),\
                     patch.object(benchmark.subprocess,'check_output',return_value='codex new\n'),\
                     patch.object(benchmark.subprocess,'run') as start:
                 with self.assertRaisesRegex(ValueError,'rerun preflight'):

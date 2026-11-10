@@ -246,7 +246,8 @@ def main():
     elif not os.environ.get(prof['env_key']):
         raise SystemExit('Missing credential variable: ' + prof['env_key'])
     stamp = time.strftime('%Y%m%d-%H%M%S')
-    output = args.output or ROOT / 'runs/engineering/claude-precheck' / (args.profile + '-' + stamp)
+    from robofrontier.configuration import runs_root
+    output = args.output or runs_root() / 'engineering/claude-precheck' / (args.profile + '-' + stamp)
     receipt = run_precheck(args.profile, Path(output).absolute(), args.max_budget_usd, dict(os.environ), check_fork=args.check_fork)
     print(json.dumps({k: receipt[k] for k in ('profile', 'requested_model', 'passed', 'total_cost_usd', 'stopped')}
                      | {'receipt': str(Path(output).absolute() / 'receipt.json')}, indent=2, ensure_ascii=False))

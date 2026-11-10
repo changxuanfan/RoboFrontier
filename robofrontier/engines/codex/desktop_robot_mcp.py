@@ -206,7 +206,9 @@ def serve(bridge):
             if isinstance(request, dict): pool.submit(reply, request)
 
 
-def config_snippet(python=sys.executable, runs_root=ROOT / 'runs'):
+def config_snippet(python=sys.executable, runs_root=None):
+    from robofrontier.configuration import runs_root as default_root
+    runs_root = default_root() if runs_root is None else runs_root
     return '\n'.join(['[mcp_servers.%s]' % SERVER, 'command = %s' % json.dumps(str(Path(python).absolute())),
                       'args = %s' % json.dumps(['-m', 'robofrontier.engines.codex.desktop_robot_mcp', '--runs-root', str(Path(runs_root).resolve())]),
                       'env = { PYTHONPATH = %s }' % json.dumps(str(ROOT)),
@@ -215,11 +217,12 @@ def config_snippet(python=sys.executable, runs_root=ROOT / 'runs'):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--runs-root', type=Path, default=ROOT / 'runs')
+    parser.add_argument('--runs-root', type=Path, default=None)
     parser.add_argument('--print-config', action='store_true', help='Print the Desktop config.toml entry and exit')
     args = parser.parse_args()
     if args.print_config: print(config_snippet(runs_root=args.runs_root), end=''); return
-    serve(DesktopRobotBridge(args.runs_root))
+    from robofrontier.configuration import runs_root
+    serve(DesktopRobotBridge(args.runs_root or runs_root()))
 
 
 if __name__ == '__main__': main()

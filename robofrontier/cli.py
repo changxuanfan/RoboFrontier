@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 
-from .configuration import ROOT, TOPOLOGIES, load_configuration, rendering_environment
+from .configuration import ROOT, TOPOLOGIES, load_configuration, rendering_environment, runs_root
 from .runtime import policy_env, layout as run_layout
 
 
@@ -70,7 +70,6 @@ def plan(config):
 
 
 def prepare(output, config):
-    from robofrontier.batch.codex_batch import prepare_batch
     from robofrontier.batch.handoff import setup_assets
     from robofrontier.batch.prepare import load_env
     from .runtime.setup import write_json
@@ -93,8 +92,8 @@ def prepare(output, config):
                'record_realtime_video': config['render']['record_realtime_video']}
     with _catalog_file(config) as catalog:
         if policy['engine'] == 'claude':
-            from robofrontier.batch.claude_prepare import prepare_batch
-            result = prepare_batch(output, [policy['profile']], families=selection['families'] or None,
+            from robofrontier.batch.claude_prepare import prepare_batch as prepare_claude
+            result = prepare_claude(output, [policy['profile']], families=selection['families'] or None,
                                    cases=selection['cases'] or None, catalog=catalog,
                                    level=selection['level'] or None, min_arms=selection['min_arms'],
                                    topology=topology, record_video=config['render']['record_realtime_video'],
@@ -103,7 +102,8 @@ def prepare(output, config):
                                    startup_timeout_s=config['batch']['startup_timeout_s'],
                                    render_device=config['render']['device'])
         else:
-            result = prepare_batch(output, [policy['profile']], families=selection['families'] or None,
+            from robofrontier.batch.codex_batch import prepare_batch as prepare_codex
+            result = prepare_codex(output, [policy['profile']], families=selection['families'] or None,
                                    cases=selection['cases'] or None, config=catalog,
                                    level=selection['level'] or None, min_arms=selection['min_arms'],
                                    wall_limit_s=config['batch']['task_wall_limit_s'], harness_overrides=harness)
@@ -143,7 +143,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
                 raise ValueError('Claude preflight requires an explicit --max-budget-usd estimate')
             from robofrontier.engines.claude.preflight import run_precheck
             import uuid
-            output = ROOT/'runs/engineering/claude-precheck'/uuid.uuid4().hex
+            output = runs_root()/'engineering/claude-precheck'/uuid.uuid4().hex
             return run_precheck(policy['profile'], output, max_budget_usd, dict(os.environ),
                                 check_fork=not smoke_only, catalog=catalog)
         from robofrontier.engines.codex.launch import profile, launch_config, initialize_codex_home
@@ -163,7 +163,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
                     if smoke_only:
                         command.append('--smoke-only')
                     subprocess.run(command, cwd=ROOT, check=True)
-            folder = ROOT/'runs/engineering'/('model-smoke' if smoke_only else 'model-compatibility')/policy['profile']
+            folder = runs_root(config)/'engineering'/('model-smoke' if smoke_only else 'model-compatibility')/policy['profile']
             return json.loads((folder/'report.json').read_text())
         key = selected.get('env_key')
         if key and not os.environ.get(key):
@@ -179,7 +179,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             home = Path(config['runtime']['codex_home']).expanduser().resolve() if config['runtime']['codex_home'] else codex_home(env)
         home.mkdir(parents=True, exist_ok=True, mode=0o700)
         env['CODEX_HOME'] = str(home)
-        folder = ROOT/'runs/engineering'/('model-smoke' if smoke_only else 'model-compatibility')/policy['profile']
+        folder = runs_root(config)/'engineering'/('model-smoke' if smoke_only else 'model-compatibility')/policy['profile']
         folder.mkdir(parents=True, exist_ok=True)
         initialize_codex_home(launch_config(selected, folder), folder, env=env)
         command = [sys.executable, '-m', 'robofrontier.batch.codex_batch', 'preflight', '--models', policy['profile'],
@@ -243,7 +243,7 @@ def run(batch, *, continuing=False):
         state = json.loads((Path(batch)/'batch.json').read_text())
     result = {'batch': str(Path(batch).resolve()), 'status': state['status']}
     if config['evidence']['auto_collect']:
-        output = ROOT/'runs/exports'/(Path(batch).name+'-'+hashlib.sha256(str(Path(batch).resolve()).encode()).hexdigest()[:8])
+        output = runs_root(config)/'exports'/(Path(batch).name+'-'+hashlib.sha256(str(Path(batch).resolve()).encode()).hexdigest()[:8])
         result['collection'] = str(collect(batch, output))
         result['collection_complete'] = json.loads((output/'collection.json').read_text())['complete']
         if config['evidence']['auto_archive']:

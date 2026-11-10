@@ -30,6 +30,7 @@ SCHEMA = {
     'factory': {'data_root': str, 'asset_lock': str, 'source': str, 'device': str,
                 'blender': str, 'mode': str, 'views': list, 'width': int, 'height': int,
                 'samples': int, 'duration_s': float, 'import_speedup': float, 'parallel': int},
+    'paths': {'runs_root': str},
     'oracle': {'wall_limit_s': float, 'stop_grace_s': float,
                'evaluation_mode': str,
                'mosaic_planning_workers': int, 'mosaic_physics_workers': int,
@@ -96,12 +97,12 @@ def load_configuration(path=None, overrides=None):
 
 
 def _configuration_shape(version):
-    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7, 8):
+    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7, 8, 9):
         raise ValueError('Unsupported configuration schema_version')
     # Older frozen configurations remain exact. Do not append new Factory or
     # Oracle defaults to an already-hashed experiment configuration.
     shape = {k: dict(v) if isinstance(v, dict) else v for k, v in SCHEMA.items()
-             if (version >= 2 or k != 'factory') and (version >= 3 or k != 'oracle')}
+             if (version >= 2 or k != 'factory') and (version >= 3 or k != 'oracle') and (version >= 9 or k != 'paths')}
     if version == 3:
         shape['oracle'].pop('evaluation_mode')
     if version < 5:
@@ -115,6 +116,20 @@ def _configuration_shape(version):
     if version < 8:
         shape['slurm'].pop('egress_pause_s')
     return shape
+
+
+def runs_root(config=None):
+    """Where run data goes, whichever checkout runs: $ROBOFRONTIER_RUNS_ROOT, else the
+    configuration's paths.runs_root (relative to the repository), else <repo>/runs."""
+    import os
+    value = os.environ.get('ROBOFRONTIER_RUNS_ROOT')
+    if not value:
+        if config is None:
+            try: config = load_configuration()
+            except (OSError, ValueError): config = {}
+        value = (config.get('paths') or {}).get('runs_root') or ''
+    path = Path(value).expanduser() if value else ROOT / 'runs'
+    return path if path.is_absolute() else ROOT / path
 
 
 # The longest a route outage may hold a Slurm world: the wall backstop (tasks.families.WALL_BACKSTOP_S).

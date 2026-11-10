@@ -1,5 +1,5 @@
 # Shared defaults for new runs. Secrets belong in the environment or .env.
-schema_version = 8
+schema_version = 9
 
 [policy]
 engine = "codex"                     # codex | claude
@@ -73,6 +73,9 @@ samples = 64
 duration_s = 0.0                     # 0 preserves the full reviewed timeline; positive values cap a preview
 import_speedup = 0.0                 # Newly imported recording only; 0 uses the family release speedup
 parallel = 1                        # Slurm render array concurrency, independent of benchmark parallelism
+
+[paths]
+runs_root = ""                        # Where runs, receipts and caches go; empty is <repo>/runs. ROBOFRONTIER_RUNS_ROOT overrides
 
 [oracle]
 evaluation_mode = "task-reference" # Terminal task outcome; strict-process additionally requires clean process history

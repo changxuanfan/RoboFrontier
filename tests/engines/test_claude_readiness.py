@@ -87,7 +87,7 @@ class RequireReadyTests(unittest.TestCase):
         from robofrontier.engines.claude.claude_readiness import require_ready
         with tempfile.TemporaryDirectory() as root:
             with self.assertRaisesRegex(ValueError, 'No Claude precheck receipts'):
-                require_ready('haiku', root=root)
+                require_ready('haiku', runs=root)
 
 
 if __name__ == '__main__':

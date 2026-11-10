@@ -149,7 +149,8 @@ def main():
         config_directory('.', selected)
     elif not os.environ.get(selected['env_key']):
         raise SystemExit('Missing credential variable: '+selected['env_key'])
-    output=args.output or ROOT/'runs/engineering/claude-blocked-precheck'/(args.profile+'-'+time.strftime('%Y%m%d-%H%M%S'))
+    from robofrontier.configuration import runs_root
+    output=args.output or runs_root()/'engineering/claude-blocked-precheck'/(args.profile+'-'+time.strftime('%Y%m%d-%H%M%S'))
     result=run_blocked_precheck(args.profile,output,args.max_budget_usd,dict(os.environ))
     print(json.dumps({'profile':args.profile,'passed':result['passed'],'checks':result['checks'],
                       'error_type':result['error_type'],'receipt':str(output/'receipt.json')},indent=2))
