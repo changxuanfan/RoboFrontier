@@ -114,6 +114,28 @@ def probe(fixtures):
     attempt('network_tcp', lambda: connect(socket.SOCK_STREAM, ('127.0.0.1', fixtures['listener_port'])))
     attempt('network_external', lambda: connect(socket.SOCK_STREAM, ('1.1.1.1', 443)))
     attempt('unix_socket_shared', unix_socket)
+    # The engine CLI that runs this shell holds the model credential in its environment;
+    # no ancestor's environment may be readable from here (E17).
+    def ancestors():
+        pid, seen = os.getppid(), []
+        while pid > 1 and len(seen) < 12:
+            seen.append(pid)
+            try: pid = int(subprocess.run(['/bin/ps', '-o', 'ppid=', '-p', str(pid)], capture_output=True, text=True, timeout=20).stdout.strip())
+            except ValueError: break
+        return seen or [os.getppid()]
+
+    def read_proc_environ():
+        expect(any(Path(f'/proc/{pid}/environ').read_bytes() for pid in ancestors()))
+
+    def ps_environment():
+        names = fixtures['host_only']
+        for pid in ancestors():
+            out = subprocess.run(['/bin/ps', 'eww', '-o', 'command=', '-p', str(pid)], capture_output=True, text=True, timeout=20).stdout
+            if any(name+'=' in out for name in names): return
+        raise ValueError('no ancestor environment visible')
+
+    attempt('read_parent_environ', read_proc_environ)
+    attempt('ps_parent_environment', ps_environment)
     # A PID namespace can leave ps working while hiding the host's processes.
     attempt('see_host_processes', lambda: expect(len(subprocess.run(['/bin/ps', 'ax'], check=True, capture_output=True,
                                                                     timeout=20).stdout.splitlines()) > fixtures['few_processes']))

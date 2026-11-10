@@ -36,7 +36,7 @@ MUST_WORK = ('python_is_environment', 'python_on_path_is_environment', 'tmpdir_i
 MUST_FAIL = ('read_host_shared_memory', 'read_home', 'read_home_file', 'read_people', 'read_disks', 'read_system_secrets', 'read_var_tmp', 'read_private', 'read_run_root',
              'read_other_run', 'read_repository', 'tool_write_shared_tmp', 'write_public', 'write_run_root',
              'write_environment', 'run_other_python', 'import_mujoco', 'pip_install_absent_package', 'network_tcp',
-             'network_external', 'unix_socket_shared', 'see_host_processes')
+             'network_external', 'unix_socket_shared', 'see_host_processes', 'read_parent_environ', 'ps_parent_environment')
 HOST_ONLY = 'ROBOFRONTIER_PROBE_HOST_ONLY'
 CLOSED_FOLDERS = {'darwin': {'read_people': '/Users', 'read_disks': '/Volumes', 'read_system_secrets': '/Library/Keychains', 'read_var_tmp': '/var/tmp'},
                   'linux': {'read_people': '/home', 'read_disks': '/raid', 'read_system_secrets': '/root', 'read_var_tmp': '/var/tmp'}}
