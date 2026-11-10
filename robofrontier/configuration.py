@@ -3,8 +3,8 @@ from copy import deepcopy
 import math
 from pathlib import Path
 import tomllib
+from .io import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 DEFAULT = ROOT / 'robofrontier.toml'
 TOPOLOGIES = {
     'single': 'centralized',

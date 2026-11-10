@@ -4,7 +4,6 @@ The original 60 Hz recording stays immutable. An edit is an index of retained
 source frames, not a new physical episode or a restart checkpoint.
 """
 from dataclasses import asdict, dataclass
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -14,16 +13,13 @@ import numpy as np
 from scipy.ndimage import maximum_filter1d, minimum_filter1d
 
 from .motion_recording import MotionReader
+from ..io import file_sha256 as checksum
 
 DIAL_SPEEDUP = 10.
 DIAL_VIDEO_FPS = 30.
 DIAL_RECORD_HZ = 60.
 PRESENTATION = dict(speedup=DIAL_SPEEDUP,fps=DIAL_VIDEO_FPS,record_hz=DIAL_RECORD_HZ,
     repeat=False,finished_station='hold_final_pose',stop_after='all_stations_complete')
-
-
-def checksum(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def playback_speed(case_id, requested=None):

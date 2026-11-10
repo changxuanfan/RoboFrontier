@@ -16,12 +16,9 @@ from . import segments as run_segments
 from .bootstrap import NETWORK_RESUME
 from .setup import verify_inputs, write_json
 from ..tasks.config import ROOT
+from ..io import file_sha256 as sha
 
 SCHEMA = 'robofrontier.stopped-runtime-upgrade.v1'
-
-
-def sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def ledger(store):

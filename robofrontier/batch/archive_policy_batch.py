@@ -11,6 +11,7 @@ import stat
 import tempfile
 import zlib
 from robofrontier.runtime import layout as run_layout
+from ..io import file_sha256 as checksum
 
 IMAGE = re.compile(rb'(data:image/[^;,\s"\\]+;base64,)([A-Za-z0-9+/=]+)')
 REF = re.compile(rb'(data:image/[^;,\s"\\]+;base64,)@RF_IMAGE_([a-f0-9]{64})@')
@@ -18,14 +19,6 @@ MARKER = b'@RF_IMAGE_'
 B64_MARKER = b'@RF_B64_'
 B64_REF = re.compile(rb'"@RF_B64_([a-f0-9]{64})@"')
 BLOCK = 1024 * 1024
-
-
-def checksum(path):
-    h = hashlib.sha256()
-    with path.open('rb') as f:
-        for part in iter(lambda: f.read(BLOCK), b''):
-            h.update(part)
-    return h.hexdigest()
 
 
 def safe(root, name):

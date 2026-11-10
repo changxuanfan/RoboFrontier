@@ -3,7 +3,6 @@
 float32 quantization is declared. XOR + ZIP compression is bit-exact thereafter;
 no motion threshold, command reconstruction, or physics replay is used.
 """
-import hashlib
 import json
 import os
 import shutil
@@ -14,9 +13,7 @@ import numpy as np
 import mujoco
 from ..runtime.setup import write_json
 from ..tasks.scene import clone_or_copy
-
-
-def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+from ..io import file_sha256 as digest
 
 
 def freeze_source(source,destination,cache=None):

@@ -5,11 +5,10 @@ import json
 import ctypes
 import math
 import os
-from pathlib import Path
 import shutil
 import xml.etree.ElementTree as ET
+from ..io import ROOT
 
-ROOT=Path(__file__).resolve().parents[2]
 
 
 def validate_scene_asset(task):

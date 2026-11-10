@@ -11,8 +11,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from scipy.spatial import ConvexHull
+from ..io import ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = ROOT / 'configs/backgrounds/robo_factory.json'
 LAYERS = {'structure': 0, 'roof': 1, 'north': 2, 'south': 3, 'west': 4, 'east': 5}
 

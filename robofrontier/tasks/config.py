@@ -3,8 +3,8 @@ import json
 import math
 from pathlib import Path
 import hashlib
+from ..io import ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CASE = 'transport-a04-d1'  # The smallest released case; tests and bare prepare_run use it.
 DEFAULT_HARNESS = ROOT / 'configs/harness.json'
 

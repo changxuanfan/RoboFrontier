@@ -15,6 +15,7 @@ import uuid
 
 from ..configuration import ROOT, validate_configuration
 from ..runtime.setup import write_json
+from ..io import file_sha256 as _digest
 
 CONTAINER_ROOT = '/opt/RoboFrontier'
 COMMANDS = {'bootstrap', 'config', 'plan', 'prepare', 'doctor', 'preflight', 'run', 'status',
@@ -55,11 +56,6 @@ def validate_arguments(arguments):
         from ..cli import argument_parser
         argument_parser(prog='robofrontier container').parse_args(arguments)
     return arguments
-
-
-def _digest(path):
-    with Path(path).open('rb') as stream:
-        return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
 def _toml(config):

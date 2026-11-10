@@ -10,7 +10,6 @@ from robofrontier.runtime.setup import write_json
 import argparse
 from contextlib import ExitStack
 import fcntl
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -20,14 +19,10 @@ import sqlite3
 import stat
 import subprocess
 import tempfile
+from ..io import file_sha256 as digest
 
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z')
 TERMINAL = {'closed', 'needs_review', 'stopped', 'stopped_before_start'}
-
-
-def digest(path):
-    with Path(path).open('rb') as stream:
-        return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
 def load(path):

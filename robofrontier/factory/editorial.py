@@ -13,8 +13,8 @@ import subprocess
 import tempfile
 
 from . import bundle
+from ..io import ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = 'robofrontier.factory-editorial.v1'
 DEFAULT_DURATION = 210.5
 FONT = ROOT/'assets/robo_factory/fonts/BarlowCondensed-SemiBold.ttf'

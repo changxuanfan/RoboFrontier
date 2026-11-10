@@ -15,8 +15,8 @@ import time
 import uuid
 
 from .bundle import digest, inside, read, resolved_release, verify, write
+from ..io import ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 PLAN_SCHEMA = 'robofrontier.factory-render-plan.v1'
 
 

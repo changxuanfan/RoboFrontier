@@ -4,19 +4,15 @@ Historical Oracle registries remain immutable. This release records which scene
 and reviewed public projection a new policy trial actually uses.
 """
 from copy import deepcopy
-import hashlib
 import json
 from pathlib import Path
 import shutil
+from ..io import file_sha256 as sha
+from ..io import ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 RELEASE = 'benchmark/release.json'
 LEGACY_PATHS = 'benchmark/legacy-paths.json'
 READINESS = 'prepared_policy_trial'
-
-
-def sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def read(path):

@@ -27,11 +27,7 @@ import zipfile
 
 from ..configuration import ROOT, validate_configuration
 from ..runtime.setup import write_json
-
-
-def checksum(path):
-    with Path(path).open('rb') as stream:
-        return hashlib.file_digest(stream, 'sha256').hexdigest()
+from ..io import file_sha256 as checksum
 
 
 def _copy_verified(source, destination):

@@ -7,7 +7,6 @@ the supervisor owns only lifecycle, an explicit engineering deadline and logs.
 """
 from contextlib import contextmanager
 import fcntl
-import hashlib
 import importlib.metadata
 import json
 import os
@@ -21,6 +20,7 @@ import time
 
 from ..configuration import ROOT, load_configuration, rendering_environment, validate_configuration
 from ..runtime.setup import write_json
+from ..io import file_sha256 as _sha
 
 ENTRIES = {
     'transport': 'run_transport_full_oracle.py',
@@ -28,11 +28,6 @@ ENTRIES = {
     'relay': 'run_relay_live_oracle.py',
     'dial': 'run_blind_dial_oracle.py',
 }
-
-
-def _sha(path):
-    with Path(path).open('rb') as stream:
-        return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
 def _read(path):

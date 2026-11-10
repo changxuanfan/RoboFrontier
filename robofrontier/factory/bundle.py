@@ -1,6 +1,5 @@
 """Portable, checksummed factory inputs. No inference or physics execution."""
 from copy import deepcopy
-import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -9,20 +8,13 @@ import tarfile
 import tempfile
 import time
 import urllib.request
+from ..io import file_sha256 as digest
 
 SCHEMA = 'robofrontier.factory-data.v1'
 PATH_FIELDS = ('directory', 'recording', 'edit', 'derived_track')
 # Mosaic desks a Factory bundle may display: R14 (81 mm grid; the published Factory
 # data and its Oracle recordings) and R15 (71 mm grid; the current release).
 MOSAIC_DISPLAY_REVISIONS = (14, 15)
-
-
-def digest(path):
-    h = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b''):
-            h.update(block)
-    return h.hexdigest()
 
 
 def read(path):

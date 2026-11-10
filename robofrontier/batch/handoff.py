@@ -4,7 +4,6 @@ Source code travels through a Git branch/bundle. This archive contains no .env,
 Codex login, benchmark results, prepared worlds or private Dial answers.
 """
 import argparse
-import hashlib
 import io
 import json
 import os
@@ -19,11 +18,7 @@ from robofrontier.tasks.families import ROOT, RELEASE, LEGACY_PATHS, current_pat
 from robofrontier.batch.prepare import load_env
 from robofrontier.engines.codex.launch import profile
 from robofrontier.batch.tasks import check_case_assets
-
-
-def digest(path):
-    with Path(path).open('rb') as stream:
-        return hashlib.file_digest(stream, 'sha256').hexdigest()
+from ..io import file_sha256 as digest
 
 
 def pinned_asset_release(root, config):

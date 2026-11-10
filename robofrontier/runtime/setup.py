@@ -1,8 +1,6 @@
 """Prepare immutable inputs and durable runtime, without starting simulation/inference."""
 import hashlib
 import json
-import os
-import tempfile
 from pathlib import Path
 import secrets
 import shutil
@@ -13,6 +11,7 @@ from ..tasks.provenance import environment_logic_manifest
 from . import layout as run_layout
 from .bootstrap import SKILLS_HEADER, write_bootstraps
 from ..tasks.config import ROOT, load_task, load_harness, public_task,physical_control_fingerprint
+from ..io import write_json
 
 
 # Every robofrontier/**/*.py is frozen for each run; these are an engine's other sources.
@@ -22,20 +21,6 @@ ENGINE_SCRIPTS = {
               'robofrontier/engines/codex/gateway_rpc.js', 'robofrontier/engines/codex/job_gateway.js', 'robofrontier/engines/codex/borrowed_auth.js'),
     'claude': (),
 }
-
-
-def write_json(path, value):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False)+'\n'
-    fd, temporary = tempfile.mkstemp(prefix='.'+path.name+'-',dir=path.parent)
-    try:
-        with os.fdopen(fd,'w') as out:
-            os.fchmod(out.fileno(),0o600)
-            out.write(payload);out.flush();os.fsync(out.fileno())
-        os.replace(temporary,path)
-    finally:
-        if Path(temporary).exists():Path(temporary).unlink()
 
 
 def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_path=None):
