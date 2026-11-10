@@ -243,8 +243,11 @@ backstop.
 A run off Slurm (a Mac or RunPod host) has no egress route to pause its world, so
 its world owner probes the engine's model API hosts
 (`robofrontier/network_outage.py`): Claude `api.anthropic.com`; Codex
-`chatgpt.com` and `auth.openai.com`, all of which must answer. A probe is a TCP
-connection on port 443, every 5 s, with a 5 s timeout. After three consecutive
+`chatgpt.com` and `auth.openai.com`, all of which must answer. A probe is a
+verified TLS handshake on port 443 followed by an HTTP `HEAD /` that must get an
+answer (any status), every 5 s, with a 5 s timeout. A bare TCP connection is not
+enough: a local VPN tunnel accepts it even when its route to the API is gone, which
+on 2026-11-10 let eight runs fail their turns instead of pausing. After three consecutive
 failures the world pauses exactly like a Slurm egress pause: physics stops
 stepping (arms hold mid-motion), dispatch is paused, new policy requests wait with
 their original call IDs, and an `OUTAGE_PAUSED` event is written. The time since

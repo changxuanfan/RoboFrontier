@@ -2,7 +2,8 @@
 
 Runs that count active time (run_protocol clock active_time_v1) and run off Slurm (a Mac or
 RunPod host, where no egress route pauses the world) probe their engine's model API hosts
-from the world process. After `FAILURES` consecutive failed probes the world pauses as for a
+from the world process with a verified HTTPS request (a bare TCP connect succeeds through a
+local VPN tunnel whose route is gone). After `FAILURES` consecutive failed probes the world pauses as for a
 Slurm egress outage; the first successful probe resumes it. Slurm runs keep their egress
 pause. See docs/running/run-segments.md#time.
 
@@ -12,6 +13,7 @@ sandbox) never pauses a world: it gives up after `UNARMED_GIVE_UP` failures.
 """
 import os
 import socket
+import ssl
 import threading
 import time
 
@@ -24,11 +26,31 @@ SWITCH = 'ROBOFRONTIER_OUTAGE_PROBE'
 
 
 def tcp_probe(hosts, timeout=TIMEOUT_S):
-    """True when every host accepts a TCP connection on port 443."""
+    """True when every host accepts a TCP connection on port 443.
+
+    Not used by default: a local VPN tunnel accepts every TCP connection itself, so this
+    stays true while the route to the API is gone (observed 2026-11-10)."""
     for host in hosts:
         try:
             socket.create_connection((host, 443), timeout=timeout).close()
         except OSError:
+            return False
+    return True
+
+
+def https_probe(hosts, timeout=TIMEOUT_S, context=None, port=443):
+    """True when every host completes a verified TLS handshake and answers an HTTP request.
+
+    Any HTTP status counts: the answer proves the server itself was reached end to end."""
+    context = context or ssl.create_default_context()
+    for host in hosts:
+        try:
+            with socket.create_connection((host, port), timeout=timeout) as raw:
+                with context.wrap_socket(raw, server_hostname=host) as tls:
+                    tls.settimeout(timeout)
+                    tls.sendall(b'HEAD / HTTP/1.1\r\nHost: ' + host.encode('idna') + b'\r\nConnection: close\r\n\r\n')
+                    if not tls.recv(16).startswith(b'HTTP/'): return False
+        except (OSError, ValueError):
             return False
     return True
 
@@ -47,7 +69,7 @@ def bounded(probe, hosts, timeout):
 
 
 class OutageMonitor:
-    def __init__(self, hosts, probe=tcp_probe, *, interval_s=INTERVAL_S, timeout_s=TIMEOUT_S,
+    def __init__(self, hosts, probe=https_probe, *, interval_s=INTERVAL_S, timeout_s=TIMEOUT_S,
                  failures=FAILURES, unarmed_give_up=UNARMED_GIVE_UP, clock=time.monotonic):
         self.hosts = tuple(hosts); self.probe = probe; self.interval_s = interval_s
         self.timeout_s = timeout_s; self.required = failures; self.unarmed_give_up = unarmed_give_up
@@ -115,4 +137,4 @@ def monitor_for(task, config, probe=None):
     if os.environ.get(SWITCH, '').strip().lower() in ('off', '0', 'false', 'no'): return None
     hosts = ENGINE_HOSTS.get((config or {}).get('engine', 'codex'))
     if not hosts: return None
-    return OutageMonitor(hosts, probe or tcp_probe)
+    return OutageMonitor(hosts, probe or https_probe)

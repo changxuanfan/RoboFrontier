@@ -44,6 +44,54 @@ class OutageMonitorTests(unittest.TestCase):
             self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
 
 
+class ProbeTests(unittest.TestCase):
+    """Local sockets only: a tunnel that accepts TCP but has no route behind it."""
+    def serve(self, handle, tls=None):
+        import socket, threading
+        server = socket.create_server(('127.0.0.1', 0)); self.addCleanup(server.close)
+        def loop():
+            while True:
+                try: connection, _ = server.accept()
+                except OSError: return
+                threading.Thread(target=handle, args=(connection if tls is None else tls.wrap_socket(connection, server_side=True),),
+                                 daemon=True).start()
+        threading.Thread(target=loop, daemon=True).start()
+        return server.getsockname()[1]
+
+    def test_a_tunnel_that_accepts_tcp_without_a_route_fails_the_https_probe(self):
+        import socket
+        from functools import partial
+        for name, handle in (('closes', lambda c: c.close()), ('silent', lambda c: (time.sleep(2), c.close()))):
+            with self.subTest(tunnel=name):
+                port = self.serve(handle)
+                connect = socket.create_connection
+                with patch.object(network_outage.socket, 'create_connection',
+                                  side_effect=lambda address, timeout=None: connect(('127.0.0.1', port), timeout)):
+                    self.assertTrue(network_outage.tcp_probe(('api.example',), timeout=.5))
+                    self.assertFalse(network_outage.https_probe(('api.example',), timeout=.5))
+
+    def test_a_verified_https_answer_passes(self):
+        import shutil, ssl, subprocess, tempfile
+        if not shutil.which('openssl'): self.skipTest('openssl unavailable')
+        folder = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, folder)
+        key, cert = folder+'/key.pem', folder+'/cert.pem'
+        subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert,
+                        '-days', '1', '-subj', '/CN=localhost', '-addext', 'subjectAltName=DNS:localhost'],
+                       check=True, capture_output=True)
+        server = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER); server.load_cert_chain(cert, key)
+        def answer(connection):
+            try: connection.recv(1024); connection.sendall(b'HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n')
+            finally: connection.close()
+        port = self.serve(answer, tls=server)
+        client = ssl.create_default_context(cafile=cert)
+        self.assertTrue(network_outage.https_probe(('localhost',), timeout=2, context=client, port=port))
+        # An unverified certificate is not an answer from the API.
+        self.assertFalse(network_outage.https_probe(('localhost',), timeout=2, port=port))
+
+    def test_monitors_use_the_https_probe(self):
+        self.assertIs(OutageMonitor(('api.example',)).probe, network_outage.https_probe)
+
+
 class OutagePauseTests(active.Fixture):
     def setUp(self):
         super().setUp()
