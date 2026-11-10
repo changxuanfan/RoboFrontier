@@ -13,7 +13,7 @@ from robofrontier.engines.claude.budget import BudgetLedger
 from robofrontier.engines.claude.standing_team import StandingTeamPolicyHost
 from robofrontier.runtime.setup import verify_inputs
 from robofrontier.runtime.service import RuntimeService
-from robofrontier.batch.claude_benchmark import prepare_draft
+from robofrontier.batch.claude_prepare import prepare_batch
 
 
 class RoleHost:
@@ -56,7 +56,7 @@ class RoleHost:
 def standing_fixture(topology, *, factory=RoleHost, endpoint=None, env=None):
     with tempfile.TemporaryDirectory(prefix='claude-standing-') as tmp:
         batch = Path(tmp)/'batch'
-        prepare_draft(batch, ['haiku'], cases=['transport-a04-d1'], topology=topology)
+        prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], topology=topology)
         run = batch/'haiku/transport-a04-d1'
         launch = run/'private/inputs/claude.json'
         data = json.loads(launch.read_text())

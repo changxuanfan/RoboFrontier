@@ -63,7 +63,7 @@ as on Linux. In order, it:
    (`run_segments.prepare_retry` with the manual sealed-host exception) and checks
    that the call and action ledger is unchanged.
 6. **Runs the frozen runner.** It starts the original runner
-   (`claude.engineering_run.run_engineering`) from `SOURCE`, with that checkout's
+   (`claude.engineering_run.run_task`) from `SOURCE`, with that checkout's
    `.env` and the batch's frozen configuration. That runner restarts the world from
    the restore pose and resumes the Controller and every active delegate in their
    own sessions, each with its frozen resume message.

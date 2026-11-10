@@ -79,8 +79,8 @@ class EngineTests(unittest.TestCase):
         self.assertIn('robofrontier/engines/codex/codex_policy_host.js', frozen(codex))
         # All package code is frozen for either engine; only the Codex Node host files
         # outside Python are engine-specific.
-        self.assertIn('robofrontier/batch/claude_benchmark.py', frozen(codex))
-        self.assertIn('robofrontier/batch/claude_benchmark.py', frozen(claude))
+        self.assertIn('robofrontier/batch/claude_prepare.py', frozen(codex))
+        self.assertIn('robofrontier/batch/claude_prepare.py', frozen(claude))
         self.assertFalse({'robofrontier/engines/codex/codex_policy_host.js', 'robofrontier/engines/codex/codex_rpc.js'} & frozen(claude))
         self.assertTrue({'robofrontier/batch/prepare.py', 'robofrontier/batch/handoff.py', 'robofrontier/batch/tasks.py'} <= frozen(claude))
         self.assertIn('robofrontier/engines/codex/meta_dispatcher.js', frozen(claude))

@@ -15,9 +15,9 @@ import threading
 import unittest
 
 from engines.test_claude_adaptive_integration import StubModel
-from robofrontier.engines.claude.run import run_engineering
+from robofrontier.engines.claude.run import run_task
 from robofrontier.runtime.store import RuntimeStore
-from robofrontier.batch.claude_benchmark import prepare_draft
+from robofrontier.batch.claude_prepare import prepare_batch
 
 
 class MotionModel(StubModel):
@@ -48,7 +48,7 @@ class PhysicsSmokeTests(unittest.TestCase):
         result = None
         try:
             base = directory / 'batch'
-            prepare_draft(base, ['opus'], cases=[case], topology='adaptive', record_video=record_video)
+            prepare_batch(base, ['opus'], cases=[case], topology='adaptive', record_video=record_video)
             run = base / 'opus' / case
             launch = run / 'private/inputs/claude.json'
             data = json.loads(launch.read_text())
@@ -59,7 +59,7 @@ class PhysicsSmokeTests(unittest.TestCase):
             frozen['input_sha256']['private/inputs/claude.json'] = hashlib.sha256(launch.read_bytes()).hexdigest()
             manifest.write_text(json.dumps(frozen))
             env = {'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'FAKE_KEY': 'synthetic'}
-            result = run_engineering(run, env, turn_budget_usd=.5, total_budget_usd=2,
+            result = run_task(run, env, turn_budget_usd=.5, total_budget_usd=2,
                                      wall_limit_s=15, startup_timeout_s=90, poll_s=.1)
             self.assertFalse(result['scored'])
             self.assertEqual(result['reason'], 'wall_limit', result)

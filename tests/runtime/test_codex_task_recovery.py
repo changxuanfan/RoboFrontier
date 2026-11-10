@@ -11,6 +11,7 @@ from unittest.mock import patch
 import numpy as np
 
 from robofrontier.engines.codex import recover_task as recovery
+from robofrontier.engines.common import recovery as common_recovery
 from robofrontier.engines.codex.job_engine import task_id
 from robofrontier.runtime.layout import path as run_path
 from robofrontier.runtime.setup import write_json
@@ -143,10 +144,10 @@ class SupervisorHandbackTests(unittest.TestCase):
             (control/'recovery.lock').touch()
             write_json(control/'recovery.json', {'phase': 'host_started', 'pid': 99999999})
             jobs = [{'run_directory': str(run), 'status': 'needs_review', 'host_exit_code': 1}]
-            with patch.object(recovery.run_segments, 'owner_released', side_effect=[False, True]), \
-                    patch.object(recovery.time, 'sleep') as wait:
-                recovery.wait_for_recoveries(jobs)
-            wait.assert_called_once_with(1)
+            waits = []
+            with patch.object(recovery.run_segments, 'owner_released', side_effect=[False, True]):
+                common_recovery.wait_for_recoveries(jobs, sleep=waits.append)
+            self.assertEqual(waits, [1])
             self.assertEqual(jobs[0]['status'], 'needs_review')
 
     def test_a_completed_recovery_hands_back_to_the_original_batch_collector(self):
@@ -157,7 +158,7 @@ class SupervisorHandbackTests(unittest.TestCase):
             write_json(control/'recovery.json', {'phase': 'closed', 'host_exit_code': 0})
             jobs = [{'run_directory': str(run), 'status': 'needs_review'}]
             with patch.object(recovery.run_segments, 'owner_released', return_value=True):
-                recovery.wait_for_recoveries(jobs)
+                common_recovery.wait_for_recoveries(jobs)
             self.assertEqual(jobs[0]['status'], 'closed')
             self.assertEqual(jobs[0]['recovery']['host_exit_code'], 0)
             self.assertEqual(jobs[0]['host_exit_code'], 0)

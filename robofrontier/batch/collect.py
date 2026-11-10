@@ -220,8 +220,10 @@ def collect_batch(batch_path, output, *, codex_home=None):
     if output.exists() or output.is_relative_to(batch_path) or batch_path.is_relative_to(output):
         raise ValueError('Collection output must be new and outside the source batch')
     batch = load(batch_path/'batch.json')
-    engine = 'claude' if batch.get('schema') == 'robofrontier.claude-draft.v1' else 'codex'
-    if batch.get('schema') not in (None, 'robofrontier.cli-benchmark.v1', 'robofrontier.claude-draft.v1'):
+    # Claude batches prepared before 2026-11-11 are 'robofrontier.claude-draft.v1'.
+    claude = ('robofrontier.claude-batch.v2', 'robofrontier.claude-draft.v1')
+    engine = 'claude' if batch.get('schema') in claude else 'codex'
+    if batch.get('schema') not in (None, 'robofrontier.cli-benchmark.v1', *claude):
         raise ValueError('Unsupported batch schema')
     state_path = run_layout.batch_path(batch_path, 'engineering_status') if engine == 'claude' else batch_path/'batch.json'
     state = load(state_path)

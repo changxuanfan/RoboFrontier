@@ -1,4 +1,7 @@
-"""Claude planning, offline readiness, and unscored engineering runs."""
+"""Claude model profiles, case planning, batch preparation and offline readiness checks.
+
+The unified CLI (`robofrontier prepare|run|continue|status|stop`) uses these; a batch runs
+under robofrontier/batch/claude_batch.py."""
 import argparse
 import hashlib
 import secrets
@@ -20,6 +23,8 @@ from robofrontier.engines.claude.runner import _oauth_endpoint_allowed
 from robofrontier.batch.tasks import check_case_assets
 
 CATALOG = ROOT / 'configs/models.json'
+BATCH_SCHEMA = 'robofrontier.claude-batch.v2'
+LAUNCH_SCHEMA = 'robofrontier.claude-launch.v2'
 
 
 def profile(name, catalog=CATALOG):
@@ -74,20 +79,20 @@ def plan(names, families=None, cases=None, level=None, min_arms=False, parallel=
     rows = select_cases(families, cases, level, min_arms)
     jobs = [dict(profile=name, model=p['model'], provider=p['provider'], **row)
             for name, p in profiles.items() for row in rows]
-    return dict(schema='robofrontier.claude-plan.v1', execution_available=False,
+    return dict(schema='robofrontier.claude-plan.v1',
                 model_calls=0, simulator_started=False, parallel=parallel, task_count=len(jobs), jobs=jobs,
                 note='Planning only; providers and model capabilities are not verified.')
 
 
 
-def prepare_draft(output, names, families=None, cases=None, level=None, min_arms=False, catalog=CATALOG, topology='adaptive', record_video=False,
+def prepare_batch(output, names, families=None, cases=None, level=None, min_arms=False, catalog=CATALOG, topology='adaptive', record_video=False,
                   *, wall_limit_s=86400, observation_image_profile=None, startup_timeout_s=None, render_device=None):
-    """Freeze unqualified drafts for the explicit engineering runner only."""
+    """Prepare one run per profile and case, frozen for robofrontier/batch/claude_batch.py."""
     from robofrontier.tasks.families import prepare, policy_task
     from robofrontier.tasks.families import dial_code
 
     if topology not in ('adaptive', 'centralized', 'hierarchical', 'peer'):
-        raise ValueError('Unknown Claude engineering topology')
+        raise ValueError('Unknown Claude topology')
     if type(record_video) is not bool:
         raise ValueError('record_video must be a boolean')
     selection = plan(names, families, cases, level, min_arms, 1, catalog)
@@ -114,8 +119,8 @@ def prepare_draft(output, names, families=None, cases=None, level=None, min_arms
     output = Path(output).absolute()
     output.mkdir(parents=True, exist_ok=False)
     for folder in run_layout.BATCH_FOLDERS: (output/folder).mkdir()
-    batch = {'schema': 'robofrontier.claude-draft.v1', 'status': 'preparing',
-             'created_at': time.time(), 'execution_available': False, 'model_calls': 0, 'jobs': [],
+    batch = {'schema': BATCH_SCHEMA, 'status': 'preparing',
+             'created_at': time.time(), 'model_calls': 0, 'jobs': [],
              **run_layout.batch_record()}
     write_json(output / 'batch.json', batch)
     puzzles = {}
@@ -142,26 +147,25 @@ def prepare_draft(output, names, families=None, cases=None, level=None, min_arms
             # Both engines share one context budget, frozen with the run (configs/models.json).
             from ..configuration import model_catalog
             context = model_catalog('codex')
-            write_json(launch, {'schema': 'robofrontier.claude-launch-draft.v1', 'profile': p,
+            write_json(launch, {'schema': LAUNCH_SCHEMA, 'profile': p,
                                 'context_window': context['context_window'],
                                 'auto_compact_token_limit': context['auto_compact_token_limit'],
-                                'bash_isolation': bash_isolation,
-                                'qualified': False, 'execution_available': False})
+                                'bash_isolation': bash_isolation})
             manifest_path = inputs / 'manifest.json'
             manifest = read(manifest_path)
             for file in (launch,):
                 manifest['input_sha256'][str(file.relative_to(run))] = digest(file)
-            for file in (ROOT / 'robofrontier/batch/claude_benchmark.py', ROOT / 'configs/models.json'):
+            for file in (ROOT / 'robofrontier/batch/claude_prepare.py', ROOT / 'configs/models.json'):
                 relative = file.relative_to(ROOT)
                 frozen = inputs / 'frozen-source' / relative
                 frozen.parent.mkdir(parents=True, exist_ok=True)
                 frozen.write_bytes(file.read_bytes())
                 manifest['source_sha256'][str(relative)] = digest(file)
-            manifest.update(engine='claude', status='engineering draft; not qualified or runnable')
+            manifest.update(engine='claude', status='prepared')
             write_json(manifest_path, manifest)
-            batch['jobs'].append({'profile': name, 'case_id': case, 'run_directory': str(run), 'status': 'draft'})
+            batch['jobs'].append({'profile': name, 'case_id': case, 'run_directory': str(run), 'status': 'prepared'})
             write_json(output / 'batch.json', batch)
-    batch['status'] = 'prepared_not_qualified'
+    batch['status'] = 'prepared_not_started'
     write_json(output / 'batch.json', batch)
     return output / 'batch.json'
 
@@ -188,80 +192,4 @@ def doctor(names, root=ROOT, catalog=CATALOG):
             'assets': {'missing': sum(len(a['missing']) for a in assets), 'changed': sum(len(a['changed']) for a in assets)},
             'recording_tools': {name: bool(shutil.which(name)) for name in ('ffmpeg', 'ffprobe')},
             'panda_manifest_available': (root / 'vendor/panda/SOURCE.json').is_file(),
-            'execution_available': False,
             'note': 'Offline checks only; no credential validation, model calls or physics.'}
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    sub = parser.add_subparsers(dest='command', required=True)
-    sub.add_parser('models')
-    p = sub.add_parser('doctor'); p.add_argument('--models', nargs='+', default=['haiku_subscription_token', 'haiku', 'opus', 'opus_subscription', 'kimi', 'kimi_code', 'qwen', 'glm', 'deepseek'])
-    for command in ('plan', 'prepare-draft'):
-        p = sub.add_parser(command); p.add_argument('--models', nargs='+', default=['haiku_subscription_token'])
-        p.add_argument('--families', nargs='+'); p.add_argument('--cases', nargs='+')
-        p.add_argument('--level', type=int, choices=(1, 2, 3)); p.add_argument('--min-arms', action='store_true')
-        if command == 'plan': p.add_argument('--parallel', type=int, default=4)
-        else:
-            p.add_argument('--output', type=Path, required=True)
-            p.add_argument('--topology', choices=('adaptive', 'centralized', 'hierarchical', 'peer'), default='adaptive',
-                           help='Engineering draft topology; no topology qualifies a scored run')
-            p.add_argument('--record-video', action='store_true', help='Record a real-time MP4 during the engineering run')
-    for command, text in (('run-engineering', 'Unqualified native Claude topology experiments; may spend API funds'),
-                          ('continue-engineering', 'Continue a batch whose process died (docs/running/run-segments.md); may spend API funds')):
-      p = sub.add_parser(command, help=text)
-      p.add_argument('batch', type=Path); p.add_argument('--parallel', type=int, required=True)
-      p.add_argument('--turn-budget-usd', type=float, default=None,
-                     help='Optional CLI-reported cost allowance per turn; unset means no per-turn cost cap')
-      p.add_argument('--task-budget-usd', type=float, default=None,
-                     help='Optional shared task cost allowance; unset means no task cost cap')
-      p.add_argument('--wall-limit-s', type=float, default=86400,
-                     help='Engineering stop after START in seconds (default: 86400); frozen task limit still applies')
-      p.add_argument('--startup-timeout-s', type=float, default=120,
-                     help='Seconds allowed for owner startup and, for legacy READY-barrier runs, policy startup (default: 120)')
-      p.add_argument('--confirm-engineering-spend', action='store_true',
-                     help='Acknowledge model calls and estimated costs for this engineering batch')
-    for command in ('status-engineering', 'stop-engineering'):
-        p = sub.add_parser(command); p.add_argument('batch', type=Path)
-    args = parser.parse_args()
-    if args.command == 'models': result = read(CATALOG)
-    elif args.command == 'doctor': result = doctor(args.models)
-    elif args.command == 'status-engineering':
-        from robofrontier.batch.engineering_batch import status_batch
-        result = status_batch(args.batch)
-    elif args.command == 'stop-engineering':
-        from robofrontier.batch.engineering_batch import stop_batch
-        result = stop_batch(args.batch)
-    elif args.command in ('run-engineering', 'continue-engineering'):
-        if not args.confirm_engineering_spend:
-            result = {'status': 'not_started', 'reason': 'Missing --confirm-engineering-spend',
-                      'model_calls': 0, 'simulator_started': False}
-        else:
-            from robofrontier.batch.engineering_batch import run_batch
-            load_env(ROOT / '.env')
-            import signal
-            import threading
-            stop = threading.Event()
-            previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
-            def request_stop(signum, frame):
-                stop.set()
-            try:
-                for sig in previous: signal.signal(sig, request_stop)
-                result = run_batch(args.batch, dict(os.environ), parallel=args.parallel,
-                                   turn_budget_usd=args.turn_budget_usd, total_budget_usd=args.task_budget_usd,
-                                   wall_limit_s=args.wall_limit_s, startup_timeout_s=args.startup_timeout_s,
-                                   stop_requested=stop.is_set, continuing=args.command == 'continue-engineering')
-            finally:
-                for sig, handler in previous.items(): signal.signal(sig, handler)
-    else:
-        load_env(ROOT / '.env')
-        if args.command == 'plan':
-            result = plan(args.models, args.families, args.cases, args.level, args.min_arms, args.parallel)
-        else:
-            result = {'batch': str(prepare_draft(args.output, args.models, args.families, args.cases, args.level, args.min_arms,
-                                                  topology=args.topology, record_video=args.record_video)),
-                      'execution_available': False}
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-
-
-if __name__ == '__main__': main()

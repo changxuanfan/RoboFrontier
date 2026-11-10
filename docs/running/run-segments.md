@@ -140,7 +140,7 @@ with the same restore frame and end time, and uses no further continuation.
 - **A host or world exits while the batch process lives:** the batch runner
   checks after every run and, if the run may continue, prepares its next segment
   and starts its host again (`robofrontier/batch/codex_batch.py` for Codex,
-  `robofrontier/batch/engineering_batch.py` for Claude).
+  `robofrontier/batch/claude_batch.py` for Claude).
 - **The batch process died too:** the world processes close by themselves.
   Then run the batch once more; started runs continue in their next segment (by
   the same stop table) and unstarted runs start:

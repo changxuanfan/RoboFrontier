@@ -26,7 +26,7 @@ from robofrontier.engines.claude.runner import run_turn
 from robofrontier.engines.claude.provenance import fork_provenance
 from robofrontier.tasks.families import ROOT
 from robofrontier.batch.prepare import load_env
-from robofrontier.batch.claude_benchmark import profile
+from robofrontier.batch.claude_prepare import profile
 
 MIN_TURN_BUDGET = 0.02
 

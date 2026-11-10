@@ -9,7 +9,7 @@ import threading
 import time
 import unittest
 
-from robofrontier.batch.engineering_batch import run_batch, status_batch, stop_batch
+from robofrontier.batch.claude_batch import run_batch, status_batch, stop_batch
 
 
 class BatchTests(unittest.TestCase):
@@ -24,13 +24,13 @@ class BatchTests(unittest.TestCase):
                 'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2']},
                 'A1': {'kind': 'worker', 'robot': 'A1'}, 'A2': {'kind': 'worker', 'robot': 'A2'}}}))
             profile = {'provider': 'anthropic', 'model': 'fake', 'effort': 'high', 'env_key': 'FAKE_KEY'}
-            (run/'private/inputs/claude.json').write_text(json.dumps({'schema':'robofrontier.claude-launch-draft.v1',
-                'qualified':False,'execution_available':False,'profile':profile}))
+            (run/'private/inputs/claude.json').write_text(json.dumps({'schema':'robofrontier.claude-launch.v2',
+                'profile':profile}))
             (run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude', 'topology':'centralized',
                                                                        'model':'fake','effort':'high'}))
             self.jobs.append({'profile':'fake', 'case_id':case, 'run_directory':str(run), 'status':'draft'})
-        (self.root/'batch.json').write_text(json.dumps({'schema':'robofrontier.claude-draft.v1',
-            'status':'prepared_not_qualified', 'execution_available':False, 'jobs':self.jobs}))
+        (self.root/'batch.json').write_text(json.dumps({'schema':'robofrontier.claude-batch.v2',
+            'status':'prepared_not_started', 'jobs':self.jobs}))
         self.env = {'FAKE_KEY':'secret'}
 
     def tearDown(self): self.tmp.cleanup()
@@ -66,20 +66,20 @@ class BatchTests(unittest.TestCase):
         # A host stop at its own wall limit, on STOP or after the world ended is final, even when
         # its seal is missing; any other end (a dead world, a session error, a pause) asks.
         from unittest.mock import patch
-        from robofrontier.batch import engineering_batch
+        from robofrontier.batch import claude_batch
         asked = []
         def fake_continue(run, reason):
             asked.append(reason); return False, 'not eligible in this test'
-        with patch.object(engineering_batch, 'try_continue', fake_continue):
-            for reason in engineering_batch.FINAL:
-                result = engineering_batch._run_once_continued(lambda *a, **k: {'reason': reason}, 'run', {})
+        with patch.object(claude_batch, 'try_continue', fake_continue):
+            for reason in claude_batch.FINAL:
+                result = claude_batch._run_once_continued(lambda *a, **k: {'reason': reason}, 'run', {})
                 self.assertEqual(result['segments'], [])
-            result = engineering_batch._run_once_continued(lambda *a, **k: {'status': 'finished', 'reason': 'x'}, 'run', {})
+            result = claude_batch._run_once_continued(lambda *a, **k: {'status': 'finished', 'reason': 'x'}, 'run', {})
             self.assertEqual(result['segments'], [])
             self.assertEqual(asked, [])
             unexpected = ('owner_unavailable', 'world_interrupted', 'dispatch_paused', 'session_error', 'supervisor_error')
             for reason in unexpected:
-                result = engineering_batch._run_once_continued(lambda *a, **k: {'reason': reason}, 'run', {})
+                result = claude_batch._run_once_continued(lambda *a, **k: {'reason': reason}, 'run', {})
                 self.assertFalse(result['segments'][0]['continued'])
             self.assertEqual(len(asked), len(unexpected))
 
@@ -128,20 +128,6 @@ class BatchTests(unittest.TestCase):
             self.assertIsNone(options['total_budget_usd'])
             self.assertEqual(options['wall_limit_s'], 86400)
 
-    def test_cli_accepts_omitted_cost_caps_and_wall_limit(self):
-        from unittest.mock import patch
-        from robofrontier.batch.claude_benchmark import main
-        argv = ['claude_benchmark', 'run-engineering', str(self.root), '--parallel', '2',
-                '--confirm-engineering-spend']
-        with patch.object(sys, 'argv', argv), patch('robofrontier.batch.claude_benchmark.load_env'), \
-             patch('robofrontier.batch.engineering_batch.run_batch', return_value={}) as launch, \
-             patch('builtins.print'):
-            main()
-        options = launch.call_args.kwargs
-        self.assertIsNone(options['turn_budget_usd'])
-        self.assertIsNone(options['total_budget_usd'])
-        self.assertEqual(options['wall_limit_s'], 86400)
-
     def test_stop_marks_active_and_skips_queued(self):
         entered = threading.Event(); finish = threading.Event(); outcome = []
         def runner(*args, **kwargs): entered.set(); finish.wait(3); return {'status':'finished', 'reason':'stop_requested'}
@@ -157,8 +143,7 @@ class BatchTests(unittest.TestCase):
         ctx = multiprocessing.get_context('fork')
         entered = ctx.Event()
         def child():
-            from robofrontier.batch.claude_benchmark import main
-            import robofrontier.batch.engineering_batch as batch_module
+            import robofrontier.batch.claude_batch as batch_module
             original = batch_module.run_batch
             def runner(run, *args, **kwargs):
                 assert kwargs['startup_timeout_s'] == 321
@@ -171,11 +156,8 @@ class BatchTests(unittest.TestCase):
                 return original(*args, **kwargs, runner=runner, verifier=lambda _: [])
             batch_module.run_batch=launch
             os.environ['FAKE_KEY']='synthetic'
-            sys.argv=['claude_benchmark','run-engineering',str(self.root),'--parallel','1',
-                      '--turn-budget-usd','.2','--task-budget-usd','1','--wall-limit-s','5',
-                      '--startup-timeout-s','321',
-                      '--confirm-engineering-spend']
-            main()
+            batch_module.run_until_signal(self.root, dict(os.environ), parallel=1, turn_budget_usd=.2,
+                                          total_budget_usd=1, wall_limit_s=5, startup_timeout_s=321)
         process=ctx.Process(target=child); process.start()
         try:
             self.assertTrue(entered.wait(10))
@@ -203,7 +185,7 @@ class BatchTests(unittest.TestCase):
     def test_preflight_checks_all_before_start_and_rejects_path_escape(self):
         harness = Path(self.jobs[-1]['run_directory'])/'private/inputs/harness.json'
         data = json.loads(harness.read_text()); data['topology'] = 'unsupported'; harness.write_text(json.dumps(data))
-        with self.assertRaisesRegex(ValueError, 'engineering launch profile'):
+        with self.assertRaisesRegex(ValueError, 'Claude launch profile'):
             self.run_case(lambda *a, **k: self.fail('model call'))
         self.assertFalse((self.root/'engineering-claim.json').exists())
         batch = json.loads((self.root/'batch.json').read_text()); batch['jobs'][0]['run_directory'] = '/tmp/outside'
@@ -228,7 +210,7 @@ class BatchTests(unittest.TestCase):
                 self.assertTrue(all(not (Path(j['run_directory'])/'private/state/claude-engineering-claim.json').exists()
                                     for j in self.jobs))
 
-    def test_adaptive_draft_is_admitted_to_unqualified_engineering_batch(self):
+    def test_adaptive_draft_is_admitted_to_unqualified_claude_batch(self):
         for job in self.jobs:
             harness = Path(job['run_directory'])/'private/inputs/harness.json'
             data = json.loads(harness.read_text()); data['topology'] = 'adaptive'
@@ -275,7 +257,7 @@ class BatchTests(unittest.TestCase):
             if starting:
                 publication.set()
         def supervise():
-            with patch('robofrontier.batch.engineering_batch.write_json', publish):
+            with patch('robofrontier.batch.claude_batch.write_json', publish):
                 self.run_case(runner, 1)
         process = ctx.Process(target=supervise)
         process.start()

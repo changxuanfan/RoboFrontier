@@ -11,9 +11,9 @@ import time
 import unittest
 
 from engines.test_claude_physics_smoke import MotionModel
-from robofrontier.batch.engineering_batch import run_batch, status_batch
+from robofrontier.batch.claude_batch import run_batch, status_batch
 from robofrontier.runtime.store import RuntimeStore
-from robofrontier.batch.claude_benchmark import prepare_draft
+from robofrontier.batch.claude_prepare import prepare_batch
 
 
 class CompactRequests(list):
@@ -42,7 +42,7 @@ class ParallelPhysicsSmokeTests(unittest.TestCase):
         worker = None
         try:
             batch = directory / 'batch'
-            prepare_draft(batch, ['opus'], level=1, min_arms=True, topology='adaptive')
+            prepare_batch(batch, ['opus'], level=1, min_arms=True, topology='adaptive')
             jobs = json.loads((batch / 'batch.json').read_text())['jobs']
             self.assertEqual(len(jobs), 4)
             for job in jobs:

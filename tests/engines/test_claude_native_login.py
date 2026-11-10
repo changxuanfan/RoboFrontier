@@ -9,7 +9,7 @@ from unittest.mock import patch
 from robofrontier.engines.claude.runner import build_command, build_env, run_turn
 from engines.test_claude_runner import fake_claude
 from robofrontier.engines.claude.native_home import config_directory
-from robofrontier.batch.claude_benchmark import profile
+from robofrontier.batch.claude_prepare import profile
 
 
 class NativeLoginTests(unittest.TestCase):

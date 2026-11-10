@@ -18,7 +18,7 @@ from robofrontier.analysis import extract, metrics
 from robofrontier.runtime.service import RuntimeService
 from fake_pipeline import fake_capture
 from runtime import test_active_time as active
-from batch import test_claude_engineering_batch as engineering_batch
+from batch import test_claude_batch as claude_batch
 from runtime.test_policy_probe import BudgetWorld
 
 ACTIVE = active.ACTIVE
@@ -249,9 +249,9 @@ class AnalysisTests(unittest.TestCase):
 
 
 class BatchSummaryTests(unittest.TestCase):
-    setUp = engineering_batch.BatchTests.setUp
-    tearDown = engineering_batch.BatchTests.tearDown
-    run_case = engineering_batch.BatchTests.run_case
+    setUp = claude_batch.BatchTests.setUp
+    tearDown = claude_batch.BatchTests.tearDown
+    run_case = claude_batch.BatchTests.run_case
 
     def test_the_batch_marks_a_backstopped_run(self):
         def runner(run_dir, *args, **kwargs):

@@ -49,7 +49,7 @@ def submit(batch, *, continuing=False, run=subprocess.run, popen=subprocess.Pope
         raise ValueError('The Linux service runs on Linux; on macOS `robofrontier run` uses launchd')
     batch = Path(batch).expanduser().resolve(strict=True)
     data = json.loads((batch/'batch.json').read_text())
-    if not continuing and data.get('status') not in ('prepared_not_started', 'prepared_not_qualified'):
+    if not continuing and data.get('status') != 'prepared_not_started':
         raise ValueError('Only a freshly prepared batch may be submitted; a world is never restarted automatically')
     folder, name = run_layout.batch_path(batch, 'durable'), unit_name(batch)
     if continuing:

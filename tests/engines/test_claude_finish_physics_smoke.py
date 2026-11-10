@@ -10,8 +10,8 @@ import threading
 import unittest
 
 from engines.test_claude_adaptive_integration import StubModel
-from robofrontier.engines.claude.run import run_engineering
-from robofrontier.batch.claude_benchmark import prepare_draft
+from robofrontier.engines.claude.run import run_task
+from robofrontier.batch.claude_prepare import prepare_batch
 from robofrontier.batch.report import export
 
 
@@ -36,7 +36,7 @@ class FinishPhysicsSmokeTests(unittest.TestCase):
         FinishModel.requests.clear()
         try:
             batch=directory/'batch'; case='transport-a04-d1'
-            prepare_draft(batch,['opus'],cases=[case],topology='centralized')
+            prepare_batch(batch,['opus'],cases=[case],topology='centralized')
             run=batch/'opus'/case
             launch=run/'private/inputs/claude.json'; data=json.loads(launch.read_text())
             data['profile'].update(base_url=f'http://127.0.0.1:{server.server_port}',env_key='FAKE_KEY')
@@ -45,7 +45,7 @@ class FinishPhysicsSmokeTests(unittest.TestCase):
             frozen['input_sha256']['private/inputs/claude.json']=hashlib.sha256(launch.read_bytes()).hexdigest()
             manifest.write_text(json.dumps(frozen))
             env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'FAKE_KEY':'synthetic'}
-            result=run_engineering(run,env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,poll_s=.1)
+            result=run_task(run,env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,poll_s=.1)
             self.assertEqual(result['status'],'finished',result)
             request_tools = [b.get('input', {}).get('op') for req in FinishModel.requests
                              for msg in req.get('messages', []) if msg.get('role') == 'assistant'

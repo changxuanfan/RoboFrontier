@@ -100,7 +100,7 @@ class ConfineTests(unittest.TestCase):
         repo, run, table = tree(base)
         (run/'private/inputs').mkdir()
         (run/'private/inputs/policy-access.json').write_text(json.dumps({'filesystem': table, 'network': False}))
-        launch = {'schema': 'robofrontier.claude-launch-draft.v1'}
+        launch = {'schema': 'robofrontier.claude-launch.v2'}
         if isolation: launch['bash_isolation'] = isolation
         (run/'private/inputs/claude.json').write_text(json.dumps(launch))
         return run

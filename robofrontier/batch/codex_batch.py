@@ -276,7 +276,7 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
                         job.update(status='needs_review',reason='wall_backstop')
             except Exception as error:job.update(status='needs_review',error=str(error))
             write_json(folder/'batch.json',batch)
-    from ..engines.codex.recover_task import wait_for_recoveries
+    from ..engines.common.recovery import wait_for_recoveries
     wait_for_recoveries(batch['jobs'])
     batch.update(status='needs_review' if any(j['status']=='needs_review' for j in batch['jobs']) else 'closed',
                  finished_at=time.time());write_json(folder/'batch.json',batch)

@@ -128,7 +128,7 @@ not downloaded by ordinary policy bootstrap.
 
 | Component | Native Codex | Native Claude Code | Qualification boundary |
 | --- | --- | --- | --- |
-| Provider/model catalog | `configs/models.json`; launch configuration writes `codex.json` | `the `claude` section of `configs/models.json``; `robofrontier/batch/claude_benchmark.py` | Profiles alone do not establish provider compatibility. |
+| Provider/model catalog | `configs/models.json`; launch configuration writes `codex.json` | `the `claude` section of `configs/models.json``; `robofrontier/batch/claude_prepare.py` | Profiles alone do not establish provider compatibility. |
 | Task selection/freeze | `benchmark_common.select_cases`, shared preparation | Same selection/preparation; `engine: claude` in new harness/manifest | Shared tasks, separate engine qualification. |
 | One policy turn | app-server `turn/start` | `claude -p`, `robofrontier/engines/claude/runner.py` | Native turn lifecycle is not task success. |
 | Robot tools | app-server dynamic `robot` tool | Role-bound MCP in `robot_mcp.py` | Actual provider image handling requires its own evidence. |

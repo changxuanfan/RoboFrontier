@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.engines.claude.run import run_engineering
+from robofrontier.engines.claude.run import run_task
 
 
 class Store:
@@ -23,7 +23,7 @@ class Owner:
     def poll(self): return self.status
 
 
-class EngineeringRunTests(unittest.TestCase):
+class RunTaskTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.run = Path(self.tmp.name) / 'run'
         for directory in ('private/inputs', 'private/outputs', 'private/state/connections', 'public/inputs'):
@@ -31,10 +31,10 @@ class EngineeringRunTests(unittest.TestCase):
         (self.run / 'public/inputs/roles.json').write_text(json.dumps({'roles': {
             'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2']}}}))
         (self.run / 'private/inputs/claude.json').write_text(json.dumps({
-            'schema': 'robofrontier.claude-launch-draft.v1', 'qualified': False, 'execution_available': False,
+            'schema': 'robofrontier.claude-launch.v2',
             'profile': {'env_key': 'FAKE_KEY', 'model': 'fake', 'effort': 'high'}}))
         (self.run / 'private/inputs/manifest.json').write_text(json.dumps({
-            'status': 'engineering draft; not qualified or runnable', 'engine': 'claude'}))
+            'status': 'prepared', 'engine': 'claude'}))
         (self.run / 'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'centralized'}))
         (self.run / 'private/state/connections/Meta.json').write_text('{}')
         self.env = {'FAKE_KEY': 'secret', 'PATH': '/bin'}
@@ -44,7 +44,7 @@ class EngineeringRunTests(unittest.TestCase):
     def tearDown(self): self.verify.stop(); self.tmp.cleanup()
 
     def run_case(self, **kwargs):
-        return run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
+        return run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
                                policy_factory=Policy, **kwargs)
 
     def test_owner_failure_consumes_claim_and_prevents_replay(self):
@@ -61,15 +61,15 @@ class EngineeringRunTests(unittest.TestCase):
         self.assertEqual(status, (self.run / 'private/outputs/claude-engineering-status.json').read_text())
         self.assertEqual(len(observed), 1)
 
-    def test_stop_and_non_draft_fail_before_owner_or_claim(self):
+    def test_stop_and_an_unprepared_run_fail_before_owner_or_claim(self):
         (self.run/'STOP').touch()
         with self.assertRaisesRegex(ValueError, 'stopped'):
             self.run_case(owner_factory=lambda *a, **k: self.fail('must not start'))
         self.assertFalse((self.run/'private/state/claude-engineering-claim.json').exists())
         (self.run/'STOP').unlink()
-        path = self.run/'private/inputs/claude.json'; data = json.loads(path.read_text()); data['qualified'] = True
+        path = self.run/'private/inputs/claude.json'; data = json.loads(path.read_text()); data['schema'] = 'other'
         path.write_text(json.dumps(data))
-        with self.assertRaisesRegex(ValueError, 'engineering drafts'):
+        with self.assertRaisesRegex(ValueError, 'prepared for Claude'):
             self.run_case(owner_factory=lambda *a, **k: self.fail('must not start'))
 
     def test_ready_owner_delegates_to_supervisor_and_records_seal(self):
@@ -82,7 +82,7 @@ class EngineeringRunTests(unittest.TestCase):
                 assert self.owner_alive()
                 return {'reason': 'world_ended', 'seal': {'sealed': True}}
         with patch('robofrontier.engines.claude.run.CentralizedSupervisor', Supervisor):
-            result = run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
+            result = run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
                                      policy_factory=Attached, owner_factory=lambda *a, **k: Owner(None))
         self.assertEqual(result['status'], 'needs_review')
         self.assertFalse(result['scored'])
@@ -99,7 +99,7 @@ class EngineeringRunTests(unittest.TestCase):
                 def standing(run, profile, env, ledger, **kwargs):
                     seen.append((ledger.snapshot()['limit_usd'], kwargs))
                     return Policy()
-                result = run_engineering(run, self.env, turn_budget_usd=.5, total_budget_usd=2,
+                result = run_task(run, self.env, turn_budget_usd=.5, total_budget_usd=2,
                     standing_policy_factory=standing, owner_factory=lambda *a, **k: Owner(1))
                 self.assertEqual(result['status'], 'needs_review')
                 self.assertEqual(seen, [('2', {'turn_budget_usd':.5})])
@@ -111,7 +111,7 @@ class EngineeringRunTests(unittest.TestCase):
         def adaptive(run, profile, env, ledger, **kwargs):
             seen.append((ledger.snapshot()['limit_usd'], kwargs))
             return Policy()
-        result = run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
+        result = run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
                                  adaptive_policy_factory=adaptive, owner_factory=lambda *a, **k: Owner(1))
         self.assertEqual(result['status'], 'needs_review')
         self.assertEqual(seen[0][0], '2')
@@ -124,7 +124,7 @@ class EngineeringRunTests(unittest.TestCase):
         def adaptive(run, profile, env, ledger, **kwargs):
             seen.append((ledger.snapshot(), kwargs))
             return Policy()
-        run_engineering(self.run, self.env, adaptive_policy_factory=adaptive,
+        run_task(self.run, self.env, adaptive_policy_factory=adaptive,
                         owner_factory=lambda *a, **k: Owner(1))
         self.assertEqual(len(seen), 1)
         self.assertIsNone(seen[0][0]['limit_usd'])
@@ -145,7 +145,7 @@ class EngineeringRunTests(unittest.TestCase):
             def __init__(self,*a,**k): pass
             def run(self): return {'reason':'wall_limit','seal':{'sealed':True,'unresolved_action_ids':[]}}
         with patch('robofrontier.engines.claude.run.CentralizedSupervisor',Supervisor):
-            result=run_engineering(self.run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
+            result=run_task(self.run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                    adaptive_policy_factory=adaptive,owner_factory=lambda *a,**k: ExitingOwner(None))
         self.assertTrue(result['seal']['sealed'])
         self.assertFalse(result['owner_alive'])
@@ -165,7 +165,7 @@ class EngineeringRunTests(unittest.TestCase):
             def __init__(self,*a,**k): pass
             def run(self): return {'reason':'world_ended','seal':{'sealed':True,'video':{'readable':False}}}
         with patch('robofrontier.engines.claude.run.CentralizedSupervisor', Supervisor):
-            result=run_engineering(self.run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
+            result=run_task(self.run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                    policy_factory=Attached,owner_factory=lambda *a,**k: ExitingOwner(None))
         self.assertTrue(result['video_required'])
         self.assertFalse(result['owner_alive'])
@@ -190,7 +190,7 @@ class EngineeringRunTests(unittest.TestCase):
                         if unresolved is not None: seal['unresolved_action_ids']=unresolved
                         return {'reason':'world_ended','seal':seal,'finish_turns_drained':True}
                 with patch('robofrontier.engines.claude.run.CentralizedSupervisor', Supervisor):
-                    result=run_engineering(run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
+                    result=run_task(run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                            policy_factory=Attached,owner_factory=lambda *a,**k: ExitingOwner(None))
                 self.assertEqual(result['status'], expected)
 
@@ -211,7 +211,7 @@ class EngineeringRunTests(unittest.TestCase):
                     def run(self): return {'reason':'world_ended','seal':{'sealed':True,'unresolved_action_ids':[]},
                                           'finish_turns_drained':True}
                 with patch('robofrontier.engines.claude.run.CentralizedSupervisor',Supervisor):
-                    result=run_engineering(run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
+                    result=run_task(run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                            policy_factory=Attached,owner_factory=lambda *a,**k: ExitingOwner(None))
                 self.assertTrue(result['evaluation_required'])
                 self.assertEqual(result['evaluation_present'],expected)
@@ -227,7 +227,7 @@ class EngineeringRunTests(unittest.TestCase):
             with self.subTest(topology=topology, turn=turn, total=total):
                 (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine': 'claude', 'topology': topology}))
                 with self.assertRaisesRegex(ValueError, 'budget'):
-                    run_engineering(self.run, self.env, turn_budget_usd=turn, total_budget_usd=total,
+                    run_task(self.run, self.env, turn_budget_usd=turn, total_budget_usd=total,
                                     standing_policy_factory=lambda *a, **k: self.fail('must not start'),
                                     owner_factory=lambda *a, **k: self.fail('must not start'))
                 self.assertFalse(claim.exists())
@@ -237,11 +237,11 @@ class EngineeringRunTests(unittest.TestCase):
         (self.run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
             'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2', 'A3']}}}))
         with self.assertRaisesRegex(ValueError, '4 concurrent roles'):
-            run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=1.9,
+            run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=1.9,
                             adaptive_policy_factory=lambda *a, **k: self.fail('must not start'),
                             owner_factory=lambda *a, **k: self.fail('must not start'))
         self.assertFalse(claim.exists())
-        result = run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2,
+        result = run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2,
                                  adaptive_policy_factory=lambda *a, **k: Policy(), owner_factory=lambda *a, **k: Owner(1))
         self.assertEqual(result['reason'], 'launch_error')
 
@@ -253,11 +253,11 @@ class EngineeringRunTests(unittest.TestCase):
             if len(attempts) == 1: raise ValueError('transient input check')
             return Policy()
         with self.assertRaisesRegex(ValueError, 'transient'):
-            run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
+            run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
                             policy_factory=policy, owner_factory=lambda *a, **k: self.fail('must not start'))
         self.assertFalse((self.run/'private/state/claude-engineering-claim.json').exists())
         self.assertFalse(list((self.run/'private/state').glob('claude-budget.sqlite*')))
-        result = run_engineering(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
+        result = run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
                                  policy_factory=policy, owner_factory=lambda *a, **k: Owner(1))
         self.assertEqual(len(attempts), 2)
         self.assertEqual(result['reason'], 'launch_error')

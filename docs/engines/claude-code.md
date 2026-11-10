@@ -452,7 +452,7 @@ When authorized to spend against the selected credentials, execute:
 ```
 
 Substitute `worker-worker` to prepare peer Workers. The underlying native
-`claude_benchmark prepare-draft --topology` spellings remain `hierarchical` and
+`claude_prepare prepare-draft --topology` spellings remain `hierarchical` and
 `peer`; the unified names describe the same roles. Native `run-engineering` also
 supports those drafts. Neither entry admits formal scored execution. Provider
 preflight remains a separate explicit operation; it is never a side effect of
@@ -576,9 +576,9 @@ Run is potentially billable; invoke only with explicit authorization. The
 engine-specific multi-profile entry remains available for engineering inspection:
 
 ```sh
-.venv/bin/python -m robofrontier.batch.claude_benchmark run-engineering RUN_DIR --parallel 2 --wall-limit-s 1200 --startup-timeout-s 600
-.venv/bin/python -m robofrontier.batch.claude_benchmark status-engineering RUN_DIR
-.venv/bin/python -m robofrontier.batch.claude_benchmark stop-engineering RUN_DIR
+.venv/bin/python -m robofrontier.batch.claude_prepare run-engineering RUN_DIR --parallel 2 --wall-limit-s 1200 --startup-timeout-s 600
+.venv/bin/python -m robofrontier.batch.claude_prepare status-engineering RUN_DIR
+.venv/bin/python -m robofrontier.batch.claude_prepare stop-engineering RUN_DIR
 ```
 
 The first command is a dry plan unless `--confirm-engineering-spend` is added.
@@ -711,11 +711,11 @@ must use their own prepared inputs and evidence.
 After `uv sync --locked --extra oracle`, use:
 
 ```sh
-.venv/bin/python -m robofrontier.batch.claude_benchmark models
-.venv/bin/python -m robofrontier.batch.claude_benchmark doctor --models haiku opus kimi qwen glm deepseek
-.venv/bin/python -m robofrontier.batch.claude_benchmark plan --models kimi --level 1 --min-arms --parallel 4
-.venv/bin/python -m robofrontier.batch.claude_benchmark prepare-draft --models kimi --level 1 --min-arms --output runs/engineering/claude-draft
-.venv/bin/python -m robofrontier.batch.claude_benchmark prepare-draft --models opus --level 1 --min-arms --record-video --output runs/engineering/claude-video-draft
+.venv/bin/python -m robofrontier.batch.claude_prepare models
+.venv/bin/python -m robofrontier.batch.claude_prepare doctor --models haiku opus kimi qwen glm deepseek
+.venv/bin/python -m robofrontier.batch.claude_prepare plan --models kimi --level 1 --min-arms --parallel 4
+.venv/bin/python -m robofrontier.batch.claude_prepare prepare-draft --models kimi --level 1 --min-arms --output runs/engineering/claude-draft
+.venv/bin/python -m robofrontier.batch.claude_prepare prepare-draft --models opus --level 1 --min-arms --record-video --output runs/engineering/claude-video-draft
 .venv/bin/python -m robofrontier.engines.claude.claude_offline_probe
 ```
 

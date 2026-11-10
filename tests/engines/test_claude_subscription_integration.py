@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from robofrontier.engines.claude.runner import build_command, build_env, run_turn
 from robofrontier.engines.claude import preflight as claude_precheck, claude_blocked_precheck
-from robofrontier.batch.claude_benchmark import profile as load_profile
+from robofrontier.batch.claude_prepare import profile as load_profile
 from engines.test_claude_precheck_integration import PrecheckModel
 
 

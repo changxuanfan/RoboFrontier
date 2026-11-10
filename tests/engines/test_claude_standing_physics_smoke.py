@@ -12,9 +12,9 @@ import unittest
 
 from engines.test_claude_parallel_physics_smoke import CompactRequests
 from engines.test_claude_standing_team_integration import StandingModel
-from robofrontier.batch.engineering_batch import run_batch
+from robofrontier.batch.claude_batch import run_batch
 from robofrontier.runtime.store import RuntimeStore
-from robofrontier.batch.claude_benchmark import prepare_draft
+from robofrontier.batch.claude_prepare import prepare_batch
 
 
 class PhysicalStandingModel(StandingModel):
@@ -46,7 +46,7 @@ class StandingPhysicsSmokeTests(unittest.TestCase):
                 PhysicalStandingModel.requests.clear()
                 try:
                     batch = directory/'batch'
-                    prepare_draft(batch, ['haiku'], cases=['transport-a04-d1'], topology=topology)
+                    prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], topology=topology)
                     run = batch/'haiku/transport-a04-d1'
                     launch = run/'private/inputs/claude.json'
                     data = json.loads(launch.read_text())

@@ -20,7 +20,7 @@ from robofrontier.engines.claude.profile_identity import fingerprint
 from robofrontier.engines.claude.runner import run_turn
 from robofrontier.tasks.families import ROOT
 from robofrontier.batch.prepare import load_env
-from robofrontier.batch.claude_benchmark import profile
+from robofrontier.batch.claude_prepare import profile
 from robofrontier.engines.claude.preflight import MIN_TURN_BUDGET, PROMPTS, World, claude_version, setup_run
 
 

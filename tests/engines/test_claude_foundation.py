@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from robofrontier.batch.claude_benchmark import doctor, plan, profile
+from robofrontier.batch.claude_prepare import doctor, plan, profile
 from robofrontier.engines.claude.robot_mcp import RobotBridge, handle
 
 
@@ -22,7 +22,7 @@ class ClaudeFoundationTests(unittest.TestCase):
             release=root/RELEASE; release.parent.mkdir(parents=True)
             release.write_text(json.dumps({'families':{}}))
             with patch.dict('os.environ',{'FAKE_KEY':'environment-secret'},clear=True), \
-                 patch('robofrontier.batch.claude_benchmark.shutil.which',return_value=None):
+                 patch('robofrontier.batch.claude_prepare.shutil.which',return_value=None):
                 result=doctor(['fake'],root=root,catalog=catalog)
                 self.assertTrue(result['profiles']['fake']['credential_set'])
                 self.assertTrue(result['profiles']['fake']['base_url_configured'])
@@ -40,7 +40,6 @@ class ClaudeFoundationTests(unittest.TestCase):
         self.assertEqual([j['family'] for j in result['jobs']], ['transport', 'mosaic', 'relay', 'dial'])
         self.assertEqual([j['arms'] for j in result['jobs']], [4, 4, 8, 4])
         self.assertEqual(result['model_calls'], 0)
-        self.assertFalse(result['execution_available'])
 
     def test_precheck_uses_haiku_and_bench_keeps_opus(self):
         self.assertEqual(profile('haiku')['model'], 'claude-haiku-5-5')

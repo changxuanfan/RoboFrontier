@@ -93,8 +93,8 @@ def prepare(output, config):
                'record_realtime_video': config['render']['record_realtime_video']}
     with _catalog_file(config) as catalog:
         if policy['engine'] == 'claude':
-            from robofrontier.batch.claude_benchmark import prepare_draft
-            result = prepare_draft(output, [policy['profile']], families=selection['families'] or None,
+            from robofrontier.batch.claude_prepare import prepare_batch
+            result = prepare_batch(output, [policy['profile']], families=selection['families'] or None,
                                    cases=selection['cases'] or None, catalog=catalog,
                                    level=selection['level'] or None, min_arms=selection['min_arms'],
                                    topology=topology, record_video=config['render']['record_realtime_video'],
@@ -232,8 +232,8 @@ def run(batch, *, continuing=False):
     os.environ.clear()
     os.environ.update(environment)
     if config['policy']['engine'] == 'claude':
-        from .batch.engineering_batch import run_batch
-        state = run_batch(batch, dict(os.environ), parallel=config['batch']['parallel'],
+        from .batch.claude_batch import run_until_signal
+        state = run_until_signal(batch, dict(os.environ), parallel=config['batch']['parallel'],
                           startup_interval_s=config['batch']['startup_interval_s'],
                           startup_timeout_s=config['batch']['startup_timeout_s'],
                           wall_limit_s=config['batch']['task_wall_limit_s'], continuing=continuing)

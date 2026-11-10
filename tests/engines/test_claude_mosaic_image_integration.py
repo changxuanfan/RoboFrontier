@@ -14,7 +14,7 @@ import unittest
 from robofrontier.engines.claude.runner import run_turn
 from robofrontier.runtime.setup import verify_inputs
 from robofrontier.tasks.config import ROOT
-from robofrontier.batch.claude_benchmark import prepare_draft
+from robofrontier.batch.claude_prepare import prepare_batch
 from engines.test_claude_adaptive_integration import StubModel
 
 
@@ -48,7 +48,7 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 batch=Path(tmp)/'batch'; case='mosaic-a04-6x12-d1'
                 ReferenceModel.image_names=['target-pattern.png']
-                prepare_draft(batch,['opus'],cases=[case])
+                prepare_batch(batch,['opus'],cases=[case])
                 run=batch/'opus'/case
                 mcp=run/'private/mosaic-check-mcp.json'
                 mcp.write_text(json.dumps({'mcpServers':{'robot':{'command':sys.executable,
@@ -85,7 +85,7 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 case='dial-best5-n04-d1'; batch=Path(tmp)/'batch'
-                prepare_draft(batch,['opus'],cases=[case])
+                prepare_batch(batch,['opus'],cases=[case])
                 run=batch/'opus'/case
                 task=json.loads((run/'public/inputs/task.json').read_text())
                 names=task['initial_reference_images']

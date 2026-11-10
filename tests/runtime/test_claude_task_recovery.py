@@ -12,6 +12,7 @@ import numpy as np
 
 from robofrontier.runtime import layout as run_layout
 from robofrontier.engines.claude import recover_task as recovery
+from robofrontier.engines.common import recovery as common_recovery
 from robofrontier.runtime.delegation import Delegations
 from robofrontier.runtime.setup import write_json
 from robofrontier.runtime.store import RuntimeStore
@@ -28,7 +29,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         harness.write_text(json.dumps(dict(HARNESS, engine='claude', topology='adaptive', startup_protocol='direct_controller_v2')))
         self.batch = self.root/'batch'
         self.run = prepare('transport-a04-d1', self.batch/'opus_subscription'/'transport-a04-d1', harness).resolve()
-        write_json(self.batch/'batch.json', {'schema': 'robofrontier.claude-draft.v1', 'jobs': [
+        write_json(self.batch/'batch.json', {'schema': 'robofrontier.claude-batch.v2', 'jobs': [
             {'profile': 'opus_subscription', 'case_id': 'transport-a04-d1', 'run_directory': str(self.run)}]})
         write_json(run_layout.batch_path(self.batch, 'engineering_status'),
                    {'status': 'running', 'jobs': [{'case_id': 'transport-a04-d1', 'status': 'needs_review', 'reason': 'dispatch_paused'}]})
@@ -256,7 +257,7 @@ class HandbackTests(unittest.TestCase):
             jobs = [{'run_directory': str(run), 'status': 'needs_review'}]
             with patch.object(recovery.run_segments, 'owner_released', side_effect=[False, True]):
                 waits = []
-                recovery.wait_for_recoveries(jobs, sleep=waits.append)
+                common_recovery.wait_for_recoveries(jobs, sleep=waits.append)
             self.assertEqual(waits, [1])
             self.assertEqual(jobs[0]['status'], 'closed')
 

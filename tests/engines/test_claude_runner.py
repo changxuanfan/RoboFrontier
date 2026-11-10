@@ -164,7 +164,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
         self.assertNotIn('ALL_PROXY', env); self.assertNotIn('ROBOFRONTIER_EGRESS_INSTANCE', env)
 
     def test_unconfigured_third_party_endpoint_never_launches_cli(self):
-        from robofrontier.batch.claude_benchmark import profile
+        from robofrontier.batch.claude_prepare import profile
         with patch.dict('os.environ', {}, clear=True):
             selected = profile('qwen')
         self.assertIsNone(selected['base_url'])  # Offline inspection is allowed.

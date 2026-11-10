@@ -46,7 +46,7 @@ class CommunicationReportTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             batch, output = Path(tmp)/'batch', Path(tmp)/'report.json'
             (batch/'control').mkdir(parents=True)
-            (batch/'batch.json').write_text(json.dumps({'status': 'prepared_not_qualified', 'jobs': [],
+            (batch/'batch.json').write_text(json.dumps({'status': 'prepared_not_started', 'jobs': [],
                 'layout': 'batch-v2', 'layout_paths': {'engineering_status': 'control/engineering-status.json'}}))
             (batch/'control/engineering-status.json').write_text(json.dumps({'status': 'running'}))
             with mock.patch('sys.argv', ['communication_report', str(batch), '--output', str(output)]):

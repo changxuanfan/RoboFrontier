@@ -1,7 +1,9 @@
-"""Experimental single-run launcher; never admits a scored benchmark batch.
+"""Run one prepared Claude run: its world owner, policy hosts and supervisor.
 
-Starting this module may call a paid model. It is deliberately not wired into
-benchmark run commands. An engineering draft can be consumed once, never replayed.
+It calls a paid model. A run is claimed once and never restarted; a stopped run continues
+only in a new segment (runtime/segments.py). The batch supervisor
+(robofrontier/batch/claude_batch.py) calls run_task for each run. The status, claim and lock
+files keep their layout names (`engineering_*`), which runs already prepared record.
 """
 import fcntl
 from functools import partial
@@ -94,11 +96,11 @@ def _time_rule(run):
     return run_clock(_run_protocol(run))
 
 
-def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400, startup_timeout_s=120,
+def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400, startup_timeout_s=120,
                     poll_s=0.5, owner_factory=subprocess.Popen, policy_factory=CentralizedPolicyHost,
                     adaptive_policy_factory=AdaptivePolicyHost, standing_policy_factory=StandingTeamPolicyHost,
                     clock=time.monotonic, sleep=time.sleep):
-    """Run one explicit engineering draft and conservatively retain uncertain state.
+    """Run one prepared run and conservatively retain uncertain state.
 
     Optional budgets are best-effort limits based on CLI-reported cost, not billing.
     The caller must authorize model calls before invoking this function.
@@ -112,17 +114,18 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
     run = Path(run_dir).resolve()
     launch = json.loads((run / 'private/inputs/claude.json').read_text())
     manifest = json.loads((run / 'private/inputs/manifest.json').read_text())
-    if launch.get('schema') != 'robofrontier.claude-launch-draft.v1' or launch.get('qualified') is not False or launch.get('execution_available') is not False:
-        raise ValueError('Only unqualified engineering drafts are accepted')
-    if manifest.get('status') != 'engineering draft; not qualified or runnable' or manifest.get('engine') != 'claude':
-        raise ValueError('Expected a frozen Claude engineering draft')
+    from robofrontier.batch.claude_prepare import LAUNCH_SCHEMA
+    if launch.get('schema') != LAUNCH_SCHEMA:
+        raise ValueError('Expected a run prepared for Claude')
+    if manifest.get('status') != 'prepared' or manifest.get('engine') != 'claude':
+        raise ValueError('Expected a frozen Claude run')
     changed = verify_inputs(run)
     if changed: raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
     profile = launch['profile']
     config = json.loads((run / 'private/inputs/harness.json').read_text())
     topology = config.get('topology')
     if topology not in ('centralized', 'adaptive', 'hierarchical', 'peer') or config.get('engine') != 'claude':
-        raise ValueError('Expected a supported Claude engineering draft')
+        raise ValueError('Expected a supported Claude run')
     if profile.get('auth_mode') != 'native_login' and not base_env.get(profile['env_key']):
         raise ValueError('Missing credential variable: ' + profile['env_key'])
     if profile.get('auth_mode') == 'native_login':
@@ -165,7 +168,7 @@ def run_engineering(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd
         if not resuming:
             with claim.open('x') as out:
                 os.fchmod(out.fileno(), 0o600)
-                json.dump({'claimed_at': time.time(), 'pid': os.getpid(), 'mode': 'engineering'}, out)
+                json.dump({'claimed_at': time.time(), 'pid': os.getpid(), 'mode': 'run'}, out)
                 out.flush(); os.fsync(out.fileno())
         claimed = True
         if topology == 'adaptive':

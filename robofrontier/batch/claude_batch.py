@@ -1,4 +1,4 @@
-"""Single-use, unqualified engineering batches; not a scored benchmark runner."""
+"""Run a prepared Claude batch: one supervisor, up to 36 runs in parallel (robofrontier run)."""
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import fcntl
 import json
@@ -6,13 +6,14 @@ from pathlib import Path
 import re
 import time
 
-from robofrontier.engines.claude.run import _check_shared_budget, _positive, run_engineering
+from robofrontier.engines.claude.run import _check_shared_budget, _positive, run_task
 from robofrontier.engines.claude.runner import build_env
 from robofrontier.engines.claude.native_home import config_directory
 from robofrontier.runtime import layout as run_layout
 from robofrontier.runtime.setup import verify_inputs, write_json
 from robofrontier.batch.launch_schedule import LaunchSchedule
 from robofrontier.runtime.segments import try_continue
+from robofrontier.batch.claude_prepare import BATCH_SCHEMA, LAUNCH_SCHEMA
 
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z')
 
@@ -38,8 +39,8 @@ def _stop_all(folder, jobs):
 def _jobs(folder):
     folder = Path(folder).resolve()
     batch = json.loads((folder / 'batch.json').read_text())
-    if batch.get('schema') != 'robofrontier.claude-draft.v1' or batch.get('status') != 'prepared_not_qualified' or batch.get('execution_available') is not False:
-        raise ValueError('Expected a completed unqualified engineering draft batch')
+    if batch.get('schema') != BATCH_SCHEMA or batch.get('status') != 'prepared_not_started':
+        raise ValueError('Expected a prepared Claude batch')
     jobs = batch.get('jobs')
     if not isinstance(jobs, list) or not jobs: raise ValueError('Batch has no jobs')
     seen = set()
@@ -99,11 +100,10 @@ def _preflight(jobs, env, verifier, continuing=False, budgets=(None, None)):
         launch = json.loads((run / 'private/inputs/claude.json').read_text())
         config = json.loads((run / 'private/inputs/harness.json').read_text())
         profile = launch['profile']
-        if (launch.get('schema') != 'robofrontier.claude-launch-draft.v1' or launch.get('qualified') is not False
-                or launch.get('execution_available') is not False or config.get('engine') != 'claude'
+        if (launch.get('schema') != LAUNCH_SCHEMA or config.get('engine') != 'claude'
                 or config.get('topology') not in ('centralized', 'adaptive', 'hierarchical', 'peer') or config.get('model') != profile.get('model')
                 or config.get('effort') != profile.get('effort')):
-            raise ValueError('Run does not match the engineering launch profile')
+            raise ValueError('Run does not match its Claude launch profile')
         _check_shared_budget(run, config['topology'], *budgets)
         if profile.get('auth_mode') != 'native_login' and not env.get(profile.get('env_key')):
             raise ValueError('Missing provider credential variable')
@@ -158,10 +158,24 @@ def stop_batch(folder):
     return {'stop_requested': True, 'jobs': len(jobs), 'note': 'Request only; inspect status and sealing outcome.'}
 
 
+def run_until_signal(folder, base_env, **options):
+    """run_batch with SIGINT and SIGTERM turned into an orderly batch stop (as `robofrontier stop`):
+    active runs stop and seal, queued runs do not start, and this process returns."""
+    import signal
+    import threading
+    stop = threading.Event()
+    previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
+    try:
+        for sig in previous: signal.signal(sig, lambda signum, frame: stop.set())
+        return run_batch(folder, base_env, stop_requested=stop.is_set, **options)
+    finally:
+        for sig, handler in previous.items(): signal.signal(sig, handler)
+
+
 def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400,
-              startup_timeout_s=120, runner=run_engineering, verifier=verify_inputs, stop_requested=lambda: False,
+              startup_timeout_s=120, runner=run_task, verifier=verify_inputs, stop_requested=lambda: False,
               startup_interval_s=.3, continuing=False):
-    """Run drafts once. Caller explicitly authorizes potential paid model calls.
+    """Run a prepared batch once; it makes paid model calls.
 
     `continuing` picks up a batch whose process died: unfinished runs continue in their
     next segment (by the stop table, run_segments.STOP_REASONS) and runs that never started start now.
@@ -249,7 +263,7 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
                         state['jobs'][index].update(status='needs_review', error_type=type(error).__name__)
                     write_json(state_path, state)
         # A task recovered by hand (robofrontier/engines/claude/recover_task.py) closes before the batch does.
-        from robofrontier.engines.claude.recover_task import wait_for_recoveries
+        from robofrontier.engines.common.recovery import wait_for_recoveries
         waiting = [{'run_directory': jobs[local]['run_directory'], 'status': state['jobs'][index]['status']}
                    for local, index in enumerate(positions)]
         wait_for_recoveries(waiting)

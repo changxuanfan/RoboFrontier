@@ -14,8 +14,8 @@ import time
 import unittest
 
 from engines.test_claude_physics_smoke import MotionModel
-from robofrontier.batch.engineering_batch import status_batch
-from robofrontier.batch.claude_benchmark import prepare_draft
+from robofrontier.batch.claude_batch import status_batch
+from robofrontier.batch.claude_prepare import prepare_batch
 
 
 @unittest.skipUnless(os.environ.get('ROBOFRONTIER_PHYSICS_SIGNAL') == '1' and shutil.which('claude'),
@@ -36,9 +36,9 @@ class SignalPhysicsSmokeTests(unittest.TestCase):
         try:
             batch=directory/'batch'
             if four_cases:
-                prepare_draft(batch,['opus'],level=1,min_arms=True,topology='adaptive')
+                prepare_batch(batch,['opus'],level=1,min_arms=True,topology='adaptive')
             else:
-                prepare_draft(batch,['opus'],cases=['transport-a04-d1'],topology='adaptive')
+                prepare_batch(batch,['opus'],cases=['transport-a04-d1'],topology='adaptive')
             jobs=json.loads((batch/'batch.json').read_text())['jobs']
             self.assertEqual(len(jobs),4 if four_cases else 1)
             for job in jobs:
@@ -51,7 +51,7 @@ class SignalPhysicsSmokeTests(unittest.TestCase):
                 manifest.write_text(json.dumps(frozen))
             env={key:os.environ[key] for key in ('PATH','HOME','LANG','LC_ALL','TMPDIR','DISPLAY','MUJOCO_GL') if key in os.environ}
             env['FAKE_KEY']='synthetic'
-            cmd=[sys.executable,'-m','robofrontier.batch.claude_benchmark','run-engineering',str(batch),
+            cmd=[sys.executable,'-m','robofrontier.batch.claude_prepare','run-engineering',str(batch),
                  '--parallel',str(len(jobs)),'--turn-budget-usd','.5','--task-budget-usd','2',
                  '--wall-limit-s','120','--confirm-engineering-spend']
             with (directory/'supervisor.log').open('w') as log:

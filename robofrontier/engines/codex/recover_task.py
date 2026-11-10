@@ -6,7 +6,6 @@ An old gateway, unsettled action, live owner or uncertain admission fails closed
 No engine restart, token copy, automatic retry or physical call replay is allowed.
 """
 import argparse
-from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
@@ -14,36 +13,18 @@ import math
 import os
 from pathlib import Path
 import secrets
-import shutil
 import socket
 import sqlite3
 import subprocess
 import sys
-import tempfile
 import time
 
 from robofrontier.runtime import segments as run_segments
+from robofrontier.engines.common.recovery import RecoveryBlocked, ledger as _ledger, readonly, validate_physical_restore
 from robofrontier.engines.codex.job_engine import task_id
 from robofrontier.runtime.layout import path as run_path, batch_path
 from robofrontier.runtime.setup import write_json
 from robofrontier.runtime.store import RuntimeStore
-
-
-class RecoveryBlocked(ValueError):
-    pass
-
-
-@contextmanager
-def readonly(run):
-    db = sqlite3.connect((Path(run)/'private/state/runtime.sqlite').as_uri()+'?mode=ro', uri=True)
-    db.execute('PRAGMA query_only=ON')
-    class Store:
-        def get(self, key, default=None):
-            row = db.execute('SELECT value FROM meta WHERE key=?', (key,)).fetchone()
-            return json.loads(row[0]) if row else default
-    store = Store(); store.db = db
-    try: yield store
-    finally: db.close()
 
 
 def gateway_call(endpoint, method, params=None):
@@ -61,12 +42,6 @@ def gateway_call(endpoint, method, params=None):
         if 'error' in value:
             raise RecoveryBlocked('Running gateway does not support safe single-task recovery; no task was rebound')
         return value['result']
-
-
-def _ledger(db):
-    rows = [list(row) for row in db.execute('SELECT * FROM calls ORDER BY id')]
-    actions = [list(row) for row in db.execute('SELECT * FROM actions ORDER BY id')]
-    return hashlib.sha256(json.dumps([rows, actions], sort_keys=True).encode()).hexdigest()
 
 
 def inspect(run, manifest, source):
@@ -123,41 +98,6 @@ def inspect(run, manifest, source):
     if not set(threads) <= set(state['threads']): raise RecoveryBlocked('Original role ownership is incomplete')
     record['threads'] = state['threads']
     return record
-
-
-def validate_physical_restore(run, source, python, scratch, record):
-    """Construct only a private clone. No model, action, mj_step or original output write."""
-    import numpy as np
-    with tempfile.TemporaryDirectory(prefix='restore-check-', dir=scratch) as temporary:
-        clone = Path(temporary)
-        shutil.copytree(Path(run)/'private/inputs', clone/'private/inputs', ignore=shutil.ignore_patterns('frozen-source'))
-        with readonly(run) as store:
-            _, _, _, pose = run_segments._last_frame(run, store.get('segment', 0))
-            holds = store.get('arm_holds') or {}
-        folder = run_segments.input_dir(clone, record['segment']); folder.mkdir(parents=True)
-        np.save(folder/'restore-pose.npy', pose, allow_pickle=False)
-        task = json.loads((clone/'private/inputs/task.json').read_text())
-        note = {'schema': run_segments.RESTORE_SCHEMA, 'segment': record['segment'], 'case_id': task['id'],
-                'source_scene_sha256': task['scene_sha256'], 'source_sim_s': record['sim_s'], 'held_grasps': holds}
-        write_json(folder/'restore-pose.json', note)
-        file = clone/'private/inputs/manifest.json'; manifest = json.loads(file.read_text())
-        for path in folder.iterdir(): manifest['input_sha256'][str(path.relative_to(clone))] = hashlib.sha256(path.read_bytes()).hexdigest()
-        write_json(file, manifest)
-        code = """import sys,json,numpy as np
-sys.path.insert(0,sys.argv[1])
-from robofrontier.runtime.pipeline import World
-from robofrontier.runtime.segments import current_restore
-from pathlib import Path
-run=Path(sys.argv[2]); task=json.loads((run/'private/inputs/task.json').read_text())
-world=World(run,task); note,pose=current_restore(run)
-assert np.array_equal(world.data.qpos,np.load(pose,allow_pickle=False))
-assert np.count_nonzero(world.data.qvel)==0 and world.time==note['source_sim_s']
-assert sorted(getattr(world,'restored_holds',[]))==sorted(note['held_grasps'])
-print(json.dumps({'verified':True,'physics_steps':0,'held_arms':sorted(note['held_grasps'])}))
-"""
-        checked = subprocess.run([str(python), '-I', '-c', code, str(source), str(clone)], capture_output=True, text=True, timeout=120)
-        if checked.returncode: raise RecoveryBlocked('Physical restore validation failed on the private clone: '+checked.stderr[-1500:])
-        return json.loads(checked.stdout.splitlines()[-1])
 
 
 def execute(run, manifest, source, python, scratch, *, allocation_end):
@@ -221,30 +161,6 @@ def execute(run, manifest, source, python, scratch, *, allocation_end):
         except BaseException:
             record.update(phase='needs_review', finished_at=time.time()); write_json(status_path, record)
             raise
-
-
-def wait_for_recoveries(jobs):
-    """Keep the original supervisor/engine alive until authorized recovery hosts finish."""
-    for job in jobs:
-        path = Path(job['run_directory'])/'private/state/control/recovery.json'
-        while path.exists():
-            record = json.loads(path.read_text())
-            with (path.parent/'recovery.lock').open('r') as lock:
-                try:
-                    fcntl.flock(lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
-                    supervising = False
-                except BlockingIOError: supervising = True
-            # Even a lost recovery supervisor can leave its host/world alive.
-            # Wait for that original owner; never restart it or close its gateway.
-            if not supervising and run_segments.owner_released(job['run_directory']): break
-            time.sleep(1)
-        if path.exists():
-            record = json.loads(path.read_text())
-            job['recovery'] = record
-            job['status'] = 'closed' if record['phase'] == 'closed' else 'needs_review'
-            if record['phase'] == 'closed':
-                job.setdefault('original_host_exit_code', job.get('host_exit_code'))
-                job['host_exit_code'] = record['host_exit_code']
 
 
 def main():

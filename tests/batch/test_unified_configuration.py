@@ -25,7 +25,7 @@ def tearDownModule():
 
 class UnifiedConfigurationTests(unittest.TestCase):
     def test_claude_engine_defaults_to_setup_token_without_replacing_explicit_profiles(self):
-        from robofrontier.batch.claude_benchmark import profile
+        from robofrontier.batch.claude_prepare import profile
         config = load_configuration(overrides={'policy': {'engine': 'claude'}})
         self.assertEqual(config['policy']['profile'], 'haiku_subscription_token')
         self.assertEqual(plan(config)['model'], 'claude-haiku-5-5')
@@ -151,7 +151,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
                 batch = Path(tmp)/'batch'
                 prepare(batch, config)
                 data = json.loads((batch/'batch.json').read_text())
-                self.assertFalse(data['execution_available'])
+                self.assertEqual(data['status'], 'prepared_not_started')
                 self.assertEqual(data['model_calls'], 0)
                 run = Path(data['jobs'][0]['run_directory'])
                 harness = json.loads((run/'private/inputs/harness.json').read_text())

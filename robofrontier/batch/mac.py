@@ -79,7 +79,7 @@ def submit(batch, *, continuing=False):
         raise ValueError('Durable runs use macOS launchd; on Linux submit through Slurm')
     batch = Path(batch).expanduser().resolve(strict=True)
     data = json.loads((batch/'batch.json').read_text())
-    if not continuing and data.get('status') not in ('prepared_not_started', 'prepared_not_qualified'):
+    if not continuing and data.get('status') != 'prepared_not_started':
         raise ValueError('Only a freshly prepared batch may be submitted; a world is never restarted automatically')
     folder, label = run_layout.batch_path(batch, 'durable'), service_label(batch)
     if continuing:

@@ -11,7 +11,6 @@ import argparse
 import fcntl
 import hashlib
 import json
-import math
 import os
 from pathlib import Path
 import sqlite3
@@ -20,7 +19,8 @@ import sys
 import time
 
 from robofrontier.runtime import layout as run_layout, segments as run_segments
-from robofrontier.engines.codex.recover_task import RecoveryBlocked, readonly, validate_physical_restore
+from robofrontier.engines.common.recovery import (RecoveryBlocked, ledger as _ledger, lock_free as _lock_free, readonly,
+                                                 validate_physical_restore)
 from robofrontier.runtime.setup import verify_inputs, write_json
 from robofrontier.runtime.store import RuntimeStore
 
@@ -32,31 +32,12 @@ FAILED_SETUP = ('Manual recovery: native delegate setup never started; its robot
                 'No fork was repeated.')
 
 
-def _ledger(db, interrupted=()):
-    """The task's own calls and actions; the seal's observe/shutdown calls are not task calls.
-    `interrupted`: unfinished calls/actions of a world that closed by itself, which the next
-    segment settles as failed."""
-    skip = set(interrupted)
-    rows = [list(row) for row in db.execute("SELECT * FROM calls WHERE NOT (actor='Meta' AND id LIKE 'seal-%') ORDER BY id")
-            if row[0] not in skip]
-    actions = [list(row) for row in db.execute('SELECT * FROM actions ORDER BY id') if row[0] not in skip]
-    return hashlib.sha256(json.dumps([rows, actions], sort_keys=True).encode()).hexdigest()
-
-
-def _lock_free(path):
-    if not path.exists(): return True
-    with path.open('a+') as lock:
-        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError: return False
-        fcntl.flock(lock, fcntl.LOCK_UN)
-        return True
-
-
 def _batch(run):
     folder = run.parent.parent
     batch = json.loads((folder/'batch.json').read_text())
-    if batch.get('schema') != 'robofrontier.claude-draft.v1':
-        raise RecoveryBlocked('Run is not part of a Claude engineering batch')
+    from robofrontier.batch.claude_prepare import BATCH_SCHEMA
+    if batch.get('schema') != BATCH_SCHEMA:
+        raise RecoveryBlocked('Run is not part of a Claude batch')
     jobs = [i for i, job in enumerate(batch['jobs']) if Path(job['run_directory']).resolve() == run]
     if len(jobs) != 1: raise RecoveryBlocked('Run is not uniquely listed in its batch')
     return folder, jobs[0]
@@ -193,12 +174,12 @@ from robofrontier.batch.prepare import load_env
 from robofrontier.cli import _frozen_configuration
 from robofrontier.configuration import rendering_environment
 from robofrontier.runtime.diagnostics import require_runtime
-from robofrontier.engines.claude.run import run_engineering
+from robofrontier.engines.claude.run import run_task
 load_env(source/'.env')
 config = _frozen_configuration(batch); require_runtime(config)
 environment = rendering_environment(config['render']['device'], platform.system(), os.environ)
 os.environ.clear(); os.environ.update(environment)
-result = run_engineering(run, dict(os.environ), wall_limit_s=config['batch']['task_wall_limit_s'],
+result = run_task(run, dict(os.environ), wall_limit_s=config['batch']['task_wall_limit_s'],
                          startup_timeout_s=config['batch']['startup_timeout_s'])
 print(json.dumps(result, default=str))
 """
@@ -302,19 +283,6 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
             record.update(phase='needs_review', error=str(error)[:1000], finished_at=time.time())
             write_json(status_path, record)
             raise
-
-
-def wait_for_recoveries(jobs, sleep=time.sleep):
-    """Keep a batch from closing (and collecting) while one of its tasks is being recovered."""
-    for job in jobs:
-        path = Path(job['run_directory'])/'private/state/control/recovery.json'
-        while path.exists():
-            if _lock_free(path.parent/'recovery.lock') and run_segments.owner_released(job['run_directory']): break
-            sleep(1)
-        if path.exists():
-            record = json.loads(path.read_text())
-            job['recovery'] = {k: record.get(k) for k in ('phase', 'segment', 'host_exit_code', 'result_reason')}
-            job['status'] = 'closed' if record.get('phase') == 'closed' else 'needs_review'
 
 
 def submit_durable(args):
