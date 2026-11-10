@@ -207,6 +207,15 @@ def index_release():
             projection = case.get('public_projection')
             if projection: projection['sha256'] = file_sha256(ROOT/projection['path'])
             for entry in case.get('public_files', {}).values(): entry['sha256'] = file_sha256(ROOT/entry['path'])
+    # The release's identity: every case file, public file and catalog by hash, and the
+    # private codes. Recorded with a date when the release is frozen (docs/physics.md).
+    content = {'cases': {case['id']: {**case['source_files'], 'public/task.json': case['public_projection']['sha256'],
+                                      **{'public/'+n: e['sha256'] for n, e in case.get('public_files', {}).items()}}
+                         for family in release['families'].values() for case in family['gpt']},
+               'catalogs': {name: file_sha256(ROOT/family['catalog']['path']) for name, family in release['families'].items()},
+               'private': release.get('private', {})}
+    release['release_id'] = hashlib.sha256(json.dumps(content, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
+    release.setdefault('frozen', None)
     path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
     from scripts import site_data
     site_data.tasks()  # the project page's task index records the release hash
