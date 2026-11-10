@@ -161,12 +161,14 @@ def submit(service,job):
         if group:
             if group['state']!='collecting':raise ValueError('Sync group already committed/closed; query it or choose a new group ID')
             if group['robots']!=sorted(robots) or group['timeout_s']!=timeout:raise ValueError('Sync group contract mismatch')
-            if time.time()>=group['deadline_at']:raise ValueError('Sync deadline expired; never renew by resubmission')
+            if float(service.world.time)>=group['deadline_sim_s']:raise ValueError('Sync deadline expired; never renew by resubmission')
             if any(p['actor']==job['actor'] for p in group['parts']):raise ValueError('One immutable submission per owner in a sync group')
-        else:group=dict(id=ident,robots=sorted(robots),timeout_s=timeout,deadline_at=time.time()+timeout,state='collecting',parts=[])
+        # The deadline is simulation time: it stops with the world, through pauses and outages,
+        # as the run's active time does, so a group never expires while nothing could move.
+        else:group=dict(id=ident,robots=sorted(robots),timeout_s=timeout,deadline_sim_s=float(service.world.time)+timeout,state='collecting',parts=[])
         _reserve(service,job,prepared,pending=True,group_id=ident)
         group['parts'].append(dict(id=job['id'],actor=job['actor'],robots=sorted(owned)));save_group(service.store,group)
-        service.store.event('SYNC_PART_RESERVED',job['actor'],{'group_id':ident,'call_id':job['id'],'robots':sorted(owned),'deadline_at':group['deadline_at']})
+        service.store.event('SYNC_PART_RESERVED',job['actor'],{'group_id':ident,'call_id':job['id'],'robots':sorted(owned),'deadline_sim_s':group['deadline_sim_s']})
     service.action_batches[job['id']]=job
     if not job['data'].get('wait',True):service.respond(job,summary(service,job))
 
@@ -210,7 +212,7 @@ def poll(service):
     for group in groups(store).values():
         if group['state']!='collecting':continue
         paused=store.get('dispatch_paused',False) or store.get('physics_state')!='running' or service.ended
-        if paused or time.time()>=group['deadline_at']:
+        if paused or float(service.world.time)>=group['deadline_sim_s']:
             cancel_collecting(store,'run_paused_or_ended' if paused else 'synchronization_deadline_expired',float(service.world.time),group['id']);continue
         if set(r for p in group['parts'] for r in p['robots'])!=set(group['robots']):continue
         parts=[service.requests[p['id']] for p in group['parts']]

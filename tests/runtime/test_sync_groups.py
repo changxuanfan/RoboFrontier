@@ -76,11 +76,11 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(set(s.world.running),{'C'})
     def test_contract_change_duplicate_and_late_join_do_not_renew_or_start(self):
         s=self.service();data=self.part('A');j=self.call(s,'A','action_batch',data,'a-part')
-        deadline=s.store.get('action_groups')['g']['deadline_at']
-        self.call(s,'A','action_batch',data,'a-part');self.assertEqual(s.store.get('action_groups')['g']['deadline_at'],deadline)
+        deadline=s.store.get('action_groups')['g']['deadline_sim_s']
+        self.call(s,'A','action_batch',data,'a-part');self.assertEqual(s.store.get('action_groups')['g']['deadline_sim_s'],deadline)
         self.assertIn('error',self.call(s,'A','action_batch',data)['result'])
         self.assertIn('error',self.call(s,'B','action_batch',self.part('B',timeout=30))['result'])
-        with patch('time.time',return_value=deadline+1):s.pump()
+        s.world.time=deadline+1;s.pump()  # the deadline is simulation time
         self.assertEqual(j['result']['execution_status'],'failed');self.assertFalse(j['result']['execution_started'])
         self.assertEqual(s.world.executed,[])
         self.assertIn('error',self.call(s,'B','action_batch',self.part('B'))['result'])
