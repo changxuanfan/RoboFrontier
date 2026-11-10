@@ -43,6 +43,16 @@ def _catalog_file(config):
         yield path
 
 
+def _policy_environment():
+    """What `prepare` would freeze for policy scripts, without changing anything."""
+    from .policy_env import ENV_VAR, default_root, selected
+    try:
+        root = selected() if os.environ.get(ENV_VAR) else default_root()
+    except ValueError as error:
+        return {'status': 'unavailable', 'error': str(error)}
+    return {'status': 'host_python', 'root': None} if root is None else {'status': 'frozen', 'root': str(root)}
+
+
 def plan(config):
     from robofrontier.benchmark_common import select_cases
     selection = config['selection']
@@ -55,7 +65,7 @@ def plan(config):
             'topology': policy['topology'], 'parallel': config['batch']['parallel'],
             'startup_interval_s': config['batch']['startup_interval_s'],
             'task_wall_limit_s': config['batch']['task_wall_limit_s'],
-            'task_count': len(selected), 'jobs': selected,
+            'task_count': len(selected), 'jobs': selected, 'policy_environment': _policy_environment(),
             'qualification': 'Claude engineering only' if policy['engine'] == 'claude'
                 else 'Requires a matching live provider compatibility receipt'}
 
@@ -280,7 +290,10 @@ def argument_parser(*, prog=None):
         if name == 'run':
             p.add_argument('--engineering', action='store_true', help='Explicitly run an unqualified Claude engineering draft')
             p.add_argument('--durable', action='store_true',
-                           help='Run under the macOS user launchd service, so it outlives this terminal')
+                           help='Run under the macOS user launchd service with Interactive priority, so it outlives '
+                                'this terminal (the macOS default, a continuation included)')
+            p.add_argument('--foreground', action='store_true',
+                           help='On macOS, run in this process at its own priority instead of the launchd service')
             p.add_argument('--continue', dest='continuing', action='store_true',
                            help='Continue a batch whose supervisor died; started runs continue once (docs/running/run-segments.md)')
     p = sub.add_parser('collect', help='Collect stopped native sessions, motion and evidence')
@@ -374,11 +387,16 @@ def main(argv=None):
                 load_env(ROOT/'.env')
                 emit(submit(config, args.output, queue=args.queue, engineering=args.engineering))
             else:
+                # New runs use the frozen policy Python environment by default (policy_env.default_root).
+                from .policy_env import apply_default
+                apply_default()
                 emit({'batch': str(prepare(args.output, config)), 'model_calls': 0})
-        elif args.command == 'run' and args.durable:
-            if args.continuing: raise ValueError('Continue a batch in the foreground; --durable starts only fresh batches')
+        elif args.command == 'run' and (args.durable or (sys.platform == 'darwin' and not args.foreground)):
+            # On macOS a batch, a continuation included, runs under launchd with ProcessType=Interactive
+            # by default, so it outlives the terminal or agent session that started it.
+            if args.foreground: raise ValueError('--durable and --foreground are exclusive')
             from .durable import submit as submit_durable
-            emit(submit_durable(args.batch, engineering=args.engineering))
+            emit(submit_durable(args.batch, engineering=args.engineering, continuing=args.continuing))
         elif args.command == 'run':
             from robofrontier.benchmark_common import load_env
             load_env(ROOT/'.env')

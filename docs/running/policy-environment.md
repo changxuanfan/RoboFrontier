@@ -1,10 +1,15 @@
 # Policy Python environment
 
-Policy scripts can use one frozen Python environment instead of whatever the host has. A run
-uses it only when the trusted launcher sets `ROBOFRONTIER_POLICY_ENV` during `prepare`; every
-other run, and every run already prepared, keeps its earlier behavior. Preparation refuses an
-environment until the check below has passed on it. It has passed on macOS and on Slurm (Ubuntu
-22.04, kernel 5.15, Landlock ABI 1); RunPod and Docker have not been tried.
+Policy scripts use one frozen Python environment instead of whatever the host has. New runs use
+it by default: `robofrontier prepare` freezes the build of the current locks under
+`ROBOFRONTIER_POLICY_ENV_BASE`, or on macOS under `/Users/Shared/robofrontier`, once the check
+below has passed on it. Preparation refuses when that build is missing or unchecked, rather than
+falling back to the host's Python. `ROBOFRONTIER_POLICY_ENV=PATH` picks another environment and
+`ROBOFRONTIER_POLICY_ENV=off` keeps the host's Python for a run. `robofrontier plan` shows the
+choice as `policy_environment`. A Linux host with no base named keeps the host's Python; on Slurm,
+set the base to the shared build. Runs already prepared keep what they froze. The check has passed
+on macOS and on Slurm (Ubuntu 22.04, kernel 5.15, Landlock ABI 1); RunPod and Docker have not been
+tried.
 
 ## Use it
 
@@ -30,10 +35,12 @@ The receipt is per build, not per node: on shared storage, one pass admits every
 that build. Nodes should match the one checked (kernel, Landlock, user namespaces); a node without
 unprivileged user namespaces fails each Codex command rather than running it less confined.
 
-Prepare with the flag:
+Prepare as usual; the default applies. To name another environment, or to keep the host's
+Python:
 
 ```sh
 ROBOFRONTIER_POLICY_ENV=/Users/Shared/robofrontier/policy-env-<id> .venv/bin/robofrontier prepare ...
+ROBOFRONTIER_POLICY_ENV=off .venv/bin/robofrontier prepare ...
 ```
 
 ## What a run gets

@@ -40,16 +40,24 @@ def stopped(run, store):
             or store.get('segment_journal') or store.get('pending_segment')):
         raise ValueError('Upgrade requires a fully stopped, sealed and integrity-valid segment')
     if not run_segments.owner_released(run): raise ValueError('A process still owns the world')
-    if store.db.execute("SELECT 1 FROM calls WHERE status NOT IN ('completed','failed') LIMIT 1").fetchone():
-        raise ValueError('An original call is unsettled; never replay it')
-    if store.db.execute("SELECT 1 FROM actions WHERE status NOT IN ('completed','failed') LIMIT 1").fetchone():
-        raise ValueError('An original action is unsettled; never replay it')
     kinds = ('INTEGRITY_ABORT',) + run_segments.NORMAL_END_EVENTS
     if store.db.execute('SELECT 1 FROM events WHERE kind IN (%s) LIMIT 1' % ','.join('?' for _ in kinds), kinds).fetchone():
         raise ValueError('A normal end or integrity abort cannot be upgraded for continuation')
     seal = json.loads((run_segments.output_dir(run, store.get('segment', 0))/'seal.json').read_text())
-    if (not seal.get('sealed') or not seal.get('fresh_observation')
-            or any(seal.get(k) for k in ('unresolved_action_ids', 'capture_error', 'shutdown_error'))):
+    if not seal.get('sealed') or any(seal.get(k) for k in ('capture_error', 'shutdown_error')):
+        raise ValueError('The original world did not seal cleanly')
+    actions = {row['id'] for row in store.db.execute("SELECT id FROM actions WHERE status NOT IN ('completed','failed')")}
+    if seal.get('owner_was_live') is False:
+        # The world had closed by itself before the seal (its host was lost). Its unfinished
+        # actions are the ones the seal lists; the next segment fails them and replays none
+        # (run_segments.prepare_retry, as for an automatic continuation).
+        if actions != set(seal.get('unresolved_action_ids') or []):
+            raise ValueError('Unsettled actions differ from the ones the seal recorded')
+        return
+    if store.db.execute("SELECT 1 FROM calls WHERE status NOT IN ('completed','failed') LIMIT 1").fetchone():
+        raise ValueError('An original call is unsettled; never replay it')
+    if actions: raise ValueError('An original action is unsettled; never replay it')
+    if not seal.get('fresh_observation') or seal.get('unresolved_action_ids'):
         raise ValueError('The original world did not seal cleanly')
 
 

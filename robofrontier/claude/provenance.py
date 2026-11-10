@@ -16,6 +16,56 @@ from pathlib import Path
 UUID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
 # Per-session fields that legitimately differ between a parent row and its forked copy.
 SESSION_FIELDS = ('sessionId', 'promptId')
+# Where the CLI ran when it wrote a row. A fork starts in its launch directory and rewrites
+# them on every copied row, so a parent that changed directory differs only in these.
+ENVIRONMENT_FIELDS = ('cwd', 'slug', 'gitBranch')
+
+
+def _normalized(rows, preserved=()):
+    """Rows without the metadata a native fork rewrites (observed, not guessed):
+
+    - where the CLI ran (ENVIRONMENT_FIELDS), which the fork sets to its launch directory;
+    - the display path of an edited-file notice, which a fork re-renders;
+    - the usage of a preserved assistant row, which a compacted copy rewrites.
+    Message content always has to match."""
+    out = []
+    for row in copy.deepcopy(rows):
+        for key in ENVIRONMENT_FIELDS: row.pop(key, None)
+        notice = row.get('attachment')
+        if row.get('type') == 'attachment' and isinstance(notice, dict) and notice.get('type') == 'edited_text_file':
+            notice.pop('displayPath', None)
+        if row.get('uuid') in preserved and row.get('type') == 'assistant' and isinstance(row.get('message'), dict):
+            row['message'].pop('usage', None)
+        out.append(row)
+    return out
+
+
+def _is_retry(row):
+    """The CLI's own notice of a retried API request; a fork keeps only some of them."""
+    return row.get('type') == 'system' and row.get('subtype') == 'api_error'
+
+
+def _without_retries(rows):
+    """Rows without retry notices; a row that hung from one hangs from its nearest kept ancestor."""
+    gone = {row['uuid']: row.get('parentUuid') for row in rows if _is_retry(row)}
+    out = []
+    for row in rows:
+        if _is_retry(row): continue
+        link, seen = row.get('parentUuid'), set()
+        while link in gone and link not in seen: seen.add(link); link = gone[link]
+        out.append(row if link == row.get('parentUuid') else dict(row, parentUuid=link))
+    return out
+
+
+def _prefix_holding(rows, count):
+    """Length of the shortest prefix of `rows` that holds `count` rows other than retry notices."""
+    if count == 0: return 0
+    kept = 0
+    for index, row in enumerate(rows):
+        if not _is_retry(row):
+            kept += 1
+            if kept == count: return index + 1
+    return None
 
 
 def transcript_rows(config_dir, session_id):
@@ -64,8 +114,12 @@ def copied_history_length(source, copied):
     Its preserved-message metadata describes the only supported reordering and the
     two reparented edges. Unknown compaction formats fail closed.
     """
-    if copied[:len(source)] == source:
+    if copied[:len(source)] == source or _normalized(copied[:len(source)]) == _normalized(source):
         return len(source)
+    kept = _without_retries(source)
+    length = _prefix_holding(copied, len(kept))
+    if length is not None and _normalized(_without_retries(copied[:length])) == _normalized(kept):
+        return length
     boundaries = [i for i, row in enumerate(source)
                   if row.get('type') == 'system' and row.get('subtype') == 'compact_boundary']
     if not boundaries:
@@ -85,29 +139,42 @@ def copied_history_length(source, copied):
             or segment.get('headUuid') != ids[0] or segment.get('tailUuid') != ids[-1]
             or segment.get('anchorUuid') != anchor):
         raise ValueError('Invalid preserved compaction segment')
-    if boundary < len(ids) or [row['uuid'] for row in source[boundary-len(ids):boundary]] != ids:
+    # The preserved rows are the ones just before the boundary. The metadata lists them in
+    # the order the copy carries them, which can differ from file order: a split assistant
+    # message's tool calls come before their results (observed 2026-11-10).
+    before = source[boundary-len(ids):boundary] if boundary >= len(ids) else []
+    if sorted(row['uuid'] for row in before) != sorted(ids):
         raise ValueError('Preserved segment is not contiguous before compaction')
+    rows = {row['uuid']: row for row in before}
     anchors = [i for i in range(boundary+1, len(source)) if source[i]['uuid'] == anchor]
     if len(anchors) != 1 or source[anchors[0]].get('isCompactSummary') is not True:
         raise ValueError('Compaction summary anchor is missing or ambiguous')
     anchor_index = anchors[0]
     if anchor_index + 1 >= len(source):
         raise ValueError('Compaction has no post-summary history')
-    expected = copy.deepcopy(source[boundary:anchor_index+1] + source[boundary-len(ids):boundary]
-                             + source[anchor_index+1:])
-    insertion = anchor_index-boundary+1
-    expected[insertion]['parentUuid'] = anchor
-    expected[insertion+len(ids)]['parentUuid'] = ids[-1]
-    actual = copy.deepcopy(copied[:len(expected)])
-    for row in expected + actual:
-        row.pop('cwd', None)
-        row.pop('slug', None)
-        row.pop('gitBranch', None)
-        if row.get('uuid') in ids and row.get('type') == 'assistant' and isinstance(row.get('message'), dict):
-            row['message'].pop('usage', None)
+    expected = _without_retries(source[boundary:anchor_index+1] + [rows[u] for u in ids] + source[anchor_index+1:])
+    length = _prefix_holding(copied, len(expected))
+    if length is None:
+        raise ValueError('Compacted native fork history does not match the source session')
+    actual = _without_retries(copied[:length])
+    insertion = next(i for i, row in enumerate(expected) if row['uuid'] == anchor) + 1
+    relinked = range(insertion, insertion+len(ids)+1)  # the preserved rows and the first row after them
+    # Reparented edges: the segment hangs from the summary, each preserved row from an earlier
+    # one of the segment (or the summary), and the history after it from the segment's tail.
+    seen = {anchor}
+    for index in relinked[:-1]:
+        link = actual[index].get('parentUuid')
+        if link not in seen or (index == insertion and link != anchor):
+            raise ValueError('Compacted native fork reparents the preserved segment unexpectedly')
+        seen.add(actual[index].get('uuid'))
+    if actual[relinked[-1]].get('parentUuid') != ids[-1]:
+        raise ValueError('Compacted native fork does not continue from the preserved tail')
+    expected, actual = _normalized(expected, ids), _normalized(actual, ids)
+    for index in relinked:
+        expected[index].pop('parentUuid', None); actual[index].pop('parentUuid', None)
     if actual != expected:
         raise ValueError('Compacted native fork history does not match the source session')
-    return len(expected)
+    return length
 
 
 def fork_provenance(parent, child, config_dir, at=None):
@@ -138,12 +205,15 @@ def first_input(rows):
     """Text of the first user message in these history rows that is not a tool result.
 
     A fork taken at a pending tool call starts with rows the CLI adds itself (an error
-    result for the unanswered call and a short assistant reply); the host's first
-    message to the child follows them.
+    result for the unanswered call, a short assistant reply and, when the parent had
+    background commands, a system task notification); the host's first message to the
+    child follows them.
     """
     for row in rows:
         message = row.get('message')
         if row.get('type') != 'user' or row.get('isMeta') or not isinstance(message, dict):
+            continue
+        if (row.get('origin') or {}).get('kind') == 'task-notification' and row.get('promptSource') == 'system':
             continue
         content = message.get('content')
         if isinstance(content, str):

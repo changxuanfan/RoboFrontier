@@ -1,7 +1,8 @@
 """The one Python environment that policy scripts use, frozen when a run is prepared.
 
-A run uses it only when the trusted launcher names it in ROBOFRONTIER_POLICY_ENV; every
-other run keeps its earlier behavior. The environment lives outside the home folder and
+A run uses it when the trusted launcher names it in ROBOFRONTIER_POLICY_ENV. On macOS
+`robofrontier prepare` names the default one (default_root) unless that variable is set,
+`off` keeping the host's Python. Runs already prepared keep what they froze. The environment lives outside the home folder and
 the repository, is read-only, and holds a standalone Python with a few preinstalled
 packages plus an offline wheel store (configs/policy-env/). scripts/build_policy_env.py
 builds it. Policy shells get variables() instead of the host's environment, so scripts
@@ -141,15 +142,53 @@ def require_private_route(config):
         raise ValueError('Keep slurm.egress_root outside /tmp, which policies can read and write')
 
 
+OFF = ('off', 'none', '0', 'false', 'no')
+# Where scripts/build_policy_env.py builds by default on macOS: outside every home folder.
+# Elsewhere ROBOFRONTIER_POLICY_ENV_BASE names the base (for example on Slurm shared storage).
+DEFAULT_BASE = Path('/Users/Shared/robofrontier')
+BASE_VAR = 'ROBOFRONTIER_POLICY_ENV_BASE'
+
+
 def selected():
     """The environment named by the trusted launcher, or None for an earlier-style run."""
     value = os.environ.get(ENV_VAR)
-    if not value:
+    if not value or value.strip().lower() in OFF:
         return None
     root = Path(value)
     if not root.is_absolute():
         raise ValueError(ENV_VAR + ' must be an absolute path')
     return root.resolve()
+
+
+def default_root():
+    """The environment `robofrontier prepare` uses when ROBOFRONTIER_POLICY_ENV is unset.
+
+    New runs use the build of the current locks by default: under ROBOFRONTIER_POLICY_ENV_BASE,
+    or on macOS under DEFAULT_BASE. The build must have passed scripts/check_policy_env.py
+    (require_checked). Preparation refuses when it is missing or unchecked, rather than silently
+    falling back to the host's Python. A host without a base (Linux with none named) returns
+    None, so its runs keep the host's Python until a base is configured there."""
+    import sys
+    base = os.environ.get(BASE_VAR) or (str(DEFAULT_BASE) if sys.platform == 'darwin' else None)
+    if not base: return None
+    from scripts.build_policy_env import identity
+    base = Path(base)
+    root = base/('policy-env-' + identity())
+    hint = (' Build and check it once: .venv/bin/python -m scripts.build_policy_env --base %s, then '
+            '.venv/bin/python -m scripts.check_policy_env %s; or set %s=off for a run on the host Python.' % (base, root, ENV_VAR))
+    if not root.is_dir(): raise ValueError('The default policy environment is not built: ' + str(root) + '.' + hint)
+    manifest = verify(root)
+    try: require_checked(root, manifest)
+    except ValueError as error: raise ValueError('The default policy environment did not pass its check. ' + str(error) + '.' + hint) from None
+    return root.resolve()
+
+
+def apply_default():
+    """Name the default environment for this process's preparation, unless one was chosen."""
+    if os.environ.get(ENV_VAR): return selected()
+    root = default_root()
+    if root is not None: os.environ[ENV_VAR] = str(root)
+    return root
 
 
 def variables(root, run):

@@ -68,6 +68,22 @@ class RuntimeUpgradeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unsettled'): self.upgrade()
         self.assertEqual(self.manifest.read_bytes(), self.original)
 
+    def test_a_world_that_closed_by_itself_upgrades_with_the_actions_its_seal_lists(self):
+        self.store.begin_call('lost', 'Controller', 'move', {'robot': 'A'})
+        self.store.db.execute("INSERT INTO actions VALUES ('lost','Controller','uncertain','{}')"); self.store.db.commit()
+        folder = run_segments.output_dir(self.run, 1)
+        with self.assertRaisesRegex(ValueError, 'unsettled'): runtime_upgrade.stopped(self.run, self.store)
+        write_json(folder/'seal.json', {'sealed': True, 'fresh_observation': False, 'owner_was_live': False,
+                                        'unresolved_action_ids': ['other']})
+        with self.assertRaisesRegex(ValueError, 'differ'): runtime_upgrade.stopped(self.run, self.store)
+        write_json(folder/'seal.json', {'sealed': True, 'fresh_observation': False, 'owner_was_live': False,
+                                        'unresolved_action_ids': ['lost']})
+        runtime_upgrade.stopped(self.run, self.store)
+        # A live world's seal still has to be clean.
+        write_json(folder/'seal.json', {'sealed': True, 'fresh_observation': True, 'owner_was_live': True,
+                                        'unresolved_action_ids': ['lost']})
+        with self.assertRaisesRegex(ValueError, 'unsettled'): runtime_upgrade.stopped(self.run, self.store)
+
     def test_changed_ledger_cannot_use_the_grant(self):
         grant = self.upgrade()
         self.store.begin_call('new', 'Controller', 'observe', {})
