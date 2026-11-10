@@ -120,6 +120,14 @@ def expected_protocol(case, protocol, release_sha256):
     return expected
 
 
+def dial_code(case_id, root=ROOT):
+    """The Dial case's fixed secret code, from the private part of the release."""
+    codes = read(Path(root)/RELEASE).get('private', {}).get('dial_codes', {})
+    if case_id not in codes:
+        raise ValueError('The release has no code for '+case_id)
+    return list(codes[case_id])
+
+
 def policy_task(case_id, root=ROOT, wall_limit_s=86400):
     name, family, case = resolve_case(case_id, root=root)
     task = read(Path(root)/case['directory']/'task.json')

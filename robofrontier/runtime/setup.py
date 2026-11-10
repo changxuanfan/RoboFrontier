@@ -40,7 +40,10 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         n=len(task['dials'])
         from ..tasks.dial import alphabet
         values_allowed=alphabet(task)
-        puzzle=json.loads(Path(private_puzzle_path).read_text()) if private_puzzle_path else {'code_symbols':[secrets.choice(values_allowed) for _ in range(n)]}
+        # Every run of a Dial case uses the case's fixed code from the release; an engineering
+        # run may name another.
+        from ..tasks.families import dial_code
+        puzzle=json.loads(Path(private_puzzle_path).read_text()) if private_puzzle_path else {'code_symbols':dial_code(task['id'])}
         values=puzzle.get('code_symbols')
         if set(puzzle)!={'code_symbols'} or not isinstance(values,list) or len(values)!=n or any(type(x) is not int or x not in values_allowed for x in values):raise ValueError('Expected one configured private nonzero symbol per suite dial')
         puzzle_relative=Path('private/inputs/suite-code.json')

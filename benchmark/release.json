@@ -1613,5 +1613,82 @@
     "fps": 30,
     "export_requires_duration": true
   },
-  "transport_physics_revision": "r14-rolling-friction-candidate-20261029"
+  "transport_physics_revision": "r14-rolling-friction-candidate-20261029",
+  "private": {
+    "scope": "Evaluator-only values. Never copied into a run's public files.",
+    "dial_codes": {
+      "dial-best5-n04-d1": [
+        5,
+        1,
+        1,
+        1
+      ],
+      "dial-best5-n04-d2": [
+        4,
+        2,
+        5,
+        4
+      ],
+      "dial-best5-n04-d3": [
+        5,
+        2,
+        2,
+        1
+      ],
+      "dial-best5-n06-d1": [
+        5,
+        1,
+        2,
+        5,
+        5,
+        1
+      ],
+      "dial-best5-n06-d2": [
+        5,
+        2,
+        3,
+        3,
+        3,
+        2
+      ],
+      "dial-best5-n06-d3": [
+        3,
+        3,
+        4,
+        2,
+        4,
+        3
+      ],
+      "dial-best5-n08-d1": [
+        5,
+        2,
+        1,
+        5,
+        5,
+        3,
+        3,
+        4
+      ],
+      "dial-best5-n08-d2": [
+        1,
+        3,
+        1,
+        5,
+        4,
+        2,
+        5,
+        2
+      ],
+      "dial-best5-n08-d3": [
+        1,
+        4,
+        1,
+        5,
+        4,
+        2,
+        4,
+        1
+      ]
+    }
+  }
 }

@@ -7,6 +7,7 @@ run again on its own output.
     python -m scripts.build_release physics   # contact and solver settings into every scene.xml
     python -m scripts.build_release settle    # start every scene at rest under that physics
     python -m scripts.build_release letters   # print Transport block letters upright
+    python -m scripts.build_release codes     # one fixed private code per Dial case
     python -m scripts.build_release check     # the scenes already carry them
 
 See docs/physics.md for the values and where they come from.
@@ -309,6 +310,25 @@ def letters(args):
     print(f'{changed} scenes changed')
 
 
+def codes(args):
+    """Draw one secret code for each Dial case, once, into the private part of release.json.
+
+    The evaluator reads it; it is never copied into anything a model can read. Existing
+    codes are kept, so running this again changes nothing."""
+    import secrets
+    from robofrontier.tasks.dial import alphabet
+    path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
+    private = release.setdefault('private', {'scope': 'Evaluator-only values. Never copied into a run\'s public files.'})
+    stored = private.setdefault('dial_codes', {})
+    for case in release['families']['dial']['gpt']:
+        if case['id'] in stored: continue
+        task = json.loads((ROOT/case['directory']/'task.json').read_text())
+        stored[case['id']] = [secrets.choice(alphabet(task)) for _ in task['dials']]
+    path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
+    index_release(); pin_asset_release()
+    print(f'{len(stored)} Dial codes')
+
+
 def check(args):
     bad = {folder.name: p for folder in cases() if (p := check_physics(folder))}
     print(json.dumps(bad or 'all scenes carry the release physics', indent=1))
@@ -320,6 +340,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest='step', required=True)
     sub.add_parser('physics').set_defaults(run=physics)
     sub.add_parser('letters').set_defaults(run=letters)
+    sub.add_parser('codes').set_defaults(run=codes)
     step = sub.add_parser('settle'); step.add_argument('--cases', nargs='*'); step.set_defaults(run=settle)
     sub.add_parser('check').set_defaults(run=check)
     args = parser.parse_args(argv)

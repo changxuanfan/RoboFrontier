@@ -83,7 +83,7 @@ def prepare_draft(output, names, families=None, cases=None, level=None, min_arms
                   *, wall_limit_s=86400, observation_image_profile=None, startup_timeout_s=None, render_device=None):
     """Freeze unqualified drafts for the explicit engineering runner only."""
     from robofrontier.tasks.families import prepare, policy_task
-    from robofrontier.tasks.dial import alphabet
+    from robofrontier.tasks.families import dial_code
 
     if topology not in ('adaptive', 'centralized', 'hierarchical', 'peer'):
         raise ValueError('Unknown Claude engineering topology')
@@ -122,7 +122,7 @@ def prepare_draft(output, names, families=None, cases=None, level=None, min_arms
         task = policy_task(case)
         if task.get('family') == 'dial':
             target = output / 'private/dial' / (case + '.json')
-            write_json(target, {'code_symbols': [secrets.choice(alphabet(task)) for _ in task['dials']]})
+            write_json(target, {'code_symbols': dial_code(case)})
             puzzles[case] = target
     for name, p in profiles.items():
         cfg = read(ROOT / 'configs/harnesses/policy.json')

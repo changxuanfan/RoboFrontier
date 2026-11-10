@@ -38,14 +38,12 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
     # Match private Dial instances across model arms of this batch. These are
     # new secrets, never copied from an Oracle or exposed in public inputs.
     puzzles={}
-    import secrets
-    from robofrontier.tasks.families import policy_task
-    from robofrontier.tasks.dial import alphabet
+    from robofrontier.tasks.families import dial_code, policy_task
     for case in selected:
         task=policy_task(case)
         if task.get('family')=='dial':
             target=output/'private/dial'/(case+'.json')
-            write_json(target,{'code_symbols':[secrets.choice(alphabet(task)) for _ in task['dials']]})
+            write_json(target,{'code_symbols':dial_code(case)})
             puzzles[case]=target
     for name,p in profiles.items():
         config_dir=output/'profiles'/name;config_dir.mkdir(parents=True)
