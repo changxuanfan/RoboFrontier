@@ -1014,9 +1014,5 @@ def build_factory(config_path=DEFAULT_CONFIG, output=None, workstation_catalog=N
     scene,manifest=_Builder(config,assets,output).finish()
     # Local, relative assets make the resulting scene directory portable.
     (assets/'asset-manifest.json').write_text(json.dumps({'generated_by':'robofrontier.factory.scene','seed':config['seed'],'third_party':[{'id':'Barlow Condensed','source':'https://github.com/google/fonts/tree/main/ofl/barlowcondensed','license':'SIL Open Font License 1.1','license_file':'fonts/OFL.txt'},{'id':'concrete_floor_02','source':'https://polyhaven.com/a/concrete_floor_02','license':'CC0 1.0','metadata':'source/polyhaven/source.json'}],'assets':manifest['assets']},indent=2)+'\n')
-    # Output folders may be reused; do not retain obsolete generated mesh copies.
-    active_meshes={file.name for file in (assets/'meshes').glob('factory_*.obj')}
-    for file in (output/'assets/meshes').glob('factory_*.obj'):
-        if file.name not in active_meshes:file.unlink()
     (output/'build-config.json').write_text(json.dumps(config,indent=2)+'\n')
     return scene,manifest
