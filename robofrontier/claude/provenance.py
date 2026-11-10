@@ -103,6 +103,11 @@ def copied_history_length(source, copied):
         row.pop('cwd', None)
         row.pop('slug', None)
         row.pop('gitBranch', None)
+        # A compacted copy re-renders an edited-file notice with the display path the
+        # parent's row lacks; the file name and snippet still must match.
+        if row.get('type') == 'attachment' and isinstance(row.get('attachment'), dict) \
+                and row['attachment'].get('type') == 'edited_text_file':
+            row['attachment'].pop('displayPath', None)
         if row.get('uuid') in ids and row.get('type') == 'assistant' and isinstance(row.get('message'), dict):
             row['message'].pop('usage', None)
     if actual != expected:
@@ -138,12 +143,15 @@ def first_input(rows):
     """Text of the first user message in these history rows that is not a tool result.
 
     A fork taken at a pending tool call starts with rows the CLI adds itself (an error
-    result for the unanswered call and a short assistant reply); the host's first
-    message to the child follows them.
+    result for the unanswered call, a short assistant reply and, when the parent had
+    background commands, a system task notification); the host's first message to the
+    child follows them.
     """
     for row in rows:
         message = row.get('message')
         if row.get('type') != 'user' or row.get('isMeta') or not isinstance(message, dict):
+            continue
+        if (row.get('origin') or {}).get('kind') == 'task-notification' and row.get('promptSource') == 'system':
             continue
         content = message.get('content')
         if isinstance(content, str):
