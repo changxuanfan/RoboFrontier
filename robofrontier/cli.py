@@ -11,7 +11,7 @@ import sys
 import tempfile
 
 from .configuration import ROOT, TOPOLOGIES, load_configuration, rendering_environment
-from . import run_layout
+from . import policy_env, run_layout
 
 
 def _print(value):
@@ -78,6 +78,7 @@ def prepare(output, config):
     policy, selection = config['policy'], config['selection']
     load_env(ROOT/'.env')
     plan(config)  # Reject invalid model and selection before any installation.
+    policy_env.require_private_route(config)
     output = Path(output).resolve()
     if output.exists():
         raise ValueError('Choose a new output directory; prepared runs are never overwritten')

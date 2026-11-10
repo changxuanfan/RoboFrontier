@@ -2,7 +2,11 @@
 
 Runs each real CLI against a local stub model in a throwaway run, with the access table and
 variables a real run freezes. No provider is contacted and no credential is used. Prints
-ok/denied per attempt and never prints file contents; exits nonzero on any difference.
+ok/denied per attempt and never prints file contents; exits nonzero on any difference. A pass
+on both engines records a receipt beside the environment, which preparing a run requires. The
+receipt lists each engine with the sandbox and CLI version it ran, and preparation refuses any
+other combination. Give --scratch where batches will really run, since where a run sits changes
+what can be opened.
 
     .venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id>
 """
@@ -27,12 +31,18 @@ ROOT = Path(__file__).resolve().parents[1]
 MUST_WORK = ('python_is_environment', 'python_on_path_is_environment', 'tmpdir_in_workspace', 'home_in_workspace',
              'threads_not_limited', 'host_variables_gone', 'libraries_and_plots', 'tempfile', 'shell_heredoc', 'shell_sort',
              'subprocess_system_tool', 'read_public', 'write_workspace', 'read_environment', 'pip_install_store',
-             'import_installed', 'venv', 'shell_reports_success', 'read_shared_tmp', 'write_shared_tmp')
-MUST_FAIL = ('read_home', 'read_home_file', 'read_users', 'read_volumes', 'read_keychains', 'read_private', 'read_run_root',
+             'import_installed', 'venv', 'shell_reports_success', 'read_shared_tmp', 'write_shared_tmp', 'create_in_tmp',
+             'process_pool', 'process_executor', 'core_versions')
+MUST_FAIL = ('read_host_shared_memory', 'read_home', 'read_home_file', 'read_people', 'read_disks', 'read_system_secrets', 'read_var_tmp', 'read_private', 'read_run_root',
              'read_other_run', 'read_repository', 'tool_write_shared_tmp', 'write_public', 'write_run_root',
              'write_environment', 'run_other_python', 'import_mujoco', 'pip_install_absent_package', 'network_tcp',
-             'network_external', 'unix_socket_shared', 'list_processes')
+             'network_external', 'unix_socket_shared', 'see_host_processes')
 HOST_ONLY = 'ROBOFRONTIER_PROBE_HOST_ONLY'
+CLOSED_FOLDERS = {'darwin': {'read_people': '/Users', 'read_disks': '/Volumes', 'read_system_secrets': '/Library/Keychains', 'read_var_tmp': '/var/tmp'},
+                  'linux': {'read_people': '/home', 'read_disks': '/raid', 'read_system_secrets': '/root', 'read_var_tmp': '/var/tmp'}}
+FEW_PROCESSES = 15
+# Claude's macOS sandbox refuses the system limit that ProcessPoolExecutor reads first; Pool works.
+KNOWN_LIMITS = {('darwin', 'claude'): ('process_executor',)}
 OTHER_PYTHONS = ('/opt/homebrew/bin/python3', '/usr/local/bin/python3')
 OUTPUT_TYPES = ('function_call_output', 'custom_tool_call_output')
 PROBE_LIMIT_S = 280
@@ -174,7 +184,23 @@ def run_codex(run, command, scratch, seen, shared):
         server.server_close()
 
 
-ENGINES = {'codex': run_codex, 'claude': run_claude}
+def run_codex_landlock(run, command, scratch, seen, shared):
+    """The Linux Codex path: its tools run in a confined worker, with no shell in the CLI."""
+    from robofrontier.codex import tool_backend
+    tool_backend.prepare(run, {'tool_backend': 'landlock-v1', 'runner_backend': 'slurm-managed-v1'})
+    done = tool_backend.execute(run, {'tool': 'policy_exec', 'command': command}, timeout=PROBE_LIMIT_S)
+    seen.append({'content': done.stdout + done.stderr, 'is_error': done.returncode != 0})
+
+
+ENGINES = {'codex': run_codex_landlock if sys.platform == 'linux' else run_codex, 'claude': run_claude}
+
+
+def isolation(name):
+    """The sandbox the check runs `name` in, which a run prepared on this host would freeze."""
+    if name == 'codex':
+        return 'landlock-v1' if ENGINES['codex'] is run_codex_landlock else 'native'
+    from robofrontier.claude.landlock_shell import choose
+    return choose()
 
 
 def throwaway_run(scratch, name, environment):
@@ -190,9 +216,7 @@ def throwaway_run(scratch, name, environment):
     (run/'root.txt').write_text('ROOT')
     (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record(name)))
     policy_env.prepare_run(run, environment)
-    access = policy_access.record(run, environment=environment)
-    # The other run is beside this one, so close it as a repository's runs folder would be.
-    access['filesystem'][str(other)] = 'deny'
+    access = policy_access.record(run, environment=environment, unchecked=True)
     (run/'private/inputs/policy-access.json').write_text(json.dumps(access))
     shutil.copy(policy_env_probe.__file__, run/'public/inputs/probe.py')
     return run, other
@@ -209,18 +233,27 @@ def shell_succeeded(seen):
             and not any(item.get('is_error') for item in seen))
 
 
-def check_engine(name, environment, scratch):
-    """Run the probe through one engine; returns its results, or raises when it did not report."""
+def check_engine(name, environment, scratch, mode):
+    """Run the probe through one engine in sandbox `mode`; returns its results, or raises when it did not report."""
     run, other = throwaway_run(scratch, name, environment)
+    if name == 'claude':
+        # Read by claude.runner.confine, as a prepared run's launch record is.
+        (run/'private/inputs/claude.json').write_text(json.dumps({'bash_isolation': mode}))
     shared = Path('/tmp')/('robofrontier-probe-' + scratch.name)
     shared.mkdir()
+    shared_memory = Path('/dev/shm')/('robofrontier-probe-' + scratch.name)
+    if shared_memory.parent.is_dir():
+        shared_memory.write_text('SHARED')
     (shared/'canary.txt').write_text('SHARED')
     listener = socket.socket()
     listener.bind(('127.0.0.1', 0))
     listener.listen()
     other_python = next((path for path in OTHER_PYTHONS if Path(path).exists()), '/missing/python3')
     fixtures = {'real_home': str(Path.home().resolve()), 'run': str(run), 'env': str(environment), 'host_only': [HOST_ONLY, 'ANTHROPIC_API_KEY', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'ROBOFRONTIER_OFFLINE_STUB_TOKEN'],
-                'home_file': next((str(p) for p in (Path.home()/'.zshrc', Path.home()/'.profile') if p.is_file()), '/missing'),
+                'home_file': next((str(p) for p in (Path.home()/'.zshrc', Path.home()/'.bashrc', Path.home()/'.profile') if p.is_file()), '/missing'),
+                'shared_memory_file': str(shared_memory), 'closed_folders': CLOSED_FOLDERS[sys.platform], 'few_processes': FEW_PROCESSES,
+                'core_packages': policy_env.load(environment)['packages'],
+                'tmp_file': str(Path('/tmp')/('robofrontier-probe-new-' + scratch.name)),
                 'other_run_file': str(other/'private/inputs/task.json'), 'repo_file': str(ROOT/'pyproject.toml'),
                 'shared_tmp': str(shared), 'other_python': other_python, 'listener_port': listener.getsockname()[1]}
     (run/'public/inputs/probe.json').write_text(json.dumps(fixtures))
@@ -235,6 +268,11 @@ def check_engine(name, environment, scratch):
         if not (run/'workspace'/RESULT).is_file():
             raise ValueError(name + ' did not finish the probe')
         results = json.loads((run/'workspace'/RESULT).read_text())
+        # A masked folder can accept a write and discard it, so ask the real disk.
+        for attempt, written in (('write_run_root', run/'written.txt'), ('write_public', run/'public/inputs/written.txt'),
+                                 ('write_environment', environment/'written.txt')):
+            if results.get(attempt) == 'ok' and not written.exists():
+                results[attempt] = 'denied'
         # Claude's file tools follow permission rules, not the sandbox, so try writing with them too.
         results['tool_write_shared_tmp'] = 'ok' if (shared/'tool-written.txt').exists() else 'denied'
         results['shell_reports_success'] = 'ok' if shell_succeeded(seen[:1] if name == 'claude' else seen) else 'denied'
@@ -242,35 +280,55 @@ def check_engine(name, environment, scratch):
     finally:
         listener.close()
         shutil.rmtree(shared, ignore_errors=True)
+        shared_memory.unlink(missing_ok=True)
 
 
-def differences(results):
-    wrong = [name + ' should work' for name in MUST_WORK if results.get(name) != 'ok']
+def differences(results, known=()):
+    wrong = [name + ' should work' for name in MUST_WORK if results.get(name) != 'ok' and name not in known]
     wrong += [name + ' should be denied' for name in MUST_FAIL if results.get(name) != 'denied']
     return wrong
+
+
+def receipt_record(manifest, modes):
+    """What a pass records: each engine with the sandbox and CLI version it ran.
+
+    Per build: host and platform say where it ran, and preparation compares only `checked`.
+    """
+    return {'schema': policy_env.RECEIPT_SCHEMA, 'passed': True, 'tree_sha256': manifest['tree_sha256'],
+            'checked': [policy_env.combination(name, mode) for name, mode in sorted(modes.items())],
+            'host': socket.gethostname(), 'platform': sys.platform, 'at': time.time()}
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('environment', type=Path)
     parser.add_argument('--engine', choices=sorted(ENGINES), action='append')
+    parser.add_argument('--scratch', type=Path, help='Where to put throwaway runs, as a batch would; default beside the environment')
     args = parser.parse_args(argv)
     environment = args.environment.resolve()
     manifest = policy_env.verify(environment)
     print('environment ok: Python', manifest['python'], manifest['packages'])
     failed = False
     # Beside the environment, so nothing here sits in a shared temporary folder.
-    scratch = Path(tempfile.mkdtemp(prefix='check-', dir=environment.parent))
+    scratch = Path(tempfile.mkdtemp(prefix='check-', dir=args.scratch or environment.parent)).resolve()
+    names = args.engine or sorted(ENGINES)
+    modes = {name: isolation(name) for name in names}
     try:
-        for name in args.engine or sorted(ENGINES):
-            results = check_engine(name, environment, scratch)
-            wrong = differences(results)
-            print(json.dumps({'engine': name, 'attempts': len(results), 'differences': wrong}))
+        for name in names:
+            results = check_engine(name, environment, scratch, modes[name])
+            wrong = differences(results, KNOWN_LIMITS.get((sys.platform, name), ()))
+            print(json.dumps({'engine': name, policy_env.ISOLATION[name]: modes[name], 'attempts': len(results), 'differences': wrong}))
             failed = failed or bool(wrong)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     if failed:
         sys.exit(1)
+    if not args.engine:
+        receipt = policy_env.receipt_path(environment)
+        temporary = receipt.with_name(receipt.name + '.tmp')
+        temporary.write_text(json.dumps(receipt_record(manifest, modes)) + '\n')
+        temporary.replace(receipt)
+        print('recorded', receipt)
 
 
 if __name__ == '__main__':

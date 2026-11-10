@@ -23,13 +23,11 @@ from .task_config import ROOT
 NETWORK = False
 WEB_SEARCH = False
 HOME_SECRETS = ('.codex', '.claude', '.ssh', '.robofrontier', '.config/claude')
-# Hosts where a run with a policy environment has been tested through each engine's sandbox.
-QUALIFIED_SYSTEMS = ('darwin',)
 # Closed for a run with a policy environment: people's files, removable disks, other temporary
 # folders, other Python installations, and the system keychain files. /tmp stays open, since
 # shells and tools write there at fixed paths.
 CLOSED_ROOTS = {'darwin': ('/Users', '/Volumes', '/var/tmp', '/var/folders', '/opt', '/usr/local', '/Library/Keychains'),
-                'linux': ('/home', '/root', '/mnt', '/media', '/var/tmp', '/dev/shm', '/opt', '/usr/local')}
+                'linux': ('/home', '/root', '/mnt', '/media', '/raid', '/var/tmp', '/dev/shm', '/opt', '/usr/local')}
 
 
 def _checkouts(repo):
@@ -87,11 +85,18 @@ def closed_table(run, environment, *, home=None, system=None, **kwargs):
     stays writable and is shared with other runs.
     """
     run = Path(run).resolve()
+    system = system or sys.platform
+    if system == 'linux':
+        require_outside_tmp(run)
     home = Path(home).expanduser().resolve() if home else Path.home().resolve()
     access = table(run, home=home, **{**kwargs, 'tmp_dirs': ('/tmp',)})
-    for path in CLOSED_ROOTS[system or sys.platform]:
+    for path in CLOSED_ROOTS[system]:
         access[str(Path(path).resolve())] = 'deny'
     access[str(home)] = 'deny'
+    # On macOS a run may sit in scratch under /tmp, beside the rest of its batch; Linux refuses it above.
+    for folder in (run.parent, run.parent.parent):
+        if folder not in (Path('/'), Path('/tmp').resolve()):
+            access[str(folder)] = 'deny'
     access[str(Path(environment).resolve())] = 'read'
     access[str(run)] = 'deny'
     access[str(run/'public')] = 'read'
@@ -100,15 +105,31 @@ def closed_table(run, environment, *, home=None, system=None, **kwargs):
     return access
 
 
-def record(run, environment=None, **kwargs):
+def require_outside_tmp(run):
+    """On Linux, refuse a run with a policy environment, or a TMPDIR, inside /tmp.
+
+    Landlock cannot open a folder and close something inside it: the folder itself gets no rule.
+    A closed run, batch or TMPDIR inside /tmp would leave /tmp unwritable, where shells and the
+    CLIs create files at fixed paths. TMPDIR=/tmp itself stays open.
+    """
+    tmp = Path('/tmp').resolve()
+    temporary = Path(os.environ['TMPDIR']).resolve() if os.environ.get('TMPDIR') else None
+    for name, path in (('the run folder', run), ('TMPDIR', temporary)):
+        if path is not None and path != tmp and path.is_relative_to(tmp):
+            raise ValueError('On Linux, keep %s outside /tmp for a run with a policy environment (set '
+                             'slurm.scratch_root and TMPDIR under /var/tmp, for example); found %s' % (name, path))
+
+
+def record(run, environment=None, unchecked=False, **kwargs):
     """What a prepared run freezes: the table, network and web search choices."""
     environment = environment or policy_env.selected()
     if environment is None:
         return {'schema': 'robofrontier.policy-access.v1', 'filesystem': table(run, **kwargs),
                 'network': NETWORK, 'web_search': WEB_SEARCH}
-    if sys.platform not in QUALIFIED_SYSTEMS:
-        raise ValueError('The policy environment is not yet qualified on ' + sys.platform)
     manifest = policy_env.verify(environment)
+    # scripts/check_policy_env.py is what passes this, so it alone may be `unchecked`.
+    if not unchecked:
+        policy_env.require_checked(environment, manifest)
     return {'schema': 'robofrontier.policy-access.v2', 'filesystem': closed_table(run, environment, **kwargs),
             'network': NETWORK, 'web_search': WEB_SEARCH,
             'policy_env': {'root': str(Path(environment).resolve()), 'id': manifest['id'], 'python': manifest['python'],

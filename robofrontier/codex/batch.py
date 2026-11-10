@@ -24,6 +24,10 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
     if not names or len(set(names))!=len(names):raise ValueError('Choose distinct model profiles')
     profiles={n:profile(n,config) for n in names}
     selected=[row['case_id'] for row in select_cases(families,cases,level,min_arms)]
+    # A policy environment admits only the tool backend and Codex CLI its check ran.
+    from robofrontier import policy_env
+    from .tool_backend import selected as tool_backend
+    for p in profiles.values():policy_env.require_combination('codex',tool_backend(p))
     output=Path(output).absolute();output.mkdir(parents=True,exist_ok=False)
     for name in run_layout.BATCH_FOLDERS:(output/name).mkdir()
     batch=dict(schema='robofrontier.cli-benchmark.v1',status='preparing',created_at=time.time(),

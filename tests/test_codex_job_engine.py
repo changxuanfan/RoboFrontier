@@ -73,6 +73,7 @@ class JobManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'frozen deny table'):
                 self.build()
 
+    @patch('robofrontier.codex.job_engine.require_pinned_cli', lambda env=None: None)
     def test_proxy_loss_terminates_only_the_owned_native_process_group(self):
         from robofrontier.codex.job_engine import engine
         self.private.mkdir(mode=0o700)
@@ -91,6 +92,7 @@ class JobManifestTests(unittest.TestCase):
                     while process.poll() is None and time.monotonic()<deadline:time.sleep(.05)
                     self.assertIsNotNone(process.poll())
 
+    @patch('robofrontier.codex.job_engine.require_pinned_cli', lambda env=None: None)
     def test_a_zombie_only_engine_group_does_not_abort_cleanup(self):
         # macOS answers killpg with EPERM once only zombies remain in the engine's group.
         from robofrontier.codex import job_engine

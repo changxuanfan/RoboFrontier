@@ -38,7 +38,35 @@ DENIED_SYSCALLS = (
 )
 
 
-def seccomp_filter(filesystem_abi=None):
+MS_NOSUID, MS_NODEV, MS_REC, MS_PRIVATE = 2, 4, 1 << 14, 1 << 18
+
+
+def private_shared_memory():
+    """Give this command an empty /dev/shm of its own, for Python's multiprocessing locks.
+
+    Other jobs on the node keep data in the real one, and Landlock could only open all of it.
+    Runs before Landlock and seccomp, which forbid these calls, and fails rather than fall
+    back to the shared folder.
+    """
+    uid, gid = os.getuid(), os.getgid()
+    os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNS)
+    Path('/proc/self/setgroups').write_text('deny')
+    Path('/proc/self/uid_map').write_text('%d %d 1' % (uid, uid))
+    Path('/proc/self/gid_map').write_text('%d %d 1' % (gid, gid))
+    libc = ctypes.CDLL(None, use_errno=True)
+    for source, target, kind, flags in ((b'none', b'/', None, MS_REC | MS_PRIVATE),
+                                        (b'tmpfs', b'/dev/shm', b'tmpfs', MS_NOSUID | MS_NODEV)):
+        if libc.mount(source, target, kind, flags, None):
+            raise OSError(ctypes.get_errno(), 'Cannot prepare a private /dev/shm')
+
+
+# A run with a policy environment needs pip and venv, which set file modes. These calls succeed
+# without changing anything, since Landlock cannot limit which of the account's files they reach.
+MODE_SYSCALLS = ('chmod', 'fchmod', 'fchmodat', 'fchmodat2')
+PRETEND_SUCCESS, DENY = 0x00050000, 0x00050001  # SCMP_ACT_ERRNO(0), SCMP_ACT_ERRNO(EPERM)
+
+
+def seccomp_filter(filesystem_abi=None, ignore_mode_changes=False):
     name = ctypes.util.find_library('seccomp')
     if not name:
         raise RuntimeError('libseccomp is required for the Codex Landlock backend')
@@ -66,7 +94,8 @@ def seccomp_filter(filesystem_abi=None):
             number = library.seccomp_syscall_resolve_name(name.encode())
             if name == 'fchmodat2' and number < 0:
                 number = 452  # x86_64/aarch64: old libseccomp, newer kernel.
-            if number >= 0 and library.seccomp_rule_add(context, 0x00050001, number, 0):
+            action = PRETEND_SUCCESS if ignore_mode_changes and name in MODE_SYSCALLS else DENY
+            if number >= 0 and library.seccomp_rule_add(context, action, number, 0):
                 raise RuntimeError('Cannot enforce syscall restriction: ' + name)
         version = abi() if filesystem_abi is None else filesystem_abi
         if version < 3:
@@ -164,10 +193,13 @@ def main():
     # No inherited host descriptors, credentials, Python import controls or shell RC.
     os.closerange(3, resource.getrlimit(resource.RLIMIT_NOFILE)[0])
     os.environ.clear()
-    os.environ.update(PATH=str(Path(sys.executable).parent)+':/usr/local/bin:/usr/bin:/bin',
-                      LANG='C.UTF-8', TMPDIR=str(temporary))
+    frozen = access.get('policy_env')
+    os.environ.update(frozen['variables'] if frozen else dict(
+        PATH=str(Path(sys.executable).parent)+':/usr/local/bin:/usr/bin:/bin', LANG='C.UTF-8', TMPDIR=str(temporary)))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    seccomp_filter(abi())
+    if frozen:
+        private_shared_memory()
+    seccomp_filter(abi(), ignore_mode_changes=bool(frozen))
     restrict(rules)
     drop_capabilities()
     os.chdir(run/'workspace')

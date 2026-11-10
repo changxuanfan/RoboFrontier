@@ -1,14 +1,15 @@
 # Policy Python environment
 
-Policy scripts use one frozen Python environment instead of whatever the host has. On macOS
-`robofrontier prepare` uses it by default: the environment built from the current locks under
-`/Users/Shared/robofrontier` (or `ROBOFRONTIER_POLICY_ENV_BASE`) that passed its check.
-Preparation refuses when that one is missing, unchecked or failed, rather than falling back to
-the host's Python. `ROBOFRONTIER_POLICY_ENV=PATH` picks another environment, and
+Policy scripts use one frozen Python environment instead of whatever the host has. New runs use
+it by default: `robofrontier prepare` freezes the build of the current locks under
+`ROBOFRONTIER_POLICY_ENV_BASE`, or on macOS under `/Users/Shared/robofrontier`, once the check
+below has passed on it. Preparation refuses when that build is missing or unchecked, rather than
+falling back to the host's Python. `ROBOFRONTIER_POLICY_ENV=PATH` picks another environment and
 `ROBOFRONTIER_POLICY_ENV=off` keeps the host's Python for a run. `robofrontier plan` shows the
-choice as `policy_environment`. Runs already prepared keep what they froze. Other hosts keep
-the host's Python, and naming an environment there is refused, until they have been tested
-through each engine's sandbox.
+choice as `policy_environment`. A Linux host with no base named keeps the host's Python; on Slurm,
+set the base to the shared build. Runs already prepared keep what they froze. The check has passed
+on macOS and on Slurm (Ubuntu 22.04, kernel 5.15, Landlock ABI 1); RunPod and Docker have not been
+tried.
 
 ## Use it
 
@@ -19,12 +20,20 @@ the network and `uvx`; the result is read-only and runs need no network:
 .venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier
 ```
 
-Check it before a batch. This drives each real CLI with a local stub model, so it contacts no
-provider and uses no credential:
+Check it where batches will run, on a compute node for Slurm. This drives each real CLI with a
+local stub model, so it contacts no provider and uses no credential. A pass records a receipt
+beside the environment that lists each engine with the sandbox it ran (Codex's tool backend,
+Claude Code's Bash isolation) and the CLI version on `PATH`. Preparation refuses any other
+combination, so check again after changing a CLI, or to use Codex's `native` tool backend on Linux.
+A receipt from before these lists is refused until the check runs again:
 
 ```sh
-.venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id>
+.venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id> --scratch <batch location>
 ```
+
+The receipt is per build, not per node: on shared storage, one pass admits every node that uses
+that build. Nodes should match the one checked (kernel, Landlock, user namespaces); a node without
+unprivileged user namespaces fails each Codex command rather than running it less confined.
 
 Prepare as usual; the default applies. To name another environment, or to keep the host's
 Python:
@@ -58,8 +67,31 @@ refuses an environment whose files changed.
 Codex renders the table as a permission profile. Claude Code renders it as file-tool rules plus
 its Bash sandbox.
 
+## Slurm
+
+- Set `slurm.scratch_root` outside `/tmp`, such as `/var/tmp`, and name shared storage in
+  `ROBOFRONTIER_SHARED_DENY_ROOTS`. An empty `scratch_root` uses `SLURM_TMPDIR`, which is often
+  under `/tmp`; preparation then refuses the run.
+- Keep the Mac route's `slurm.egress_root` outside `/tmp` too, since policies can read and write
+  there. Preparing a run with an environment refuses it otherwise.
+- Put the pinned Codex CLI (see `docs/engines/codex.md`) first on `PATH`. A newer one can reject the
+  run's configuration, and a shared account's copy can change without notice, so every job-scoped
+  Slurm engine refuses any other version, with or without a policy environment.
+
 ## Known limits
 
+- **On Linux, runs and `TMPDIR` stay outside `/tmp`, such as under `/var/tmp`.** Landlock cannot
+  open a folder and close something inside it, so a closed run, batch or `TMPDIR` under `/tmp` would
+  leave nothing able to create files directly in `/tmp`. Preparation and the check refuse it;
+  `TMPDIR=/tmp` itself is fine. macOS allows runs under `/tmp`.
+- **`ProcessPoolExecutor` fails under Claude on macOS.** Its sandbox refuses a system limit that
+  the executor reads first. `multiprocessing.Pool` works, and Linux has no such limit.
+- **Codex on Linux ignores `chmod`.** Landlock cannot limit which of the account's files a mode
+  change reaches, so the call succeeds without doing anything; `pip` and `venv` still work, and
+  `./script.sh` needs `bash script.sh`. It also blocks `kill` and sockets.
+- **Each Codex command on Linux has its own empty `/dev/shm`.** It holds Python's multiprocessing
+  locks and goes away with the command, so other jobs' shared memory stays out of reach. This needs
+  unprivileged user namespaces, and commands fail on a host without them.
 - **`/tmp` is open and shared.** Closing it breaks zsh here-documents and the Claude CLI's record of
   each command's working directory, which use fixed paths there. So a policy can read and write what
   other runs and other programs on the host keep in `/tmp`, including other Claude sessions' files

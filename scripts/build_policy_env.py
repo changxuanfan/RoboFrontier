@@ -70,6 +70,8 @@ def make_writable(root):
 
 
 def build(base):
+    # A shared account's ~/.local packages and pip settings must not reach the build or its manifest.
+    os.environ.update(PYTHONNOUSERSITE='1', PIP_CONFIG_FILE=os.devnull)
     base = Path(base).expanduser().resolve()
     target = base/('policy-env-' + identity())
     base.mkdir(parents=True, exist_ok=True)
