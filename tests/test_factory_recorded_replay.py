@@ -32,7 +32,6 @@ class FactoryRecordedReplayTests(unittest.TestCase):
  def test_shared_edit_replays_same_poses_and_skipped_appearance_without_physics(self):
   from robofrontier.motion_edit import build_timeline
   from scripts.replay_motion_in_factory import replay
-  from scripts.export_factory_recorded_pose import export
   from robofrontier.robot_control import quat_matrix
   scene=current_scene()
   if not scene.exists():self.skipTest('Generated factory not present')
@@ -51,10 +50,6 @@ class FactoryRecordedReplayTests(unittest.TestCase):
    report=replay(root/'motion',scene,root/'checked',edit_timeline=path)
    self.assertTrue(report['passed']);self.assertEqual(report['states_checked'],3)
    self.assertEqual(report['replayed_source_timestamps_s'],[0.,1.,2.])
-   pose=export(root/'motion',scene,root/'pose.json',edit_timeline=path,output_frame=1)
-   self.assertEqual(pose['selected_source_frame'],60);self.assertEqual(pose['selected_recorded_time_s'],1.)
-   display=next(g for g in pose['geoms'] if g['name'].endswith('__score_0_0'))
-   np.testing.assert_allclose(display['rgba'],[.1,.2,.3,.75],atol=1e-7)
    frozen=Workstation(reader.path/'source');q=frames[60][1]
    baseline=frozen.frame(q);shift=np.array([4.,-3.,.2]);yaw=.7
    rotated=frozen.frame(q,1.,shift,yaw);rotation=np.array([[np.cos(yaw),-np.sin(yaw),0],[np.sin(yaw),np.cos(yaw),0],[0,0,1.]])

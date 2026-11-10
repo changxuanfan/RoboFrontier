@@ -22,7 +22,7 @@ PLAN_SCHEMA = 'robofrontier.factory-render-plan.v1'
 
 def code_hashes():
     files = set((ROOT/'robofrontier').glob('*.py'))
-    for package in ('suite', 'factory', 'demo'):
+    for package in ('suite', 'factory'):
         files.update((ROOT/'robofrontier'/package).glob('*.py'))
     files.update((ROOT/'scripts').glob('*factory*.py'))
     files.add(ROOT/'scripts/promo_preview.py')
@@ -481,7 +481,7 @@ def submit(plan_path, partition, parallel=1, cpus=20, memory='64G', wall_time='2
         '--cpus-per-task',str(cpus),'--mem',memory,'--time',wall_time,'--no-requeue','--signal=B:TERM@'+str(stop_warning_s),
         '--array',f'0-{len(plan["jobs"])-1}%{parallel}','--output',str(logs/'%A_%a.out'),
         '--chdir',str(ROOT),'--export=ALL,RF_FACTORY_PYTHON='+sys.executable,
-        str(ROOT/'scripts/slurm_factory.sbatch'),'--plan',str(path),'--blender',blender_path(blender)]
+        str(ROOT/'scripts/slurm_factory.sbatch'),str(path),'--blender',blender_path(blender)]
     options=[]
     for name,value in (('partition',partition),('account',account),('qos',qos)):
         if value:options.extend(['--'+name,value])

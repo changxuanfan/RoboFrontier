@@ -1,7 +1,7 @@
 # Factory design, rendering and historical acceptance
 
-For a new checkout, use the [unified Factory guide](replay.md). The native
-[Linux/Slurm handoff](server.md) documents `scripts.factory_server`.
+For a new checkout, use the [unified Factory guide](replay.md); the
+[Linux/Slurm guide](server.md) runs the same commands on a cluster.
 Both freeze inputs from `configs/factory-assets.json`; the package uses Mosaic
 R14. Policy assets and optional historical Factory playback data are separate.
 New compressed recordings can be imported through the unified entry using their
@@ -50,9 +50,8 @@ all swept robot volumes. Mesh sharing, repeated materials/textures and static
 batching are retained. A build uses assets inside its own output; source task
 assets remain unchanged.
 
-Fixed lighting and camera settings are in
-`configs/backgrounds/robo_factory_lookdev.json` and
-`configs/backgrounds/robo_factory_lookdev_camera.json`. Broad soft fill replaces
+`scripts/render_factory_blender.py` accepts offline lighting and camera
+overrides (`--lighting-config`, `--camera-config`). Broad soft fill replaces
 discrete pools of light. Low-angle warm sunlight enters actual window openings;
 the exterior road was removed. Dark robot joints and shells, wooden task pieces
 and printed tabletop elements have separately calibrated display materials.
@@ -130,10 +129,10 @@ source scenes, events and robot joints remain unchanged.
 
 ## Lower-level build, inspect and export
 
-Use the unified or native handoff for new machines. The following interfaces
+Use `robofrontier factory` for new machines. The following interfaces
 assume that matching local inputs already exist. `video` and `poses` require an
 explicit `--release` with resolved paths for the selected scene. The batch's
-`release.json` produced by `factory_server prepare` is one such input. Choose
+`release.json` produced by `robofrontier factory prepare` is one such input. Choose
 new output directories; these examples do not bootstrap historical local paths.
 
 ```sh
@@ -316,21 +315,23 @@ not attempt to resolve those maintainer-local delivery pointers.
 
 ## Static per-desk front and side views
 
-For an already built scene, export Blender assets and desk cameras:
+`robofrontier factory prepare` renders these views from the data package. For
+an already built scene and an existing desk camera file, export Blender assets
+and render directly (the desk camera exporter, `scripts/factory_desk_cameras.py`,
+was removed on 2026-11-10; see the [cleanup log](../cleanup-20261110.md)):
 
 ```sh
 .venv/bin/python -m scripts.export_factory_blender --scene SCENE/scene.xml --output ASSET
-.venv/bin/python -m scripts.factory_desk_cameras --scene SCENE/scene.xml --output desk-cameras.json
 blender --background --python-exit-code 1 --python scripts/render_factory_blender.py -- \
   --asset ASSET --output DESK_OUTPUT --desk-cameras desk-cameras.json \
   --width 1280 --height 800 --samples 16 --profile fast
 ```
 
-The default exports front and side perspective views of each desk inside the
+The desk cameras give front and side perspective views of each desk inside the
 Factory. Front follows the simple scene's `global` camera direction; side faces
 the station's lateral axis. Station labels sit on the floor below desks. Front
 framing includes the label with tighter margins to keep the desk large; side
 prioritizes the equipment without requiring visible label text. Distance and
 center adapt to each desk's initial geometry bounds for a 16:10 image.
-`--views top` adds the older overhead view. These are static initial poses,
+These are static initial poses,
 not coverage of every pose during execution.

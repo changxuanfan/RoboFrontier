@@ -62,25 +62,11 @@ The manifest checksum, supplied independently of its contents, is
 
 Download the [optional archive](https://github.com/changxuanfan/RoboFrontier/releases/download/development-fixtures-20261102/legacy-test-fixtures-v4.tar.gz)
 and [manifest](https://github.com/changxuanfan/RoboFrontier/releases/download/development-fixtures-20261102/legacy-test-fixtures-v4.json)
-from the separate development-fixture prerelease. Verify against the independent
-pins above, then install them into a checkout:
-
-```sh
-python3 scripts/install_historical_fixtures.py \
-  --archive /path/to/legacy-test-fixtures-v4.tar.gz \
-  --manifest /path/to/legacy-test-fixtures-v4.json \
-  --manifest-sha256 909e9a42b2c4048bb9d5affc58fdc3930c449394b8efb1f83e854ae98ff9ba06 \
-  --report runs/engineering/historical-fixture-install.json
-```
-
-This standard-library installer verifies the archive and every member before
-installing any fixture, rejects tracked source destinations, links outside the
-bundle and paths outside the historical fixture roots, and preserves existing
-files. An existing different file is an error; an identical file is reused.
-Interrupted installation can be retried. Shared content links only newly staged
-copies, never the supplied original recordings or an existing fixture. Extraction
-reads the archive sequentially, including hardlinks, to avoid repeatedly
-decompressing the large bundle. The dated Relay source aliases under
+from the separate development-fixture prerelease and verify them against the
+independent pins above. Its checked installer, `scripts/install_historical_fixtures.py`,
+was removed on 2026-11-10 with the release freeze; restore it from tag
+`archive/pre-cleanup-20261110` to install the bundle (see the
+[cleanup log](../cleanup-20261110.md)). The dated Relay source aliases under
 `outputs/oracle/relay-edited-tracks-20261027/` are included only for the nine
 registered source directories and their original metadata/assets. Other output
 paths are rejected. The dated Mosaic review packages, design/coverage certificates,

@@ -1,7 +1,7 @@
 # Configuration and frozen inputs
 
 The released tasks are in [`../benchmark/`](../benchmark/README.md). For a new run, start with [`../robofrontier.toml`](../robofrontier.toml), not a
-legacy family JSON or the root `config.json` single-arm demo. The unified loader
+legacy family JSON. The unified loader
 resolves repository defaults, a partial operator TOML, and explicit CLI overrides
 in that order. It rejects unknown fields and freezes the effective configuration
 into a new batch. Changing settings does not change an already prepared batch.
@@ -18,10 +18,8 @@ See the [configuration and CLI guide](../docs/unified-cli.md).
 | `policy-assets.json` | Pinned policy asset archive and integrity inventory used by automatic bootstrap/preparation |
 | `factory-assets.json` | Independent R14 Factory recording release, split sizes and SHA-256 fingerprints; it does not change policy scene selection |
 | `backgrounds/robo_factory.json` | Factory appearance, layout and shared visual resources |
-| `backgrounds/robo_factory_lookdev*.json` | Offline lighting and camera overrides for `render_factory_blender --lighting-config/--camera-config` |
 | `patterns/` | Tulip pattern parameters used by the Frontier V2 scene builder |
 | `retention.json` | What `scripts/curate_repository.py` keeps: Oracle sources, released inputs, final media and selected policy evidence; `skip_runs` names the `runs/` data roots it never proposes (batches and policy runs are always kept) |
-| `noslip.json` | No-slip physics variant for the single-arm demo |
 | `examples/luna-l3-cpu.toml` | CPU Slurm example for the four maximum-arm Level 3 tasks |
 | `environments/` | Scene revisions before release, the earlier revisions released cases and Oracle recordings name as sources, and scenes the tests open |
 | `suites/` | Generated catalogs of earlier collections; `frontier-current-oracle.json` is the 36-station Oracle layout used by the Factory |

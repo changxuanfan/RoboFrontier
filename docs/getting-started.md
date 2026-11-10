@@ -20,7 +20,7 @@ Model profiles are configuration choices, not universal provider compatibility c
 | Queue a job with node-local runtime state | [Slurm submission](running/slurm.md) |
 | Replay motion and render Factory backgrounds | [Factory workflow](factory/replay.md) |
 | Edit the full Factory camera plan and English video titles/subtitles | [Editable video project](factory/editorial.md) |
-| Browse the 36 current tasks and initial scenes | [Download the offline atlas](https://github.com/changxuanfan/RoboFrontier/releases/download/development-fixtures-20261102/robofrontier-task-atlas-20261102.zip) · [Atlas guide](tasks/atlas.md) |
+| Browse the 36 current tasks and initial scenes | [Project page](https://changxuanfan.github.io/RoboFrontier/) |
 | See which integration gates have passed | [Acceptance and source provenance](archive/unified-main.md) |
 | Read the policy's role and tool contract | [Robot collaboration skill](../prompts/skills/robot-collaboration/SKILL.md) |
 | Read completion and recovery rules | [Shared policy rules](../prompts/rules.md) |
@@ -271,10 +271,9 @@ all-frame replay checks, with small CPU video previews. The editable
 [full-length English video project](factory/editorial.md) is tracked and has
 passed CPU/Metal preview and media round trips. The original full movie is
 published in the [Factory tour release](https://github.com/changxuanfan/RoboFrontier/releases/tag/factory-tour-media-20261102); a new current-source full render is deferred. New full physical
-Oracle qualification remains open. The tracked
-[English task atlas](task-atlas/index.html) includes current
-public task contracts and 72 regenerated initial views; its [guide](tasks/atlas.md)
-provides verification and offline ZIP commands. Existing Oracle intervention records and historical source identities must
+Oracle qualification remains open. The
+[project page](https://changxuanfan.github.io/RoboFrontier/) shows the 36 current
+public tasks. Existing Oracle intervention records and historical source identities must
 be preserved; assisted execution is not automatically an autonomous benchmark.
 
 ## Repository map
@@ -287,14 +286,13 @@ be preserved; assisted execution is not automatically an autonomous benchmark.
 | `prompts/` | Every text a model reads: rules, roles, skills and the two manager prompts |
 | `configs/` | Model catalogs, harnesses, asset locks, and scene revisions not yet released |
 | `scripts/`, `tests/` | Engineering commands and regression checks |
-| `docs/` | Guides by topic, the tracked public task atlas and dated history |
-| `assets/`, `web/task-atlas/` | Shared art and the atlas page templates |
+| `docs/` | Guides by topic and dated history |
+| `assets/` | Shared art |
 | `docker/` | The container image |
 | `runs/`, `outputs/` | Ignored runtime evidence and media; back up separately from Git |
 | `.robofrontier/` | Ignored private native state and container command receipts |
 
 The full layout and where new files go: [repository layout](repository-layout.md).
 
-The early single-arm application is available as `robofrontier demo` or
-`robofrontier-demo`; it is not the default benchmark entry. A standalone wheel,
-without the repository catalogs/assets, is not a qualified distribution.
+A standalone wheel without the repository catalogs/assets is not a qualified
+distribution.

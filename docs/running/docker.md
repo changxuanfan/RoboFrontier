@@ -229,8 +229,8 @@ status and stop do not log in or invoke a model automatically.
 
 ## Compatibility and limits
 
-The older `scripts.luna_cpu` module is a legacy entry point. Existing frozen data
-remain readable; new unified runs should use this wrapper and `docker/Dockerfile`.
+Existing frozen data remain readable; new unified runs use this wrapper and
+`docker/Dockerfile`. The older `scripts.luna_cpu` entry was removed on 2026-11-10.
 
 The image's Python/CLI/system-library pins, source revision and asset lock define
 the executable environment. A later source change requires a new image and new

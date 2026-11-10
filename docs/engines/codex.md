@@ -3,7 +3,7 @@
 For new experiments, use the [unified CLI](../unified-cli.md) and its versioned
 TOML. This guide explains the native Codex path, the retained
 `python -m scripts.benchmark` interface, and Luna execution on Linux CPU and
-Slurm. See the [Linux guide](../running/server-benchmark.md) for environment choices,
+Slurm. See the [Slurm guide](../running/slurm.md) for environment choices,
 the [engine overview](README.md) for what Codex shares with Claude and for
 [shared setup](README.md#shared-setup), and [providers](providers.md) for
 catalogs, credentials and third-party endpoints.
@@ -281,9 +281,8 @@ operating-system containment against malicious policy code.
 This section was written for the unified `integration/unified-main` checkout
 before it replaced the published default branch. Start with the
 [unified CLI](../unified-cli.md) and use the [Slurm staging guide](../running/slurm.md)
-for queue execution. The native `scripts.luna_cpu` wrapper remains a
-compatibility entry, with different Codex home behavior; it is not the new
-cluster submission mechanism.
+for queue execution. The older native `scripts.luna_cpu` wrapper was removed on
+2026-11-10.
 
 New-run defaults select Luna/high, official OpenAI API authentication, adaptive
 organization, all 36 R14 task selections and 36 requested concurrent task hosts.
@@ -452,9 +451,8 @@ source evidence or turn engineering errors into model failures.
 
 Inspect metrics in the same execution context, using stopped evidence when a
 command opens SQLite. Do not read a live container database from the Mac host,
-or an active node database across a shared mount. Native compatibility commands
-include `scripts.luna_cpu usage`, `performance` and `collect`. Usage deduplicates
-recorded responses and reports missing traces; it is not the provider bill.
+or an active node database across a shared mount. Usage reports
+deduplicate recorded responses and report missing traces; they are not the provider bill.
 Completed-response TPM is not a provider admission/rate-limit counter. Model
 turn duration includes tool waits; action and model intervals overlap and must
 not be summed as disjoint cost/time categories. Owner counters are not a complete
@@ -467,28 +465,3 @@ sacct -j JOB_ID --format=JobID,State,Elapsed,AllocCPUS,MaxRSS,TotalCPU
 Site accounting determines metric scope. Inspect missing sessions/evaluations,
 unsealed outcomes and stage-out receipts before sharing a collected package.
 A backup is a separately retained verified copy, not merely an ignored run folder.
-
-### Native compatibility commands
-
-For a local Linux filesystem and an existing compatible environment, the native
-wrapper retains `setup-assets`, `doctor`, `preflight`, `prepare`, `submit`, `run`,
-`status`, `stop`, `usage`, `performance`, `collect`, and `l3-max-test`. Its profiles
-include `luna`, `openlux-luna` and `openlux-terra` (see
-[OpenLux Terra](../archive/openlux-terra.md)); changing profile changes the
-required API key and provider preflight. It does not stage live state to Slurm
-scratch. Prefer the unified entry for new task-isolated/concurrent deployments.
-
-The following remains a model-free way to inspect the legacy L3 preparation:
-
-```sh
-.venv/bin/python -m scripts.luna_cpu l3-max-test --prepare-only \
-  --output runs/policy/legacy-l3-draft
-```
-
-Its native one-hour default, optional `--wall-limit-s`, parallel-4 selection and
-private `codex-home.json` marker remain compatibility behavior. An already
-prepared directory is executed with its separate native `run` command after a
-matching preflight, not by invoking `l3-max-test` over it again. Never move a
-prepared live batch between machines/absolute paths or mix native and unified
-configuration markers. Old Docker commands/image defaults are documented as
-Legacy; new work should use the frozen [Docker commands](../running/docker.md).

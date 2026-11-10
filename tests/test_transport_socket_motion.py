@@ -17,7 +17,6 @@ from robofrontier.suite.evaluate import Monitor
 from robofrontier.suite import transport_socket_motion as socket
 from robofrontier.suite import transport_oracle_v2 as reference
 from robofrontier.suite.transport_unit_motion import insertion_grasps
-from scripts.verify_transport_parallel_unit import execute_independent_sequences
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -52,28 +51,6 @@ class SocketMotionTests(unittest.TestCase):
         t.execute('socket-withdraw',{robot:('move',dict(target_m=target.tolist(),quaternion_wxyz=matrix_quat(rotation).tolist()))})
         original.assert_called_once()
         np.testing.assert_array_equal(t.data.qpos,before)
-
-    def test_fast_arm_continues_while_other_arm_is_busy(self):
-        starts=[]
-        class Arm:
-            job=None
-            def validate(self,op,parameters,*_):return parameters['joint_rad'][0]
-            def start(self,ident,duration,now):
-                self.job=(ident,now+duration);starts.append((ident,now))
-            def poll(self,now,*_):
-                if self.job is None or now+1e-9<self.job[1]:return None
-                ident=self.job[0];self.job=None
-                return dict(status='completed',call_id=ident)
-        t=SimpleNamespace(time=0.,tick=0,stride=1,cfg={},actions=[],check_stop=lambda:None,
-            event=Mock(),arms={'A':Arm(),'B':Arm()},task={'workspace_world_m':{'lower':[0,0,0],'upper':[1,1,1]}})
-        def step():t.tick+=1;t.time=round(t.time+.02,8)
-        t.step=step
-        def op(label,duration,delay=0.):
-            return dict(label=label,delay=delay,command=('move',dict(joint_rad=[duration]*7)))
-        execute_independent_sequences(t,{'A':[op('first',.1),op('second',.1,.06)],'B':[op('long',.5)]})
-        self.assertEqual(starts,[('independent-A-0',0.),('independent-B-0',0.),('independent-A-1',.16)])
-        self.assertEqual(t.time,.5);self.assertEqual(len(t.actions),3)
-        self.assertTrue(all(a.job is None for a in t.arms.values()))
 
     def test_replan_does_not_pull_inserted_or_unknown_payload(self):
         data=SimpleNamespace(body=lambda _:SimpleNamespace(xpos=np.zeros(3),xmat=np.eye(3).ravel()),

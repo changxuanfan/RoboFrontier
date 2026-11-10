@@ -21,8 +21,7 @@ runs' plans and experience are not automatically loaded into a new experiment.
 | `runs/` | Ignored run-local evidence and engineering outputs |
 
 Use `python -m robofrontier.cli`; see [CLI configuration](unified-cli.md).
-The root `config.json` is a Legacy single-arm demonstration, not a second
-benchmark-wide configuration. Current task inputs are selected through
+Current task inputs are selected through
 `benchmark/release.json`. Historical Oracle witnesses and new
 policy inputs have separate purposes and qualification records. New unified
 Oracle executions select current released scenes; Factory playback uses each
@@ -157,16 +156,6 @@ There is no requirement to end a turn after every decision or request every
 camera. Saved-note timestamps/revisions differ from current/latest action facts.
 Executor updates do not make an old note freshly authored. Teammate statements
 remain statements, not verified physical facts.
-
-Legacy `scripts/role_tools.js` helpers provide robot-tool, finite-sequence and
-role-step boundaries. `robotTool` returns the requested result and selected
-images already present. `job` may return original images with original times;
-a missing image does not trigger hidden observation. `robotSequence` executes
-only the agent's finite move/gripper list, returning at events, failure,
-uncertainty, pause/end or an intermediate image requiring interpretation. It
-contains no hidden grasp/transport planner or conditional action queue.
-Permitted local analysis can refresh mail at its operation boundary; bare native
-tools have no universal project inbox hook.
 
 New requests omit outer `call_id`; the host generates and returns it. To query
 an existing action, make a new `job` request with the target ID in `data.call_id`.

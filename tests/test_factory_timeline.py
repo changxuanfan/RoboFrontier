@@ -13,7 +13,7 @@ from robofrontier.factory.bundle import resolved_release,read as read_bundle
 
 def portable_data(test):
     folder=ROOT/'runs/factory-data/r14'
-    if not (folder/'bundle.json').is_file():test.skipTest('Install factory data with scripts.factory_server setup')
+    if not (folder/'bundle.json').is_file():test.skipTest('Install factory data with robofrontier factory setup')
     release=resolved_release(folder)
     scene=folder/read_bundle(folder/'bundle.json')['scene']
     return release,scene

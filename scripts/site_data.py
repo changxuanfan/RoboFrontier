@@ -1,7 +1,8 @@
 """Generate the project page's data files from the release and encoded media.
 
 tasks:  site/data/tasks.json, the 36 released cases with their public facts (family, level,
-        arms, workload) and the one-line level differences, from the public task atlas.
+        arms, workload) and the one-line level differences, from the release and each case's
+        public policy task.
 media:  site/data/media.json, every video set (Oracle, then one per model) with its base URL
         and per-task front/side files, from the manifests that scripts.site_media writes.
 
@@ -13,6 +14,7 @@ A set's BASE_URL is where its files are published (its media repository's Pages 
 relative path such as `_media/oracle/` for a local preview.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -20,7 +22,6 @@ import re
 from robofrontier.task_config import ROOT
 
 SITE = ROOT / 'site/data'
-ATLAS = ROOT / 'docs/task-atlas/tasks.json'
 
 FAMILIES = {
     'transport': {'name': 'Transport', 'verb': 'Deliver ordered items to their boards, by handover or staging',
@@ -71,17 +72,31 @@ def workload(case):
 
 
 def tasks():
-    atlas = json.loads(ATLAS.read_text())
-    references = oracle(json.loads((ROOT / 'benchmark/release.json').read_text()))
+    import tempfile
+    from robofrontier.task_config import public_task
+    from robofrontier.task_families import RELEASE, freeze_public, policy_task
+    payload = (ROOT / RELEASE).read_bytes()
+    release = json.loads(payload)
+    references = oracle(release)
     rows = []
-    for case in atlas['cases']:
-        family = case['family']
-        rows.append({'id': case['id'], 'family': family, 'level': case['level'], 'arms': case['arm_count'],
-                     'workload': workload(case), 'unit': FAMILIES[family]['unit'],
-                     'level_note': FAMILIES[family]['levels'][case['level'] - 1],
-                     'objective': case['objective'], 'rules': case['rules'], 'oracle': references[case['id']]})
+    for family in FAMILIES:
+        for record in release['families'][family]['gpt']:
+            # The same rule overlay a new policy run receives.
+            task = policy_task(record['id'])
+            public = public_task(task)
+            with tempfile.TemporaryDirectory(prefix='rf-site-public-') as temporary:
+                for folder in ('public/inputs', 'private/inputs'):
+                    (Path(temporary) / folder).mkdir(parents=True)
+                freeze_public(task, Path(temporary), public)
+            case = {'id': public['id'], 'family': public['family'], 'level': public['level'],
+                    'arm_count': len(task['arms']), 'dials': public.get('dials')}
+            rows.append({'id': case['id'], 'family': family, 'level': case['level'], 'arms': case['arm_count'],
+                         'workload': workload(case), 'unit': FAMILIES[family]['unit'],
+                         'level_note': FAMILIES[family]['levels'][case['level'] - 1],
+                         'objective': public['objective'], 'rules': public['rules'],
+                         'oracle': references[case['id']]})
     rows.sort(key=lambda r: (list(FAMILIES).index(r['family']), r['arms'], r['workload'], r['level']))
-    document = {'schema': 'robofrontier.site-tasks.v1', 'release_sha256': atlas['release_sha256'],
+    document = {'schema': 'robofrontier.site-tasks.v1', 'release_sha256': hashlib.sha256(payload).hexdigest(),
                 'families': FAMILIES, 'tasks': rows}
     return write(SITE / 'tasks.json', document)
 

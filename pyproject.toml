@@ -15,7 +15,6 @@ dependencies = [
 
 [project.scripts]
 robofrontier = "robofrontier.cli:main"
-robofrontier-demo = "robofrontier.demo.app:main"
 
 [project.urls]
 Repository = "https://github.com/changxuanfan/RoboFrontier"

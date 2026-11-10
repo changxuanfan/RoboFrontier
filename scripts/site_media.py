@@ -5,8 +5,9 @@ encode:  each source MP4 becomes a 720p H.264 file (CRF 28, preset slow, faststa
          of every output and the SHA-256 of its source. Existing verified outputs are kept.
 montage: one 1920 x 1080 video per family, a 3 x 3 grid of its nine tasks (rows are
          difficulty levels, columns scales), each tile sped up to a common length.
-explainer: the README benchmark figure: per family, its largest team at Levels 1-3 from the
-         task atlas, with what each level changes.
+explainer: the README benchmark figure: per family, its largest team at Levels 1-3, with what
+         each level changes. IMAGES holds initial-state renders named <case>-top.jpg and
+         <case>-global.jpg (the retired task atlas made them; see docs/cleanup-20261110.md).
 stills:  README images: montage posters with a play badge and a 400-px thumbnail of every
          task. The README banner and teaser come from scripts/site_film.py.
 
@@ -16,7 +17,7 @@ Run from the repository root:
     .venv/bin/python -m scripts.site_media encode SOURCES OUT
     .venv/bin/python -m scripts.site_media montage OUT/manifest.json FAMILY OUT_MP4
     .venv/bin/python -m scripts.site_media stills OUT/manifest.json MONTAGE_DIR docs/media/readme
-    .venv/bin/python -m scripts.site_media explainer docs/task-atlas/images docs/media/readme/benchmark.jpg
+    .venv/bin/python -m scripts.site_media explainer IMAGES docs/media/readme/benchmark.jpg
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -141,7 +142,7 @@ def play_badge(path, size=0.16):
 
 def explainer(atlas, out, width=1800):
     """The README benchmark figure: one row per family, its largest team at Levels 1-3, each
-    the task's real initial state from the task atlas, with what the level changes."""
+    the task's real initial state from a render in `atlas`, with what the level changes."""
     from PIL import Image, ImageDraw, ImageFont
     fonts = Path(__file__).resolve().parents[1] / 'assets/robo_factory/fonts'
     display = lambda n: ImageFont.truetype(str(fonts / 'SpaceGrotesk-Bold.ttf'), n)

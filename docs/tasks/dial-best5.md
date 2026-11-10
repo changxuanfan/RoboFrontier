@@ -67,9 +67,10 @@ is still supported. Presentation time is not a policy or physics deadline.
 
 ```sh
 .venv/bin/python -m scripts.check_dial_family --output /absolute/NEW-review
-.venv/bin/python -m scripts.build_dial_policy_package --check-output /absolute/EXISTING-review/policy-review
-.venv/bin/python -m scripts.edit_dial_recording /absolute/attempt/motion --output /absolute/NEW-edit.json
 ```
+
+The policy-package checker (`build_dial_policy_package.py`) and the motion editor
+(`edit_dial_recording.py`) were removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
 
 These tools do not create policy runtime, role connections, or model sessions.
 They bind reports, assets, controller/evaluator fingerprints, and regenerated
@@ -81,21 +82,18 @@ guidance, camera calibration, initial reference image, and optional
 `table-geometry.json`. Ring-shaped tables retain their real holes and segmented
 or mesh geometry. Private evidence indexes are engineering-only.
 
-```sh
-.venv/bin/python -m scripts.render_dial_oracle /absolute/attempt \
-  --edit /absolute/edit.json --output /absolute/NEW-views
-```
-
-Simple-background rendering uses the frozen source and edit. Current
+Simple-background rendering (`render_dial_oracle.py`, also removed on
+2026-11-10) used the frozen source and edit. Current
 [Factory commands](../factory/replay.md) provide the complex-background Cycles path;
 `python -m scripts.factory video` remains the lower-level entry. The historical
 Classic final-video entry is retired; source frames and delivered videos remain.
 
-`run_best5_dial_batch.py` and `run_blind_dial_oracle.py` are explicit Legacy
-engineering Oracle entries using R11 and `configs/harness-frontier-v2-servo2.json`.
-Their native no-budget behavior is not the unified Oracle's default 24-hour
-engineering deadline. `commission_best5_dials.py` is a bounded local diagnostic,
-not evidence of a full task. The shoulder-clamp experiment entry is retired,
+`run_blind_dial_oracle.py` is an explicit Legacy engineering Oracle entry using
+R11 and `configs/harness-frontier-v2-servo2.json`. Its native no-budget behavior
+is not the unified Oracle's default 24-hour engineering deadline. The batch
+runner `run_best5_dial_batch.py` and the local diagnostic
+`commission_best5_dials.py` were removed on 2026-11-10. The shoulder-clamp
+experiment entry is retired,
 while real model shoulder geometry remains. Historical readers serve old evidence.
 
 ## Source edits and independent playback cursors

@@ -58,7 +58,7 @@ def main():
         modules=('test_action_batch','test_sync_groups','test_beam_policy','test_spring_dial','test_spring_dial_policy','test_pipeline','test_pipeline_client',
                  'test_runtime_store','test_run_setup','test_scheduling','test_centralized','test_delegation',
                  'test_delegate_callbacks','test_private_evaluation','test_run_seal','test_run_report',
-                 'test_transport_schedule','test_recording','test_harness_checker','test_policy_batch_viewer',
+                 'test_recording','test_harness_checker','test_policy_batch_viewer',
                  'test_oracle_protocol','test_oracle_terminal_recovery','test_source_compatibility',
                  'test_mosaic_historical_provenance')
         suite=unittest.defaultTestLoader.loadTestsFromNames(modules)
@@ -68,12 +68,6 @@ def main():
         if guard:guard.stop()
     node=subprocess.run(['node',str(ROOT/'tests/test_meta_dispatcher.cjs')],capture_output=True,text=True,cwd=ROOT)
     print(node.stdout,end='');print(node.stderr,end='',file=sys.stderr)
-    bridge=subprocess.run(['node',str(ROOT/'tests/test_role_tools.cjs')],capture_output=True,text=True,cwd=ROOT)
-    print(bridge.stdout,end='');print(bridge.stderr,end='',file=sys.stderr)
-    sequence=subprocess.run(['node',str(ROOT/'tests/test_robot_sequence.cjs')],capture_output=True,text=True,cwd=ROOT)
-    print(sequence.stdout,end='');print(sequence.stderr,end='',file=sys.stderr)
-    local_step=subprocess.run(['node',str(ROOT/'tests/test_role_step.cjs')],capture_output=True,text=True,cwd=ROOT)
-    print(local_step.stdout,end='');print(local_step.stderr,end='',file=sys.stderr)
     # Every Node host test (Codex RPC, preflight, restart, seal, wall limit, tool errors...).
     node_tests={}
     for source in sorted((ROOT/'tests').glob('test_*.js')):
@@ -89,7 +83,7 @@ def main():
         py_compile.compile(str(source),doraise=True);compilation.append(str(source.relative_to(ROOT)))
     # Parse the inline UI scripts without executing a browser or opening a port.
     ui_script="const fs=require('fs'),vm=require('vm');for(const f of process.argv.slice(1)){const s=fs.readFileSync(f,'utf8');for(const m of s.matchAll(/<script>([\\s\\S]*?)<\\/script>/g))new vm.Script(m[1]);}"
-    ui=subprocess.run(['node','-e',ui_script,str(ROOT/'assets/pipeline_dashboard.html'),str(ROOT/'assets/pipeline_cameras.html')],capture_output=True,text=True)
+    ui=subprocess.run(['node','-e',ui_script,str(ROOT/'assets/pipeline_dashboard.html')],capture_output=True,text=True)
     # Validate runnable documentation as syntax, without executing its tools.
     doc_js="const fs=require('fs');const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;const s=fs.readFileSync(process.argv[1],'utf8');for(const m of s.matchAll(/```javascript\\n([\\s\\S]*?)```/g))new AsyncFunction(m[1]);"
     runbook=subprocess.run(['node','-e',doc_js,str(ROOT/'docs/meta-runbook.md')],capture_output=True,text=True)
@@ -104,15 +98,12 @@ def main():
         print(validator.stdout,end='');print(validator.stderr,end='',file=sys.stderr)
     dispatcher_count=re.search(r'^PASS: (\d+) dispatcher scenarios:',node.stdout,re.MULTILINE)
     dispatcher_passed=node.returncode==0 and dispatcher_count is not None
-    passed=result.wasSuccessful() and dispatcher_passed and bridge.returncode==0 and sequence.returncode==0 and local_step.returncode==0 and all(node_tests.values()) and all(s['passed'] for s in js_syntax) and ui.returncode==0 and runbook.returncode==0 and tool_docs.returncode==0 and not broken_links and (validator is None or validator.returncode==0)
+    passed=result.wasSuccessful() and dispatcher_passed and all(node_tests.values()) and all(s['passed'] for s in js_syntax) and ui.returncode==0 and runbook.returncode==0 and tool_docs.returncode==0 and not broken_links and (validator is None or validator.returncode==0)
     report={'checked_at':datetime.now(ZoneInfo('Asia/Hong_Kong')).isoformat(),'passed':passed,
             'scope':('Protocol-only engineering: FakeWorld/HTTP, private scoring on synthetic records, frozen inputs and encoder recovery. Physics creation/stepping prohibited; no native sessions, model inference or GUI.' if args.protocol_only else 'Offline engineering; FakeWorld/HTTP, robot kinematics/contacts, source/evidence verification and FFmpeg regressions. Installed native CLIs may run against synthetic loopback model endpoints in isolated test sessions. No real provider inference, GUI or model task-solving qualification.'),
             'physics_entrypoints_blocked':args.protocol_only,
             'python_tests':{'run':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'skipped':len(result.skipped)},
             'dispatcher_js':{'passed':dispatcher_passed,'scenarios':int(dispatcher_count[1]) if dispatcher_count else None,'error':node.stderr or None},
-            'role_tool_bridge_js':{'passed':bridge.returncode==0,'summary':bridge.stdout.strip(),'error':bridge.stderr or None},
-            'finite_sequence_js':{'passed':sequence.returncode==0,'error':sequence.stderr or None},
-            'local_role_step_js':{'passed':local_step.returncode==0,'error':local_step.stderr or None},
             'node_host_tests':node_tests,
             'javascript_syntax':{'passed':all(s['passed'] for s in js_syntax),'files':js_syntax},
             'ui_script_syntax':{'passed':ui.returncode==0,'error':ui.stderr or None},

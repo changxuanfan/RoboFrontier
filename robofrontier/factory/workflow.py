@@ -126,7 +126,7 @@ def _cases(data_root, selection):
 def _frozen(plan_path):
     path, plan = server.load_plan(plan_path)
     if 'effective_configuration' not in plan:
-        raise ValueError('Legacy render plan: use scripts.factory_server with its original settings')
+        raise ValueError('Legacy render plan without a frozen configuration; prepare it again with robofrontier factory prepare')
     config = plan['effective_configuration']
     validate_configuration(config)
     return path, plan, config

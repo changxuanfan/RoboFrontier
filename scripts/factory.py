@@ -104,7 +104,7 @@ def build(output,release_path=None):
     data_root=ROOT/'runs/factory-data/r14'
     if release_path is None:
         if not (data_root/'bundle.json').exists():
-            raise ValueError('Run python -m scripts.factory_server setup first, or provide --release')
+            raise ValueError('Run robofrontier factory setup first, or provide --release')
         release=resolved_release(data_root)
     else:
         release_path=Path(release_path)

@@ -189,9 +189,7 @@ separate. Claude task execution still requires `--engineering`; these profiles
 do not open formal scored eligibility. Local shared-home checks do not qualify
 Docker, Slurm, 36 simultaneous subscription tasks or every refresh boundary.
 The Slurm entry continues to accept API credentials only. See the [acceptance ledger](../archive/unified-main.md)
-for actual source-pinned results and the
-[official documentation findings](../development/anthropic-subscription-qualification.md)
-for the documented mechanisms and remaining empirical qualifications.
+for actual source-pinned results.
 
 Official references: [Codex authentication](https://learn.chatgpt.com/docs/auth),
 [Codex account refresh](https://learn.chatgpt.com/docs/app-server), and

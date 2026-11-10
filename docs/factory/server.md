@@ -1,9 +1,8 @@
 # Native Factory Linux and Slurm handoff
 
-New unified-main users should start with [Factory replay and offline
-rendering](replay.md). This page documents the underlying
-`scripts.factory_server` commands, including their own Slurm render array.
-They replay frozen motion, appearance events and reviewed edits using FK and
+Start with [Factory replay and offline rendering](replay.md). This page covers
+running the same `robofrontier factory` commands on a Linux cluster, including
+the Slurm render array. They replay frozen motion, appearance events and reviewed edits using FK and
 Blender Cycles. They do not call models, issue robot commands, simulate contact
 or produce new benchmark scores. Policy execution has different SQLite and
 Slurm requirements: see [policy Slurm staging](../running/slurm.md). Dated native acceptance
@@ -22,10 +21,7 @@ cd RoboFrontier
 uv sync --locked
 ```
 
-Integration changes exist only on `integration/unified-main` until publication;
-cloning remote `main` before that merge does not obtain them. The earlier native
-server handoff was published as `codex/factory-server-handoff`. Record the exact
-commit for a reproducible run. Reinstall `.venv` on the server rather than copying
+Record the exact commit for a reproducible run. Reinstall `.venv` on the server rather than copying
 it from a Mac. If the uv cache and checkout are on different filesystems,
 `UV_LINK_MODE=copy` avoids repeated hard-link attempts during installation.
 
@@ -45,7 +41,7 @@ passes that environment into the job. Run doctor inside an allocation before
 long jobs. System-library errors do not justify editing source scenes.
 
 ```sh
-.venv/bin/python -m scripts.factory_server setup
+.venv/bin/robofrontier factory setup
 ```
 
 Setup defaults to `runs/factory-data/r14/`. `configs/factory-assets.json` pins the
@@ -63,7 +59,7 @@ an allowed CPU allocation, for example:
 ```sh
 module load slurm/slurm/23.02.6
 srun --partition debug --cpus-per-task 8 --mem 16G --time 01:00:00 \
-  .venv/bin/python -m scripts.factory_server setup
+  .venv/bin/robofrontier factory setup
 ```
 
 The same `srun` prefix can wrap preparation. Submission itself is a lightweight
@@ -91,7 +87,7 @@ runs or success evidence. Other source qualification flags are also retained.
 Inside a GPU allocation, inspect software and the requested device:
 
 ```sh
-.venv/bin/python -m scripts.factory_server doctor --device OPTIX
+.venv/bin/robofrontier factory doctor --device OPTIX
 ```
 
 To queue the inspection from a login node:
@@ -99,7 +95,7 @@ To queue the inspection from a login node:
 ```sh
 srun --partition YOUR_GPU_PARTITION --gres gpu:1 --cpus-per-task 4 \
   --mem 16G --time 00:20:00 \
-  .venv/bin/python -m scripts.factory_server doctor --device OPTIX
+  .venv/bin/robofrontier factory doctor --device OPTIX
 ```
 
 A login node without a GPU cannot verify compute-node GPU availability. An
@@ -111,22 +107,22 @@ views: eight one-second previews. Production defaults are 1920 x 1080, 30 fps
 and 64 samples; this diagnostic deliberately reduces resolution and sampling.
 
 ```sh
-.venv/bin/python -m scripts.factory_server prepare \
+.venv/bin/robofrontier --config site.toml factory prepare \
   --output runs/factory/smoke \
   --cases transport-a04-d1 mosaic-a04-6x12-d1 relay-a08-d1 dial-best5-n04-d1 \
   --duration-s 1 --width 640 --height 360 --samples 8 --device OPTIX
 
-.venv/bin/python -m scripts.factory_server submit \
-  --plan runs/factory/smoke/plan.json --partition YOUR_PARTITION \
-  --parallel 2 --cpus 20 --memory 64G --time 01:00:00 --dry-run
+.venv/bin/robofrontier factory submit runs/factory/smoke/plan.json
 ```
 
-Review generated sbatch options, then remove `--dry-run` to submit. Resources
-and partitions depend on the site; the example does not guarantee immediate GPU
-allocation. Some sites require the Slurm module before submission.
+`site.toml` holds the `[slurm]` partition and resources and `factory.parallel`
+(see [Slurm render jobs](replay.md#slurm-render-jobs)); `prepare` freezes them
+into the plan. Review the printed sbatch command, then add `--queue` to submit.
+Resources and partitions depend on the site; the example does not guarantee
+immediate GPU allocation. Some sites require the Slurm module before submission.
 
-The command creates an array with one GPU per render item. `--parallel` limits
-simultaneous renders, not model concurrency. The checkout, Python environment,
+The command creates an array with one GPU per render item. `factory.parallel`
+limits simultaneous renders, not model concurrency. The checkout, Python environment,
 data and `BLENDER_BIN` must be accessible on compute nodes. The template does not
 embed personal accounts or a fixed Lustre path. Its Slurm wall time includes
 preparation, rendering, encoding and stage-out; it is unrelated to policy START.
@@ -143,13 +139,12 @@ Omit `--duration-s` to render full reviewed clips. Without filters, 36 stations
 and two views produce 72 render items:
 
 ```sh
-.venv/bin/python -m scripts.factory_server prepare \
+.venv/bin/robofrontier --config site.toml factory prepare \
   --output runs/factory/full --device OPTIX
-.venv/bin/python -m scripts.factory_server submit \
-  --plan runs/factory/full/plan.json --partition YOUR_PARTITION --parallel 2
+.venv/bin/robofrontier factory submit runs/factory/full/plan.json --queue
 ```
 
-Use `--families transport relay`, `--levels 1 2`, `--views front` or explicit
+Use `--families transport relay`, `--level 1`, `--views front` or explicit
 `--cases CASE_ID ...` to narrow selection. Preparation checks the full data
 package. Each render item checks its own source recording, scene, assets and
 camera rather than repeatedly reading other tasks' large recordings. Desk mode
@@ -160,10 +155,9 @@ The presentation is a separate job, defaulting to 210.5 seconds, with a full
 Factory camera path and explicitly recorded playback restarts:
 
 ```sh
-.venv/bin/python -m scripts.factory_server prepare \
+.venv/bin/robofrontier --config site.toml factory prepare \
   --output runs/factory/promo --mode promo --device OPTIX
-.venv/bin/python -m scripts.factory_server submit \
-  --plan runs/factory/promo/plan.json --partition YOUR_PARTITION --parallel 1
+.venv/bin/robofrontier factory submit runs/factory/promo/plan.json --queue
 ```
 
 Its camera plan, `reset-events.json` and per-frame source mapping are retained.
@@ -182,8 +176,8 @@ Use `--device METAL` when preparing for native macOS, or explicit `--device CPU`
 for CPU rendering. Slurm is optional:
 
 ```sh
-.venv/bin/python -m scripts.factory_server run --plan runs/factory/local/plan.json --index 0
-.venv/bin/python -m scripts.factory_server status --plan runs/factory/local/plan.json
+.venv/bin/robofrontier factory run runs/factory/local/plan.json --index 0
+.venv/bin/robofrontier factory status runs/factory/local/plan.json
 ```
 
 First create `local` with `prepare`; every preparation needs a new output path.
@@ -233,10 +227,9 @@ Wait until every original writer has stopped. Import
 `private/outputs/motion/`, not the image or session directory:
 
 ```sh
-.venv/bin/python -m scripts.factory_server import-motion \
-  --recording /path/to/run/private/outputs/motion \
+.venv/bin/robofrontier factory import-motion /path/to/run/private/outputs/motion \
   --output runs/factory-data/my-recording --speedup 1
-.venv/bin/python -m scripts.factory_server prepare \
+.venv/bin/robofrontier factory prepare --source imported \
   --data-root runs/factory-data/my-recording \
   --output runs/factory/my-recording --device OPTIX
 ```
@@ -256,8 +249,9 @@ archive into ordinary files before importing its motion directory.
 
 ## Maintainer packaging
 
-`export` creates a portable directory from explicit scene, release, cameras,
-asset and source-root inputs. `pack` verifies every file and writes tar.gz.
+`robofrontier.factory.bundle.export` creates a portable directory from explicit
+scene, release, cameras, asset and source-root inputs; `bundle.pack` verifies every
+file and writes tar.gz.
 The package retains original edit and motion bytes; identical files share hard
 links. `robofrontier.factory.bundle.split_archive` creates part metadata, pinned after
 publication in `configs/factory-assets.json`. Publish changed data under a new

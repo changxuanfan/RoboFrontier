@@ -9,7 +9,6 @@ from robofrontier.suite.dial_best_worker import RecordDecoder
 from robofrontier.suite.dial_best_oracle import BestDecoder,BestManipulator,WORKER
 from robofrontier.suite.dial_hold_oracle import Channel
 from robofrontier.suite.dial_oracle import Manipulator
-from scripts.build_best5_dials import verify_panel_support
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -136,18 +135,6 @@ class BestOracleTests(unittest.TestCase):
         actual=[[round(math.degrees(a),1) for a in m.target_angles(s)] for s in range(1,6)]
         self.assertEqual(actual,[[60.],[120.],[179.5,-179.5],[-120.],[-60.]])
         m.t.task={};self.assertEqual([round(math.degrees(a),1) for a in m.target_angles(2)],[179.5,-179.5])
-
-    def test_panel_layout_has_actual_table_support_and_expected_sizes(self):
-        for n in (4,6,8):
-            for level in (1,2,3):
-                folder=ROOT/f'benchmark/dial/dial-best5-n{n:02}-d{level}'
-                m=mujoco.MjModel.from_xml_path(str(folder/'scene.xml'));d=mujoco.MjData(m);mujoco.mj_resetDataKeyframe(m,d,m.key('initial').id);mujoco.mj_forward(m,d)
-                verify_panel_support(m,d)
-                scale=1.5 if n>=6 and level>1 else 1.
-                np.testing.assert_allclose(m.geom('score_base').size,[.22*scale,.17*scale,.018*scale])
-                if n==8 and level==1:np.testing.assert_allclose(d.geom('score_base').xpos[:2],[0.,0.])
-                task=json.loads((folder/'public-task.json').read_text())
-                self.assertNotIn('initial_supplies',task);self.assertIn('Unlock',task['objective'])
 
 
 if __name__=='__main__':unittest.main()
