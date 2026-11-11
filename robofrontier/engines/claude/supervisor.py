@@ -6,6 +6,8 @@ physical process; seal is the only normal shutdown path and never replays work.
 import math
 import time
 
+from robofrontier.runtime.bootstrap import STARTUP_TIMEOUT_S
+
 
 # active_time_v1: the host ends a run on its own only this far past the world's limit, and
 # waits this long after the world's cutoff for it to brake and close.
@@ -15,7 +17,7 @@ ACTIVE_CLOSE_WAIT_S = 120.
 
 class CentralizedSupervisor:
     def __init__(self, policy, owner_alive, *, stop_requested=lambda: False,
-                 startup_timeout_s=300, wall_limit_s=86400, poll_s=1,
+                 startup_timeout_s=STARTUP_TIMEOUT_S, wall_limit_s=86400, poll_s=1,
                  seal_timeout_s=30, finish_turn_grace_s=30, time_rule='START_wall_time',
                  wall_backstop_s=None, clock=time.monotonic, wall_clock=time.time, sleep=time.sleep):
         for name, value, maximum in (('startup_timeout_s', startup_timeout_s, 86400),

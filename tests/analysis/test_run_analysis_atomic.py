@@ -6,7 +6,7 @@ import tarfile
 import tempfile
 import unittest
 
-from robofrontier.analysis import atomic as atomic_v2
+from robofrontier.analysis import atomic
 from robofrontier.analysis import metrics as M
 from robofrontier.analysis.archive import Run
 
@@ -75,7 +75,7 @@ class AtomicStepTests(unittest.TestCase):
         ]
         goal = dict(t=31.0, item='A_item1', pos=[1.0, 0.0, 0.8])
         d = record('transport', actions, goals={'slot_1': goal})
-        r = atomic_v2.transport_atomic(d, M.Clock(d))
+        r = atomic.transport_atomic(d, M.Clock(d))
         self.assertEqual(r['handoffs'], 1)
         self.assertEqual(r['delivered'], 2)  # the in-place regrasp is not a step
         self.assertEqual(r['atomic_failed'], 1)  # A's failed grasp marks A's handoff
@@ -94,7 +94,7 @@ class AtomicStepTests(unittest.TestCase):
             ]
         }
         d = record('relay', actions, handovers=handovers, drops=[[25.0, 'payload_01', 1]])
-        r = atomic_v2.relay_atomic(d, M.Clock(d))
+        r = atomic.relay_atomic(d, M.Clock(d))
         self.assertEqual(r['delivered'], 3)
         self.assertEqual(r['atomic_failed'], 1)  # the drop marks the timber's last step
         self.assertEqual(r['atomic_total'], 3)
@@ -102,7 +102,7 @@ class AtomicStepTests(unittest.TestCase):
     def test_dial_turns_need_a_dwell_and_skip_pass_through_marks(self):
         samples = [(0.0, [0.0]), (1.0, [0.0]), (2.0, [30.0]), (3.0, [60.0]), (4.5, [60.0])]
         samples += [(5.0, [119.0]), (5.3, [150.0]), (6.0, [180.0]), (8.0, [180.0])]
-        self.assertEqual(atomic_v2.dial_turns(angle_lines(samples)), [[3.0, 0], [6.0, 0]])
+        self.assertEqual(atomic.dial_turns(angle_lines(samples)), [[3.0, 0], [6.0, 0]])
 
     def test_dial_failures_go_to_the_next_turn(self):
         actions = [
@@ -111,7 +111,7 @@ class AtomicStepTests(unittest.TestCase):
             act('A', 'move', 20, 21, target=[0, 0, 1]),
         ]
         d = record('dial', actions)
-        r = atomic_v2.dial_atomic(d, M.Clock(d), [[5.0, 0], [10.0, 1]])
+        r = atomic.dial_atomic(d, M.Clock(d), [[5.0, 0], [10.0, 1]])
         self.assertEqual((r['atomic_failed'], r['atomic_total'], r['delivered']), (1, 2, 2))
 
     def test_archive_reads_folders_and_tars(self):

@@ -25,6 +25,7 @@ from robofrontier.engines.claude.runner import build_env
 from robofrontier.engines.claude.native_home import config_directory
 from robofrontier.engines.claude.supervisor import CentralizedSupervisor
 from robofrontier.engines.claude.standing_team import StandingTeamPolicyHost
+from robofrontier.runtime.bootstrap import STARTUP_TIMEOUT_S
 from robofrontier.runtime.clock import run_clock, wall_backstop_s
 from robofrontier.runtime.seal import seal_run
 from robofrontier.runtime.setup import verify_inputs, write_json
@@ -96,7 +97,7 @@ def _time_rule(run):
     return run_clock(_run_protocol(run))
 
 
-def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400, startup_timeout_s=120,
+def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400, startup_timeout_s=STARTUP_TIMEOUT_S,
                     poll_s=0.5, owner_factory=subprocess.Popen, policy_factory=CentralizedPolicyHost,
                     adaptive_policy_factory=AdaptivePolicyHost, standing_policy_factory=StandingTeamPolicyHost,
                     clock=time.monotonic, sleep=time.sleep):

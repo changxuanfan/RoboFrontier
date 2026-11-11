@@ -215,3 +215,16 @@ class EngineRenderingTests(unittest.TestCase):
             self.assertEqual((other/'private/inputs/models.json').read_bytes(), (run/'private/inputs/models.json').read_bytes())
             self.assertEqual(launch['context_window'], 300000)
             self.assertEqual(launch['auto_compact_token_limit'], 267000)
+
+
+class SharedConstantTests(unittest.TestCase):
+    """The Codex host is JavaScript, so the limits both engines share are written twice."""
+
+    def test_the_codex_host_uses_the_shared_limits(self):
+        import re
+        from robofrontier.configuration import load_configuration
+        host = (ROOT/'robofrontier/engines/codex/codex_policy_host.js').read_text()
+        def constant(name): return float(re.search(r'const %s=([0-9.]+);' % name, host).group(1))
+        self.assertEqual(constant('MAX_CAPACITY_RETRIES'), policy_bootstrap.MAX_CAPACITY_RETRIES)
+        self.assertEqual(constant('STARTUP_TIMEOUT_S'), policy_bootstrap.STARTUP_TIMEOUT_S)
+        self.assertEqual(load_configuration()['batch']['startup_timeout_s'], policy_bootstrap.STARTUP_TIMEOUT_S)

@@ -11,7 +11,7 @@ import sqlite3
 import tempfile
 import unittest
 
-from robofrontier.analysis import atomic as atomic_v2, extract
+from robofrontier.analysis import atomic, extract
 from robofrontier.analysis import metrics as M
 from robofrontier.analysis.archive import Run
 
@@ -136,7 +136,7 @@ class TransportCutoffTests(unittest.TestCase):
         self.assertEqual(d['host']['turns'], [[None, BASE + 90, BASE + 100]])
         self.assertEqual(o['messages'], 1)
         self.assertEqual(len(d['actions']), 4)  # the actions started at t=140 and t=190 are dropped
-        v2 = atomic_v2.compute(d)
+        v2 = atomic.compute(d)
         self.assertEqual(v2['delivered'], 1)
 
     def test_scores_the_budget_cutoff_evaluation_not_the_last_row(self):
@@ -254,7 +254,7 @@ class SparseLogTests(unittest.TestCase):
         a = M.compute(out['events-60s'])['atomic']
         self.assertIsNone(a['lost'])
         self.assertTrue(a['objects_unknown'])
-        self.assertTrue(atomic_v2.compute(out['events-60s'])['objects_unknown'])
+        self.assertTrue(atomic.compute(out['events-60s'])['objects_unknown'])
 
     def test_a_ten_second_log_without_a_recording_still_gives_lost_items_and_dial_turns(self):
         self.assertTrue(extract.use_motion(['events-10s'], 'sparse'))
@@ -271,7 +271,7 @@ class SparseLogTests(unittest.TestCase):
         f = Fixture(self.tmp, 'dial-10s')
         f.log([header('events-10s'), angles(0, 0.0), angles(10, 0.0), angles(20, 60.0), angles(30, 60.0)])
         f.db([action('A', 0, 5)], [(BASE, 'START', {})])
-        r = atomic_v2.run_dial_turns(Run('dial-10s', f.root))
+        r = atomic.run_dial_turns(Run('dial-10s', f.root))
         self.assertEqual((r['turns'], r['unknown'], r['source']), ([[20.0, 0]], None, 'process log'))
 
     def test_dial_turns_are_unknown_in_a_sparse_log(self):
@@ -280,7 +280,7 @@ class SparseLogTests(unittest.TestCase):
             f = Fixture(self.tmp, fmt)
             f.log([header(fmt), angles(0, 0.0), angles(1, 0.0), angles(3, 60.0), angles(5, 60.0)])
             f.db([action('A', 0, 5)], [(BASE, 'START', {})])
-            r = atomic_v2.run_dial_turns(Run(fmt, f.root))
+            r = atomic.run_dial_turns(Run(fmt, f.root))
             self.assertEqual(r['turns'], want)
             self.assertEqual(r['unknown'] is None, want is not None)
 
@@ -290,9 +290,9 @@ class SparseLogTests(unittest.TestCase):
         f.log([header(), angles(0, 0.0), angles(1, 0.0), angles(3, 60.0), angles(5, 60.0),
                angles(10, 120.0), angles(12, 120.0)])
         f.db([action('A', 0, 5)], [(BASE, 'START', {}), (BASE + 8, 'POLICY_WALL_LIMIT', {'sim_time_s': 8.0})])
-        self.assertEqual(atomic_v2.run_dial_turns(Run('outer/run', f.root))['turns'], [[3.0, 0]])
+        self.assertEqual(atomic.run_dial_turns(Run('outer/run', f.root))['turns'], [[3.0, 0]])
         # Keyed one level above the run folder, the log is still found.
-        self.assertEqual(atomic_v2.run_dial_turns(Run('outer', f.root))['turns'], [[3.0, 0]])
+        self.assertEqual(atomic.run_dial_turns(Run('outer', f.root))['turns'], [[3.0, 0]])
 
 
 if __name__ == '__main__':

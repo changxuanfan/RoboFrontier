@@ -13,7 +13,7 @@ import unittest
 
 import numpy as np
 
-from robofrontier.analysis import atomic as atomic_v2, extract, motion
+from robofrontier.analysis import atomic, extract, motion
 from robofrontier.analysis import metrics as M
 from robofrontier.analysis.archive import Run
 from analysis.test_run_analysis_segments import BASE, Fixture, action, header, snap
@@ -109,7 +109,7 @@ class TransportFromMotionTests(unittest.TestCase):
         np.testing.assert_allclose(S['goals']['g1']['pos'], [0.3, 0.1, 0.8], atol=1e-6)
         d = f.extract('transport')
         self.assertEqual(M.compute(d)['atomic']['lost'], 1)
-        self.assertIsNone(atomic_v2.compute(d)['objects_unknown'])
+        self.assertIsNone(atomic.compute(d)['objects_unknown'])
 
     def test_without_a_recording_a_sparse_log_still_leaves_objects_unknown(self):
         f = self.run_with('t60-bare', transport_log(), [])
@@ -227,7 +227,7 @@ class DialFromMotionTests(unittest.TestCase):
         f.db([action('A', 0, 5)], [(BASE, 'START', {})] + list(events))
         for sub, times, path in recordings:
             write_motion(f.dir / 'private/outputs' / sub, DIAL_TASK, DIAL_JOINTS, times, dial_states(times, path))
-        return atomic_v2.run_dial_turns(Run(name, f.root))
+        return atomic.run_dial_turns(Run(name, f.root))
 
     def test_two_turns_between_60_s_rows_come_from_motion(self):
         # 0 -> 60 at 10 s, 60 -> 180 at 20 s passing 120 without dwelling, 180 -> 240 at 30.5 s
@@ -257,9 +257,9 @@ class DialFromMotionTests(unittest.TestCase):
     def test_the_rule_gives_the_same_turns_frame_by_frame_or_by_chunk(self):
         t = frames(0, 60)
         A = np.degrees(dial_states(t, [(0, 0.0), (10, 60.0), (20, 180.0), (30.5, 240.0), (31.3, 180.0)]))
-        whole = atomic_v2.DialSettle()
+        whole = atomic.DialSettle()
         whole.feed(t, A)
-        single = atomic_v2.DialSettle()
+        single = atomic.DialSettle()
         for k in range(len(t)):
             single.feed(t[k : k + 1], A[k : k + 1])
         self.assertEqual(whole.turns(), single.turns())

@@ -6,9 +6,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from robofrontier.factory.playback import FactoryTimeline
 from robofrontier.media.motion_recording import digest
 from robofrontier.runtime.setup import write_json
-ROOT=Path(__file__).resolve().parents[2]
-PREP=ROOT/'runs/factory-data/r14'
-SCENE=PREP/'scene-v2/scene.xml'
+from robofrontier.factory.workflow import data_root
 
 def make_camera(position,target,fov=52):
  position=list(map(float,position))
@@ -88,7 +86,7 @@ def camera_at(keys,t):
  return keys[-1]['camera']
 
 def main():
- p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);p.add_argument('--duration',type=float,default=210.5);p.add_argument('--preview-fps',type=int,default=5);p.add_argument('--prep',type=Path,default=PREP);p.add_argument('--scene',type=Path);p.add_argument('--cameras',type=Path);p.add_argument('--camera-plan',type=Path,help='Frozen editable camera waypoints; omit for the Legacy tour');p.add_argument('--release',type=Path,required=True,help='Fully combined release with resolved input paths');args=p.parse_args();prep=args.prep.resolve();scene=args.scene or prep/'scene/scene.xml'
+ p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);p.add_argument('--duration',type=float,default=210.5);p.add_argument('--preview-fps',type=int,default=5);p.add_argument('--prep',type=Path,help='The Factory data folder; default factory.data_root');p.add_argument('--scene',type=Path);p.add_argument('--cameras',type=Path);p.add_argument('--camera-plan',type=Path,help='Frozen editable camera waypoints; omit for the generated tour');p.add_argument('--release',type=Path,required=True,help='Fully combined release with resolved input paths');args=p.parse_args();prep=(args.prep or data_root()).resolve();scene=args.scene or prep/'scene/scene.xml'
  if not math.isfinite(args.duration) or args.duration<=0:raise ValueError('Positive finite duration required')
  if args.preview_fps not in (1,2,3,5,6,10,15,30):raise ValueError('Preview fps must divide 30')
  output=args.output;output.mkdir(parents=True,exist_ok=False)

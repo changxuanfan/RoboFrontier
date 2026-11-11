@@ -66,7 +66,10 @@ CAPACITY_RESUME = ('Your previous model turn failed because of a capacity or rat
                    'this continuation. It is the same session and the same live world; nothing was reset or replayed. '
                    'Read your inbox, check pending and job with the original IDs before acting again, and keep '
                    'submitted actions and completed results. Then continue the task.\n')
-MAX_CAPACITY_RETRIES = 3
+MAX_CAPACITY_RETRIES = 3  # Also in engines/codex/codex_policy_host.js.
+# How long a run's roles may take to start: batch.startup_timeout_s in robofrontier.toml, which a
+# prepared run freezes in harness.json; this is the default for callers that pass none.
+STARTUP_TIMEOUT_S = 600.0
 # Sent once to a role whose turn failed on the plan's usage limit, after the world paused until
 # the reset and resumed (runtime/quota.py); the same on both engines.
 QUOTA_RESUME = ('Your previous model turn failed because the account\'s usage limit was reached. The trial was '

@@ -101,7 +101,8 @@ def build(output,release_path=None):
     shell=output.parent/(output.name+'-shell')
     if output.exists() or shell.exists():raise FileExistsError('Choose a new factory output')
     from robofrontier.factory.bundle import resolved_release
-    data_root=ROOT/'runs/factory-data/r14'
+    from robofrontier.factory.workflow import data_root as configured_data_root
+    data_root=configured_data_root()
     if release_path is None:
         if not (data_root/'bundle.json').exists():
             raise ValueError('Run robofrontier factory setup first, or provide --release')

@@ -10,6 +10,7 @@ from robofrontier.engines.claude.run import _check_shared_budget, _positive, run
 from robofrontier.engines.claude.runner import build_env
 from robofrontier.engines.claude.native_home import config_directory
 from robofrontier.runtime import layout as run_layout
+from robofrontier.runtime.bootstrap import STARTUP_TIMEOUT_S
 from robofrontier.runtime.setup import verify_inputs, write_json
 from robofrontier.batch.launch_schedule import LaunchSchedule
 from robofrontier.runtime.segments import try_continue
@@ -173,7 +174,7 @@ def run_until_signal(folder, base_env, **options):
 
 
 def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400,
-              startup_timeout_s=120, runner=run_task, verifier=verify_inputs, stop_requested=lambda: False,
+              startup_timeout_s=STARTUP_TIMEOUT_S, runner=run_task, verifier=verify_inputs, stop_requested=lambda: False,
               startup_interval_s=.3, continuing=False):
     """Run a prepared batch once; it makes paid model calls.
 

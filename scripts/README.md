@@ -23,7 +23,7 @@ package module named in the table) from the repository root. Keep existing modul
 | `robofrontier.factory.commands build/video/poses` | Low-level scene construction, public pose export, and Cycles video; requires an explicitly matching source |
 | `check_harness` | Run the offline Python, JavaScript, documentation, and protocol regression inventory; historical fixtures may require separate assets |
 | `check_oracle_preservation` | Check the preservation manifest and frozen Oracle source bindings |
-| `run_analysis extract/compute/dial-turns/atomic-v2/session-archive` | Offline analysis of archived runs: timing, outcomes and atomic-step failure rates (version 2 step rules in `robofrontier/analysis/atomic.py`); data root, run list and outputs are arguments, and no run data lives in the repository |
+| `run_analysis extract/compute/dial-turns/atomic/session-archive` | Offline analysis of archived runs: timing, outcomes and atomic-step failure rates (version 2 step rules in `robofrontier/analysis/atomic.py`); data root, run list and outputs are arguments, and no run data lives in the repository |
 | `robofrontier/factory/blender/export.py`, `render.py` (inside Blender) | Export and render Cycles scenes, reuse fixed-camera frames, and compare sampled source poses |
 | `site_media encode/montage/stills/explainer` | Encode task videos to 720p with posters and a verified manifest, build the family montages, README stills and the README benchmark figure |
 | `site_film short/film/web/banner` | Cut the film and its short teaser from the raw Robo World render with motion graphics in the page's style, and derive the page hero loop, README teaser and banner |

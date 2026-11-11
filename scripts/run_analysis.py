@@ -9,8 +9,8 @@ fields are copied into the outputs.
   run_analysis.py extract  --root DATA --runs runs.json --out extracted/
   run_analysis.py compute  --extracted extracted/ --out metrics.json
   run_analysis.py dial-turns --root DATA --runs runs.json --out dial-turns.json
-  run_analysis.py atomic-v2 --extracted extracted/ --metrics metrics.json \\
-      --dial-turns dial-turns.json --out atomic-v2.json
+  run_analysis.py atomic --extracted extracted/ --metrics metrics.json \\
+      --dial-turns dial-turns.json --out atomic.json
   run_analysis.py session-archive package.tar.gz ... --out sessions.json
 
 Object poses (lost items, goal positions) and Dial angles come from each run's motion recording
@@ -19,7 +19,7 @@ them every 10 s (`--motion always` reads the recording for every run that has on
 log without a recording is read at its 10 s sampling.
 
 Every command exits 1 when a selected run is missing, fails or lacks the data it needs;
-the failing ids are printed, and dial-turns and atomic-v2 also write them beside --out
+the failing ids are printed, and dial-turns and atomic also write them beside --out
 (`<out>.errors.json`, `<out>.skipped.json`). Extraction writes each record atomically and
 redoes any existing record that does not load.
 """
@@ -34,7 +34,7 @@ import traceback
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from robofrontier.analysis import atomic as atomic_v2, extract, metrics, session_archive  # noqa: E402
+from robofrontier.analysis import atomic, extract, metrics, session_archive  # noqa: E402
 from robofrontier.analysis.archive import Run  # noqa: E402
 
 
@@ -80,7 +80,7 @@ def _turns(job):
     try:
         run = Run(sel['k'], root, cache)
         try:
-            return sel['id'], atomic_v2.run_dial_turns(run, motion=motion), None
+            return sel['id'], atomic.run_dial_turns(run, motion=motion), None
         finally:
             run.close()
     except Exception:
@@ -88,7 +88,7 @@ def _turns(job):
 
 
 def _skip_reason(d, turns, have_turns):
-    """Why atomic_v2.compute gave nothing for a record, and whether that is missing data."""
+    """Why atomic.compute gave nothing for a record, and whether that is missing data."""
     S = d.get('suite')
     if not d.get('nfiles'):
         return 'no files', True
@@ -129,7 +129,7 @@ def main(argv=None):
     s.add_argument('--extracted', required=True)
     s.add_argument('--out', required=True)
     s.add_argument('--workers', type=int, default=6)
-    s = sub.add_parser('atomic-v2')
+    s = sub.add_parser('atomic')
     s.add_argument('--extracted', required=True)
     s.add_argument('--metrics', help='version 1 output of `compute`, reused for Mosaic')
     s.add_argument('--dial-turns', help='output of `dial-turns`; Dial runs are skipped without it')
@@ -183,7 +183,7 @@ def main(argv=None):
                 print('EXCLUDED', r['id'], r['excluded'], file=sys.stderr)
         print(len(rows), 'runs,', len(bad), 'failed,', sum(1 for r in rows if r.get('excluded')), 'excluded')
         return 1 if bad else 0
-    if a.cmd == 'atomic-v2':
+    if a.cmd == 'atomic':
         v1 = (
             {
                 r['id']: r.get('atomic')
@@ -199,7 +199,7 @@ def main(argv=None):
             try:
                 d = json.loads(path.read_text())
                 rid = d['sel']['id']
-                new = atomic_v2.compute(d, v1.get(rid), turns.get(rid))
+                new = atomic.compute(d, v1.get(rid), turns.get(rid))
             except Exception:
                 skipped.append(dict(id=path.stem, reason='error: ' + traceback.format_exc()[-300:], missing=True))
                 continue

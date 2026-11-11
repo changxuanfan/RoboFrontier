@@ -53,7 +53,7 @@ class ScriptTests(unittest.TestCase):
         self.assertEqual(json.loads(out.read_text())['good']['turns'], [[3.0, 0]])
         self.assertEqual(list(json.loads(Path(str(out) + '.errors.json').read_text())), ['gone'])
 
-    def test_atomic_v2_lists_dial_runs_without_turns(self):
+    def test_atomic_lists_dial_runs_without_turns(self):
         out = self.tmp / 'extracted'
         self.runs.write_text(json.dumps([dict(id='good', k='good', family='dial')]))
         self.assertEqual(self.main('extract', '--root', self.tmp / 'data', '--runs', self.runs, '--out', out,
@@ -61,12 +61,12 @@ class ScriptTests(unittest.TestCase):
         turns = self.tmp / 'turns.json'
         turns.write_text(json.dumps({}))
         result = self.tmp / 'v2.json'
-        code, err = self.main('atomic-v2', '--extracted', out, '--dial-turns', turns, '--out', result)
+        code, err = self.main('atomic', '--extracted', out, '--dial-turns', turns, '--out', result)
         self.assertEqual(code, 1)
         skipped = json.loads(Path(str(result) + '.skipped.json').read_text())
         self.assertEqual([(x['id'], x['missing']) for x in skipped], [('good', True)])
         turns.write_text(json.dumps({'good': {'turns': [[3.0, 0]], 'unknown': None}}))
-        code, err = self.main('atomic-v2', '--extracted', out, '--dial-turns', turns, '--out', result)
+        code, err = self.main('atomic', '--extracted', out, '--dial-turns', turns, '--out', result)
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(result.read_text())[0]['delivered'], 1)
 

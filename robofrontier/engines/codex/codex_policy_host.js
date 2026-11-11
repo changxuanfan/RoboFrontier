@@ -16,7 +16,9 @@ const frozenText=(run,name)=>{const file=path.join(run,'private/inputs/bootstrap
 // Capacity recovery, the same policy as robofrontier/engines/claude/recovery.py: at most 3
 // consecutive resumes of a session, 10/20/40 s apart plus a 0-5 s jitter fixed by the
 // session ID (so many runs do not retry together); a completed turn resets the count.
-const MAX_CAPACITY_RETRIES=3;
+const MAX_CAPACITY_RETRIES=3;  // As robofrontier/runtime/bootstrap.py.
+// The default startup timeout when harness.json names none, as STARTUP_TIMEOUT_S there.
+const STARTUP_TIMEOUT_S=600;
 // As in robofrontier/engines/claude/supervisor.py (finish_turn_grace_s): after a normal finish the
 // world is already frozen, so existing turns may write their final reply before closing.
 const FINISH_TURN_GRACE_MS=30000;
@@ -453,7 +455,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
       this.owner=spawn(this.python,['-m','robofrontier.runtime.pipeline','--run-dir',this.run,'--hidden'],
         {cwd:this.cwd,stdio:['ignore',ownerLog,ownerLog],env:ownerEnv,detached:true}); fs.closeSync(ownerLog);
       this.owner.on('error',error=>{this.ownerError=error;});
-      const startupTimeout=read(path.join(this.run,'private/inputs/harness.json')).startup_timeout_s ?? 120;
+      const startupTimeout=read(path.join(this.run,'private/inputs/harness.json')).startup_timeout_s ?? STARTUP_TIMEOUT_S;
       if (!Number.isFinite(startupTimeout) || startupTimeout<=0) throw new Error('Invalid owner startup timeout');
       const ownerDeadline=performance.now()+startupTimeout*1000;
       for (;;) {

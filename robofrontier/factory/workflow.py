@@ -12,6 +12,11 @@ def _path(value):
     return (path if path.is_absolute() else ROOT/path).resolve()
 
 
+def data_root(config=None):
+    """The Factory recording bundle's folder: the configuration's factory.data_root."""
+    return _path((config or load_configuration())['factory']['data_root'])
+
+
 def add_arguments(subparsers):
     parser = subparsers.add_parser('factory', help='Configure frozen-motion replay and offline Cycles rendering')
     actions = parser.add_subparsers(dest='factory_action', required=True)
