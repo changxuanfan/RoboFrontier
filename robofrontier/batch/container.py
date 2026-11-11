@@ -223,7 +223,8 @@ def _command(arguments, config, image, volumes, name, settings_file, environment
             command.extend(['-c', 'cli_auth_credentials_store="file"'])
         return [*command, *native[1:]]
     if arguments[0] == 'policy-env':
-        script = ('set -e; root=$(python -m scripts.build_policy_env --base %s | tail -n 1 | '
+        # The image forbids uv's Python downloads; the build installs its own pinned Python on purpose.
+        script = ('set -e; root=$(UV_PYTHON_DOWNLOADS=manual python -m scripts.build_policy_env --base %s | tail -n 1 | '
                   'python -c "import json,sys; print(json.load(sys.stdin)[\'root\'])"); '
                   'python -m scripts.check_policy_env "$root" --scratch %s' % (POLICY_BASE, CONTAINER_TMPDIR))
         return [*command, '--entrypoint', 'sh', image, '-c', script]
