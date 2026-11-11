@@ -18,6 +18,7 @@ import hashlib
 import json
 import re
 import sys
+import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -214,7 +215,10 @@ def index_release():
                          for family in release['families'].values() for case in family['gpt']},
                'catalogs': {name: file_sha256(ROOT/family['catalog']['path']) for name, family in release['families'].items()},
                'private': release.get('private', {})}
-    release['release_id'] = hashlib.sha256(json.dumps(content, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
+    release_id = hashlib.sha256(json.dumps(content, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
+    if release.get('frozen') and release_id != release['frozen']['release_id']:
+        raise ValueError('The release is frozen (%s); its files may not change' % release['frozen']['release_id'])
+    release['release_id'] = release_id
     release.setdefault('frozen', None)
     path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
     from scripts import site_data
@@ -222,6 +226,7 @@ def index_release():
 
 
 def physics(args):
+    require_unfrozen()
     changed = 0
     for folder in cases():
         before = file_sha256(folder/'scene.xml')
@@ -277,6 +282,7 @@ def settle_case(folder):
 def settle(args):
     """Write each scene's resting pose into its initial keyframe, so a run starts at rest
     (the Relay timbers with hanging weights moved 4 to 9 mm in their first seconds)."""
+    require_unfrozen()
     changed = 0
     for folder in cases():
         if args.cases and folder.name not in args.cases: continue
@@ -300,6 +306,7 @@ ITEM_PRINT = re.compile(r'[A-Z]{1,2}_item\d+_print\d+')
 def letters(args):
     """Turn each Transport block letter printed upside down on a side face by half a turn,
     so its top points at the block's top. The prints are display geoms without contact."""
+    require_unfrozen()
     changed = 0
     for folder in cases():
         text = (folder/'scene.xml').read_text(); root = ET.fromstring(text); model = compile_scene(folder)
@@ -328,6 +335,7 @@ def codes(args):
 
     The evaluator reads it; it is never copied into anything a model can read. Existing
     codes are kept, so running this again changes nothing."""
+    require_unfrozen()
     import secrets
     from robofrontier.tasks.dial import alphabet
     path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
@@ -353,6 +361,7 @@ def public(args):
     public/task.json (without the run's own protocol and image profile) and every family
     material a run receives, except the family skill, which runs copy from prompts/skills.
     The release then names these files, and a run only copies them."""
+    require_unfrozen()
     import shutil, tempfile
     from robofrontier.tasks.families import prepare
     path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
@@ -384,6 +393,30 @@ def public(args):
     index_release(); pin_asset_release()
 
 
+def require_unfrozen():
+    if json.loads((BENCHMARK/'release.json').read_text()).get('frozen'):
+        raise SystemExit('The release is frozen; physics, scenes and task files no longer change (docs/physics.md)')
+
+
+def freeze(args):
+    """Record the release as final: its id, the date and the physics validation it passed.
+    Every step that writes the release refuses afterwards."""
+    require_unfrozen()
+    validation = Path(args.validation)
+    report = json.loads(validation.read_text())
+    if not report.get('passed'):
+        raise SystemExit('Freeze only after a passing physics validation (scripts/validate_physics.py)')
+    if check(args):
+        raise SystemExit('A scene does not carry the release physics')
+    index_release()
+    path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
+    release['frozen'] = {'release_id': release['release_id'], 'date': time.strftime('%Y-%m-%d'),
+                         'physics_validation': validation.name}
+    path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
+    pin_asset_release()
+    print(json.dumps(release['frozen']))
+
+
 def check(args):
     bad = {folder.name: p for folder in cases() if (p := check_physics(folder))}
     print(json.dumps(bad or 'all scenes carry the release physics', indent=1))
@@ -399,6 +432,8 @@ def main(argv=None):
     sub.add_parser('public').set_defaults(run=public)
     step = sub.add_parser('settle'); step.add_argument('--cases', nargs='*'); step.set_defaults(run=settle)
     sub.add_parser('check').set_defaults(run=check)
+    frozen = sub.add_parser('freeze'); frozen.set_defaults(run=freeze)
+    frozen.add_argument('--validation', required=True, help='A passing runs/engineering/validate-physics/<time>.json')
     args = parser.parse_args(argv)
     return args.run(args) or 0
 

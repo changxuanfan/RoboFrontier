@@ -1566,5 +1566,9 @@
     }
   },
   "release_id": "020a26c59223ce50",
-  "frozen": null
+  "frozen": {
+    "release_id": "020a26c59223ce50",
+    "date": "2026-11-11",
+    "physics_validation": "20261111-143742.json"
+  }
 }

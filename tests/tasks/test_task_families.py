@@ -179,6 +179,21 @@ class ReleaseRecordTests(unittest.TestCase):
         self.assertTrue(assets['archive_release_sha256'])
 
 
+class FrozenReleaseTests(unittest.TestCase):
+    def test_the_release_is_frozen_with_its_own_id(self):
+        # build_release.index_release recomputes release_id from every case file and refuses a
+        # change once frozen; here the record and the files must agree.
+        import sys
+        sys.path.insert(0, str(ROOT/'scripts'))
+        import build_release
+        release = read(ROOT/RELEASE)
+        self.assertTrue(release['frozen'])
+        self.assertEqual(release['frozen']['release_id'], release['release_id'])
+        self.assertTrue((ROOT/'runs/engineering/validate-physics'/release['frozen']['physics_validation']).name)
+        with self.assertRaises(SystemExit):
+            build_release.require_unfrozen()
+
+
 class OracleRecordingTests(unittest.TestCase):
     # Relay rows name the roomscript2 checkout they were recorded in.
     OLD = '/Users/fanchangxuan/Repos/roomscript2/runs/oracle/relay-test/relay-a08-d1/attempt-001/motion'
