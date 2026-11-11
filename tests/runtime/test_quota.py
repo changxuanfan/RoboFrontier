@@ -19,6 +19,14 @@ class QuotaTests(unittest.TestCase):
         found = usage_limit("You've hit your session limit · resets 1:30pm (America/New_York)", NOW)
         self.assertEqual(found['resets_at'], datetime(2026, 11, 11, 13, 30, tzinfo=NY).timestamp())
 
+    def test_a_hyphenated_window_name_is_a_usage_limit(self):
+        # The message that stopped ten Opus runs on 2026-11-11: it was read as a session error.
+        now = datetime(2026, 11, 11, 17, 45, tzinfo=ZoneInfo('Asia/Hong_Kong')).timestamp()
+        found = usage_limit("You've hit your 5-hour limit \u00b7 resets 9:10pm (Asia/Hong_Kong)", now)
+        self.assertIsNotNone(found)
+        self.assertEqual(found['resets_at'], datetime(2026, 11, 11, 21, 10, tzinfo=ZoneInfo('Asia/Hong_Kong')).timestamp())
+        self.assertIsNotNone(usage_limit("You\u2019ve hit your 7-day limit \u00b7 resets Nov 14, 9am (America/New_York)", now))
+
     def test_older_claude_and_codex_texts(self):
         self.assertEqual(usage_limit('Claude AI usage limit reached|1700000000', NOW)['resets_at'], None)  # far past
         self.assertEqual(usage_limit('Claude AI usage limit reached|%d' % (NOW + 600), NOW)['resets_at'], NOW + 600)

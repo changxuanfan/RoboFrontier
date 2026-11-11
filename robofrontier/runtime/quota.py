@@ -19,7 +19,8 @@ import time
 from datetime import datetime, timedelta
 
 # Text that names a plan limit (not a short rate limit).
-LIMIT = re.compile(r"(you[\u2019']?ve hit your (?:\w+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|"
+# The window's name may be hyphenated: Claude Code says "You've hit your 5-hour limit".
+LIMIT = re.compile(r"(you[\u2019']?ve hit your (?:[\w-]+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|"
                    r"usageLimitExceeded|weekly limit|session limit)", re.I)
 # When a reset time cannot be read, the world tries again after this long.
 RECHECK_S = 1800.
