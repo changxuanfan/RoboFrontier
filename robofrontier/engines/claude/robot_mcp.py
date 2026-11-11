@@ -96,34 +96,47 @@ class RobotBridge:
         result = {**result, 'call_id': call_id}
         host_event(self.run, 'robot_tool_completed', actor=self.actor, op=op, call_id=call_id,
                    duration_s=time.monotonic()-began)
-        if op == 'work' and 'delegate_id' in data:
+        if op == 'work' and 'delegate_id' in data and 'delegate_report' not in result:
             result = self.attach_delegate_report(result, data['delegate_id'])
+        # A robot_only run's public_file: text goes beside the JSON as it is, an image as an image.
+        public_file = result.get('public_file') if isinstance(result.get('public_file'), dict) else {}
+        file_text = public_file.get('text')
+        if isinstance(file_text, str):
+            result = {**result, 'public_file': {k: v for k, v in public_file.items() if k != 'text'}}
         content = [{'type': 'text', 'text': json.dumps(result, ensure_ascii=False, allow_nan=False)}]
+        if isinstance(file_text, str):
+            content.append({'type': 'text', 'text': file_text})
+        if public_file.get('kind') == 'image':
+            content.append(self.image_content(public_file.get('image'), 'Public file could not be loaded: '
+                                              + str(public_file.get('path'))))
         observation = result.get('observation') or (result.get('original_result') or {}).get('observation') or {}
         for view in views:
             name = observation.get('images', {}).get(view)
             if not name:
                 content.append({'type': 'text', 'text': 'Selected view unavailable: ' + view})
                 continue
-            try:
-                image = Path(name).resolve()
-                public = (self.run / 'public').resolve()
-                if not image.is_relative_to(public) or not image.is_file():
-                    raise ValueError('Observation image is outside this run public directory or unavailable')
-                data_bytes = image.read_bytes()
-                if data_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
-                    mime = 'image/png'
-                elif data_bytes.startswith(b'\xff\xd8\xff'):
-                    mime = 'image/jpeg'
-                else:
-                    raise ValueError('Observation is not a PNG or JPEG image')
-            except (OSError, ValueError, TypeError, RuntimeError):
-                # The RPC has already executed. Preserve its result and call ID
-                # even when the optional image cannot safely be returned.
-                content.append({'type': 'text', 'text': 'Selected view could not be loaded: ' + view})
-                continue
-            content.append({'type': 'image', 'data': base64.b64encode(data_bytes).decode('ascii'), 'mimeType': mime})
+            content.append(self.image_content(name, 'Selected view could not be loaded: ' + view))
         return {'content': content}
+
+    def image_content(self, name, unavailable):
+        """A PNG or JPEG inside this run's public/ folder as image content, else `unavailable` as text."""
+        try:
+            image = Path(name).resolve()
+            public = (self.run / 'public').resolve()
+            if not image.is_relative_to(public) or not image.is_file():
+                raise ValueError('Observation image is outside this run public directory or unavailable')
+            data_bytes = image.read_bytes()
+            if data_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
+                mime = 'image/png'
+            elif data_bytes.startswith(b'\xff\xd8\xff'):
+                mime = 'image/jpeg'
+            else:
+                raise ValueError('Observation is not a PNG or JPEG image')
+        except (OSError, ValueError, TypeError, RuntimeError):
+            # The RPC has already executed. Preserve its result and call ID
+            # even when the optional image cannot safely be returned.
+            return {'type': 'text', 'text': unavailable}
+        return {'type': 'image', 'data': base64.b64encode(data_bytes).decode('ascii'), 'mimeType': mime}
 
     def attach_delegate_report(self, result, actor):
         """Inline only a finished child report authorized by the runtime work response."""

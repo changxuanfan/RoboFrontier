@@ -91,6 +91,8 @@ def load_harness(path=None):
         raise ValueError('Unknown topology')
     if c.get('engine','codex') not in ('codex','claude'):
         raise ValueError('Unknown policy engine')
+    from ..runtime.tool_mode import of as tool_mode
+    tool_mode(c)  # Absent in every earlier run, which is a full run.
     if c.get('startup_protocol') not in ('direct_controller_v2', 'direct_team_v3'):
         raise ValueError('Unknown startup protocol')
     if c['startup_protocol'] == 'direct_controller_v2' and c['topology'] not in ('adaptive', 'centralized'):

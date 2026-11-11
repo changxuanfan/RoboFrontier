@@ -8,7 +8,7 @@ import shutil
 from .store import RuntimeStore, packed
 from ..physics.observation_image import DEFAULT_PROFILE, observation_profile
 from ..tasks.provenance import environment_logic_manifest
-from . import layout as run_layout
+from . import layout as run_layout, tool_mode
 from .bootstrap import SKILLS_HEADER, write_bootstraps
 from ..tasks.config import ROOT, load_task, load_harness, public_task,physical_control_fingerprint
 from ..io import write_json
@@ -104,9 +104,15 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         roles.update({a: {'kind':'worker', 'robot':a} for a in task['arms']})
     write_json(directory/'public/inputs/roles.json', {'topology':cfg['topology'], 'manager':cfg['manager'], 'coordinator':cfg['coordinator'] if cfg['topology']=='hierarchical' else None, 'roles':roles})
     templates = ROOT/'prompts'
-    rules = (templates/'rules.md').read_text().replace('{{RUN_DIR}}',str(directory))
+    # Passages that depend on the role's tools are marked in the templates (tool_mode.render).
+    mode = tool_mode.of(cfg)
+    rules = tool_mode.render((templates/'rules.md').read_text(), mode).replace('{{RUN_DIR}}',str(directory))
     (directory/'public/inputs/rules.md').write_text(rules)
     shutil.copytree(templates/'skills/robot-collaboration', directory/'public/inputs/skill')
+    for template in sorted((directory/'public/inputs/skill').rglob('*.md')):
+        text = template.read_text()
+        rendered = tool_mode.render(text, mode)
+        if rendered != text: template.write_text(rendered)
     # The run's shared lessons file, inside the policy's only writable folder. Its
     # rules live in the frozen Skill, which no role can edit.
     (directory/run_layout.LAYOUTS[run_layout.CURRENT]['skills_file']).write_text(SKILLS_HEADER)
@@ -141,13 +147,14 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     store.close()
     # The Python its scripts use, named by the trusted launcher; earlier-style runs have none.
     from . import policy_env
-    if policy_env.selected() is not None:
+    if policy_env.selected() is not None and mode != tool_mode.ROBOT_ONLY:
         policy_env.prepare_run(directory, policy_env.selected())
     # One frozen first message per policy role, sent unchanged by either engine.
     write_bootstraps(directory)
     # What the policy may read and write, rendered by each engine's own sandbox.
     from .access import record as access_record
-    write_json(directory/'private/inputs/policy-access.json', access_record(directory))
+    write_json(directory/'private/inputs/policy-access.json',
+               access_record(directory, no_environment=mode == tool_mode.ROBOT_ONLY))
     paths = list((ROOT/'robofrontier').rglob('*.py'))
     paths += [path for path in (ROOT/'prompts').rglob('*.md') if 'archive' not in path.relative_to(ROOT/'prompts').parts]
     # Freeze only the policy-host scripts of this run's engine, so editing the other
@@ -194,7 +201,11 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         'family_release':family_release,
         'observation_contract':task['observation_contract'],
         'manager':'Meta session executes deterministic dispatcher; no independent desktop takeover',
-        'isolation':('Role authentication and protocol/integrity checks, plus each engine\'s file sandbox: '
+        'isolation':('Role authentication and protocol/integrity checks; policies have the robot tool alone, with no '
+                     'shell, code execution or file tool: they read this run\'s public/ folder and extend its shared '
+                     'lessons only through that tool'
+                     if mode == tool_mode.ROBOT_ONLY else
+                     'Role authentication and protocol/integrity checks, plus each engine\'s file sandbox: '
                      + ('policies write only inside workspace/ and /tmp, and read only those, public/, the operating '
                         'system and the frozen Python environment'
                         if json.loads((directory/'private/inputs/policy-access.json').read_text()).get('policy_env') else

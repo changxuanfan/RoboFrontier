@@ -31,6 +31,8 @@ def _catalog(config):
         # template, independent of another Desktop session's mutable cache.
         catalog['profiles'][policy['profile']]['use_cached_model_metadata'] = False
         catalog['profiles'][policy['profile']]['tool_backend'] = config['runtime'].get('codex_tool_backend', 'native')
+        if policy.get('tool_mode', 'full') != 'full':
+            catalog['profiles'][policy['profile']]['tool_mode'] = policy['tool_mode']
         if config['runtime']['codex_home_scope'] == 'job':
             catalog['profiles'][policy['profile']]['runner_backend'] = 'slurm-managed-v1'
     return catalog
@@ -91,6 +93,9 @@ def prepare(output, config):
                'startup_timeout_s': config['batch']['startup_timeout_s'],
                'render_device': config['render']['device'],
                'record_realtime_video': config['render']['record_realtime_video']}
+    # Written only for a robot_only run, so a full run's frozen harness is what it always was.
+    if policy.get('tool_mode', 'full') != 'full':
+        harness['tool_mode'] = policy['tool_mode']
     with _catalog_file(config) as catalog:
         if policy['engine'] == 'claude':
             from robofrontier.batch.claude_prepare import prepare_batch as prepare_claude
@@ -101,7 +106,8 @@ def prepare(output, config):
                                    wall_limit_s=config['batch']['task_wall_limit_s'],
                                    observation_image_profile=config['render']['observation_profile'],
                                    startup_timeout_s=config['batch']['startup_timeout_s'],
-                                   render_device=config['render']['device'])
+                                   render_device=config['render']['device'],
+                                   tool_mode=policy.get('tool_mode', 'full'))
         else:
             from robofrontier.batch.codex_batch import prepare_batch as prepare_codex
             result = prepare_codex(output, [policy['profile']], families=selection['families'] or None,
@@ -241,8 +247,12 @@ def run(batch, *, continuing=False):
     from .runtime import versions
     require_runtime(config)
     document = json.loads((Path(batch)/'batch.json').read_text())
-    # Every run uses a policy environment and the closed access table (E12).
+    # Every run uses a policy environment and the closed access table (E12), except a robot_only
+    # run: its roles have no shell or file tool, so there is nothing for either to confine.
+    from .runtime import tool_mode
     for job in document.get('jobs', []):
+        if tool_mode.of_run(job['run_directory']) == tool_mode.ROBOT_ONLY:
+            continue
         access = json.loads((Path(job['run_directory'])/'private/inputs/policy-access.json').read_text())
         if access.get('schema') != 'robofrontier.policy-access.v2':
             raise ValueError('Run prepared without a policy environment: '+job['run_directory'])
@@ -392,6 +402,7 @@ def argument_parser(*, prog=None):
         p.add_argument('--profile')
         p.add_argument('--effort', choices=('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
         p.add_argument('--topology', choices=TOPOLOGIES)
+        p.add_argument('--tool-mode', choices=('full', 'robot_only'))
         p.add_argument('--parallel', type=int)
         p.add_argument('--render', choices=('nvidia', 'cpu', 'native'))
         p.add_argument('--level', type=int, choices=(1, 2, 3))
@@ -481,7 +492,7 @@ def main(argv=None):
             return 0
         if args.command in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
             overrides = {}
-            for section, fields in (('policy', ('engine', 'profile', 'effort', 'topology')),
+            for section, fields in (('policy', ('engine', 'profile', 'effort', 'topology', 'tool_mode')),
                                     ('batch', ('parallel',)),
                                     ('selection', ('level', 'min_arms', 'cases', 'families'))):
                 updates = {field: getattr(args, field) for field in fields if getattr(args, field) is not None}
@@ -514,8 +525,12 @@ def main(argv=None):
                 emit(submit(config, args.output, queue=args.queue))
             else:
                 # New runs use the frozen policy Python environment by default (policy_env.default_root).
-                from .runtime.policy_env import apply_default
-                apply_default()
+                from .runtime.policy_env import ENV_VAR, apply_default
+                if config['policy'].get('tool_mode', 'full') == 'robot_only':
+                    # No shell runs in a robot_only run, so it freezes no Python environment.
+                    os.environ[ENV_VAR] = 'off'
+                else:
+                    apply_default()
                 emit({'batch': str(prepare(args.output, config)), 'model_calls': 0})
         elif args.command == 'continue':
             report = continue_runs(args.batch, args.cases)

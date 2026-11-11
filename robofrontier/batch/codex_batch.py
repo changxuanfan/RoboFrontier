@@ -51,7 +51,7 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
         harness=read(ROOT/'configs/harnesses/policy.json')
         harness.update(engine='codex',model=p['model'],effort=p['effort'],record_realtime_video=False)
         if harness_overrides:
-            allowed={'topology','startup_protocol','observation_image_profile','record_realtime_video','startup_timeout_s','render_device'}
+            allowed={'topology','startup_protocol','observation_image_profile','record_realtime_video','startup_timeout_s','render_device','tool_mode'}
             if set(harness_overrides)-allowed:raise ValueError('Unsupported harness overrides')
             harness.update(harness_overrides)
         if not harness_overrides and p.get('benchmark_topology') in ('hierarchical', 'peer'):

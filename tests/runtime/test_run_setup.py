@@ -94,7 +94,9 @@ class SetupTests(unittest.TestCase):
 
     def test_eight_workers_prepare_with_same_skill_in_both_topologies(self):
         p=ROOT/'benchmark/transport/transport-a08-d1/task.json'
-        skill=(Path(__file__).resolve().parents[2]/'prompts/skills/robot-collaboration/SKILL.md').read_bytes()
+        # The template marks its tool-dependent passages; a full run gets the full wording.
+        from robofrontier.runtime.tool_mode import render
+        skill=render((Path(__file__).resolve().parents[2]/'prompts/skills/robot-collaboration/SKILL.md').read_text(),'full').encode()
         for topology in ('hierarchical','peer'):
             cfg=load_harness();cfg['topology']=topology;cfg['startup_protocol']=startup_protocol(topology)
             c=self.root/(topology+'.json');c.write_text(json.dumps(cfg))

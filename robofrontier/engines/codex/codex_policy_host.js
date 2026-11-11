@@ -168,20 +168,30 @@ class PolicyHost {
         path.join(this.run,'private/state/connections',actor+'.json')));
       const reply=await this.clients.get(actor).call({call_id:callId,op:a.op,data:a.data||{}});
       if (reply.status!==0) throw Object.assign(new Error('Robot client failed'),{stdout:reply.output});
-      const result=JSON.parse(reply.output),contentItems=[{type:'inputText',text:JSON.stringify(result)}];
-      const observation=result.observation || result.original_result?.observation;
-      for (const view of a.views||[]) {
-        const file=observation?.images?.[view];
-        if (!file) {contentItems.push({type:'inputText',text:'Selected view unavailable: '+view});continue;}
+      const result=JSON.parse(reply.output);
+      // A robot_only run's public_file: text goes beside the JSON as it is, an image as an image.
+      const publicFile=result.public_file && typeof result.public_file==='object'?result.public_file:{};
+      const fileText=typeof publicFile.text==='string'?publicFile.text:null;
+      if (fileText!==null) {result.public_file={...publicFile};delete result.public_file.text;}
+      const contentItems=[{type:'inputText',text:JSON.stringify(result)}];
+      if (fileText!==null) contentItems.push({type:'inputText',text:fileText});
+      const image=(file,unavailable)=>{
         try {
           const real=fs.realpathSync(file),publicRoot=fs.realpathSync(path.join(this.run,'public'))+path.sep;
           if (!real.startsWith(publicRoot)) throw new Error('Observation outside this run public directory');
           const bytes=fs.readFileSync(real),mime=observationMime(bytes);
-          contentItems.push({type:'inputImage',imageUrl:'data:'+mime+';base64,'+bytes.toString('base64')});
+          return {type:'inputImage',imageUrl:'data:'+mime+';base64,'+bytes.toString('base64')};
         } catch (error) {
           // The physical action already ran: retain the original result and call_id.
-          contentItems.push({type:'inputText',text:'Selected view could not be loaded: '+view});
+          return {type:'inputText',text:unavailable};
         }
+      };
+      if (publicFile.kind==='image') contentItems.push(image(publicFile.image,'Public file could not be loaded: '+publicFile.path));
+      const observation=result.observation || result.original_result?.observation;
+      for (const view of a.views||[]) {
+        const file=observation?.images?.[view];
+        if (!file) {contentItems.push({type:'inputText',text:'Selected view unavailable: '+view});continue;}
+        contentItems.push(image(file,'Selected view could not be loaded: '+view));
       }
       this.event({event:'robot_tool_completed',actor,thread_id:p.threadId,op:a.op,call_id:p.callId,duration_s:(Date.now()-toolStarted)/1000});
       return {success:true,contentItems};
