@@ -47,7 +47,7 @@ CLOSED_FOLDERS = {'darwin': {'read_people': '/Users', 'read_disks': '/Volumes', 
 FEW_PROCESSES = 15
 # Claude's macOS sandbox refuses the system limit that ProcessPoolExecutor reads first; Pool works.
 KNOWN_LIMITS = {('darwin', 'claude'): ('process_executor',)}
-OTHER_PYTHONS = ('/opt/homebrew/bin/python3', '/usr/local/bin/python3')
+OTHER_PYTHONS = ('/opt/homebrew/bin/python3', '/usr/local/bin/python3', '/usr/bin/python3')
 OUTPUT_TYPES = ('function_call_output', 'custom_tool_call_output')
 PROBE_LIMIT_S = 280
 RUNNING = re.compile(r'Process running with session ID (\d+)')

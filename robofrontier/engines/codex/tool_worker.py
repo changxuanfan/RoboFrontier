@@ -186,6 +186,13 @@ def main():
         raise ValueError('Isolated tools require pipe-backed or anonymous Unix stream standard descriptors')
     # Some Python builds fall back from getrandom() to this read-only entropy
     # source. No other device becomes readable through the /dev deny table.
+    frozen = access.get('policy_env')
+    # The table opens /dev/shm only for a private one (tool_backend.prepare). Where the host forbids
+    # the user namespace it needs (a RunPod container), the shared one stays closed: Python's
+    # multiprocessing locks then do not work, as under the Claude Landlock shell.
+    if frozen:
+        try: private_shared_memory()
+        except PermissionError: access['filesystem']['/dev/shm'] = 'deny'
     rules = allowlist(access['filesystem'], read=['/dev/urandom'], write=['/dev/null'])
     temporary = run/'workspace/.tmp'
     if not temporary.is_dir():
@@ -193,16 +200,9 @@ def main():
     # No inherited host descriptors, credentials, Python import controls or shell RC.
     os.closerange(3, resource.getrlimit(resource.RLIMIT_NOFILE)[0])
     os.environ.clear()
-    frozen = access.get('policy_env')
     os.environ.update(frozen['variables'] if frozen else dict(
         PATH=str(Path(sys.executable).parent)+':/usr/local/bin:/usr/bin:/bin', LANG='C.UTF-8', TMPDIR=str(temporary)))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    if frozen:
-        # Where the host forbids user namespaces (a RunPod container), there is no private
-        # /dev/shm: Landlock keeps the shared one closed, so multiprocessing locks do not work,
-        # as under the Claude Landlock shell; nothing shared opens.
-        try: private_shared_memory()
-        except PermissionError: pass
     seccomp_filter(abi(), ignore_mode_changes=bool(frozen))
     restrict(rules)
     drop_capabilities()

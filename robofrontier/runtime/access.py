@@ -12,6 +12,7 @@ engines: the repository is public, so the network could reach reference
 solutions, and results would depend on what the web returned that day.
 """
 import os
+import re
 import json
 from pathlib import Path
 import subprocess
@@ -99,12 +100,32 @@ def closed_table(run, environment, *, home=None, system=None, **kwargs):
     for folder in (run.parent, run.parent.parent):
         if folder not in (Path('/'), Path('/tmp').resolve()):
             access[str(folder)] = 'deny'
+    if system == 'linux':
+        # The system's own Python and pip live in the open /usr/bin: closed one by one, so a
+        # policy shell runs only the environment's Python, as on macOS where /opt and
+        # /usr/local hold the others.
+        for path in system_pythons():
+            access[path] = 'deny'
     access[str(Path(environment).resolve())] = 'read'
     access[str(run)] = 'deny'
     access[str(run/'public')] = 'read'
     access[str(run/'private')] = 'deny'
     access[str(run/run_layout.LAYOUTS[run_layout.CURRENT]['policy_cwd'])] = 'write'
     return access
+
+
+SYSTEM_PYTHON = re.compile(r'(python|pip)[0-9.]*(-config)?')
+
+
+def system_pythons(folders=('/usr/bin', '/bin', '/usr/sbin')):
+    """The Python interpreters and pip commands a Linux system keeps in its open folders."""
+    found = set()
+    for folder in folders:
+        folder = Path(folder)
+        if folder.is_symlink() or not folder.is_dir(): continue
+        for entry in folder.iterdir():
+            if SYSTEM_PYTHON.fullmatch(entry.name): found.add(str(entry))
+    return sorted(found)
 
 
 def require_outside_tmp(run):
