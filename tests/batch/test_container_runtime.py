@@ -71,8 +71,20 @@ class ContainerRuntimeTests(unittest.TestCase):
         self.assertEqual(tomllib.loads(runtime._toml(self.config)), self.config)
 
     def command(self, arguments, config=None, credentials=None):
-        return runtime._command(arguments, config or self.config, 'image', {'runs': 'runs', 'state': 'state'},
+        return runtime._command(arguments, config or self.config, 'image', {'runs': 'runs', 'state': 'state', 'policy': 'policy'},
                                 'container', self.root/'settings.toml', credentials or {})
+
+    def test_the_policy_environment_lives_in_its_own_volume_and_is_built_and_checked_there(self):
+        command = self.command(['policy-env'])
+        self.assertIn('type=volume,src=policy,dst='+runtime.POLICY_BASE, command)
+        self.assertIn('ROBOFRONTIER_POLICY_ENV_BASE='+runtime.POLICY_BASE, command)
+        self.assertIn('TMPDIR='+runtime.CONTAINER_TMPDIR, command)
+        self.assertFalse(runtime.CONTAINER_TMPDIR.startswith('/tmp/'))
+        script = command[-1]
+        self.assertIn('scripts.build_policy_env --base '+runtime.POLICY_BASE, script)
+        self.assertIn('scripts.check_policy_env', script)
+        self.assertEqual(command[command.index('--entrypoint')+1], 'sh')
+        self.assertEqual(runtime.validate_arguments(['policy-env']), ['policy-env'])
 
     def test_commands_use_named_volumes_and_never_put_api_values_in_arguments(self):
         with patch.object(runtime.platform, 'system', return_value='Darwin'):
@@ -98,8 +110,11 @@ class ContainerRuntimeTests(unittest.TestCase):
         self.assertNotIn('--privileged', command)
         self.assertNotIn('--cap-add', command)
         self.assertNotIn('--security-opt', self.command(['prepare'], config))
+        # Both engines' Landlock shells need it where Docker's profile refuses Landlock.
         config['policy'].update(engine='claude', profile='haiku')
-        self.assertNotIn('--security-opt', self.command(['run', 'runs/policy/batch'], config))
+        config['runtime']['codex_tool_backend'] = 'native'
+        self.assertIn('seccomp=unconfined', self.command(['run', 'runs/policy/batch'], config))
+        self.assertIn('seccomp=unconfined', self.command(['policy-env'], config))
 
     def test_render_mode_requires_hardware_only_for_real_task_execution(self):
         config = load_configuration(overrides={'render': {'device': 'nvidia'}})
@@ -113,7 +128,7 @@ class ContainerRuntimeTests(unittest.TestCase):
     def test_run_reads_frozen_render_settings_from_the_container_volume(self):
         with patch.object(runtime.subprocess, 'check_output', return_value=json.dumps(self.config)) as read:
             result = runtime._frozen_settings(['run', 'runs/policy/batch'], load_configuration(),
-                                              'image', {'runs': 'runs', 'state': 'state'})
+                                              'image', {'runs': 'runs', 'state': 'state', 'policy': 'policy'})
         self.assertEqual(result['render']['device'], 'cpu')
         self.assertIn('/opt/RoboFrontier/runs/policy/batch/effective-config.json', read.call_args.args[0])
         self.assertIn('--rm', read.call_args.args[0])

@@ -11,7 +11,7 @@ def main():
     for path in (ROOT/'runs', ROOT/'.robofrontier'):
         path.mkdir(parents=True, exist_ok=True, mode=0o700)
         _local_storage(path)
-    temporary = Path(os.environ.get('TMPDIR', '/tmp/robofrontier'))
+    temporary = Path(os.environ.get('TMPDIR', '/var/tmp/robofrontier'))
     temporary.mkdir(parents=True, exist_ok=True, mode=0o700)
     return native_main()
 

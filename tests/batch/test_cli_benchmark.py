@@ -122,6 +122,17 @@ class CliBenchmarkTests(unittest.TestCase):
                 self.assertFalse(cfg['record_realtime_video'])
                 self.assertFalse(any('suite-code' in str(p) for p in (run/'public').rglob('*')))
 
+    def test_a_stop_request_reaches_the_batch_and_every_run(self):
+        # What SIGINT/SIGTERM and `robofrontier stop` do for a Codex batch.
+        from robofrontier.runtime import layout as run_layout
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)/'batch'; runs = [folder/'runs'/name for name in ('a', 'b')]
+            for run in runs: run.mkdir(parents=True)
+            (folder/'batch.json').write_text(json.dumps({'jobs': [{'run_directory': str(run)} for run in runs]}))
+            benchmark.request_stop(folder)
+            self.assertTrue(run_layout.batch_path(folder, 'stop').exists())
+            self.assertTrue(all(run_layout.path(run, 'stop', 'codex').exists() for run in runs))
+
     def test_env_is_literal_and_existing_values_win(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'RF_EXISTING':'existing'}, clear=True):
             env=Path(tmp)/'.env'

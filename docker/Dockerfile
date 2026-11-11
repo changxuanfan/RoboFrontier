@@ -6,7 +6,7 @@ ARG CODEX_VERSION=0.165.0
 ARG CLAUDE_CODE_VERSION=2.1.316
 ARG UV_VERSION=0.9.28
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libosmesa6 libegl1 libgl1 libglvnd0 libglib2.0-0 ffmpeg git ca-certificates \
+    libosmesa6 libegl1 libgl1 libglvnd0 libglib2.0-0 libseccomp2 ffmpeg git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
@@ -22,9 +22,9 @@ ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 RUN uv sync --locked --extra oracle \
     && .venv/bin/python -m robofrontier.cli bootstrap \
     && rm -rf /root/.cache/uv /root/.cache/pip runs/asset-cache \
-    && mkdir -p .robofrontier runs /tmp/robofrontier
+    && mkdir -p .robofrontier runs /var/tmp/robofrontier /opt/robofrontier-policy
 ENV PATH="/opt/RoboFrontier/.venv/bin:${PATH}" \
-    TMPDIR=/tmp/robofrontier \
+    TMPDIR=/var/tmp/robofrontier ROBOFRONTIER_POLICY_ENV_BASE=/opt/robofrontier-policy \
     OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 # The CLI sets CPU OSMesa or NVIDIA EGL explicitly from frozen task settings.
 ENTRYPOINT ["python", "-m", "robofrontier.batch.container_entrypoint"]

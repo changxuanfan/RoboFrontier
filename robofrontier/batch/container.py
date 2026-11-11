@@ -18,6 +18,11 @@ from ..runtime.setup import write_json
 from ..io import file_sha256 as _digest
 
 CONTAINER_ROOT = '/opt/RoboFrontier'
+# The policy environment's base, a persistent volume outside the checkout: built and checked once
+# in the container (`container policy-env`), where its check receipt then stays.
+POLICY_BASE = '/opt/robofrontier-policy'
+# Outside /tmp, which a run with a policy environment refuses as TMPDIR (runtime.access).
+CONTAINER_TMPDIR = '/var/tmp/robofrontier'
 COMMANDS = {'bootstrap', 'config', 'plan', 'prepare', 'doctor', 'preflight', 'run', 'status',
             'stop', 'collect', 'archive', 'extract'}
 
@@ -35,13 +40,15 @@ def validate_arguments(arguments):
     """Resolve native syntax/help before any Docker, configuration or auth work."""
     arguments = list(arguments or ['plan'])
     action = arguments[0]
-    if action not in COMMANDS | {'build', 'auth'}:
+    if action not in COMMANDS | {'build', 'auth', 'policy-env'}:
         raise ValueError('Unsupported container command')
     if '--config' in arguments or '--result-file' in arguments:
         raise ValueError('Pass the host --config before container; result-file is managed by the wrapper')
-    if action == 'build':
-        parser = argparse.ArgumentParser(prog='robofrontier container build',
-            description='Build the committed source image. This command accepts no options.')
+    if action in ('build', 'policy-env'):
+        description = {'build': 'Build the committed source image.',
+                       'policy-env': 'Build the policy Python environment in its volume and check its sandbox.'}[action]
+        parser = argparse.ArgumentParser(prog='robofrontier container '+action,
+            description=description+' This command accepts no options.')
         parser.parse_args(arguments[1:])
     elif action == 'auth':
         if any(value in ('-h', '--help') for value in arguments[1:]):
@@ -103,12 +110,13 @@ def _settings(arguments, config):
 def _volumes(config, root):
     scope = hashlib.sha256(str(Path(root).resolve()).encode()).hexdigest()[:12]
     prefix = 'robofrontier-'+scope+'-'+config['container']['workspace'].lower()
-    return {'runs': prefix+'-runs', 'state': prefix+'-state'}
+    return {'runs': prefix+'-runs', 'state': prefix+'-state', 'policy': prefix+'-policy'}
 
 
 def _mounts(volumes):
     return ['--mount', 'type=volume,src='+volumes['runs']+',dst='+CONTAINER_ROOT+'/runs',
-            '--mount', 'type=volume,src='+volumes['state']+',dst='+CONTAINER_ROOT+'/.robofrontier']
+            '--mount', 'type=volume,src='+volumes['state']+',dst='+CONTAINER_ROOT+'/.robofrontier',
+            '--mount', 'type=volume,src='+volumes['policy']+',dst='+POLICY_BASE]
 
 
 def _ensure_volumes(volumes):
@@ -186,12 +194,13 @@ def _command(arguments, config, image, volumes, name, settings_file, environment
     command = ['docker', 'run', '--name', name, '--init', '--sig-proxy=false', *_mounts(volumes),
                '--mount', 'type=bind,src='+str(settings_file)+',dst=/run/robofrontier.toml,readonly',
                '--env', 'CODEX_HOME='+CONTAINER_ROOT+'/.robofrontier/subscription',
-               '--env', 'TMPDIR=/tmp/robofrontier',
+               '--env', 'TMPDIR='+CONTAINER_TMPDIR, '--env', 'ROBOFRONTIER_POLICY_ENV_BASE='+POLICY_BASE,
                '--env', 'CLAUDE_CONFIG_DIR='+CONTAINER_ROOT+'/.robofrontier/claude-auth',
                '--env', 'OMP_NUM_THREADS=1', '--env', 'OPENBLAS_NUM_THREADS=1']
     resources = config['container']
-    if (resources['seccomp_profile'] == 'unconfined' and
-            config['policy']['engine'] == 'codex' and arguments[0] in ('doctor', 'preflight', 'run')):
+    # Docker's default seccomp profile may refuse Landlock; `unconfined` lets the policy sandbox
+    # (Landlock and its own seccomp filter) install itself, for either engine.
+    if resources['seccomp_profile'] == 'unconfined' and arguments[0] in ('doctor', 'preflight', 'run', 'policy-env'):
         command.extend(['--security-opt', 'seccomp=unconfined'])
     if resources['memory_gib']:
         command.append('--memory='+str(resources['memory_gib'])+'g')
@@ -213,6 +222,11 @@ def _command(arguments, config, image, volumes, name, settings_file, environment
         if native[0] == 'codex':
             command.extend(['-c', 'cli_auth_credentials_store="file"'])
         return [*command, *native[1:]]
+    if arguments[0] == 'policy-env':
+        script = ('set -e; root=$(python -m scripts.build_policy_env --base %s | tail -n 1 | '
+                  'python -c "import json,sys; print(json.load(sys.stdin)[\'root\'])"); '
+                  'python -m scripts.check_policy_env "$root" --scratch %s' % (POLICY_BASE, CONTAINER_TMPDIR))
+        return [*command, '--entrypoint', 'sh', image, '-c', script]
     return [*command, image, '--config', '/run/robofrontier.toml',
             '--result-file', '/tmp/robofrontier-result.json', *arguments]
 

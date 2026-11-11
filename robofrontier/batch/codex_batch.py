@@ -127,8 +127,26 @@ def run_batch(folder, parallel, continuing=False):
         # Another supervisor may have changed the batch before the lock.
         batch=read(folder/'batch.json')
         if batch['status']!=expected:raise ValueError('Batch status changed before the lock')
-        with ExitStack() as stack:
-            return _run_batch_locked(folder, parallel, batch, continuing, stack=stack)
+        # SIGINT and SIGTERM (a launchd or systemd stop) become an orderly stop, as `robofrontier stop`
+        # and the Claude supervisor make it: active runs stop and seal, queued runs do not start.
+        import signal,threading
+        previous={}
+        if threading.current_thread() is threading.main_thread():
+            previous={sig:signal.getsignal(sig) for sig in (signal.SIGINT,signal.SIGTERM)}
+            for sig in previous:signal.signal(sig,lambda signum,frame:request_stop(folder))
+        try:
+            with ExitStack() as stack:
+                return _run_batch_locked(folder, parallel, batch, continuing, stack=stack)
+        finally:
+            for sig,handler in previous.items():signal.signal(sig,handler)
+
+
+def request_stop(folder):
+    """Ask every run of a batch, and the batch, to stop; hosts stop and seal on their own."""
+    folder=Path(folder)
+    for stop in [run_layout.batch_path(folder,'stop'),
+                 *(run_layout.path(job['run_directory'],'stop','codex') for job in read(folder/'batch.json')['jobs'])]:
+        stop.parent.mkdir(parents=True,exist_ok=True);stop.touch()
 
 
 def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
@@ -368,9 +386,7 @@ def main():
                      for a,v in s.agents().items()});s.close()
         print(json.dumps(batch,ensure_ascii=False,indent=2))
     else:
-        for stop in [run_layout.batch_path(args.batch,'stop'),
-                     *(run_layout.path(job['run_directory'],'stop','codex') for job in read(args.batch/'batch.json')['jobs'])]:
-            stop.parent.mkdir(parents=True,exist_ok=True);stop.touch()
+        request_stop(args.batch)
 
 
 if __name__=='__main__':main()

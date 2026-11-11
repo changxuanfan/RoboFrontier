@@ -94,7 +94,22 @@ The wrist-turn, carry and Dial failures share one cause: the NoSlip pass drags a
 steady rate once the hand turns faster than about 0.5 rad/s. Without NoSlip the turn stays below
 1.7°, but resting objects then creep up to 2.6 mm a minute; impratio, impedance, condim and NoSlip
 iterations do not change it, and a 1 ms step halves it. The robot limits stay at the real
-Franka values. Whether to accept these failures is an open decision before the release is frozen.
+Franka values.
+
+Tried on the failing checks with the release scenes, changing only the simulation step:
+
+| Step | Wrist turns, carries, cylinder, Dial at 1.0 rad/s | Relay at 70 N | Largest case per 20 ms step |
+| --- | --- | --- | --- |
+| 2 ms (released) | fail (3.8–6.3°, 2.1–2.5 mm, 6.5°) | fails, 2.02 mm | 3.0 ms |
+| 1 ms | wrist turns still 2.2–3.2°, carries 1.5–1.9 mm; Dial passes | fails, 3.6 mm | about 6 ms (not measured alone) |
+| 0.5 ms | **all pass** (at most 1.2°, 1.0 mm, 0.9°) | fails, 2.9 mm | 11.3 ms |
+
+The Relay slip is not the solver's: as the two senders lift the timber, their hands move about
+2 mm apart along it at every grip force and step, as two position-controlled arms holding one
+rigid load pull against each other; it grows with grip force (40 N passes). Stiffening the
+finger coupling changes nothing at 0.5 ms; turning NoSlip off fixes Relay and every turn but
+lets a held object creep 2.9 mm in 60 s. Choosing the step (and its cost: 36 runs at 0.5 ms need
+about 20 Mac cores) and how a shared load is held is open before the release is frozen.
 
 ## Freezing the release
 

@@ -1,15 +1,11 @@
 # Running in Docker
 
 `robofrontier container ...` runs the unified CLI inside an image built from the committed
-source, with two persistent local Docker volumes for run data and native state. Only a stopped,
-verified evidence ZIP is copied back to the host.
+source, with three persistent local Docker volumes: run data, native state, and the policy Python
+environment. Only a stopped, verified evidence ZIP is copied back to the host.
 
-**Current limit: a batch cannot be prepared in the image.** The image contains no policy Python
-environment and no way to name one (`ROBOFRONTIER_POLICY_ENV` and
-`ROBOFRONTIER_POLICY_ENV_BASE` are not passed in), and every run needs a checked one, so
-`container prepare` refuses with "No policy environment". `build`, `doctor`, `plan`,
-`preflight` and `auth` work; `run` has nothing to run until the image carries a checked policy
-environment. See [policy environment](policy-environment.md).
+The policy environment is built and checked once per workspace with `container policy-env`
+(step 5); until it has passed, `container prepare` refuses. Not yet tried on a live Docker host.
 
 ## 1. Prerequisites
 
@@ -70,17 +66,21 @@ The Codex login goes to the state volume's `/opt/RoboFrontier/.robofrontier/subs
 (file-backed), used by Codex subscription profiles with `runtime.codex_home_scope = "shared"`.
 The host's `~/.codex`, `~/.claude` and Keychain are never mounted.
 
-## 5. Check and preflight
+## 5. Policy environment, check and preflight
 
 ```sh
+.venv/bin/robofrontier --config docker.toml container policy-env
 .venv/bin/robofrontier --config docker.toml container doctor
 .venv/bin/robofrontier --config docker.toml container plan
 .venv/bin/robofrontier --config docker.toml container preflight --confirm-spend                      # Codex
 .venv/bin/robofrontier --config docker.toml container preflight --confirm-spend --max-budget-usd 1   # Claude
 ```
 
-`doctor` checks the CLI, the Codex sandbox and a real MuJoCo render context, without
-authenticating. Receipts land in the runs volume.
+`policy-env` builds the policy Python environment in its volume (`/opt/robofrontier-policy`)
+and runs its sandbox check against both engines' real CLIs, with no model calls; runs then use it.
+If the check reports that Landlock is unavailable, Docker's seccomp profile is refusing it: set
+`seccomp_profile = "unconfined"` (Limits). `doctor` checks the CLI, the sandbox and a real
+MuJoCo render context, without authenticating. Receipts land in the runs volume.
 
 ## 6. Prepare, run, status, stop
 
@@ -91,7 +91,7 @@ authenticating. Receipts land in the runs volume.
 .venv/bin/robofrontier --config docker.toml container stop runs/policy/my-batch
 ```
 
-(`prepare` refuses until the image has a policy environment; see the top.) Batch paths are
+(`prepare` refuses until `container policy-env` has passed.) Batch paths are
 relative paths under `runs/`, inside the runs volume. `container run` waits for the batch in the
 foreground and starts it with the batch's frozen configuration. Ctrl-C requests an orderly stop
 and waits up to 180 s for sealing and collection. A container still running afterwards is
@@ -119,10 +119,11 @@ never does.
 
 ## Limits
 
-- **No policy environment in the image**, so no batch can be prepared (top of this page).
 - **No `continue`** through the wrapper.
-- **Seccomp.** Docker's default profile can deny the user namespaces Codex's `native` sandbox
-  needs; `seccomp_profile = "unconfined"` drops it for Codex `doctor`, `preflight` and `run`
-  only, without `--privileged`.
+- **Seccomp.** Docker's default profile can refuse Landlock. `seccomp_profile = "unconfined"`
+  drops it for `policy-env`, `doctor`, `preflight` and `run`, without `--privileged`; the policy
+  shell then installs its own seccomp filter and Landlock rules, as on RunPod.
+- Without user namespaces in the container, `/dev/shm` stays closed to policies, so Python's
+  process pools fail there ([policy environment](policy-environment.md)).
 - **Slurm jobs do not use Docker**; they stage onto node-local scratch ([Slurm](slurm.md)).
 - The image has no Blender: Factory rendering runs natively ([Factory replay](../factory/replay.md)).
