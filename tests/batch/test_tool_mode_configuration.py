@@ -35,6 +35,14 @@ class ToolModeConfigurationTests(unittest.TestCase):
         validate_configuration(config)
         self.assertEqual(config['policy']['tool_mode'], 'robot_only')
 
+    def test_a_robot_only_codex_receipt_never_replaces_the_full_one(self):
+        from robofrontier.cli import _receipt_name
+        from robofrontier.runtime.tool_mode import receipt_name
+        self.assertEqual(receipt_name('luna', 'full'), 'luna')
+        self.assertEqual(receipt_name('luna', 'robot_only'), 'luna.robot_only')
+        self.assertEqual(_receipt_name({'profile': 'luna'}), 'luna')
+        self.assertEqual(_receipt_name({'profile': 'luna', 'tool_mode': 'robot_only'}), 'luna.robot_only')
+
 
 if __name__ == '__main__':
     unittest.main()

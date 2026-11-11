@@ -15,6 +15,11 @@ from .runtime import policy_env, layout as run_layout
 from .tasks.config import startup_protocol
 
 
+def _receipt_name(policy):
+    from .runtime.tool_mode import receipt_name
+    return receipt_name(policy['profile'], policy.get('tool_mode', 'full'))
+
+
 def _print(value):
     print(json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False))
 
@@ -181,7 +186,8 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
                     if smoke_only:
                         command.append('--smoke-only')
                     subprocess.run(command, cwd=ROOT, check=True)
-            folder = runs_root(config)/'engineering'/('model-smoke' if smoke_only else 'model-compatibility')/policy['profile']
+            folder = (runs_root(config)/'engineering'/('model-smoke' if smoke_only else 'model-compatibility')
+                      /_receipt_name(policy))
             return json.loads((folder/'report.json').read_text())
         key = selected.get('env_key')
         if key and not os.environ.get(key):
@@ -197,7 +203,8 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             home = Path(config['runtime']['codex_home']).expanduser().resolve() if config['runtime']['codex_home'] else codex_home(env)
         home.mkdir(parents=True, exist_ok=True, mode=0o700)
         env['CODEX_HOME'] = str(home)
-        folder = runs_root(config)/'engineering'/('model-smoke' if smoke_only else 'model-compatibility')/policy['profile']
+        folder = (runs_root(config)/'engineering'/('model-smoke' if smoke_only else 'model-compatibility')
+                      /_receipt_name(policy))
         folder.mkdir(parents=True, exist_ok=True)
         initialize_codex_home(launch_config(selected, folder), folder, env=env)
         command = [sys.executable, '-m', 'robofrontier.batch.codex_batch', 'preflight', '--models', policy['profile'],

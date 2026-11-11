@@ -31,7 +31,8 @@ first message in a robot-only run.
 - **Codex** switches its own tools off with the feature flags and model catalog the Landlock tool
   worker uses, and registers `robot` as the only dynamic tool. `runtime.codex_tool_backend` is
   `native` on every host, since there is nothing to confine. A robot-only profile needs its own
-  `robofrontier preflight`: the receipt is tied to the launch profile.
+  `robofrontier preflight --tool-mode robot_only`: the receipt is tied to the launch profile and
+  is kept beside the full one, under `<profile>.robot_only/`.
 
 No policy Python environment is frozen for a robot-only run.
 
