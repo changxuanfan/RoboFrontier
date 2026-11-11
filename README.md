@@ -45,9 +45,9 @@ team brings more arms and more work; a higher level changes the physics of the j
 The videos below are **Oracle** reference runs rendered in Robo World: privileged programs
 that read hidden task state. They show that each task can be done; they are not model
 results. The Mosaic 6- and 8-arm runs and `dial-best5-n08-d3` were operator-assisted;
-Transport and Mosaic were recorded on revision R13, before the released physics revision;
-the Relay runs are historical runs whose completion was confirmed by review. Idle time is
-removed and playback is sped up. Each montage plays all nine tasks of a family at once:
+Transport and Mosaic were recorded with the scenes' earlier physics settings, not the
+released ones; the Relay runs' completion was confirmed by review. Idle time is removed and
+playback is sped up. Each montage plays all nine tasks of a family at once:
 rows are difficulty levels 1–3, columns are team sizes.
 
 ### 🟦 Transport — deliver ordered items to their boards
@@ -138,30 +138,103 @@ Each run gets 24 hours from its START; reading, planning and waiting count. Benc
 results, the communication study and the skills study are on the
 [project page](https://changxuanfan.github.io/RoboFrontier/#results).
 
-## Quick start
+## Getting started
 
-Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js and the native CLI of the engine
-you select.
+### 1. What you need
+
+| | |
+| --- | --- |
+| **Host** | macOS on Apple silicon, Linux with an NVIDIA GPU or CPU only, a Slurm cluster, a RunPod pod or Docker. Each has a guide in [docs/running/](docs/README.md). |
+| **Software** | Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js, `ffmpeg`, and the CLI of the engine you run: Claude Code 2.1.316 (`claude`) or Codex 0.165.0 (`codex`). Other versions are refused. |
+| **Linux sandbox** | `bwrap` and `socat` where user namespaces work; otherwise Linux 6.7 or newer (Landlock ABI 4) with `libseccomp`. |
+| **A model account** | A Claude subscription token, or an API key for one of the profiles in [`configs/models.json`](configs/models.json). |
+
+### 2. Install
 
 ```sh
+git clone https://github.com/changxuanfan/RoboFrontier.git
+cd RoboFrontier
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap   # restore the pinned task assets, hash-verified
-.venv/bin/robofrontier doctor      # check the CLI, sandbox and renderer
-.venv/bin/robofrontier plan        # what would run; no model calls
+.venv/bin/robofrontier bootstrap
 ```
 
-Preparing and running a batch make real, billable model calls only after an explicit
-preflight. [Getting started](docs/getting-started.md) covers configuration, running,
-monitoring, data handoff, Oracle runs and Robo World rendering (the `factory` commands);
+`bootstrap` downloads the pinned task assets and checks every file against its hash.
+
+### 3. Credentials
+
+```sh
+cp .env.example .env
+chmod 600 .env
+```
+
+Fill in only the variable your profile reads, for example `CLAUDE_CODE_OAUTH_TOKEN` (from
+`claude setup-token`) for the Claude subscription profiles, or `OPENAI_API_KEY` for Codex's
+`luna`. Keep credentials in `.env`, not exported in the shell: runs load it themselves and
+hand the Claude token to the CLI on a pipe, so no policy shell can read it.
+
+### 4. Choose what to run
+
+Defaults are in [`robofrontier.toml`](robofrontier.toml): Codex with `luna`, the adaptive
+protocol, all 36 tasks, and a renderer picked for the host. Change them with options or a
+small TOML of your own, passed before the command (`robofrontier --config site.toml ...`);
+[`configs/examples/`](configs/examples) has one for the Mac, RunPod and Slurm.
+
+```sh
+.venv/bin/robofrontier doctor --engine claude                  # CLI version, sandbox, renderer, credentials
+.venv/bin/robofrontier plan --engine claude --families relay --level 1
+```
+
+`plan` lists each task, its arms and the model, and makes no model calls.
+
+### 5. Build and check the policy environment
+
+Every run gives the model its own frozen Python environment, closed off from the rest of the
+host. Build it once per host, in a folder outside your home folder and the repository, then
+check that its sandbox holds:
+
+```sh
+.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier   # prints its root
+.venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id>
+```
+
+On macOS that base is the default. On Linux pick one (outside `/tmp`) and set
+`ROBOFRONTIER_POLICY_ENV_BASE` to it in the shell that prepares runs. The check starts each
+engine's real CLI against a local stub, with no model calls, and tries about 50 things a policy
+must and must not be able to do; `prepare` refuses an environment that has not passed it.
+[Policy environment](docs/running/policy-environment.md) covers what each platform allows.
+
+### 6. Preflight, then run
+
+```sh
+.venv/bin/robofrontier preflight --engine claude --confirm-spend --max-budget-usd 1
+.venv/bin/robofrontier prepare --engine claude --families relay --level 1 --output runs/policy/claude-relay-l1
+.venv/bin/robofrontier run runs/policy/claude-relay-l1
+.venv/bin/robofrontier status runs/policy/claude-relay-l1
+```
+
+- `preflight` makes a few small, paid calls to confirm the model and CLI behave as the harness
+  needs; a run is refused without its passed receipt.
+- `prepare` freezes the code, the task inputs, the profile and the configuration into a new
+  folder. Nothing in it changes afterwards.
+- `run` on macOS hands the batch to launchd and returns, so it outlives the terminal; on Linux
+  add `--durable` for the same. Each run has 24 hours of active time from its START and is
+  scored then, or when the model finishes.
+- `stop` ends a batch in order. A run that stopped unexpectedly continues by itself once;
+  `robofrontier continue` continues stopped runs by hand, as the same trials.
+
+Each run's results, videos and evidence stay in the batch folder; when the batch ends they are
+also collected into `runs/exports/<batch>-<hash>/` and a verified ZIP beside it (the runs root
+is `paths.runs_root`, default `runs/`). [Getting started](docs/getting-started.md) goes through each step in detail;
 [docs/](docs/README.md) has every guide.
 
 | Path | What is there |
 | --- | --- |
 | [`benchmark/`](benchmark/README.md) | The 36 released tasks and `release.json` |
-| [`robofrontier/`](robofrontier) | Simulation, native hosts, runtime protocol, evidence |
+| [`robofrontier/`](robofrontier) | Simulation, engine hosts, runtime protocol, evidence |
 | [`prompts/`](prompts) | Every text a model reads: rules, roles, skills |
+| [`configs/`](configs/README.md) | Model profiles, harness settings, pinned asset archives, examples |
 | [`site/`](site/DESIGN.md) | The project page |
-| [`docs/`](docs/README.md) | Guides by topic and dated history |
+| [`docs/`](docs/README.md) | Guides by topic, and the project history |
 
 ## Citation
 

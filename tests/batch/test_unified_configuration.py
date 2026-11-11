@@ -60,7 +60,17 @@ class UnifiedConfigurationTests(unittest.TestCase):
             config = load_configuration(path, {'batch': {'parallel': 4}})
             self.assertEqual(config['batch']['parallel'], 4)
             self.assertEqual(plan(config)['task_count'], 4)
-            self.assertEqual(config['render']['device'], 'nvidia')
+            # The default `auto` is resolved for this host before anything is frozen.
+            from robofrontier.configuration import detected_render_device
+            self.assertEqual(config['render']['device'], detected_render_device())
+
+    def test_auto_rendering_follows_the_host(self):
+        from robofrontier.configuration import detected_render_device
+        self.assertEqual(detected_render_device('Darwin'), 'native')
+        with patch('pathlib.Path.exists', return_value=False), patch('shutil.which', return_value=None):
+            self.assertEqual(detected_render_device('Linux'), 'cpu')
+        with patch('shutil.which', return_value='/usr/bin/nvidia-smi'):
+            self.assertEqual(detected_render_device('Linux'), 'nvidia')
 
     def test_old_operator_toml_uses_its_own_defaults_shape(self):
         for version in (1,2,3):

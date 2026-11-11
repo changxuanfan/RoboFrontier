@@ -92,8 +92,23 @@ def load_configuration(path=None, overrides=None):
             and 'profile' not in updates.get('policy', {})
             and 'profile' not in (overrides or {}).get('policy', {})):
         result['policy']['profile'] = 'haiku_subscription_token'
+    if result['render']['device'] == 'auto':
+        result['render']['device'] = detected_render_device()
     validate_configuration(result)
     return result
+
+
+def detected_render_device(system=None):
+    """What `render.device = "auto"` selects here: macOS's own OpenGL, NVIDIA EGL on a Linux host
+    with an NVIDIA device, else Mesa's CPU renderer. A prepared batch freezes the choice."""
+    import platform
+    import shutil
+    system = system or platform.system()
+    if system == 'Darwin':
+        return 'native'
+    if Path('/dev/nvidia0').exists() or shutil.which('nvidia-smi'):
+        return 'nvidia'
+    return 'cpu'
 
 
 def _configuration_shape(version):

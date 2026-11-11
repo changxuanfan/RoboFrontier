@@ -145,8 +145,19 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             from robofrontier.engines.claude.preflight import run_precheck
             import uuid
             output = runs_root()/'engineering/claude-precheck'/uuid.uuid4().hex
-            return run_precheck(policy['profile'], output, max_budget_usd, dict(os.environ),
-                                check_fork=not smoke_only, catalog=catalog)
+            report = run_precheck(policy['profile'], output, max_budget_usd, dict(os.environ),
+                                  check_fork=not smoke_only, catalog=catalog)
+            if smoke_only or not report.get('passed'):
+                return report
+            # The blocked-parent fork check: a run needs both receipts, as a Codex run needs its one.
+            from robofrontier.engines.claude.claude_blocked_precheck import run_blocked_precheck
+            blocked_output = runs_root()/'engineering/claude-blocked-precheck'/uuid.uuid4().hex
+            blocked = run_blocked_precheck(policy['profile'], blocked_output, max_budget_usd,
+                                           dict(os.environ), catalog=catalog)
+            return {**report, 'passed': bool(blocked['passed']),
+                    'blocked_precheck': {'passed': blocked['passed'], 'checks': blocked['checks'],
+                                         'error_type': blocked['error_type'],
+                                         'receipt': str(blocked_output/'receipt.json')}}
         from robofrontier.engines.codex.launch import profile, launch_config, initialize_codex_home
         selected = profile(policy['profile'], catalog)
         if config['runtime']['codex_home_scope'] == 'job':

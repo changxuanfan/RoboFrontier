@@ -49,10 +49,10 @@ def _pending_observe(rows):
     return False
 
 
-def run_blocked_precheck(name, output, budget, base_env, *, binary='claude', wait_s=60):
+def run_blocked_precheck(name, output, budget, base_env, *, binary='claude', wait_s=60, catalog=None):
     if isinstance(budget,bool) or not isinstance(budget,(int,float)) or not math.isfinite(budget) or budget < MIN_TURN_BUDGET*3:
         raise ValueError('Budget must cover three minimum turn allowances')
-    prof = profile(name)
+    prof = profile(name, catalog) if catalog is not None else profile(name)
     output = Path(output)
     output.mkdir(parents=True,exist_ok=False)
     run,mcp,server=setup_run(output,base_env)

@@ -20,7 +20,7 @@ level = 0                            # 0 selects all levels; otherwise 1, 2 or 3
 min_arms = false
 
 [render]
-device = "nvidia"                    # nvidia (Linux EGL) | cpu (Linux OSMesa) | native (macOS)
+device = "auto"                      # auto | nvidia (Linux EGL) | cpu (Linux OSMesa) | native (macOS); auto picks native on macOS, nvidia with an NVIDIA GPU, else cpu
 observation_profile = "jpeg_896x560_q85"
 record_realtime_video = false
 
