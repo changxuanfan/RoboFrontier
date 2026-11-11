@@ -72,6 +72,17 @@ without receipts matching its profile and CLI version.
 
 ## 6. Prepare and run
 
+A running batch checks its source for changes and aborts every run, for good, when one appears
+(`INTEGRITY_ABORT`; [continuation](continuation.md)). Run batches from a checkout nothing edits
+while they run, a detached worktree of `main` outside the repository for example, with the data
+root pointing where the receipts and results belong:
+
+```sh
+git worktree add --detach ~/Repos/RoboFrontier-run main
+cd ~/Repos/RoboFrontier-run && uv sync --locked --extra oracle && install -m 600 ../RoboFrontier/.env .env
+export ROBOFRONTIER_RUNS_ROOT=~/Repos/RoboFrontier/runs
+```
+
 ```sh
 .venv/bin/robofrontier --config site.toml prepare --output runs/policy/my-batch
 .venv/bin/robofrontier run runs/policy/my-batch          # submits the launchd job and returns
