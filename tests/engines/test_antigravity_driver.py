@@ -165,6 +165,37 @@ class NativeTests(unittest.TestCase):
                 receipt = json.loads((run/'private/engine/context'/(session+'.json')).read_text())
                 self.assertEqual(receipt['system_prompt'], 'frozen_system_prompt_only')
 
+    def test_tool_hook_refuses_the_native_tools_the_cli_still_declares(self):
+        # (tool mode, native call, refused). manage_task list/status is allowed in a full run.
+        cases = (('robot_only', 'manage_task', {'Action': 'list'}, True),
+                 ('robot_only', 'list_resources', {'ServerName': 'robofrontier'}, True),
+                 ('full', 'manage_task', {'Action': 'kill', 'TaskId': 'x'}, True),
+                 ('full', 'manage_task', {'Action': 'list'}, False))
+        for mode, name, args, refused in cases:
+            with self.subTest(mode=mode, tool=name, args=args), tempfile.TemporaryDirectory(prefix='rf-agy-hook-') as folder:
+                def response(body, name=name, args=args):
+                    if any('functionResponse' in p for p in body['contents'][-1]['parts']):
+                        return [{'text': 'done'}]
+                    return [{'functionCall': {'name': name, 'args': args}}]
+                stub = Stub(response)
+                run = Path(folder).resolve()
+                fixture(run)
+                write_json(run/'private/inputs/harness.json',
+                           {'engine': 'antigravity', **({'tool_mode': mode} if mode != 'full' else {})})
+                driver = Driver(run, 'Controller', {'model': 'gemini-3.8-flash-low', 'effort': 'low',
+                    'auth_mode': 'api_key', 'env_key': 'RF_TEST_KEY', 'base_url': 'https://generativelanguage.googleapis.com'},
+                    {**os.environ, 'RF_TEST_KEY': 'fake'}, gateway_factory=lambda base, key: Gateway(stub.url, key))
+                try:
+                    driver(driver.profile, driver.profile['model'], 'low', None, 'probe', run, {},
+                           events_name='turn.jsonl', timeout=30)
+                    results = [p['functionResponse']['response'] for c in stub.requests[-1]['contents']
+                               for p in c['parts'] if 'functionResponse' in p]
+                    self.assertEqual(len(results), 1)
+                    self.assertEqual('denied by pre-tool hook' in json.dumps(results[0]), refused, results[0])
+                finally:
+                    driver.close()
+                    stub.close()
+
     def test_reported_usage_crossing_limit_creates_native_checkpoint(self):
         for reported, expected in ((260000, False), (267001, True)):
             with self.subTest(reported=reported), tempfile.TemporaryDirectory(prefix='rf-agy-context-') as folder:

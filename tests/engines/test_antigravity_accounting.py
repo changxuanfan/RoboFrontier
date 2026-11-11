@@ -204,7 +204,8 @@ class SystemPromptTests(unittest.TestCase):
             'mixinConfig': {'promptSections': [{'custom': {'title': 'System Prompt', 'content': content}},
                                                {'builtinName': 'user_information'}, {'builtinName': 'guidelines'}],
                             'tools': [{'name': 'manage_task', 'builtin': True}]},
-            'customizationDiscovery': {'skills': {'inheritUser': True}, 'rules': {'inheritUser': True}}}}
+            'customizationDiscovery': {'skills': {'inheritUser': True}, 'rules': {'inheritUser': True},
+                                       'hooks': {'inheritUser': True}}}}
 
     def test_only_the_frozen_prompt_remains_and_user_customizations_are_off(self):
         from robofrontier.engines.antigravity.context import DISCOVERY, policy_spec, prompt_only
@@ -229,6 +230,10 @@ class SystemPromptTests(unittest.TestCase):
         spec = policy_spec(self.native(system), 267000, system)
         self.assertFalse(prompt_only(spec, system + ' Extra.'))
         spec['agentConfig']['customizationDiscovery']['rules']['inheritUser'] = True
+        self.assertFalse(prompt_only(spec, system))
+        # Without hook lookup the run's own tool hook would not run.
+        spec = policy_spec(self.native(system), 267000, system)
+        spec['agentConfig']['customizationDiscovery']['hooks']['inheritUser'] = False
         self.assertFalse(prompt_only(spec, system))
         with self.assertRaisesRegex(ValueError, 'frozen system prompt'):
             policy_spec(self.native('Another agent.'), 267000, system)

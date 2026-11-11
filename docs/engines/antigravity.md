@@ -193,7 +193,8 @@ characters in eight sections of its own (`user_information`, `mcp_servers`,
 into a block named after the heading (`# Policy rules` became `<Policy rules>`).
 The adapter creates the policy conversation, through the same `StartCascade` RPC,
 with one untitled section holding the whole frozen text, and turns off the lookup
-of user-level skills, agents, plugins, rules and hooks. It reads this back before
+of skills, agents, plugins and rules. Hook lookup stays on: turning it off also
+stops the run's own tool hook. It reads this back before
 any policy input and on every reopened or forked session, and refuses a session
 that differs. Nothing platform-specific is added to the prompt.
 

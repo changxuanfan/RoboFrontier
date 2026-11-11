@@ -41,8 +41,11 @@ def with_checkpoint(spec, threshold):
     return spec
 
 
-# User-level customizations the CLI would otherwise look up for the agent.
-DISCOVERY = ('skills', 'agents', 'plugins', 'rules', 'hooks')
+# Customizations the CLI would otherwise look up for the agent. Hooks are not in this
+# list: turning their lookup off also stops the run's own PreToolUse hook
+# (workspace .agents/hooks.json), which then refuses nothing. The private CLI home
+# keeps personal hooks out.
+DISCOVERY = ('skills', 'agents', 'plugins', 'rules')
 
 
 def system_text(run):
@@ -74,7 +77,8 @@ def prompt_only(spec, system):
     discovery = agent.get('customizationDiscovery', {})
     return (len(sections) == 1 and set(sections[0]) == {'custom'}
             and not sections[0]['custom'].get('title') and sections[0]['custom'].get('content') == system
-            and not any(discovery.get(name, {}).get('inheritUser') for name in DISCOVERY))
+            and not any(discovery.get(name, {}).get('inheritUser') for name in DISCOVERY)
+            and discovery.get('hooks', {}).get('inheritUser') is True)
 
 
 def verify_static(driver):
