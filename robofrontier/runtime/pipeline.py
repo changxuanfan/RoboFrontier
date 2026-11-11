@@ -414,8 +414,8 @@ class Service(RuntimeService):
             else:
                 # Only a window needs GLFW: imported before an EGL context, it breaks EGL, and the
                 # spawned render worker re-imports this module (physics/render_worker.py).
-                import glfw
-                if not glfw.init():raise RuntimeError('GLFW init failed')
+                from robofrontier.physics.cocoa import start_glfw
+                glfw=start_glfw()
                 glfw.window_hint(glfw.VISIBLE,not self.hidden)
                 self.window=glfw.create_window(1280,800,'RoboFrontier — Shared World',None,None)
                 if not self.window:raise RuntimeError('GLFW window creation failed')

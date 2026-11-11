@@ -24,8 +24,8 @@ def _graphics_context():
         context = GLContext(1280, 800)
         context.make_current()
         return context
-    import glfw
-    if not glfw.init(): raise RuntimeError('GLFW init failed')
+    from robofrontier.physics.cocoa import start_glfw
+    glfw = start_glfw()
     glfw.window_hint(glfw.VISIBLE, False)
     window = glfw.create_window(1280, 800, 'RoboFrontier observations', None, None)
     if not window: raise RuntimeError('GLFW window creation failed')
