@@ -111,6 +111,7 @@ class AllowlistTests(unittest.TestCase):
     def test_write_never_makes_a_named_socket(self):
         fs = landlock_shell.handled_fs(4)
         self.assertFalse(landlock_shell.access_for('write', fs) & landlock_shell.MAKE_SOCK)
+        self.assertTrue(landlock_shell.access_for('write', fs) & landlock_shell.MAKE_REG)
         self.assertEqual(landlock_shell.access_for('list', fs), landlock_shell.READ_DIR)
 
 class ConfineTests(unittest.TestCase):
