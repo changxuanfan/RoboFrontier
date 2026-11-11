@@ -11,9 +11,9 @@ As with Claude Code's sandbox only Bash is confined, not the CLI or the robot MC
 (which Claude Code also starts through the prefix; see write_rules).
 The rules allow reading and writing exactly what the table grants (Landlock grants by
 listed path, so a denied folder inside a readable one is listed around), deny every
-TCP connection and bind, and fail closed: without Landlock network rules (ABI 4,
-Linux 6.7) the command does not run. Landlock does not cover UDP or named Unix
-sockets, and before ABI 6 it does not stop signals.
+TCP connection and bind, and no named Unix socket is made anywhere; it fails closed:
+without Landlock network rules (ABI 4, Linux 6.7) the command does not run. Landlock
+does not cover UDP, and before ABI 6 it does not stop signals or abstract Unix sockets.
 
 Standard library only, so the prefix runs it with `python -I` before any import.
 """
@@ -32,14 +32,22 @@ CREATE_RULESET, ADD_RULE, RESTRICT_SELF = 444, 445, 446  # Same number on x86_64
 PATH_BENEATH, NET_PORT = 1, 2
 PR_SET_NO_NEW_PRIVS = 38
 EXECUTE, WRITE_FILE, READ_FILE, READ_DIR = 1 << 0, 1 << 1, 1 << 2, 1 << 3
+MAKE_SOCK = 1 << 8
 REFER, TRUNCATE, IOCTL_DEV = 1 << 13, 1 << 14, 1 << 15
 FILE_ONLY = EXECUTE | WRITE_FILE | READ_FILE | TRUNCATE | IOCTL_DEV
 READ = EXECUTE | READ_FILE | READ_DIR
+ACCESS = {'list': READ_DIR, 'read': READ}
 BIND_TCP, CONNECT_TCP = 1 << 0, 1 << 1
 SCOPE_ABSTRACT_UNIX, SCOPE_SIGNAL = 1 << 0, 1 << 1
 NETWORK_ABI = 4
 # Devices a shell writes to as a matter of course.
 DEVICES = ('/dev/null', '/dev/tty')
+
+
+def access_for(mode, fs):
+    """The Landlock rights for a rule: 'write' is everything handled but making a named Unix
+    socket, which in a shared folder such as /tmp would reach other runs' processes."""
+    return ACCESS.get(mode, fs & ~MAKE_SOCK)
 
 
 def abi():
@@ -87,6 +95,9 @@ def allowlist(table, read=(), write=()):
     A symbolic link among those children gets no rule: a rule attaches to the link's
     target, which may be a denied folder (a link beside the repository, or one a policy
     shell planted in /tmp). Its target keeps whatever its own place in the table grants.
+    A readable folder whose differing entries are only files directly in it, such as
+    /usr/bin with the system Python closed, also gets a 'list' rule so it can still be
+    listed; a folder with a differing folder below does not, since listing reaches below.
     `read` and `write` add paths after the table, such as Claude Code's shell snapshots.
     """
     entries = {Path(p): mode for p, mode in table.items()}
@@ -100,6 +111,8 @@ def allowlist(table, read=(), write=()):
             children = sorted(path.iterdir())
         except OSError:
             return
+        if mode != 'deny' and all(p.parent == path and not p.is_dir() for p in below):
+            rules.append((str(path), 'list'))
         for child in children:
             if child in entries or child.is_symlink():
                 continue
@@ -164,7 +177,7 @@ def restrict(rules):
                 kind = os.fstat(fd).st_mode
                 if stat.S_ISLNK(kind):
                     continue  # Never grant a link's target under the link's name (see allowlist).
-                access = (READ if mode == 'read' else fs)
+                access = access_for(mode, fs)
                 if not stat.S_ISDIR(kind):
                     access &= FILE_ONLY
                 rule = PathBeneath(access & fs, fd)

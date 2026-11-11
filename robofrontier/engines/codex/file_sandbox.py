@@ -9,7 +9,7 @@ import os
 import stat
 
 from robofrontier.engines.common.landlock import (
-    abi, handled_fs, READ, FILE_ONLY, CREATE_RULESET, ADD_RULE, RESTRICT_SELF,
+    abi, handled_fs, access_for, FILE_ONLY, CREATE_RULESET, ADD_RULE, RESTRICT_SELF,
     PATH_BENEATH, PR_SET_NO_NEW_PRIVS, BIND_TCP, CONNECT_TCP,
     SCOPE_ABSTRACT_UNIX, SCOPE_SIGNAL,
 )
@@ -35,7 +35,7 @@ def restrict(rules):
         _fields_ = [('allowed_access', ctypes.c_uint64), ('parent_fd', ctypes.c_int32)]
     try:
         for path, mode in rules:
-            if mode not in ('read', 'write'):
+            if mode not in ('list', 'read', 'write'):
                 raise ValueError('Unknown filesystem permission')
             try:
                 fd = os.open(path, os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC)
@@ -45,7 +45,7 @@ def restrict(rules):
                 kind = os.fstat(fd).st_mode
                 if stat.S_ISLNK(kind):
                     continue  # A rule would attach to the link's target, which the table may deny.
-                access = READ if mode == 'read' else fs
+                access = access_for(mode, fs)
                 if not stat.S_ISDIR(kind):
                     access &= FILE_ONLY
                 rule = PathBeneath(access & fs, fd)

@@ -95,6 +95,24 @@ class AllowlistTests(unittest.TestCase):
             self.assertFalse(any(Path(path) == repo or repo in Path(path).parents for path, _ in rules), rules)
 
 
+    def test_a_folder_with_only_closed_files_can_still_be_listed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp).resolve(); tools = base/'bin'; tools.mkdir(); (base/'home').mkdir()
+            for name in ('true', 'python3'): (tools/name).write_text('')
+            # /usr/bin with the system Python closed: listed, its other files readable.
+            rules = landlock_shell.allowlist({str(base): 'read', str(tools/'python3'): 'deny'})
+            self.assertIn((str(tools), 'list'), rules)
+            self.assertIn((str(tools/'true'), 'read'), rules)
+            self.assertNotIn(str(tools/'python3'), dict(rules))
+            # A closed folder below keeps its parent unlisted, since listing reaches below.
+            rules = landlock_shell.allowlist({str(base): 'read', str(base/'home'): 'deny'})
+            self.assertNotIn((str(base), 'list'), rules)
+
+    def test_write_never_makes_a_named_socket(self):
+        fs = landlock_shell.handled_fs(4)
+        self.assertFalse(landlock_shell.access_for('write', fs) & landlock_shell.MAKE_SOCK)
+        self.assertEqual(landlock_shell.access_for('list', fs), landlock_shell.READ_DIR)
+
 class ConfineTests(unittest.TestCase):
     def prepared(self, base, isolation):
         repo, run, table = tree(base)

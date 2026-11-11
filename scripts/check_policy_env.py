@@ -47,6 +47,10 @@ CLOSED_FOLDERS = {'darwin': {'read_people': '/Users', 'read_disks': '/Volumes', 
 FEW_PROCESSES = 15
 # Claude's macOS sandbox refuses the system limit that ProcessPoolExecutor reads first; Pool works.
 KNOWN_LIMITS = {('darwin', 'claude'): ('process_executor',)}
+# Python's process pools keep their locks in /dev/shm, which is shared with other runs. Where the
+# host forbids user namespaces (RunPod pods) no command can get a private one, so it stays closed
+# and process pools fail; threads and plain subprocesses still work.
+SHARED_MEMORY_LIMITS = ('process_pool', 'process_executor')
 OTHER_PYTHONS = ('/opt/homebrew/bin/python3', '/usr/local/bin/python3', '/usr/bin/python3')
 OUTPUT_TYPES = ('function_call_output', 'custom_tool_call_output')
 PROBE_LIMIT_S = 280
@@ -293,6 +297,21 @@ def check_engine(name, environment, scratch, mode):
         shared_memory.unlink(missing_ok=True)
 
 
+def private_shared_memory_possible():
+    """Whether a command here can get an empty /dev/shm of its own, as a Codex command does."""
+    probe = 'from robofrontier.engines.codex.tool_worker import private_shared_memory as p; p()'
+    return subprocess.run([sys.executable, '-c', probe], cwd=ROOT, capture_output=True, timeout=60).returncode == 0
+
+
+def known_limits(name, mode):
+    """The probe items that cannot work for engine `name` in sandbox `mode` on this host."""
+    known = KNOWN_LIMITS.get((sys.platform, name), ())
+    # Claude's Landlock prefix never makes a private /dev/shm; Codex's worker does where it can.
+    if mode == 'landlock-v1' and (name == 'claude' or not private_shared_memory_possible()):
+        known += SHARED_MEMORY_LIMITS
+    return known
+
+
 def differences(results, known=()):
     wrong = [name + ' should work' for name in MUST_WORK if results.get(name) != 'ok' and name not in known]
     wrong += [name + ' should be denied' for name in MUST_FAIL if results.get(name) != 'denied']
@@ -326,7 +345,7 @@ def main(argv=None):
     try:
         for name in names:
             results = check_engine(name, environment, scratch, modes[name])
-            wrong = differences(results, KNOWN_LIMITS.get((sys.platform, name), ()))
+            wrong = differences(results, known_limits(name, modes[name]))
             print(json.dumps({'engine': name, policy_env.ISOLATION[name]: modes[name], 'attempts': len(results), 'differences': wrong}))
             failed = failed or bool(wrong)
     finally:
