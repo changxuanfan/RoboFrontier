@@ -1,4 +1,4 @@
-"""Native Native standing teams over the shared runtime mailbox and scheduler.
+"""Native CLI standing teams over the shared runtime mailbox and scheduler.
 
 Every initial role owns an independent native session. Bind the complete team,
 START once, and only then send task prompts. This engineering host never forks a

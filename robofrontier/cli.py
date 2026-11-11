@@ -140,6 +140,9 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
     from robofrontier.batch.prepare import load_env
     load_env(ROOT/'.env')
     policy = config['policy']
+    if policy['engine'] == 'antigravity' and max_budget_usd is not None:
+        # The CLI reports no cost, so a dollar cap would be accepted and never applied.
+        raise ValueError('Antigravity preflight cannot enforce --max-budget-usd; omit it')
     if not confirm_spend:
         return {'status': 'not_run', 'model_calls': 0,
                 'reason': 'Add --confirm-spend to authorize real provider calls',

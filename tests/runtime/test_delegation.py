@@ -259,6 +259,34 @@ class DelegationTests(unittest.TestCase):
         self.assertNotEqual(self.d.owners()['A'],'Controller')
         self.assertIn('error',self.call('Controller','gripper',{'robot':'C','state':'open'})['result'])
 
+    def bound(self):
+        self.delegate();self.d.claim('batch','manager');c=self.d.batch('batch')['children'][0]
+        self.d.bind('batch',c['actor'],'child',{'source_thread_id':'parent','source_ordinal':1,'source_sha256':'x'},'manager')
+        return c
+
+    def test_activation_refuses_an_expired_setup_deadline(self):
+        c=self.bound()
+        b=self.d.batch('batch');b['setup_deadline']=time.time()-1;self.d.save(b)
+        with self.assertRaisesRegex(ValueError,'deadline'):self.d.activate('batch','manager')
+        self.assertEqual(self.d.batch('batch')['status'],'creating')
+        self.assertEqual(self.service.store.agent(c['actor'])['delegation_state'],'creating')
+
+    def test_activation_refuses_a_paused_or_ended_run(self):
+        c=self.bound()
+        self.service.store.put('dispatch_paused',True)
+        with self.assertRaisesRegex(ValueError,'running unpaused'):self.d.activate('batch','manager')
+        self.service.store.put('dispatch_paused',False)
+        self.service.store.put('lifecycle','ended')
+        with self.assertRaisesRegex(ValueError,'running unpaused'):self.d.activate('batch','manager')
+        self.assertEqual(self.service.store.agent(c['actor'])['delegation_state'],'creating')
+        self.service.store.put('lifecycle','running')
+        self.d.activate('batch','manager')
+        self.assertEqual(self.service.store.agent(c['actor'])['delegation_state'],'active')
+
+    def test_an_active_batch_is_not_activated_twice(self):
+        self.bound();self.d.activate('batch','manager')
+        with self.assertRaisesRegex(ValueError,'not being created'):self.d.activate('batch','manager')
+
     def test_finished_delegates_do_not_accept_new_business_work(self):
         self.delegate();child=self.activate()[0]['actor']
         self.call(child,'return_task',{'outcome':'completed','result':'evidence'})

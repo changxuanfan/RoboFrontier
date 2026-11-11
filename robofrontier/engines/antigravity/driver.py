@@ -23,6 +23,41 @@ from robofrontier.runtime.setup import write_json
 from robofrontier.engines.common.native import PreLaunchCancelled
 
 CAPACITY_CODES = frozenset(('RESOURCE_EXHAUSTED', 'UNAVAILABLE', 'rate_limit', 'server_overloaded'))
+USAGE_KEYS = ('input_tokens', 'output_tokens', 'thinking_tokens', 'cache_read_tokens')
+USER_INPUT_STEP = 14  # Native step type of one user input (native_turn.completed requires it).
+
+
+class ForkUnacknowledged(ValueError):
+    """The fork RPC named a child session but did not acknowledge the bound step."""
+    def __init__(self, child):
+        super().__init__('Native fork did not acknowledge the bound step')
+        self.child = child
+
+
+def usage_baseline(rows):
+    """Counters a session starts from: what its (possibly inherited) transcript already holds.
+
+    A fork child's counters continue its parent's. Transcript rows carry no thinking
+    count, so an inherited thinking total is unknown, not zero."""
+    return {key: sum(r.get(key, 0) for r in rows) if not rows or any(key in r for r in rows) else None
+            for key in USAGE_KEYS}
+
+
+def usage_delta(raw, previous):
+    """(this turn's share, new running totals) from the CLI's cumulative counters.
+
+    A counter the result leaves out keeps its previous total, so a later result is
+    not charged the whole session again."""
+    raw = raw if isinstance(raw, dict) else {}
+    delta, totals = {}, dict(previous)
+    for key in USAGE_KEYS:
+        value, before = raw.get(key), previous.get(key)
+        if type(value) not in (int, float):
+            delta[key] = None
+            continue
+        totals[key] = value
+        delta[key] = value-before if type(before) in (int, float) and value >= before else None
+    return delta, totals
 
 
 def native_id(value):
@@ -69,6 +104,8 @@ class Driver:
         self.csrf = secrets.token_urlsafe(32)
         self.lock = threading.RLock()
         self.reported_usage = None
+        # events_name -> native step count before that turn's input was written.
+        self.inputs = {}
         self.log = self.run/'private/engine'/('antigravity-' + actor + '.log')
 
     def environment(self):
@@ -167,8 +204,7 @@ class Driver:
                     else:
                         transcript = self.home/'brain'/sid/'.system_generated/logs/transcript.jsonl'
                         rows = [json.loads(line) for line in transcript.read_text().splitlines()] if transcript.is_file() else []
-                        self.reported_usage = {key: sum(r.get(key, 0) for r in rows)
-                            for key in ('input_tokens', 'output_tokens', 'thinking_tokens', 'cache_read_tokens')}
+                        self.reported_usage = usage_baseline(rows)
                 write_json(self.run/'private/state/antigravity-sessions'/ (self.actor + '.json'),
                            {'session_id': sid, 'actor': self.actor})
                 return sid
@@ -248,6 +284,8 @@ class Driver:
                     raise PreLaunchCancelled('Antigravity turn stopped before input')
                 self.process.stdin.write(json.dumps({'event': 'user', 'message': {'content': prompt}}) + '\n')
                 self.process.stdin.flush()
+                with self.lock:
+                    self.inputs[events_name] = native_start
                 while True:
                     if cancel_event and cancel_event.is_set() or timeout and time.monotonic() - began >= timeout:
                         self.close()
@@ -275,12 +313,9 @@ class Driver:
                         if summary.get('turn_status') == 'ended':
                             from .context import verify_effective
                             verify_effective(self)
-                        raw = summary.get('usage') or {}
-                        delta = {key: raw[key]-self.reported_usage.get(key, 0)
-                            if type(raw.get(key)) in (int, float) and raw[key] >= self.reported_usage.get(key, 0) else None
-                            for key in ('input_tokens', 'output_tokens', 'thinking_tokens', 'cache_read_tokens')}
-                        self.reported_usage = raw
-                        write_json(self.run/'private/state/antigravity-accounting'/(self.session+'.json'), raw)
+                        delta, self.reported_usage = usage_delta(summary.get('usage'), self.reported_usage)
+                        write_json(self.run/'private/state/antigravity-accounting'/(self.session+'.json'),
+                                   self.reported_usage)
                         host_event(self.run, 'cli_turn_completed', actor=self.actor, session_id=self.session,
                             events_name=events_name, phase='policy', usage_delta=delta,
                             reported_cost_usd=None, duration_s=time.monotonic()-began)
@@ -302,9 +337,34 @@ class Driver:
         with urllib.request.urlopen(request, timeout=30) as response:
             return json.load(response)
 
+    def input_delivered(self, events_name, timeout, alive=lambda: True):
+        """True once the native history holds the user input of turn `events_name`.
+
+        Writing to the CLI's stdin only hands the text to a pipe. The session's own
+        database recording a new user-input step is the evidence that it arrived."""
+        from .provenance import steps
+        deadline = time.monotonic() + timeout
+        while True:
+            with self.lock:
+                start = self.inputs.get(events_name)
+            if start is not None:
+                try:
+                    if any(row[1] == USER_INPUT_STEP for row in steps(self.home, self.session)[start:]):
+                        return True
+                except (sqlite3.Error, ValueError):
+                    pass  # Being written; read again.
+            elif not alive():
+                return False
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(.05)
+
     def fork(self, step):
         reply = self.rpc('ForkConversation', {'sourceCascadeId': self.session, 'forkAtStepIndex': step})
         child = native_id(reply.get('newCascadeId'))
-        if child == self.session or reply.get('forkedAtStepIndex') != step:
-            raise ValueError('Native fork did not acknowledge the bound step')
+        if child == self.session:
+            raise ValueError('Native fork returned its own source session')
+        if reply.get('forkedAtStepIndex') != step:
+            # The child exists. Its ID must reach the run's records before anything fails.
+            raise ForkUnacknowledged(child)
         return child

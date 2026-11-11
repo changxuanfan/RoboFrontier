@@ -89,7 +89,9 @@ blocked-parent native fork, exact inherited-prefix verification, child recall
 without tools and parent continuation. A smoke check does not qualify a run.
 Receipts bind the profile, CLI version and adapter implementation. Changing any
 of these requires a new receipt. CLI usage does not report dollar cost, so a
-precise dollar allowance is unsupported; missing cost stays null.
+precise dollar allowance is unsupported; missing cost stays null. Preflight
+refuses `--max-budget-usd` before any provider call rather than accept a cap it
+cannot apply.
 
 ## Run, status and stop
 
@@ -117,11 +119,23 @@ before returning it for runtime role binding. No model input is sent during this
 setup. Later turns reuse that conversation; process recovery resumes its ID.
 
 Adaptive forks bind the pending native tool call by conversation, trajectory,
-step and exact arguments. A write-ahead receipt precedes the fork RPC; an unknown
-outcome pauses dispatch and is never automatically reforked. The child inherits
-the exact prefix, the pending tool is canceled and the native fork notice is
-verified. No child prompt or tool runs before the batch activates. These notices
-are native behavior and remain observable differences from Codex.
+step and exact arguments. Before each fork and in its proof, the parent's last
+native step must still be that bound call: same tool ID, same argument hash, still
+pending. A write-ahead receipt precedes the fork RPC; an unknown outcome pauses
+dispatch and is never automatically reforked. A fork reply that names a child but
+not the requested step still records that child's ID for review. The child inherits
+the exact prefix (payload and metadata, both in the saved digest), the pending tool
+is canceled and the native fork notice is verified. These notices are native
+behavior and remain observable differences from Codex.
+
+Activation is decided by the runtime, for every engine: it refuses a batch whose
+setup deadline has passed or whose run is paused or no longer running, whatever
+the host checked before its last native step. No child prompt or tool runs before
+the batch activates. A child counts as started only once its own native history
+holds the first input; writing to the CLI's stdin is not that evidence. Input not
+seen within 30 seconds, or by the setup deadline, is recorded as uncertain and
+pauses the run for review. Stopping a failed setup stops every child even when
+one child's cleanup raises. Each fork emits a timed `fork_created` event.
 
 ## Recovery
 
@@ -168,7 +182,12 @@ common task/runtime contract does not imply byte-identical model input.
 
 The host copies only its own native transcripts and SQLite session databases.
 Collection and Slurm fallback exclude the native CLI home. Usage is recorded as
-per-turn deltas from native cumulative counters; missing costs remain null.
+per-turn deltas from native cumulative counters; missing costs remain null. The
+CLI's `output_tokens` already include thinking (`total_tokens` is input plus
+output), so reports use them as they are and list thinking separately. A result
+without usage leaves the running totals unchanged. A fork child's counters continue
+its parent's; its transcript has no thinking count, so the child's first turn
+reports an unknown thinking share instead of charging the inherited total.
 The standard collect/report/archive commands apply to Antigravity batches.
 
 Opt-in tests use the real pinned CLI and a local fake Gemini service, so they do
@@ -198,6 +217,16 @@ trial or a passed live provider preflight.
 | Real Gemini API / third-party API service | Not verified | No live API key supplied; local protocol tests do not qualify a provider |
 | RunPod | 51 sandbox checks, 7 CLI tests and all four topology smokes passed | Real CLI, NVIDIA EGL and MuJoCo with a local fake Gemini service. This pod needed the generic EGL loader and OpenGL libraries. |
 | Slurm | Queued | Job 432846 requests one GPU and a 48-hour time limit. Node and provider qualification are pending. |
+
+Later the same day, after a review: activation guards, delivery-confirmed child
+start, bound-call fork proof, usage accounting and the refused preflight budget
+(above). Mac regression: 1,854 tests, no failed modules. Real CLI with the local
+fake service: 10 transport tests and five topology smokes passed, including an
+adaptive run with two children. Not rerun after these changes: the live
+subscription preflight (the adapter fingerprint changed, so its receipt must be
+renewed before a run), RunPod and Slurm. Still open: a live adaptive run with
+several children, native quota and network error classification, and one frozen
+tool-backend descriptor shared by preparation and execution.
 
 The live subscription receipt is profile and implementation specific. Neither
 these checks nor its model label establish provider identity cryptographically,

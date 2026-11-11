@@ -400,8 +400,9 @@ def export_metrics(run, engine):
                 continue
             seen.add(e['events_name'])
             raw = dict(e.get('usage_delta') or {})
-            output, thinking = number(raw.get('output_tokens')), number(raw.get('thinking_tokens'))
-            raw['output_tokens'] = output + thinking if None not in (output, thinking) else None
+            # The CLI's output_tokens already include thinking (total = input + output),
+            # the same definition as the other engines' output tokens.
+            thinking = number(raw.get('thinking_tokens'))
             rows.append({'actor': e.get('actor'), 'session_id': e.get('session_id'), 'phase': e.get('phase', 'policy'),
                 'usage': usage(engine, raw), 'usage_source': 'native_result_counter_delta',
                 'thinking_tokens': thinking, 'reported_cost_usd': None,

@@ -21,7 +21,7 @@ from robofrontier.runtime.store import RuntimeStore
 @unittest.skipUnless(os.environ.get('ROBOFRONTIER_ANTIGRAVITY_PHYSICS') == '1' and shutil.which('agy'),
                      'opt-in real CLI and MuJoCo against a local model service')
 class PhysicsTests(unittest.TestCase):
-    def exercise(self, topology):
+    def exercise(self, topology, robots=('A',)):
         def response(body):
             contents = body.get('contents', [])
             last = contents[-1].get('parts', []) if contents else []
@@ -31,7 +31,7 @@ class PhysicsTests(unittest.TestCase):
             if topology == 'adaptive' and child:
                 op, data = ('return_task', {'outcome': 'completed', 'result': 'synthetic evidence'})
             elif topology == 'adaptive':
-                op, data = 'delegate', {'scopes': [{'robots': ['A'], 'goal': 'synthetic', 'done_when': 'synthetic'}]}
+                op, data = 'delegate', {'scopes': [{'robots': [r], 'goal': 'synthetic', 'done_when': 'synthetic'} for r in robots]}
             elif topology == 'centralized':
                 op, data = 'finish', {'note': 'synthetic early finish'}
             else:
@@ -76,7 +76,13 @@ class PhysicsTests(unittest.TestCase):
                     batches = list(store.get('delegations', {}).values())
                     self.assertEqual(len(batches), 1, str(directory))
                     self.assertEqual(batches[0]['status'], 'finished', {'batch': batches[0], 'retained': str(directory)})
-                    self.assertEqual(store.get('robot_owners')['A'], 'Controller')
+                    self.assertEqual([c['start_status'] for c in batches[0]['children']], ['sent']*len(robots))
+                    self.assertEqual({store.get('robot_owners')[r] for r in robots}, {'Controller'})
+                    for child in batches[0]['children']:
+                        fork = json.loads((run/'private/state/antigravity-forks'/(child['actor']+'.json')).read_text())
+                        self.assertEqual(fork['status'], 'verified')
+                        self.assertEqual(fork['proof']['pending_tool_id'], fork['binding']['tool_id'])
+                    self.assertEqual(batches[0]['source_provenance']['pending_tool_id'], fork['binding']['tool_id'])
                 elif topology == 'centralized':
                     self.assertEqual(result['reason'], 'world_ended')
                     self.assertFalse(json.loads((run/'private/outputs/evaluation.json').read_text())['task_success'])
@@ -94,6 +100,9 @@ class PhysicsTests(unittest.TestCase):
 
     def test_adaptive(self):
         self.exercise('adaptive')
+
+    def test_adaptive_two_children(self):
+        self.exercise('adaptive', robots=('A', 'B'))
 
     def test_controller_worker(self):
         self.exercise('hierarchical')
