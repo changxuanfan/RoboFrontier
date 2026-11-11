@@ -18,7 +18,6 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-import glfw
 import mujoco
 import numpy as np
 from PIL import Image
@@ -266,9 +265,6 @@ class World:
     def recover_action(self,actor,call_id):
         return self.arms[actor].recover_stopped(call_id)
 
-    def _stop_action(self,arm,status,reason=None):
-        return arm.end(status,reason)
-
     def poll_actions(self,timeout):
         return [r for arm in self.arms.values() if (r:=arm.poll(self.time,timeout)) is not None]
 
@@ -406,6 +402,7 @@ class Service(RuntimeService):
         observer=secrets.token_urlsafe(24)
         Handler=self.http_handler(observer)
         try:
+            glfw=None
             backend=os.environ.get('MUJOCO_GL','').lower()
             if self.hidden and backend in ('osmesa','egl'):
                 if backend=='egl':
@@ -415,6 +412,9 @@ class Service(RuntimeService):
                 self.offscreen_context=GLContext(1280,800)
                 self.offscreen_context.make_current()
             else:
+                # Only a window needs GLFW: imported before an EGL context, it breaks EGL, and the
+                # spawned render worker re-imports this module (physics/render_worker.py).
+                import glfw
                 if not glfw.init():raise RuntimeError('GLFW init failed')
                 glfw.window_hint(glfw.VISIBLE,not self.hidden)
                 self.window=glfw.create_window(1280,800,'RoboFrontier — Shared World',None,None)

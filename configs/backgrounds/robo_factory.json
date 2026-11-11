@@ -206,7 +206,7 @@
   },
   "workstation_dressing": {
     "enabled": true,
-    "catalog": "configs/suites/frontier-current-oracle.json"
+    "catalog": "benchmark/release.json"
   },
   "offline_lighting": {
     "exposure_ev": -0.75,

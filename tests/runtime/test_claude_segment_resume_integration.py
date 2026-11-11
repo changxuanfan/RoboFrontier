@@ -19,6 +19,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 
 from engines.test_claude_adaptive_integration import StubModel
 from runtime.test_run_segments_integration import wait_until
@@ -32,7 +33,9 @@ ROOT = Path(__file__).resolve().parents[2]
 CASE = 'mosaic-a04-6x12-d1'
 RESUME = 'The host stopped unexpectedly'
 CHILD = ('import json,os,sys;from robofrontier.engines.claude.run import run_task;'
-         "env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'FAKE_KEY':'synthetic'};"
+         "env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'FAKE_KEY':'synthetic',"
+         # The rendering backend, as robofrontier run passes it (EGL on a Linux GPU host).
+         "**{k:os.environ[k] for k in ('MUJOCO_GL','PYOPENGL_PLATFORM') if k in os.environ}};"
          'print(json.dumps(run_task(sys.argv[1],env,wall_limit_s=600,startup_timeout_s=90,poll_s=.1)))')
 
 
@@ -56,7 +59,9 @@ class ClaudeSegmentResumeTests(unittest.TestCase):
     def test_killed_host_resumes_the_same_session_with_the_resume_message(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp).resolve() / 'batch'
-            prepare_batch(base, ['opus'], cases=[CASE], topology='centralized')
+            # A local fake model with a fake key: nothing to expose (claude_prepare.exposed_api_keys).
+            with patch('robofrontier.batch.claude_prepare.exposed_api_keys', return_value=[]):
+                prepare_batch(base, ['opus'], cases=[CASE], topology='centralized')
             run = base / 'opus' / CASE
             task = json.loads((run / 'private/inputs/task.json').read_text())
             SlowMoveModel.camera, SlowMoveModel.robot = camera_names(task)[0], sorted(task['arms'])[0]

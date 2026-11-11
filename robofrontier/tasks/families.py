@@ -48,16 +48,6 @@ def oracle_recording(name, root=ROOT):
                             +' (looked in '+', '.join(map(str, candidates))+')')
 
 
-def legacy_bytes(name, root=ROOT):
-    """A released file's bytes as recorded before the benchmark/ move; only path text changed."""
-    import re
-    moved = _moved(root)
-    data = (Path(root)/current_path(name, root)).read_bytes()
-    back = {new.encode(): old.encode() for old, new in moved.items() if Path(new).parts[0] == 'benchmark'}
-    pattern = re.compile(b'(' + b'|'.join(re.escape(n) for n in sorted(back, key=len, reverse=True)) + rb')(?![A-Za-z0-9_.-])')
-    return pattern.sub(lambda m: back[m.group(1)], data)
-
-
 def resolve_case(case_id, purpose='gpt', root=ROOT):
     root = Path(root)
     release = read(root/RELEASE)

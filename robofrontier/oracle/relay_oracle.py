@@ -579,11 +579,6 @@ def goal_contact_allowed(t):
  return bool(getattr(t,'task',{}).get('completion',{}).get('allow_goal_payload_contact',False))
 
 
-def assembly_table_contact(t,ident):
- owned=set(t.monitor.relay.states[ident]['all_geoms'])
- return any(contact.dist<=0 and any(int(a) in owned and (t.model.geom(int(b)).name or '').startswith('table_') for a,b in ((contact.geom1,contact.geom2),(contact.geom2,contact.geom1))) for contact in t.data.contact)
-
-
 def grounded_timber(t,ident):
  """Wood supported by tabletop or an in-goal wood stack, excluding pendants.
 

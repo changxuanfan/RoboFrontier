@@ -675,14 +675,6 @@ class EvaluatedHold:
     def close(self):self.channel.close()
 
 
-class HoldMonitor(Monitor):
-    def __init__(self,trial,codebook):
-        super().__init__(trial,secret=[1]*len(trial.task['dials']))
-        self.game=EvaluatedHold(self,codebook)
-    def sample_dial(self,dt):
-        super().sample_dial(dt);self.result_cache['private_red_hold_ready']=self.game.red_ready
-
-
 class HoldingManipulator(Manipulator):
     # A held input has no mandatory post-turn withdrawal. Actual release,
     # when needed later, retains the existing measured-separation checks.

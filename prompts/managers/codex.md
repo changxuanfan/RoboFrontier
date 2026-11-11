@@ -3,8 +3,7 @@
 Give the following prompt to a coding agent with terminal access to this checkout.
 The outer agent can use any model or desktop application. The measured policy
 model runs inside Codex CLI and is selected by the frozen profile and effort.
-For provider-specific setup, read `docs/engines/README.md#providers`; historical prices
-in `docs/archive/model-pricing-20261028.md` are dated observations, not current quotes.
+For provider-specific setup, read `docs/engines/README.md#providers`.
 
 ```text
 Manage a RoboFrontier Codex benchmark through the unified command line.

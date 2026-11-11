@@ -10,8 +10,8 @@ The source code is licensed separately under the MIT License ([`LICENSE`](LICENS
 
 ## What this covers
 
-- Task, scene and environment data: the released tasks in `benchmark/`, and
-  `configs/environments/` and `configs/suites/`.
+- Task, scene and environment data: the released tasks in `benchmark/`, including the Oracle's
+  source scenes in `benchmark/oracle/`.
 - Rendered media: the README and project-page images in `docs/media/` and `site/`,
   benchmark previews, the Factory meshes, textures and tour material in
   `assets/robo_factory/`, and the videos published from this project (Oracle
@@ -26,7 +26,7 @@ These keep their own licenses and are not relicensed here:
 
 | Material | Where | License |
 | --- | --- | --- |
-| Franka Emika Panda model from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie), fetched into `vendor/` and embedded in scene files | `configs/environments/**/scene.xml`, `vendor/` | Apache License 2.0 |
+| Franka Emika Panda model from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie), fetched into `vendor/` and embedded in scene files | `benchmark/**/scene.xml`, `vendor/` | Apache License 2.0 |
 | Barlow Condensed font | `assets/robo_factory/fonts/` | SIL Open Font License 1.1 ([`OFL.txt`](assets/robo_factory/fonts/OFL.txt)) |
 | Space Grotesk Bold (film titles) | `assets/robo_factory/fonts/` | SIL Open Font License 1.1 ([`OFL-SpaceGrotesk.txt`](assets/robo_factory/fonts/OFL-SpaceGrotesk.txt)) |
 | JetBrains Mono Medium (film labels) | `assets/robo_factory/fonts/` | SIL Open Font License 1.1 ([`OFL-JetBrainsMono.txt`](assets/robo_factory/fonts/OFL-JetBrainsMono.txt)) |

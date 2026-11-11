@@ -194,12 +194,6 @@ def delegate_prompt(run, actor, child):
             .replace('{{SCOPE}}', json.dumps(scope, ensure_ascii=False, separators=(',', ':'))))
 
 
-def frozen_system_prompt(run):
-    """The frozen system prompt, or None for a run prepared before it existed."""
-    path = Path(run) / 'private/inputs/bootstrap/system.md'
-    return path.read_text() if path.is_file() else None
-
-
 def frozen_bootstrap(run, actor):
     """The frozen first message, or None for a run prepared before it existed."""
     path = Path(run) / 'private/inputs/bootstrap' / (actor + '.md')

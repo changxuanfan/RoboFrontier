@@ -61,21 +61,6 @@ def may_be_visible(camera,placement):
  tanv=math.tan(math.radians(camera['vertical_fov_deg'])/2);tanh=tanv*1.8
  return abs(float(np.dot(v,right))) <= max(0.,depth)*tanh+radius*math.sqrt(1+tanh*tanh) and abs(float(np.dot(v,up))) <= max(0.,depth)*tanv+radius*math.sqrt(1+tanv*tanv)
 
-def reset_schedule(keys,visits,placements,fps):
- by_id={p['case_id']:p for p in placements};events=[];last_arrival={}
- for visit in visits:
-  ident=visit['case_id'];arrival=visit['arrival_s'];previous=last_arrival.get(ident,0);last_arrival[ident]=arrival
-  # The first visited region is already running from time zero; do not reset it.
-  if arrival<74:continue
-  earliest=max(0,arrival-10,previous+1);latest=arrival-2
-  candidates=range(math.ceil(earliest*fps),math.floor(latest*fps)+1)
-  for frame in candidates:
-   t=frame/fps;c=camera_at(keys,t)
-   if c['position_m'][2]>=20 or may_be_visible(c,by_id[ident]):continue
-   events.append(dict(case_id=ident,time_s=t,frame_30=round(t*30),arrival_s=arrival));break
-  else:events.append(dict(case_id=ident,time_s=None,arrival_s=arrival,reason='no offscreen window'))
- return events
-
 def camera_at(keys,t):
  if t<=keys[0]['t']:return keys[0]['camera']
  # Hermite splines share velocities at opening waypoints so the pan does not pause.

@@ -168,10 +168,9 @@ sessions are bound. Each role receives an explicit started prompt. `ready` is an
 capability query; it is not a model-readiness gate. Old `ready_barrier_v1` inputs
 keep their frozen legacy behavior. Direct START does not change robot ownership.
 
-Claude exposes all four modes as explicit engineering drafts, including native
-standing Workers with independent sessions. See [Claude standing teams](engines/claude-code.md#standing-teams)
-for commands, resource implications and measured coverage. Formal scored Claude
-lifecycle qualification remains an integration gate. Use the engine-specific guide rather than assuming that a
+Claude runs all four modes, including native standing Workers with independent sessions. See
+[Claude standing teams](engines/claude-code.md#standing-teams) for commands and resource
+implications. Use the engine-specific guide rather than assuming that a
 Codex app-server tool/fork interface exists in Claude Code. API and native
 subscription authentication are separate paths. In particular, isolated Codex
 API homes do not imply qualified concurrent subscription-token refresh.

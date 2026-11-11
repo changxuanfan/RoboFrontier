@@ -172,9 +172,8 @@ class ReleaseRecordTests(unittest.TestCase):
         self.assertNotIn('harness', sorted(read(ROOT/RELEASE)))
         assets = read(ROOT/'configs/policy-assets.json')
         self.assertEqual(assets['release_sha256'], sha(ROOT/RELEASE))
-        # A task-only revision reuses the pinned asset archive.
-        self.assertEqual(assets['archive_release_sha256'],
-                         'b432892f174f9394927905345fc860b68b3ebc64d7c276530635eda79a699d1c')
+        # The pinned archive was built from this release (handoff.export_assets).
+        self.assertEqual(assets['archive_release_sha256'], sha(ROOT/RELEASE))
 
 
 class OracleRecordingTests(unittest.TestCase):

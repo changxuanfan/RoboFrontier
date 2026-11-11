@@ -429,14 +429,6 @@ def export(run, store):
                 'continuations': continuations(store), 'after_score': store.get('after_score')})
 
 
-def continue_by_hand(run, reason='manual continue', source_root=None):
-    """Prepare an operator's continuation of one stopped run (robofrontier continue)."""
-    from .store import RuntimeStore
-    store = RuntimeStore(Path(run) / 'private/state/runtime.sqlite')
-    try: return prepare_retry(run, store, reason, manual=True, source_root=source_root)
-    finally: store.close()
-
-
 def try_continue(run, reason, wait_s=60., sleep=time.sleep):
     """After a host exited: prepare the next segment if this run continues by itself.
 

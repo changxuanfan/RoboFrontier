@@ -441,6 +441,9 @@ def main(argv=None):
             if args.render:
                 overrides['render'] = {'device': args.render}
             config = load_configuration(args.config, overrides)
+            # Receipts, exports and caches go where this configuration says, for every later
+            # call and child process (configuration.runs_root reads the variable first).
+            os.environ.setdefault('ROBOFRONTIER_RUNS_ROOT', str(runs_root(config)))
             if args.command == 'config':
                 emit(config)
             elif args.command == 'plan':

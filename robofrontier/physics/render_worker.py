@@ -64,7 +64,9 @@ def _serve(connection, model_bytes):
     import mujoco
     from PIL import Image
     model = pickle.loads(model_bytes)
-    _graphics_context()
+    # Held for the life of the process: an EGL or OSMesa context object frees its context when
+    # it is collected, and MjrContext then fails (gladLoadGL error).
+    graphics = _graphics_context()
     data = mujoco.MjData(model)
     context = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
     scene = mujoco.MjvScene(model, maxgeom=MAX_GEOM)

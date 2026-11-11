@@ -120,11 +120,8 @@ def export(directory, codex_home=None):
                                 if e['kind']=='TOOL_RETURN' and e['details'].get('op')=='wait_events')),
             'async_actions':async_actions,
             'interpretation':'Action overlap covers active tool executions, excluding idle pose/grasp holding. It does not establish independent useful work or an architecture advantage.'}
-    if config.get('engine', 'codex') == 'claude':
-        # The current Claude launcher only admits unqualified engineering
-        # drafts. An evaluation is meaningful evidence, not qualification.
-        report.update(engine='claude', benchmark_qualified=False,
-                      qualification_reason='Claude engineering execution is not qualified for formal benchmark results')
+    # Both engines report the same way; a run's precheck receipts gate it before it starts.
+    report['engine'] = config.get('engine', 'codex')
     if isinstance(metric_evaluation,dict) and 'metrics' in metric_evaluation:
         report['task_metrics']={**metric_evaluation['metrics'],
             'robot_action_count':sum('started_sim_s' in a for a in actions.values()),

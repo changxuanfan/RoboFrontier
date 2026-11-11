@@ -1,92 +1,50 @@
 # Claude batch manager prompt
 
-Give this prompt to a coding agent with terminal and repository access. The
-outer session can use any model. Claude CLI and the frozen profile select the
-inner measured model. A Claude run needs passed precheck receipts for its
-profile and CLI version (`robofrontier preflight`). Read
-[handoff status](../../docs/engines/claude-code.md) before using it.
+Give this prompt to a coding agent with terminal and repository access. The outer session can
+use any model; Claude Code and the frozen profile select the measured model. Read the
+[Claude Code guide](../../docs/engines/claude-code.md) before using it.
 
 ```text
-Act as the outer manager for a RoboFrontier Claude engineering batch. First read
-docs/engines/claude-code.md and docs/unified-cli.md.
+Act as the outer manager for a RoboFrontier batch run by Claude Code. First read
+docs/unified-cli.md and docs/engines/claude-code.md.
 
-Parameters:
-- models: [opus]
+Settings:
+- profile: haiku_subscription_token
 - families: [transport, mosaic, relay, dial]
 - level: 1
-- scale: min-arms
+- min_arms: true
 - topology: adaptive
-- record_video: false
 - parallel: 4
-- mode: plan
-- output: runs/engineering/opus-l1-small-001
-- precheck_budget_usd: unspecified
-- check_fork: true
-- check_blocked_fork: false
-- turn_budget_usd: null
-- task_budget_usd: null
-- wall_limit_s: 86400
-- startup_timeout_s: 600
+- mode: plan            (plan | precheck | run)
+- output: runs/policy/claude-l1
+- precheck_budget_usd: 1
 
-1. Inspect the checkout, Git commit, worktree state and current release registry.
-   Report scene versions. Manage this batch only, leaving other sessions' runs
-   with their original operators.
-2. Run robofrontier.batch.claude_benchmark doctor for the selected profiles, CLI and assets.
-   Report missing credential variable names only. If .env is absent, copy the
-   empty .env.example template with mode 0600; preserve existing .env and
-   credentials. Doctor establishes no account/provider compatibility claim.
-3. Run robofrontier.batch.claude_benchmark plan with the requested models, families, level,
-   scale and parallelism. Pass --min-arms only when requested. Report each exact
-   case, arm count and inner model. For mode=plan, stop here.
-4. For mode=precheck, use robofrontier.engines.claude.preflight --profile PROFILE
-   --max-budget-usd BUDGET --confirm-spend for each selected profile only when
-   real provider spend has been authorized and a positive precheck estimate is
-   specified. Add --check-fork when requested. Keep every receipt and report its
-   result. Missing authorization, budget, credentials or a compatible endpoint
-   leaves the paid step pending; finish offline work and report missing items.
-   This checks text, native image/tool round trips and continuation. An idle
-   fork check does not qualify a blocked parent's fork or a full physical task.
-   When check_blocked_fork=true and its additional spend is authorized, run
-   robofrontier.engines.claude.claude_blocked_precheck separately and retain the independent receipt.
-   robofrontier.engines.claude.claude_readiness checks whether both receipts match the profile and
-   CLI; a match does not grant formal benchmark qualification.
-5. For mode=engineering, continue only within authorization for these models and
-   this engineering batch. Turn/task budgets default to null; omit their flags
-   rather than inventing dollar limits. Explicit limits must be positive. The
-   wall limit defaults to 86400 seconds from START; an engineering short-test
-   stop may be earlier without rewriting the frozen public task limit.
-   Prepare a new directory using robofrontier.batch.claude_benchmark prepare-draft with
-   matching selection, topology and output. Add --record-video only when
-   requested, checking FFmpeg/ffprobe first. Permanent-worker Claude modes remain
-   unavailable; use single or adaptive drafts. Verify batch.json case/profile
-   selection before execution. Retain an existing directory instead of reusing
-   it.
-6. Run robofrontier.batch.claude_benchmark run-engineering OUTPUT --parallel N
-   --wall-limit-s W --startup-timeout-s S --confirm-engineering-spend in a
-   persistent terminal. Add --turn-budget-usd T or --task-budget-usd B only when
-   explicitly set. Startup timeout bounds owner startup and the policy startup
-   gate of legacy READY runs; it is not another task clock. Keep the process
-   handle and poll status-engineering
-   until it exits. Request stopping with stop-engineering, then inspect every
-   sealing result, process state and needs_review field. Claimed batches/worlds
-   are single-use; preserve unknown state and evidence rather than restarting.
-7. Report the inner model profiles, exact tasks, concurrency, per-case terminal
-   states and evidence paths. Clearly identify anything still unverified.
+1. Inspect the checkout, its commit and whether the tree is clean. Manage this batch only;
+   leave other sessions' runs to their operators.
+2. Run `robofrontier doctor --engine claude --profile PROFILE`. Report missing credential
+   variable names only, never values. If .env is absent, copy .env.example with mode 0600;
+   never overwrite an existing .env.
+3. Run `robofrontier plan --engine claude --profile PROFILE` with the selection. Report each
+   case, its arm count and the model. For mode=plan, stop here.
+4. For mode=precheck (real spend, only when authorized): run
+   `robofrontier preflight --engine claude --profile PROFILE --confirm-spend --max-budget-usd B`,
+   then `python -m robofrontier.engines.claude.claude_blocked_precheck --profile PROFILE
+   --max-budget-usd B --confirm-spend`. Keep both receipts and report the results. A run is
+   refused until both pass for this profile and CLI version.
+5. For mode=run (real spend, only when authorized): `robofrontier prepare` into a new output
+   folder with the selection, then `robofrontier run OUTPUT` (under launchd on macOS, or with
+   `--durable` on Linux). Poll `robofrontier status OUTPUT` until it ends; stop with
+   `robofrontier stop OUTPUT` and then inspect each run's seal and needs_review fields. A run
+   that stopped unexpectedly continues by itself once; continue others by hand with
+   `robofrontier continue OUTPUT [--cases ...]` only when asked.
+6. Report the profile, the cases, concurrency, each run's final state and evidence paths, and
+   anything still unverified.
 
-The outer manager owns setup/supervision; the inner model owns task decisions,
-visual reasoning and robot actions. Keep private answers isolated and frozen
-inputs unchanged. External action hints, action injection and modified scoring
-are outside this protocol. Provider bills are authoritative. CLI-reported cost
-limits are estimates, not a provider payment ceiling; each task has its own
-accounting, while adaptive roles share that task's ledger. A task concurrency
-setting is not the number of concurrent API requests.
+The outer manager owns setup and supervision; the inner model owns task decisions, visual
+reasoning and robot actions. Keep private answers isolated and frozen inputs unchanged; never
+inject actions or change scoring. CLI-reported costs are estimates, not a payment ceiling.
 ```
 
-Multiple models and cases form a Cartesian product in this native entry. One
-model and the four families at Level 1/minimum arms produces four tasks. Prepare
-again on the target host instead of copying a prepared directory's absolute
-paths. `opus_subscription` remains an unverified native subscription candidate;
-its explicit OAuth configuration does not import Desktop login automatically.
-For the unified one-profile workflow, use `robofrontier --config SETTINGS.toml`
-with `policy.engine="claude"` and a Claude profile, then `robofrontier run`; it
-refuses a profile without passed precheck receipts.
+The selection is a Cartesian product: one profile and the four families at level 1 with the
+fewest arms give four runs. Prepare on the host that runs the batch, never copy a prepared
+folder to another host.

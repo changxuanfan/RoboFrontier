@@ -127,7 +127,7 @@ class SegmentIntegrationTests(unittest.TestCase):
             store = self.store(run)
             try:
                 self.assertTrue(any(e['kind'] == 'HOST_LOST' for e in store.events(50)))
-                self.assertEqual(retry_eligibility(run, store), (False, 'already continued once'))
+                self.assertEqual(retry_eligibility(run, store), (False, 'already continued automatically once; continue by hand (robofrontier continue)'))
             finally: store.close()
             self.assertTrue((output_dir(run, 1) / 'interruption-evaluation.json').is_file())
 

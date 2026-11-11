@@ -198,7 +198,7 @@ class PolicyHost {
         if (p.turn.status==='failed' && capacityFailure(p.turn.error)) {
           const key=p.threadId+':'+p.turn.id;
           if (!this.failures.has(key)) this.failures.set(key,Date.now());
-          this.event({event:'capacity_wait',thread_id:p.threadId,turn_id:p.turn.id,retry_after_s:10});
+          this.event({event:'capacity_wait',thread_id:p.threadId,turn_id:p.turn.id,retry_after_s:capacityDelayMs(this.capacityAttempts?.get(p.threadId)||0,p.threadId)/1000});
         }
       }
       if (['turn/started','turn/completed','thread/status/changed','thread/tokenUsage/updated','error'].includes(m.method))
@@ -324,7 +324,7 @@ class PolicyHost {
       }
       if (Date.now()-this.failures.get(key)<capacityDelayMs(attempt,id)) continue;
       // Isolated robots remain reserved, but their owners can resume to inspect them.
-      const code="from robofrontier.runtime.store import RuntimeStore;from robofrontier.runtime.scheduling import blocks_model_recovery;import sys,json;s=RuntimeStore(sys.argv[1]);a=sys.argv[2];print(json.dumps(any(blocks_model_recovery(v) for v in s.actions(a).values()) or any(True for r in s.db.execute(\"SELECT 1 FROM calls WHERE actor=? AND status='accepted' AND op IN ('move','gripper','action_batch','delegate')\",(a,)))));s.close()";
+      const code="from robofrontier.runtime.store import RuntimeStore;from robofrontier.runtime.scheduling import blocks_model_recovery;import sys,json;s=RuntimeStore(sys.argv[1]);a=sys.argv[2];acts=s.actions(a).values();print(json.dumps(any(blocks_model_recovery(v) for v in acts) or any(v['status']=='uncertain' and not (v.get('isolated') or v.get('local_recovery')) for v in acts) or any(b.get('status')=='creating' for b in (s.get('delegations') or {}).values()) or any(True for r in s.db.execute(\"SELECT 1 FROM calls WHERE actor=? AND status='accepted' AND op IN ('move','gripper','action_batch','delegate')\",(a,)))));s.close()";
       const {stdout}=await execFileAsync(this.python,['-c',code,path.join(this.run,'private/state/runtime.sqlite'),actor],{cwd:this.cwd});
       if (JSON.parse(stdout)) continue;
       this.retries.add(key); // An unknown turn/start acknowledgement is never repeated.

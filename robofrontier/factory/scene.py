@@ -711,6 +711,14 @@ class _Builder:
         from .workstations import placements
         from ..physics.workstation import Workstation
         catalog_path=ROOT/settings['catalog'];catalog=json.loads(catalog_path.read_text())
+        if 'families' in catalog:
+            # The release itself: one workstation per released Oracle recording, at its source.
+            from ..tasks.families import current_path
+            def facts(family,case_id):
+                listed=json.loads((ROOT/'benchmark'/family/'catalog.json').read_text())['cases']
+                return next({k:c[k] for k in ('level','arms','dials') if k in c} for c in listed if c['id']==case_id)
+            catalog={'cases':[{'family':family,'id':row['id'],'directory':current_path(row['directory']),**facts(family,row['id'])}
+                              for family,entry in catalog['families'].items() for row in entry['oracle']]}
         self.dressing_catalog_sha256=_hash(catalog_path)
         plan=placements(catalog,self.cfg['regions'],ROOT)
         self.dressing_plan=plan

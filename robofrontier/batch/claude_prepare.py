@@ -85,6 +85,14 @@ def plan(names, families=None, cases=None, level=None, min_arms=False, parallel=
 
 
 
+def exposed_api_keys(profiles, bash_isolation):
+    """Profiles whose API key a policy shell could read: Claude Code's bubblewrap on Linux leaves
+    the CLI's environment readable, and only a subscription token goes on a pipe instead
+    (claude.runner.start_cli)."""
+    if not (sys.platform.startswith('linux') and bash_isolation == 'claude-sandbox'): return []
+    return sorted(n for n, p in profiles.items() if p.get('auth_mode', 'api_key') == 'api_key')
+
+
 def prepare_batch(output, names, families=None, cases=None, level=None, min_arms=False, catalog=CATALOG, topology='adaptive', record_video=False,
                   *, wall_limit_s=86400, observation_image_profile=None, startup_timeout_s=None, render_device=None):
     """Prepare one run per profile and case, frozen for robofrontier/batch/claude_batch.py."""
@@ -113,13 +121,10 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
     # Prepared on the host that runs it: Claude Code's sandbox, or Landlock where it cannot run.
     from robofrontier.engines.common.landlock import choose
     bash_isolation = choose()
-    # Claude Code's bubblewrap on Linux leaves the CLI's environment readable from a policy shell.
-    # A subscription token goes to the CLI on a pipe (claude.runner.start_cli); an API key cannot.
-    if sys.platform.startswith('linux') and bash_isolation == 'claude-sandbox':
-        keyed = sorted(n for n, p in profiles.items() if p.get('auth_mode', 'api_key') == 'api_key')
-        if keyed:
-            raise ValueError('API-key Claude profiles would expose their key to policy shells under bubblewrap '
-                             'on Linux; use a subscription-token profile: ' + ', '.join(keyed))
+    keyed = exposed_api_keys(profiles, bash_isolation)
+    if keyed:
+        raise ValueError('API-key Claude profiles would expose their key to policy shells under bubblewrap '
+                         'on Linux; use a subscription-token profile: ' + ', '.join(keyed))
     # A policy environment admits only the Bash isolation and Claude Code CLI its check ran.
     from robofrontier.runtime import policy_env
     policy_env.require_combination('claude', bash_isolation)
