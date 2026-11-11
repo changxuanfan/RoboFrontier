@@ -19,6 +19,7 @@ class MotionClassificationTests(unittest.TestCase):
         q[:,1]=.15*np.sin(np.linspace(0,8*np.pi,len(q)))
         self.assertEqual(classify_window(q,j),'repeated_passive')
 
+    @unittest.skipUnless((Path(__file__).resolve().parents[2]/'runs/oracle').is_dir(), 'needs the local Oracle recordings')
     def test_real_stream_cuts_idle_but_preserves_fail_recover_progress_and_appearance(self):
         from robofrontier.tasks.families import ROOT,RELEASE,read
         from robofrontier.physics.workstation import Workstation

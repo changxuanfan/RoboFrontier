@@ -32,6 +32,8 @@ class FamilyReleaseTests(unittest.TestCase):
             rows = [c for f in release['families'].values() for c in f[purpose]]
             self.assertEqual(len(rows), 36)
             self.assertEqual(len({c['id'] for c in rows}), 36)
+            # The Oracle's recorded sources are local run data (runs/oracle), absent in CI.
+            if purpose == 'oracle' and not (ROOT/'runs/oracle').is_dir(): continue
             for c in rows:
                 resolve_case(c['id'], purpose)
         mosaic = release['families']['mosaic']

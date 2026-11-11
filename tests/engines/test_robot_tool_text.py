@@ -1,6 +1,7 @@
 """Every engine serves one robot tool description (engines/common/robot_tool.json, E2)."""
 import json
 import subprocess
+import shutil
 import unittest
 
 from robofrontier.io import ROOT
@@ -9,6 +10,7 @@ from robofrontier.engines.codex import desktop_robot_mcp
 
 
 class RobotToolTextTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('node'), 'needs Node.js')
     def test_claude_desktop_and_codex_serve_the_same_tool(self):
         shared = json.loads((ROOT/'robofrontier/engines/common/robot_tool.json').read_text())
         self.assertEqual(robot_mcp.TOOL, shared)

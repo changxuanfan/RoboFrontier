@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from robofrontier.cli import _frozen_configuration, plan, prepare, preflight
 from robofrontier.configuration import load_configuration, rendering_environment
@@ -149,7 +150,9 @@ class UnifiedConfigurationTests(unittest.TestCase):
                     'policy': {'engine':'claude','profile':'haiku','topology':topology},
                     'render': {'device':'native'}, 'selection': {'cases':['transport-a04-d1']}})
                 batch = Path(tmp)/'batch'
-                prepare(batch, config)
+                # Preparing only; no key is used (claude_prepare.exposed_api_keys).
+                with patch('robofrontier.batch.claude_prepare.exposed_api_keys', return_value=[]):
+                    prepare(batch, config)
                 data = json.loads((batch/'batch.json').read_text())
                 self.assertEqual(data['status'], 'prepared_not_started')
                 self.assertEqual(data['model_calls'], 0)

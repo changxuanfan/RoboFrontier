@@ -38,12 +38,19 @@ def object_name(name):
 def tar_index(path, cache_dir=None):
     """Member offsets of an uncompressed tar, cached so later runs seek directly.
 
-    The cache is bound to the archive's identity (resolved path, size, modification time and
-    inode), so a tar that was rewritten or was still growing is indexed again."""
+    The cache is bound to the archive's identity (resolved path, size, modification time, inode
+    and a hash of its first and last 64 KiB), so a tar that was rewritten or was still growing is
+    indexed again, also where a rewrite in place keeps size and inode and the file system's
+    modification time is coarse (Lustre)."""
     cache = Path(cache_dir) if cache_dir else default_cache_dir()
     cache.mkdir(parents=True, exist_ok=True)
     st = os.stat(path)
-    ident = '%s|%d|%d|%d' % (Path(path).resolve(), st.st_size, st.st_mtime_ns, st.st_ino)
+    edges = hashlib.sha256()
+    with open(path, 'rb') as stream:
+        edges.update(stream.read(65536))
+        if st.st_size > 65536:
+            stream.seek(max(65536, st.st_size - 65536)); edges.update(stream.read())
+    ident = '%s|%d|%d|%d|%s' % (Path(path).resolve(), st.st_size, st.st_mtime_ns, st.st_ino, edges.hexdigest())
     p = cache / (hashlib.sha1(ident.encode()).hexdigest()[:16] + '.jsonl')
     if not p.exists():
         tmp = p.with_suffix('.tmp.%d' % os.getpid())

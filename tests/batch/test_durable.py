@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import plistlib
 import tempfile
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -51,6 +52,7 @@ class DurableTests(unittest.TestCase):
             self.assertEqual(plist['ProcessType'], 'Interactive')
 
 
+@unittest.skipUnless(sys.platform == 'darwin', 'macOS launchd')
 class RunDefaultTests(unittest.TestCase):
     """A fresh macOS batch runs under launchd with Interactive priority unless --foreground is given."""
 

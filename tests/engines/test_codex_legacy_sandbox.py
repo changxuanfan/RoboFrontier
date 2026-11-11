@@ -58,7 +58,11 @@ class FailClosedTests(unittest.TestCase):
 @unittest.skipUnless(sys.platform.startswith('linux') and abi() >= 1, 'Linux Landlock required')
 class LegacyKernelBoundaryTests(unittest.TestCase):
     def test_abi1_and_abi2_preserve_boundaries_and_workspace_operations(self):
+        from robofrontier.engines.common.landlock import abi
         for version in (1, 2):
+            if abi() < version:
+                with self.subTest(abi=version): self.skipTest('this kernel has Landlock ABI %d' % abi())
+                continue
             with self.subTest(abi=version), tempfile.TemporaryDirectory() as temporary:
                 base = Path(temporary).resolve()
                 run = fixture(base)

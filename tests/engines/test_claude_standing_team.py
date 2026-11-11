@@ -56,7 +56,9 @@ class RoleHost:
 def standing_fixture(topology, *, factory=RoleHost, endpoint=None, env=None):
     with tempfile.TemporaryDirectory(prefix='claude-standing-') as tmp:
         batch = Path(tmp)/'batch'
-        prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], topology=topology)
+        # A local fake model and a fake key: nothing to expose (claude_prepare.exposed_api_keys).
+        with patch('robofrontier.batch.claude_prepare.exposed_api_keys', return_value=[]):
+            prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], topology=topology)
         run = batch/'haiku/transport-a04-d1'
         launch = run/'private/inputs/claude.json'
         data = json.loads(launch.read_text())

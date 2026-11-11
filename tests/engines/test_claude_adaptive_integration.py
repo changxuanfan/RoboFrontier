@@ -193,6 +193,7 @@ class AdaptiveIntegrationTests(unittest.TestCase):
                 self.assertLess(StubModel.asked_at,activated)
                 self.assertGreater(min(t for t,actor,_ in ops if actor==child),activated)
                 # Its first input is the frozen delegate message, exactly as the Codex dispatcher fills it.
+                if not shutil.which('node'): return  # the Codex comparison needs Node.js
                 codex=subprocess.run(['node','-e',CODEX_FIRST_MESSAGE,str(ROOT),str(run),json.dumps(batch['children'][0])],
                                      capture_output=True,text=True,timeout=30,check=True).stdout
                 self.assertTrue(codex.startswith('Your current runtime role is '+child))

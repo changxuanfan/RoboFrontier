@@ -7,6 +7,7 @@ import re
 import subprocess
 import tempfile
 import threading
+import shutil
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
@@ -134,6 +135,7 @@ class BatchViewerTests(unittest.TestCase):
                     with urlopen(url+'/frame/'+key,timeout=3) as response:self.assertEqual(response.read(),expected)
                 with self.assertRaises(HTTPError):urlopen(url+'/frame/transport-a04-d1',timeout=3)
 
+    @unittest.skipUnless(shutil.which('node'), 'needs Node.js')
     def test_inline_browser_script_is_valid_without_running_a_browser(self):
         for script in re.findall(r'<script>(.*?)</script>',HTML,re.S):
             result=subprocess.run(['node','-e',"new(require('node:vm').Script)(process.argv[1])",script],
