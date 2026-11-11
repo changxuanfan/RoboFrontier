@@ -47,6 +47,18 @@ class RuntimeDiagnosticTests(unittest.TestCase):
         self.assertEqual(calls[1][0][:3], ['codex', 'sandbox', '--'])
         self.assertFalse(Path(calls[0][1]['CODEX_HOME']).parent.exists())
 
+    def test_a_robot_only_codex_run_does_not_need_the_codex_sandbox(self):
+        calls = []
+        with patch.object(diagnostics, '_checked', side_effect=lambda command, **options: calls.append(command) or 'version'):
+            report = diagnostics._native_probe('codex', 'native', True)
+        self.assertEqual(calls, [['codex', '--version']])
+        self.assertEqual(report, {'version': 'version', 'sandbox_checked': False, 'tool_mode': 'robot_only'})
+        seen = []
+        config = {**self.config, 'policy': {**self.config['policy'], 'engine': 'codex', 'tool_mode': 'robot_only'}}
+        with patch.object(diagnostics, '_native_probe', side_effect=lambda *args: seen.append(args) or {'version': 'v'}):
+            self.assertTrue(diagnostics.inspect_runtime(config, render=False)['passed'])
+        self.assertEqual(seen[0][2], True)
+
     def test_renderer_probe_preserves_allocation_visibility_but_not_credentials(self):
         with patch.object(diagnostics.platform, 'system', return_value='Linux'), \
                 patch.dict(os.environ, {'CUDA_VISIBLE_DEVICES': '3', 'OPENAI_API_KEY': 'secret',
