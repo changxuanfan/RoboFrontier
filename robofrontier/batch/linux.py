@@ -24,7 +24,11 @@ from ..configuration import ROOT
 from ..runtime import layout as run_layout
 
 PASSED_ENVIRONMENT = ('HOME', 'PATH', 'LANG', 'LC_ALL', 'TMPDIR', 'CODEX_HOME', 'ROBOFRONTIER_CLAUDE_HOME', 'MUJOCO_GL',
-                      'PYOPENGL_PLATFORM', 'ROBOFRONTIER_POLICY_ENV', 'ROBOFRONTIER_POLICY_ENV_BASE', 'ROBOFRONTIER_RUNS_ROOT')
+                      'PYOPENGL_PLATFORM', 'ROBOFRONTIER_POLICY_ENV', 'ROBOFRONTIER_POLICY_ENV_BASE', 'ROBOFRONTIER_RUNS_ROOT',
+                      # Rendering and the route to the providers, as an interactive run has them.
+                      'LD_LIBRARY_PATH', 'CUDA_VISIBLE_DEVICES', 'NVIDIA_VISIBLE_DEVICES', 'NVIDIA_DRIVER_CAPABILITIES',
+                      '__EGL_VENDOR_LIBRARY_FILENAMES', 'MUJOCO_EGL_DEVICE_ID', 'HTTPS_PROXY', 'NO_PROXY',
+                      'SSL_CERT_FILE')
 
 
 def unit_name(batch):

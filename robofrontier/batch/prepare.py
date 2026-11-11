@@ -7,6 +7,17 @@ import shlex
 from ..tasks.families import ROOT, RELEASE, read
 
 
+def env_file_names(path, *names):
+    """Which of `names` an .env file sets, without reading their values into the environment."""
+    found = set()
+    for line in Path(path).read_text().splitlines():
+        line = line.strip()
+        if line.startswith('export '): line = line[7:].lstrip()
+        key, sep, _ = line.partition('=')
+        if sep and key in names: found.add(key)
+    return sorted(found)
+
+
 def load_env(path):
     """Load literal KEY=value entries; existing process environment wins."""
     path = Path(path)

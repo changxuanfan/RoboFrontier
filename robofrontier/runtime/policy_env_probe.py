@@ -65,6 +65,18 @@ def probe(fixtures):
         with socket.socket(socket.AF_UNIX) as sock:
             sock.bind(str(Path(fixtures['shared_tmp'])/'probe.sock'))
 
+    def unix_connect():
+        # A socket another program on the host listens on, such as tmux's or the session bus.
+        with socket.socket(socket.AF_UNIX) as sock:
+            sock.settimeout(3)
+            sock.connect(fixtures['host_socket'])
+            sock.send(b'x')
+
+    def udp_send():
+        # The check counts what arrives; a send that leaves no trace is not proof of a closed network.
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.sendto(b'probe', ('127.0.0.1', fixtures['udp_port']))
+
     def plot():
         script = ("import matplotlib.pyplot as p;p.plot([1,2]);p.savefig('plot.png');"
                   "import cv2,numpy,scipy,PIL;cv2.imwrite('array.png',numpy.zeros((4,4),'uint8'))")
@@ -114,6 +126,10 @@ def probe(fixtures):
     attempt('network_tcp', lambda: connect(socket.SOCK_STREAM, ('127.0.0.1', fixtures['listener_port'])))
     attempt('network_external', lambda: connect(socket.SOCK_STREAM, ('1.1.1.1', 443)))
     attempt('unix_socket_shared', unix_socket)
+    attempt('unix_socket_connect', unix_connect)
+    attempt('network_udp', udp_send)
+    # Signal 0 asks only whether a signal could be sent, to a process outside this run.
+    attempt('signal_other_process', lambda: os.kill(fixtures['host_pid'], 0))
     # No credential may be readable from here in any ancestor's environment (E17): the Claude
     # CLI gets its token on a pipe (claude.runner.start_cli), and where the sandbox hides other
     # processes (Seatbelt, Landlock) no environment is readable at all.

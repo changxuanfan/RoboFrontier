@@ -11,13 +11,16 @@ As with Claude Code's sandbox only Bash is confined, not the CLI or the robot MC
 (which Claude Code also starts through the prefix; see write_rules).
 The rules allow reading and writing exactly what the table grants (Landlock grants by
 listed path, so a denied folder inside a readable one is listed around), deny every
-TCP connection and bind, and no named Unix socket is made anywhere; it fails closed:
-without Landlock network rules (ABI 4, Linux 6.7) the command does not run. Landlock
-does not cover UDP, and before ABI 6 it does not stop signals or abstract Unix sockets.
+TCP connection and bind, and no named Unix socket is made anywhere; seccomp closes what
+Landlock does not cover (every socket, signals and tracing of other processes, namespaces,
+owner changes, and mode changes, which succeed without effect), as for Codex. It fails closed: without
+Landlock network rules (ABI 4, Linux 6.7) or libseccomp the command does not run.
 
-Standard library only, so the prefix runs it with `python -I` before any import.
+Standard library only (with the system's libseccomp), so the prefix runs it with `python -I`
+before any import.
 """
 import ctypes
+import ctypes.util
 import json
 import os
 from pathlib import Path
@@ -36,7 +39,7 @@ MAKE_REG, MAKE_SOCK = 1 << 8, 1 << 9
 REFER, TRUNCATE, IOCTL_DEV = 1 << 13, 1 << 14, 1 << 15
 FILE_ONLY = EXECUTE | WRITE_FILE | READ_FILE | TRUNCATE | IOCTL_DEV
 READ = EXECUTE | READ_FILE | READ_DIR
-ACCESS = {'list': READ_DIR, 'read': READ}
+ACCESS = {'list': READ_DIR, 'read': READ}  # 'write' is everything handled (access_for).
 BIND_TCP, CONNECT_TCP = 1 << 0, 1 << 1
 SCOPE_ABSTRACT_UNIX, SCOPE_SIGNAL = 1 << 0, 1 << 1
 NETWORK_ABI = 4
@@ -47,7 +50,98 @@ DEVICES = ('/dev/null', '/dev/tty')
 def access_for(mode, fs):
     """The Landlock rights for a rule: 'write' is everything handled but making a named Unix
     socket, which in a shared folder such as /tmp would reach other runs' processes."""
-    return ACCESS.get(mode, fs & ~MAKE_SOCK)
+    if mode == 'write':
+        return fs & ~MAKE_SOCK
+    if mode not in ACCESS:
+        raise ValueError('Unknown filesystem permission: %r' % (mode,))
+    return ACCESS[mode]
+
+
+# What Landlock does not mediate, closed with seccomp for both engines' Linux Landlock shells:
+# sockets (an existing named Unix socket, UDP, abstract sockets), signals and tracing of other
+# processes, namespaces and mounts, and metadata changes.
+DENIED_SYSCALLS = (
+    'socket', 'socketpair', 'socketcall', 'connect', 'bind', 'listen', 'accept', 'accept4',
+    'sendmsg', 'recvmsg', 'sendto', 'recvfrom', 'sendmmsg', 'recvmmsg',
+    'io_uring_setup', 'io_uring_enter', 'io_uring_register',
+    'ptrace', 'process_vm_readv', 'process_vm_writev', 'pidfd_getfd', 'pidfd_send_signal',
+    'kill', 'tkill', 'tgkill', 'rt_sigqueueinfo', 'rt_tgsigqueueinfo',
+    'mount', 'umount2', 'pivot_root', 'setns', 'unshare', 'setsid', 'setpgid', 'open_by_handle_at',
+    'bpf', 'perf_event_open',
+    # Landlock does not mediate these metadata changes, including on newer ABIs.
+    'chmod', 'fchmod', 'fchmodat', 'fchmodat2', 'chown', 'fchown', 'lchown', 'fchownat',
+    'chown32', 'fchown32', 'lchown32', 'setxattr', 'lsetxattr', 'fsetxattr',
+    'removexattr', 'lremovexattr', 'fremovexattr', 'utime', 'utimes', 'futimesat',
+    'utimensat', 'utimensat_time64',
+)
+
+
+# A run with a policy environment needs pip and venv, which set file modes. These calls succeed
+# without changing anything, since Landlock cannot limit which of the account's files they reach.
+MODE_SYSCALLS = ('chmod', 'fchmod', 'fchmodat', 'fchmodat2')
+PRETEND_SUCCESS, DENY = 0x00050000, 0x00050001  # SCMP_ACT_ERRNO(0), SCMP_ACT_ERRNO(EPERM)
+
+
+def seccomp_filter(filesystem_abi=None, ignore_mode_changes=False):
+    name = ctypes.util.find_library('seccomp')
+    if not name:
+        raise RuntimeError('libseccomp is required for Landlock isolation')
+    library = ctypes.CDLL(name, use_errno=True)
+    library.seccomp_init.argtypes = [ctypes.c_uint32]
+    library.seccomp_init.restype = ctypes.c_void_p
+    library.seccomp_syscall_resolve_name.argtypes = [ctypes.c_char_p]
+    library.seccomp_syscall_resolve_name.restype = ctypes.c_int
+    library.seccomp_rule_add.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_uint]
+    library.seccomp_rule_add.restype = ctypes.c_int
+    class ArgCompare(ctypes.Structure):
+        _fields_ = [('arg', ctypes.c_uint), ('op', ctypes.c_uint),
+                    ('datum_a', ctypes.c_uint64), ('datum_b', ctypes.c_uint64)]
+    library.seccomp_rule_add_array.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int,
+                                              ctypes.c_uint, ctypes.POINTER(ArgCompare)]
+    library.seccomp_rule_add_array.restype = ctypes.c_int
+    library.seccomp_load.argtypes = [ctypes.c_void_p]
+    library.seccomp_load.restype = ctypes.c_int
+    library.seccomp_release.argtypes = [ctypes.c_void_p]
+    context = library.seccomp_init(0x7fff0000)  # SCMP_ACT_ALLOW
+    if not context:
+        raise RuntimeError('seccomp_init failed')
+    try:
+        for name in DENIED_SYSCALLS:
+            number = library.seccomp_syscall_resolve_name(name.encode())
+            if name == 'fchmodat2' and number < 0:
+                number = 452  # x86_64/aarch64: old libseccomp, newer kernel.
+            action = PRETEND_SUCCESS if ignore_mode_changes and name in MODE_SYSCALLS else DENY
+            if number >= 0 and library.seccomp_rule_add(context, action, number, 0):
+                raise RuntimeError('Cannot enforce syscall restriction: ' + name)
+        version = abi() if filesystem_abi is None else filesystem_abi
+        if version < 3:
+            for name in ('truncate', 'truncate64'):
+                number = library.seccomp_syscall_resolve_name(name.encode())
+                if number >= 0 and library.seccomp_rule_add(context, 0x00050001, number, 0):
+                    raise RuntimeError('Cannot enforce legacy truncate restriction')
+            # openat2 keeps its flags in a pointer, which classic seccomp cannot
+            # inspect. ENOSYS allows safe libc/tool fallbacks to filtered openat.
+            number = library.seccomp_syscall_resolve_name(b'openat2')
+            if number < 0:
+                number = 437
+            if library.seccomp_rule_add(context, 0x00050026, number, 0):
+                raise RuntimeError('Cannot enforce legacy openat2 restriction')
+            for name, argument in (('open', 1), ('openat', 2)):
+                number = library.seccomp_syscall_resolve_name(name.encode())
+                if number < 0:
+                    if name == 'openat':
+                        raise RuntimeError('Cannot resolve legacy openat restriction')
+                    continue
+                # Normal O_WRONLY/O_RDWR writes remain governed by Landlock.
+                # Deny truncation through read-only and invalid access modes.
+                for access in (os.O_RDONLY, os.O_ACCMODE):
+                    compare = ArgCompare(argument, 7, os.O_TRUNC | os.O_ACCMODE, os.O_TRUNC | access)
+                    if library.seccomp_rule_add_array(context, 0x00050001, number, 1, ctypes.byref(compare)):
+                        raise RuntimeError('Cannot enforce legacy open flags restriction')
+        if library.seccomp_load(context):
+            raise RuntimeError('Cannot install seccomp restrictions')
+    finally:
+        library.seccomp_release(context)
 
 
 def abi():
@@ -72,10 +166,10 @@ def choose():
                                 '--unshare-net', 'true'], capture_output=True, timeout=30)
         if probe.returncode == 0:
             return 'claude-sandbox'
-    if abi() >= NETWORK_ABI:
+    if abi() >= NETWORK_ABI and ctypes.util.find_library('seccomp'):
         return 'landlock-v1'
-    raise ValueError('No Bash isolation on this host: bubblewrap cannot create namespaces and '
-                     'Landlock with network rules (ABI 4) is unavailable')
+    raise ValueError('No Bash isolation on this host: bubblewrap cannot create namespaces, and '
+                     'Landlock with network rules (ABI 4) or libseccomp is unavailable')
 
 
 def handled_fs(version):
@@ -205,8 +299,10 @@ def main(argv):
     if argv[2] in data.get('unconfined', []):
         os.execv('/bin/bash', ['bash', '-c', argv[2]])
     try:
+        # As the Codex tool worker: seccomp for what Landlock leaves open, then the file and TCP rules.
+        seccomp_filter(abi(), ignore_mode_changes=True)
         restrict([tuple(rule) for rule in data['rules']])
-    except OSError as error:
+    except (OSError, RuntimeError) as error:
         sys.stderr.write('Bash isolation unavailable: %s\n' % error)
         return 126
     os.execv('/bin/bash', ['bash', '-c', argv[2]])

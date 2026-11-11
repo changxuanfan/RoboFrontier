@@ -21,7 +21,7 @@ from ..configuration import ROOT
 
 CAFFEINATE = '/usr/bin/caffeinate'
 # Non-secret variables the run needs from the submitting shell.
-PASSED_ENVIRONMENT = ('HOME', 'PATH', 'LANG', 'LC_ALL', 'TMPDIR', 'CODEX_HOME', 'ROBOFRONTIER_CLAUDE_HOME',
+PASSED_ENVIRONMENT = ('HOME', 'PATH', 'ROBOFRONTIER_RUNS_ROOT', 'LANG', 'LC_ALL', 'TMPDIR', 'CODEX_HOME', 'ROBOFRONTIER_CLAUDE_HOME',
                       'MUJOCO_GL', 'PYOPENGL_PLATFORM')
 
 

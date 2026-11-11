@@ -322,10 +322,17 @@ class SlurmJobTests(unittest.TestCase):
         self.config = load_configuration(overrides={
             'schema_version': 8, 'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay), 'egress_pause_s': 120}})
+        # The token must be in the checkout's .env (ignored by Git), never only in the shell.
+        with self.assertRaisesRegex(ValueError, 'keep CLAUDE_CODE_OAUTH_TOKEN in'):
+            with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
+                slurm.submit(self.config, self.root/'without-env', root=self.repo)
+        (self.repo/'.env').write_text('CLAUDE_CODE_OAUTH_TOKEN=fixture-not-a-token\n')
         with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
             slurm.submit(self.config, self.submission, root=self.repo)
         manifest, _ = slurm._verify_submission(self.submission)
         self.assertEqual((manifest['credential_env'], manifest['auth_mode']), ('CLAUDE_CODE_OAUTH_TOKEN', 'api'))
+        self.assertEqual(manifest['credential_file'], str((self.repo/'.env').resolve()))
+        self.assertNotIn('fixture-not-a-token', ''.join(path.read_text(errors='ignore') for path in self.submission.rglob('*') if path.is_file()))
         self.assertNotIn('--dependency=singleton', slurm.queue_command(self.config['slurm'], self.submission))
         self.config['slurm']['egress_root'] = str(self.repo/'egress')
         with self.assertRaisesRegex(ValueError, 'egress state outside'):

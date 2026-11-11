@@ -1,7 +1,7 @@
 """Queue frozen source, execute on node-local storage, and return stopped evidence.
 
 The batch shell outlives its srun step. No function opens SQLite. API credentials
-travel in the environment. Subscription caches are loaded late under a private
+travel in the environment; the Claude subscription token does not (submit). Subscription caches are loaded late under a private
 stream lease, never in source snapshots or returned evidence.
 """
 import argparse
@@ -25,7 +25,7 @@ import tempfile
 import time
 import zipfile
 
-from ..configuration import ROOT, validate_configuration
+from ..configuration import ROOT, runs_root, validate_configuration
 from ..runtime.setup import write_json
 from ..io import file_sha256 as checksum
 
@@ -223,13 +223,25 @@ def submit(config, output, *, queue=False, root=ROOT):
     if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=root, text=True):
         raise ValueError('Commit tracked changes before freezing a Slurm source snapshot')
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
-    receipt = root/'runs/engineering/model-compatibility'/policy['profile']/'report.json'
+    # Where preflight wrote it: the configured runs root, else the submitting checkout's runs/.
+    receipts = runs_root(config) if runs_root(config) != ROOT/'runs' else root/'runs'
+    receipt = receipts/'engineering/model-compatibility'/policy['profile']/'report.json'
     if policy['engine'] == 'codex' and (not receipt.is_file() or not json.loads(receipt.read_text()).get('passed')):
         raise ValueError('Run the matching explicit provider preflight before preparing a Slurm submission')
     if subscription:
         from ..engines.codex.job_engine import fingerprint
         if json.loads(receipt.read_text()).get('job_gateway_sha256') != fingerprint():
             raise ValueError('Run the matching job-gateway subscription preflight before submission')
+    # A Claude subscription token never travels in the job's environment: a process keeps its
+    # starting environment readable in /proc for life, and Claude Code's bubblewrap sandbox
+    # leaves other processes visible. The job reads it from this .env itself (execute).
+    token_file = None
+    if selected.get('auth_mode') == 'oauth_token':
+        from .prepare import env_file_names
+        token_file = (root/'.env').resolve()
+        if not token_file.is_file() or not env_file_names(token_file, selected['env_key']):
+            raise ValueError('For a Claude subscription run on Slurm, keep %s in %s; the job reads it '
+                             'from there, never from its environment' % (selected['env_key'], token_file))
     archive = ensure_asset_archive(root)
     python = Path(sys.executable).absolute()  # Preserve the venv symlink and site-packages.
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -258,13 +270,16 @@ def submit(config, output, *, queue=False, root=ROOT):
         write_json(staged/'submission.json', {'schema': 'robofrontier.slurm-submission.v1',
             'commit': commit, 'sha256': files, 'engine': policy['engine'],
             'credential_env': selected.get('env_key'), 'auth_mode': 'subscription' if subscription else 'api',
+            **({'credential_file': str(token_file)} if token_file else {}),
             'model_calls_during_preparation': 0,
             'python': str(python), 'status': 'prepared_not_queued'})
         staged.rename(output)
     if queue:
         if platform.system() != 'Linux':
             raise ValueError('Submission prepared; run sbatch on the Linux cluster: ' + str(output))
-        job_id = subprocess.check_output(queue_command(config["slurm"], output), cwd=root, text=True).strip().split(";")[0]
+        environment = {name: value for name, value in os.environ.items() if not token_file or name != selected['env_key']}
+        job_id = subprocess.check_output(queue_command(config["slurm"], output), cwd=root, text=True,
+                                         env=environment).strip().split(";")[0]
         if not job_id.isdigit():
             raise ValueError('Unexpected sbatch response; inspect the queue before submitting again')
         write_json(output/'queue.json', {'job_id': job_id, 'queued_at': time.time()})
@@ -310,6 +325,15 @@ def execute(local):
         raise ValueError('Execute must import the staged node-local source')
     document = json.loads((local/'local-job.json').read_text())
     config = json.loads((local/'config.json').read_text())
+    manifest = json.loads((Path(document['submission'])/'submission.json').read_text())
+    if manifest.get('credential_file'):
+        # Into this process's environment only; its children get it on a pipe (claude.runner.start_cli).
+        from .prepare import load_env
+        load_env(manifest['credential_file'])
+    # Everything this job writes stays in its node-local source until stage-out, whatever
+    # paths.runs_root or the submitting shell said.
+    earlier_root = os.environ.get('ROBOFRONTIER_RUNS_ROOT')
+    os.environ['ROBOFRONTIER_RUNS_ROOT'] = str(ROOT/'runs')
     path = local/'execution-result.json'
     result = None
     try:
@@ -328,6 +352,9 @@ def execute(local):
             # The kind only; a message could carry route or credential details.
             write_json(path, {**result, 'context_failure': type(error).__name__})
         raise
+    finally:
+        if earlier_root is None: os.environ.pop('ROBOFRONTIER_RUNS_ROOT', None)
+        else: os.environ['ROBOFRONTIER_RUNS_ROOT'] = earlier_root
     return result
 
 
@@ -335,7 +362,7 @@ def execute(local):
 def subscription_environment(config, local, *, on_failure):
     """Seed only after allocation and hold custody until native writers close.
 
-    Without a subscription store (Claude's token travels in the job environment) only a
+    Without a subscription store (Claude's token is read from .env inside the job) only a
     configured Mac route is admitted, with the same pause, fencing and environment.
     """
     if config['slurm'].get('auth_mode') != 'subscription':

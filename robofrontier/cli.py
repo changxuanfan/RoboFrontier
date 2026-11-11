@@ -211,10 +211,20 @@ def run(batch, *, continuing=False):
     had started continues in its next segment when its stop allows it, and unstarted runs start
     (docs/running/continuation.md)."""
     config = _frozen_configuration(batch)
+    # Receipts and exports are where the batch's configuration put them, as for prepare.
+    os.environ.setdefault('ROBOFRONTIER_RUNS_ROOT', str(runs_root(config)))
     if config['policy']['engine'] == 'claude':
         # Both engines need passed compatibility receipts; Codex checks its own per run.
         from .engines.claude.claude_readiness import require_ready
-        require_ready(config['policy']['profile'])
+        from .engines.claude.runner import require_hidden_token
+        frozen = [json.loads((Path(job['run_directory'])/'private/inputs/claude.json').read_text())
+                  for job in json.loads((Path(batch)/'batch.json').read_text()).get('jobs', [])]
+        # Each run's frozen profile, effort included, must match a receipt, as Codex checks per run.
+        for profile in {json.dumps(item['profile'], sort_keys=True) for item in frozen} or {None}:
+            require_ready(config['policy']['profile'], selected=json.loads(profile) if profile else None)
+        # Seatbelt and Landlock keep other processes' environments unreadable; bubblewrap does not.
+        if any(item.get('bash_isolation') == 'claude-sandbox' for item in frozen):
+            require_hidden_token()
     from .runtime.diagnostics import require_runtime
     from .runtime import versions
     require_runtime(config)
@@ -271,6 +281,7 @@ def continue_runs(batch, cases=None):
     continuation after the finish or the cutoff keeps the score recorded then. Each named
     run (default: every run that may continue) gets its next segment; the batch then runs
     them like `run --continue`. Returns what was prepared and what was not, with why."""
+    os.environ.setdefault('ROBOFRONTIER_RUNS_ROOT', str(runs_root(_frozen_configuration(batch))))
     from .runtime import segments
     from .runtime.setup import write_json
     batch = Path(batch).resolve()
@@ -284,19 +295,25 @@ def continue_runs(batch, cases=None):
         unknown = set(cases) - {job['case_id'] for job in jobs}
         if unknown: raise ValueError('Not in this batch: '+', '.join(sorted(unknown)))
         jobs = [job for job in jobs if job['case_id'] in cases]
-    prepared, refused = [], {}
-    for job in jobs:
+    from .runtime.store import RuntimeStore
+    def eligible(job, prepare=False):
         run = Path(job['run_directory'])
-        from .runtime.store import RuntimeStore
         store = RuntimeStore(run/'private/state/runtime.sqlite')
         try:
             ok, why = segments.retry_eligibility(run, store, manual=True)
-            if ok: segments.prepare_retry(run, store, 'manual continue', manual=True)
+            if ok and prepare: segments.prepare_retry(run, store, 'manual continue', manual=True)
+            return ok, why
         finally: store.close()
-        if ok: prepared.append(job['case_id'])
-        else: refused[job['case_id']] = why
+    # Every named run is checked before any is changed, so a refusal leaves the batch as it was.
+    verdicts = {job['case_id']: eligible(job) for job in jobs}
+    refused = {case: why for case, (ok, why) in verdicts.items() if not ok}
     if cases and refused:
         raise ValueError('Cannot continue: '+'; '.join(f'{k}: {v}' for k, v in refused.items()))
+    prepared = []
+    for job in jobs:
+        if verdicts[job['case_id']][0]:
+            eligible(job, prepare=True)
+            prepared.append(job['case_id'])
     if not prepared: return {'batch': str(batch), 'prepared': [], 'refused': refused}
     # Reopen the batch for exactly these runs; the others keep their final status.
     if engine == 'claude':

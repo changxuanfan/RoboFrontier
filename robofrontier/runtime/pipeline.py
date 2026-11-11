@@ -484,12 +484,15 @@ class Service(RuntimeService):
             if hasattr(self,'server'):self.server.shutdown()
             if self.render_worker is not None:
                 self.render_worker.wait(60);self.finish_failed_captures();self.render_worker.close()
-            if hasattr(self,'offscreen_context'):
-                if hasattr(self,'context'):self.context.free()
-                self.offscreen_context.free()
-            if hasattr(self,'window'):glfw.destroy_window(self.window)
-            if not hasattr(self,'offscreen_context'):glfw.terminate()
-            self.close()
+            try:
+                if hasattr(self,'offscreen_context'):
+                    if hasattr(self,'context'):self.context.free()
+                    self.offscreen_context.free()
+                if hasattr(self,'window'):glfw.destroy_window(self.window)
+                if glfw is not None and not hasattr(self,'offscreen_context'):glfw.terminate()
+            finally:
+                # The world closes even when its graphics never started or fail to close.
+                self.close()
 
 
 def main():

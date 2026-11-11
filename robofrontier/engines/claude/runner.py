@@ -306,6 +306,39 @@ def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget
 TOKEN_FD_VARIABLE = 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR'
 
 
+def environment_holders(name, pid='self'):
+    """This process and its ancestors whose starting environment names `name` (Linux /proc).
+
+    A process's starting environment stays readable in /proc for its whole life, whatever it
+    later removes from os.environ; .env files are loaded in-process, so they never appear here."""
+    holders, key = [], name.encode() + b'='
+    for _ in range(32):
+        try:
+            data = Path('/proc/%s/environ' % pid).read_bytes()
+            stat = Path('/proc/%s/stat' % pid).read_text()
+        except OSError:
+            break
+        if any(entry.startswith(key) for entry in data.split(b'\0')):
+            holders.append(int(stat.split()[0]))
+        parent = int(stat.rsplit(')', 1)[1].split()[1])
+        if parent <= 1:
+            break
+        pid = parent
+    return holders
+
+
+def require_hidden_token(name='CLAUDE_CODE_OAUTH_TOKEN'):
+    """On Linux, refuse a Claude run when the token is in this process's or an ancestor's
+    starting environment: Claude Code's bubblewrap sandbox lets a policy shell read it there."""
+    if not sys.platform.startswith('linux'):
+        return
+    holders = environment_holders(name)
+    if holders:
+        raise ValueError('%s is in the starting environment of process %s, where a policy shell could read it; '
+                         'unset it in the shell (or job) and keep it in .env, which runs load themselves'
+                         % (name, ', '.join(map(str, holders))))
+
+
 def start_cli(cmd, env, **options):
     """Popen for a Claude CLI process, with a subscription token moved from `env` to a pipe."""
     env = dict(env)

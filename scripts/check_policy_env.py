@@ -36,7 +36,8 @@ MUST_WORK = ('python_is_environment', 'python_on_path_is_environment', 'tmpdir_i
 MUST_FAIL = ('read_host_shared_memory', 'read_home', 'read_home_file', 'read_people', 'read_disks', 'read_system_secrets', 'read_var_tmp', 'read_private', 'read_run_root',
              'read_other_run', 'read_repository', 'tool_write_shared_tmp', 'write_public', 'write_run_root',
              'write_environment', 'run_other_python', 'import_mujoco', 'pip_install_absent_package', 'network_tcp',
-             'network_external', 'unix_socket_shared', 'see_host_processes', 'read_parent_environ', 'ps_parent_environment')
+             'network_external', 'unix_socket_shared', 'unix_socket_connect', 'network_udp', 'signal_other_process',
+             'see_host_processes', 'read_parent_environ', 'ps_parent_environment')
 HOST_ONLY = 'ROBOFRONTIER_PROBE_HOST_ONLY'
 # What the parent-environment probes look for: a subscription credential in any ancestor's
 # environment. The local stub's fake API key stays in the CLI's environment; Claude API-key
@@ -262,6 +263,13 @@ def check_engine(name, environment, scratch, mode):
     listener = socket.socket()
     listener.bind(('127.0.0.1', 0))
     listener.listen()
+    host_socket = socket.socket(socket.AF_UNIX)
+    host_socket.bind(str(shared/'host.sock'))
+    host_socket.listen()
+    datagrams = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    datagrams.bind(('127.0.0.1', 0))
+    datagrams.setblocking(False)
+    bystander = subprocess.Popen(['sleep', '900'])
     other_python = next((path for path in OTHER_PYTHONS if Path(path).exists()), '/missing/python3')
     fixtures = {'credentials': list(CREDENTIALS), 'real_home': str(Path.home().resolve()), 'run': str(run), 'env': str(environment), 'host_only': [HOST_ONLY, 'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'ROBOFRONTIER_OFFLINE_STUB_TOKEN'],
                 'home_file': next((str(p) for p in (Path.home()/'.zshrc', Path.home()/'.bashrc', Path.home()/'.profile') if p.is_file()), '/missing'),
@@ -269,7 +277,8 @@ def check_engine(name, environment, scratch, mode):
                 'core_packages': policy_env.load(environment)['packages'],
                 'tmp_file': str(Path('/tmp')/('robofrontier-probe-new-' + scratch.name)),
                 'other_run_file': str(other/'private/inputs/task.json'), 'repo_file': str(ROOT/'pyproject.toml'),
-                'shared_tmp': str(shared), 'other_python': other_python, 'listener_port': listener.getsockname()[1]}
+                'shared_tmp': str(shared), 'other_python': other_python, 'listener_port': listener.getsockname()[1],
+                'host_socket': str(shared/'host.sock'), 'udp_port': datagrams.getsockname()[1], 'host_pid': bystander.pid}
     (run/'public/inputs/probe.json').write_text(json.dumps(fixtures))
     # A here-document in the engine's own shell, which may not take its temporary file from TMPDIR.
     # Here-documents and the CLI's own records need /tmp, so a closed /tmp fails shell_reports_success.
@@ -289,10 +298,16 @@ def check_engine(name, environment, scratch, mode):
                 results[attempt] = 'denied'
         # Claude's file tools follow permission rules, not the sandbox, so try writing with them too.
         results['tool_write_shared_tmp'] = 'ok' if (shared/'tool-written.txt').exists() else 'denied'
+        try: results['network_udp'] = 'ok' if datagrams.recv(64) == b'probe' else 'denied'
+        except BlockingIOError: results['network_udp'] = 'denied'
         results['shell_reports_success'] = 'ok' if shell_succeeded(seen[:1] if name == 'claude' else seen) else 'denied'
         return results
     finally:
         listener.close()
+        host_socket.close()
+        datagrams.close()
+        bystander.kill()
+        bystander.wait()
         shutil.rmtree(shared, ignore_errors=True)
         shared_memory.unlink(missing_ok=True)
 
@@ -356,15 +371,20 @@ def main(argv=None):
     # combination; a check of some engines adds them to what an earlier pass of this build recorded.
     receipt = policy_env.receipt_path(environment)
     record = receipt_record(manifest, modes)
-    try: earlier = json.loads(receipt.read_text())
-    except (OSError, ValueError): earlier = {}
-    if (args.engine and earlier.get('schema') == policy_env.RECEIPT_SCHEMA and earlier.get('passed')
-            and earlier.get('tree_sha256') == manifest['tree_sha256']):
-        kept = [item for item in earlier.get('checked', []) if item.get('engine') not in modes]
-        record['checked'] = sorted(kept + record['checked'], key=lambda item: json.dumps(item, sort_keys=True))
-    temporary = receipt.with_name(receipt.name + '.tmp')
-    temporary.write_text(json.dumps(record) + '\n')
-    temporary.replace(receipt)
+    # Checks of different engines may finish together: merge under a lock, publish atomically.
+    import fcntl
+    with open(receipt.with_name(receipt.name + '.lock'), 'a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try: earlier = json.loads(receipt.read_text())
+        except (OSError, ValueError): earlier = {}
+        if (args.engine and earlier.get('schema') == policy_env.RECEIPT_SCHEMA and earlier.get('passed')
+                and earlier.get('tree_sha256') == manifest['tree_sha256']):
+            kept = [item for item in earlier.get('checked', []) if item.get('engine') not in modes]
+            record['checked'] = sorted(kept + record['checked'], key=lambda item: json.dumps(item, sort_keys=True))
+        fd, temporary = tempfile.mkstemp(prefix=receipt.name + '.', suffix='.tmp', dir=receipt.parent)
+        with os.fdopen(fd, 'w') as output:
+            output.write(json.dumps(record) + '\n')
+        os.replace(temporary, receipt)
     print('recorded', receipt)
 
 

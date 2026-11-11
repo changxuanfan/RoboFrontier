@@ -6,6 +6,7 @@ authentication, robot connections and IPC remain in the host, never this worker.
 import base64
 import ctypes
 import ctypes.util
+import errno
 import json
 import os
 from pathlib import Path
@@ -14,7 +15,7 @@ import socket
 import stat
 import sys
 
-from robofrontier.engines.common.landlock import allowlist
+from robofrontier.engines.common.landlock import allowlist, seccomp_filter
 from robofrontier.engines.codex.file_sandbox import abi, restrict
 
 SCHEMA = 'robofrontier.codex-tools.v1'
@@ -22,20 +23,6 @@ SCHEMA = 'robofrontier.codex-tools.v1'
 # JSON.stringify({tool, command}); an escaped control character takes six bytes.
 INPUT_LIMIT = 131000
 REQUEST_LIMIT = 6*INPUT_LIMIT + 1024
-DENIED_SYSCALLS = (
-    'socket', 'socketpair', 'socketcall', 'connect', 'bind', 'listen', 'accept', 'accept4',
-    'sendmsg', 'recvmsg', 'sendto', 'recvfrom', 'sendmmsg', 'recvmmsg',
-    'io_uring_setup', 'io_uring_enter', 'io_uring_register',
-    'ptrace', 'process_vm_readv', 'process_vm_writev', 'pidfd_getfd', 'pidfd_send_signal',
-    'kill', 'tkill', 'tgkill', 'rt_sigqueueinfo', 'rt_tgsigqueueinfo',
-    'mount', 'umount2', 'pivot_root', 'setns', 'unshare', 'setsid', 'setpgid', 'open_by_handle_at',
-    'bpf', 'perf_event_open',
-    # Landlock does not mediate these metadata changes, including on newer ABIs.
-    'chmod', 'fchmod', 'fchmodat', 'fchmodat2', 'chown', 'fchown', 'lchown', 'fchownat',
-    'chown32', 'fchown32', 'lchown32', 'setxattr', 'lsetxattr', 'fsetxattr',
-    'removexattr', 'lremovexattr', 'fremovexattr', 'utime', 'utimes', 'futimesat',
-    'utimensat', 'utimensat_time64',
-)
 
 
 MS_NOSUID, MS_NODEV, MS_REC, MS_PRIVATE = 2, 4, 1 << 14, 1 << 18
@@ -58,74 +45,6 @@ def private_shared_memory():
                                         (b'tmpfs', b'/dev/shm', b'tmpfs', MS_NOSUID | MS_NODEV)):
         if libc.mount(source, target, kind, flags, None):
             raise OSError(ctypes.get_errno(), 'Cannot prepare a private /dev/shm')
-
-
-# A run with a policy environment needs pip and venv, which set file modes. These calls succeed
-# without changing anything, since Landlock cannot limit which of the account's files they reach.
-MODE_SYSCALLS = ('chmod', 'fchmod', 'fchmodat', 'fchmodat2')
-PRETEND_SUCCESS, DENY = 0x00050000, 0x00050001  # SCMP_ACT_ERRNO(0), SCMP_ACT_ERRNO(EPERM)
-
-
-def seccomp_filter(filesystem_abi=None, ignore_mode_changes=False):
-    name = ctypes.util.find_library('seccomp')
-    if not name:
-        raise RuntimeError('libseccomp is required for the Codex Landlock backend')
-    library = ctypes.CDLL(name, use_errno=True)
-    library.seccomp_init.argtypes = [ctypes.c_uint32]
-    library.seccomp_init.restype = ctypes.c_void_p
-    library.seccomp_syscall_resolve_name.argtypes = [ctypes.c_char_p]
-    library.seccomp_syscall_resolve_name.restype = ctypes.c_int
-    library.seccomp_rule_add.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_uint]
-    library.seccomp_rule_add.restype = ctypes.c_int
-    class ArgCompare(ctypes.Structure):
-        _fields_ = [('arg', ctypes.c_uint), ('op', ctypes.c_uint),
-                    ('datum_a', ctypes.c_uint64), ('datum_b', ctypes.c_uint64)]
-    library.seccomp_rule_add_array.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int,
-                                              ctypes.c_uint, ctypes.POINTER(ArgCompare)]
-    library.seccomp_rule_add_array.restype = ctypes.c_int
-    library.seccomp_load.argtypes = [ctypes.c_void_p]
-    library.seccomp_load.restype = ctypes.c_int
-    library.seccomp_release.argtypes = [ctypes.c_void_p]
-    context = library.seccomp_init(0x7fff0000)  # SCMP_ACT_ALLOW
-    if not context:
-        raise RuntimeError('seccomp_init failed')
-    try:
-        for name in DENIED_SYSCALLS:
-            number = library.seccomp_syscall_resolve_name(name.encode())
-            if name == 'fchmodat2' and number < 0:
-                number = 452  # x86_64/aarch64: old libseccomp, newer kernel.
-            action = PRETEND_SUCCESS if ignore_mode_changes and name in MODE_SYSCALLS else DENY
-            if number >= 0 and library.seccomp_rule_add(context, action, number, 0):
-                raise RuntimeError('Cannot enforce syscall restriction: ' + name)
-        version = abi() if filesystem_abi is None else filesystem_abi
-        if version < 3:
-            for name in ('truncate', 'truncate64'):
-                number = library.seccomp_syscall_resolve_name(name.encode())
-                if number >= 0 and library.seccomp_rule_add(context, 0x00050001, number, 0):
-                    raise RuntimeError('Cannot enforce legacy truncate restriction')
-            # openat2 keeps its flags in a pointer, which classic seccomp cannot
-            # inspect. ENOSYS allows safe libc/tool fallbacks to filtered openat.
-            number = library.seccomp_syscall_resolve_name(b'openat2')
-            if number < 0:
-                number = 437
-            if library.seccomp_rule_add(context, 0x00050026, number, 0):
-                raise RuntimeError('Cannot enforce legacy openat2 restriction')
-            for name, argument in (('open', 1), ('openat', 2)):
-                number = library.seccomp_syscall_resolve_name(name.encode())
-                if number < 0:
-                    if name == 'openat':
-                        raise RuntimeError('Cannot resolve legacy openat restriction')
-                    continue
-                # Normal O_WRONLY/O_RDWR writes remain governed by Landlock.
-                # Deny truncation through read-only and invalid access modes.
-                for access in (os.O_RDONLY, os.O_ACCMODE):
-                    compare = ArgCompare(argument, 7, os.O_TRUNC | os.O_ACCMODE, os.O_TRUNC | access)
-                    if library.seccomp_rule_add_array(context, 0x00050001, number, 1, ctypes.byref(compare)):
-                        raise RuntimeError('Cannot enforce legacy open flags restriction')
-        if library.seccomp_load(context):
-            raise RuntimeError('Cannot install seccomp restrictions')
-    finally:
-        library.seccomp_release(context)
 
 
 def drop_capabilities():
@@ -192,7 +111,10 @@ def main():
     # multiprocessing locks then do not work, as under the Claude Landlock shell.
     if frozen:
         try: private_shared_memory()
-        except PermissionError: access['filesystem']['/dev/shm'] = 'deny'
+        # EPERM where namespaces are forbidden; ENOSPC where user.max_user_namespaces is 0; EINVAL in some containers.
+        except OSError as error:
+            if error.errno not in (errno.EPERM, errno.ENOSPC, errno.EINVAL): raise
+            access['filesystem']['/dev/shm'] = 'deny'
     rules = allowlist(access['filesystem'], read=['/dev/urandom'], write=['/dev/null'])
     temporary = run/'workspace/.tmp'
     if not temporary.is_dir():
