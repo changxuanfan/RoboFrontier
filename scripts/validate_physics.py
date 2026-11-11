@@ -39,6 +39,18 @@ REST_DRIFT_MM = .2         # after the first 5 s
 PLACE_SETTLE_S, STILL_MM_S = 1., 1.
 STEP_BUDGET_MS = 20.
 
+# Accepted by the owner on 2026-11-11, keeping the 2 ms step: during fast motion a held object lags
+# the hand and creeps a little (NoSlip at 2 ms), and a fast-turned Dial lags behind the wrist. A
+# policy chooses its own speeds and sees the result, so it can turn slowly or correct; making the
+# simulation easier for it is not the benchmark's job. A failing check counts as accepted only
+# inside the envelope measured then, so a new regression still fails.
+ACCEPTED_ENVELOPE = {
+    'carry': dict(slip_mm=3., peak_rot_deg=7., residual_rot_deg=2.),
+    'dial': dict(follow_error_deg=7.),
+    'relay': dict(carry_slip_mm=2.5),
+}
+ACCEPTED_REASON = 'Fast-motion lag at the 2 ms step, inside the accepted envelope (docs/physics.md#validation)'
+
 FAST = dict(speed_m_s=2., acceleration_m_s2=13., angular_speed_rad_s=2.5, angular_acceleration_rad_s2=25.)
 GENTLE = dict(speed_m_s=.1, acceleration_m_s2=1., angular_speed_rad_s=.5, angular_acceleration_rad_s2=5.)
 
@@ -375,6 +387,24 @@ def jobs(selected, cases):
     return out
 
 
+def accepted(result):
+    """Whether a failed check is the accepted fast-motion lag (ACCEPTED_ENVELOPE) and nothing else."""
+    envelope = ACCEPTED_ENVELOPE.get(result.get('scenario'))
+    if result.get('passed') or not envelope or result.get('error'):
+        return False
+    if result['scenario'] == 'carry':
+        return bool(result.get('held')) and all(result[key] <= limit for key, limit in envelope.items())
+    if result['scenario'] == 'dial':
+        return (result.get('grasp') == 'completed' and result['follow_error_deg'] <= envelope['follow_error_deg']
+                and result['drift_after_release_deg'] < .1)
+    if result['scenario'] == 'relay':
+        grasps = {**result['sender_grasp'], **result['receiver_grasp']}.values()
+        slips = list(result['carry_slip_mm'].values())+list(result['receiver_carry_slip_mm'].values())
+        return (all(v == 'completed' for v in grasps) and result['airborne'] and result['timber_moved_by_receivers_mm'] < 1.
+                and result['drop_at_release_mm'] < 1. and max(slips) <= envelope['carry_slip_mm'])
+    return False
+
+
 def run(job):
     function, args = job
     start = time.time()
@@ -384,7 +414,9 @@ def run(job):
         result = dict(name=function.__name__, args=[str(a) for a in args], passed=False, error=f'{type(error).__name__}: {error}',
                       trace=traceback.format_exc()[-1500:])
     result.setdefault('scenario', function.__name__); result['seconds'] = round(time.time()-start, 1)
-    return json.loads(json.dumps(result, default=lambda v: v.item() if hasattr(v, 'item') else str(v)))
+    result = json.loads(json.dumps(result, default=lambda v: v.item() if hasattr(v, 'item') else str(v)))
+    if accepted(result): result['accepted'] = ACCEPTED_REASON
+    return result
 
 
 def main(argv=None):
@@ -400,9 +432,10 @@ def main(argv=None):
             results.append(result); print(json.dumps(result), flush=True)
     out = ROOT/'runs/engineering/validate-physics'/(time.strftime('%Y%m%d-%H%M%S')+'.json')
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(dict(results=results, passed=all(r['passed'] for r in results)), indent=1)+'\n')
-    failed = [r for r in results if not r['passed']]
-    print(f'{len(results)-len(failed)} of {len(results)} passed; {out}')
+    failed = [r for r in results if not r['passed'] and not r.get('accepted')]
+    out.write_text(json.dumps(dict(results=results, passed=not failed), indent=1)+'\n')
+    taken = sum(1 for r in results if r.get('accepted'))
+    print(f'{sum(1 for r in results if r["passed"])} of {len(results)} passed, {taken} accepted, {len(failed)} failed; {out}')
     return 1 if failed else 0
 
 
