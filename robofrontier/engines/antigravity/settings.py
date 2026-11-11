@@ -6,7 +6,15 @@ from pathlib import Path
 import shlex
 import sys
 
+from robofrontier.runtime import tool_mode
 from robofrontier.runtime.setup import write_json
+
+ROBOT_TOOL, FILE_TOOLS = 'robot', ('policy_exec', 'policy_image')
+
+
+def mcp_tools(run):
+    """The MCP tools a role of this run is given: the robot tool, and in a full run the file tools."""
+    return (ROBOT_TOOL,) if tool_mode.of_run(run) == tool_mode.ROBOT_ONLY else (ROBOT_TOOL, *FILE_TOOLS)
 
 
 def cli_workspace(run):
@@ -65,7 +73,7 @@ def configure(run, python=sys.executable):
         folder/'mcp_config.json': json.dumps({'mcpServers': {'robofrontier': {
             'command': os.path.abspath(python),
             'args': ['-m', 'robofrontier.engines.antigravity.robot_mcp', '--run-dir', str(run)],
-            'env': {'PYTHONPATH': str(root)}, 'tools': {name: {'eager': True} for name in ('robot', 'policy_exec', 'policy_image')}, 'timeoutSeconds': -1}}}, sort_keys=True),
+            'env': {'PYTHONPATH': str(root)}, 'tools': {name: {'eager': True} for name in mcp_tools(run)}, 'timeoutSeconds': -1}}}, sort_keys=True),
         folder/'hooks.json': json.dumps({'hooks': {'PreToolUse': [{'matcher': '.*', 'hooks': [
             {'type': 'command', 'command': hook}]}]}}, sort_keys=True),
     }

@@ -13,6 +13,7 @@ from robofrontier.runtime.setup import write_json
 from .driver import native_id
 from .profile import fingerprint
 from .provenance import steps, tool_call
+from .settings import mcp_tools
 from robofrontier.engines.common.policy_tools import TOOLS, execute as file_tool
 
 
@@ -21,9 +22,11 @@ def binding_path(run, call_id):
 
 
 class Router:
-    tools = [TOOL, *TOOLS]
     def __init__(self, run):
         self.run = Path(run).resolve()
+        # A robot_only run declares and serves the robot tool alone (runtime/tool_mode.py).
+        self.file_tools = [tool['name'] for tool in TOOLS if tool['name'] in mcp_tools(self.run)]
+        self.tools = [TOOL, *(tool for tool in TOOLS if tool['name'] in self.file_tools)]
         self.bridges = {}
         self.lock = threading.Lock()
 
@@ -47,7 +50,7 @@ class Router:
     def call_tool(self, name, args, request_id=None, metadata=None):
         if name == 'robot':
             return self.call(args, request_id, metadata)
-        if name not in ('policy_exec', 'policy_image'):
+        if name not in self.file_tools:
             raise ValueError('Unknown tool')
         actor, session, _ = self.authorize(metadata)
         from robofrontier.batch.metrics import host_event

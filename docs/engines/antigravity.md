@@ -75,6 +75,14 @@ Landlock's process visibility and process-pool limitations are the same as the
 Codex broker's, and are recorded by that probe. A lifetime pipe and a separate
 guardian stop policy commands when their MCP owner exits, including SIGKILL.
 
+## Tool modes
+
+`--tool-mode robot_only` ([robot-only runs](../running/robot-only.md)) works as on the other
+engines: the role's first message, system prompt and robot operations are the shared ones. The
+adapter registers `robot` as the only MCP tool, writes no file-tool backend and needs no policy
+Python environment or sandbox check. Its hook refuses `manage_task`, `list_resources` and
+`read_resource`, which the CLI still declares. A full run is unchanged.
+
 ## Preflight and receipts
 
 The unified command requires explicit authorization for provider calls:

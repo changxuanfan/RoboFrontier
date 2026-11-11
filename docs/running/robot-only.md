@@ -21,7 +21,7 @@ budget, context window and compaction.
 | Shell, Python, scripts, scratch files, cropping or measuring images in code | yes | no |
 
 The two operations exist only in a robot-only run; a full run refuses them, and its inputs are
-byte for byte what they were before the mode existed. Both engines' roles receive the same
+byte for byte what they were before the mode existed. Every engine's roles receive the same
 first message in a robot-only run.
 
 ## How each engine is restricted
@@ -33,6 +33,11 @@ first message in a robot-only run.
   `native` on every host, since there is nothing to confine. A robot-only profile needs its own
   `robofrontier preflight --tool-mode robot_only`: the receipt is tied to the launch profile and
   is kept beside the full one, under `<profile>.robot_only/`.
+- **Antigravity** serves `robot` as its only MCP tool: `policy_exec` and `policy_image` are not
+  registered, and its tool hook refuses every other call. The CLI itself still declares
+  `manage_task`, `list_resources` and `read_resource` to the model; no setting removes them, so
+  they are visible and refused. The provider preflight uses neither file tool, so one receipt
+  serves both modes.
 
 No policy Python environment is frozen for a robot-only run.
 
@@ -42,7 +47,10 @@ No policy Python environment is frozen for a robot-only run.
 `tests/engines/test_claude_robot_only.py` and `tests/engines/test_codex_robot_only.py` run the
 installed CLIs against a local stub model and read the tool list the model is sent on a first
 turn, a fork and a resumed session: it is the robot tool alone, and the engines' own tools are
-refused.
+refused. `tests/engines/test_antigravity_physics_smoke.py` (opt-in, real CLI and MuJoCo with a
+local model service) runs a single-role and a two-child adaptive robot-only task and checks the
+tools declared on every request; `tests/engines/test_antigravity_accounting.py` covers the hook
+and the MCP router.
 
 ## Not supported yet
 

@@ -21,7 +21,7 @@ from robofrontier.runtime.store import RuntimeStore
 @unittest.skipUnless(os.environ.get('ROBOFRONTIER_ANTIGRAVITY_PHYSICS') == '1' and shutil.which('agy'),
                      'opt-in real CLI and MuJoCo against a local model service')
 class PhysicsTests(unittest.TestCase):
-    def exercise(self, topology, robots=('A',)):
+    def exercise(self, topology, robots=('A',), tool_mode='full'):
         def response(body):
             contents = body.get('contents', [])
             last = contents[-1].get('parts', []) if contents else []
@@ -48,7 +48,11 @@ class PhysicsTests(unittest.TestCase):
             if op == 'observe':
                 args['views'] = ['global']
             return [{'functionCall': {'name': 'mcp_robofrontier_robot', 'args': args}}]
-        stub = Stub(response)
+        declared = []
+        def recorded(body):
+            declared.append(sorted(f['name'] for t in body.get('tools', []) for f in t.get('functionDeclarations', [])))
+            return response(body)
+        stub = Stub(recorded)
         scratch = Path(os.environ.get('ROBOFRONTIER_TEST_SCRATCH', str(Path.home()/'.cache/robofrontier-antigravity')))
         scratch.mkdir(parents=True, exist_ok=True)
         directory = Path(tempfile.mkdtemp(prefix='physics-', dir=scratch)).resolve()
@@ -61,12 +65,19 @@ class PhysicsTests(unittest.TestCase):
             render = os.environ.get('ROBOFRONTIER_TEST_RENDER', 'native' if system == 'Darwin' else 'cpu')
             env = rendering_environment(render, system, {**os.environ, 'RF_STUB_KEY': 'host-only-synthetic'})
             prepare_batch(directory/'batch', ['stub'], cases=['transport-a04-d1'], topology=topology,
-                          catalog=catalog, render_device=render, wall_limit_s=12)
+                          catalog=catalog, render_device=render, wall_limit_s=12, tool_mode=tool_mode)
             run = directory/'batch/stub/transport-a04-d1'
             driver = functools.partial(Driver, gateway_factory=lambda base, key: Gateway(stub.url, key))
             with patch('robofrontier.engines.antigravity.session_host.Driver', driver):
                 result = run_task(run, env, wall_limit_s=12, startup_timeout_s=90, poll_s=.1)
             self.assertEqual(result['status'], 'finished', {'result': result, 'retained': str(directory)})
+            # Every request of every role, forked children included, declares the same tools.
+            file_tools = ['mcp_robofrontier_policy_exec', 'mcp_robofrontier_policy_image']
+            native = ['list_resources', 'manage_task', 'read_resource']  # Declared by the CLI; refused in robot_only.
+            expected = sorted(['mcp_robofrontier_robot', *native, *([] if tool_mode == 'robot_only' else file_tools)])
+            self.assertTrue(declared and all(tools == expected for tools in declared), declared[:3])
+            if tool_mode == 'robot_only':
+                self.assertFalse((run/'private/inputs/policy-tools.json').exists())
             self.assertTrue(result['seal']['sealed'])
             self.assertFalse(result['owner_alive'])
             self.assertEqual(result['seal']['unresolved_action_ids'], [])
@@ -105,6 +116,12 @@ class PhysicsTests(unittest.TestCase):
 
     def test_adaptive_two_children(self):
         self.exercise('adaptive', robots=('A', 'B'))
+
+    def test_adaptive_robot_only(self):
+        self.exercise('adaptive', robots=('A', 'B'), tool_mode='robot_only')
+
+    def test_single_robot_only(self):
+        self.exercise('centralized', tool_mode='robot_only')
 
     def test_controller_worker(self):
         self.exercise('hierarchical')

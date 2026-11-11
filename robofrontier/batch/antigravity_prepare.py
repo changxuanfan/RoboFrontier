@@ -19,7 +19,8 @@ LAUNCH_SCHEMA = 'robofrontier.antigravity-launch.v1'
 
 def prepare_batch(output, names, families=None, cases=None, level=None, min_arms=False, catalog=None,
                   topology='adaptive', record_video=False, *, wall_limit_s=86400,
-                  observation_image_profile=None, startup_timeout_s=None, render_device=None):
+                  observation_image_profile=None, startup_timeout_s=None, render_device=None,
+                  tool_mode='full'):
     from robofrontier.tasks.families import prepare, policy_task, dial_code
     from robofrontier.batch.tasks import check_case_assets
     from robofrontier.tasks.families import RELEASE, read
@@ -32,8 +33,13 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
         report = check_case_assets(released[item['case_id']], ROOT)
         if report['missing'] or report['changed']:
             raise ValueError('Missing or changed scene assets: ' + item['case_id'])
-    backend = isolation()
-    policy_env.require_combination('antigravity', backend)
+    from robofrontier.runtime.tool_mode import MODES, ROBOT_ONLY
+    if tool_mode not in MODES:
+        raise ValueError('Unknown tool mode: ' + str(tool_mode))
+    # A robot_only role has no file or shell tool, so nothing is confined or checked.
+    backend = None if tool_mode == ROBOT_ONLY else isolation()
+    if backend is not None:
+        policy_env.require_combination('antigravity', backend)
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=False)
     for folder in layout.BATCH_FOLDERS:
@@ -47,6 +53,9 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
                    record_realtime_video=record_video)
         if topology in ('hierarchical', 'peer'):
             cfg['startup_protocol'] = 'direct_team_v3'
+        # Written only for a robot_only run, so a full run's frozen harness is unchanged.
+        if tool_mode != 'full':
+            cfg['tool_mode'] = tool_mode
         for key, value in (('observation_image_profile', observation_image_profile),
                            ('startup_timeout_s', startup_timeout_s), ('render_device', render_device)):
             if value is not None:

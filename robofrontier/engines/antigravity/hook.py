@@ -12,9 +12,16 @@ def decision(run, event):
     args = call.get('args', event.get('tool_input', event.get('toolInput', {})))
     if not isinstance(args, dict):
         return {'decision': 'deny', 'reason': 'Invalid tool input'}
+    from .settings import mcp_tools
+    from robofrontier.runtime import tool_mode
+    if tool_mode.of_run(run) == tool_mode.ROBOT_ONLY:
+        # The CLI still declares manage_task and its MCP resource tools; none may run.
+        if name == 'mcp_robofrontier_robot':
+            return {'decision': 'allow'}
+        return {'decision': 'deny', 'reason': 'robot is your only tool'}
     if name == 'manage_task' and args.get('Action') in ('list', 'status'):
         return {'decision': 'allow'}
-    if name in ('mcp_robofrontier_robot', 'mcp_robofrontier_policy_exec', 'mcp_robofrontier_policy_image'):
+    if name in ['mcp_robofrontier_' + tool for tool in mcp_tools(run)]:
         return {'decision': 'allow'}
     return {'decision': 'deny', 'reason': 'Use the bound robot and policy file tools'}
 

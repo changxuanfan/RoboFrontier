@@ -234,6 +234,44 @@ class SystemPromptTests(unittest.TestCase):
             policy_spec(self.native('Another agent.'), 267000, system)
 
 
+class RobotOnlyTests(unittest.TestCase):
+    def run_folder(self, folder, mode):
+        run = Path(folder)
+        write_json(run/'private/inputs/harness.json', {'engine': 'antigravity', **({} if mode == 'full' else {'tool_mode': mode})})
+        return run
+
+    def test_only_the_robot_tool_is_served_and_allowed(self):
+        from robofrontier.engines.antigravity.hook import decision
+        from robofrontier.engines.antigravity.robot_mcp import Router
+        from robofrontier.engines.antigravity.settings import mcp_tools
+        call = lambda run, name, args=None: decision(run, {'tool_name': name, 'tool_input': args or {}})['decision']
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.run_folder(folder, 'robot_only')
+            self.assertEqual(mcp_tools(run), ('robot',))
+            router = Router(run)
+            self.assertEqual([tool['name'] for tool in router.tools], ['robot'])
+            for name in ('policy_exec', 'policy_image'):
+                with self.assertRaisesRegex(ValueError, 'Unknown tool'):
+                    router.call_tool(name, {'command': 'pwd', 'path': 'x'})
+            self.assertEqual(call(run, 'mcp_robofrontier_robot', {'op': 'observe'}), 'allow')
+            for name, args in (('mcp_robofrontier_policy_exec', {}), ('mcp_robofrontier_policy_image', {}),
+                               ('manage_task', {'Action': 'list'}), ('list_resources', {}), ('read_resource', {}),
+                               ('run_command', {}), ('read_file', {})):
+                self.assertEqual(call(run, name, args), 'deny', name)
+
+    def test_a_full_run_keeps_its_file_tools(self):
+        from robofrontier.engines.antigravity.hook import decision
+        from robofrontier.engines.antigravity.robot_mcp import Router
+        call = lambda run, name, args=None: decision(run, {'tool_name': name, 'tool_input': args or {}})['decision']
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.run_folder(folder, 'full')
+            self.assertEqual([tool['name'] for tool in Router(run).tools], ['robot', 'policy_exec', 'policy_image'])
+            for name in ('mcp_robofrontier_robot', 'mcp_robofrontier_policy_exec', 'mcp_robofrontier_policy_image'):
+                self.assertEqual(call(run, name), 'allow')
+            self.assertEqual(call(run, 'manage_task', {'Action': 'status'}), 'allow')
+            self.assertEqual(call(run, 'run_command'), 'deny')
+
+
 class PreflightBudgetTests(unittest.TestCase):
     def test_a_dollar_cap_is_refused_before_any_provider_call(self):
         from robofrontier import cli
