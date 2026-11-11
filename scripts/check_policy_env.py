@@ -52,6 +52,9 @@ KNOWN_LIMITS = {('darwin', 'claude'): ('process_executor',)}
 # host forbids user namespaces (RunPod pods) no command can get a private one, so it stays closed
 # and process pools fail; threads and plain subprocesses still work.
 SHARED_MEMORY_LIMITS = ('process_pool', 'process_executor')
+# Landlock cannot hide processes: a policy shell lists them, but cannot read their environments or
+# trace or signal them (the read_parent_environ, ps_parent_environment and signal probes).
+LANDLOCK_LIMITS = ('see_host_processes',)
 OTHER_PYTHONS = ('/opt/homebrew/bin/python3', '/usr/local/bin/python3', '/usr/bin/python3')
 OUTPUT_TYPES = ('function_call_output', 'custom_tool_call_output')
 PROBE_LIMIT_S = 280
@@ -324,12 +327,14 @@ def known_limits(name, mode):
     # Claude's Landlock prefix never makes a private /dev/shm; Codex's worker does where it can.
     if mode == 'landlock-v1' and (name == 'claude' or not private_shared_memory_possible()):
         known += SHARED_MEMORY_LIMITS
+    if mode == 'landlock-v1':
+        known += LANDLOCK_LIMITS
     return known
 
 
 def differences(results, known=()):
     wrong = [name + ' should work' for name in MUST_WORK if results.get(name) != 'ok' and name not in known]
-    wrong += [name + ' should be denied' for name in MUST_FAIL if results.get(name) != 'denied']
+    wrong += [name + ' should be denied' for name in MUST_FAIL if results.get(name) != 'denied' and name not in known]
     return wrong
 
 
