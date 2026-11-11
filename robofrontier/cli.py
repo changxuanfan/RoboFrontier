@@ -285,6 +285,26 @@ def _lock_held(path):
     return False
 
 
+def _with_live_runs(batch, state):
+    """A running batch's jobs as they are: the supervisors record a run as started or prepared and
+    then only its end, so a run whose own record shows it working is reported `running`."""
+    if state.get('status') != 'running':
+        return state
+    jobs = json.loads((Path(batch)/'batch.json').read_text()).get('jobs', [])
+    for job, entry in zip(jobs, state.get('jobs', [])):
+        run = Path(job['run_directory'])
+        if entry.get('status') == 'starting':  # Claude: the run's own status file
+            own = run_layout.path(run, 'engineering_status', 'claude')
+            try: working = json.loads(own.read_text()).get('status') == 'running'
+            except (OSError, ValueError): working = False
+        elif entry.get('status') == 'prepared':  # Codex: its host process was started
+            working = run_layout.path(run, 'host_process', 'codex').is_file()
+        else:
+            continue
+        if working: entry['status'] = 'running'
+    return state
+
+
 def continue_runs(batch, cases=None):
     """Continue stopped runs of a batch by hand, as the same trials (docs/running/continuation.md).
 
@@ -525,7 +545,7 @@ def main(argv=None):
         elif args.command == 'status':
             # Read the supervisor's atomic snapshot, never open a writer's SQLite.
             snapshot = run_layout.batch_path(args.batch, 'engineering_status')
-            state = json.loads((snapshot if snapshot.is_file() else args.batch/'batch.json').read_text())
+            state = _with_live_runs(args.batch, json.loads((snapshot if snapshot.is_file() else args.batch/'batch.json').read_text()))
             if sys.platform == 'darwin': from .batch.mac import service_state
             else: from .batch.linux import service_state
             durable = service_state(args.batch)

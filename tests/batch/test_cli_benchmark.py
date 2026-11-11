@@ -133,6 +133,22 @@ class CliBenchmarkTests(unittest.TestCase):
             self.assertTrue(run_layout.batch_path(folder, 'stop').exists())
             self.assertTrue(all(run_layout.path(run, 'stop', 'codex').exists() for run in runs))
 
+    def test_status_reports_a_working_run_as_running(self):
+        from robofrontier.cli import _with_live_runs
+        from robofrontier.runtime import layout as run_layout
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary); runs = [folder/name for name in ('claude', 'codex', 'queued')]
+            for run in runs: run.mkdir()
+            (folder/'batch.json').write_text(json.dumps({'jobs': [{'run_directory': str(run)} for run in runs]}))
+            own = run_layout.path(runs[0], 'engineering_status', 'claude'); own.parent.mkdir(parents=True)
+            own.write_text(json.dumps({'status': 'running'}))
+            host = run_layout.path(runs[1], 'host_process', 'codex'); host.parent.mkdir(parents=True, exist_ok=True)
+            host.write_text('{}')
+            state = {'status': 'running', 'jobs': [{'status': 'starting'}, {'status': 'prepared'}, {'status': 'starting'}]}
+            self.assertEqual([j['status'] for j in _with_live_runs(folder, state)['jobs']], ['running', 'running', 'starting'])
+            ended = {'status': 'closed', 'jobs': [{'status': 'starting'}]}
+            self.assertEqual(_with_live_runs(folder, ended)['jobs'][0]['status'], 'starting')
+
     def test_env_is_literal_and_existing_values_win(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'RF_EXISTING':'existing'}, clear=True):
             env=Path(tmp)/'.env'
