@@ -83,7 +83,12 @@ class ConfigurationTests(unittest.TestCase):
             tool_backend.verify_receipt({**launch,'tool_backend_sha256':'old'},receipt)
 
     def test_backend_is_explicit_and_old_frozen_configuration_keeps_its_shape(self):
-        self.assertEqual(load_configuration()['runtime']['codex_tool_backend'], 'native')
+        # The default `auto` is Codex's own sandbox on macOS and the checked Landlock worker on Linux.
+        expected = 'landlock-v1' if sys.platform.startswith('linux') else 'native'
+        self.assertEqual(load_configuration()['runtime']['codex_tool_backend'], expected)
+        self.assertEqual(load_configuration(host='slurm')['runtime']['codex_tool_backend'], 'landlock-v1')
+        claude = load_configuration(overrides={'policy': {'engine': 'claude'}}, host='slurm')
+        self.assertEqual(claude['runtime']['codex_tool_backend'], 'native')
         config = load_configuration(overrides={'schema_version': 4})
         self.assertNotIn('codex_tool_backend', config['runtime'])
         with self.assertRaises(ValueError):

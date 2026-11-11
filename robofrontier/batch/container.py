@@ -91,6 +91,9 @@ def _settings(arguments, config):
         # native CLI does (Claude: the subscription-token profile).
         from ..configuration import load_configuration
         result['policy']['profile'] = load_configuration(overrides={'policy': {'engine': options.engine}})['policy']['profile']
+    if options.engine is not None and options.engine != config['policy']['engine'] and 'codex_tool_backend' in result.get('runtime', {}):
+        # The container is Linux: Codex's tools run under landlock-v1 there, and only Codex has a tool backend.
+        result['runtime']['codex_tool_backend'] = 'landlock-v1' if options.engine == 'codex' else 'native'
     if options.render is not None:
         result['render']['device'] = options.render
     validate_configuration(result)
