@@ -117,11 +117,13 @@ def policy_settings(run_dir):
     writable = sorted(p for p, mode in table.items() if mode == 'write')
     # Claude rules take absolute paths as //path. acceptEdits accepts edits only inside
     # the working folder and every other edit is refused; these rules also keep hidden
-    # paths and the frozen inputs out of reach. Rules follow gitignore matching, where
-    # 'path/**' covers only what lies inside path, so each path also gets an exact rule:
-    # a hidden file (the repository's .env beside the runs folder) is denied by that one.
+    # paths and the frozen inputs out of reach. 'path/**' covers only what lies inside
+    # path. A bare 'path' is matched as a string prefix, so it also closes every sibling
+    # whose name begins with it (a batch 'x' beside a batch 'x-b' closed all of x-b, its
+    # runs' workspaces included); it is kept only for a file, such as the repository's .env.
     def rules(tool, paths):
-        return [tool+'(//'+p.lstrip('/')+suffix+')' for p in paths for suffix in ('', '/**')]
+        return [tool+'(//'+p.lstrip('/')+suffix+')' for p in paths
+                for suffix in (('', '/**') if Path(p).is_file() else ('/**',))]
     deny = rules('Read', hidden) + rules('Edit', hidden+[str(run/'public')])
     # Glob rules are matched when a tool runs, so they also cover run folders created later.
     deny += ['%s(//%s)' % (tool, p.lstrip('/')) for tool in ('Read', 'Edit') for p in private]
