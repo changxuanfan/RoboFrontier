@@ -348,7 +348,7 @@ def execute(arguments, config, *, root=ROOT):
                     output = _export_archive(name, receipt, root/'runs/container-exports'/config['container']['workspace'])
                     if output:
                         state['exported_archive'] = str(output)
-                elif code == 0 and arguments[0] != 'auth':
+                elif code == 0 and arguments[0] not in ('auth', 'policy-env'):  # these run no CLI command
                     state.update(exit_code=2, status='missing_result_needs_review')
             except (OSError, ValueError, subprocess.SubprocessError) as error:
                 state.update(status='export_failed_needs_review', exit_code=2,
