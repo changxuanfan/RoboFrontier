@@ -52,6 +52,15 @@ These actions also accept `"cameras":["global","A_front"]` for the completion ob
 `run_ended:true` means the team run has closed. Late messages can still be saved for audit; they cannot reopen execution and do not trigger further team work. No new motion is accepted after finish.
 
 `run_paused:true` means the operator paused the run. Stop new physical work and save waiting; it is not a grasp failure or permission to recreate the world.
+<!-- tools:robot_only -->
+
+## Public files and run skills
+
+`robot` is the only tool in this run. Two of its operations stand in for file tools; neither moves a robot.
+
+- `public_file {}` lists your frozen inputs under `public/inputs/` and names the run's other public folders. `public_file {"path":"<path>"}` returns one of them: a text file as text, a PNG or JPEG as an image, a folder as a listing. A path is relative to `public/inputs/` as task.json lists its references, or starts with `public/`, or is the absolute path your first message printed. This is how to view `initial_reference_images`, `robot_layout_image` and `target.reference_image`, to reread the task, rules, Skills and calibration after a context gap, and to open a saved observation (`public/observations/`) or a returned report (`public/results/`). It only reads, and only inside this run's `public/` folder; a file above the size limit is refused with its size.
+- `skills {"action":"headings"}` lists the run's shared lessons as numbered entries with their revision headings. `skills {"action":"read","entries":[2,5]}` returns those entries; without `entries` it returns the whole file. `skills {"action":"append","heading":"…","body":"…"}` adds an entry and `skills {"action":"revise","entry":2,"heading":"…","body":"…"}` adds a revision at the end of entry 2. Earlier text cannot be changed or removed. The Run skills section of your Skill says what to write and in which format.
+<!-- /tools -->
 
 ## Selected images
 

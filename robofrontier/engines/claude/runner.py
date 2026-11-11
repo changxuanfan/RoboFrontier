@@ -24,7 +24,7 @@ from robofrontier.engines.claude.recovery import api_error, capacity_code, usage
 from robofrontier.engines.claude.native_home import config_directory
 from robofrontier.engines.claude.cost_state import amount, baseline, invocation_cost
 from robofrontier.batch.metrics import host_event
-from robofrontier.runtime import policy_env, layout as run_layout
+from robofrontier.runtime import policy_env, layout as run_layout, tool_mode
 
 ENV_PASSTHROUGH = ('PATH', 'LANG', 'LC_ALL', 'TMPDIR')
 ROBOT_TOOL = 'mcp__robot__robot'
@@ -136,6 +136,16 @@ def policy_settings(run_dir):
                         'network': {'allowedDomains': ['*'] if access.get('network') else []}}}
 
 
+def robot_only(run_dir):
+    """Whether this run's policy turns keep the robot tool alone (runtime/tool_mode.py)."""
+    return tool_mode.of_run(run_dir) == tool_mode.ROBOT_ONLY
+
+
+def turn_settings(run_dir):
+    """The file and shell settings of a policy turn; none in a robot_only run, which has no such tools."""
+    return None if robot_only(run_dir) else policy_settings(run_dir)
+
+
 def confine(run_dir, settings, config_dir):
     """A policy turn's settings and extra environment for its frozen Bash isolation.
 
@@ -244,7 +254,7 @@ def settings_folder(run_dir):
 
 def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget_usd=None, binary='claude', resume=None,
                   fork_from=None, enable_robot=True, auth_mode='api_key', prompt_via_stdin=False, settings=None,
-                  system_prompt=None, stream_input=False, gate=None, settings_dir=None):
+                  system_prompt=None, stream_input=False, gate=None, settings_dir=None, robot_only=False):
     """Return argv for one headless turn.
 
     With `settings` (see `policy_settings`) a policy turn gets the bound robot tool plus
@@ -253,6 +263,8 @@ def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget
     recent one. `fork_from` starts session `session_id` as a fork of that session;
     a delegate fork passes `gate` (see `gate_settings`). With `settings_dir` the
     settings are passed as a file written there (see `settings_argument`).
+    `robot_only` is a run whose roles have the robot tool alone: no built-in tool is
+    loaded, and user, project and local settings stay out as on every confined turn.
     """
     if effort not in EFFORTS:
         raise ValueError('Unsupported effort: ' + str(effort))
@@ -271,7 +283,9 @@ def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget
     # --bare would expose only Bash, Read and Edit, so confined policy turns load no
     # user, project or local settings instead. --bare also skips hooks, so a gated turn
     # does the same.
-    isolation = (['--bare'] if auth_mode == 'api_key' and settings is None and hooks is None
+    if robot_only and (settings is not None or not enable_robot):
+        raise ValueError('A robot_only turn has the robot tool and no file or shell settings')
+    isolation = (['--bare'] if auth_mode == 'api_key' and settings is None and hooks is None and not robot_only
                  else ['--setting-sources', ''])
     cmd = [binary, '-p'] + isolation + ['--model', model, '--effort', effort] + session_flags + [
            '--mcp-config', mcp_arg, '--strict-mcp-config']
@@ -528,11 +542,12 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
         # Native reports retain session history, but the CLI budget limits
         # this invocation. Adding historical cost here would enlarge the cap.
         native_limit = float(maximum)
-    settings, confined = confine(run_dir, policy_settings(run_dir) if enable_robot else None, config_dir)
+    settings, confined = confine(run_dir, turn_settings(run_dir) if enable_robot else None, config_dir)
     cmd = build_command(model, effort, mcp_config, prompt, session_id, native_limit, binary, resume,
                         fork_from=fork_from, enable_robot=enable_robot, auth_mode=profile.get('auth_mode','api_key'),
                         prompt_via_stdin=True, settings=settings, system_prompt=policy_system_prompt(run_dir),
-                        gate=gate, settings_dir=settings_folder(run_dir))
+                        gate=gate, settings_dir=settings_folder(run_dir),
+                        robot_only=enable_robot and robot_only(run_dir))
     env = {**build_env(profile, base_env, config_dir), **confined}
     launch = run_dir/'private/inputs/claude.json'
     frozen = json.loads(launch.read_text()) if launch.is_file() else {}
@@ -664,11 +679,11 @@ class PersistentSession:
         config_dir = config_directory(run_dir, profile)
         if profile.get('auth_mode') != 'native_login':
             config_dir.mkdir(parents=True, exist_ok=True)
-        settings, confined = confine(run_dir, policy_settings(run_dir), config_dir)
+        settings, confined = confine(run_dir, turn_settings(run_dir), config_dir)
         cmd = build_command(model, effort, mcp_config, None, session_id, None, binary, resume, fork_from=fork_from,
                             auth_mode=profile.get('auth_mode', 'api_key'), settings=settings,
                             system_prompt=policy_system_prompt(run_dir), stream_input=True, gate=gate,
-                            settings_dir=settings_folder(run_dir))
+                            settings_dir=settings_folder(run_dir), robot_only=robot_only(run_dir))
         env = {**build_env(profile, base_env, config_dir), **confined}
         launch = Path(run_dir)/'private/inputs/claude.json'
         frozen = json.loads(launch.read_text()) if launch.is_file() else {}

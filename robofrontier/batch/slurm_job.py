@@ -229,7 +229,8 @@ def submit(config, output, *, queue=False, root=ROOT):
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     # Where preflight wrote it: the configured runs root, else the submitting checkout's runs/.
     receipts = runs_root(config) if runs_root(config) != ROOT/'runs' else root/'runs'
-    receipt = receipts/'engineering/model-compatibility'/policy['profile']/'report.json'
+    from ..runtime.tool_mode import receipt_name
+    receipt = receipts/'engineering/model-compatibility'/receipt_name(policy['profile'], policy.get('tool_mode', 'full'))/'report.json'
     if policy['engine'] == 'codex' and (not receipt.is_file() or not json.loads(receipt.read_text()).get('passed')):
         raise ValueError('Run the matching explicit provider preflight before preparing a Slurm submission')
     claude_receipts = {}
@@ -328,7 +329,9 @@ def stage(submission, local):
     asset = source/'runs/asset-cache'/(manifest['sha256']['policy-assets.tar.gz']+'.tar.gz')
     _copy_verified(submission/'policy-assets.tar.gz', asset)
     if config['policy']['engine'] == 'codex':
-        receipt = source/'runs/engineering/model-compatibility'/config['policy']['profile']/'report.json'
+        from ..runtime.tool_mode import receipt_name
+        receipt = (source/'runs/engineering/model-compatibility'
+                   /receipt_name(config['policy']['profile'], config['policy'].get('tool_mode', 'full'))/'report.json')
         _copy_verified(submission/'provider-report.json', receipt)
     if config['policy']['engine'] == 'claude':
         from ..engines.claude.claude_readiness import PRECHECKS, BLOCKED_PRECHECKS
@@ -365,8 +368,11 @@ def execute(local):
     try:
         with subscription_environment(config, local, on_failure=lambda: request_stop(local)):
             # The policy environment under ROBOFRONTIER_POLICY_ENV_BASE, as `robofrontier prepare` picks it.
-            from ..runtime.policy_env import apply_default
-            apply_default()
+            from ..runtime.policy_env import ENV_VAR, apply_default
+            if config['policy'].get('tool_mode', 'full') == 'robot_only':
+                os.environ[ENV_VAR] = 'off'  # As `robofrontier prepare`: no shell, so no Python environment.
+            else:
+                apply_default()
             prepare(ROOT/'runs/policy/batch', config)
             if (local/'STOP').exists():
                 request_stop(local)

@@ -1,11 +1,12 @@
 # Shared defaults for new runs. Secrets belong in the environment or .env.
-schema_version = 9
+schema_version = 10
 
 [policy]
 engine = "codex"                     # codex | claude
 profile = "luna"                     # An engine-specific model catalog entry
 effort = "high"
 topology = "adaptive"                # single | controller-worker | worker-worker | adaptive
+tool_mode = "full"                   # full | robot_only (the robot tool alone: no shell, code execution or file tools)
 
 [batch]
 parallel = 36

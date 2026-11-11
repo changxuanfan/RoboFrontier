@@ -51,7 +51,7 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
         harness=read(ROOT/'configs/harnesses/policy.json')
         harness.update(engine='codex',model=p['model'],effort=p['effort'],record_realtime_video=False)
         if harness_overrides:
-            allowed={'topology','startup_protocol','observation_image_profile','record_realtime_video','startup_timeout_s','render_device'}
+            allowed={'topology','startup_protocol','observation_image_profile','record_realtime_video','startup_timeout_s','render_device','tool_mode'}
             if set(harness_overrides)-allowed:raise ValueError('Unsupported harness overrides')
             harness.update(harness_overrides)
         if not harness_overrides and p.get('benchmark_topology') in ('hierarchical', 'peer'):
@@ -167,7 +167,8 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
         if verify_inputs(run):raise ValueError('Prepared code/inputs changed; prepare a new batch')
         key=launch['profile'].get('env_key')
         if key and not os.environ.get(key):raise ValueError('Missing credential environment variable: '+key)
-        receipt=runs_root()/'engineering/model-compatibility'/job['profile']/'report.json'
+        from ..runtime.tool_mode import receipt_name, of as tool_mode_of
+        receipt=runs_root()/'engineering/model-compatibility'/receipt_name(job['profile'],tool_mode_of(launch['profile']))/'report.json'
         if not receipt.is_file():raise ValueError('Run benchmark preflight for '+job['profile']+' before scored trials')
         checked=read(receipt)
         expected=__import__('hashlib').sha256(json.dumps(launch['profile'],sort_keys=True).encode()).hexdigest()
@@ -330,7 +331,8 @@ def main():
             key=selected.get('env_key')
             if key and not os.environ.get(key):raise ValueError('Set '+key+' before live preflight')
             scope='model-smoke' if args.smoke_only else 'model-compatibility'
-            target=runs_root()/'engineering'/scope/name;target.mkdir(parents=True,exist_ok=True)
+            from ..runtime.tool_mode import receipt_name, of as tool_mode_of
+            target=runs_root()/'engineering'/scope/receipt_name(name,tool_mode_of(selected));target.mkdir(parents=True,exist_ok=True)
             write_json(target/'launch.json',launch_config(selected,target))
             # A failed/interrupted new check must not leave an older pass usable
             # under the new provider/model fingerprint.

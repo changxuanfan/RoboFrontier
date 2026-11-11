@@ -3,7 +3,7 @@
 The options are listed here rather than taken from robofrontier/configuration.py, so a test
 using this checks the validator against what older files actually hold.
 """
-LATER_OPTIONS = {'runtime': ('codex_tool_backend',),
+LATER_OPTIONS = {'policy': ('tool_mode',), 'runtime': ('codex_tool_backend',),
                  'slurm': ('auth_mode', 'credential_store', 'egress_mode', 'egress_root', 'egress_wait_s', 'egress_pause_s')}
 
 

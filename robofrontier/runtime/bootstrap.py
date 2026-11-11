@@ -9,7 +9,7 @@ whole when they compact a long conversation.
 import json
 from pathlib import Path
 
-from . import layout as run_layout
+from . import layout as run_layout, tool_mode
 
 ENGINE_LINES = {
     'claude': ('To view an image listed in the task (initial_reference_images, robot_layout_image, '
@@ -18,6 +18,11 @@ ENGINE_LINES = {
               '(spawn_agent and similar); split work only through robot delegate.'),
 }
 ENGINE_LINES['antigravity'] = ENGINE_LINES['claude']
+# The last line of a robot_only run's first message, the same on every engine: the robot
+# tool is the role's only tool (runtime/tool_mode.py).
+ROBOT_ONLY_LINE = ('To view an image listed in the task (initial_reference_images, robot_layout_image, '
+                   'target.reference_image), call robot with op public_file and data {"path": "<listed path>"}. '
+                   'robot is your only tool: split work only through robot delegate.')
 # The first part of every policy turn's system prompt on both engines (system_prompt adds the
 # run's rules): it replaces Claude Code's and Codex's own coding-agent instructions, so both
 # models see the same text.
@@ -25,6 +30,35 @@ SYSTEM_PROMPT = ('You are a RoboFrontier policy agent. Follow the frozen public 
                  'the tool protocol and the evidence boundaries. Command only the robots assigned to your role, '
                  'use other tools within your permissions, and preserve original call IDs across uncertain results. Do not manage the model host, modify '
                  'the benchmark, or read private evaluation data.\n')
+ROBOT_ONLY_SYSTEM_PROMPT = SYSTEM_PROMPT.replace(
+    'use other tools within your permissions', 'use the robot tool, which is your only tool')
+assert ROBOT_ONLY_SYSTEM_PROMPT != SYSTEM_PROMPT
+# What a full run's messages say about the lessons file, and what a robot_only run's say instead.
+ROBOT_ONLY_WORDING = (
+    ('Reread the headings of the run\'s skills.md before acting; teammates may have added '
+     'entries since you were forked.',
+     'List the headings of the run\'s shared lessons before acting (robot op skills, data {"action":"headings"}); '
+     'teammates may have added entries since you were forked.'),
+    ('Teammates may have added to skills.md: list its headings again (grep \'^##\' skills.md).',
+     'Teammates may have added to the shared lessons: list their headings again (robot op skills, data '
+     '{"action":"headings"}).'),
+    ('your session, work note, messages, workspace and skills.md are kept',
+     'your session, work note, messages and the shared lessons are kept'),
+    ('your session, work note, messages, workspace and skills.md are as they were',
+     'your session, work note, messages and the shared lessons are as they were'),
+)
+
+
+def for_mode(text, mode):
+    """A frozen message in the wording of this run's tool mode."""
+    if mode == tool_mode.ROBOT_ONLY:
+        for full, robot_only in ROBOT_ONLY_WORDING:
+            text = text.replace(full, robot_only)
+        if 'skills.md' in text or 'grep' in text:
+            raise ValueError('A robot_only message still names a file or shell tool')
+    return text
+
+
 # First message of an adaptive delegate; hosts fill {{ACTOR}} and {{SCOPE}} (compact JSON
 # of robots, goal, done_when, constraints) from the runtime assignment.
 DELEGATE = ('Your current runtime role is {{ACTOR}}, a temporary delegate, not a standing per-robot Worker. '
@@ -121,12 +155,17 @@ def bootstrap_text(run, actor):
     lessons = run / run_layout.LAYOUTS[run_layout.CURRENT]['skills_file']
     lessons_line = ('Before acting, read the headings of ' + str(lessons) + ', the run\'s shared lessons; '
                     'teammates may add entries during the run.\n\n' if lessons.is_file() else '')
+    mode = tool_mode.of(harness)
+    if mode == tool_mode.ROBOT_ONLY:
+        lessons_line = ('Before acting, list the headings of the run\'s shared lessons with robot op skills and data '
+                        '{"action":"headings"}; teammates may add entries during the run.\n\n')
     startup = STARTUP[harness['startup_protocol']]
     text = ('This is a new, independent RoboFrontier trial in ' + str(run) + '. Your role is ' + actor + '.\n\n'
             'The run\'s rules are in your system prompt (also at ' + str(public / 'rules.md') + '). Your other '
             'public inputs follow in full, each under its path.\n\n' + '\n\n'.join(parts) + '\n\n--- end of inputs ---\n\n'
-            + (READABLE_ENV if (public / 'environment.md').is_file() else READABLE) + '\n\n' + lessons_line + startup + '\n\n'
-            + ENGINE_LINES[harness.get('engine', 'codex')] + '\n')
+            + (READABLE_ROBOT_ONLY if mode == tool_mode.ROBOT_ONLY else
+               READABLE_ENV if (public / 'environment.md').is_file() else READABLE) + '\n\n' + lessons_line + startup + '\n\n'
+            + (ROBOT_ONLY_LINE if mode == tool_mode.ROBOT_ONLY else ENGINE_LINES[harness.get('engine', 'codex')]) + '\n')
     if len(text.encode()) > MAX_BOOTSTRAP_BYTES:
         raise ValueError('Public inputs exceed the start message size limit')
     return text
@@ -140,13 +179,16 @@ READABLE = ('The same files stay readable on disk. Your filesystem permissions d
 READABLE_ENV = ('The same files stay readable on disk. Your filesystem permissions deny the folders that '
                 'hold this run but allow its public/ and workspace/ folders; the more specific entry wins. '
                 'Everything else in the run stays closed. Reread any of them with your file tools when needed.')
+READABLE_ROBOT_ONLY = ('The same files stay available. You have no file tools: read any of them again with robot '
+                       'op public_file, for example after a context gap.')
 MAX_BOOTSTRAP_BYTES = 400_000
 
 
 def system_prompt(run):
     """The frozen system prompt: the policy role statement, then this run's rules."""
     rules = (Path(run) / 'public/inputs/rules.md').read_text()
-    return SYSTEM_PROMPT + '\n' + rules.rstrip('\n') + '\n'
+    role = ROBOT_ONLY_SYSTEM_PROMPT if tool_mode.of_run(run) == tool_mode.ROBOT_ONLY else SYSTEM_PROMPT
+    return role + '\n' + rules.rstrip('\n') + '\n'
 
 
 def write_bootstraps(run):
@@ -155,6 +197,7 @@ def write_bootstraps(run):
     roles = json.loads((run / 'public/inputs/roles.json').read_text())['roles']
     folder = run / 'private/inputs/bootstrap'
     folder.mkdir()
+    mode = tool_mode.of_run(run)
     (folder / 'system.md').write_text(system_prompt(run))
     written = [folder / 'system.md']
     for actor, info in roles.items():
@@ -164,10 +207,10 @@ def write_bootstraps(run):
         written.append(target)
     if json.loads((run / 'public/inputs/roles.json').read_text())['topology'] == 'adaptive':
         target = folder / 'delegate.md'
-        target.write_text(DELEGATE)
+        target.write_text(for_mode(DELEGATE, mode))
         written.append(target)
-    (folder / 'resume.md').write_text(RESUME)
-    (folder / 'model-restart.md').write_text(MODEL_RESTART)
+    (folder / 'resume.md').write_text(for_mode(RESUME, mode))
+    (folder / 'model-restart.md').write_text(for_mode(MODEL_RESTART, mode))
     (folder / 'capacity-resume.md').write_text(CAPACITY_RESUME)
     (folder / 'quota-resume.md').write_text(QUOTA_RESUME)
     notice=folder/'network-resume.md'
