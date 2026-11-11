@@ -74,6 +74,8 @@ class StubModel(http.server.BaseHTTPRequestHandler):
             ('## Bash command sandbox','USD budget','The user hasn'))
         text,blocks='',[]
         for message in reversed(messages):
+            # Without built-in tools the CLI states its environment in a system-role message.
+            if message.get('role')=='system': continue
             content=message.get('content',[])
             if isinstance(content,str):
                 if not content.startswith(('USD budget','The user hasn')): text=content; break

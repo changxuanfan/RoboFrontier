@@ -22,7 +22,8 @@ command's result as JSON).
 | `factory`, `oracle` | [Factory rendering](factory/replay.md), [Oracle](oracle/README.md) |
 
 `config`, `plan`, `prepare`, `doctor`, `preflight` and `slurm-submit` accept the selection
-options `--engine {codex,claude}`, `--profile`, `--effort`, `--topology`, `--parallel`,
+options `--engine {codex,claude}`, `--profile`, `--effort`, `--topology`,
+`--tool-mode {full,robot_only}`, `--parallel`,
 `--render {nvidia,cpu,native}`, `--level {1,2,3}`, `--min-arms`, `--cases` and `--families`.
 
 ## Installation
@@ -44,7 +45,7 @@ version (`robofrontier/runtime/versions.py`: Codex 0.165.0, Claude Code 2.1.316)
 `robofrontier.toml` holds the defaults. A partial user TOML (`--config`) overrides the settings
 it names, and command-line options override both. Unknown fields, wrong types, non-finite
 intervals and invalid limits are errors. Credentials go in `.env` or the environment, never in
-TOML. The current `schema_version` is 9; a partial TOML may omit it. A prepared batch keeps its
+TOML. The current `schema_version` is 10; a partial TOML may omit it. A prepared batch keeps its
 frozen configuration whatever version it has.
 
 ```sh
@@ -62,6 +63,7 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 | `policy.profile` | Entry in the engine's section of `configs/models.json`; `--engine claude` without a profile selects `haiku_subscription_token` |
 | `policy.effort` | Requested reasoning effort; must match the preflight receipt |
 | `policy.topology` | `single`, `controller-worker`, `worker-worker` or `adaptive` |
+| `policy.tool_mode` | `full` (default) or `robot_only`: the robot tool alone ([robot-only runs](running/robot-only.md)) |
 | `batch.parallel` | Runs at once, 1 to 36 |
 | `batch.startup_interval_s` | Gap between host launches (0.3 s); never between robot calls |
 | `batch.task_wall_limit_s` | Active time per run, 86,400 s ([how it is counted](running/continuation.md#time)); at most 86,400 for Claude Code |

@@ -8,9 +8,11 @@ const tools=[
    inputSchema:{type:'object',properties:{path:{type:'string'}},required:['path'],additionalProperties:false}}
 ];
 function enabled(launch){return (launch.tool_backend??launch.profile?.tool_backend??'native')==='landlock-v1';}
+// A robot_only run (runtime/tool_mode.py): Codex's own tools are off and no file tools replace them.
+function robotOnly(launch){return (launch.tool_mode??launch.profile?.tool_mode??'full')==='robot_only';}
 function subscription(launch){return (launch.profile?.provider??launch.provider)==='openai';}
 async function admit(rpc,launch){
-  if(!enabled(launch))return;
+  if(!enabled(launch)&&!robotOnly(launch))return;
   await requireNoMcpServers(rpc);
   const {config}=await rpc.call('config/read',{});
   const flags=['shell_tool','view_image','shell_snapshot','unified_exec','apps','goals','plugins',
@@ -32,7 +34,7 @@ async function admit(rpc,launch){
       models[0].multi_agent_version!=='disabled'||models[0].node_repl_disabled!==true||
       models[0].tool_mode!==null||models[0].experimental_supported_tools?.length!==0)
     throw new Error('Codex broker model metadata is not restricted');
-  if(subscription(launch)){
+  if(enabled(launch)&&subscription(launch)){
     const account=await rpc.call('account/read',{refreshToken:false});
     if(account.account?.type!=='chatgpt')throw new Error('Codex subscription broker requires native ChatGPT authentication');
   }
@@ -71,4 +73,4 @@ function call(run,python,tool,args){
     });
   });
 }
-module.exports={tools,enabled,subscription,admit,call};
+module.exports={tools,enabled,robotOnly,subscription,admit,call};

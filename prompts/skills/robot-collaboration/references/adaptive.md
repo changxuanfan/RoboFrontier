@@ -20,7 +20,12 @@ Call `return_task` with `outcome` (`completed`, `failed` or `cancelled`) and `re
 
 Include useful run-local lessons and their evidence/limits in the return report, or point to its entry in the run's `skills.md`. Controller selects what to adopt for further work. A fresh fork inherits the parent's history; point it to current adopted lessons or selected permitted references and mark superseded advice. This transfers experience without keeping a returned delegate active or installing a global Skill.
 
+<!-- tools:full -->
 Controller can recover its own delegate status with work. To read a returned report on Claude, call work with {"delegate_id":"Delegate_..."}; the report is returned inline. In Codex, use the authorized result reference to read the public report file. Reports include the assigned scope and are Agent-produced evidence, not private evaluator state. Other roles read only results referenced to them through their permitted tools/messages.
+<!-- /tools -->
+<!-- tools:robot_only -->
+Controller can recover its own delegate status with work. To read a returned report, call work with {"delegate_id":"Delegate_..."}; the report is returned inline as delegate_report. Reports include the assigned scope and are Agent-produced evidence, not private evaluator state. Other roles read only results referenced to them through their permitted tools/messages. Images a report refers to are read with public_file.
+<!-- /tools -->
 
 A deliberate pause or wait retains this delegation and robot ownership; return_task closes it. Follow the communication reference's pause/confirmation rules. A delegate is temporary, not a standing per-robot Worker. If choosing to end a native reply while the scope is still needed, save the pending condition and a finite self-selected after_s; this optional recovery path is not a prerequisite to normal completion. The deadline can resume that active scope once when the session is idle and execution permits it. Returning control does not open the gripper or restore a home pose; report payload/robot conditions and remaining commitments.
 
@@ -28,4 +33,9 @@ An observed idle/error/attention native turn without return_task generates one d
 
 For a platform error with a freshly confirmed failed native turn, a new addressed Controller message can start a continuation only after physical calls are known settled. Saved timers and old work alone do not retry the error. If that continuation fails again, the existing request does not automatically retry it; inspect the new failure before choosing another request or reporting it for operator review. Message delivery is not permission to disregard an existing pause or replay motion.
 
+<!-- tools:full -->
 Controller's work returns compact delegate_status with session timestamps, saved work metadata and active executions. work with delegate_id selects one own delegate's note/latest execution, including a returned delegate's result reference. A note is Agent evidence, not world truth. In a Codex host that exposes native read-only inspection, Controller may use read_thread/wait_threads on its own recorded delegate IDs for a question not resolved there; this does not authorize native creation, settings changes or messaging outside the task protocol. Prefer compact status for monitoring. Native read_thread can return long Agent messages despite output-truncation options: present selected fields/snippets rather than its entire result. Combine chosen RGB and robot feedback with these facts to investigate unexpected progress and the next parallel work. No complete session history is injected automatically.
+<!-- /tools -->
+<!-- tools:robot_only -->
+Controller's work returns compact delegate_status with session timestamps, saved work metadata and active executions. work with delegate_id selects one own delegate's note/latest execution, including a returned delegate's result reference. A note is Agent evidence, not world truth. Combine chosen RGB and robot feedback with these facts to investigate unexpected progress and the next parallel work. No complete session history is injected automatically.
+<!-- /tools -->

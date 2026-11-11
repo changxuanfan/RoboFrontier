@@ -65,6 +65,12 @@ def codex_home(env=None):
 def launch_config(p, folder, run_dir=None):
     from .tool_backend import selected, fingerprint
     backend = selected(p)
+    # A robot_only role keeps the robot tool alone (runtime/tool_mode.py): Codex's own tools
+    # are switched off exactly as for the tool worker, and no file tools replace them.
+    from robofrontier.runtime import tool_mode
+    robot_only = tool_mode.of(p) == tool_mode.ROBOT_ONLY
+    if robot_only and backend != 'native':
+        raise ValueError('A robot_only run has no file tools to confine: use the native tool backend')
     provider = p['provider']
     args = []
     # Account apps and goals are personal Codex features, not task tools, and no
@@ -74,7 +80,7 @@ def launch_config(p, folder, run_dir=None):
               'model_auto_compact_token_limit':p['auto_compact_token_limit'],
               'web_search':'disabled', 'features.multi_agent':False,
               'features.apps':False, 'features.goals':False, 'project_doc_max_bytes':0}
-    if backend == 'landlock-v1':
+    if backend == 'landlock-v1' or robot_only:
         if os.environ.get('ROBOFRONTIER_EGRESS_INSTANCE') and p.get('runner_backend') == 'slurm-managed-v1':
             values['features.respect_system_proxy'] = True
         for flag in ('shell_tool', 'view_image', 'shell_snapshot', 'unified_exec', 'plugins',
@@ -82,7 +88,7 @@ def launch_config(p, folder, run_dir=None):
                      'computer_use', 'code_mode', 'code_mode_only', 'code_mode_host', 'multi_agent_v2'):
             values['features.'+flag] = False
         values.update({'agents.enabled': False, 'tools.experimental_request_user_input.enabled': False})
-        if p['provider'] == 'openai':
+        if p['provider'] == 'openai' and backend == 'landlock-v1':
             values['forced_login_method'] = 'chatgpt'
             # Built-in provider IDs cannot be overridden in CLI 0.165.0. Keep
             # native AuthManager/account refresh, with its normal ChatGPT URL,
@@ -146,7 +152,7 @@ def launch_config(p, folder, run_dir=None):
     model['availability_nux']=None
     model['service_tiers']=[];model['additional_speed_tiers']=[]
     model['available_access_programs']=None
-    if backend == 'landlock-v1':
+    if backend == 'landlock-v1' or robot_only:
         model.update(apply_patch_tool_type=None, multi_agent_version='disabled')
     target=folder/'models.json';write_json(target,{'models':[model]})
     values['model_catalog_json']=str(target.resolve())
@@ -171,7 +177,8 @@ def launch_config(p, folder, run_dir=None):
                 args.extend(['-c','shell_environment_policy.set.'+name+'='+json.dumps(value)])
     return dict(model=p['model'],provider=provider,effort=p['effort'],args=args,
                 profile=p,context_window=p['context_window'],auto_compact_token_limit=p['auto_compact_token_limit'],
-                tool_backend=backend,tool_backend_sha256=fingerprint(p),model_catalog=str(target.resolve()))
+                tool_backend=backend,tool_backend_sha256=fingerprint(p),model_catalog=str(target.resolve()),
+                **({'tool_mode': tool_mode.ROBOT_ONLY} if robot_only else {}))
 
 
 def initialize_codex_home(launch, folder, timeout_s=90, *, env=None):

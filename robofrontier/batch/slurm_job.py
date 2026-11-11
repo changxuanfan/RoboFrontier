@@ -352,8 +352,11 @@ def execute(local):
     try:
         with subscription_environment(config, local, on_failure=lambda: request_stop(local)):
             # The policy environment under ROBOFRONTIER_POLICY_ENV_BASE, as `robofrontier prepare` picks it.
-            from ..runtime.policy_env import apply_default
-            apply_default()
+            from ..runtime.policy_env import ENV_VAR, apply_default
+            if config['policy'].get('tool_mode', 'full') == 'robot_only':
+                os.environ[ENV_VAR] = 'off'  # As `robofrontier prepare`: no shell, so no Python environment.
+            else:
+                apply_default()
             prepare(ROOT/'runs/policy/batch', config)
             if (local/'STOP').exists():
                 request_stop(local)

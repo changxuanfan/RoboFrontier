@@ -15,7 +15,7 @@ TOPOLOGIES = {
 }
 SCHEMA = {
     'schema_version': int,
-    'policy': dict.fromkeys(('engine', 'profile', 'effort', 'topology'), str),
+    'policy': dict.fromkeys(('engine', 'profile', 'effort', 'topology', 'tool_mode'), str),
     'batch': {'parallel': int, 'startup_interval_s': float, 'task_wall_limit_s': float, 'startup_timeout_s': float},
     'selection': {'families': list, 'cases': list, 'level': int, 'min_arms': bool},
     'render': {'device': str, 'observation_profile': str, 'record_realtime_video': bool},
@@ -104,6 +104,8 @@ def load_configuration(path=None, overrides=None, *, host=None):
     runtime = result.get('runtime', {})
     if runtime.get('codex_tool_backend') == 'auto':
         linux = host in ('slurm', 'container') or (host is None and sys.platform.startswith('linux'))
+        # A robot_only role has no file or shell tool to confine, so no tool worker is used.
+        linux = linux and result['policy'].get('tool_mode', 'full') != 'robot_only'
         # Codex's own sandbox on macOS; on Linux the tool worker under Landlock and seccomp,
         # the backend scripts/check_policy_env.py checks there.
         runtime['codex_tool_backend'] = 'landlock-v1' if linux and result['policy']['engine'] == 'codex' else 'native'
@@ -125,7 +127,7 @@ def detected_render_device(system=None):
 
 
 def _configuration_shape(version):
-    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7, 8, 9):
+    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10):
         raise ValueError('Unsupported configuration schema_version')
     # Older frozen configurations remain exact. Do not append new Factory or
     # Oracle defaults to an already-hashed experiment configuration.
@@ -143,6 +145,8 @@ def _configuration_shape(version):
             shape['slurm'].pop(field)
     if version < 8:
         shape['slurm'].pop('egress_pause_s')
+    if version < 10:
+        shape['policy'].pop('tool_mode')
     return shape
 
 
@@ -175,6 +179,11 @@ def validate_configuration(config):
     choice('policy', 'engine', ('codex', 'claude'))
     choice('policy', 'topology', TOPOLOGIES)
     choice('policy', 'effort', ('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
+    robot_only = False
+    if version >= 10:
+        from .runtime.tool_mode import MODES, ROBOT_ONLY
+        choice('policy', 'tool_mode', MODES)
+        robot_only = config['policy']['tool_mode'] == ROBOT_ONLY
     from re import fullmatch
     if not fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', config['policy']['profile']):
         raise ValueError('Invalid policy.profile identifier')
@@ -202,6 +211,11 @@ def validate_configuration(config):
         choice('runtime', 'codex_tool_backend', ('native', 'landlock-v1'))
         if config['policy']['engine'] != 'codex' and config['runtime']['codex_tool_backend'] != 'native':
             raise ValueError('codex_tool_backend applies only to the Codex engine')
+        if robot_only and config['runtime']['codex_tool_backend'] != 'native':
+            # landlock-v1 confines policy_exec and policy_image, which a robot_only role does not
+            # have; the Slurm subscription route requires that backend and is not supported yet.
+            raise ValueError('policy.tool_mode = "robot_only" uses codex_tool_backend = "native": '
+                             'there are no file or shell tools to confine')
     choice('container', 'seccomp_profile', ('default', 'unconfined'))
     choice('evidence', 'archive_format', ('zip',))
     if config['evidence']['auto_archive'] and not config['evidence']['auto_collect']:

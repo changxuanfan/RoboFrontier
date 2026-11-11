@@ -7,7 +7,10 @@ administrative methods are never reachable through a policy connection.
 POLICY_OPS = frozenset(('public_image', 'ready', 'robot_model', 'check_motion', 'send', 'inbox', 'wait_events',
                         'history', 'work', 'delegate', 'return_task', 'team', 'checkpoint', 'yield',
                         'observe', 'stop', 'move', 'gripper', 'action_batch', 'recover_action', 'job', 'finish',
-                        'pending'))
+                        'pending',
+                        # Only a robot_only run accepts these (runtime/tool_mode.py); the runtime
+                        # refuses them elsewhere.
+                        'public_file', 'skills'))
 
 
 def check_request(op, data):

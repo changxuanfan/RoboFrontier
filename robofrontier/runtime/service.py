@@ -19,6 +19,7 @@ from .setup import verify_inputs, write_json
 from .delegation import Delegations
 from ..tasks.scene import camera_names
 from .stop_diagnostics import stop_diagnostics
+from . import tool_mode, public_files, run_skills
 from ..tasks.config import action_limits, execution_timing
 
 
@@ -288,6 +289,22 @@ class RuntimeService:
         self.roles=tuple(self.store.agents())
         self.policy_roles=tuple(a for a in self.roles if self.store.agent(a)['kind']!='manager')
 
+    def delegate_report(self, selected):
+        """A robot_only Controller has no file tool for a returned delegate's report, so
+        `work` with that delegate's ID carries the report itself."""
+        if selected is None or tool_mode.of(self.config) != tool_mode.ROBOT_ONLY:
+            return {}
+        path = self.directory/'public/results'/(selected+'.json')
+        if not path.is_file():
+            return {}
+        try:
+            report = json.loads(path.read_text())
+        except (OSError, ValueError):
+            return {'delegate_report_unavailable': True}
+        if not isinstance(report, dict) or report.get('actor') != selected:
+            return {'delegate_report_unavailable': True}
+        return {'delegate_report': report}
+
     def selected_cameras(self, cameras, allow_empty=False):
         allowed = set(camera_names(self.task))
         if (not isinstance(cameras,list) or (not cameras and not allow_empty)
@@ -447,7 +464,18 @@ class RuntimeService:
                                    **({'delegations':Delegations(self.store).active(),
                                        'delegate_status':Delegations(self.store).status(actor,selected),
                                        'robot_owners':Delegations(self.store).owners()}
-                                      if parent else {})})
+                                      if parent else {}),
+                                   **self.delegate_report(selected)})
+            elif op in tool_mode.ROBOT_ONLY_OPS:
+                if tool_mode.of(self.config) != tool_mode.ROBOT_ONLY:
+                    raise ValueError('Unknown tool operation')
+                if op == 'public_file':
+                    self.respond(job, {'public_file': public_files.read(self.directory, data)})
+                else:
+                    result = run_skills.handle(self.directory, actor, data)
+                    if result.get('written'):
+                        self.store.event('RUN_SKILL_WRITTEN', actor, {'entry': result['entry'], 'heading': result['heading']})
+                    self.respond(job, {'skills': result})
             elif op == 'delegate':
                 batch=Delegations(self.store).create(actor,job['id'],data['scopes'])
                 self.register_delegates(batch)

@@ -143,9 +143,11 @@ def require_outside_tmp(run):
                              'slurm.scratch_root and TMPDIR under /var/tmp, for example); found %s' % (name, path))
 
 
-def record(run, environment=None, unchecked=False, **kwargs):
-    """What a prepared run freezes: the table, network and web search choices."""
-    environment = environment or policy_env.selected()
+def record(run, environment=None, unchecked=False, *, no_environment=False, **kwargs):
+    """What a prepared run freezes: the table, network and web search choices.
+
+    `no_environment` is a robot_only run: no shell runs, so no Python environment is frozen."""
+    environment = None if no_environment else environment or policy_env.selected()
     if environment is None:
         return {'schema': 'robofrontier.policy-access.v1', 'filesystem': table(run, **kwargs),
                 'network': NETWORK, 'web_search': WEB_SEARCH}

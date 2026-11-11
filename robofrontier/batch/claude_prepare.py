@@ -94,7 +94,8 @@ def exposed_api_keys(profiles, bash_isolation):
 
 
 def prepare_batch(output, names, families=None, cases=None, level=None, min_arms=False, catalog=CATALOG, topology='adaptive', record_video=False,
-                  *, wall_limit_s=86400, observation_image_profile=None, startup_timeout_s=None, render_device=None):
+                  *, wall_limit_s=86400, observation_image_profile=None, startup_timeout_s=None, render_device=None,
+                  tool_mode='full'):
     """Prepare one run per profile and case, frozen for robofrontier/batch/claude_batch.py."""
     from robofrontier.tasks.families import prepare, policy_task
     from robofrontier.tasks.families import dial_code
@@ -149,6 +150,7 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
         if observation_image_profile is not None:cfg['observation_image_profile']=observation_image_profile
         if startup_timeout_s is not None:cfg['startup_timeout_s']=startup_timeout_s
         if render_device is not None:cfg['render_device']=render_device
+        if tool_mode != 'full':cfg['tool_mode']=tool_mode
         cfg_path = output / 'profiles' / name / 'harness.json'
         write_json(cfg_path, cfg)
         for case in selected:
