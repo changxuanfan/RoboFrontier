@@ -30,17 +30,15 @@ scene file is byte-identical to R14. Its builder, `scripts/build_mosaic_pitch.py
 R14 (81 mm) is only in the archive tag `archive/pre-cleanup-20261110`. New Factory imports use the actual
 policy/Oracle recording's own frozen scene, source hashes, motion, and events.
 
-Historical purpose files, including `benchmark/mosaic/delivery.json`
-and `selection.json`, retain their original R13 Oracle/R14 future-policy split
-for provenance. They do not override unified new-run selection. The nine original
+The historical purpose files `benchmark/mosaic/delivery.json` and
+`benchmark/mosaic/selection.json` (in the tag `archive/pre-cleanup-20261110`) record the
+original R13 Oracle/R14 future-policy split. They do not affect new-run selection. The nine original
 complete Oracle witnesses and their Factory recordings use R13 stock colors;
 their independent audits covered 1,566/1,566 cells. Preserve those recordings
 with their original source instead of replaying their poses into R14 colors.
-The delivery metadata now uses schema `robofrontier.mosaic-delivery.v2`: its
-`timeline_index` points to the checksum-pinned original video index. Unified
-release `historical_edit` entries can use a `mosaic_video_index` reference;
-The removed `prepare_factory_edits` script (2026-11-10) resolved the case through
-that index and verified both index and original edit hashes. Legacy direct edit paths remain supported.
+That delivery metadata (schema `robofrontier.mosaic-delivery.v2`) has a `timeline_index`
+pointing to the checksum-pinned original video index; the removed `prepare_factory_edits`
+script (2026-11-10) resolved cases through it and verified the index and edit hashes.
 Original non-English filenames stay in the immutable evidence, not current
 configuration strings. No historical file is renamed or rewritten.
 New R14 Oracle attempts have separate qualification; the old success does not
@@ -108,10 +106,9 @@ review packager (`scripts/mosaic.py` with `robofrontier/suite/mosaic_delivery.py
 were removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the
 [cleanup log](../cleanup-20261110.md)).
 
-The default family check inspects its R14 policy entries without creating a run
-or calling a model. Its explicit `--purpose oracle` inspects Legacy R13 witnesses;
-it is not the current unified Oracle scene selector. Package output must be new;
-this is a review export, not a geometry rebuild or policy launch.
+That check inspected the R14 policy entries (or, with `--purpose oracle`, the R13
+witnesses) without creating a run or calling a model; it was a review export, not a
+geometry rebuild or policy launch.
 
 The historical R14 package is
 `outputs/policy-packages/mosaic-r14-local-colours-20261027`; its `previews/index.html`

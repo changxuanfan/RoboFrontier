@@ -60,10 +60,13 @@ test('an active turn cannot be steered by the scheduler',async()=>{
   assert.equal(called,false);
 });
 test('cold resume reopens only working roles and never returned delegates',async()=>{
-  const resumed=[],sent=[];
-  const host={run:'/tmp/stopped-run',launch:{model:'stub',provider:'openai'},actors:new Map(),
-    hostPath:()=>'/tmp/stopped-run/workspace',event:()=>{},
-    rpc:{call:async(method,p)=>{resumed.push(p.threadId);}},
+  const resumed=[],sent=[],run=fs.mkdtempSync(path.join(os.tmpdir(),'stopped-run-'));
+  fs.mkdirSync(path.join(run,'private/inputs/bootstrap'),{recursive:true});
+  fs.writeFileSync(path.join(run,'private/inputs/bootstrap/system.md'),'frozen system');
+  test.after(()=>fs.rmSync(run,{recursive:true,force:true}));
+  const host={run,launch:{model:'stub',provider:'openai'},actors:new Map(),
+    hostPath:()=>path.join(run,'workspace'),event:()=>{},
+    rpc:{call:async(method,p)=>{resumed.push(p.threadId);assert.equal(p.baseInstructions,'frozen system');}},
     send:async(id,message)=>sent.push([id,message]),
     admin:async(op)=>op==='snapshot'?{agents:{
       Controller:{kind:'controller',thread_id:'parent'},
@@ -79,18 +82,14 @@ test('robot transport cannot select another role connection',()=>{
   assert.equal(robotTool.name,'robot');
   assert.equal(robotTool.inputSchema.properties.connection,undefined);
 });
-test('direct bootstrap names shared rules and does not promise all drop counters',()=>{
-  const prompt=PolicyHost.prototype.bootstrap.call({run:'/tmp/test-run',wallLimit:300},'Controller');
-  assert.match(prompt,/policy-rules\.md/);
-  assert.match(prompt,/Supported process events follow their task-specific detection rules/);
-  assert.match(prompt,/do not automatically veto completion/);
-  assert.match(prompt,/without waiting for another START/);
-});
-test('frozen legacy roles retain the readiness barrier and read their work after wake',()=>{
-  const prompt=PolicyHost.prototype.bootstrap.call({run:'/tmp/test-run',wallLimit:36000},'A','ready_barrier_v1');
-  assert.match(prompt,/call robot ready/);
-  assert.match(prompt,/call robot work/);
-  assert.doesNotMatch(prompt,/The experiment has STARTED and the task clock is running/);
+test('bootstrap sends the frozen start message and fails clearly without one',()=>{
+  const run=fs.mkdtempSync(path.join(os.tmpdir(),'codex-bootstrap-'));
+  try {
+    fs.mkdirSync(path.join(run,'private/inputs/bootstrap'),{recursive:true});
+    fs.writeFileSync(path.join(run,'private/inputs/bootstrap/Controller.md'),'frozen start');
+    assert.equal(PolicyHost.prototype.bootstrap.call({run},'Controller'),'frozen start');
+    assert.throws(()=>PolicyHost.prototype.bootstrap.call({run},'A'),/Missing frozen bootstrap message/);
+  } finally { fs.rmSync(run,{recursive:true,force:true}); }
 });
 test('capacity recovery resumes a started task with the frozen capacity notice',async()=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'capacity-retry-'));

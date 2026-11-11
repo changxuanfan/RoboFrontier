@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "topology": "hierarchical",
+  "startup_protocol": "direct_team_v3",
   "manager": "Meta",
   "coordinator": "Controller",
   "model": "gpt-6-luna",

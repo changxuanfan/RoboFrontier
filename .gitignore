@@ -12,9 +12,7 @@ __pycache__/
 /outputs
 /docs/generated
 /configs/evaluations/private
-/.deepeval/
 /.oracle-deps/
-/.codex-luna/
 /.codex-tools/
 /.robofrontier/
 /.claude/

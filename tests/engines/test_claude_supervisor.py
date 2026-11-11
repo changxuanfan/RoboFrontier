@@ -5,9 +5,8 @@ from robofrontier.engines.claude.supervisor import CentralizedSupervisor
 
 
 class Store:
-    def __init__(self): self.data = {'lifecycle': 'prepared', 'dispatch_paused': False}; self.ready = False
+    def __init__(self): self.data = {'lifecycle': 'prepared', 'dispatch_paused': False}
     def get(self, key, default=None): return self.data.get(key, default)
-    def agent(self, actor): return {'ready': self.ready}
 
 
 class Host:
@@ -25,8 +24,9 @@ class Policy:
     def __init__(self):
         self.store = Store(); self.host = Host(); self.dispatcher = None; self.binds = 0; self.cycles = 0
     def bind_and_bootstrap(self):
+        # Direct start: the world is running before the first model input.
         self.binds += 1; self.dispatcher = Dispatcher(); self.host.state = 'active'
-    def start_when_ready(self): self.store.data.update(lifecycle='running', start_at=self.now())
+        self.store.data.update(lifecycle='running', start_at=self.now())
     def cycle(self): self.cycles += 1; return {'paused': False}
     def stop(self): self.host.stopped = True; self.host.state = 'unknown'
 
@@ -127,9 +127,9 @@ class SupervisorTests(unittest.TestCase):
         p2.bind_and_bootstrap = bind2
         self.assertEqual(self.supervisor(p2, lambda: None).run()['reason'], 'dispatch_paused')
 
-    def test_ready_then_start_dispatch_wall_limit_and_seal(self):
+    def test_direct_start_dispatch_wall_limit_and_seal(self):
         p = Policy()
-        def tick(): p.host.state = 'idle'; p.store.ready = True
+        def tick(): p.host.state = 'idle'
         supervisor = self.supervisor(p, tick)
         result = supervisor.run()
         self.assertEqual(result['reason'], 'wall_limit')
@@ -138,7 +138,10 @@ class SupervisorTests(unittest.TestCase):
         with self.assertRaises(ValueError): supervisor.run()
 
     def test_startup_timeout_never_starts_or_dispatches(self):
-        p = Policy(); result = self.supervisor(p, lambda: None).run()
+        p = Policy()
+        def bind(): p.dispatcher = Dispatcher(); p.host.state = 'active'
+        p.bind_and_bootstrap = bind
+        result = self.supervisor(p, lambda: None).run()
         self.assertEqual(result['reason'], 'startup_timeout')
         self.assertFalse(result['started']); self.assertEqual(p.cycles, 0)
         self.assertTrue(p.host.stopped)
@@ -154,7 +157,6 @@ class SupervisorTests(unittest.TestCase):
             self.now += 3
             p.host.state = 'active'
         p.bind_and_bootstrap = bind
-        p.start_when_ready = lambda: self.fail('direct start must not wait for READY')
         result = supervisor.run()
         self.assertEqual(result['reason'], 'wall_limit')
         self.assertEqual(self.now, 4)
@@ -205,7 +207,8 @@ class SupervisorTests(unittest.TestCase):
         p = Policy()
         result = self.supervisor(p, lambda: setattr(p.host, 'state', 'unknown')).run()
         self.assertEqual(result['reason'], 'session_unknown')
-        self.assertEqual(p.binds, 1); self.assertEqual(p.cycles, 0)
+        # One cycle ran while the turn was active; none after it became unknown.
+        self.assertEqual(p.binds, 1); self.assertEqual(p.cycles, 1)
 
     def test_unknown_budget_failure_preserves_bounded_session_evidence(self):
         p=Policy()

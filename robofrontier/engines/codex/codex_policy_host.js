@@ -10,9 +10,13 @@ const fileTools = require('./tool_broker');
 const {runMetaDispatcher} = require('./meta_dispatcher');
 const sleep = ms => new Promise(resolve=>setTimeout(resolve,ms));
 const read = file=>JSON.parse(fs.readFileSync(file,'utf8'));
-// Frozen at preparation by robofrontier/runtime/bootstrap.py; absent from runs prepared earlier.
+// Frozen at preparation by robofrontier/runtime/bootstrap.py. frozenText returns null for an
+// optional notice the run lacks; requiredText fails for a start or system message.
 const frozenText=(run,name)=>{const file=path.join(run,'private/inputs/bootstrap',name);
   return fs.existsSync(file)?fs.readFileSync(file,'utf8'):null;};
+const requiredText=(run,name)=>{const text=frozenText(run,name);
+  if (text===null) throw new Error('Missing frozen bootstrap message: '+path.join(run,'private/inputs/bootstrap',name));
+  return text;};
 // Capacity recovery, the same policy as robofrontier/engines/claude/recovery.py: at most 3
 // consecutive resumes of a session, 10/20/40 s apart plus a 0-5 s jitter fixed by the
 // session ID (so many runs do not retry together); a completed turn resets the count.
@@ -23,7 +27,6 @@ const STARTUP_TIMEOUT_S=600;
 // world is already frozen, so existing turns may write their final reply before closing.
 const FINISH_TURN_GRACE_MS=30000;
 const capacityDelayMs=(attempt,id)=>10000*2**attempt+[...String(id)].reduce((n,c)=>n+c.charCodeAt(0),0)%5000;
-const LEGACY_SYSTEM_PROMPT='You are a RoboFrontier policy agent running in Codex. Follow the frozen public task, current role, tool protocol and evidence boundaries. Use your assigned robot tools. Preserve original call IDs across uncertain results. Do not manage the model host, modify the benchmark, or read private evaluation data.';
 function toolFailure(callId, stdout) {
   let detail;
   try { if (typeof stdout==='string' && stdout.length<=16384) detail=JSON.parse(stdout); } catch {}
@@ -335,17 +338,8 @@ class PolicyHost {
       this.event({event:'capacity_retry',thread_id:id,failed_turn_id:t.id,attempt:attempt+1});
     }
   }
-  bootstrap(actor, startupProtocol='direct_controller_v2') {
-    const frozen=frozenText(this.run,actor+'.md');
-    if (frozen!==null) return frozen;
-    return `Run a fresh, independent RoboFrontier experiment. Run directory: ${this.run}. Current role: ${actor}.
-Read this run's public/inputs/common.md, policy-rules.md, task.json, roles/${actor}.md, skill/SKILL.md, skill/references/tools.md and skill/references/communication.md; read skill/references/adaptive.md only in adaptive mode. Use this task's public inputs, your own work notes and authorized images.
-CLI transport: use the bound robot tool. Its op/data match the frozen Skill's role API. Omit outer call_id for a new request; the response returns its ID. To query an existing action, issue a new job request with the original action ID in data.call_id. For an uncertain result, retry only the same outer ID with identical op/data. Select returned cameras with views. The tool binds your own connection and returns complete JSON and actual RGB image content; a path alone is not an observation. After permitted local image analysis or other non-robot work, refresh your inbox with robot inbox.
-${startupProtocol==='ready_barrier_v1' ? 'Legacy startup: read the public task and role, call robot ready, save waiting state and end this startup turn. On the post-START continuation, call robot work to restore your work and continue within your role.' : 'The experiment has STARTED and the task clock is running. Read the task, view its initial images or use robot observe, then choose your own plan and actions within your assigned role. You may call robot ready for capabilities and limits; continue after its response without waiting for another START. In adaptive mode only, choose bounded forks through robot delegate when useful.'}
-Scoring version terminal_outcome_v2: completion follows the task's published conditions. Supported process events follow their task-specific detection rules and are reported separately; they do not automatically veto completion. Observe, recover and continue after problems. Relay requires an actual released payload supported within GOAL tolerances; an airborne handover record is not a separate final-completion gate.
-Follow policy-rules.md: continue observing, acting and recovering while unfinished. The host enforces the time limit. On pause, stop, run_ended or budget exhaustion, stop new work immediately. Propose finish when the task is complete or permitted evidence establishes that recovery is no longer possible.
-Use your assigned native session and bound robot tools. Read public task evidence within your role; your connection is for authentication only. Keep experience local to this run. Oracle solutions, other trials, private scene/XML, private evaluation and engineering source are outside policy evidence. Preserve the benchmark, physics and harness.
-`;
+  bootstrap(actor) {
+    return requiredText(this.run,actor+'.md');
   }
   // After a normal finish, wait up to the grace for replies already in progress. No
   // dispatch or physics happens here. Returns whether every turn settled.
@@ -365,21 +359,19 @@ Use your assigned native session and bound robot tools. Read public task evidenc
     } catch(error) {this.event({event:'finish_drain_error',message:error.message});return false;}
   }
   async startInitialRoles(roles, startupProtocol) {
-    const direct=['direct_controller_v2','direct_team_v3'].includes(startupProtocol);
-    if (!direct && startupProtocol!=='ready_barrier_v1') throw new Error('Unknown startup protocol');
+    if (!['direct_controller_v2','direct_team_v3'].includes(startupProtocol)) throw new Error('Unknown startup protocol');
     const policy=Object.entries(roles).filter(([,info])=>info.kind!=='manager');
     if (!policy.length || (startupProtocol==='direct_controller_v2' &&
         (policy.length!==1 || policy[0][0]!=='Controller'))) throw new Error('Unexpected initial policy roles');
     const bound=[];
     for (const [actor] of policy) {
       if (this.stopRequested()) throw new Error('Stop requested during initial session setup');
-      // A run with a frozen access table runs under its permission profile from launch;
-      // a thread `sandbox` would replace that profile, so only earlier runs send one.
-      const system=frozenText(this.run,'system.md');
+      // The run's permission profile applies from launch; a thread `sandbox` would replace it.
+      const system=requiredText(this.run,'system.md');
       const result=await this.rpc.call('thread/start',{model:this.launch.model,modelProvider:this.launch.provider,
         cwd:this.hostPath('policy_cwd'),approvalPolicy:'never',ephemeral:false,
         dynamicTools:[robotTool,...(fileTools.enabled(this.launch)?fileTools.tools:[])],
-        ...(system===null?{sandbox:'workspace-write'}:{}),baseInstructions:system??LEGACY_SYSTEM_PROMPT,
+        baseInstructions:system,
         threadSource:'robofrontier-benchmark',config:{web_search:'disabled','features.multi_agent':false}},STARTUP_ACK_MS);
       const id=result.thread.id; this.actors.set(id,actor);
       this.event({event:'role_created',actor,thread_id:id,provider:this.launch.provider,model:this.launch.model});
@@ -387,17 +379,14 @@ Use your assigned native session and bound robot tools. Read public task evidenc
       const resultBind=await this.bindInitialRole(actor,id);
       if (!resultBind.bound) throw new Error('Initial role binding was not confirmed');
       bound.push({actor,id});
-      if (!direct) await this.send(id,this.bootstrap(actor,startupProtocol));
     }
-    if (direct) {
-      if (this.stopRequested()) throw new Error('Stop requested before START');
-      const started=await this.admin('request-start');
-      if (!started.started) throw new Error('Direct START was not confirmed');
-      this.event({event:'direct_start',actors:bound.map(role=>role.actor)});
-      for (const {actor,id} of bound) {
-        if (this.stopRequested()) throw new Error('Stop requested before initial model input');
-        await this.send(id,this.bootstrap(actor,startupProtocol));
-      }
+    if (this.stopRequested()) throw new Error('Stop requested before START');
+    const started=await this.admin('request-start');
+    if (!started.started) throw new Error('Direct START was not confirmed');
+    this.event({event:'direct_start',actors:bound.map(role=>role.actor)});
+    for (const {actor,id} of bound) {
+      if (this.stopRequested()) throw new Error('Stop requested before initial model input');
+      await this.send(id,this.bootstrap(actor));
     }
   }
   // Only the app-server stopped; the world never did. Start a new one, reopen every
@@ -409,7 +398,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
     for (const [actor,agent] of Object.entries(snapshot.agents)) {
       if (agent.kind==='manager' || !agent.thread_id) continue;
       await this.rpc.call('thread/resume',{threadId:agent.thread_id,cwd:this.hostPath('policy_cwd'),model:this.launch.model,
-        modelProvider:this.launch.provider,approvalPolicy:'never',baseInstructions:frozenText(this.run,'system.md')??undefined,
+        modelProvider:this.launch.provider,approvalPolicy:'never',baseInstructions:requiredText(this.run,'system.md'),
         config:{web_search:'disabled','features.multi_agent':false}},STARTUP_ACK_MS);
       this.actors.set(agent.thread_id,actor);
       this.event({event:'role_resumed',actor,thread_id:agent.thread_id});
@@ -430,7 +419,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
       if (agent.kind==='manager' || !agent.thread_id) continue;
       if (agent.kind==='delegate' && agent.delegation_state==='finished') continue;
       await this.rpc.call('thread/resume',{threadId:agent.thread_id,cwd:this.hostPath('policy_cwd'),model:this.launch.model,
-        modelProvider:this.launch.provider,approvalPolicy:'never',baseInstructions:frozenText(this.run,'system.md')??undefined,
+        modelProvider:this.launch.provider,approvalPolicy:'never',baseInstructions:requiredText(this.run,'system.md'),
         config:{web_search:'disabled','features.multi_agent':false}},STARTUP_ACK_MS);
       this.actors.set(agent.thread_id,actor);
       this.event({event:'role_resumed',actor,thread_id:agent.thread_id});
@@ -464,7 +453,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
         await sleep(1000);
       }
       const roles=read(path.join(this.run,'public/inputs/roles.json')).roles;
-      const startupProtocol=read(path.join(this.run,'private/inputs/harness.json')).startup_protocol || 'ready_barrier_v1';
+      const startupProtocol=read(path.join(this.run,'private/inputs/harness.json')).startup_protocol;
       // A run continued after an unexpected exit reopens its roles' own threads instead.
       if ((await this.admin('snapshot')).lifecycle==='resuming') await this.resumeSessions();
       else await this.startInitialRoles(roles,startupProtocol);
@@ -497,7 +486,7 @@ Use your assigned native session and bound robot tools. Read public task evidenc
         let outcome;
         try {
           outcome=await runMetaDispatcher({runDir:this.run,python:this.python,cwd:this.cwd,tools,owner,
-            startWhenReady:true,observationSource:'codex.app-server',onEvent:e=>this.event(e),
+            observationSource:'codex.app-server',onEvent:e=>this.event(e),
             createSnapshot:async p=>JSON.parse((await createNativeFork(p,true)).content[0].text),
             stopRequested:()=>this.stopRequested()||this.rpcLost||this.ownerExited()});
         } catch (error) { if (!this.rpcLost) throw error; }

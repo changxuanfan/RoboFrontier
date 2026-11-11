@@ -1,16 +1,14 @@
 # Native Codex engine
 
-For new experiments, use the [unified CLI](../unified-cli.md) and its versioned
-TOML. This guide explains the native Codex path, the retained
-`python -m scripts.benchmark` interface, and Luna execution on Linux CPU and
-Slurm. See the [Slurm guide](../running/slurm.md) for environment choices,
+Run experiments with the [unified CLI](../unified-cli.md) and its TOML. This guide
+explains the native Codex path and Luna execution on Linux CPU and Slurm. See the [Slurm guide](../running/slurm.md) for environment choices,
 the [engine overview](README.md) for what Codex shares with Claude and for
 [shared setup](README.md#shared-setup), and [providers](README.md#providers) for
 catalogs, credentials and third-party endpoints.
 
 The engine lives in `robofrontier/engines/codex/`: `launch.py` builds the app-server
-configuration and native home, `batch.py` prepares and supervises batches (and
-backs `python -m scripts.benchmark`), and the Node `codex_policy_host.js`,
+configuration and native home, `robofrontier/batch/codex_batch.py` prepares and
+supervises batches for `robofrontier prepare` and `robofrontier run`, and the Node `codex_policy_host.js`,
 `codex_rpc.js`, `codex_preflight.js` and `codex_initialize.js` drive app-server.
 Selection and `.env` loading shared with Claude are in
 `robofrontier/batch/prepare.py`.
@@ -137,7 +135,7 @@ This test inspects the actual model tool inventory, rejects forged native calls,
 and exercises fork/resume and eight concurrent roles. Separate physical engineering
 runs still establish role startup, robot transport and shutdown on the target host.
 
-Prefer the unified commands, which use current TOML defaults:
+The unified commands use the TOML defaults:
 
 ```sh
 .venv/bin/robofrontier bootstrap
@@ -153,21 +151,18 @@ Use the explicit Linux CPU or macOS native renderer when appropriate; the defaul
 is Linux NVIDIA. A prepared batch keeps its frozen backend. Preparation calls
 no model, starts no physical world, and requires a new output directory.
 
-The retained native interface is useful for reproducing its original workflows:
+Selection, monitoring and stopping use the same command:
 
 ```sh
-.venv/bin/python -m scripts.benchmark models
-# Billable: images, tools, manual compaction and native fork checks.
-.venv/bin/python -m scripts.benchmark preflight --models astra
-.venv/bin/python -m scripts.benchmark prepare --models astra \
-  --families mosaic --output runs/policy/NEW_NATIVE_BATCH
-.venv/bin/python -m scripts.benchmark run runs/policy/NEW_NATIVE_BATCH --parallel 9
-.venv/bin/python -m scripts.benchmark status runs/policy/NEW_NATIVE_BATCH
-.venv/bin/python -m scripts.benchmark stop runs/policy/NEW_NATIVE_BATCH
+.venv/bin/robofrontier plan --profile astra --families mosaic
+.venv/bin/robofrontier prepare --profile astra --families mosaic \
+  --output runs/policy/NEW_BATCH
+.venv/bin/robofrontier status runs/policy/NEW_BATCH
+.venv/bin/robofrontier stop runs/policy/NEW_BATCH
 ```
 
-Omitting family/case filters prepares all 36 cases per selected model. The native
-entry accepts up to 36 task slots, but local CPU, memory, disk, rendering, native
+Omitting family/case filters prepares all 36 cases. A batch accepts up to 36 task
+slots, but local CPU, memory, disk, rendering, native
 sessions, delegates, and provider capacity remain real bounds. Prepare a new
 batch after changing execution source or frozen inputs; never restart a previously
 started physical world to reuse its result directory.
@@ -433,9 +428,7 @@ engineering selection is not a replacement for the 36-task/24-hour defaults.
 ### Evidence and resource metrics
 
 New unified API runs isolate task-native Codex state; the batch records actual
-home/session paths. The native Luna compatibility wrapper instead records its
-batch home in `codex-home.json`, generally under
-`.codex-luna/<batch-name>-<path-hash>/sessions/`. Neither location is the shared
+home/session paths in each run's `codex-home.json`. That home is not the shared
 server user's default `~/.codex` unless explicitly configured that way. Docker
 uses persistent local volumes and exports stopped results; inspect that flow's
 own recorded paths rather than guessing a host path.

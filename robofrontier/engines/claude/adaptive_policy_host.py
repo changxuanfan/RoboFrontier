@@ -10,8 +10,8 @@ import uuid
 
 from robofrontier.engines.claude.adaptive_dispatch import AdaptiveDispatcher
 from robofrontier.engines.claude.adaptive_setup import AdaptiveForkSetup
-from robofrontier.engines.claude.bootstrap import bootstrap_prompt
 from robofrontier.engines.claude.session_host import ClaudeSessionHost
+from robofrontier.runtime.bootstrap import frozen_bootstrap
 from robofrontier.runtime.pipeline_client import client_call
 from robofrontier.runtime.setup import verify_inputs
 from robofrontier.runtime.store import RuntimeStore
@@ -41,7 +41,7 @@ class AdaptivePolicyHost:
                 raise ValueError('A previously bound or started world cannot be restarted')
             changed=verifier(self.run)
             if changed: raise ValueError('Frozen inputs changed: '+', '.join(changed))
-            self.prompt=bootstrap_prompt(self.run,topology='adaptive',startup_protocol=cfg.get('startup_protocol','ready_barrier_v1'))
+            self.prompt=frozen_bootstrap(self.run,'Controller')
             self.host=host_factory(self.run,'Controller',profile,base_env,
                                    max_budget_usd=turn_budget_usd,budget_ledger=ledger)
             if resume: self.host.adopt(self.store.agent('Controller')['thread_id'])
@@ -64,9 +64,8 @@ class AdaptivePolicyHost:
         self.setup=self.setup_factory(self.store,self.host,self.ledger,'claude-meta-'+uuid.uuid4().hex,
                                       child_budget_usd=self.turn_budget_usd)
         self.dispatcher=AdaptiveDispatcher(self.store,self.setup)
-        if self.store.get('config').get('startup_protocol') == 'direct_controller_v2':
-            reply=self.dispatcher.admin('request-start')
-            if not reply.get('started'): raise ValueError('Direct START was not confirmed')
+        reply=self.dispatcher.admin('request-start')
+        if not reply.get('started'): raise ValueError('Direct START was not confirmed')
         return self.host.send(self.prompt)
 
     def resume_segment(self):
@@ -87,14 +86,6 @@ class AdaptivePolicyHost:
         for actor,text in reply['messages'].items():
             host=self.dispatcher.host(actor)
             if host is not None: host.send(text)
-        return reply
-
-    def start_when_ready(self):
-        if not self.bound or not self.dispatcher: raise ValueError('Controller has not been bound')
-        if not self.dispatcher.observe('Controller') or self.host.observe()['status']!='idle' or not self.store.agent('Controller')['ready']:
-            raise ValueError('Controller must be READY and its startup turn idle')
-        reply=self.dispatcher.admin('request-start')
-        if not reply.get('started'): raise ValueError('World did not confirm START')
         return reply
 
     def cycle(self):

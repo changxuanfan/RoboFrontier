@@ -9,7 +9,7 @@ acceptance ledger (`docs/archive/unified-main.md`, in the [archive tag](../histo
 
 | Guide | Contents |
 | --- | --- |
-| [Codex engine](codex.md) | Native app-server policy execution, the retained `scripts.benchmark` interface, Luna on Linux CPU and Slurm |
+| [Codex engine](codex.md) | Native app-server policy execution, Luna on Linux CPU and Slurm |
 | [Claude engine](claude-code.md) | Native Claude CLI/MCP engineering entries, authentication, cost ledger, standing teams, prechecks and historical evidence |
 | [Providers](README.md#providers) | Model catalogs and profiles, the authentication matrix, third-party endpoints, preflight and multi-model batches |
 | [Runtime protocol notes](../protocol.md) | Observation images, SQLite writer contention, direct START and terminal scoring, robot tool errors |
@@ -24,8 +24,7 @@ does not establish task success.
 
 New Single/Adaptive runs use direct Controller START; both engines use direct
 team START for initial standing-team roles. `ready` is a capability query in
-those runs. Historical `ready_barrier_v1` inputs retain their old READY/idle
-barrier. Claude exposes all four engineering topologies. Native permanent
+those runs. Claude exposes all four engineering topologies. Native permanent
 Workers are documented in [Claude standing teams](claude-code.md#standing-teams);
 formal scored Claude execution remains unavailable.
 
@@ -342,11 +341,8 @@ Claude qualification remain separate acceptance requirements.
 ## Providers
 
 For running, see the [unified CLI](../unified-cli.md), [Docker](../running/docker.md),
-[Slurm](../running/slurm.md) and [evidence storage](../running/evidence-storage.md) guides. This
-section was first written while the checkout was integrating
-`integration/unified-main`, before that work replaced the published default
-branch. The native `scripts.benchmark` entry is retained for Codex compatibility
-and has different defaults from the unified entry. Engine-specific details are
+[Slurm](../running/slurm.md) and [evidence storage](../running/evidence-storage.md) guides.
+Engine-specific details are
 in the [Codex](codex.md) and [Claude](claude-code.md) guides; installation, the `.env`
 file and policy assets are in [shared setup](README.md#shared-setup).
 
@@ -379,8 +375,7 @@ qualification.
 Defaults:
 
 - The repository's overall default is the Codex `luna` profile
-  (`gpt-6-luna`, effort `high`) through `OPENAI_API_KEY`. The retained native
-  `scripts.benchmark` CLI still defaults to its historical `astra` selection.
+  (`gpt-6-luna`, effort `high`) through `OPENAI_API_KEY`.
 - An engine-only Claude selection (`--engine claude` with no profile in the user
   TOML or explicit options) defaults to `haiku_subscription_token`. The legacy
   Claude planning/preparation script also defaults to it when `--models` is
@@ -539,9 +534,7 @@ Official references: [Codex authentication](https://learn.chatgpt.com/docs/auth)
 ### Multi-model task selection and concurrency
 
 New unified defaults are Luna/high, adaptive, 36 concurrent task hosts and a
-24-hour limit from each task's persisted START. The retained native
-`scripts.benchmark run` default is parallel 9. Always inspect a plan rather than
-assuming two entries use identical defaults.
+24-hour limit from each task's persisted START. Inspect a plan before preparing.
 
 | Selection | Tasks per model | Four model profiles |
 | --- | ---: | ---: |
@@ -569,21 +562,10 @@ or provider request concurrency; delegates, turns and forks add model requests.
 Concurrent batches add their loads. CPU, RAM, rendering and account RPM/TPM can
 all limit throughput. No setting silently guarantees successful 36-way execution.
 
-For a deliberately shared Dial random instance across multiple Codex profiles,
-the native compatibility entry retains one combined preparation:
-
-```sh
-.venv/bin/python -m scripts.benchmark prepare --models kimi qwen glm deepseek \
-  --level 1 --min-arms --output runs/policy/native-four-model-comparison
-.venv/bin/python -m scripts.benchmark run runs/policy/native-four-model-comparison --parallel 4
-```
-
-This selects 16 tasks that execute in batches of up to four. Independent
-preparations can generate different Dial instances. It is a native compatibility
-workflow, not a 144-task unified concurrency setting. Keep profile-specific
-context/compaction thresholds and requested effort in reports: identical effort
-strings do not prove identical compute. Do not infer current values from the
-original handoff's 272,000/245,000 context/compaction snapshot.
+Each preparation selects one profile. Every run of a Dial case uses that case's fixed code
+from `benchmark/release.json`, so all profiles face the same puzzles. Keep the context and
+compaction thresholds and the requested effort in reports: identical effort strings do not
+prove identical compute.
 
 Finish is subject to action/delegation safety checks and then evaluation; saying
 "done" does not prove success. STOP requests a graceful shutdown rather than an

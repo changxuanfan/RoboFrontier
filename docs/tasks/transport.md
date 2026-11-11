@@ -68,7 +68,7 @@ Oracle evaluators retain their original criteria; their reports are not rewritte
 The original nine R13 independent physical witnesses passed 216/216 placements:
 three frozen-program and six engineering-assisted runs. Their reports, failures,
 timings, executors, and full 60 Hz motion remain preserved under the index
-`benchmark/transport/r13-qualified.json`.
+`benchmark/transport/r13-qualified.json` in the tag `archive/pre-cleanup-20261110`.
 
 The original R14 release compiled the changed collision geometry and checked
 that it differed only in the table openings. In six opening-bearing recordings,

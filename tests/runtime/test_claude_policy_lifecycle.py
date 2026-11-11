@@ -1,5 +1,4 @@
 """Offline lifecycle using the real runtime, scheduler and a synthetic world."""
-import hashlib
 import http.server
 import json
 from pathlib import Path
@@ -46,12 +45,6 @@ class LifecycleTests(unittest.TestCase):
             config_path = root / 'config.json'
             config_path.write_text(json.dumps(cfg))
             run = prepare_run(root / 'run', harness_path=config_path)
-            prompt = run / 'public/inputs/claude-controller.md'
-            prompt.write_text((ROOT / 'tests/fixtures/prompts/claude-controller.md').read_text())
-            manifest_path = run / 'private/inputs/manifest.json'
-            manifest = json.loads(manifest_path.read_text())
-            manifest['input_sha256']['public/inputs/claude-controller.md'] = hashlib.sha256(prompt.read_bytes()).hexdigest()
-            manifest_path.write_text(json.dumps(manifest))
             service = RuntimeService(run, FakeWorld, fake_capture)
 
             class Handler(http.server.BaseHTTPRequestHandler):

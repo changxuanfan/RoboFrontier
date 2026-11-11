@@ -1,11 +1,22 @@
 const test=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {PolicyHost}=require('../../robofrontier/engines/codex/codex_policy_host');
+
+// A run folder holding the frozen system and start messages a prepared run has.
+function frozenRun() {
+  const run=fs.mkdtempSync(path.join(os.tmpdir(),'codex-direct-start-'));
+  const folder=path.join(run,'private/inputs/bootstrap');fs.mkdirSync(folder,{recursive:true});
+  fs.writeFileSync(path.join(folder,'system.md'),'frozen system');
+  for (const actor of ['Controller','A','B']) fs.writeFileSync(path.join(folder,actor+'.md'),'frozen start for '+actor);
+  test.after(()=>fs.rmSync(run,{recursive:true,force:true}));
+  return run;
+}
 
 function fixture() {
   const operations=[];
   let threads=0;
   const host={
-    run:'/run',layout:{policy_cwd:'.'},launch:{model:'offline',provider:'offline'},actors:new Map(),
+    run:frozenRun(),layout:{policy_cwd:'.'},launch:{model:'offline',provider:'offline'},actors:new Map(),
     hostPath:PolicyHost.prototype.hostPath,
     event:e=>operations.push({type:'event',...e}),
     stopRequested:()=>false,
@@ -31,11 +42,8 @@ test('direct team binds every role, starts once, then supplies explicit START pr
   assert.equal(operations.slice(0,start).filter(o=>o.type==='send').length,0);
   const prompts=operations.filter(o=>o.type==='send');
   assert.equal(prompts.length,3);
-  for (const item of prompts) {
-    assert.match(item.prompt,/has STARTED/);
-    assert.match(item.prompt,/without waiting for another START/);
-    assert.doesNotMatch(item.prompt,/Legacy startup:/);
-  }
+  assert.deepEqual(prompts.map(item=>item.prompt),['Controller','A','B'].map(actor=>'frozen start for '+actor));
+  for (const item of operations.filter(o=>o.type==='thread/start')) assert.equal(item.baseInstructions,'frozen system');
 });
 test('Controller-only direct startup still binds and starts before its first model input',async()=>{
   const {host,operations}=fixture();
@@ -55,13 +63,11 @@ test('a rejected START cannot result in any initial model turn',async()=>{
   await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team_v3'),/START/);
   assert.equal(operations.filter(o=>o.type==='send').length,0);
 });
-test('frozen legacy startup keeps its separate READY model turn',async()=>{
+test('a run without its frozen system message creates no session',async()=>{
   const {host,operations}=fixture();
-  await PolicyHost.prototype.startInitialRoles.call(host,standing,'ready_barrier_v1');
-  assert.equal(operations.filter(o=>o.type==='request-start').length,0);
-  const prompts=operations.filter(o=>o.type==='send');
-  assert.equal(prompts.length,3);
-  for (const item of prompts) assert.match(item.prompt,/Legacy startup:/);
+  fs.rmSync(path.join(host.run,'private/inputs/bootstrap/system.md'));
+  await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team_v3'),/Missing frozen bootstrap message/);
+  assert.equal(operations.length,0);
 });
 test('an unknown protocol fails before any native session creation',async()=>{
   const {host,operations}=fixture();

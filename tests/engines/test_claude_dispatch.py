@@ -25,10 +25,12 @@ class ClaudeDispatchTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = RuntimeStore(Path(self.tmp.name) / 'runtime.sqlite')
         cfg = json.loads((Path(__file__).resolve().parents[2] / 'configs/harnesses/policy.json').read_text())
-        cfg.update(engine='claude', topology='centralized', startup_protocol='ready_barrier_v1')
+        cfg.update(engine='claude', topology='centralized', startup_protocol='direct_controller_v2')
         self.store.initialize('run', cfg, ['A'])
-        self.store.update_agent('Controller', ready=True, thread_id='test-session')
+        self.store.update_agent('Controller', thread_id='test-session')
         self.store.start()
+        # The Controller has saved work to continue, so the scheduler owes it a wake.
+        self.store.checkpoint_work('Controller', 'continue', 'inspect the scene')
         self.host = FakeHost(); self.host.state = 'idle'; self.host.sent = []
 
     def tearDown(self):

@@ -16,8 +16,6 @@ count toward the task clock. `ready` is an optional capability query; it is not
 a readiness barrier. Standing Controller + Worker and Worker-Worker runs bind
 all initial roles before one `direct_team_v3` START, then send each an explicit
 started task prompt (see [initial roles and START](#initial-roles-and-start)).
-Frozen `ready_barrier_v1` runs keep their historical READY/idle startup and must
-not be reinterpreted as direct-start experiments.
 
 The limit is 24 hours of active running time (`run_protocol.clock: active_time_v1`): outages,
 usage-limit pauses, host sleep and the gaps between segments do not count, and the world scores
@@ -129,7 +127,7 @@ robofrontier prepare --engine claude --profile haiku_subscription \
 
 `haiku_subscription` uses the default native login namespace. It requires the
 selected directory to equal HOME/.claude and leaves CLAUDE_CONFIG_DIR unset.
-Claude Code 2.1.312 selects a distinct credential namespace when that variable is
+Claude Code 2.1.316 (the pin in `robofrontier/runtime/versions.py`) selects a distinct credential namespace when that variable is
 explicitly set, even to the same path. For an account authenticated with an
 explicit CLAUDE_CONFIG_DIR, choose `haiku_subscription_directory` and the same
 directory used during its native login. The selection is part of the profile
@@ -205,7 +203,7 @@ not hard provider billing caps, subscription credits or one shared batch budget.
 
 ### Native cumulative cost accounting
 
-Claude Code 2.1.312 persists a session-wide cost-state counter in its transcript.
+Claude Code 2.1.316 persists a session-wide cost-state counter in its transcript.
 Resuming or forking a session inherits that counter. The runner retains the raw
 native total and subtracts only a verified prior native counter to report new
 invocation work. The CLI budget remains the unchanged per-invocation allowance;

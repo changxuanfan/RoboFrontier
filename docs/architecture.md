@@ -61,9 +61,7 @@ sessions, requests one persisted START, then supplies an explicit started prompt
 to every role. Initial reading and observations count toward the task clock.
 
 `ready` is an optional capability query in these protocols. It does not unlock
-START; continue after its response without waiting for another START. Frozen
-Legacy `ready_barrier_v1` runs retain their readiness/idle-observation barrier
-and original continuation behavior. Their inputs are not silently migrated.
+START; continue after its response without waiting for another START.
 
 The policy limit is `task_wall_limit_s`, normally 86,400 seconds, of active
 running time saved in the run store; host stalls, pauses and network outages do

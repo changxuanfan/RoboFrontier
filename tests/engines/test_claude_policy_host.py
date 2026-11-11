@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from robofrontier.engines.claude.policy_host import CentralizedPolicyHost
 from robofrontier.runtime.store import RuntimeStore
@@ -23,11 +24,10 @@ class PolicyHostTests(unittest.TestCase):
         public = self.run / 'public/inputs'; public.mkdir(parents=True)
         (public/'task.json').write_text(json.dumps({'family_materials': []}))
         (public/'roles.json').write_text(json.dumps({'topology': 'centralized', 'roles': {'Controller': {'kind': 'controller'}}}))
-        for name in ('claude-controller.md', 'policy-rules.md', 'skill/SKILL.md', 'skill/references/tools.md',
-                     'skill/references/communication.md', 'skill/references/motion-check.md'):
-            path=public/name; path.parent.mkdir(parents=True, exist_ok=True); path.write_text('public input')
+        frozen=self.run/'private/inputs/bootstrap/Controller.md'; frozen.parent.mkdir(parents=True)
+        frozen.write_text('frozen start')
         cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
-        cfg.update(startup_protocol='ready_barrier_v1', engine='claude', topology='centralized', model='fake', effort='high')
+        cfg.update(startup_protocol='direct_controller_v2', engine='claude', topology='centralized', model='fake', effort='high')
         store=RuntimeStore(self.run/'private/state/runtime.sqlite'); store.initialize('run', cfg, ['A']); store.close()
         self.profile={'model':'fake', 'effort':'high', 'env_key':'FAKE'}
         self.calls=[]
@@ -41,16 +41,25 @@ class PolicyHostTests(unittest.TestCase):
 
     def tearDown(self): self.tmp.cleanup()
 
-    def test_binding_once_and_start_requires_ready_and_idle(self):
+    def test_binding_once_starts_before_the_frozen_start_message(self):
         host=CentralizedPolicyHost(self.run, self.profile, {}, host_factory=FakeHost, client=self.client, verifier=lambda _: [])
+        admin=[]
+        def start(dispatcher, op, data=None):
+            admin.append((op, host.host.prompts[:])); dispatcher.store.start(); return {'started': True}
         try:
-            host.bind_and_bootstrap()
+            with mock.patch('robofrontier.engines.claude.policy_host.ClaudeDispatcher.admin', start):
+                host.bind_and_bootstrap()
             self.assertEqual(self.calls, ['bind'])
-            self.assertIn('public input', host.host.prompts[0])
+            self.assertEqual(admin, [('request-start', [])])
+            self.assertEqual(host.host.prompts, ['frozen start'])
             with self.assertRaises(ValueError): host.bind_and_bootstrap()
-            with self.assertRaisesRegex(ValueError, 'READY'): host.start_when_ready()
             host.stop()
         finally: host.close()
+
+    def test_missing_frozen_start_message_fails_before_any_session(self):
+        (self.run/'private/inputs/bootstrap/Controller.md').unlink()
+        with self.assertRaisesRegex(ValueError, 'Missing frozen bootstrap message'):
+            CentralizedPolicyHost(self.run, self.profile, {}, host_factory=FakeHost, client=self.client, verifier=lambda _: [])
 
     def test_unknown_binding_acknowledgement_is_not_retried(self):
         def lost(*args, **kwargs): raise OSError('lost acknowledgement')

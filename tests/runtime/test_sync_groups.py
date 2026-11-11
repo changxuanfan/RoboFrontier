@@ -11,7 +11,7 @@ from robofrontier.runtime.setup import prepare_run
 from robofrontier.runtime.service import RuntimeService
 from robofrontier.runtime.delegation import Delegations
 from robofrontier.runtime.scheduling import Scheduler
-from robofrontier.tasks.config import load_harness
+from robofrontier.tasks.config import load_harness, startup_protocol
 
 
 class SyncTests(unittest.TestCase):
@@ -20,7 +20,7 @@ class SyncTests(unittest.TestCase):
         for s in self.services:s.close()
         self.tmp.cleanup()
     def service(self,mode='peer'):
-        root=Path(self.tmp.name)/str(len(self.services));root.mkdir();cfg=load_harness();cfg['topology']=mode
+        root=Path(self.tmp.name)/str(len(self.services));root.mkdir();cfg=load_harness();cfg['topology']=mode;cfg['startup_protocol']=startup_protocol(mode)
         path=root/'cfg.json';path.write_text(json.dumps(cfg));run=prepare_run(root/'run',harness_path=path)
         s=RuntimeService(run,FakeWorld,fake_capture);self.services.append(s)
         for actor,value in s.store.agents().items():

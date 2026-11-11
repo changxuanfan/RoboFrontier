@@ -591,7 +591,7 @@ checks cannot qualify scored trials. Changes invalidate that receipt.
 Local checks (no login, scheduler, real provider or physical action):
 
 ```sh
-.venv/bin/python -m unittest tests.test_slurm_auth tests.test_codex_job_engine tests.test_slurm_gateway_native tests.test_slurm_job
+.venv/bin/python -m unittest tests.batch.test_slurm_auth tests.engines.test_codex_job_engine tests.engines.test_slurm_gateway_native tests.batch.test_slurm_job
 node --test tests/engines/test_codex_job_gateway.js
 ```
 
@@ -603,7 +603,7 @@ are fixtures, not a model or account login. Separate tests cover stream leases,
 partial writes, missing-generation rollback refusal, owner/fencing checks,
 cross-task denials, colliding client IDs and engine failure without redispatch.
 
-The ABI compatibility regression is `tests.test_codex_legacy_sandbox`. Local
+The ABI compatibility regression is `tests.engines.test_codex_landlock_old_abi`. Local
 Linux checks exercise ABI 1/2 masks and the ordinary worker boundaries. A tiny
 synthetic syscall check on slogin-01 (Linux 5.19, actual ABI 2) also passed on
 2026-11-04, without models, simulation, assets or scheduler jobs. That login-node

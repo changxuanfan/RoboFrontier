@@ -166,9 +166,6 @@ class CentralizedSupervisor:
                     if started_at is None:
                         if now - began >= self.startup_timeout_s:
                             reason = 'startup_timeout'; break
-                        if state == 'idle' and self.policy.store.agent('Controller')['ready']:
-                            self.policy.start_when_ready()
-                            started_at = self._projected_start()
                     else:
                         if self._limit_reached(now, started_at):
                             reason = 'wall_limit'; break

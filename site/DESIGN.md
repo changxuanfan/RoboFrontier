@@ -65,8 +65,8 @@ an attachment uploaded through the GitHub web editor.
 
 ## Results pipeline
 
-`scripts/site/export_results.py` reads collected run exports (batch `evaluation.json`,
-host metrics, runtime events) and writes `site/data/results.json`:
+No script writes `site/data/results.json` yet. Its exporter will read collected run
+exports (batch `evaluation.json`, host metrics, runtime events) and write this shape:
 
 ```json
 {"schema": "robofrontier.site-results.v1", "generated_at": "...",
@@ -91,7 +91,7 @@ site/                    project page source, deployed by GitHub Actions to Page
   data/media.json        every video URL by set, task and view
   data/results.json      generated benchmark results
   DESIGN.md              this plan
-scripts/site/            encode_videos.py, make_montage.py, export_results.py, build_tasks.py
+scripts/                 site_media.py (videos, montages, stills), site_film.py, site_data.py (tasks, media)
 docs/media/              README stills (posters for the 36-cell table)
 ```
 

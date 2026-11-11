@@ -8,9 +8,9 @@ from pathlib import Path
 import time
 import uuid
 
-from .bootstrap import bootstrap_prompt
 from .budget import BudgetExhausted
 from .session_host import ClaudeSessionHost
+from ...runtime.bootstrap import frozen_bootstrap
 from ...runtime.pipeline_client import client_call
 from ...runtime.setup import verify_inputs
 from ...runtime.cli import execute
@@ -75,8 +75,7 @@ class StandingTeamPolicyHost:
             changed = verifier(self.run)
             if changed:
                 raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
-            self.prompts = {a: bootstrap_prompt(self.run, topology=cfg['topology'], actor=a,
-                                               startup_protocol='direct_team_v3') for a in agents}
+            self.prompts = {a: frozen_bootstrap(self.run, a) for a in agents}
             self.hosts = {a: host_factory(self.run, a, profile, base_env,
                                           max_budget_usd=turn_budget_usd, budget_ledger=ledger) for a in agents}
             if any(h.actor != a for a, h in self.hosts.items()):

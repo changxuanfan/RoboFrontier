@@ -563,8 +563,8 @@ class PipelineTests(unittest.TestCase):
         finally:store.close()
 
     def test_peer_wait_is_addressed_and_has_no_coordinator(self):
-        from robofrontier.tasks.config import load_harness
-        cfg=load_harness();cfg['topology']='peer'
+        from robofrontier.tasks.config import load_harness, startup_protocol
+        cfg=load_harness();cfg['topology']='peer';cfg['startup_protocol']=startup_protocol('peer')
         config=self.path.parent/'peer.json';config.write_text(json.dumps(cfg))
         run=prepare_run(self.path.parent/'peer',harness_path=config)
         service=RuntimeService(run,FakeWorld,fake_capture)

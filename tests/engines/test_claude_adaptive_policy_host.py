@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from robofrontier.engines.claude.adaptive_policy_host import AdaptivePolicyHost
 from robofrontier.engines.claude.budget import BudgetLedger
@@ -24,14 +25,13 @@ class AdaptiveHostTests(unittest.TestCase):
         public.mkdir(parents=True)
         (public/'task.json').write_text(json.dumps({'family_materials':[]}))
         (public/'roles.json').write_text(json.dumps({'topology':'adaptive','roles':{'Controller':{'kind':'controller'}}}))
-        for name in ('claude-controller.md','policy-rules.md','skill/SKILL.md','skill/references/tools.md','skill/references/communication.md',
-                     'skill/references/motion-check.md','skill/references/adaptive.md'):
-            p=public/name; p.parent.mkdir(parents=True,exist_ok=True); p.write_text('public '+name)
         self.profile={'model':'fake','effort':'high','env_key':'FAKE'}
         launch=self.run/'private/inputs/claude.json'; launch.parent.mkdir(parents=True)
         launch.write_text(json.dumps({'profile':self.profile}))
+        frozen=self.run/'private/inputs/bootstrap/Controller.md'; frozen.parent.mkdir()
+        frozen.write_text('frozen adaptive start')
         cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
-        cfg.update(startup_protocol='ready_barrier_v1', engine='claude',topology='adaptive',model='fake',effort='high')
+        cfg.update(startup_protocol='direct_controller_v2', engine='claude',topology='adaptive',model='fake',effort='high')
         store=RuntimeStore(self.run/'private/state/runtime.sqlite'); store.initialize('run',cfg,['A']); store.close()
         self.ledger=BudgetLedger.create(self.run/'private/state/budget.sqlite',1); self.calls=[]
         def client(conn,op,data,call_id,**kwargs):
@@ -42,19 +42,17 @@ class AdaptiveHostTests(unittest.TestCase):
     def make(self):
         return AdaptivePolicyHost(self.run,self.profile,{},self.ledger,turn_budget_usd=.2,
                                   host_factory=FakeHost,client=self.client,verifier=lambda _:[])
-    def test_binding_readiness_and_multi_role_stop(self):
+    def test_direct_start_binding_and_multi_role_stop(self):
         host=self.make()
+        def start(dispatcher,op,data=None):
+            self.assertEqual((op,host.host.prompts),('request-start',[]))
+            host.store.start(); return {'started':True}
         try:
-            host.bind_and_bootstrap(); self.assertIn('skill/references/adaptive.md',host.host.prompts[0])
+            with mock.patch('robofrontier.engines.claude.adaptive_policy_host.AdaptiveDispatcher.admin',start):
+                host.bind_and_bootstrap()
+            self.assertEqual(host.host.prompts,['frozen adaptive start'])
+            self.assertEqual(host.store.get('lifecycle'),'running')
             with self.assertRaisesRegex(ValueError,'Never repeat'): host.bind_and_bootstrap()
-            with self.assertRaisesRegex(ValueError,'READY'): host.start_when_ready()
-            host.store.update_agent('Controller',ready=True); host.host.state='idle'
-            original=host.dispatcher.admin
-            def admin(op,data=None):
-                if op=='request-start': host.store.start(); return {'started':True}
-                return original(op,data)
-            host.dispatcher.admin=admin
-            self.assertTrue(host.start_when_ready()['started'])
             child=FakeHost(self.run,'Delegate_test',self.profile,{},max_budget_usd=.2,budget_ledger=self.ledger)
             child.state='active'; host.setup.hosts['Delegate_test']=child
             self.assertEqual(host.stop()['roles'],2)

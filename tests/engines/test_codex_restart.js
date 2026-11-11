@@ -7,6 +7,7 @@ test('a lost app-server is replaced and each working role resumes with the froze
   try {
     fs.mkdirSync(path.join(dir,'private/inputs/bootstrap'),{recursive:true});
     fs.writeFileSync(path.join(dir,'private/inputs/bootstrap/model-restart.md'),'RESTART NOTICE');
+    fs.writeFileSync(path.join(dir,'private/inputs/bootstrap/system.md'),'frozen system');
     const calls=[],sent=[];
     const host={run:dir,launch:{model:'m',provider:'p'},actors:new Map(),layout:{policy_cwd:'workspace'},
       hostPath:PolicyHost.prototype.hostPath,event:()=>{},

@@ -41,7 +41,7 @@ class RuntimeService:
     def _initialize(self, directory, world_factory, capture, video_factory):
         self.directory = Path(directory).resolve()
         if not (self.directory/'private/inputs/manifest.json').is_file():
-            raise ValueError('Prepare a new run first with robofrontier/runtime/create_pipeline_run.py')
+            raise ValueError('Prepare a new run first with robofrontier prepare')
         manifest = json.loads((self.directory/'private/inputs/manifest.json').read_text())
         if manifest.get('schema_version') != 3:
             raise ValueError('Historical run: use its frozen tools; no automatic migration')
@@ -357,8 +357,7 @@ class RuntimeService:
                 if changed:
                     raise ValueError('Prepared inputs changed: '+str(changed))
                 policy = [v for v in self.store.agents().values() if v['kind'] != 'manager']
-                now = time.time()
-                protocol = self.config.get('startup_protocol', 'ready_barrier_v1')
+                protocol = self.config['startup_protocol']
                 if protocol == 'direct_controller_v2':
                     if len(policy) != 1 or policy[0]['kind'] != 'controller' or not policy[0]['thread_id']:
                         raise ValueError('Direct START requires one bound Controller')
@@ -366,8 +365,8 @@ class RuntimeService:
                     threads = [v['thread_id'] for v in policy]
                     if not threads or not all(threads) or len(set(threads)) != len(threads):
                         raise ValueError('Direct team START requires every initial role bound to a distinct session')
-                elif not all(v['ready'] and v['thread_id'] and v['session_status']=='idle' and v['session_observed_at'] is not None and 0 <= now-v['session_observed_at'] <= self.config['session_observation_ttl_s'] for v in policy):
-                    raise ValueError('Import fresh actual idle session observations before START')
+                else:
+                    raise ValueError('Unknown startup protocol')
                 # The trial's START gates run before START is committed, so a refused START
                 # leaves the run prepared: no START event, start time or video.
                 self.check_startable()

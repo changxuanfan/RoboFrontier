@@ -39,7 +39,6 @@ Native Codex and Claude hosts, preparation and provider checks. `robofrontier` c
 
 | Script | Purpose |
 | --- | --- |
-| `benchmark.py` | Entry point for `python -m scripts.benchmark`; the Codex engine lives in `robofrontier/engines/codex/`. |
 | `build_policy_env.py` | Build the read-only Python environment and offline package store for policy scripts, once per host. |
 | `check_policy_env.py` | Before a batch, check an environment and each engine's sandbox with stub models; no provider is contacted. |
 
@@ -90,9 +89,8 @@ Privileged reference execution and its diagnostics. A name with `oracle`, `commi
 | Script | Purpose |
 | --- | --- |
 
-`create_pipeline_run` remains a Legacy interface for historical tasks and
-explicit configurations. `meta_dispatcher.js` executes frozen Meta operations;
-it is not an autonomous task-solving agent.
+`meta_dispatcher.js` executes frozen Meta operations; it is not an autonomous
+task-solving agent.
 
 Family builders, audits, and Oracle scripts keep their historical names for
 provenance, tests, and reproducibility. A name containing `oracle`, `commission`,

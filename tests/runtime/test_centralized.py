@@ -9,14 +9,14 @@ from fake_pipeline import FakeWorld, fake_capture
 from robofrontier.runtime.setup import prepare_run
 from robofrontier.runtime.service import RuntimeService
 from robofrontier.runtime.store import RuntimeStore
-from robofrontier.tasks.config import load_harness
+from robofrontier.tasks.config import load_harness, startup_protocol
 
 
 class CentralizedTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
-        cfg = load_harness(); cfg['topology'] = 'centralized'
+        cfg = load_harness(); cfg['topology'] = 'centralized'; cfg['startup_protocol'] = startup_protocol('centralized')
         path = root/'config.json'; path.write_text(json.dumps(cfg))
         self.run = prepare_run(root/'run', harness_path=path)
         self.service = RuntimeService(self.run, FakeWorld, fake_capture)

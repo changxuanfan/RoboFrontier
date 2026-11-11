@@ -12,6 +12,7 @@ import tempfile
 
 from .configuration import ROOT, TOPOLOGIES, load_configuration, rendering_environment, runs_root
 from .runtime import policy_env, layout as run_layout
+from .tasks.config import startup_protocol
 
 
 def _print(value):
@@ -85,7 +86,7 @@ def prepare(output, config):
     setup_assets()
     topology = TOPOLOGIES[policy['topology']]
     harness = {'topology': topology,
-               'startup_protocol': 'direct_controller_v2' if topology in ('centralized', 'adaptive') else 'direct_team_v3',
+               'startup_protocol': startup_protocol(topology),
                'observation_image_profile': config['render']['observation_profile'],
                'startup_timeout_s': config['batch']['startup_timeout_s'],
                'render_device': config['render']['device'],

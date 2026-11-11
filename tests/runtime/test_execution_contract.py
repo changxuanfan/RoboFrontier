@@ -19,7 +19,7 @@ from robofrontier.runtime.pipeline import World
 from robofrontier.physics.robot_control import matrix_quat
 from robofrontier.runtime.setup import prepare_run
 from robofrontier.runtime.service import RuntimeService
-from robofrontier.tasks.config import ROOT, load_harness
+from robofrontier.tasks.config import ROOT, load_harness, startup_protocol
 from motion import filled
 
 
@@ -220,7 +220,7 @@ class SceneTopologyContractTests(unittest.TestCase):
             def request_stop(self,actor,call):
                 assert self.running.pop(actor)==call
                 self.finished.append({'call_id':call,'status':'failed','reason':'stopped_by_agent'})
-        cfg=load_harness();cfg['topology']=mode
+        cfg=load_harness();cfg['topology']=mode;cfg['startup_protocol']=startup_protocol(mode)
         path=self.root/(scene+'-'+mode+'.json');path.write_text(json.dumps(cfg))
         task_path=self.mosaic_task if scene=='mosaic' else None
         run=prepare_run(self.root/(scene+'-'+mode),task_path,path)

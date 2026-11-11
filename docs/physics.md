@@ -17,7 +17,7 @@ models equal the earlier scenes with these values applied, array for array.
 | Friction cone | elliptic, impratio 1 | Pushed or released objects stop and stay still |
 | NoSlip | 10 iterations, tolerance 1e-9 | Removes the slow drift of resting objects; at 1e-12 a receiving hand could not slide along a held timber |
 | Contact stiffness, every collision geom | solref `0.004 1`, solimp `0.95 0.99 0.001 0.5 2` | The stiffest stable at a 2 ms step; rigid parts sink in by micrometres. One value for the whole scene |
-| Sliding friction | finger pads 0.8; every other surface 0.4 | Rubber pads; wood, plastic and metal on each other. Fingers have priority 1, so a finger contact uses 0.8; any other contact uses the larger of two 0.4 values |
+| Sliding friction | finger collision geoms (the 5 pads and the finger body) 0.8; every other surface 0.4 | Rubber pads; wood, plastic and metal on each other. The finger collision geoms have priority 1, so a finger contact uses 0.8; any other contact uses the larger of two 0.4 values |
 | Torsional, rolling friction | 0.005 m, 0.0001 m | Small values, as before |
 | Round loose parts (cylinders, spheres) | condim 6, rolling 0.1 × radius | They roll a little and stop |
 | Dial module disk and stem | condim 6, rolling 0.03 m | A disk leans on its rim and needs it to stop |

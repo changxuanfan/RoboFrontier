@@ -4,7 +4,7 @@ A Mac runs a batch under the user's launchd service, so it outlives the terminal
 session that started it. This is the default for `run`, a continuation included:
 
 ```sh
-.venv/bin/robofrontier prepare --config site.toml --output runs/policy/my-batch
+.venv/bin/robofrontier --config site.toml prepare --output runs/policy/my-batch
 .venv/bin/robofrontier run runs/policy/my-batch          # under launchd
 .venv/bin/robofrontier status runs/policy/my-batch
 .venv/bin/robofrontier stop runs/policy/my-batch         # an orderly stop

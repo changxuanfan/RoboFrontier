@@ -44,8 +44,7 @@ Requested model/effort is recorded separately from verified platform evidence.
 All initial roles are bound before direct START. A new Single/Adaptive run
 starts its Controller; a standing team starts all bound initial roles under one
 task clock. Every role receives explicit started instructions. `ready` only
-queries capabilities and does not require another START. Frozen Legacy READY
-runs keep their original gate. All four native Claude modes run once the profile has passed
+queries capabilities and does not require another START. All four native Claude modes run once the profile has passed
 precheck receipts. Standing modes use distinct persistent native sessions, not Adaptive
 delegations; see the [standing-team guide](engines/claude-code.md#standing-teams).
 
@@ -67,61 +66,6 @@ truth is separate Oracle evidence. Do not transfer its state, trajectories or
 reports into policy inputs. Policy exploration uses permitted observations and
 counts toward the task's time/actions/failures. Any separate learning stage must
 state its budget and retained experience before the experiment.
-
-## Legacy native Desktop scheduling
-
-This section preserves the frozen Desktop research-session workflow. It is not
-the default command-line host and cannot be kept alive merely by returning a
-final chat response. Use the run's original manifest, tools and protocol when
-reviewing a Legacy run; never rewrite its prepared inputs to a new protocol.
-
-The Legacy preparation entries remain:
-
-```sh
-uv run python robofrontier/runtime/create_pipeline_run.py runs/NEW --task TASK.json
-uv run python scripts/check_harness.py --report runs/engineering-check.json
-```
-
-A prepared v3 run contains files and a database, but no live world, policy
-sessions, video or actions. Its policies read common rules, their task, their own
-role and Skill. The manager reads its private runbook and role. Old prepared
-packages are not automatically converted by current services.
-
-After authorization, start the single physical owner with
-`python -m robofrontier.runtime.pipeline --run-dir runs/NEW`. Create the independent
-native policy sessions and bind their real thread IDs. For frozen
-`ready_barrier_v1` only, policies read their inputs, call READY and yield. The
-service requires all initial roles READY/bound with fresh actual idle platform
-observations before START. Legacy START saves neutral continuation work; it
-does not assign actions or execution order. Direct protocols instead use their
-native host's explicit START path; this Legacy dispatcher's readiness option
-must not be treated as a new direct-start launcher.
-
-Inside the manager's tool environment, load the run's frozen dispatcher:
-
-```javascript
-// @exec: {"yield_time_ms": 1000, "max_output_tokens": 2000}
-const quote = s => "'" + s.replaceAll("'", String.fromCharCode(39,92,39,39)) + "'";
-const source = await tools.exec_command({
-  cmd: "cat " + quote(RUN_DIRECTORY + "/private/inputs/frozen-source/robofrontier/engines/codex/meta_dispatcher.js"),
-  workdir: REPOSITORY, max_output_tokens: 12000
-});
-if (source.exit_code !== 0) throw new Error("dispatcher unavailable");
-const dispatcher = eval(source.output + "\nrunMetaDispatcher;");
-await dispatcher({
-  runDir: RUN_DIRECTORY, python: PYTHON, cwd: REPOSITORY, tools,
-  startWhenReady: true,
-  onEvent: e => { if (e.event !== "cycle" || e.cycle % 15 === 0) notify(e); }
-});
-```
-
-Paths refer to this run's absolute locations. Fake adapters, not real platform
-tools, are used in offline checks. After a yielded execution returns a live
-cell ID, poll that same cell. Keep the manager tool context active while it owns
-Desktop scheduling. A yielded cell does not establish a standalone daemon that
-survives the manager's final response. Initial acceptance should cover a returned
-delegate while another works, idle Controller continuation and missing handback,
-rather than starting a dense full experiment before these boundaries work.
 
 ## Fixed scheduling and failure handling
 
@@ -269,7 +213,7 @@ failed turn requires new parent input or engineering review.
 Dispatcher health records successful observations, checks, delivery and redacted
 errors. Stale time means missing health evidence, regardless of a background
 cell's existence. Polling latency includes platform time and does not promise
-instant callbacks. The Legacy Desktop dispatcher attempts a status query at
+instant callbacks. The dispatcher attempts a status query at
 most twice, withdraws stale idle trust on a missing observation and pauses after
 three consecutive missing cycles. Existing actions retain their original result
 paths; missing state is not guessed idle and forks are not resent.

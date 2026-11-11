@@ -3,7 +3,7 @@
 A RunPod pod, or any Linux host without Slurm, runs a batch as a background service:
 
 ```sh
-.venv/bin/robofrontier prepare --config site.toml --output /workspace/robofrontier-runs/policy/my-batch
+.venv/bin/robofrontier --config site.toml prepare --output /workspace/robofrontier-runs/policy/my-batch
 .venv/bin/robofrontier run /workspace/robofrontier-runs/policy/my-batch --durable
 .venv/bin/robofrontier status /workspace/robofrontier-runs/policy/my-batch
 .venv/bin/robofrontier stop /workspace/robofrontier-runs/policy/my-batch

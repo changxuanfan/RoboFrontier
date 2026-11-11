@@ -128,7 +128,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'frozen configuration'):
                 _frozen_configuration(batch)
 
-    def test_new_standing_team_batches_freeze_direct_start_without_a_ready_barrier(self):
+    def test_standing_team_batches_freeze_direct_team_start(self):
         for topology in ('controller-worker', 'worker-worker'):
             with self.subTest(topology=topology), tempfile.TemporaryDirectory() as temporary:
                 config = load_configuration(overrides={'policy': {'topology': topology},

@@ -27,7 +27,7 @@ R13 or R14 name those revisions.
 | Nine-case model catalog | `benchmark/dial/catalog.json` |
 | Specification, defaults, frozen evidence registry | `benchmark/dial/best5-r11.json` |
 | Policy-specific guidance | `prompts/skills/dial/SKILL.md` (earlier: `prompts/archive/tasks/dial-best5.md` in the tag `archive/pre-cleanup-20261110`) |
-| Original shared integration requests | `benchmark/dial/integration-requests.json` |
+| Original shared integration requests | `benchmark/dial/integration-requests.json` (in the tag `archive/pre-cleanup-20261110`) |
 | Historical review package and progress-aware edits | `outputs/engineering/dial-family-current/` |
 | Delivered nine simple-background videos | `outputs/oracle/dial-nine-videos-20261027/` |
 | Delivered nine Factory videos and matching scenes | `outputs/robo-factory/dial-best5-edited-10x-20261027/` |

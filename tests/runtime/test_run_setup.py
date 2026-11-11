@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from robofrontier.runtime.setup import prepare_run,verify_inputs
-from robofrontier.tasks.config import ROOT,load_task,load_harness
+from robofrontier.tasks.config import ROOT,load_task,load_harness, startup_protocol
 from robofrontier.runtime.store import RuntimeStore
 
 class SetupTests(unittest.TestCase):
@@ -96,7 +96,7 @@ class SetupTests(unittest.TestCase):
         p=ROOT/'benchmark/transport/transport-a08-d1/task.json'
         skill=(Path(__file__).resolve().parents[2]/'prompts/skills/robot-collaboration/SKILL.md').read_bytes()
         for topology in ('hierarchical','peer'):
-            cfg=load_harness();cfg['topology']=topology
+            cfg=load_harness();cfg['topology']=topology;cfg['startup_protocol']=startup_protocol(topology)
             c=self.root/(topology+'.json');c.write_text(json.dumps(cfg))
             run=prepare_run(self.root/topology,p,c)
             roles=json.loads((run/'public/inputs/roles.json').read_text())['roles']

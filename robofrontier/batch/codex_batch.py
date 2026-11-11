@@ -49,7 +49,7 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
     for name,p in profiles.items():
         config_dir=output/'profiles'/name;config_dir.mkdir(parents=True)
         harness=read(ROOT/'configs/harnesses/policy.json')
-        harness.update(model=p['model'],effort=p['effort'],observation_renderer='classic',record_realtime_video=False)
+        harness.update(engine='codex',model=p['model'],effort=p['effort'],record_realtime_video=False)
         if harness_overrides:
             allowed={'topology','startup_protocol','observation_image_profile','record_realtime_video','startup_timeout_s','render_device'}
             if set(harness_overrides)-allowed:raise ValueError('Unsupported harness overrides')

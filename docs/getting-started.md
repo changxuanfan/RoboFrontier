@@ -33,9 +33,9 @@ current documentation must not reinterpret an old result as a new-protocol run.
 ## Install and verify assets
 
 Use a repository checkout and Python 3.12. Install uv, Node.js and the native CLI
-for the selected policy engine. The integration checks use Codex 0.165.0 and
-Claude Code 2.1.312; these are observed reproducibility pins, not claims about the
-latest upstream releases. The Docker image installs both pinned CLIs itself.
+for the selected policy engine. Runs use Codex 0.165.0 and Claude Code 2.1.316, the
+versions pinned in `robofrontier/runtime/versions.py`; these are reproducibility pins,
+not claims about the latest upstream releases. The Docker image installs both pinned CLIs itself.
 
 ```sh
 uv sync --locked --extra oracle
@@ -165,8 +165,7 @@ replayed. Short engineering stops are separate from the published task deadline.
 
 All new unified batches directly START after their required initial native
 sessions are bound. Each role receives an explicit started prompt. `ready` is an optional
-capability query; it is not a model-readiness gate. Old `ready_barrier_v1` inputs
-keep their frozen legacy behavior. Direct START does not change robot ownership.
+capability query; it is not a model-readiness gate. Direct START does not change robot ownership.
 
 Claude runs all four modes, including native standing Workers with independent sessions. See
 [Claude standing teams](engines/claude-code.md#standing-teams) for commands and resource
@@ -207,7 +206,6 @@ SQLite database from macOS or place active WAL databases on Lustre/NFS.
 For new API batches, each task uses a private Codex home beneath
 `.robofrontier/codex/`. Its `sessions/` directory contains the native Controller
 and delegate transcripts. The run's `codex-home.json` records its exact home.
-Legacy `.codex-luna/` and shared-home recordings remain separate legacy layouts.
 `codex-host.jsonl` is the harness event log; it does not replace native session
 JSONL files.
 

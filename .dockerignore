@@ -2,7 +2,6 @@
 .venv
 .env*
 !.env.example
-.codex-luna
 .codex-tools
 .robofrontier
 .oracle-deps

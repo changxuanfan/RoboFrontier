@@ -47,7 +47,7 @@ revision. An existing custom image with another revision is rejected. Commit
 tracked changes before rebuilding; a build never silently captures uncommitted
 experiments or credentials.
 
-The build installs observed CLI pins Codex 0.165.0 and Claude Code 2.1.312.
+The build installs the CLI pins Codex 0.165.0 and Claude Code 2.1.316 (`robofrontier/runtime/versions.py`).
 They are reproducibility pins, not a claim that they are the latest releases.
 The Python dependency lock is used unchanged. Policy assets are downloaded and
 verified during image construction. No model call occurs during build.

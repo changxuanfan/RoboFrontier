@@ -33,7 +33,7 @@ function codexAdapter(tools) {
     adapter.title = async params => decode(await tools.mcp__codex_app__set_thread_title(params));
   return adapter;
 }
-async function runMetaDispatcher({runDir, python, cwd, tools, adapter = codexAdapter(tools), onEvent = () => {}, stopRequested = () => false, maxCycles = Infinity, startWhenReady = false, observationSource = 'codex.wait_threads', createSnapshot, owner: givenOwner = null}) {
+async function runMetaDispatcher({runDir, python, cwd, tools, adapter = codexAdapter(tools), onEvent = () => {}, stopRequested = () => false, maxCycles = Infinity, observationSource = 'codex.wait_threads', createSnapshot, owner: givenOwner = null}) {
   const quote = value => "'" + String(value).replaceAll("'", "'\\''") + "'";
   // A host that restarts its model process keeps one owner, so it keeps its scheduler lease.
   const owner = givenOwner || 'meta-' + Date.now() + '-' + Math.random().toString(16).slice(2);
@@ -184,22 +184,14 @@ async function runMetaDispatcher({runDir, python, cwd, tools, adapter = codexAda
       return {lifecycle:snapshot.lifecycle,paused:!!snapshot.paused,cycles:cycle-1};
     }
     if (snapshot.lifecycle==='running') await establishForks(snapshot);
-    // Prepared runs remain inert unless Meta explicitly armed startWhenReady.
-    // Initial session binding remains separate. Adaptive fork creation executes
-    // only the task Controller's durable, explicitly bounded requests above.
+    // The host starts the run after binding its initial roles; a prepared run stays inert here.
+    // Adaptive fork creation executes only the task Controller's durable, explicitly bounded
+    // requests above.
     const policy = Object.entries(snapshot.agents).filter(([,a])=>a.kind!=='manager' && a.thread_id &&
       (a.kind!=='delegate'||a.delegation_state==='active'));
     const observations = (await Promise.all(policy.map(([actor,a])=>safeObserve(actor,a)))).filter(Boolean);
     if (observations.length) await runtime('observe-sessions',{observations,cycle});
     if (statusPaused) return {lifecycle:snapshot.lifecycle,paused:true,cycles:cycle};
-    const expectedPolicy = Object.entries(snapshot.agents).filter(([,a])=>a.kind!=='manager');
-    if (snapshot.lifecycle==='prepared' && startWhenReady &&
-        (snapshot.config.startup_protocol || 'ready_barrier_v1')==='ready_barrier_v1' && expectedPolicy.length>0 &&
-        expectedPolicy.every(([actor,a])=>a.ready && a.thread_id && !a.recovery_required && observations.some(o=>o.actor===actor && o.status==='idle' && o.turn_id))) {
-      const started = await runtime('request-start');
-      if (started.error || !started.started) throw new Error('START gate rejected: '+JSON.stringify(started));
-      onEvent({event:'run_started'});
-    }
     if (snapshot.lifecycle==='running') {
       for (const command of (await runtime('plan')).commands) {
         if (statusPaused) break;

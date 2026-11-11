@@ -118,7 +118,7 @@ class CliBenchmarkTests(unittest.TestCase):
             self.assertEqual(batch['model_calls'],0)
             for run in (a,b):
                 cfg=json.loads((run/'private/inputs/harness.json').read_text())
-                self.assertEqual(cfg['observation_renderer'],'classic')
+                self.assertEqual(cfg['engine'],'codex')
                 self.assertFalse(cfg['record_realtime_video'])
                 self.assertFalse(any('suite-code' in str(p) for p in (run/'public').rglob('*')))
 

@@ -78,6 +78,11 @@ def public_task(task):
     return project(task)
 
 
+def startup_protocol(topology):
+    """The start protocol a topology uses: standing teams start together, a Controller alone."""
+    return 'direct_team_v3' if topology in ('hierarchical', 'peer') else 'direct_controller_v2'
+
+
 def load_harness(path=None):
     c = json.loads(Path(path or DEFAULT_HARNESS).read_text())
     if c['manager'] != 'Meta' or c['coordinator'] not in ('Controller', 'Coordinator'):
@@ -86,11 +91,11 @@ def load_harness(path=None):
         raise ValueError('Unknown topology')
     if c.get('engine','codex') not in ('codex','claude'):
         raise ValueError('Unknown policy engine')
-    if c.get('startup_protocol', 'ready_barrier_v1') not in ('ready_barrier_v1', 'direct_controller_v2', 'direct_team_v3'):
+    if c.get('startup_protocol') not in ('direct_controller_v2', 'direct_team_v3'):
         raise ValueError('Unknown startup protocol')
-    if c.get('startup_protocol') == 'direct_controller_v2' and c['topology'] not in ('adaptive', 'centralized'):
+    if c['startup_protocol'] == 'direct_controller_v2' and c['topology'] not in ('adaptive', 'centralized'):
         raise ValueError('Direct startup requires a single Controller')
-    if c.get('startup_protocol') == 'direct_team_v3' and c['topology'] not in ('hierarchical', 'peer'):
+    if c['startup_protocol'] == 'direct_team_v3' and c['topology'] not in ('hierarchical', 'peer'):
         raise ValueError('Direct team startup requires standing Workers')
     for key in ('poll_interval_s','integrity_check_interval_s','session_observation_ttl_s','manager_lease_s','max_batch_messages','max_batch_bytes','max_message_chars','min_check_interval_s','max_check_interval_s','action_timeout_sim_s','video_fps','max_unacknowledged_wakes'):
         if not math.isfinite(float(c[key])) or c[key] <= 0:

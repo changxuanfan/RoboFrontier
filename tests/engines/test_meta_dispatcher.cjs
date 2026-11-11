@@ -30,7 +30,7 @@ async function scenario({busy=false,failSend=false,wrongThread=false}={}) {
   if(!busy)assert(reports[0].includes(failSend||wrongThread?'uncertain':'sent'));
   assert(!calls.some(c=>c.includes('pipeline_client')||c.includes(' move ')||c.includes(' gripper ')));
 }
-async function startup(armed,ready) {
+async function startup(ready) {
   let starts=0,sends=0;
   const tools={
     exec_command:async({cmd})=>{
@@ -44,8 +44,8 @@ async function startup(armed,ready) {
     mcp__codex_app__wait_threads:async()=>response({polls:[{thread:{status:{type:'idle'}},latestTurn:{id:'t0'}}]}),
     mcp__codex_app__send_message_to_thread:async()=>{sends++;throw Error('must not notify before run starts')}
   };
-  await runMetaDispatcher({runDir:'/fake',python:'/fake/python',cwd:'/fake',tools,maxCycles:1,startWhenReady:armed});
-  assert.equal(starts,armed&&ready?1:0);assert.equal(sends,0);
+  await runMetaDispatcher({runDir:'/fake',python:'/fake/python',cwd:'/fake',tools,maxCycles:1});
+  assert.equal(starts,0);assert.equal(sends,0);
 }
 async function interrupted(){let calls=0;const tools={exec_command:async()=>{calls++;return {exit_code:0,output:JSON.stringify({lifecycle:'interrupted',paused:false})}}};const r=await runMetaDispatcher({runDir:'/fake',python:'/fake/python',cwd:'/fake',tools,maxCycles:1});assert.equal(r.lifecycle,'interrupted');assert.equal(calls,1)}
 async function delegation({failFork=false,failBind=false,failSnapshot=false,failSnapshotBind=false,wrongSnapshotParent=false,abandoned=false,lostStartAck=false,returnedBeforeAck=true,label=false,titleFailure=false,count=2}={}) {
@@ -248,7 +248,7 @@ async function networkPause(){
  const cases=[
   networkPause,neutralAdapter,()=>setupDeadline(false),()=>setupDeadline(true),
   ()=>scenario(), ()=>scenario({busy:true}), ()=>scenario({failSend:true}), ()=>scenario({wrongThread:true}),
-  interrupted, ()=>startup(false,true), ()=>startup(true,false), ()=>startup(true,true),
+  interrupted, ()=>startup(false), ()=>startup(true),
   ()=>delegation(), ()=>delegation({count:4}), ()=>delegation({failFork:true}), ()=>delegation({failBind:true}),
   ()=>delegation({failSnapshot:true}), ()=>delegation({failSnapshotBind:true}),
   ()=>delegation({wrongSnapshotParent:true}), ()=>delegation({abandoned:true}),

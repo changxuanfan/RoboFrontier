@@ -87,8 +87,6 @@ STARTUP = {
     'direct_team_v3': ('The experiment has started for the whole team and the task clock is running. Read, observe, '
                        'then decide and act within your role; ready is optional and you continue without waiting '
                        'for another START.'),
-    'ready_barrier_v1': ('Before START, inspect the task and scene, call ready, save waiting and end the startup '
-                         'turn. Await the host START before task actions.'),
 }
 
 
@@ -122,7 +120,7 @@ def bootstrap_text(run, actor):
     lessons = run / run_layout.LAYOUTS[run_layout.CURRENT]['skills_file']
     lessons_line = ('Before acting, read the headings of ' + str(lessons) + ', the run\'s shared lessons; '
                     'teammates may add entries during the run.\n\n' if lessons.is_file() else '')
-    startup = STARTUP[harness.get('startup_protocol', 'ready_barrier_v1')]
+    startup = STARTUP[harness['startup_protocol']]
     text = ('This is a new, independent RoboFrontier trial in ' + str(run) + '. Your role is ' + actor + '.\n\n'
             'The run\'s rules are in your system prompt (also at ' + str(public / 'rules.md') + '). Your other '
             'public inputs follow in full, each under its path.\n\n' + '\n\n'.join(parts) + '\n\n--- end of inputs ---\n\n'
@@ -198,6 +196,8 @@ def delegate_prompt(run, actor, child):
 
 
 def frozen_bootstrap(run, actor):
-    """The frozen first message, or None for a run prepared before it existed."""
+    """The frozen first message written when the run was prepared."""
     path = Path(run) / 'private/inputs/bootstrap' / (actor + '.md')
-    return path.read_text() if path.is_file() else None
+    if not path.is_file():
+        raise ValueError('Missing frozen bootstrap message: ' + str(path))
+    return path.read_text()

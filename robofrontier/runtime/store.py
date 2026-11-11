@@ -152,21 +152,19 @@ class RuntimeStore:
             if self.get('lifecycle') != 'prepared':
                 raise ValueError('Run is not prepared')
             policy = {a: v for a, v in self.agents().items() if v['kind'] != 'manager'}
-            protocol = self.get('config').get('startup_protocol', 'ready_barrier_v1')
-            direct = protocol in ('direct_controller_v2', 'direct_team_v3')
-            if direct:
-                threads = [v['thread_id'] for v in policy.values()]
-                if not threads or not all(threads) or len(set(threads)) != len(threads):
-                    raise ValueError('Direct START requires every initial role bound to a distinct session')
-                if protocol == 'direct_controller_v2' and set(policy) != {'Controller'}:
-                    raise ValueError('Direct Controller START requires one Controller')
-            elif not policy or not all(v['ready'] for v in policy.values()):
-                raise ValueError('All policy roles must be READY')
+            protocol = self.get('config')['startup_protocol']
+            if protocol not in ('direct_controller_v2', 'direct_team_v3'):
+                raise ValueError('Unknown startup protocol')
+            threads = [v['thread_id'] for v in policy.values()]
+            if not threads or not all(threads) or len(set(threads)) != len(threads):
+                raise ValueError('Direct START requires every initial role bound to a distinct session')
+            if protocol == 'direct_controller_v2' and set(policy) != {'Controller'}:
+                raise ValueError('Direct Controller START requires one Controller')
             self.put('lifecycle', 'running')
             self.put('physics_state', 'running')
             self.put('start_at', time.time())
             for a, v in policy.items():
-                self.update_agent(a, work_state='waiting' if direct else 'continue', note='' if direct else 'START; form your own plan within role authority',
+                self.update_agent(a, work_state='waiting', note='',
                                   work_saved_at=time.time(), work_revision=v['work_revision'] + 1)
             self.event('START', self.get('config')['manager'])
 

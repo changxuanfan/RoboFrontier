@@ -5,7 +5,7 @@ import threading
 import unittest
 from robofrontier.runtime.store import RuntimeStore
 from robofrontier.runtime.store import packed
-from robofrontier.tasks.config import load_harness
+from robofrontier.tasks.config import load_harness, startup_protocol
 
 class StoreTests(unittest.TestCase):
     def setUp(self):
@@ -71,7 +71,7 @@ class StoreTests(unittest.TestCase):
         self.assertIsNone(self.s.delivery('A')['delivery_id'])
     def test_peers_can_route_directly_without_a_hidden_coordinator(self):
         self.s.close();self.s=RuntimeStore(Path(self.tmp.name)/'peer.sqlite')
-        config=load_harness();config['topology']='peer';self.s.initialize('peer',config,['A','B'])
+        config=load_harness();config['topology']='peer';config['startup_protocol']=startup_protocol('peer');self.s.initialize('peer',config,['A','B'])
         self.assertNotIn('Controller',self.s.agents())
         self.s.send('A',['B'],'peer work','peer-key')
         self.assertEqual(self.s.pending('B')['messages'],1)
@@ -89,12 +89,12 @@ class StoreTests(unittest.TestCase):
         for mode in ('hierarchical','peer','centralized'):
             store=RuntimeStore(Path(self.tmp.name)/(mode+'-start.sqlite'))
             try:
-                cfg=load_harness();cfg['topology']=mode;store.initialize(mode,cfg,['A','B','C'])
+                cfg=load_harness();cfg['topology']=mode;cfg['startup_protocol']=startup_protocol(mode);store.initialize(mode,cfg,['A','B','C'])
                 policy={a:v for a,v in store.agents().items()if v['kind']!='manager'}
-                for actor in policy:store.update_agent(actor,ready=True)
+                for actor in policy:store.update_agent(actor,thread_id='session-'+actor)
                 store.start()
                 for actor in policy:
-                    self.assertEqual(store.agent(actor)['work_state'],'continue',(mode,actor))
+                    self.assertEqual(store.agent(actor)['work_state'],'waiting',(mode,actor))
                 self.assertEqual(store.agent('Meta')['work_state'],'waiting')
                 self.assertEqual(store.actions(),{})
                 self.assertEqual(store.db.execute('SELECT count(*) FROM messages').fetchone()[0],0)

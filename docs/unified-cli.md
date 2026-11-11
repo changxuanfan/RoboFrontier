@@ -1,8 +1,7 @@
 # Unified command-line configuration
 
-This interface is being integrated on `integration/unified-main`. It has not yet
-replaced the GitHub default branch. See the acceptance ledger (`docs/archive/unified-main.md`, in the [archive tag](history.md))
-for checks still required before publishing a unified release.
+The `robofrontier` command prepares, runs and checks benchmark batches for both engines.
+This guide covers its configuration and commands.
 
 ## Installation in this checkout
 
@@ -25,8 +24,9 @@ already verified files. It does not call a model or download the larger optional
 Factory recording bundle. A plain `git clone` cannot execute an installation
 step; run the bootstrap command after installing Python dependencies.
 
-The development checks use Codex CLI 0.165.0 and Claude Code 2.1.312. These are
-observed local versions, not a claim about the latest upstream versions. Install
+Runs use Codex CLI 0.165.0 and Claude Code 2.1.316, the versions pinned in
+`robofrontier/runtime/versions.py`; `prepare` and `run` refuse others. These are
+reproducibility pins, not a claim about the latest upstream versions. Install
 the CLI for the engine you intend to use. A changed Codex CLI version invalidates
 an existing provider compatibility receipt and requires another preflight.
 
@@ -132,10 +132,8 @@ does not unlock START and its response does not require a waiting turn. New
 requests follow the current role's ownership and communication permissions:
 direct start does not give a coordinating Controller its Workers' robots.
 
-Existing `ready_barrier_v1` inputs retain their legacy startup behavior. They
-are not rewritten or silently upgraded. A new fixed-team batch prepared through
-either the unified CLI or a profile with `benchmark_topology` uses direct team
-start. Binding/START failure or STOP during setup blocks initial model input.
+A fixed-team batch prepared through either the unified CLI or a profile with
+`benchmark_topology` uses direct team start. Binding/START failure or STOP during setup blocks initial model input.
 
 ## Render backends
 

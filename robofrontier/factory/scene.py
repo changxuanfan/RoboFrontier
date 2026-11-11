@@ -1007,8 +1007,7 @@ def build_factory(config_path=DEFAULT_CONFIG, output=None, workstation_catalog=N
         workstation_catalog=Path(workstation_catalog).resolve()
         if not workstation_catalog.is_file():raise ValueError('Missing explicit workstation catalog')
         config.setdefault('workstation_dressing',{})['catalog']=str(workstation_catalog)
-    default_folder={'robo-factory-v4':'v4-shell','robo-factory-v5':'v5-shell'}.get(config['id'],'scene')
-    output=Path(output or ROOT/'outputs/robo-factory'/default_folder).resolve();output.mkdir(parents=True,exist_ok=True)
+    output=Path(output or ROOT/'outputs/robo-factory/scene').resolve();output.mkdir(parents=True,exist_ok=True)
     b=config['building'];W,D=b['width_m'],b['depth_m']
     if min(W,D,b['eave_height_m'])<=0:raise ValueError('Building dimensions must be positive')
     for r in config['regions']:

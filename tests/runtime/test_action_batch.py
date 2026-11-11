@@ -10,14 +10,14 @@ from fake_pipeline import FakeWorld, fake_capture
 from robofrontier.runtime.setup import prepare_run
 from robofrontier.runtime.service import RuntimeService
 from robofrontier.runtime.store import RuntimeStore
-from robofrontier.tasks.config import load_harness
+from robofrontier.tasks.config import load_harness, startup_protocol
 from robofrontier.runtime.scheduling import Scheduler
 
 
 class BatchTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();root=Path(self.tmp.name);self.run=root/'run';self.n=0
-        cfg=load_harness();cfg['topology']='adaptive';p=root/'harness.json';p.write_text(json.dumps(cfg))
+        cfg=load_harness();cfg['topology']='adaptive';cfg['startup_protocol']=startup_protocol('adaptive');p=root/'harness.json';p.write_text(json.dumps(cfg))
         prepare_run(self.run,harness_path=p);self.s=RuntimeService(self.run,FakeWorld,fake_capture)
         self.call('Controller','ready');self.call('Meta','bind',{'actor':'Controller','thread_id':'controller'})
         self.s.store.observe_session('Controller','idle','t1',time.time(),'codex.wait_threads');self.call('Meta','start')
