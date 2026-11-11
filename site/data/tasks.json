@@ -1,6 +1,6 @@
 {
  "schema": "robofrontier.site-tasks.v1",
- "release_sha256": "b445dda2f09191ea5df938709a2cff9593d6a200758fdfac0031ea6eabf63c23",
+ "release_sha256": "91136ac95d64b22880f7df546006e17fadce7fc445c473d4dce4e9967740a087",
  "families": {
   "transport": {
    "name": "Transport",

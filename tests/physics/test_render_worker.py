@@ -8,6 +8,7 @@ import mujoco
 import numpy as np
 from PIL import Image
 
+from robofrontier.physics.cocoa import start_glfw
 from robofrontier.physics.render_worker import RenderWorker, apply_state, render_images
 
 SCENE = '''<mujoco><visual><global offwidth="1280" offheight="800"/></visual><worldbody>
@@ -38,7 +39,9 @@ class RenderWorkerTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def local_image(self, source_model, source_data, path):
-        if not glfw.init(): self.skipTest('No GLFW here')
+        # As a world starts it (physics/cocoa.py), so a saved-window prompt cannot block it on macOS.
+        try: start_glfw()
+        except RuntimeError: self.skipTest('No GLFW here')
         glfw.window_hint(glfw.VISIBLE, False)
         window = glfw.create_window(1280, 800, 'test', None, None)
         if not window: self.skipTest('No window here')

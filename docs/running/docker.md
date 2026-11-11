@@ -5,7 +5,9 @@ source, with three persistent local Docker volumes: run data, native state, and 
 environment. Only a stopped, verified evidence ZIP is copied back to the host.
 
 The policy environment is built and checked once per workspace with `container policy-env`
-(step 5); until it has passed, `container prepare` refuses. Not yet tried on a live Docker host.
+(step 5); until it has passed, `container prepare` refuses. Checked on Docker Desktop 29.9 on
+macOS with `seccomp_profile = "unconfined"`: both engines pass the check under Landlock and a batch
+prepares.
 
 ## 1. Prerequisites
 

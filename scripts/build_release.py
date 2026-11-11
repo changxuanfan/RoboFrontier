@@ -414,6 +414,8 @@ def freeze(args):
                          'physics_validation': validation.name}
     path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
     pin_asset_release()
+    from scripts import site_data
+    site_data.tasks()  # the page's task index records the release hash, which this changed
     print(json.dumps(release['frozen']))
 
 
