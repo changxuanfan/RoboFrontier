@@ -236,8 +236,10 @@ def physics(args):
 
 
 def pin_asset_release():
-    """The scene assets (meshes, label images) are unchanged, so the pinned asset archive
-    still serves this release; record which release it now serves."""
+    """Record which release the pinned asset archive serves. Only valid while the scene assets
+    are unchanged: a step that changes an asset (letters) needs a new archive
+    (robofrontier.batch.handoff assets), published and pinned in configs/policy-assets.json;
+    restore_assets refuses an archive whose files differ from the release's hashes."""
     path = ROOT/'configs/policy-assets.json'
     config = json.loads(path.read_text()); config['release_sha256'] = file_sha256(BENCHMARK/'release.json')
     path.write_text(json.dumps(config, indent=2)+'\n')

@@ -1,8 +1,8 @@
 {
-  "release": "handoff-20261028",
-  "url": "https://github.com/changxuanfan/robofrontier/releases/download/handoff-20261028/policy-assets-rolling003-20261029.tar.gz",
-  "archive_sha256": "1bb7420c38c44b7e2f469d3789a1c0096a4f5cf6d377894d1ae2c1b0a8de2d31",
+  "release": "assets-20261111",
+  "url": "https://github.com/changxuanfan/RoboFrontier/releases/download/assets-20261111/policy-assets-20261111.tar.gz",
+  "archive_sha256": "83169e74fb0e12f702bbc500b01350a47403a9e488afcd9d8b37bf163e98e8df",
   "panda_source_sha256": "b3702cb6a1f33835ebf19cfa303b4108ce67dd4aece802d8f732f3b984736c4d",
-  "archive_release_sha256": "b432892f174f9394927905345fc860b68b3ebc64d7c276530635eda79a699d1c",
+  "archive_release_sha256": "f1f255de39e9d99e370a57e985bfdb364839d3ff7c2f84d64ff741e3a1f4ceae",
   "release_sha256": "f1f255de39e9d99e370a57e985bfdb364839d3ff7c2f84d64ff741e3a1f4ceae"
 }
