@@ -38,6 +38,10 @@ MUST_FAIL = ('read_host_shared_memory', 'read_home', 'read_home_file', 'read_peo
              'write_environment', 'run_other_python', 'import_mujoco', 'pip_install_absent_package', 'network_tcp',
              'network_external', 'unix_socket_shared', 'see_host_processes', 'read_parent_environ', 'ps_parent_environment')
 HOST_ONLY = 'ROBOFRONTIER_PROBE_HOST_ONLY'
+# What the parent-environment probes look for: a subscription credential in any ancestor's
+# environment. The local stub's fake API key stays in the CLI's environment; Claude API-key
+# profiles are refused where the sandbox shows other processes (claude_prepare.prepare_batch).
+CREDENTIALS = ('CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY', 'ROBOFRONTIER_OFFLINE_STUB_TOKEN')
 CLOSED_FOLDERS = {'darwin': {'read_people': '/Users', 'read_disks': '/Volumes', 'read_system_secrets': '/Library/Keychains', 'read_var_tmp': '/var/tmp'},
                   'linux': {'read_people': '/home', 'read_disks': '/raid', 'read_system_secrets': '/root', 'read_var_tmp': '/var/tmp'}}
 FEW_PROCESSES = 15
@@ -137,7 +141,7 @@ await rpc.close();process.exit(0);})().catch(e=>{console.error(e.stack);process.
 
 
 def run_claude(run, command, scratch, seen, shared):
-    from robofrontier.engines.claude.runner import build_command, confine, policy_settings
+    from robofrontier.engines.claude.runner import build_command, confine, policy_settings, start_cli
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), claude_stub(command, seen, shared))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     config = run/'private/engine/config'
@@ -146,10 +150,16 @@ def run_claude(run, command, scratch, seen, shared):
     argv = build_command('claude-opus-5-5', 'high', '{"mcpServers":{}}', 'go', auth_mode='oauth_token', settings=settings)
     env = {'PATH': os.environ.get('PATH', ''), 'HOME': str(scratch/'cli-home'), HOST_ONLY: '1',
            'ANTHROPIC_BASE_URL': 'http://127.0.0.1:%d' % server.server_port, 'ANTHROPIC_API_KEY': 'local-fake-key',
+           'CLAUDE_CODE_OAUTH_TOKEN': 'local-fake-token',
            'CLAUDE_CONFIG_DIR': str(config), 'DISABLE_TELEMETRY': '1', 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
            'ENABLE_TOOL_SEARCH': 'false', 'ENABLE_CLAUDEAI_MCP_SERVERS': 'false', **extra}
     try:
-        subprocess.run(argv, cwd=run/'workspace', env=env, capture_output=True, stdin=subprocess.DEVNULL, timeout=PROBE_LIMIT_S, check=True)
+        # Launched as a run launches it: the token goes to the CLI on a pipe, not in its environment.
+        cli = start_cli(argv, env, cwd=run/'workspace', stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
+        try: _, err = cli.communicate(timeout=PROBE_LIMIT_S)
+        except subprocess.TimeoutExpired:
+            cli.kill(); cli.communicate(); raise
+        if cli.returncode: raise subprocess.CalledProcessError(cli.returncode, argv, stderr=err)
     finally:
         server.shutdown()
         server.server_close()
@@ -249,7 +259,7 @@ def check_engine(name, environment, scratch, mode):
     listener.bind(('127.0.0.1', 0))
     listener.listen()
     other_python = next((path for path in OTHER_PYTHONS if Path(path).exists()), '/missing/python3')
-    fixtures = {'real_home': str(Path.home().resolve()), 'run': str(run), 'env': str(environment), 'host_only': [HOST_ONLY, 'ANTHROPIC_API_KEY', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'ROBOFRONTIER_OFFLINE_STUB_TOKEN'],
+    fixtures = {'credentials': list(CREDENTIALS), 'real_home': str(Path.home().resolve()), 'run': str(run), 'env': str(environment), 'host_only': [HOST_ONLY, 'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'ROBOFRONTIER_OFFLINE_STUB_TOKEN'],
                 'home_file': next((str(p) for p in (Path.home()/'.zshrc', Path.home()/'.bashrc', Path.home()/'.profile') if p.is_file()), '/missing'),
                 'shared_memory_file': str(shared_memory), 'closed_folders': CLOSED_FOLDERS[sys.platform], 'few_processes': FEW_PROCESSES,
                 'core_packages': policy_env.load(environment)['packages'],
@@ -323,12 +333,20 @@ def main(argv=None):
         shutil.rmtree(scratch, ignore_errors=True)
     if failed:
         sys.exit(1)
-    if not args.engine:
-        receipt = policy_env.receipt_path(environment)
-        temporary = receipt.with_name(receipt.name + '.tmp')
-        temporary.write_text(json.dumps(receipt_record(manifest, modes)) + '\n')
-        temporary.replace(receipt)
-        print('recorded', receipt)
+    # Each entry names its engine, sandbox and CLI version, and preparation asks for its exact
+    # combination; a check of some engines adds them to what an earlier pass of this build recorded.
+    receipt = policy_env.receipt_path(environment)
+    record = receipt_record(manifest, modes)
+    try: earlier = json.loads(receipt.read_text())
+    except (OSError, ValueError): earlier = {}
+    if (args.engine and earlier.get('schema') == policy_env.RECEIPT_SCHEMA and earlier.get('passed')
+            and earlier.get('tree_sha256') == manifest['tree_sha256']):
+        kept = [item for item in earlier.get('checked', []) if item.get('engine') not in modes]
+        record['checked'] = sorted(kept + record['checked'], key=lambda item: json.dumps(item, sort_keys=True))
+    temporary = receipt.with_name(receipt.name + '.tmp')
+    temporary.write_text(json.dumps(record) + '\n')
+    temporary.replace(receipt)
+    print('recorded', receipt)
 
 
 if __name__ == '__main__':

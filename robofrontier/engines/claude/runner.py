@@ -300,6 +300,30 @@ def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget
     return cmd
 
 
+# The subscription token reaches the CLI on a pipe, never in its environment: a policy shell can
+# read its parent's environment where the Bash sandbox does not hide other processes (Claude
+# Code's bubblewrap on Linux; check_policy_env's read_parent_environ probe).
+TOKEN_FD_VARIABLE = 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR'
+
+
+def start_cli(cmd, env, **options):
+    """Popen for a Claude CLI process, with a subscription token moved from `env` to a pipe."""
+    env = dict(env)
+    token = env.pop('CLAUDE_CODE_OAUTH_TOKEN', None)
+    if token is None:
+        return subprocess.Popen(cmd, env=env, **options)
+    read, write = os.pipe()
+    try:
+        os.write(write, token.encode())
+    finally:
+        os.close(write)
+    try:
+        env[TOKEN_FD_VARIABLE] = str(read)
+        return subprocess.Popen(cmd, env=env, pass_fds=(read,), **options)
+    finally:
+        os.close(read)
+
+
 def build_env(profile, base_env, config_dir):
     """Pass only this profile's endpoint and credential; never inherit other providers' keys."""
     auth_mode=profile.get('auth_mode','api_key')
@@ -492,8 +516,8 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
     with tempfile.TemporaryFile() as prompt_input:
         prompt_input.write(prompt.encode('utf-8'))
         prompt_input.seek(0)
-        process = subprocess.Popen(cmd, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, stdin=prompt_input, start_new_session=True)
+        process = start_cli(cmd, env, cwd=cwd, text=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, stdin=prompt_input, start_new_session=True)
     deadline = None if timeout is None else time.monotonic() + timeout
     while True:
         remaining = None if deadline is None else deadline - time.monotonic()
@@ -618,9 +642,9 @@ class PersistentSession:
             self.reported_total = baseline(config_dir, source) if source else amount(0)
         except ValueError:
             self.reported_total = None
-        self.process = subprocess.Popen(cmd, cwd=policy_cwd(run_dir), env=env, text=True,
-                                        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                        start_new_session=True, bufsize=1)
+        self.process = start_cli(cmd, env, cwd=policy_cwd(run_dir), text=True,
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 start_new_session=True, bufsize=1)
         self.events, self.stderr = queue.Queue(), []
         process, events, stderr = self.process, self.events, self.stderr
         def read_stdout():

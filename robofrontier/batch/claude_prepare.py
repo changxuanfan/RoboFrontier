@@ -113,6 +113,13 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
     # Prepared on the host that runs it: Claude Code's sandbox, or Landlock where it cannot run.
     from robofrontier.engines.common.landlock import choose
     bash_isolation = choose()
+    # Claude Code's bubblewrap on Linux leaves the CLI's environment readable from a policy shell.
+    # A subscription token goes to the CLI on a pipe (claude.runner.start_cli); an API key cannot.
+    if sys.platform.startswith('linux') and bash_isolation == 'claude-sandbox':
+        keyed = sorted(n for n, p in profiles.items() if p.get('auth_mode', 'api_key') == 'api_key')
+        if keyed:
+            raise ValueError('API-key Claude profiles would expose their key to policy shells under bubblewrap '
+                             'on Linux; use a subscription-token profile: ' + ', '.join(keyed))
     # A policy environment admits only the Bash isolation and Claude Code CLI its check ran.
     from robofrontier.runtime import policy_env
     policy_env.require_combination('claude', bash_isolation)
