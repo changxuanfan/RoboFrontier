@@ -370,10 +370,8 @@ class PolicySettingsTests(unittest.TestCase):
             self.assertIn('Read(%s)' % env, deny)
             self.assertIn('Edit(%s)' % env, deny)
             configs = '//'+str(repo/'configs').lstrip('/')
-            for rule in ('Read(%s/**)', 'Edit(%s/**)'):
+            for rule in ('Read(%s)', 'Read(%s/**)', 'Edit(%s)', 'Edit(%s/**)'):
                 self.assertIn(rule % configs, deny)
-            # A bare folder rule is a string prefix: it would close any sibling named configs-*.
-            self.assertNotIn('Read(%s)' % configs, deny)
             public = '//'+str(run/'public').lstrip('/')
             self.assertIn('Edit(%s/**)' % public, deny)
             self.assertIn(str(repo/'.env'), settings['sandbox']['filesystem']['denyRead'])
@@ -381,25 +379,19 @@ class PolicySettingsTests(unittest.TestCase):
             for folder in (repo, repo/'runs', run):
                 self.assertFalse(any(rule.startswith('Read(//'+str(folder).lstrip('/')+')') for rule in deny), folder)
 
-    def test_a_batch_named_like_the_start_of_this_one_does_not_close_this_run(self):
-        # 2026-11-11: batch 'opus-l3-20261111' beside 'opus-l3-20261111-b' rendered
-        # Read/Edit(//.../opus-l3-20261111), which closed every workspace of the -b batch.
+    def test_a_link_beside_the_run_gets_no_rule(self):
+        # 2026-11-11: ~/Repos/roomscript2 -> RoboFrontier got Edit(//.../roomscript2/**); Claude
+        # Code resolves the link, so every run inside the repository lost its workspace.
         from robofrontier.runtime import access as policy_access
         from robofrontier.engines.claude.runner import policy_settings
         with tempfile.TemporaryDirectory() as tmp:
-            t = Path(tmp).resolve(); repo, home = t/'repo', t/'home'
-            run = repo/'runs/policy/batch-b/profile/case'
-            for folder in (run/'workspace', run/'public/inputs', run/'private/inputs', repo/'runs/policy/batch', home):
-                folder.mkdir(parents=True, exist_ok=True)
-            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(), checkouts=[repo])})
+            repo, home, run = self.layout(tmp)
+            (repo.parent/'alias').symlink_to(repo)
+            self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
+                                                                      checkouts=[repo])})
             deny = policy_settings(run)['permissions']['deny']
-            sibling = '//'+str(repo/'runs/policy/batch').lstrip('/')
-            self.assertIn('Read(%s/**)' % sibling, deny)
-            workspace = '/'+str(run/'workspace')
-            for rule in deny:
-                pattern = rule[rule.index('(')+1:-1]
-                if '*' not in pattern:
-                    self.assertFalse(workspace.startswith(pattern), rule)
+            alias = '//'+str(repo.parent/'alias').lstrip('/')
+            self.assertFalse(any(rule.startswith(('Read(%s' % alias, 'Edit(%s' % alias)) for rule in deny), deny)
 
     def test_every_run_private_folder_under_the_denied_repository_is_closed_by_pattern(self):
         # The deny list is rendered once per CLI process; a run prepared later beside this

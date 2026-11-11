@@ -46,8 +46,8 @@ def _denied_paths(table):
     """Paths to deny for Claude, whose rules have no "most specific path wins".
 
     A denied folder that contains an allowed path (the repository holding this run)
-    becomes denies on everything beside the route to that path, level by level, as the
-    folder stands when the settings are rendered: once per CLI process, which a
+    becomes denies on everything beside the route to that path, level by level, except
+    symbolic links, as the folder stands when the settings are rendered: once per CLI process, which a
     persistent session keeps for the whole run. A folder created later beside the route
     is not on this list; `_private_globs` keeps every run's private/ closed regardless.
     """
@@ -69,6 +69,11 @@ def _denied_paths(table):
             except OSError:
                 continue
             for child in children:
+                if child.is_symlink():
+                    # Claude Code resolves a rule's path, so a rule on a link closes its target:
+                    # ~/Repos/roomscript2 -> RoboFrontier closed every run inside the repository.
+                    # The target keeps whatever its own place in the table grants (as landlock.allowlist).
+                    continue
                 if child.name not in keep:
                     denied.append(child)
                 elif not any(a == child for a in allowed):
@@ -117,13 +122,11 @@ def policy_settings(run_dir):
     writable = sorted(p for p, mode in table.items() if mode == 'write')
     # Claude rules take absolute paths as //path. acceptEdits accepts edits only inside
     # the working folder and every other edit is refused; these rules also keep hidden
-    # paths and the frozen inputs out of reach. 'path/**' covers only what lies inside
-    # path. A bare 'path' is matched as a string prefix, so it also closes every sibling
-    # whose name begins with it (a batch 'x' beside a batch 'x-b' closed all of x-b, its
-    # runs' workspaces included); it is kept only for a file, such as the repository's .env.
+    # paths and the frozen inputs out of reach. Rules follow gitignore matching, where
+    # 'path/**' covers only what lies inside path, so each path also gets an exact rule:
+    # a hidden file (the repository's .env beside the runs folder) is denied by that one.
     def rules(tool, paths):
-        return [tool+'(//'+p.lstrip('/')+suffix+')' for p in paths
-                for suffix in (('', '/**') if Path(p).is_file() else ('/**',))]
+        return [tool+'(//'+p.lstrip('/')+suffix+')' for p in paths for suffix in ('', '/**')]
     deny = rules('Read', hidden) + rules('Edit', hidden+[str(run/'public')])
     # Glob rules are matched when a tool runs, so they also cover run folders created later.
     deny += ['%s(//%s)' % (tool, p.lstrip('/')) for tool in ('Read', 'Edit') for p in private]
