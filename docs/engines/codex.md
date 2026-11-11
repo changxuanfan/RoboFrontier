@@ -177,9 +177,11 @@ model requests inside each run; `batch.parallel` counts runs.
 - **Capacity errors**: bounded same-session resume ([capacity recovery](README.md#capacity-recovery)).
   Authentication errors, quota exhaustion and ordinary task errors are not retried as capacity
   errors.
-- **Network outage**: a turn that failed during an egress or network-outage pause is resent once
-  per role and pause with the frozen `network-resume.md` after the runtime grants the claim
-  (`network-recovery`); an uncertain case holds the run for review.
+- **Network outage**: as on Claude Code, in a run that counts active time, a turn that failed
+  within 30 s of an egress or network-outage pause is continued once per role and pause with the
+  frozen `network-resume.md`, after the runtime grants the claim (`network-recovery`) and once the
+  role has no robot work in flight. A network or unclassified failure is continued; any other
+  failure in that window, or a second one, holds the run for review.
 - **Unexpected stop**: the run continues by itself once
   ([continuation](../running/continuation.md#when-a-run-continues),
   [Codex task recovery](../running/continuation.md#codex-task-recovery)). A Slurm `job`-scope

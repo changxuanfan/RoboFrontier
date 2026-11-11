@@ -29,6 +29,34 @@ test('network recovery accepts only structured transport failures without HTTP s
   assert.equal(networkFailure({message:'network error'}),false);
   for(const httpStatusCode of [401,403,429,500])assert.equal(networkFailure({codexErrorInfo:{httpConnectionFailed:{httpStatusCode}}}),false);
 });
+// An outage that paused the world a minute ago and resumed it just now.
+const outage=()=>({claim:'one',paused_at:Date.now()/1000-60,resumed_at:Date.now()/1000});
+function networkHost(folder,state,record,{failedAt=Date.now()/1000,inFlight=false}={}){
+  return {run:folder,stopped:false,actors:new Map([['thread','Controller']]),retries:new Set(),
+    networkFailures:new Map(),failedAt:new Map([['thread:failed',failedAt]]),activeTime:true,
+    robotWorkInFlight:async()=>inFlight,
+    admin:async(op)=>{record.push(op);return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:outage()}:{allowed:true};},
+    observe:async()=>structuredClone(state),send:async()=>{record.push('send');},event:()=>{}};
+}
+test('as on Claude: only failures near the outage are its, other kinds hold for review, work in flight waits',async t=>{
+  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-network-host-'));t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
+  fs.mkdirSync(path.join(folder,'private/inputs/bootstrap'),{recursive:true});
+  fs.writeFileSync(path.join(folder,'private/inputs/bootstrap/network-resume.md'),'notice');
+  const other={thread:{status:{type:'systemError'}},latestTurn:{id:'failed',status:'failed',error:{message:'tool schema rejected'}}};
+  let record=[];
+  await PolicyHost.prototype.retryCapacity.call(networkHost(folder,other,record,{failedAt:Date.now()/1000-3600}));
+  assert.deepEqual(record,['snapshot']);  // an hour before the outage: not this path's
+  record=[];
+  await PolicyHost.prototype.retryCapacity.call(networkHost(folder,other,record));
+  assert.deepEqual(record,['snapshot','network-recovery-uncertain']);
+  record=[];
+  await PolicyHost.prototype.retryCapacity.call(networkHost(folder,failedNetworkState,record,{inFlight:true}));
+  assert.deepEqual(record,['snapshot']);  // waits for robot work to settle
+  record=[];
+  const unclassified={thread:{status:{type:'systemError'}},latestTurn:{id:'failed',status:'failed'}};
+  await PolicyHost.prototype.retryCapacity.call(networkHost(folder,unclassified,record));
+  assert.deepEqual(record,['snapshot','network-recovery','send']);
+});
 test('network continuation is one fresh notice after a durable claim, never an old turn replay',async t=>{
   const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-network-host-'));t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
   fs.mkdirSync(path.join(folder,'private/inputs/bootstrap'),{recursive:true});
@@ -36,7 +64,8 @@ test('network continuation is one fresh notice after a durable claim, never an o
   const sent=[],operations=[];
   const host={run:folder,stopped:false,actors:new Map([['thread','Controller']]),retries:new Set(),
     networkFailures:new Map([['thread:failed',Date.now()/1000]]),
-    admin:async(op)=>{operations.push(op);return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:{claim:'one'}}:{allowed:true};},
+    failedAt:new Map(),activeTime:true,robotWorkInFlight:async()=>false,
+    admin:async(op)=>{operations.push(op);return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:outage()}:{allowed:true};},
     observe:async()=>structuredClone(failedNetworkState),
     send:async(id,notice)=>{sent.push({id,notice});},event:()=>{}};
   await PolicyHost.prototype.retryCapacity.call(host);await PolicyHost.prototype.retryCapacity.call(host);
@@ -48,7 +77,8 @@ test('unknown network continuation acknowledgement holds review and is never rep
   fs.mkdirSync(path.join(folder,'private/inputs/bootstrap'),{recursive:true});fs.writeFileSync(path.join(folder,'private/inputs/bootstrap/network-resume.md'),'notice');
   let sends=0,reviews=0;
   const host={run:folder,stopped:false,actors:new Map([['thread','Controller']]),retries:new Set(),networkFailures:new Map([['thread:failed',Date.now()/1000]]),
-    admin:async(op)=>{if(op==='network-recovery-uncertain')reviews++;return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:{claim:'one'}}:{allowed:true};},
+    failedAt:new Map(),activeTime:true,robotWorkInFlight:async()=>false,
+    admin:async(op)=>{if(op==='network-recovery-uncertain')reviews++;return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:outage()}:{allowed:true};},
     observe:async()=>structuredClone(failedNetworkState),
     send:async()=>{sends++;throw new Error('unknown acknowledgement');},event:()=>{}};
   await PolicyHost.prototype.retryCapacity.call(host);await PolicyHost.prototype.retryCapacity.call(host);

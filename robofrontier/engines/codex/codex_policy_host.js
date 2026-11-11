@@ -21,6 +21,8 @@ const requiredText=(run,name)=>{const text=frozenText(run,name);
 // consecutive resumes of a session, 10/20/40 s apart plus a 0-5 s jitter fixed by the
 // session ID (so many runs do not retry together); a completed turn resets the count.
 const MAX_CAPACITY_RETRIES=3;  // As robofrontier/runtime/bootstrap.py.
+// How far either side of a network pause a failed turn counts as part of it (claude/recovery.py NETWORK_WINDOW_S).
+const NETWORK_WINDOW_S=30;
 // The default startup timeout when harness.json names none, as STARTUP_TIMEOUT_S there.
 const STARTUP_TIMEOUT_S=600;
 // As in robofrontier/engines/claude/supervisor.py (finish_turn_grace_s): after a normal finish the
@@ -106,11 +108,15 @@ class PolicyHost {
   constructor(run, cwd, python) {
     this.run=path.resolve(run); this.cwd=cwd; this.python=python;
     this.launch=read(path.join(this.run,'private/inputs/codex.json'));
-    this.wallLimit=read(path.join(this.run,'private/inputs/task.json')).run_protocol.total_wall_limit_s;
+    const runProtocol=read(path.join(this.run,'private/inputs/task.json')).run_protocol;
+    this.wallLimit=runProtocol.total_wall_limit_s;
+    // Network continuations apply to runs that count active time only (runtime/clock.py), as on Claude.
+    this.activeTime=(runProtocol.clock||'START_wall_time')!=='START_wall_time';
     this.actors=new Map(); this.turns=new Map(); this.failures=new Map(); this.retries=new Set();
     this.stopped=false;
     this.turnStarted=new Map();
     this.networkFailures=new Map();
+    this.failedAt=new Map();  // When each failed turn was seen, in seconds.
   }
   // Host file locations come from robofrontier/runtime/layout.py, the one source for both engines.
   hostPath(key) {
@@ -198,6 +204,7 @@ class PolicyHost {
       const began=this.turnStarted.get(turnKey);
       if (m.method==='turn/completed') {
         this.turns.set(p.threadId,p.turn);
+        if(p.turn.status==='failed'&&!this.failedAt.has(turnKey))this.failedAt.set(turnKey,Date.now()/1000);
         if(p.turn.status==='failed'&&networkFailure(p.turn.error))this.networkFailures.set(turnKey,Date.now()/1000);
         if (p.turn.status==='completed') this.capacityAttempts?.delete(p.threadId);
         if (p.turn.status==='failed' && capacityFailure(p.turn.error)) {
@@ -264,9 +271,7 @@ class PolicyHost {
     }
     const recovery=snapshot.egress_recovery;
     if(!recovery||!String(recovery.claim||'').startsWith('quota-')||recovery.resumed_at<this.quotaTurns.get(key))return false;
-    const code="from robofrontier.runtime.store import RuntimeStore;from robofrontier.runtime.scheduling import blocks_model_recovery;import sys,json;s=RuntimeStore(sys.argv[1]);a=sys.argv[2];print(json.dumps(any(blocks_model_recovery(v) for v in s.actions(a).values()) or any(True for r in s.db.execute(\"SELECT 1 FROM calls WHERE actor=? AND status IN ('accepted','running','uncertain') AND op IN ('move','gripper','action_batch','delegate')\",(a,)))));s.close()";
-    const {stdout}=await execFileAsync(this.python,['-c',code,path.join(this.run,'private/state/runtime.sqlite'),actor],{cwd:this.cwd});
-    if(JSON.parse(stdout))return false;
+    if(await this.robotWorkInFlight(actor))return false;
     const claim=await this.admin('network-recovery',{actor,thread_id:id,failed_turn_id:t.id,error_observed_at:this.quotaTurns.get(key)});
     if(claim.review_required){this.retries.add(key);await this.admin('network-recovery-uncertain',{actor,thread_id:id});return true;}
     if(!claim.allowed)return false;
@@ -274,6 +279,12 @@ class PolicyHost {
     try{await this.send(id,notice);this.event({event:'quota_continuation',actor,thread_id:id,failed_turn_id:t.id});}
     catch{await this.admin('network-recovery-uncertain',{actor,thread_id:id});return true;}
     return false;
+  }
+  // Whether a role still has robot work that a continuation could overlap (claude/recovery.py does the same).
+  async robotWorkInFlight(actor) {
+    const code="from robofrontier.runtime.store import RuntimeStore;from robofrontier.runtime.scheduling import blocks_model_recovery;import sys,json;s=RuntimeStore(sys.argv[1]);a=sys.argv[2];print(json.dumps(any(blocks_model_recovery(v) for v in s.actions(a).values()) or any(True for r in s.db.execute(\"SELECT 1 FROM calls WHERE actor=? AND status IN ('accepted','running','uncertain') AND op IN ('move','gripper','action_batch','delegate')\",(a,)))));s.close()";
+    const {stdout}=await execFileAsync(this.python,['-c',code,path.join(this.run,'private/state/runtime.sqlite'),actor],{cwd:this.cwd});
+    return JSON.parse(stdout);
   }
   async retryCapacity() {
     if (this.stopped) return;
@@ -287,21 +298,31 @@ class PolicyHost {
         if(await this.retryQuota(id,actor,t,snapshot))return;
         continue;
       }
-      if(state.thread.status.type==='systemError'&&t?.status==='failed'&&snapshot.egress_recovery
-          && !capacityFailure(t.error) && (!networkFailure(t.error)||this.networkFailures?.get(id+':'+t.id)===undefined||!frozenText(this.run,'network-resume.md'))){
-        await this.admin('network-recovery-uncertain',{actor,thread_id:id});return;
-      }
-      if(state.thread.status.type==='systemError'&&t?.status==='failed'&&networkFailure(t.error)){
-        const key=id+':'+t.id,observed=this.networkFailures?.get(key);
-        const notice=frozenText(this.run,'network-resume.md');
-        if(!snapshot.egress_recovery||observed===undefined||!notice||this.retries.has(key))continue;
-        const claim=await this.admin('network-recovery',{actor,thread_id:id,failed_turn_id:t.id,error_observed_at:observed});
-        if(claim.review_required){await this.admin('network-recovery-uncertain',{actor,thread_id:id});return;}
+      // A turn that failed during a network outage or egress pause (NETWORK_WINDOW_S either side of
+      // it), as the Claude host decides (claude/recovery.py recover_network): a network or
+      // unclassified failure is continued once with the frozen notice when no robot work is in
+      // flight; another failure, or a second one in the same pause, holds the run for review.
+      // A failure outside every pause is not this path's; no request or action is replayed.
+      if(state.thread.status.type==='systemError'&&t?.status==='failed'&&!capacityFailure(t.error)){
+        const key=id+':'+t.id,failedAt=this.failedAt.get(key)??this.networkFailures.get(key);
+        const notice=frozenText(this.run,'network-resume.md'),recovery=snapshot.egress_recovery;
+        if(this.retries.has(key)||failedAt===undefined||!notice||!this.activeTime||!recovery)continue;
+        if(failedAt<recovery.paused_at-NETWORK_WINDOW_S||failedAt>recovery.resumed_at+NETWORK_WINDOW_S)continue;
+        const kind=networkFailure(t.error)?'network':(t.error?'other':'unclassified');
+        if(kind==='other'){
+          this.retries.add(key);
+          await this.admin('network-recovery-uncertain',{actor,thread_id:id});
+          this.event({event:'network_continuation_uncertain',actor,thread_id:id,failed_turn_id:t.id,reason:'turn failed for another reason during a network outage'});
+          return;
+        }
+        if(await this.robotWorkInFlight(actor))continue;
+        const claim=await this.admin('network-recovery',{actor,thread_id:id,failed_turn_id:t.id,error_observed_at:failedAt});
+        if(claim.review_required){this.retries.add(key);await this.admin('network-recovery-uncertain',{actor,thread_id:id});return;}
         if(!claim.allowed)continue;
         this.retries.add(key);
         try{
           await this.send(id,notice);
-          this.event({event:'network_continuation',actor,thread_id:id,failed_turn_id:t.id});
+          this.event({event:'network_continuation',actor,thread_id:id,failed_turn_id:t.id,failure:kind});
         }catch{
           await this.admin('network-recovery-uncertain',{actor,thread_id:id});
           this.event({event:'network_continuation_uncertain',actor,thread_id:id});

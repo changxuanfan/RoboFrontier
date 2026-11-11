@@ -228,3 +228,5 @@ class SharedConstantTests(unittest.TestCase):
         self.assertEqual(constant('MAX_CAPACITY_RETRIES'), policy_bootstrap.MAX_CAPACITY_RETRIES)
         self.assertEqual(constant('STARTUP_TIMEOUT_S'), policy_bootstrap.STARTUP_TIMEOUT_S)
         self.assertEqual(load_configuration()['batch']['startup_timeout_s'], policy_bootstrap.STARTUP_TIMEOUT_S)
+        from robofrontier.engines.claude.recovery import NETWORK_WINDOW_S
+        self.assertEqual(constant('NETWORK_WINDOW_S'), NETWORK_WINDOW_S)
