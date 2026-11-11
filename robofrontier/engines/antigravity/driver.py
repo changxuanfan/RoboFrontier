@@ -175,14 +175,15 @@ class Driver:
                 if self.session and sid != self.session:
                     raise ValueError('Antigravity resumed a different session')
                 self.session = sid
-                from .context import limits, verify_static, with_checkpoint
+                from .context import limits, policy_spec, system_text, verify_static
                 if creating:
                     # Bootstrap establishes authenticated local control without sending
                     # model input. Create the actual policy conversation with immutable
-                    # checkpoint settings, then attach the CLI to that native ID.
+                    # checkpoint settings and only the frozen system prompt, then attach
+                    # the CLI to that native ID.
                     metadata = self.rpc('GetConversationMetadata', {'conversationId': sid})
                     _, threshold = limits(self.run)
-                    spec = with_checkpoint(metadata['metadata']['staticConfig'], threshold)
+                    spec = policy_spec(metadata['metadata']['staticConfig'], threshold, system_text(self.run))
                     reply = self.rpc('StartCascade', {'customAgentSpec': spec,
                         'workspaceUris': [cli_workspace(self.run).as_uri()],
                         'source': 'CORTEX_TRAJECTORY_SOURCE_CLI'})

@@ -128,6 +128,43 @@ class NativeTests(unittest.TestCase):
         finally:
             stub.close()
 
+    def test_model_service_receives_exactly_the_frozen_system_prompt(self):
+        from robofrontier.engines.antigravity.provenance import steps
+        from robofrontier.runtime.bootstrap import SYSTEM_PROMPT
+        from robofrontier.configuration import ROOT
+        stub = Stub()
+        self.addCleanup(stub.close)
+        with tempfile.TemporaryDirectory(prefix='rf-agy-system-') as folder:
+            run = Path(folder).resolve()
+            fixture(run)
+            # What a prepared run freezes: the role statement, then the released rules.
+            system = SYSTEM_PROMPT + '\n' + (ROOT/'prompts/rules.md').read_text().rstrip('\n') + '\n'
+            self.assertGreater(system.count('\n'), 10)
+            (run/'private/inputs/bootstrap/system.md').write_text(system)
+            selected = {'model': 'gemini-3.8-flash-low', 'effort': 'low', 'auth_mode': 'api_key',
+                        'env_key': 'RF_TEST_KEY', 'base_url': 'https://generativelanguage.googleapis.com'}
+            make = lambda actor, session=None: Driver(run, actor, selected, {**os.environ, 'RF_TEST_KEY': 'fake'},
+                session=session, gateway_factory=lambda base, key: Gateway(stub.url, key))
+            def received():
+                return '\n'.join(p.get('text', '') for p in stub.requests[-1]['systemInstruction']['parts'])
+            driver = make('Controller')
+            self.addCleanup(driver.close)
+            sid = driver.open()
+            for name in ('one', 'two'):
+                driver(selected, selected['model'], 'low', None, 'Input ' + name, run, {}, events_name=name+'.jsonl', timeout=30)
+                # Only the file's final newline is dropped.
+                self.assertEqual(received(), system.rstrip('\n'))
+                driver.close()
+                driver.open()
+            child = make('ForkProbe', driver.fork(len(steps(driver.home, sid))-1))
+            self.addCleanup(child.close)
+            child.open()
+            child(selected, selected['model'], 'low', None, 'Fork input', run, {}, events_name='fork.jsonl', timeout=30)
+            self.assertEqual(received(), system.rstrip('\n'))
+            for session in (sid, child.session):
+                receipt = json.loads((run/'private/engine/context'/(session+'.json')).read_text())
+                self.assertEqual(receipt['system_prompt'], 'frozen_system_prompt_only')
+
     def test_reported_usage_crossing_limit_creates_native_checkpoint(self):
         for reported, expected in ((260000, False), (267001, True)):
             with self.subTest(reported=reported), tempfile.TemporaryDirectory(prefix='rf-agy-context-') as folder:

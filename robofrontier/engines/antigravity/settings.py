@@ -55,9 +55,9 @@ def configure(run, python=sys.executable):
              + '  - manage_task\n'
              + 'subagent: false\nmainAgent: true\n---\n'
              + (run/'private/inputs/bootstrap/system.md').read_text())
-    if sys.platform == 'linux':
-        agent += ('\nThe policy working directory for file tools is '
-                  + str(run/'workspace') + '. Use paths relative to that directory.\n')
+    # Nothing is added to the system prompt on any platform. The CLI's own working
+    # folder (cli_workspace) is not named to the model: its environment section is
+    # removed (context.policy_spec), and file tools run in the policy workspace.
     root = Path(__file__).resolve().parents[3]
     hook = shlex.join([os.path.abspath(python), '-m', 'robofrontier.engines.antigravity.hook', str(run)])
     expected = {

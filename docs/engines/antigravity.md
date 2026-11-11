@@ -174,9 +174,39 @@ it does not establish a provider's actual hard context capacity or behavior with
 a real 267k-token conversation. `CheckpointConfig.contextWindow` is a string
 model-option selector; writing `"300000"` there is not proof of 300k capacity.
 
-System suffixes, user time/wrappers, native tool schemas (`toolSummary`,
-`manage_task`) and native fork/restart notices remain explicit differences. A
-common task/runtime contract does not imply byte-identical model input.
+### System prompt
+
+The model service receives the frozen `system.md` and nothing else, as Claude
+Code's `--system-prompt` and Codex's `baseInstructions` give it; only the file's
+final newline is dropped. By default the CLI would send about 8,000 more
+characters in eight sections of its own (`user_information`, `mcp_servers`,
+`skills`, `user_rules`, `messaging`, `artifacts`, `guidelines`,
+`communication_style`), and would cut the agent text at every top-level heading
+into a block named after the heading (`# Policy rules` became `<Policy rules>`).
+The adapter creates the policy conversation, through the same `StartCascade` RPC,
+with one untitled section holding the whole frozen text, and turns off the lookup
+of user-level skills, agents, plugins, rules and hooks. It reads this back before
+any policy input and on every reopened or forked session, and refuses a session
+that differs. Nothing platform-specific is added to the prompt.
+
+A test with the real CLI and a local service compares the received system
+instruction with the released rules, across resume and a fork. The MCP tools stay
+declared without the `mcp_servers` section. On the live subscription the first
+probe turn fell from 3,244 to 1,128 input tokens, consistent with the removed
+text; the service's actual input is not otherwise observable there.
+
+### Remaining differences in model input
+
+- Each user message is wrapped: `<USER_REQUEST>` tags, an `<ADDITIONAL_METADATA>`
+  block with the host's local time, and on the first input a
+  `<USER_SETTINGS_CHANGE>` notice about model selection. No configuration field
+  for this was found in the pinned CLI.
+- Tools the adapter does not choose: native `manage_task` returns even when the
+  configured tool list is empty, and the CLI adds `list_resources` and
+  `read_resource` for MCP. Every tool call carries a required `toolSummary`.
+- Native fork and restart notices.
+
+A common task/runtime contract does not imply byte-identical model input.
 
 ## Evidence and reports
 
@@ -218,13 +248,15 @@ trial or a passed live provider preflight.
 | RunPod | 51 sandbox checks, 7 CLI tests and all four topology smokes passed | Real CLI, NVIDIA EGL and MuJoCo with a local fake Gemini service. This pod needed the generic EGL loader and OpenGL libraries. |
 | Slurm | Queued | Job 432846 requests one GPU and a 48-hour time limit. Node and provider qualification are pending. |
 
-Later the same day, after a review: activation guards, delivery-confirmed child
+Later the same day, after a review and the system prompt change, the live
+subscription preflight passed again on the final code (all 8 checks). Changes
+after the review: activation guards, delivery-confirmed child
 start, bound-call fork proof, usage accounting and the refused preflight budget
-(above). Mac regression: 1,854 tests, no failed modules. Real CLI with the local
-fake service: 10 transport tests and five topology smokes passed, including an
-adaptive run with two children. Not rerun after these changes: the live
-subscription preflight (the adapter fingerprint changed, so its receipt must be
-renewed before a run), RunPod and Slurm. Still open: a live adaptive run with
+(above). Mac regression: no failed modules. Real CLI with the local
+fake service: 11 transport tests and five topology smokes passed, including an
+adaptive run with two children. Not rerun after these changes: RunPod and Slurm,
+where the Linux system prompt no longer carries a working-directory note and
+needs a file-tool check. Still open: a live adaptive run with
 several children, native quota and network error classification, and one frozen
 tool-backend descriptor shared by preparation and execution.
 

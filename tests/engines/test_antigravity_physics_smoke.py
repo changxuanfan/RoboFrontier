@@ -76,7 +76,9 @@ class PhysicsTests(unittest.TestCase):
                     batches = list(store.get('delegations', {}).values())
                     self.assertEqual(len(batches), 1, str(directory))
                     self.assertEqual(batches[0]['status'], 'finished', {'batch': batches[0], 'retained': str(directory)})
-                    self.assertEqual([c['start_status'] for c in batches[0]['children']], ['sent']*len(robots))
+                    # 'observed': the child had already returned when its start was recorded.
+                    self.assertTrue(all(c['start_status'] in ('sent', 'observed') for c in batches[0]['children']),
+                                    batches[0]['children'])
                     self.assertEqual({store.get('robot_owners')[r] for r in robots}, {'Controller'})
                     for child in batches[0]['children']:
                         fork = json.loads((run/'private/state/antigravity-forks'/(child['actor']+'.json')).read_text())

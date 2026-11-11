@@ -198,6 +198,42 @@ class StopTests(unittest.TestCase):
         self.assertEqual([e['actor'] for e in events if e['event'] == 'delegate_cleanup_failed'], ['a'])
 
 
+class SystemPromptTests(unittest.TestCase):
+    def native(self, content):
+        return {'agentConfig': {
+            'mixinConfig': {'promptSections': [{'custom': {'title': 'System Prompt', 'content': content}},
+                                               {'builtinName': 'user_information'}, {'builtinName': 'guidelines'}],
+                            'tools': [{'name': 'manage_task', 'builtin': True}]},
+            'customizationDiscovery': {'skills': {'inheritUser': True}, 'rules': {'inheritUser': True}}}}
+
+    def test_only_the_frozen_prompt_remains_and_user_customizations_are_off(self):
+        from robofrontier.engines.antigravity.context import DISCOVERY, policy_spec, prompt_only
+        system = 'Role statement.\n\n# Rules\n- one'
+        native = self.native('Role statement.')
+        # As the CLI parses the agent file: the heading became a second section's title.
+        native['agentConfig']['mixinConfig']['promptSections'].insert(1, {'custom': {'title': 'Rules', 'content': '- one'}})
+        spec = policy_spec(native, 267000, system)
+        agent = spec['agentConfig']
+        self.assertEqual(agent['mixinConfig']['promptSections'], [{'custom': {'title': '', 'content': system}}])
+        self.assertEqual(agent['cascadeConfig']['checkpointConfig']['maxTokenLimit'], 267000)
+        self.assertTrue(all(agent['customizationDiscovery'][name]['inheritUser'] is False for name in DISCOVERY))
+        self.assertTrue(prompt_only(spec, system))
+        # As the CLI reads it back: an empty title is omitted.
+        del agent['mixinConfig']['promptSections'][0]['custom']['title']
+        self.assertTrue(prompt_only(spec, system))
+
+    def test_a_native_session_with_other_sections_or_text_is_refused(self):
+        from robofrontier.engines.antigravity.context import policy_spec, prompt_only
+        system = 'Role statement.'
+        self.assertFalse(prompt_only(self.native(system), system))
+        spec = policy_spec(self.native(system), 267000, system)
+        self.assertFalse(prompt_only(spec, system + ' Extra.'))
+        spec['agentConfig']['customizationDiscovery']['rules']['inheritUser'] = True
+        self.assertFalse(prompt_only(spec, system))
+        with self.assertRaisesRegex(ValueError, 'frozen system prompt'):
+            policy_spec(self.native('Another agent.'), 267000, system)
+
+
 class PreflightBudgetTests(unittest.TestCase):
     def test_a_dollar_cap_is_refused_before_any_provider_call(self):
         from robofrontier import cli

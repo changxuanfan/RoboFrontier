@@ -69,7 +69,7 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
                 'requested_auto_compact_token_limit': model_catalog('codex')['auto_compact_token_limit'],
                 'effective_auto_compact_token_limit': None,
                 'compaction_configuration': 'native_static_config',
-                'differences': ['cli_system_suffix', 'user_wrappers', 'native_tools', 'fork_resume_notices',
+                'differences': ['user_wrappers', 'native_tools', 'fork_resume_notices',
                                 'provider_context_capacity_unverified']})
             manifest_file = run/'private/inputs/manifest.json'
             manifest = json.loads(manifest_file.read_text())
