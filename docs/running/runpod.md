@@ -28,7 +28,7 @@ starting site TOML.
   closed, and Python's process pools fail there while threads and subprocesses work
   ([policy environment](policy-environment.md)).
 - **Tools.** Put the Node.js and CLI folders on `PATH` (`/workspace/tools/node/bin` and
-  `/workspace/tools/npm/bin` in the setup below) in every shell that prepares, runs or checks.
+  `/workspace/tools/npm/bin` on the pod used here) in every shell that prepares, runs or checks.
 - **Rendering.** Without a GPU use `render.device = "cpu"` (Mesa's llvmpipe); the world process
   limits it to two threads per run.
 - **Policy environment.** Build it on the pod and run its check there, with
