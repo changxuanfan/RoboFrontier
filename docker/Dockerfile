@@ -20,6 +20,7 @@ WORKDIR /opt/RoboFrontier
 COPY . .
 ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 RUN uv sync --locked --extra oracle \
+    && .venv/bin/python -m scripts.install_antigravity --output /usr/local/bin/agy \
     && .venv/bin/python -m robofrontier.cli bootstrap \
     && rm -rf /root/.cache/uv /root/.cache/pip runs/asset-cache \
     && mkdir -p .robofrontier runs /var/tmp/robofrontier /opt/robofrontier-policy

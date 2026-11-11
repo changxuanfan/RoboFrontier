@@ -1,14 +1,15 @@
-# Policy engines: Codex and Claude Code
+# Policy engines: Codex, Claude Code and Antigravity
 
-Both engines run the same released tasks (`benchmark/release.json`) with the same frozen inputs,
+The three engines run the same released tasks (`benchmark/release.json`) with the same frozen inputs,
 rules, robot tool text, runtime, START timing, terminal scoring and evidence formats. Each role
-is a native session of the engine's own CLI. This page covers what the two share; the engine
-guides cover the rest, in the same section order so they can be read side by side.
+is a native session of the engine's own CLI. The engine guides cover setup and behavior
+specific to each CLI.
 
 | Guide | Contents |
 | --- | --- |
 | [Codex](codex.md) | app-server sessions, Codex homes, tool backends, receipts |
 | [Claude Code](claude-code.md) | `claude -p` sessions over MCP, authentication modes, Bash isolation, prechecks, cost ledger |
+| [Antigravity](antigravity.md) | Persistent `agy` sessions, native static checkpoint configuration, brokered tools, native forks and current validation limits |
 | [Providers](#providers) | Profiles, the authentication matrix, third-party endpoints |
 | [Unified CLI](../unified-cli.md) | Configuration and the `robofrontier` commands |
 | [Runtime protocol](../protocol.md) | Observation images, START, terminal scoring, robot tool errors |
@@ -31,8 +32,7 @@ either invalidates the run.
 ## Shared setup
 
 Install Python 3.12, uv, Node.js and the CLI of the engine you will use, at the version pinned in
-`robofrontier/runtime/versions.py` (Codex 0.165.0, Claude Code 2.1.316; the same versions are the
-`CODEX_VERSION` and `CLAUDE_CODE_VERSION` arguments of [`docker/Dockerfile`](../../docker/Dockerfile)).
+`robofrontier/runtime/versions.py` (Codex 0.165.0, Claude Code 2.1.316, Antigravity 1.5.5).
 `prepare` and `run` refuse any other version.
 
 ```sh
@@ -66,7 +66,12 @@ network access, copy the archive over and run:
 
 The Factory recording package is separate and not needed for policy runs.
 
-## Component map
+## Codex and Claude Code component map
+
+Antigravity uses the shared Python policy hosts, batch supervisor and robot MCP
+implementation with Claude Code. Its persistent CLI transport and native fork
+verification are in `robofrontier/engines/antigravity/`. See the
+[Antigravity guide](antigravity.md) for isolation and preflight details.
 
 | Component | Codex | Claude Code |
 | --- | --- | --- |
@@ -83,7 +88,7 @@ The Factory recording package is separate and not needed for policy runs.
 | Capacity recovery | `codex_policy_host.js` | `engines/claude/recovery.py` |
 | Host events | `private/outputs/codex-host.jsonl` | `private/outputs/claude-host.jsonl` |
 
-Both engines share the robot tool description `robofrontier/engines/common/robot_tool.json`,
+All three engines share the robot tool description `robofrontier/engines/common/robot_tool.json`,
 the runtime under `robofrontier/runtime/`, the access table `robofrontier/runtime/access.py`,
 metrics `robofrontier/batch/metrics.py` and reports `robofrontier/batch/report.py`.
 
@@ -225,6 +230,9 @@ selects `haiku_subscription_token`.
 | Claude | Subscription token (`claude setup-token`) | `haiku_subscription_token`, `opus_subscription` | `CLAUDE_CODE_OAUTH_TOKEN` |
 | Claude | Saved login, default directory | `haiku_subscription` | `ROBOFRONTIER_CLAUDE_HOME` = `$HOME/.claude`, `CLAUDE_CONFIG_DIR` unset |
 | Claude | Saved login, explicit directory | `haiku_subscription_directory` | `ROBOFRONTIER_CLAUDE_HOME` = the `CLAUDE_CONFIG_DIR` used at login |
+| Antigravity | Saved Google login | `flash_subscription` | Native `agy` account ([Antigravity authentication](antigravity.md#authentication)) |
+| Antigravity | Gemini API key | `flash_api` | `GEMINI_API_KEY` |
+| Antigravity | Gemini-compatible service | `flash_service` | `ANTIGRAVITY_SERVICE_API_KEY`, `ANTIGRAVITY_SERVICE_BASE_URL` |
 | Claude | Anthropic API key | `haiku`, `opus` | `ANTHROPIC_API_KEY` |
 | Claude | Third-party Anthropic-compatible API | `kimi`, `kimi_code`, `qwen`, `glm`, `deepseek` | `KIMI_API_KEY`; `KIMI_CODE_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_ANTHROPIC_BASE_URL`; `ZAI_API_KEY`; `DEEPSEEK_API_KEY` |
 

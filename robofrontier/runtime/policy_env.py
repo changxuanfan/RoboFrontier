@@ -28,9 +28,9 @@ SHELL_FILE = 'policy-env.sh'
 GUIDE_FILE = 'environment.md'
 RECEIPT_SUFFIX = '.check.json'
 RECEIPT_SCHEMA = 'robofrontier.policy-env-check.v2'
-CLIS = {'codex': 'codex', 'claude': 'claude'}
+CLIS = {'codex': 'codex', 'claude': 'claude', 'antigravity': 'agy'}
 # What each engine's policy shells run in: the Codex tool backend, or Claude Code's Bash isolation.
-ISOLATION = {'codex': 'tool_backend', 'claude': 'bash_isolation'}
+ISOLATION = {'codex': 'tool_backend', 'claude': 'bash_isolation', 'antigravity': 'terminal_isolation'}
 
 
 def _digest_file(path):

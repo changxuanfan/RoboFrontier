@@ -9,10 +9,10 @@ import importlib.metadata
 import re
 import subprocess
 
-ENGINES = {'claude': '2.1.316', 'codex': '0.165.0'}
+ENGINES = {'claude': '2.1.316', 'codex': '0.165.0', 'antigravity': '1.5.5'}
 LIBRARIES = {'mujoco': '3.16.0', 'numpy': '2.5.4', 'pillow': '12.3.0'}
-ENGINE_COMMANDS = {'claude': ['claude', '--version'], 'codex': ['codex', '--version']}
-ENGINE_ENVIRONMENT = {'claude': {'DISABLE_AUTOUPDATER': '1'}, 'codex': {}}
+ENGINE_COMMANDS = {'claude': ['claude', '--version'], 'codex': ['codex', '--version'], 'antigravity': ['agy', '--version']}
+ENGINE_ENVIRONMENT = {'claude': {'DISABLE_AUTOUPDATER': '1'}, 'codex': {}, 'antigravity': {'AGY_CLI_DISABLE_AUTO_UPDATE': 'true'}}
 
 
 def engine_version(engine, run=subprocess.run):

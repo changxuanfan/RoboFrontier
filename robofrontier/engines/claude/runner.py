@@ -498,8 +498,7 @@ def _redact(text, secret):
     return text
 
 
-class PreLaunchCancelled(InterruptedError):
-    """Cancellation was observed before a CLI subprocess was created."""
+from robofrontier.engines.common.native import PreLaunchCancelled
 
 
 def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,

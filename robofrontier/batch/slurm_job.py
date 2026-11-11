@@ -72,6 +72,10 @@ def _stopped_files(root, relative, issues, *, prune_config=True):
                 if projects.is_dir() or projects.is_symlink():
                     yield from (file for file in _stopped_files(projects, relative, issues, prune_config=False)
                                 if file.name.endswith('.jsonl'))
+            elif prune_config and name == 'home' and parent.name == 'engine' and parent.parent.name == 'private':
+                # Antigravity's private CLI home is never returned. Its own-session
+                # transcript/database copies live beside it in engine/.
+                continue
             elif not (prune_config and (name == 'claude-config' or name == 'config' and parent.name == 'engine')):
                 kept.append(name)
         dirs[:] = kept
@@ -229,6 +233,10 @@ def submit(config, output, *, queue=False, root=ROOT):
     if policy['engine'] == 'codex' and (not receipt.is_file() or not json.loads(receipt.read_text()).get('passed')):
         raise ValueError('Run the matching explicit provider preflight before preparing a Slurm submission')
     claude_receipts = {}
+    antigravity_receipt = None
+    if policy['engine'] == 'antigravity':
+        from ..engines.antigravity.preflight import require_ready
+        antigravity_receipt = require_ready(policy['profile'], selected, runs=receipts)
     if policy['engine'] == 'claude':
         # The job checks them as any Claude run does (claude_readiness.require_ready), from its own runs/.
         from ..engines.claude.claude_readiness import PRECHECKS, BLOCKED_PRECHECKS, require_ready
@@ -274,6 +282,8 @@ def submit(config, output, *, queue=False, root=ROOT):
             files['provider-report.json'] = _copy_verified(receipt, staged/'provider-report.json')
         for name, (source, _) in claude_receipts.items():
             files[name] = _copy_verified(source, staged/name)
+        if antigravity_receipt is not None:
+            files['antigravity-precheck.json'] = _copy_verified(antigravity_receipt, staged/'antigravity-precheck.json')
         (staged/'job.sbatch').write_text(_script(output, python, config['slurm']))
         files['job.sbatch'] = checksum(staged/'job.sbatch')
         write_json(staged/'submission.json', {'schema': 'robofrontier.slurm-submission.v1',
@@ -324,6 +334,9 @@ def stage(submission, local):
         from ..engines.claude.claude_readiness import PRECHECKS, BLOCKED_PRECHECKS
         for name, folder in (('claude-precheck.json', PRECHECKS), ('claude-blocked-precheck.json', BLOCKED_PRECHECKS)):
             _copy_verified(submission/name, source/'runs'/folder/'submitted/receipt.json')
+    if config['policy']['engine'] == 'antigravity':
+        target = source/'runs/engineering/antigravity-precheck'/config['policy']['profile']/'receipt.json'
+        _copy_verified(submission/'antigravity-precheck.json', target)
     write_json(local/'config.json', config)
     write_json(local/'local-job.json', {'schema': 'robofrontier.slurm-local.v1', 'submission': str(submission),
         'job_id': os.environ['SLURM_JOB_ID'], 'filesystem': kind,

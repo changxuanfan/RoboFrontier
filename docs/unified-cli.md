@@ -22,7 +22,7 @@ command's result as JSON).
 | `factory`, `oracle` | [Factory rendering](factory/replay.md), [Oracle](oracle/README.md) |
 
 `config`, `plan`, `prepare`, `doctor`, `preflight` and `slurm-submit` accept the selection
-options `--engine {codex,claude}`, `--profile`, `--effort`, `--topology`, `--parallel`,
+options `--engine {codex,claude,antigravity}`, `--profile`, `--effort`, `--topology`, `--parallel`,
 `--render {nvidia,cpu,native}`, `--level {1,2,3}`, `--min-arms`, `--cases` and `--families`.
 
 ## Installation
@@ -58,8 +58,8 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 
 | Setting | Meaning |
 | --- | --- |
-| `policy.engine` | `codex` or `claude` |
-| `policy.profile` | Entry in the engine's section of `configs/models.json`; `--engine claude` without a profile selects `haiku_subscription_token` |
+| `policy.engine` | `codex`, `claude` or `antigravity` |
+| `policy.profile` | Entry in the engine's section of `configs/models.json`. Claude defaults to `haiku_subscription_token` and Antigravity to `flash_subscription`. |
 | `policy.effort` | Requested reasoning effort; must match the preflight receipt |
 | `policy.topology` | `single`, `controller-worker`, `worker-worker` or `adaptive` |
 | `batch.parallel` | Runs at once, 1 to 36 |
@@ -114,12 +114,14 @@ Each profile names its credential variable ([authentication matrix](engines/READ
 .venv/bin/robofrontier preflight --confirm-spend                 # Codex, full
 .venv/bin/robofrontier preflight --confirm-spend --smoke-only    # Codex, does not qualify a run
 .venv/bin/robofrontier preflight --engine claude --max-budget-usd 1 --confirm-spend
+.venv/bin/robofrontier preflight --engine antigravity --profile flash_subscription --confirm-spend
 ```
 
 Without `--confirm-spend` no model is called and the result is `not_run`. Receipts go under
 `<runs_root>/engineering/`; `run` refuses a batch whose profile, catalog or CLI version does not
 match a passed receipt. Details: [Codex](engines/codex.md#preflight-and-receipts),
-[Claude Code](engines/claude-code.md#preflight-and-receipts).
+[Claude Code](engines/claude-code.md#preflight-and-receipts),
+[Antigravity](engines/antigravity.md#preflight-and-receipts).
 
 ## Run, monitor and stop
 

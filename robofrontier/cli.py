@@ -26,6 +26,11 @@ def _catalog(config):
     if policy['profile'] not in catalog['profiles']:
         raise ValueError('Unknown ' + policy['engine'] + ' profile: ' + policy['profile'])
     catalog['profiles'][policy['profile']]['effort'] = policy['effort']
+    if policy['engine'] == 'antigravity':
+        from .engines.antigravity.profile import profile
+        selected = profile(policy['profile'])
+        selected['effort'] = policy['effort']
+        catalog['profiles'][policy['profile']] = selected
     if policy['engine'] == 'codex':
         # New portable batches and their preflight use the same checked-in
         # template, independent of another Desktop session's mutable cache.
@@ -92,8 +97,11 @@ def prepare(output, config):
                'render_device': config['render']['device'],
                'record_realtime_video': config['render']['record_realtime_video']}
     with _catalog_file(config) as catalog:
-        if policy['engine'] == 'claude':
-            from robofrontier.batch.claude_prepare import prepare_batch as prepare_claude
+        if policy['engine'] in ('claude', 'antigravity'):
+            if policy['engine'] == 'claude':
+                from robofrontier.batch.claude_prepare import prepare_batch as prepare_claude
+            else:
+                from robofrontier.batch.antigravity_prepare import prepare_batch as prepare_claude
             result = prepare_claude(output, [policy['profile']], families=selection['families'] or None,
                                    cases=selection['cases'] or None, catalog=catalog,
                                    level=selection['level'] or None, min_arms=selection['min_arms'],
@@ -139,6 +147,9 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
     from .runtime.diagnostics import require_runtime
     require_runtime(config, render=False)
     with _catalog_file(config) as catalog:
+        if policy['engine'] == 'antigravity':
+            from .engines.antigravity.preflight import run_precheck
+            return run_precheck(policy['profile'], catalog=catalog, smoke_only=smoke_only)
         if policy['engine'] == 'claude':
             if max_budget_usd is None:
                 raise ValueError('Claude preflight requires an explicit --max-budget-usd estimate')
@@ -237,6 +248,11 @@ def run(batch, *, continuing=False):
         # Seatbelt and Landlock keep other processes' environments unreadable; bubblewrap does not.
         if any(item.get('bash_isolation') == 'claude-sandbox' for item in frozen):
             require_hidden_token()
+    if config['policy']['engine'] == 'antigravity':
+        from .engines.antigravity.preflight import require_ready
+        for job in json.loads((Path(batch)/'batch.json').read_text()).get('jobs', []):
+            selected = json.loads((Path(job['run_directory'])/'private/inputs/antigravity.json').read_text())['profile']
+            require_ready(config['policy']['profile'], selected)
     from .runtime.diagnostics import require_runtime
     from .runtime import versions
     require_runtime(config)
@@ -253,7 +269,7 @@ def run(batch, *, continuing=False):
                    **versions.ENGINE_ENVIRONMENT[config['policy']['engine']]}
     os.environ.clear()
     os.environ.update(environment)
-    if config['policy']['engine'] == 'claude':
+    if config['policy']['engine'] in ('claude', 'antigravity'):
         from .batch.claude_batch import run_until_signal
         state = run_until_signal(batch, dict(os.environ), parallel=config['batch']['parallel'],
                           startup_interval_s=config['batch']['startup_interval_s'],
@@ -319,7 +335,7 @@ def continue_runs(batch, cases=None):
     batch = Path(batch).resolve()
     config = _frozen_configuration(batch)
     engine = config['policy']['engine']
-    lock = run_layout.batch_path(batch, 'engineering_lock' if engine == 'claude' else 'supervisor_lock')
+    lock = run_layout.batch_path(batch, 'engineering_lock' if engine in ('claude', 'antigravity') else 'supervisor_lock')
     if _lock_held(lock): raise ValueError('The batch is still running; stop it or wait before continuing runs')
     document = json.loads((batch/'batch.json').read_text())
     jobs = document['jobs']
@@ -348,7 +364,7 @@ def continue_runs(batch, cases=None):
             prepared.append(job['case_id'])
     if not prepared: return {'batch': str(batch), 'prepared': [], 'refused': refused}
     # Reopen the batch for exactly these runs; the others keep their final status.
-    if engine == 'claude':
+    if engine in ('claude', 'antigravity'):
         path = run_layout.batch_path(batch, 'engineering_status')
         state = json.loads(path.read_text())
         for job, entry in zip(document['jobs'], state['jobs']):
@@ -388,7 +404,7 @@ def argument_parser(*, prog=None):
     sub = parser.add_subparsers(dest='command', required=True)
     for name in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
         p = sub.add_parser(name)
-        p.add_argument('--engine', choices=('codex', 'claude'))
+        p.add_argument('--engine', choices=('codex', 'claude', 'antigravity'))
         p.add_argument('--profile')
         p.add_argument('--effort', choices=('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
         p.add_argument('--topology', choices=TOPOLOGIES)

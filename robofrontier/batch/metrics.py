@@ -175,7 +175,7 @@ def usage(engine, raw, model_usage=None):
         total = uncached+cached+written if None not in (uncached, cached, written) else None
     else:
         total = number(raw.get('input_tokens', raw.get('inputTokens')))
-        cached = number(raw.get('cached_input_tokens', raw.get('cachedInputTokens')))
+        cached = number(raw.get('cache_read_tokens') if engine == 'antigravity' else raw.get('cached_input_tokens', raw.get('cachedInputTokens')))
         uncached = total-cached if total is not None and cached is not None and total >= cached else None
         written = None  # Codex does not separately report cache writes here.
     # Same definition for both engines: every input token not read from cache.
@@ -394,6 +394,18 @@ def export_metrics(run, engine):
                              'usage_source': 'model_usage' if summary.get('model_usage') else 'usage',
                              'reported_cost_usd': number(summary.get('total_cost_usd')),
                              'duration_s': None, 'ended_at': None})
+    elif engine == 'antigravity':
+        for e in events:
+            if e.get('event') != 'cli_turn_completed' or not e.get('events_name') or e['events_name'] in seen:
+                continue
+            seen.add(e['events_name'])
+            raw = dict(e.get('usage_delta') or {})
+            output, thinking = number(raw.get('output_tokens')), number(raw.get('thinking_tokens'))
+            raw['output_tokens'] = output + thinking if None not in (output, thinking) else None
+            rows.append({'actor': e.get('actor'), 'session_id': e.get('session_id'), 'phase': e.get('phase', 'policy'),
+                'usage': usage(engine, raw), 'usage_source': 'native_result_counter_delta',
+                'thinking_tokens': thinking, 'reported_cost_usd': None,
+                'duration_s': number(e.get('duration_s')), 'ended_at': number(e.get('at'))})
     else:
         previous = {}
         for e in events:
@@ -435,7 +447,7 @@ def export_metrics(run, engine):
                           if all(r['usage'][k] is not None for r in selected) else None for k in fields}
     malformed = sum(e.get('event') == 'malformed_evidence' for e in events)
     started = {e.get('events_name') for e in events if e.get('event') == 'cli_turn_started'}
-    unfinished = len(started-seen) if engine == 'claude' else None
+    unfinished = len(started-seen) if engine in ('claude', 'antigravity') else None
     # A compaction's tokens appear only in a result's modelUsage, never in the transcript.
     complete = not legacy and not malformed and not unfinished and not (after_results or {}).get('compactions')
     reported = sum(costs) if costs else None
@@ -456,7 +468,7 @@ def export_metrics(run, engine):
                                               if not cost_complete and estimate and estimate['estimated_cost_usd'] is not None else None),
             'usage_after_last_result': after_results,
             'rows': rows, 'phase_counts': {p: sum(r['phase'] == p for r in rows) for p in sorted({r['phase'] for r in rows})},
-            'row_unit': 'cli_turn' if engine == 'claude' else 'token_usage_update',
+            'row_unit': 'cli_turn' if engine in ('claude', 'antigravity') else 'token_usage_update',
             'unfinished_cli_turns': unfinished,
             'tool_call_count': len(tools),
             'tool_seconds_sum': sum(tool_seconds) if tool_seconds and None not in tool_seconds else None,

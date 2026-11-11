@@ -90,7 +90,7 @@ def execute(store, op, data, owner, now):
         # Matching transcript prefixes alone do not authenticate a native fork.
         # Claude adaptive delegation stays closed until creation and role binding
         # can be verified together by the trusted host.
-        if cfg.get('engine') == 'claude':
+        if cfg.get('engine') in ('claude', 'antigravity'):
             raise ValueError('Claude adaptive delegation is not yet qualified')
         # Commit identity before reading platform files: a failed check must
         # not erase a native fork that already exists.

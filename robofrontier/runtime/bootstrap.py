@@ -17,6 +17,7 @@ ENGINE_LINES = {
     'codex': ('View images listed in the task with view_image. Do not use Codex collaboration tools '
               '(spawn_agent and similar); split work only through robot delegate.'),
 }
+ENGINE_LINES['antigravity'] = ENGINE_LINES['claude']
 # The first part of every policy turn's system prompt on both engines (system_prompt adds the
 # run's rules): it replaces Claude Code's and Codex's own coding-agent instructions, so both
 # models see the same text.

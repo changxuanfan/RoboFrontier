@@ -230,7 +230,7 @@ def batch_path(batch, key):
 def main():
     parser = argparse.ArgumentParser(description='Print a run\'s resolved host paths as JSON (for the Node hosts).')
     parser.add_argument('run', type=Path)
-    parser.add_argument('--engine', choices=['claude', 'codex'])
+    parser.add_argument('--engine', choices=['claude', 'codex', 'antigravity'])
     args = parser.parse_args()
     print(json.dumps({'layout': layout(args.run), 'paths': paths(args.run, args.engine)}, sort_keys=True))
 
