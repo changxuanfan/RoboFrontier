@@ -26,6 +26,12 @@ def of(config):
     return mode
 
 
+def receipt_name(profile_name, mode):
+    """The folder of a profile's Codex preflight receipt. A robot_only launch differs from the
+    full one, so it has a receipt of its own and never replaces the full run's."""
+    return profile_name + ('.robot_only' if mode == ROBOT_ONLY else '')
+
+
 def of_run(run):
     """The frozen mode of a prepared run."""
     path = Path(run)/'private/inputs/harness.json'
