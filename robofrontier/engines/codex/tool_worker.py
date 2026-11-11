@@ -198,7 +198,11 @@ def main():
         PATH=str(Path(sys.executable).parent)+':/usr/local/bin:/usr/bin:/bin', LANG='C.UTF-8', TMPDIR=str(temporary)))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     if frozen:
-        private_shared_memory()
+        # Where the host forbids user namespaces (a RunPod container), there is no private
+        # /dev/shm: Landlock keeps the shared one closed, so multiprocessing locks do not work,
+        # as under the Claude Landlock shell; nothing shared opens.
+        try: private_shared_memory()
+        except PermissionError: pass
     seccomp_filter(abi(), ignore_mode_changes=bool(frozen))
     restrict(rules)
     drop_capabilities()
