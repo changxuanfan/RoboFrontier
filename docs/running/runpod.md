@@ -24,12 +24,16 @@ starting site TOML.
   `public/` and `workspace/` folders and the policy environment are the only places it reaches.
 - **Isolation.** Claude Code's own Bash sandbox does not run in a RunPod container, so Bash runs
   under Landlock ([Claude Code](../engines/claude-code.md)); Codex uses its `landlock-v1` tool
-  backend.
+  backend. A pod forbids user namespaces, so no command gets a private `/dev/shm`: it stays
+  closed, and Python's process pools fail there while threads and subprocesses work
+  ([policy environment](policy-environment.md)).
+- **Tools.** Put the Node.js and CLI folders on `PATH` (`/workspace/tools/node/bin` and
+  `/workspace/tools/npm/bin` in the setup below) in every shell that prepares, runs or checks.
 - **Rendering.** Without a GPU use `render.device = "cpu"` (Mesa's llvmpipe); the world process
   limits it to two threads per run.
 - **Policy environment.** Build it on the pod and run its check there, with
   `ROBOFRONTIER_POLICY_ENV_BASE` naming the base ([policy environment](policy-environment.md)).
 
 A network outage and a used-up usage limit pause the run in place and resume it by
-themselves ([continuation](continuation.md#time)). Not yet verified on a live pod after the
-2026-11-10 cleanup: the service, Landlock and the policy environment check.
+themselves ([continuation](continuation.md#time)). Verified on a live pod (48 CPUs, kernel 6.8,
+Landlock ABI 4) on 2026-11-11: the policy environment check passes for Claude and Codex.

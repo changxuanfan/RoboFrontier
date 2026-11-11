@@ -91,7 +91,15 @@ its Bash sandbox.
   `./script.sh` needs `bash script.sh`. It also blocks `kill` and sockets.
 - **Each Codex command on Linux has its own empty `/dev/shm`.** It holds Python's multiprocessing
   locks and goes away with the command, so other jobs' shared memory stays out of reach. This needs
-  unprivileged user namespaces, and commands fail on a host without them.
+  unprivileged user namespaces. On a host without them (a RunPod pod), and for Claude's Landlock
+  Bash, `/dev/shm` stays closed instead, so `multiprocessing.Pool` and `ProcessPoolExecutor` fail
+  there; threads and plain subprocesses work. The check records this as a known limit.
+- **No named Unix socket can be made under Landlock.** In the shared `/tmp` one would reach other
+  runs' processes. Python's own process pools use socket pairs or abstract sockets and are not
+  affected.
+- **The system Python is closed on Linux.** `python3` and `pip` in `/usr/bin`, `/bin` and
+  `/usr/sbin` cannot run, so a policy shell runs only the environment's Python; the folders stay
+  listable and their other programs run.
 - **`/tmp` is open and shared.** Closing it breaks zsh here-documents and the Claude CLI's record of
   each command's working directory, which use fixed paths there. So a policy can read and write what
   other runs and other programs on the host keep in `/tmp`, including other Claude sessions' files
