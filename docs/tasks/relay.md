@@ -1,129 +1,70 @@
 # Relay
 
-The team carries 1.2 m timbers (2, 3 or 4 of them, with 8, 12 or 16 arms) along a route of
-worktops from their starting positions to the painted GOAL. Carrying a timber in the air takes at
-least two arms. Every timber needs at least one qualified airborne handover: a new arm holds the
-timber for 0.2 s while at least two current holders keep it off the table, before one lets go.
-A timber that falls may be lifted again by the arms that held it when it fell; if another arm
-picks it up, its earlier handovers no longer count. A regrasp on the table is never a handover.
+The team carries red timbers (about 1.2 m long; 2, 3 or 4 of them with 8, 12 or 16 arms) along a
+route of worktops from their starting positions to the painted GOAL. Carrying a timber in the air
+takes at least two arms, and every timber needs at least one qualified airborne handover before
+it counts. Final placement in GOAL is free: timbers may touch or stack.
 
 | Level | Timber |
 | --- | --- |
 | 1 (`d1`) | A straight beam |
-| 2 (`d2`) | A 63° arc with a free-hanging 600 g wooden pendulum on its underside |
-| 3 (`d3`) | A 31.5° sprung elbow (±25° passive hinges) with the same pendulum |
+| 2 (`d2`) | A 63° circular arc with a free-hanging pendant (170 mm wooden shaft, 600 g) on its underside |
+| 3 (`d3`) | A 31.5° elbow (148.5° interior angle) on passive out-of-plane springs (±25°), with the same pendant |
 
-Layouts: a straight table (8 arms), a 90° arc (12) and a semicircle (16). A timber is done when
-at least 70 % of its centreline lies above GOAL, every arm has released it and it has had a
-qualified handover; stacking in GOAL is allowed.
+| Arms | Layout | Timbers |
+| --- | --- | --- |
+| 8 | Two straight rows | 2 |
+| 12 | 90° arc, 7 outer and 5 inner arms | 3 |
+| 16 | Semicircle, 10 outer and 6 inner arms | 4 |
 
-## Earlier revisions, Oracle evidence and tools
+Tables are 0.8 m high. Arms grasp the red timber, never the pendant, its eyes or shaft.
 
-The sections below keep the detail written while each revision was built; numbers such as
-R13 or R14 name those revisions.
+## Completion
 
-### Released geometry
+A timber is complete when, at scoring:
 
-| Arms | Layout | Assemblies per case | Initial endpoint chord, L2/L3 |
-| --- | --- | --- | --- |
-| 8 | Two straight rows | 2 | 1.15 m |
-| 12 | 90-degree arc, seven outer/five inner | 3 | 1.15 m |
-| 16 | Semicircle, ten outer/six inner | 4 | 1.20 m |
+- at least 70 % of its centreline length lies in the vertical space above the GOAL outline
+  (`relay-timber-goal-70pct-v1`; only timber segments count, never the pendant), reported as
+  `timber_inside_fraction`;
+- every arm has released it; table support and stillness are not required; and
+- it has a counted airborne handover (`relay-airborne-handover-v1`), reported as
+  `airborne_handover_met`.
 
-Each scale has Levels 1, 2 and 3. Tables are 0.80 m high. The 16-arm radial row
-spacing is 1.40 m; the 12-arm outer/inner radii are 3.46/2.16 m. Level 1 retains
-its own apparatus and arrangement. Level 2 uses a 63-degree circular-arc timber.
-Level 3 uses a 31.5-degree deflection, 148.5-degree interior angle and passive
-out-of-plane springs with limits of +/-25 degrees. On Levels 2 and 3, a fixed eye
-attaches directly to the timber underside 100 mm along it from the endpoint,
-without a mounting stem, and interlinks with the pendant's eye. The wooden shaft
-is 170 mm and its weight is 600 g. Frozen model geometry is authoritative.
+The case is complete when every timber is. `robofrontier/tasks/relay.py` holds the rule,
+`robofrontier/tasks/relay_goal_fraction.py` measures the fraction and the `Relay` class in
+`robofrontier/tasks/evaluate.py` tracks custody, handovers and drops.
 
-### Current policy completion and process records
+## Handovers
 
-New policy runs use `terminal_outcome_v2`. Move every assembly from its own
-initial position toward the common GOAL; returning it to START is unnecessary.
-Controllers choose teams, grasp points, handover locations and schedules.
-Independent operations may overlap within role ownership and collision limits.
+- **Airborne.** A timber becomes airborne when it is lifted more than 25 mm with at least two
+  arms holding it. It is *off the table* while its lowest part is more than 2 mm above the
+  tabletop and nothing connects it to the table, directly or through other cargo.
+- **Qualified handover.** While the timber is off the table and at least two current holders
+  keep it, a new arm must hold it for at least 0.2 s; then a current holder lets go. The change
+  is recorded with `protocol: qualified-members-v3` and `airborne: true`. The receiver's 0.2 s
+  restart whenever the timber touches the table or the receiver loses contact. A change of
+  holders in which a new arm has not qualified is recorded as an `unverified_handover`
+  violation and does not count.
+- **Never a handover.** Pushing or dragging a timber along the table, and a change of holders
+  while it rests in GOAL (recorded as `grounded-regrasp-v1`, `airborne: false`).
 
-Final placement may include cargo contact and stacking. Under the current
-`relay-timber-goal-70pct-v1` rule, each timber must have at least 70 percent of
-its centreline length in the vertical space above the painted GOAL outline, and
-every robot must have released it. Table support, direct or through other
-cargo, is not required, and there is no speed threshold or stationary-duration
-test. Only physical timber segments count, never a pendant, ring or shaft; the
-measured fraction is reported per payload as `timber_inside_fraction`.
+## Drops and recovery
 
-Tasks prepared before this rule keep the earlier `relay-final-goal-50mm-v1`
-rule: the complete assembly within GOAL with at most 50 mm outward tolerance on
-each boundary, released and actually supported. A low release may begin when
-the lowest assembly part is at most 30 mm above the table; opening the gripper
-alone does not establish landing or completion.
+An airborne timber is *dropped* when it touches the table or floor outside the allowed GOAL
+landing, or when fewer than two arms hold it for more than 0.2 s. Drops are counted in `drops`
+and recorded as process events; they do not veto the score.
 
-New runs also declare `relay-airborne-handover-v1`: a timber counts as complete
-only after a qualified airborne handover. A new arm must hold the timber for at
-least 0.2 seconds while at least two current holders keep it off the table, and
-then a current holder must let go. Pushing or dragging a timber along the table
-never qualifies. Off the table means the lowest assembly part is more than 2 mm
-above the tabletop and nothing connects the timber to the table, directly or through
-other cargo; the receiver's 0.2 seconds restart whenever that stops. A change of
-holders while the timber rests in GOAL is recorded with `airborne: false`
-(`grounded-regrasp-v1`) and never counts. Handover rows written by this evaluator
-carry `protocol: qualified-members-v3` and `airborne: true`; rows of earlier logs
-(`qualified-members-v2`) did not check the table, so they may include such regrasps.
-Each payload reports `airborne_handover_met`. Runs prepared before
-this rule keep their placement-only terminal outcome, and no agent in those runs was
-told a handover was required.
+- The arms that held the timber when it fell may lift it again. Once at least two of them have it
+  clear of the table, it is airborne again and its earlier handovers still count.
+- If any other arm grasps the dropped timber, a `receiver_recovered_drop` violation is recorded
+  and none of that timber's handovers counts, earlier or later, until the arms that held it at
+  the drop lift it clear again; only handovers after that lift count.
 
-Collisions, drops, unsupported transfers and recovery violations remain process
-records. They are not an automatic veto on an otherwise valid terminal outcome.
-Models may recover through ordinary robot actions. Reset,
-respawn, direct object-state writes, welds and history erasure are unavailable.
-See [shared START and scoring semantics](../protocol.md#direct-controller-startup-and-terminal-scoring-v2).
+A continued run keeps each timber's handovers, drops and holders from the moment it stopped
+([continuation](../running/continuation.md)).
 
-`robofrontier/tasks/relay.py` defines the current
-`relay-timber-goal-70pct-v1` contract (and recognizes the earlier
-`relay-final-goal-50mm-v1`); `robofrontier/tasks/relay_goal_fraction.py` measures
-the centreline fraction. `robofrontier/tasks/families.py` applies the
-new-run terminal overlay and freezes the corresponding public guidance. Do not
-publish the older clean-process vetoes as the current policy completion rule. Old
-recordings retain their original contract and native verdict.
+## Presentation
 
-### Execution and reference code
-
-Use the [unified CLI](../unified-cli.md) for native model runs and the
-[Oracle interface](../oracle/README.md) for privileged references. Unified Oracle execution
-has a configurable 24-hour engineering limit from owner launch, separate from
-the policy's START clock. An Oracle monitor's engineering corrections are not
-an autonomous model result.
-
-`run_relay_live_oracle.py` handles individual reference executions. The
-nine-case batch runner, `scripts/run_relay_nine_oracles.py`, was removed on 2026-11-10 (restore from tag `archive/pre-cleanup-20261110`; see the [cleanup log](../cleanup-20261110.md)).
-
-| Module, under `robofrontier/` unless stated | Responsibility |
-| --- | --- |
-| `suite/relay_contract.py` | Base rules, projections, input checks and default native paths |
-| `oracle/relay_oracle.py`, `oracle/relay_pipeline.py` | Private reference planning and parallel execution frontiers |
-| `oracle/recovery.py` (`RelayLiveRecovery`) | Typed recovery with request/execution evidence |
-| `suite/relay_user_goal_policy.py`, `suite/relay_contact_escape.py`, `suite/relay_donor_staging.py` | Goal release, bounded contact escape and donor clearing |
-| `suite/relay_observation_state.py` | Privileged readonly state evidence |
-| `suite/relay_scene.py`, `suite/relay_underslung.py`, `suite/rigid_relay.py` | Geometry and retained builders |
-| `relay_video_motion.py`, `relay_motion_edit.py` | Background-independent motion analysis and time mapping |
-
-### Historical data and handoff
-
-The following local records are not included by Git clone and do not establish
-new current-source qualification:
-
-- Completion selection: `runs/oracle/relay-r16-38b5423-20261026-171651/USER-GOAL-ALL-NINE-COMPLETE.json`.
-- Level 1 originals: `runs/oracle/relay-nine-ab1abec-20261026-032833/`.
-- Levels 2/3 originals: `runs/oracle/relay-r16-38b5423-20261026-171651/`.
-- Videos/frame maps: `outputs/oracle/relay-20x-20261027/report.md`.
-- Independent edited tracks: `outputs/oracle/relay-edited-tracks-20261027/`.
-- Retained dependencies and retired-source manifest: `runs/engineering/relay-cleanup-20261027/manifest.json`.
-
-Original 60-Hz streams, appearance events, failure/recovery/control-correction
-hashes, reports and videos remain evidence. See the merge notes (`docs/archive/plans/suite-v2/relay-merge-handoff.md`, in the [archive tag](../history.md)) and the
-[current task-family entry](README.md). Historical Factory presentations use
-independent per-table loops at 20x/30 fps; static neighboring tables do not imply
-simultaneous task completion.
+Videos play Relay at 20× and 30 fps (`speedup` in `benchmark/release.json`), each table looping
+on its own clock; neighboring tables in one frame are not synchronized. See
+[Factory replay](../factory/replay.md).

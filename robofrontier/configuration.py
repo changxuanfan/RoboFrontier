@@ -2,6 +2,7 @@
 from copy import deepcopy
 import math
 from pathlib import Path
+import sys
 import tomllib
 from .io import ROOT
 
@@ -65,7 +66,7 @@ def _merge(base, updates, prefix=''):
             base[key] = value
 
 
-def load_configuration(path=None, overrides=None):
+def load_configuration(path=None, overrides=None, *, host=None):
     """Layer a partial user TOML and explicit options over checked-in defaults.
 
     Secrets and arbitrary environment expansion are deliberately not supported.
@@ -92,8 +93,20 @@ def load_configuration(path=None, overrides=None):
             and 'profile' not in updates.get('policy', {})
             and 'profile' not in (overrides or {}).get('policy', {})):
         result['policy']['profile'] = 'haiku_subscription_token'
+    # `auto` values are settled here, before anything is frozen: for this host, for the Slurm
+    # nodes a submission will run on (host='slurm', from the job's GPU request), or for the
+    # Linux container a Docker command starts (host='container', with this host's GPU if any).
     if result['render']['device'] == 'auto':
-        result['render']['device'] = detected_render_device()
+        if host == 'slurm': device = 'nvidia' if result['slurm']['gpus'] else 'cpu'
+        elif host == 'container': device = 'nvidia' if detected_render_device() == 'nvidia' else 'cpu'
+        else: device = detected_render_device()
+        result['render']['device'] = device
+    runtime = result.get('runtime', {})
+    if runtime.get('codex_tool_backend') == 'auto':
+        linux = host in ('slurm', 'container') or (host is None and sys.platform.startswith('linux'))
+        # Codex's own sandbox on macOS; on Linux the tool worker under Landlock and seccomp,
+        # the backend scripts/check_policy_env.py checks there.
+        runtime['codex_tool_backend'] = 'landlock-v1' if linux and result['policy']['engine'] == 'codex' else 'native'
     validate_configuration(result)
     return result
 
@@ -221,7 +234,7 @@ def validate_configuration(config):
             raise ValueError('slurm.egress_wait_s must be between 1 and 3600')
         if slurm['egress_mode'] == 'mac-ssh':
             path = Path(slurm['egress_root'])
-            # Claude carries its credential in the job environment and needs only the route.
+            # Claude reads its token from .env inside the job (slurm_job.execute) and needs only the route.
             routed = slurm['auth_mode'] == 'subscription' or config['policy']['engine'] == 'claude'
             if not routed or not path.is_absolute() or '..' in path.parts:
                 raise ValueError('Mac egress requires subscription mode or Claude, and an absolute private egress_root')

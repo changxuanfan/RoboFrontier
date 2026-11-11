@@ -2672,7 +2672,7 @@
     "cube_size_m": 0.06,
     "object_mass_kg": 0.16874999999999996,
     "contact_friction": [
-      1.0,
+      0.4,
       0.005,
       0.0001
     ],
@@ -5205,8 +5205,7 @@
     "policy": [
       "Selected timestamped RGB",
       "Robot proprioception and robot geometry",
-      "Action feedback",
-      "Visible dial count"
+      "Action feedback"
     ]
   },
   "completion": {

@@ -1,9 +1,9 @@
 # Oracle recovery boundaries
 
-Oracle execution is privileged engineering, not a policy model trajectory. The
-following rules apply to new `task-reference` preparations. Frozen historical
-executions retain their original source and protocol. `strict-process` keeps
-process-clean qualification available without redefining task completion.
+Oracle execution is privileged engineering, not a policy model trajectory. These rules
+apply to `task-reference` executions (the default `--evaluation-mode`); `strict-process`
+additionally requires a clean process history without redefining task completion. A prepared
+execution keeps the source and protocol it was frozen with.
 
 ## Three independent layers
 
@@ -21,16 +21,14 @@ replacement for the other.
 ## Process history and execution health
 
 Task-reference execution records collisions, drops and other process events
-without turning a nonempty historical list into a permanent execution gate.
+without turning a nonempty event list into a permanent execution gate.
 Mosaic and Relay recovery retain those events and re-evaluate actual progress.
 Mosaic may replan a displaced or replaced completed pairing from current matching;
-it records that change and never clears the prior history. Relay's old custody
-restriction remains in strict/legacy recovery, while task-reference recovery can
-use other legitimate arms through the same ordinary action interface.
-Relay scheduling reads `terminal_goal_met` per payload in terminal mode, instead
-of using the old process-qualified `completed` field. Carry and final readiness
-still require measured support; historical drop flags are not current support
-measurements. Final opening/withdrawal retains its real support and route checks.
+it records that change and never clears the prior history. Under `strict-process`,
+Relay recovery keeps the custody restriction; task-reference recovery can use other
+legitimate arms through the same ordinary action interface. Relay scheduling reads
+`terminal_goal_met` per payload. Carry and final readiness require measured support;
+recorded drop flags are not support measurements. Final opening/withdrawal retains its real support and route checks.
 
 Unknown action outcomes, active jobs, unresolved ownership, invalid inputs,
 STOP/deadlines and numerical physics failures remain fences. Numerical failure is
@@ -38,7 +36,7 @@ latched on the Trial; subsequent stepping or recovery submission cannot resume
 that trajectory as valid evidence. No world reset, object teleportation,
 checkpoint splice or history deletion is permitted.
 
-An interrupted action's historical `uncertain` row is never overwritten. A later
+An interrupted action's recorded `uncertain` row is never overwritten. A later
 terminal motor result resolves only the same original call ID and robot; a new
 ID or an idle arm is insufficient. Controlled-stop feedback is retained as an
 event or shutdown feedback, and the report matches it to that original action.
@@ -47,7 +45,7 @@ An adapter acknowledgement fence additionally requires explicit owner review:
 only the adapter's own recorded terminal feedback after the arm is idle. It
 records the original uncertainty and review, and marks the request `resolved`.
 It does not replay the remaining sequence or turn a failed motor call into a
-successful one. Legacy/strict runs retain their original acknowledgement fence.
+successful one. Under `strict-process` the acknowledgement fence stays closed.
 
 If a batch loses acknowledgement partway through starting its arms, every
 attempted call retains its original ID and an uncertain result. Calls not yet
@@ -57,11 +55,9 @@ can be allocated, so a partially launched batch cannot disappear from evidence.
 ## Aperture is feedback, not a universal release rule
 
 The Transport reference commonly requests `min(grip_max, cube_size_m + 0.012)`:
-72 mm for a 60 mm material. Dial previously also required near-maximum measured
-aperture before examining an already separated hand's exit. These command
-preferences are not universal task completion criteria.
+72 mm for a 60 mm material. Such command preferences are not task completion criteria.
 
-Dial now requires terminal force-free execution and real separation, then screens
+Dial requires terminal force-free execution and real separation, then screens
 the actual finger configuration through its full-scene exit route. A contacting
 hand is still rejected. Relay task-reference release can review a known opening
 undershoot or overshoot only when execution is resolved, the force hold has
@@ -70,12 +66,12 @@ The support and full route checks remain in place.
 Mosaic likewise permits release reconciliation below its preferred cube-plus-3mm
 opening in task-reference mode only after actual separation, finite aperture,
 stable payload velocity and physical table/pocket support. Approach clearances
-and legacy/strict release checks are not relaxed.
+and `strict-process` release checks are not relaxed.
 
 Dial blue-support regrasp measures the rectangular stem's current projection
 along the fingers' closing axis instead of choosing a nominal 16 or 20 mm face
-from aperture alone. The original 5 mm inner/outer motor tolerances, finite
-geometry bounds and actual bilateral airborne-support checks remain unchanged.
+from aperture alone. The 5 mm inner/outer motor tolerances, finite geometry bounds
+and bilateral airborne-support checks apply unchanged.
 An abnormal projection requests geometry review rather than widening tolerances.
 
 ## Transport socket release stages
@@ -86,7 +82,7 @@ hold, it records `force-off-contact-unconfirmed` and retains this phase across a
 failed withdrawal. The `held` label is not silently cleared and the payload is
 not subsequently carried virtually with a force-free hand.
 
-For a new task-reference exit, the payload must have measured positive-force
+For a task-reference exit, the payload must have measured positive-force
 contact with an upward supporting normal on the intended board; sidewall
 pressure alone does not qualify. The arm must be known idle and force-free.
 Planning keeps the measured object pose and board fixed. Existing finger/payload
@@ -125,17 +121,8 @@ still passes normal workspace and ownership checks. Finite candidate/search
 budgets also remain strategy limits. Strict physics commissioning keeps its
 tighter residual-drift measurements separate from task completion.
 
-## Verification and scope
+## Verification
 
-The regression group includes actual archived-pose FK screening, unchanged source
-hashes, retained release phases, unknown-outcome fences, real-separation gates,
-legacy/strict process behavior and independent report verdicts. No paid model
-calls are required.
-
-A controlled local physics probe (attempt `archived-pose-exit-v8`) initialized archived Transport 8-arm Level-3
-event state 73, with newly initialized holding references. It completed the
-supported withdrawal and subsequently accepted that material under the original
-goal evaluator, without changing the scene or score tolerances. This is a local
-recovery witness, not exact episode continuation, a full-order success, or
-qualification of a different physics release. The candidate and earlier rejected
-attempts remain separate evidence.
+The Oracle regression tests cover archived-pose FK screening, unchanged source hashes,
+retained release phases, unknown-outcome fences, real-separation gates, `strict-process`
+behavior and independent report verdicts. They make no model calls.

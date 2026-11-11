@@ -1,101 +1,73 @@
-# Engineering command index
+# Engineering scripts
 
-Use the unified `robofrontier` command for new experiments. Start with the root
-[README](../README.md), [configuration guide](../docs/unified-cli.md), and
-[component map](../docs/engines/README.md#component-map). The unified CLI selects a native
-Codex or Claude runner; it does not turn one engine into the other.
+Experiments run through the `robofrontier` command ([getting started](../docs/getting-started.md),
+[command-line guide](../docs/unified-cli.md)). The scripts here are the engineering commands
+around it. Run each from the repository root as `.venv/bin/python -m scripts.NAME`; `--help`
+lists its options. None calls a model provider.
 
-For a lower-level module, run `.venv/bin/python -m scripts.MODULE` (or the dotted
-package module named in the table) from the repository root. Keep existing module names when reproducing historical evidence.
-
-| Entry | Purpose and scope |
-| --- | --- |
-| `robofrontier config/plan/bootstrap/prepare` | Resolve public TOML settings, select current released tasks, restore pinned assets, and freeze new inputs without calling a model |
-| `robofrontier doctor/preflight/run/status/stop` | Check local prerequisites; explicitly authorize provider checks; execute and monitor the selected native engine; request an orderly stop |
-| `robofrontier collect/archive/extract` | Collect stopped native sessions and task evidence, create a verified deduplicated ZIP, and verify/extract it |
-| `robofrontier container` | Build committed source and execute with persistent local Docker volumes |
-| `robofrontier slurm-submit` | Freeze a submission and optionally queue node-local execution with verified stage-out |
-| `robofrontier factory/oracle` | Replay frozen motion in Factory, or explicitly run privileged reference execution; neither is a policy benchmark launch |
-| `benchmark models/plan/preflight/prepare/run/status/stop` | Native Codex interface retained for compatibility, with model selection, task filters, provider checks, concurrency, and START-based task limits |
-| `robofrontier.batch.handoff doctor/init-env/assets/restore` | Inspect handoff prerequisites, create a private local environment file, and export/restore assets with SHA verification |
-| `robofrontier.engines.codex.check_codex_cli` | Exercise the real Codex CLI's tools, images, and forks against a local Responses stub, without external model calls |
-| `robofrontier.batch.tasks list/check/prepare/prepare-batch` | Audit current release selection and inputs, or use the retained lower-level preparation interface |
-| `robofrontier.factory.commands build/video/poses` | Low-level scene construction, public pose export, and Cycles video; requires an explicitly matching source |
-| `check_harness` | Run the offline Python, JavaScript, documentation, and protocol regression inventory; historical fixtures may require separate assets |
-| `check_oracle_preservation` | Check the preservation manifest and frozen Oracle source bindings |
-| `run_analysis extract/compute/dial-turns/atomic/session-archive` | Offline analysis of archived runs: timing, outcomes and atomic-step failure rates (version 2 step rules in `robofrontier/analysis/atomic.py`); data root, run list and outputs are arguments, and no run data lives in the repository |
-| `robofrontier/factory/blender/export.py`, `render.py` (inside Blender) | Export and render Cycles scenes, reuse fixed-camera frames, and compare sampled source poses |
-| `site_media encode/montage/stills/explainer` | Encode task videos to 720p with posters and a verified manifest, build the family montages, README stills and the README benchmark figure |
-| `site_film short/film/web/banner` | Cut the film and its short teaser from the raw Robo World render with motion graphics in the page's style, and derive the page hero loop, README teaser and banner |
-| `site_data tasks/media/readme-gallery` | Generate the project page's task and video indexes and fill the README task gallery |
-
-## Every script
-
-Run a Python module with `.venv/bin/python -m scripts.NAME` from the repository root. Each purpose below is the script's own docstring.
-
-### Benchmark engines and runs
-
-Native Codex and Claude hosts, preparation and provider checks. `robofrontier` calls these. The Codex batch runner and Node host (`codex_policy_host.js`, `codex_rpc.js`, `codex_preflight.js`, `codex_initialize.js`) are in `robofrontier/engines/codex/`.
+## Policy environment
 
 | Script | Purpose |
 | --- | --- |
-| `build_policy_env.py` | Build the read-only Python environment and offline package store for policy scripts, once per host. |
-| `check_policy_env.py` | Before a batch, check an environment and each engine's sandbox with stub models; no provider is contacted. |
+| `build_policy_env.py` | Build the read-only Python environment and offline wheel store for policy scripts, once per host (`--base FOLDER`) |
+| `check_policy_env.py` | Check a built environment and each engine's sandbox with a local stub model before a batch uses them (`ENVIRONMENT --scratch FOLDER [--engine]`) |
 
-### Evidence, reports and viewers
+See [policy environment](../docs/running/policy-environment.md).
 
-Read finished runs; none starts a model or physics.
-
-| Script | Purpose |
-| --- | --- |
-| `communication_report.py` | Summarize recorded multi-role communication without inferring model intent. |
-| `run_analysis.py` | Extract archived runs and compute timing, outcomes and atomic-step metrics; data root, run list and outputs are arguments. |
-| `summarize_oracle_batch.py` | Read-only summary of complete Oracle results, pilots and ongoing attempts. |
-| `verify_evidence_replay.py` | Compare restored evidence, all motion states/events and sampled renders. |
-| `view_policy_batch.py` | Loopback, read-only batch viewer using existing JSON and images only. |
-
-### Repository, assets and checks
+## Release and physics
 
 | Script | Purpose |
 | --- | --- |
-| `site_media.py` | Encode project page videos, family montages and README stills. |
-| `site_film.py` | Cut the RoboFrontier film and its short teaser from the raw Robo World render, with motion graphics drawn in the project page's style. |
-| `site_data.py` | Generate `site/data/` indexes and the README task gallery. |
-| `build_release.py` | Write the release's physics into every released scene and start each scene at rest; rewrites the release index. |
-| `validate_physics.py` | Check the release physics and Franka limits on the released scenes: rest, carrying, placing, pushing, collisions, Relay handover, Dial turning and step time. |
-| `check_harness.py` | Offline checks: fake services, robot/contact physics and real encoder recovery. |
-| `run_tests.py` | Run every Python and Node test in parallel, rerunning a failed module alone; CI's all-tests job. |
-| `check_oracle_preservation.py` | Verify protected historical bytes with inode-aware hashing. |
+| `build_release.py` | Write the release into the released case folders: `physics`, `settle`, `letters`, `codes`, `public`; `check` confirms the scenes carry the release physics. Each step rewrites the hashes in `benchmark/release.json` |
+| `validate_physics.py` | Check the release physics and the Franka limits on the released scenes: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`; results in `runs/engineering/validate-physics/` |
 
-### Factory, replay and video
+See [physics](../docs/physics.md) and [benchmark](../benchmark/README.md).
 
-Offline presentation of recorded motion; never steps task physics.
+## Tests and checks
 
 | Script | Purpose |
 | --- | --- |
-| `replay_motion_in_factory.py` | Replay immutable source states and optional scene-independent cuts in a factory. |
+| `run_tests.py` | Run every Python and Node test in parallel, rerunning a failed module alone; CI's `all-tests` job |
+| `check_harness.py` | Offline checks: fake services, robot and contact physics, Node hosts, syntax and documentation links; `--protocol-only` blocks physics |
+| `check_oracle_preservation.py` | Verify the protected Oracle bytes with inode-aware hashing; never repairs data |
 
-### Task builders, previews and viewers
+See [testing](../docs/development/testing.md).
 
-Build or inspect released scenes; names are kept for provenance.
+## Evidence, analysis and viewers
 
-| Script | Purpose |
-| --- | --- |
-
-### Oracle runs and engineering
-
-Privileged reference execution and its diagnostics. A name with `oracle`, `commission` or `probe` is never a scored policy entry.
+These read finished runs; none starts a model or physics.
 
 | Script | Purpose |
 | --- | --- |
+| `run_analysis.py` | Extract archived runs and compute timing, outcomes and atomic-step metrics: `extract`, `compute`, `dial-turns`, `atomic`, `session-archive`. The data root, run list and outputs are arguments; no run data lives in the repository |
+| `communication_report.py` | Summarize recorded multi-role communication without inferring model intent |
+| `summarize_oracle_batch.py` | Read-only summary of complete Oracle results, pilots and ongoing attempts |
+| `verify_evidence_replay.py` | Compare restored evidence with the original: all motion states and events, and sampled renders |
+| `view_policy_batch.py` | Loopback, read-only batch viewer using existing JSON and images only ([viewer](../docs/running/local-viewer.md)) |
 
-`meta_dispatcher.js` executes frozen Meta operations; it is not an autonomous
-task-solving agent.
+## Factory and project page
 
-Family builders, audits, and Oracle scripts keep their historical names for
-provenance, tests, and reproducibility. A name containing `oracle`, `commission`,
-or `probe` does not make that script a scored policy entry or select the current
-released task version.
+| Script | Purpose |
+| --- | --- |
+| `replay_motion_in_factory.py` | Replay recorded source states, with optional cuts, in a Factory; never steps task physics |
+| `site_media.py` | Encode task videos for the project page and README with posters and a verified manifest: `encode`, `montage`, `stills`, `explainer` |
+| `site_film.py` | Cut the film and its short teaser from the raw Robo World render, and derive the page hero loop and banner: `short`, `film`, `web`, `banner` |
+| `site_data.py` | Generate the project page's `site/data/` indexes and the README task gallery: `tasks`, `media`, `readme-gallery` |
 
-Do not modify frozen inputs or delete source evidence merely to make a
-preparation or archive check pass.
+## Package commands
+
+Some lower-level commands live in the package and run as `.venv/bin/python -m MODULE`:
+
+| Module | Purpose |
+| --- | --- |
+| `robofrontier.batch.handoff` | `doctor`, `init-env` (create `.env` from `.env.example` with mode 0600), `assets`, `setup-assets` (install the asset archive offline), `restore` |
+| `robofrontier.batch.tasks` | `list`, `check`, `prepare`, `prepare-batch`: audit released tasks and their inputs, or prepare runs directly |
+| `robofrontier.batch.archive_policy_batch` | `create`, `verify`, `restore`: the lower-level evidence archive; `restore` rebuilds an extracted archive in its original layout |
+| `robofrontier.engines.codex.check_codex_cli` | Exercise the installed Codex CLI's tools, images and forks against a local stub |
+| `robofrontier.factory.commands` | `build`, `view`, `poses`, `video`: build, view and render the Oracle workstations in one Factory |
+
+`robofrontier/factory/blender/export.py` and `render.py` run inside Blender to export and render
+Cycles scenes. `robofrontier/engines/codex/meta_dispatcher.js` executes frozen Meta operations; it
+is not a task-solving agent.
+
+Do not modify frozen inputs or delete evidence to make a preparation or archive check pass.

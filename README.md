@@ -46,7 +46,8 @@ The videos below are **Oracle** reference runs rendered in Robo World: privilege
 that read hidden task state. They show that each task can be done; they are not model
 results. The Mosaic 6- and 8-arm runs and `dial-best5-n08-d3` were operator-assisted;
 Transport and Mosaic were recorded with the scenes' earlier physics settings, not the
-released ones; the Relay runs' completion was confirmed by review. Idle time is removed and
+released ones, and the Mosaic 6- and 8-arm Level 3 clips replay their Level 2 runs; the Relay
+runs' completion was confirmed by review. Idle time is removed and
 playback is sped up. Each montage plays all nine tasks of a family at once:
 rows are difficulty levels 1–3, columns are team sizes.
 
@@ -134,7 +135,8 @@ same tasks:
 | `worker-worker` | One Worker per arm; Workers coordinate as peers. |
 | `adaptive` | One Controller that creates and retires delegates as it sees fit. |
 
-Each run gets 24 hours from its START; reading, planning and waiting count. Benchmark
+Each run gets 24 hours of active time from its START: reading, planning and waiting count,
+pauses the harness makes for a network outage or a usage limit do not. Benchmark
 results, the communication study and the skills study are on the
 [project page](https://changxuanfan.github.io/RoboFrontier/#results).
 

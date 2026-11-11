@@ -228,6 +228,13 @@ def submit(config, output, *, queue=False, root=ROOT):
     receipt = receipts/'engineering/model-compatibility'/policy['profile']/'report.json'
     if policy['engine'] == 'codex' and (not receipt.is_file() or not json.loads(receipt.read_text()).get('passed')):
         raise ValueError('Run the matching explicit provider preflight before preparing a Slurm submission')
+    claude_receipts = {}
+    if policy['engine'] == 'claude':
+        # The job checks them as any Claude run does (claude_readiness.require_ready), from its own runs/.
+        from ..engines.claude.claude_readiness import PRECHECKS, BLOCKED_PRECHECKS, require_ready
+        ready = require_ready(policy['profile'], runs=receipts, selected=selected)
+        claude_receipts = {'claude-precheck.json': (Path(ready['basic_receipt']), PRECHECKS),
+                           'claude-blocked-precheck.json': (Path(ready['blocked_receipt']), BLOCKED_PRECHECKS)}
     if subscription:
         from ..engines.codex.job_engine import fingerprint
         if json.loads(receipt.read_text()).get('job_gateway_sha256') != fingerprint():
@@ -265,6 +272,8 @@ def submit(config, output, *, queue=False, root=ROOT):
         files['effective-config.json'] = checksum(staged/'effective-config.json')
         if policy['engine'] == 'codex':
             files['provider-report.json'] = _copy_verified(receipt, staged/'provider-report.json')
+        for name, (source, _) in claude_receipts.items():
+            files[name] = _copy_verified(source, staged/name)
         (staged/'job.sbatch').write_text(_script(output, python, config['slurm']))
         files['job.sbatch'] = checksum(staged/'job.sbatch')
         write_json(staged/'submission.json', {'schema': 'robofrontier.slurm-submission.v1',
@@ -311,6 +320,10 @@ def stage(submission, local):
     if config['policy']['engine'] == 'codex':
         receipt = source/'runs/engineering/model-compatibility'/config['policy']['profile']/'report.json'
         _copy_verified(submission/'provider-report.json', receipt)
+    if config['policy']['engine'] == 'claude':
+        from ..engines.claude.claude_readiness import PRECHECKS, BLOCKED_PRECHECKS
+        for name, folder in (('claude-precheck.json', PRECHECKS), ('claude-blocked-precheck.json', BLOCKED_PRECHECKS)):
+            _copy_verified(submission/name, source/'runs'/folder/'submitted/receipt.json')
     write_json(local/'config.json', config)
     write_json(local/'local-job.json', {'schema': 'robofrontier.slurm-local.v1', 'submission': str(submission),
         'job_id': os.environ['SLURM_JOB_ID'], 'filesystem': kind,
@@ -338,6 +351,9 @@ def execute(local):
     result = None
     try:
         with subscription_environment(config, local, on_failure=lambda: request_stop(local)):
+            # The policy environment under ROBOFRONTIER_POLICY_ENV_BASE, as `robofrontier prepare` picks it.
+            from ..runtime.policy_env import apply_default
+            apply_default()
             prepare(ROOT/'runs/policy/batch', config)
             if (local/'STOP').exists():
                 request_stop(local)

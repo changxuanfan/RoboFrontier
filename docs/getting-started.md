@@ -1,295 +1,256 @@
 # Getting started
 
-Install, configure, run and hand off RoboFrontier experiments. This guide was the long
-form of the repository README; the README now introduces the benchmark, and the
-[project page](https://changxuanfan.github.io/RoboFrontier/) shows tasks, videos and results.
+This guide takes a fresh clone to a finished, collected run on one machine. Every step names
+the command, what it checks and what to do when it fails. Commands run from the repository
+root. Global options such as `--config FILE` go before the subcommand:
+`.venv/bin/robofrontier --config site.toml plan`.
 
-**Integration status:** the reviewed engineering integration and unified commands are
-published on `main`. Read the acceptance ledger (`docs/archive/unified-main.md`, in the [archive tag](history.md)) for source-pinned
-verification, follow-up repairs and open gates. Claude scored execution remains closed; all
-four Claude topologies have engineering entries. Full historical checks require legacy assets
-and closed recordings beyond the policy asset bundle; see the [testing guide](development/testing.md).
-Model profiles are configuration choices, not universal provider compatibility certificates.
+Platform details are in the [Mac](running/mac.md), [RunPod and plain Linux](running/runpod.md),
+[Slurm](running/slurm.md) and [Docker](running/docker.md) guides; every setting is in the
+[command-line guide](unified-cli.md).
 
-## Start here
+## 1. Prerequisites
 
-| Goal | Guide |
+| Need | Version and notes |
 | --- | --- |
-| Configure, prepare and run a benchmark | [Unified CLI and TOML](unified-cli.md) |
-| Run on Linux Docker or macOS Docker Desktop | [Docker execution](running/docker.md) |
-| Queue a job with node-local runtime state | [Slurm submission](running/slurm.md) |
-| Replay motion and render Factory backgrounds | [Factory workflow](factory/replay.md) |
-| Edit the full Factory camera plan and English video titles/subtitles | [Editable video project](factory/editorial.md) |
-| Browse the 36 current tasks and initial scenes | [Project page](https://changxuanfan.github.io/RoboFrontier/) |
-| See which integration gates have passed | Acceptance and source provenance (`docs/archive/unified-main.md`, in the [archive tag](history.md)) |
-| Read the policy's role and tool contract | [Robot collaboration skill](../prompts/skills/robot-collaboration/SKILL.md) |
-| Read completion and recovery rules | [Shared policy rules](../prompts/rules.md) |
-| Run privileged references and interpret recovery checks | [Oracle execution](oracle/README.md) and [recovery boundaries](oracle/recovery.md) |
+| Operating system | macOS, or Linux with glibc 2.28 or newer |
+| [uv](https://docs.astral.sh/uv/) | Installs Python 3.12 (`.python-version`) and the locked packages from `uv.lock` |
+| Node.js and npm | Node.js 22 is what CI uses; the Codex host and the engine CLIs need it |
+| Engine CLI | Exactly the pinned version in `robofrontier/runtime/versions.py`: Codex `0.165.0`, Claude Code `2.1.316`. Install only the engine you will run |
+| Rendering | macOS: native OpenGL (`render.device = "native"`). Linux: NVIDIA EGL (`nvidia`, the default) or Mesa OSMesa (`cpu`, needs the system `libosmesa6` package or equivalent) |
+| Network | For `bootstrap` (about 186 MB of pinned assets), building the policy environment, and the model provider |
 
-Current source, documentation and historical prose use English. Frozen legacy
-inputs retain their original filenames, language, protocol and source;
-current documentation must not reinterpret an old result as a new-protocol run.
+`prepare` and `run` refuse a different engine CLI, MuJoCo, NumPy or Pillow version than the
+pinned ones.
 
-## Install and verify assets
-
-Use a repository checkout and Python 3.12. Install uv, Node.js and the native CLI
-for the selected policy engine. Runs use Codex 0.165.0 and Claude Code 2.1.316, the
-versions pinned in `robofrontier/runtime/versions.py`; these are reproducibility pins,
-not claims about the latest upstream releases. The Docker image installs both pinned CLIs itself.
+## 2. Install
 
 ```sh
+git clone https://github.com/changxuanfan/RoboFrontier.git
+cd RoboFrontier
 uv sync --locked --extra oracle
+```
+
+Install the engine CLI at its pinned version, for example globally:
+
+```sh
+npm install --global @openai/codex@0.165.0              # Codex
+npm install --global @anthropic-ai/claude-code@2.1.316  # Claude Code
+codex --version; claude --version
+```
+
+The CLI folder must come first on `PATH` in every shell that prepares, runs or checks. On a
+RunPod pod that means adding the Node.js and npm `bin` folders (on the author's pod
+`/workspace/tools/node/bin` and `/workspace/tools/npm/bin`). Claude Code's self-update is turned
+off for runs.
+
+## 3. Restore the assets
+
+```sh
 .venv/bin/robofrontier bootstrap
-.venv/bin/robofrontier plan
 ```
 
-`bootstrap` downloads the policy archive pinned in `configs/policy-assets.json`,
-verifies its SHA-256 and restores every referenced asset with hash verification.
-It reuses already verified files. `prepare` performs the same required asset
-setup automatically. Cloning Git alone cannot execute an installation step.
-Neither bootstrap, planning nor preparation calls a model.
+`bootstrap` downloads the policy asset archive pinned in `configs/policy-assets.json`, checks its
+SHA-256, and restores every referenced file (the scene meshes and textures under
+`benchmark/<family>/<case>/assets/` and the Franka Panda model under `vendor/panda/`), checking
+each file's hash. It reuses files that already verify and calls no model. On failure it names
+the file or hash that differs: do not substitute another archive. For a machine without network
+access, copy the archive named in `configs/policy-assets.json` over and run
+`.venv/bin/python -m robofrontier.batch.handoff setup-assets --archive /path/to/the-archive.tar.gz`.
 
-The asset lock also records one reviewed metadata-compatible release: nine
-historical Mosaic edit references now use a pinned original video index. Every
-other release field and all asset bytes remain unchanged. Bootstrap authenticates
-both the exact revised release and its unchanged-field projection before reusing
-the original archive. The task atlas retains its original capture-release hash;
-this metadata change did not regenerate its images or alter task physics.
-
-For an offline machine, download the archive named by the checked-in asset lock
-on a connected machine, transfer it, and run:
+## 4. Credentials: `.env`
 
 ```sh
-.venv/bin/python -m robofrontier.batch.handoff setup-assets \
-  --archive /path/to/the-pinned-policy-assets.tar.gz
-.venv/bin/python -m robofrontier.batch.tasks check --purpose gpt --assets
+.venv/bin/python -m robofrontier.batch.handoff init-env
 ```
 
-Do not substitute a similarly named asset package or rebuild missing labels
-approximately. A changed scene or asset hash identifies a different input. The
-larger optional Factory recording bundle has its own release lock and installer;
-ordinary policy preparation does not download it.
+This copies `.env.example` to `.env` with mode 0600 and refuses to overwrite an existing `.env`.
+(By hand: `cp .env.example .env && chmod 600 .env`.) Fill in only the variables of the profiles
+you use; `.env` is ignored by Git. Values are read literally, and a variable already set in the
+process environment wins.
 
-## Defaults and configuration
-
-The single public settings file is [robofrontier.toml](../robofrontier.toml). A
-partial user TOML overrides named defaults; explicit CLI options override those
-settings. Unknown options and invalid values fail before execution. Each prepared
-batch freezes its resolved configuration and input hashes. Editing TOML later
-does not change an existing batch.
-
-The new-run defaults are:
-
-- Native Codex, official OpenAI API, Luna, reasoning effort `high`.
-- Adaptive topology, all 36 current cases and 36 concurrent host slots.
-- A 0.3-second interval between initial host launches, after serialized native
-  initialization. This interval does not delay robot calls or model turns.
-- A separate 86,400-second task limit measured from each persisted START.
-- Linux NVIDIA EGL observations and CPU MuJoCo dynamics.
-- JPEG observations at 896 x 560, quality 85; realtime MP4 recording disabled.
-- Automatic stopped-evidence collection and a verified ZIP archive; originals
-  retained unless an operator explicitly performs a separate reviewed cleanup.
-
-The requested concurrency is not a hardware or provider capacity guarantee.
-Account for simulator/session/delegate memory, CPU, GPU contexts, local disk and
-provider rate limits. OOM or an unsealed tool outcome is an engineering issue,
-not an automatic model task failure.
-
-Store API keys in the ignored `.env` or process environment. Never put credentials
-in TOML or commit them. Existing keys and Desktop authentication are not copied
-into another user's checkout. The selected engine's catalog is
-the engine's section of `configs/models.json`. OpenLux and third-party
-profiles need their own compatibility checks; provider routing groups are not
-selected by changing a task's model prompt.
-
-## Run from commands
-
-On an equipped Linux NVIDIA host, first check local execution prerequisites:
-
-```sh
-.venv/bin/robofrontier doctor
-```
-
-Doctor checks the selected native CLI, the Codex workspace sandbox when selected,
-and a real RGB renderer. It does not authenticate or call a model. On macOS use
-`doctor --render native` and prepare with `--render native`. For Linux CPU
-rendering use `--render cpu`; on macOS the CPU path runs inside Linux Docker.
-Render backend mismatches fail instead of silently falling back.
-
-After setting `OPENAI_API_KEY`, explicitly authorize a provider compatibility
-preflight, then prepare and run the full default batch:
-
-```sh
-.venv/bin/robofrontier preflight --confirm-spend
-.venv/bin/robofrontier prepare --output runs/policy/example-36
-.venv/bin/robofrontier run runs/policy/example-36
-```
-
-Preflight and run make real, potentially billable model calls. A smoke-only
-provider receipt does not qualify a scored run. A provider/catalog/CLI mismatch
-requires another explicit preflight. Local sandbox prerequisites are checked
-before confirmed preflight; local sandbox and frozen rendering are checked before
-task hosts start.
-
-To prepare four minimum-arm Level 1 tasks instead, choose a new directory:
-
-```sh
-.venv/bin/robofrontier prepare --level 1 --min-arms --parallel 4 \
-  --output runs/policy/example-l1
-```
-
-Preparing does not launch this batch. Use the same `run` command when ready.
-Every task has its own START and clock; preparation and session setup precede
-START, while initial reading, observation and planning count as task time.
-
-Monitor or stop from another terminal:
-
-```sh
-.venv/bin/robofrontier status runs/policy/example-36
-.venv/bin/robofrontier stop runs/policy/example-36
-```
-
-Status reads an atomic supervisor snapshot. Stop requests orderly closure; inspect
-the final sealing/collection result before treating it as complete. A disconnected
-native session or uncertain physical request is not automatically restarted or
-replayed. Short engineering stops are separate from the published task deadline.
-
-## Four collaboration modes
-
-| Mode | Initial roles and authority |
+| Variable | Used by |
 | --- | --- |
-| `single` | One Controller controls all arms and creates no delegates. |
-| `controller-worker` | One coordinating Controller and one permanent Worker per arm; each Worker controls its assigned arm. |
-| `worker-worker` | One permanent Worker per arm; Workers coordinate directly with peers. |
-| `adaptive` | One Controller controls all arms and dynamically chooses whether, when and how many bounded delegates to create or retire. |
+| `OPENAI_API_KEY` | Codex `luna` (the default profile) |
+| `OPENLUX_API_KEY` | Codex `openlux-luna`, `openlux-terra` |
+| `ANTHROPIC_API_KEY` | Claude Code `haiku`, `opus` |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code `haiku_subscription_token` (the default Claude profile) and `opus_subscription`; create it with `claude setup-token` |
+| `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, `KIMI_API_KEY`, `KIMI_CODE_API_KEY`, `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_ANTHROPIC_BASE_URL` | Third-party profiles of either engine |
 
-All new unified batches directly START after their required initial native
-sessions are bound. Each role receives an explicit started prompt. `ready` is an optional
-capability query; it is not a model-readiness gate. Direct START does not change robot ownership.
+Codex subscription profiles (`luna_subscription` and others) use a login in
+`~/.robofrontier/codex-home` instead: `CODEX_HOME=~/.robofrontier/codex-home codex login`. Never
+put credentials in a TOML file, a command argument or a commit. The Claude subscription token
+reaches the CLI on a pipe, never in an environment variable. Profiles and their authentication
+are listed in the [provider guide](engines/README.md#providers).
 
-Claude runs all four modes, including native standing Workers with independent sessions. See
-[Claude standing teams](engines/claude-code.md#standing-teams) for commands and resource
-implications. Use the engine-specific guide rather than assuming that a
-Codex app-server tool/fork interface exists in Claude Code. API and native
-subscription authentication are separate paths. In particular, isolated Codex
-API homes do not imply qualified concurrent subscription-token refresh.
+## 5. A site TOML
 
-## Completion, recovery and timing
-
-The independent scorer determines task completion from published conditions.
-Process events such as supported drop/collision detections are reported
-separately and do not automatically veto terminal completion. Dial retains its
-unlock latch: unlocking completes the puzzle. These rules do not grant an agent
-access to private evaluation state or Oracle solutions.
-
-A Controller should keep observing, acting and recovering while the task remains
-unfinished. `finish` is an end proposal accepted only after closure conditions;
-it is appropriate for completion or publicly supported unrecoverability. Accepting
-it does not imply a successful score. Ending a normal model turn or returning a
-delegate does not itself end the experiment. Hosts enforce deadline and stop
-requests independently of a supervising agent.
-
-For a new robot request, omit the outer `call_id`; the host returns a generated
-identifier. Query an existing action with a new `job` request and its original ID
-in `data.call_id`. An uncertain result may be retried only under its original ID
-and identical payload. A rejected ID conflict and an uncertain transport result
-have different meanings; neither permits blind repetition of physical actions.
-
-## Runtime data and handoff
-
-A batch lives under the path supplied to `prepare`, with one run per profile/case.
-Each run contains frozen public/private inputs, observations, tool/host events,
-runtime state and motion under `private/outputs/motion/`. Live runtime SQLite and
-Codex state must be on a node-local filesystem. Never monitor an active Docker
-SQLite database from macOS or place active WAL databases on Lustre/NFS.
-
-For new API batches, each task uses a private Codex home beneath
-`.robofrontier/codex/`. Its `sessions/` directory contains the native Controller
-and delegate transcripts. The run's `codex-home.json` records its exact home.
-`codex-host.jsonl` is the harness event log; it does not replace native session
-JSONL files.
-
-After writers stop, automatic collection places portable evidence under
-`runs/exports/` and creates a sibling ZIP. Review collection completeness and
-sealing issues. The archive deduplicates identical payloads and replaces inline
-session image Base64 with reversible image-object references. Restoration verifies
-hashes and reconstructs original transcript bytes. Live native logs are not edited
-in place. Creating a ZIP alone does not reclaim the originals' disk space.
-
-Motion retains timestamps, appearance changes and the existing float32 states;
-XOR and ZIP compression add no further numeric loss. The original conversion to
-float32 is declared and is not lossless relative to float64 simulation state.
-Historical uncompressed motion remains a compatibility obligation. JPEG
-observation settings are separate from later video resolution.
-
-## Oracle, Factory and media
-
-See [contact physics and commissioning](physics.md) for released parameters,
-candidate scope, reproducible zero-model checks and remaining physical gates.
-
-Mosaic R15 (71 mm grid pitch) is the default. Relay's independent revision
-identifiers are unrelated to Mosaic's. The current release still uses its pinned
-rolling-friction candidate; recommended new Transport/Dial physics are not a
-published replacement until their full operational gates pass. See the acceptance
-ledger before comparing results across revisions.
-
-Factory replay must use each recording's own frozen scene and assets. It reads
-saved states for visual reconstruction rather than rerunning recorded actions in
-new physics. Optional production rendering uses Blender Cycles with explicit CPU,
-Metal, CUDA or OPTIX selection; silent device fallback is not an acceptance path.
-
-Factory has a unified configuration/command entry:
+`robofrontier.toml` holds the defaults: Codex, profile `luna`, effort `high`, topology
+`adaptive`, all 36 released cases, 36 parallel runs, NVIDIA rendering. Override what differs in
+a partial, untracked TOML, starting from the example for your platform:
 
 ```sh
-.venv/bin/robofrontier factory setup
-.venv/bin/robofrontier factory doctor --device CPU
+cp configs/examples/mac.toml site.toml      # or slurm.toml, runpod.toml
+.venv/bin/robofrontier --config site.toml config
 ```
 
-The `[factory]` section controls its independent video/device settings; prepared
-plans freeze the effective configuration. See the [Factory guide](factory/replay.md)
-for closed-recording import, full tour, CPU/GPU rendering and queue submission.
-Native Oracle planning, frozen preparation and bounded supervision also have a
-unified entry:
+`config` prints the resolved settings. Unknown fields and invalid values are errors. Command
+options override the TOML: `--engine`, `--profile`, `--effort`, `--topology` (`single`,
+`controller-worker`, `worker-worker`, `adaptive`), `--parallel`, `--render`, `--level`,
+`--min-arms`, `--cases`, `--families`. Runs, receipts, exports and caches go under
+`paths.runs_root`; empty means `<repo>/runs`, and `ROBOFRONTIER_RUNS_ROOT` overrides both.
+
+## 6. Check the machine: `doctor`
 
 ```sh
-.venv/bin/robofrontier oracle plan --level 1 --min-arms
-.venv/bin/robofrontier oracle prepare --cases mosaic-a04-6x12-d1 \
-  --output runs/oracle/my-r14-check --mosaic-max-goals 2
-.venv/bin/robofrontier oracle run runs/oracle/my-r14-check
+.venv/bin/robofrontier --config site.toml doctor
 ```
 
-Use `--render native` during preparation on macOS or `--render cpu` for Linux
-software rendering. Commit the executor before preparation. The `[oracle]`
-engineering clock includes planning/review time and is separate from a model
-benchmark's START clock. The [Oracle guide](oracle/README.md) documents native
-recovery, evidence and the distinction between commissioning and full success.
-All four families have passed current compressed-motion Factory import and
-all-frame replay checks, with small CPU video previews. The editable
-[full-length English video project](factory/editorial.md) is tracked and has
-passed CPU/Metal preview and media round trips. The original full movie is
-published in the [Factory tour release](https://github.com/changxuanfan/RoboFrontier/releases/tag/factory-tour-media-20261102); a new current-source full render is deferred. New full physical
-Oracle qualification remains open. The
-[project page](https://changxuanfan.github.io/RoboFrontier/) shows the 36 current
-public tasks. Existing Oracle intervention records and historical source identities must
-be preserved; assisted execution is not automatically an autonomous benchmark.
+Doctor starts the selected engine CLI (and Codex's tool sandbox when selected) and renders a real
+RGB frame with the configured backend. It authenticates nothing and calls no model. The JSON
+report has one entry per check with `passed` and, on failure, `error`. A render failure means the
+backend does not match the machine: use `--render native` on macOS and `--render cpu` on Linux
+without an NVIDIA GPU. A backend never falls back to another one.
 
-## Repository map
+## 7. See what would run: `plan`
 
-| Path | Purpose |
-| --- | --- |
-| `benchmark/` | The released tasks: four families, nine cases each, and `release.json` |
-| `robofrontier.toml` | Public defaults for newly prepared unified batches |
-| `robofrontier/` | Simulation, native hosts, runtime protocol and evidence interfaces |
-| `prompts/` | Every text a model reads: rules, roles, skills and the two manager prompts |
-| `configs/` | Model catalogs, harnesses, asset locks, and scene revisions not yet released |
-| `scripts/`, `tests/` | Engineering commands and regression checks |
-| `docs/` | Guides by topic and dated history |
-| `assets/` | Shared art |
-| `docker/` | The container image |
-| `runs/`, `outputs/` | Ignored runtime evidence and media; back up separately from Git |
-| `.robofrontier/` | Ignored private native state and container command receipts |
+```sh
+.venv/bin/robofrontier --config site.toml plan
+```
 
-The full layout and where new files go: [repository layout](repository-layout.md).
+`plan` lists the selected cases (`jobs`), the engine, profile and topology, and
+`policy_environment`, the environment the runs will use. It writes nothing and calls no model.
 
-A standalone wheel without the repository catalogs/assets is not a qualified
-distribution.
+## 8. The policy Python environment
+
+Every run gives the policy one frozen Python 3.12 environment, never the host's Python, and a
+closed access table: the checkout, the home folder, other runs and shared storage stay out of
+reach. Build it once per host, into a folder outside the home folder and the repository (this
+needs network access and `uvx`):
+
+```sh
+.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier
+```
+
+Then check it where the runs will run (on Slurm, on a compute node). The check drives each
+engine CLI with a local stub model, so it contacts no provider:
+
+```sh
+.venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id> \
+  --scratch <folder next to where batches go>
+```
+
+On macOS `prepare` uses the build under `/Users/Shared/robofrontier` by default. On Linux set
+`ROBOFRONTIER_POLICY_ENV_BASE` to the base folder you built into; without it `prepare` refuses.
+`ROBOFRONTIER_POLICY_ENV=PATH` names a specific build. Preparation also refuses a build that is
+missing, changed, or has no passing check for this engine and its CLI version, and prints the two
+commands above; run the check again after changing a CLI. On Linux keep runs and `TMPDIR`
+outside `/tmp` (for example under `/var/tmp`). Details and known limits:
+[policy environment](running/policy-environment.md).
+
+## 9. Check the provider: `preflight`
+
+```sh
+.venv/bin/robofrontier --config site.toml preflight --confirm-spend
+```
+
+Preflight makes real, possibly billable model calls: it checks that the selected profile and
+effort work with the engine's images, tools and sessions, and writes a receipt (for Codex under
+`<runs root>/engineering/model-compatibility/<profile>/`). Without `--confirm-spend` it calls no
+model and does not pass. `--smoke-only` runs a smaller check whose receipt does not admit runs;
+for Claude, `--max-budget-usd N` caps the check's estimated cost. `run` refuses a profile, effort
+or CLI version without a matching passed receipt, so check again after changing any of them.
+
+## 10. Freeze a batch: `prepare`
+
+```sh
+.venv/bin/robofrontier --config site.toml prepare --output runs/policy/my-batch
+```
+
+`prepare` writes the batch folder and freezes, per run, the task, scene, rules, prompts, source
+code, resolved configuration, policy environment and input hashes. It calls no model and starts
+no world. `--output` must be a new folder. Later edits to the TOML or the code do not change a
+prepared batch; prepare a new one instead. To try four small cases first:
+`prepare --level 1 --min-arms --parallel 4 --output runs/policy/my-l1`.
+
+## 11. Run: `run`
+
+```sh
+.venv/bin/robofrontier run runs/policy/my-batch
+```
+
+`run` loads `.env`, checks the frozen configuration's fingerprint, every run's input hashes, the
+pinned versions, the receipts and the local prerequisites, then starts the runs, 0.3 s apart.
+On macOS it runs as a launchd service with Interactive priority under `caffeinate` and outlives
+the terminal; `--foreground` keeps it in the current process. On Linux add `--durable` for a
+background service (a systemd user service, or a `setsid` daemon where there is none).
+
+Each run has its own START. It gets 24 hours of active running time from START and is scored at
+that cutoff, or earlier when the policy's `finish` is accepted. Host stops, network outages and
+used-up usage limits do not count as active time; a network outage or usage limit pauses the run
+in place and it resumes by itself.
+
+## 12. Watch and stop: `status`, `stop`
+
+```sh
+.venv/bin/robofrontier status runs/policy/my-batch
+.venv/bin/robofrontier stop runs/policy/my-batch
+```
+
+`status` prints the supervisor's snapshot (each run's state, and the service's state on Mac or
+with `--durable`); it never opens a live database. `stop` asks every run to stop in order; check
+`status` and each run's seal afterwards, because a stop request does not prove that every
+action has settled.
+
+## 13. Continue a stopped run: `continue`
+
+When a run stops unexpectedly (a host, world or model session ends without a finish, cutoff or
+stop), the batch continues it by itself, once per run, as the same trial: same run folder,
+database and model sessions, with the world rebuilt from the last recorded frame. Any later
+continuation is by hand:
+
+```sh
+.venv/bin/robofrontier continue runs/policy/my-batch                     # every run that may continue
+.venv/bin/robofrontier continue runs/policy/my-batch --cases transport-a04-d1
+```
+
+A continuation after the finish or the cutoff keeps the score recorded at that stop. If the
+supervisor itself died, `run runs/policy/my-batch --continue` resumes the batch. Rules and
+files: [continuation](running/continuation.md).
+
+## 14. Where results go
+
+```text
+runs/policy/my-batch/
+  batch.json  effective-config.json  control/  logs/  profiles/
+  <profile>/<case>/                 one run
+    public/                         what the policy reads: inputs, observations, results
+    workspace/                      the policy's only writable folder (skills.md, its own files)
+    private/inputs/                 frozen task, scene, harness, source and manifest
+    private/outputs/                evaluation.json (the score), seal.json, report.json, motion/, segments
+    private/state/  private/logs/  private/engine/   live database, host logs, engine sessions
+```
+
+When every run has stopped, the batch collects its evidence into
+`<runs root>/exports/<batch>-<hash>/` and writes a verified ZIP next to it; the originals stay.
+To do it by hand:
+
+```sh
+.venv/bin/robofrontier collect runs/policy/my-batch --output runs/exports/my-batch
+.venv/bin/robofrontier archive runs/exports/my-batch --output runs/exports/my-batch.zip
+.venv/bin/robofrontier extract runs/exports/my-batch.zip --output runs/restored/my-batch
+```
+
+None of `runs/` is in Git; back it up separately ([evidence storage](running/evidence-storage.md)).
+`.venv/bin/python -m scripts.view_policy_batch runs/policy/my-batch` serves a read-only viewer of
+a batch ([viewer](running/local-viewer.md)).
+
+## Next
+
+- Platforms: [Mac](running/mac.md), [RunPod and plain Linux](running/runpod.md),
+  [Slurm](running/slurm.md) (on the cluster used here, `module load slurm` may be needed before
+  `srun` or `sbatch`), [Docker](running/docker.md).
+- Engines: [Codex](engines/codex.md), [Claude Code](engines/claude-code.md).
+- What a run is: [architecture](architecture.md), [runtime protocol](protocol.md),
+  [physics and robot limits](physics.md), [the tasks](tasks/README.md).
+- Reference runs and video: [Oracle](oracle/README.md), [Factory](factory/README.md).

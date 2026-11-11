@@ -452,7 +452,7 @@ def main(argv=None):
             from .batch.container import execute, validate_arguments
             # Resolve help and invalid syntax before configuration, Docker or auth.
             arguments = validate_arguments(args.arguments)
-            report = execute(arguments, load_configuration(args.config))
+            report = execute(arguments, load_configuration(args.config, host='container'))
             emit(report)
             return report['exit_code']
         if args.command == 'bootstrap':
@@ -469,7 +469,7 @@ def main(argv=None):
                     overrides[section] = updates
             if args.render:
                 overrides['render'] = {'device': args.render}
-            config = load_configuration(args.config, overrides)
+            config = load_configuration(args.config, overrides, host='slurm' if args.command == 'slurm-submit' else None)
             # Receipts, exports and caches go where this configuration says, for every later
             # call and child process (configuration.runs_root reads the variable first).
             os.environ.setdefault('ROBOFRONTIER_RUNS_ROOT', str(runs_root(config)))

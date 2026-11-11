@@ -102,7 +102,7 @@ class ContainerRuntimeTests(unittest.TestCase):
         self.assertNotIn('--security-opt', self.command(['run', 'runs/policy/batch'], config))
 
     def test_render_mode_requires_hardware_only_for_real_task_execution(self):
-        config = load_configuration()
+        config = load_configuration(overrides={'render': {'device': 'nvidia'}})
         with patch.object(runtime.platform, 'system', return_value='Darwin'):
             self.assertNotIn('--gpus', self.command(['plan'], config))
             with self.assertRaisesRegex(ValueError, 'requires Linux'):

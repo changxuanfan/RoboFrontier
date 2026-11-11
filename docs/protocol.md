@@ -1,208 +1,86 @@
-# Runtime protocol notes
+# Runtime protocol
 
-Short notes on runtime protocol versions that apply to newly prepared runs. Each
-section is independent. Existing prepared runs keep their frozen inputs, source
-and original protocol; use the matching frozen version rather than changing
-their recorded configuration or reinterpreting them as runs of a newer version.
-Engine-specific behavior is in the [engine guides](engines/README.md).
+The rules every policy run follows between preparation and scoring. Each prepared run freezes
+its inputs, source and protocol identifiers; read a frozen run with the protocol it records.
+Engine-specific behavior is in the [engine guides](engines/README.md); time and continuation in
+[continuation](running/continuation.md).
+
+## Start: system prompt, start message, START
+
+- **System prompt.** `private/inputs/bootstrap/system.md` is the policy role statement followed
+  by the run's `public/inputs/rules.md`. Claude Code receives it as `--system-prompt`, Codex as
+  each thread's `baseInstructions`, delegates included. Both engines get the same bytes, and a
+  compacted conversation keeps it whole.
+- **Start message.** Each initial role's first message (`private/inputs/bootstrap/<role>.md`)
+  carries its other public text inputs in full: `task.json`, `roles.json`, its role file, the
+  Skill, its tool, motion-check, communication and adaptive references as the topology needs, and
+  the family materials, each under its absolute path. The files stay readable on disk. The message
+  is at most 400,000 bytes. Only the last line differs between engines (how to view images).
+- **START.** Single and Adaptive runs use `direct_controller_v2`; Controller + Worker and
+  Worker-Worker runs use `direct_team_v3`. The host prepares the world, binds every initial role
+  to its own native session, persists one START and then sends each role its start message.
+  Reading, observing and planning count as task time. A failed or uncertain first delivery is an
+  engineering failure for review, never retried in the same world or reported as a task result.
+- **`ready`** is an optional query of the role's robots, run limits and static `robot_facts`. It
+  does not unlock START.
+- **Time.** The public `task.json` states no time limit (`run_protocol.total_wall_limit_s` and
+  `run_protocol.clock` are only in the private task), and the rules ask policies to plan as if
+  time were unlimited. The host gives each run 24 hours of active time (`active_time_v1`) and
+  scores it at that cutoff ([how it is counted](running/continuation.md#time)).
+
+`public/inputs/rules.md` is the one policy contract both engines receive; the hosts keep their
+own native tool transports. The CLI, model and harness together are the experimental condition:
+equal rules do not make model context or tool behavior equal.
 
 ## Observation images
 
-New runs freeze `observation_image_profile: jpeg_896x560_q85` in their harness.
-Every observation camera produces an 896 × 560 JPEG at quality 85. The public
-task describes the observation format and resolution. Video recording has its
-own resolution and is unchanged.
+`render.observation_profile = "jpeg_896x560_q85"` (the default) makes every observation camera
+produce an 896 × 560 JPEG at quality 85; `png_1280x800` is the other choice. The run's harness
+freezes it as `observation_image_profile`, and the public task states the format and resolution.
+When a published camera calibration names an image size, the run gets a copy at the observation
+resolution and the published file stays as it is. Video recording has its own resolution.
 
-A run with no profile uses the legacy `png_1280x800` profile. To prepare a new
-run with PNG observations, set that explicit profile in its harness
-configuration. Readers accept both JPEG and PNG; public reference assets keep
-their existing formats. A previously prepared run retains its frozen inputs and
-source; use the matching frozen version rather than changing its recorded
-configuration or assuming it can be resumed with different code.
+## Robot requests and IDs
 
-When a published camera calibration specifies an image size, a run-specific copy
-is created with the observation resolution while the original published asset
-remains intact. Image generation and storage remain in their existing
-transaction scope.
+For a new robot request on either engine, omit the outer `call_id`; the host generates one and
+returns it. To query an earlier physical action, send a new request
+`{"op":"job","data":{"call_id":"ACTION_ID"}}` with no outer `call_id`: the query gets its own ID
+and `data.call_id` names the action. To retry a request whose result is uncertain, resend it under
+its original outer ID with exactly the same operation and data. Never replay an uncertain physical
+action under a new ID. How the Claude host binds IDs to native tool calls is in
+[new requests, queries and delegation](engines/README.md#new-requests-queries-and-delegation).
 
-## SQLite writer contention
-
-RuntimeStore uses SQLite WAL and a 30-second busy timeout. A non-nested
-`BEGIN IMMEDIATE` that returns the ordinary `SQLITE_BUSY` code is attempted at
-most four times, with 0.25 seconds between attempts. The total SQLite waiting
-budget is approximately 120.75 seconds. Warning logs go to standard logging
-rather than the contested database, including elapsed time, attempts and
-outcome. Nested savepoints, errors inside a transaction, commit, extended busy
-codes and other errors are not replayed. Existing transaction rollback and
-action call-ID semantics remain in effect.
-
-The default local HTTP client timeout includes one maximum SQLite begin wait
-plus the normal 45-second response allowance. Callers that explicitly set a
-timeout retain their chosen value. Connection startup, multiple sequential
-acquisitions, other callers and external transport deadlines may still fail
-independently; a timeout does not establish whether an action executed.
-Reconcile or query its original call ID.
-
-The Claude shared budget ledger uses the same writer-acquisition policy.
-Existing runs retain their frozen source and should be handled with their
-matching frozen code.
-
-## Direct Controller startup and terminal scoring v2
-
-### Direct Controller startup
-
-New policy drafts use `direct_controller_v2`: after the physical owner is ready
-and the single Controller session is bound, the host starts the world and clock,
-then sends its first task prompt. Reading, observations and reasoning count
-toward the configured wall limit. A failed or uncertain first delivery is an
-engineering failure requiring review; it must not be reported as a task success
-or retried in the same world. Existing prepared runs keep their frozen inputs
-and original protocol.
-
-### Terminal outcome
-
-Policy runs declare `terminal_outcome_v2` in the frozen run protocol. Placement
-tasks require the existing geometric, release, stability and assignment
-predicates; Dial uses its solved state. Relay requires every timber to have had
-a qualified airborne handover (`relay-airborne-handover-v1`, declared in the run
-protocol) and to be released with at least 70 percent of its centreline above the
-GOAL outline (`relay-timber-goal-70pct-v1`; earlier tasks keep the 50 mm boundary
-rule with table support). Runs prepared before that protocol field keep the same
-placement check without the handover requirement. Dropped flags and recorded
-violations do not independently veto terminal completion. Reports
-retain `strict_task_success`, process compliance and violations; Relay retains
-`legacy_process_goals_met`, `legacy_completed_payloads`, drops and handover
-records. A violation entry is deduplicated by kind and key, not a verified count
-of separate collision episodes. Failed actions and unresolved actions remain
-distinct from process violations. An interrupted or unresolved physical run is
-not promoted to success.
-
-Dial success is latched once a simultaneous valid correct input unlocks the
-device; a later change to the dials does not undo it. This is an unlock event,
-rather than a requirement that the final dial positions remain correct.
-
-### Contact and drop metrics
-
-`robot_contact_episodes` separately reports sampled contact episodes for
-inter-robot and self-robot body pairs using the existing collision thresholds
-(penetration greater than 0.2 mm and 1 mm respectively). Contact gaps of at most
-50 ms of simulation time are joined. The report includes the maximum sampling
-gap and per-pair counts; it counts observed body-pair episodes, not unique
-physical impacts, and short missed contacts or multiple body pairs per impact
-can change the number. Legacy deduplicated violations and drop metrics are
-preserved; none of these counts changes terminal success.
-
-Relay `drops` is the existing state-machine detection, not a complete count of
-every physical drop; it depends on established airborne, support and contact
-states. Transport, Mosaic and Dial do not provide a validated general drop
-counter in this evaluator. An absent metric means not provided, not zero events.
-Dial's red-operation support violations are detected only before unlock; the
-success latch is unaffected by later dial changes. Other events and their
-detection coverage are task-specific.
-
-### Shared policy contract and comparability
-
-`public/inputs/policy-rules.md` is the common policy contract supplied to Codex
-and Claude; hosts retain different native tool transports. Its content and the
-actual model-facing inputs are frozen per run. The CLI model-plus-harness
-combination remains part of the experimental condition; equal task rules do not
-prove equal model context or tool behavior.
-
-This changes both model-visible startup and scoring; compare results only after
-recording the protocol and scoring version. Historic results are not rewritten.
-Policy preparation applies versioned terminal-scoring public overlays to the
-reviewed legacy projections and applicable family guidance, and records hashes
-of the resulting files. The published source release remains unchanged.
+A blocking action that is still running after 600 s returns as pending under its original ID (an
+engine may give up on a tool call sooner); the action keeps running and `job` follows it.
 
 ## Robot tool error feedback
 
-New runs distinguish a typed `CALL_ID_CONFLICT` from `TRANSPORT_UNCERTAIN`.
-This changes error feedback, not robot authority, action execution, scoring,
-or the existing call-ID guard. No failure automatically creates another ID,
-replays a command, restarts a world, or extends the deadline.
+Two typed errors tell a conflict from an unknown outcome. Neither creates an ID, replays a
+command, restarts a world or extends the deadline.
 
-`CALL_ID_CONFLICT` has `request_status: rejected` and
-`original_call_status: unknown`. Only the newly conflicting request was
-rejected; the request already associated with that ID may have executed or
-may still be running. Inspect own `pending` records and, for own physical
-actions, `job` with the original action ID. A new ID is appropriate only for
-an intentionally new request after reconciling existing work. Other roles'
-requests and parameters are not disclosed.
+| Error | `request_status` | Meaning |
+| --- | --- | --- |
+| `CALL_ID_CONFLICT` | `rejected` (`original_call_status: unknown`) | Only the new request with a reused ID was rejected. The request first sent under that ID may have run or may still run: check own `pending` records and, for a physical action, `job` with the original ID. A new ID is right only for an intentionally new request after that. Other roles' requests are not disclosed |
+| `TRANSPORT_UNCERTAIN` | `unknown` | A timeout, lost reply, malformed output, unknown error code or mismatched ID. It does not show that the operation failed to run; the durable request stays available under its original ID |
 
-The client detects local conflicts before submitting a changed request. The
-server returns HTTP 409 JSON for a typed conflict in its task-wide call
-table. The client validates the schema and matching ID, saves that explicit
-rejection separately, and does not list it as unresolved execution. Repeating
-that rejected request locally raises the same conflict without resubmission.
-The old request and its result remain unchanged.
+The client detects a local conflict before submitting a changed request. The server returns
+HTTP 409 JSON for a conflict in its task-wide call table; the client checks the schema and ID,
+records the rejection separately and does not list it as unresolved. Codex rebuilds an allowlisted
+response from the failed client's JSON, so raw stderr and command lines never reach the policy;
+the Claude MCP bridge uses the same typed exception and payloads.
 
-Timeouts, lost replies, malformed output, unknown error codes and mismatched
-IDs produce `TRANSPORT_UNCERTAIN` with `request_status: unknown`. This is a
-conservative result-unconfirmed category, not proof of a network root cause.
-It does not establish that an operation failed to execute. The durable request
-remains available for reconciliation under its original ID.
-
-Codex validates the failed client's JSON and reconstructs an allowlisted
-response; raw stderr and command lines are not returned to the policy. The
-Claude MCP bridge uses the same typed Python exception and safe payloads.
-Successful tools continue to use their existing results. Optional image
-handling remains independent in branches that already include that fix.
-
-Use a fresh prepared run after updating. Existing runs retain their frozen
-source and inputs; do not edit or reinterpret them as runs of this version.
-This change does not qualify multi-role startup, long-term concurrency,
-network-filesystem storage, or task-solving performance.
-
-Offline checks (no paid model calls or physical simulation):
+Offline checks (no model calls, no physics):
 
 ```sh
-PYTHONPATH=tests:. .venv/bin/python -m unittest tests.test_tool_errors tests.test_pipeline_client tests.test_runtime_store
+PYTHONPATH=tests:scripts .venv/bin/python -m unittest runtime.test_tool_errors \
+  runtime.test_pipeline_client runtime.test_runtime_store engines.test_claude_tool_errors
 node --test tests/engines/test_tool_errors.js
-# Claude branch additionally:
-PYTHONPATH=tests:. .venv/bin/python -m unittest tests.test_claude_tool_errors
 ```
-
-### CLI request ID and action ID
-
-For a new Codex robot request, omit the outer `call_id` and retain the response's
-`call_id`. Claude MCP requires a unique stable outer ID for each new `move`,
-`gripper`, `action_batch`, `delegate`, and `stop`; other requests may omit it.
-To query an earlier physical action, call
-`{"op":"job","data":{"call_id":"ACTION_ID"}}` with no outer `call_id`.
-The new query receives its own request ID; `data.call_id` names the original
-action. If the original request itself must be retried after an uncertain
-result, use its original outer ID and exactly the same operation and data.
-Do not assign a new ID to replay an uncertain physical action. How the Claude
-host generates and binds IDs is described in
-[new requests, queries and delegation](engines/README.md#new-requests-queries-and-delegation).
-
-## Start message, system prompt and wall limit
-
-New runs give every policy role its inputs without depending on file reads, and
-keep the rules through context compaction. Both engines receive the same bytes.
-
-- **System prompt.** `private/inputs/bootstrap/system.md` is the policy role
-  statement followed by this run's `public/inputs/rules.md`. Claude Code receives
-  it as `--system-prompt`, Codex as each thread's `baseInstructions`, delegates
-  included. A compacted conversation keeps it whole.
-- **Start message.** Each initial role's first message carries its other public
-  text inputs in full (`task.json`, `roles.json`, its role file, the Skill, its
-  tool, motion-check, communication and adaptive references as the topology needs,
-  and the family materials), each under its absolute path. The files stay
-  readable on disk. The message is limited to 400,000 bytes.
-- **Wall limit.** The public `task.json` no longer states
-  `run_protocol.total_wall_limit_s` (nor, for new runs, `run_protocol.clock`);
-  the private task keeps them and the host enforces the limit as before
-  ([how it is counted](running/continuation.md#time)). The rules ask policies to plan as if time were
-  unlimited, and a policy can no longer estimate the time left from its inputs.
-
-Earlier runs keep their frozen system prompt, start message and public task.
 
 ## IK failure detail
 
-A `move`, `check_motion` candidate or `action_batch` member whose pose has no
-verified IK solution is still rejected before execution with the same `error`.
-The response now also carries `ik_detail`:
+A `move`, `check_motion` candidate or `action_batch` member whose pose has no verified IK
+solution is rejected before execution with its `error` and an `ik_detail`:
 
 | Field | Meaning |
 | --- | --- |
@@ -211,7 +89,51 @@ The response now also carries `ik_detail`:
 | `orientation` | The orientation used: the requested `quaternion_wxyz`, or the current one kept |
 | `home_orientation` | Whether the same position solves with the robot's home hand orientation, and that quaternion |
 
-The solver searches locally from the current joint references, so these are
-solver facts, not a proof of the reach limit or a suggested target. No object
-state is used. The extra home-orientation solve runs only after the rejection;
-accepted moves and execution are unchanged (`robofrontier/physics/robot_control.py`).
+The solver searches locally from the current joint references, so these are solver facts, not a
+proof of the reach limit or a suggested target. No object state is used. The extra
+home-orientation solve runs only after a rejection (`robofrontier/physics/robot_control.py`).
+
+## Terminal outcome
+
+Policy runs declare `terminal_outcome_v2` in the frozen run protocol. The task's final conditions
+decide completion:
+
+- **Transport and Mosaic:** the geometric, release, stability and assignment predicates of each
+  goal.
+- **Relay:** every timber has had a qualified airborne handover (`relay-airborne-handover-v1`)
+  and is released with at least 70 percent of its centreline above the GOAL outline
+  (`relay-timber-goal-70pct-v1`).
+- **Dial:** success latches when a simultaneous valid correct input unlocks the device; later dial
+  changes do not undo it.
+
+Dropped flags and recorded violations do not veto completion. Reports keep
+`strict_task_success`, process compliance and violations; Relay reports also keep
+`legacy_process_goals_met`, `legacy_completed_payloads`, drops and handover records. A violation
+entry is deduplicated by kind and key, not a count of separate collisions. Failed and unresolved
+actions are reported apart from process violations. An interrupted or unresolved run is never
+promoted to success, and an accepted `finish` is not a success verdict.
+
+### Contact and drop metrics
+
+`robot_contact_episodes` reports sampled contact episodes for inter-robot and self-robot body
+pairs, using the collision thresholds (penetration above 0.2 mm and 1 mm). Contact gaps of at
+most 50 ms of simulation time are joined. The report gives per-pair counts and the largest
+sampling gap; it counts body-pair episodes, not physical impacts. None of these counts changes
+terminal success.
+
+Relay `drops` comes from its airborne, support and contact state machine and is not a complete
+count of physical drops. Transport, Mosaic and Dial have no validated general drop counter: an
+absent metric means not measured, not zero. Dial's red-operation support violations are detected
+only before unlock.
+
+## SQLite writer contention
+
+The run store uses SQLite WAL with a 30-second busy timeout. A non-nested `BEGIN IMMEDIATE` that
+returns plain `SQLITE_BUSY` is tried at most four times, 0.25 s apart, about 120.75 s in all.
+Warnings go to standard logging, not the contested database, with elapsed time, attempts and
+outcome. Nested savepoints, errors inside a transaction, commits, extended busy codes and other
+errors are not retried (`robofrontier/runtime/sqlite_busy.py`).
+
+The local HTTP client's default timeout is that maximum wait plus 45 s; a caller's explicit
+timeout is kept. A timeout does not establish whether an action ran: reconcile or query its
+original ID. The Claude budget ledger uses the same writer policy.

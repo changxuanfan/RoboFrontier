@@ -1,122 +1,118 @@
-# RoboFrontier project page and README: design plan
+# RoboFrontier project page and README: design
 
-Status: direction A (Control room) chosen on 2026-11-05 and implemented in `index.html`,
-`assets/` and `data/`. Replaced the retired task-atlas page.
+The project page is `site/index.html` with `assets/` and `data/`, deployed to GitHub Pages by
+`.github/workflows/site.yml` on pushes to `main` that touch `site/`.
 
 ## Audience and promise
 
-A visitor should understand in 30 seconds what RoboFrontier is (multimodal agents
-controlling up to 16 robot arms in one physical world), see it working, and find
-the headline result. A researcher should then be able to drill into every task,
-every video and every metric.
+A visitor should understand in 30 seconds what RoboFrontier is (multimodal agents controlling
+up to 16 robot arms in Robo World, one physical simulation), see it working and find the
+headline result. A researcher should then be able to drill into every task, every video and
+every metric.
 
-## Project page: information architecture
+## Page structure
 
-One long page with a sticky chapter rail, plus a lightbox video player. Five chapters:
+One long page with a chapter rail and a lightbox video player.
 
-| # | Chapter | Content | Data source |
-| --- | --- | --- | --- |
-| 0 | Hero | Full-bleed muted loop cut from the 3.5 min promo; title, one-line claim; buttons: Watch film, Paper, Code, Data; four counters (36 tasks, 4 families, up to 16 arms, N models) | `media.json` |
-| 1 | Benchmark | Four families as large cards (hover/scroll plays the Oracle clip); the 3 x 3 grid of scale x difficulty per family; what the policy sees and does (tools, cameras, rules); the adaptive protocol as an animated diagram (Controller spawns and retires delegates); how scoring works (terminal outcome, process events) | `tasks.json` (from the release) |
-| 2 | Watch | Video wall: family tabs, a 3 x 3 grid per family, source switch (Oracle / each model), front/side toggle, lightbox with task facts. Sources that are not rendered yet show "coming soon" | `media.json` |
-| 3 | Results | Leaderboard of all models on the adaptive protocol: completion per family/level, then failures and failure rate, retries and retry rate, wall/simulation time, input/output tokens, collisions, parallel efficiency. Metric switcher, sortable table, family x level heatmap per model | `results.json` |
-| 4 | Analysis | (a) Multi-agent communication: Single vs Controller-Worker vs Worker-Worker vs Adaptive (GPT only): success, time, tokens, parallelism, collisions, message volume and an animated message-flow view. (b) Skills: runs that write `skills.md` vs not: progress-over-time curves, late-run retry counts. (c) Parallel efficiency: concurrency timelines | `results.json` |
-| 5 | Footer | BibTeX, license (code MIT, data/media CC BY 4.0), links | static |
+| Section | Content | Data |
+| --- | --- | --- |
+| Hero | Title, the question, buttons (Code, Film, Task data, BibTeX), the Robo World hero loop, one spec strip (36 tasks, 4 families, 4–16 arms, 3 levels, 24 h per run) | `assets/video/hero.mp4` |
+| 01 Overview | Agents, the one robot tool, Robo World; the shared contract | static |
+| 02 Benchmark | Family cards; per-family explainer of levels × team sizes from the task initial states (`assets/atlas/`); the Robo World map drawn from `tasks.json`; the adaptive protocol diagram | `tasks.json` |
+| 03 Videos | Video wall: source tabs (Oracle, then each model), family and front/side switches; each Oracle video states its provenance | `media.json` |
+| 04 Results | Failures per model, completion over time, tokens over time, metric definitions | `results.json` |
+| 05 Studies | Skills (with and without `skills.md`), communication (single, controller-worker, worker-worker, adaptive), cameras (own arms vs every camera) | `results.json` |
+| 06 Cite | BibTeX | static |
 
-Multi-agent communication is chapter 4a with its own sub-navigation and a
-deep link (`#communication`). A separate page is not needed now; the chapter can be
-promoted to `communication.html` later without changing data.
+No number is hard-coded in HTML. Missing data renders an explicit "pending" state or an empty
+chart frame, never a placeholder value.
 
-No number is ever hard-coded in HTML. Missing data renders an explicit
-"pending" state, never a placeholder value.
+## Visual style
 
-## README: a static project page
+- A white paper page, light by default, with a Theme button for dark (stored under the
+  `localStorage` key `rf-theme`).
+- Fonts: Space Grotesk (display, as in the film titles), IBM Plex Sans (body), JetBrains Mono
+  (labels).
+- Signature elements: the Robo World map (`plan()` in `assets/js/site.js`), floor-signage plates
+  as section labels and the one spec strip.
+- Family colors: light theme Transport `#3b7fc4`, Mosaic `#3f9440`, Relay `#d65b3c`, Dial
+  `#b98a12`; dark theme `#8fc1ec`, `#9fdc8c`, `#ff9f87`, `#f2d46b`.
+- Motion respects `prefers-reduced-motion`; videos load lazily; controls work from the keyboard;
+  nothing shifts the layout.
 
-GitHub strips `<video>` tags except for uploaded attachments
-(`github.com/user-attachments/...`, up to 100 MB with Pro), so every inline video is
-an attachment uploaded through the GitHub web editor.
+## README
 
-1. Title, one-line claim, badges (project page, paper, license).
-2. **Promo film** inline (1080p, about 25-30 MB, H.264, faststart).
-3. **Four family montages** inline: one 1920 x 1080 video per family, a 3 x 3
-   grid of its nine Oracle tasks (rows = difficulty, columns = scale), each tile
-   720p-sourced, labeled, time-aligned and sped up. Four videos show all 36 tasks.
-4. A 36-cell poster table (one row per family) linking each task to its
-   full-length 720p video on the project page.
-5. When model videos exist: one montage per model in a collapsible `<details>`.
-6. What the agents do (short), the four topologies (one diagram), quick start,
-   repository map, citation, license. No benchmark result tables (those live on
-   the project page; the README links to them).
+GitHub plays inline video only from uploaded attachments (`github.com/user-attachments/...`),
+so every inline video is an attachment.
+
+1. `docs/media/readme/banner.png`, title, paper title, links and family-colored badges, then
+   `docs/media/readme/teaser.webp`, an animated image linking to the film (GitHub never
+   autoplays video).
+2. What it is, with `docs/media/readme/benchmark.jpg` (initial states at Levels 1–3).
+3. One inline montage per family between `<!-- media:* -->` markers: its nine Oracle tasks
+   in a 3 × 3 grid (rows are levels, columns team sizes), 1080p, each under 10 MB.
+4. A 36-task gallery linking to page deep links `#task=<id>`.
+5. Quick start, repository map, citation, license. No results table.
+
+The Oracle provenance (which runs were operator-assisted, which scene revision each was
+recorded on, that they are not model results) is stated wherever Oracle videos appear; the
+facts are in the [Oracle guide](../docs/oracle/README.md#published-reference-videos).
 
 ## Media pipeline and hosting
 
-- Encoding: CPU libx264, preset slow, CRF 28, `-movflags +faststart`, no audio,
-  720p for task videos, 1080p for the promo and montages; JPEG posters at 1280 px.
-  Verify each output (duration, frames, SSIM against source on samples).
-- Hosting: a public media repository per video set, served by its own GitHub
-  Pages (`RoboFrontier-media-oracle`, later `RoboFrontier-media-<model>`), so the
-  main repository stays small and each site stays under the 1 GB Pages limit.
-  `media.json` in the main site lists every file URL, size, duration and SHA-256.
-- Oracle sources: Transport/Relay L1-L2 `server-l12-20261028`, all L3
-  `server-l3-429372-429373` (Transport, Relay), Mosaic `server-mosaic-r14-427182`,
-  Dial `dial-corrected-429851` (supersedes earlier Dial renders). 36 tasks x front/side.
-- Model sources: simple-background renders now; Factory renders replace them later
-  under the same `media.json` keys.
+- `scripts/site_media.py`: `encode` (CPU libx264, CRF 28, `+faststart`, no audio, 720p task
+  videos, JPEG posters), `montage`, `stills` and `explainer`. Each output is checked for
+  duration and frame count.
+- `scripts/site_film.py`: `short`, `film`, `web` (hero MP4 and teaser WebP) and `banner`, drawn
+  over a raw Robo World render; `assets/robo_factory/film-project.json` holds the film's titles.
+- `scripts/site_data.py`: `tasks` (writes `data/tasks.json` from the release and the public
+  tasks, including each Oracle row's provenance), `media` (writes `data/media.json` from the
+  encode manifests) and `readme-gallery`.
+- Videos live in one public media repository per set, served by its own GitHub Pages
+  (`RoboFrontier-media-oracle`; one `RoboFrontier-media-<model>` per model), so the main
+  repository stays small. `media.json` lists every file URL, size, duration and SHA-256.
+  Model sets use the same keys as the Oracle set.
 
-## Results pipeline
+## Results data
 
-No script writes `site/data/results.json` yet. Its exporter will read collected run
-exports (batch `evaluation.json`, host metrics, runtime events) and write this shape:
+`data/results.json` (schema `robofrontier.site-results.v1`) holds one row per run and is empty
+until runs are exported; no script in the repository writes it yet. The page computes every
+aggregate, so one file serves Results and Studies. Fields the page reads:
 
 ```json
-{"schema": "robofrontier.site-results.v1", "generated_at": "...",
- "runs": [{"model": "gpt-6.1-sol", "engine": "codex", "topology": "adaptive",
-           "skills": true, "case": "mosaic-a08-12x24-d3",
+{"schema": "robofrontier.site-results.v1",
+ "runs": [{"model": "...", "model_label": "...", "engine": "codex", "topology": "adaptive",
+           "skills": true, "camera_access": "all", "case": "mosaic-a08-12x24-d3",
            "success": false, "progress": 0.41, "wall_s": 86400,
-           "actions": 0, "failed_actions": 0, "retries": 0,
-           "tokens_in": 0, "tokens_out": 0, "collisions": 0,
-           "messages": 0, "delegations": 0, "peak_parallel_arms": 0,
-           "progress_curve": [[0, 0.0]]}]}
+           "failed_actions": 0, "retries": 0, "tokens_in": 0, "tokens_out": 0,
+           "collisions": 0, "messages": 0, "parallel_efficiency": 0.0,
+           "progress_curve": [[0, 0.0]], "completion_curve": [[0, 0.0]],
+           "token_curve": [[0, 0]]}]}
 ```
 
-Aggregates are computed in the page, so the same file serves results and analysis.
+`topology` is one of `single`, `controller-worker`, `worker-worker`, `adaptive`;
+`camera_access` is `ego` or `all`.
 
-## File layout
+## Files
 
 ```text
-site/                    project page source, deployed by GitHub Actions to Pages
+site/
   index.html
-  assets/css/ assets/js/ assets/img/   (posters only; no videos)
-  data/tasks.json        36 public task facts (generated from the release)
-  data/media.json        every video URL by set, task and view
-  data/results.json      generated benchmark results
-  DESIGN.md              this plan
-scripts/                 site_media.py (videos, montages, stills), site_film.py, site_data.py (tasks, media)
-docs/media/              README stills (posters for the 36-cell table)
+  assets/css/site.css  assets/js/site.js
+  assets/img/          favicon, posters, social image
+  assets/atlas/        task initial-state images
+  assets/video/        hero loop
+  data/tasks.json      36 public task facts
+  data/media.json      every video URL by set, task and view
+  data/results.json    benchmark results
+  DESIGN.md            this file
+docs/media/readme/     README banner, teaser, benchmark image, task stills
 ```
-
-`docs/task-atlas` and `web/task-atlas` were removed on 2026-11-10; the Benchmark
-chapter covers them (see `docs/cleanup-20261110.md`).
 
 ## Links and local preview
 
-- `#film` opens the film; `#task=<case>[&view=side][&source=<set>]` opens one run. The README
-  gallery links every thumbnail this way.
-- Preview: `python3 -m http.server -d site 8765`. Locally encoded media lives in the ignored
-  `site/_media/`; `media.json` then points at `_media/<set>/`.
+- `#film` opens the film; `#task=<case>[&view=side][&source=<set>]` opens one run.
+- Preview with `python3 -m http.server -d site 8765`. Locally encoded media go in the ignored
+  `site/_media/`, with `media.json` pointing at `_media/<set>/`.
 - `?fixture=<file>` loads a results file from the ignored `site/_dev/` to test charts. Never
   publish a fixture.
-
-## Visual direction
-
-Three directions were prototyped in `site/_directions/` (ignored, not deployed); A was chosen:
-
-- **A: Control room.** Near-black, cinematic full-bleed video, monospace telemetry,
-  one electric accent, live counters and scan lines.
-- **B: Editorial lab.** White paper, very large serif display type, black ink, one
-  saturated accent; magazine pacing with scroll-driven reveals.
-- **C: Factory floor.** Warm concrete and safety yellow from the Factory renders,
-  condensed grotesk, blueprint lines and hazard stripes.
-
-All three: motion that respects `prefers-reduced-motion`, lazy video loading,
-light/dark readability, keyboard-accessible controls, no layout shift.

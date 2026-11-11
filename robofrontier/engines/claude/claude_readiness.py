@@ -114,8 +114,8 @@ def require_ready(name, runs=None, **kwargs):
     model configuration, as a Codex run needs its compatibility receipt (E5)."""
     basic, blocked = latest_receipts(name, runs)
     if basic is None or blocked is None:
-        raise ValueError(f'No Claude precheck receipts for {name}; run `robofrontier preflight --confirm-spend` '
-                         'and the blocked precheck first')
+        raise ValueError(f'No Claude precheck receipts for {name}; run `robofrontier preflight --engine claude '
+                         '--confirm-spend --max-budget-usd B` first')
     result = check_receipts(name, basic, blocked, **kwargs)
     if not result['precheck_evidence_matches']:
         failed = sorted(k for k, v in result['checks'].items() if not v)

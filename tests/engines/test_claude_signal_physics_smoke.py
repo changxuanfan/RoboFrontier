@@ -51,9 +51,11 @@ class SignalPhysicsSmokeTests(unittest.TestCase):
                 manifest.write_text(json.dumps(frozen))
             env={key:os.environ[key] for key in ('PATH','HOME','LANG','LC_ALL','TMPDIR','DISPLAY','MUJOCO_GL') if key in os.environ}
             env['FAKE_KEY']='synthetic'
-            cmd=[sys.executable,'-m','robofrontier.batch.claude_prepare','run-engineering',str(batch),
-                 '--parallel',str(len(jobs)),'--turn-budget-usd','.5','--task-budget-usd','2',
-                 '--wall-limit-s','120','--confirm-engineering-spend']
+            # The batch supervisor as `robofrontier run` starts it, with small budgets: SIGTERM must stop it in order.
+            script=('import os,sys;from robofrontier.batch.claude_batch import run_until_signal;'
+                    'run_until_signal(sys.argv[1],dict(os.environ),parallel=int(sys.argv[2]),'
+                    'turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=120)')
+            cmd=[sys.executable,'-c',script,str(batch),str(len(jobs))]
             with (directory/'supervisor.log').open('w') as log:
                 process=subprocess.Popen(cmd,env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=log)
                 deadline=time.monotonic()+90

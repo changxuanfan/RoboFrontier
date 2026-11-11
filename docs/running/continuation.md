@@ -3,8 +3,9 @@
 A run that stops can continue. The continued part is **the same trial**: the same
 run directory, runtime database, workspace and model sessions. Only the physical
 world is new, rebuilt approximately from the last recorded motion frame. Both
-engines and all four topologies (centralized, adaptive, hierarchical, peer)
-continue the same way.
+engines and all four topologies (single, controller-worker, worker-worker,
+adaptive) continue the same way. The functions named `segments.*` below are in
+`robofrontier/runtime/segments.py`.
 
 - After an **unexpected** stop (a host, world or model session ended without a
   finish, cutoff or STOP) the batch continues the run by itself, **once** per run.
@@ -31,7 +32,7 @@ A run is one or more segments, numbered from 0. The runtime database records:
 
 `private/outputs/segments.json` is an exported copy.
 
-## Files (run-v6)
+## Files
 
 ```
 private/inputs/segments/<k>/restore-pose.npy    Pose segment k starts from (frozen, bound in the manifest)
@@ -46,13 +47,12 @@ Everything else continues in place: `private/state/runtime.sqlite` (calls,
 actions, messages, work notes, delegations), `workspace/` (`skills.md` and the
 policy's own files), `public/` (inputs unchanged, observations and results
 appended), the logs, `events.jsonl` and `suite-process.jsonl` (appended, with
-segment boundary events), and `private/engine/` (sessions continue). Runs
-prepared before run-v6 never continue.
+segment boundary events), and `private/engine/` (sessions continue).
 
 ## When a run continues
 
-`run_segments.stop_reason` says why the current segment ended, from this segment's
-own records, and `run_segments.STOP_REASONS` what may follow:
+`segments.stop_reason` says why the current segment ended, from this segment's
+own records, and `segments.STOP_REASONS` what may follow:
 
 | Stop | How it is recognized | Continues by itself | By hand | Scored at this stop |
 | --- | --- | --- | --- | --- |
@@ -63,7 +63,7 @@ own records, and `run_segments.STOP_REASONS` what may follow:
 | `operator_stop` | the run's STOP marker | no | yes; the STOP marker is lifted | no |
 | `integrity_abort` | `integrity_valid` false or `INTEGRITY_ABORT` | no | no | no |
 
-`run_segments.retry_eligibility` also requires, either way:
+`segments.retry_eligibility` also requires, either way:
 
 - the lifecycle is `running`, `interrupted`, `recovery_required` or `ended`
   (not `prepared` or already `resuming`) and the run started;
@@ -84,12 +84,12 @@ crashed host leaves no orphan holding the world lock.
 ## Continuing by hand
 
 ```sh
-.venv/bin/python -m robofrontier.cli continue BATCH                    # every run that may continue
-.venv/bin/python -m robofrontier.cli continue BATCH --cases dial-a07-d1 # only these
+.venv/bin/robofrontier continue BATCH                          # every run that may continue
+.venv/bin/robofrontier continue BATCH --cases dial-best5-n04-d1  # only these
 ```
 
 The batch must not be running. Each run gets its next segment
-(`run_segments.prepare_retry` with `manual`); the batch is reopened for exactly
+(`segments.prepare_retry` with `manual`); the batch is reopened for exactly
 those runs (the others keep their final status) and runs them as
 `run --continue` does: under launchd on macOS by default, with `--durable` as a
 background service on Linux, or `--foreground` in this process. Named runs that
@@ -103,7 +103,7 @@ guard and the Claude supervisor set no limit and no backstop for such a segment.
 
 ## How a run continues
 
-1. **Settle the database** (`run_segments.prepare_retry`). Every unfinished
+1. **Settle the database** (`segments.prepare_retry`). Every unfinished
    action (running, uncertain, or accepted and not yet started) becomes failed
    with the reason "Interrupted by an unexpected host exit; the world was
    restored from the last recorded pose. Not replayed." Asking for such a call
@@ -146,7 +146,7 @@ with the same restore frame and end time, and uses no further continuation.
   the same stop table) and unstarted runs start:
 
   ```sh
-  .venv/bin/python -m robofrontier.cli run BATCH --continue
+  .venv/bin/robofrontier run BATCH --continue
   ```
 
 - **Only the model process died while the world lives:** no segment; the world
@@ -177,19 +177,18 @@ only.
 - Velocities, contact history and controller state are not kept.
 - Process monitoring (collisions, violations) restarts its counts in the new
   segment; reports combine each segment's last snapshot
-  (`run_segments.process_summary`).
+  (`segments.process_summary`).
 - The Dial game is episode history, so it continues: the new evaluator starts
   from the carried trial count, BEST and success, and the display shows that
   BEST at once. An input already scored and still held at the restore frame
   stays the same trial while it is held on: blue support ready at that frame stays
   qualified, and a red knob held there is not a new (premature) contact. Trials scored after the restore
   frame were never physically kept and are not carried. Process logs mark the
-  carried part (`carried_valid_trials`); `run_segments.dial_record` combines
-  segments, including runs continued before this existed (their later segment
-  counted from zero, so its trials are added and BEST is the maximum).
+  carried part (`carried_valid_trials`); `segments.dial_record` combines
+  segments.
 - A Relay timber's handovers and drops are episode history too, because completion
   requires a qualified handover. The new evaluator keeps those made up to the restore
-  frame (`run_segments.relay_record`). A timber held at that frame becomes airborne
+  frame (`segments.relay_record`). A timber held at that frame becomes airborne
   again through the ordinary lift check, keeping the custody and dropped state it had
   there: a receiver joining before the frame must qualify again, and a timber dropped
   there may still only be lifted by its holders.
@@ -202,17 +201,18 @@ The 24-hour limit (`run_protocol.total_wall_limit_s`) is **the time the trial is
 actually running**. A continuation is the same trial, so its time adds to the
 time already used. The frozen `run_protocol.clock` says how a run counts it.
 
-### Active time (`clock: active_time_v1`, every new policy run)
+### Active time (`clock: active_time_v1`)
 
-The world owner adds up active time tick by tick (`policy_probe.BudgetGuard`).
-An interval counts only while the lifecycle is `running`, physics is `running`
-and dispatch is not paused (`policy_probe.counting`). It does not count:
+Every policy run counts active time. The world owner adds it up tick by tick
+(`BudgetGuard` in `robofrontier/runtime/clock.py`). An interval counts only while
+the lifecycle is `running`, physics is `running` and dispatch is not paused
+(`clock.counting`). It does not count:
 
 - a pause by the experiment manager, the budget cutoff itself, an egress review
   hold;
 - a Slurm egress pause or a network-outage pause (below);
 - a stall: when the owner's previous tick is more than 5 s ago
-  (`policy_probe.STALL_S`), the gap adds nothing and is recorded as an
+  (`clock.STALL_S`), the gap adds nothing and is recorded as an
   `ACTIVE_TIME_STALL` event. Ticks normally come every few milliseconds, so this
   catches a frozen or suspended host and a machine that slept;
 - the time between segments, when no owner runs.
@@ -223,21 +223,21 @@ starts from the saved value; it never recomputes the deadline from wall time, so
 a sleep or crash is never counted again. The cutoff fires when `active_s` reaches
 the limit. `budget-cutoff.json` and `evaluation.json` record `active_s` /
 `budget_active_s` and the clock; a continuation by itself needs at least 60 s of
-active time left (`run_segments.remaining_s`).
+active time left (`segments.remaining_s`).
 
-`downtime_s` is still recorded (segment gaps and pauses) for reports; it no longer
-enters the limit. The public task does not state the clock, as it does not state
+`downtime_s` is recorded (segment gaps and pauses) for reports; it does not enter
+the limit. The public task does not state the clock, as it does not state
 the limit.
 
 The Claude supervisor leaves the end to the world: it ends a run on its own only
 60 s of active time past the limit, and waits for an outage or egress pause
-instead of sealing the paused run. The Codex host never had its own limit.
+instead of sealing the paused run. The Codex host has no limit of its own.
 
 ### Wall backstop
 
 Active time does not advance while a world is paused or its host is frozen, so it
-alone would never end a run held forever. New policy runs therefore also freeze
-`run_protocol.wall_backstop_s` (172,800 s, `task_families.WALL_BACKSTOP_S`;
+alone would never end a run held forever. Policy runs therefore also freeze
+`run_protocol.wall_backstop_s` (172,800 s, `WALL_BACKSTOP_S` in `robofrontier/tasks/families.py`;
 private, like the limit). The backstop counts wall time since START
 (`clock.backstop_elapsed`) **less every outage, egress and usage-limit pause**
 (`pause_wall_s` and the current `pause_since_wall` in the runtime database): such a
@@ -266,9 +266,7 @@ A backstopped run never continues by itself. It continues by hand
 (`robofrontier continue`, or the stopped-runtime upgrade path with its
 `manual_authorization`). Its continuation moves the backstop's `budget-cutoff.json` and `evaluation.json` aside (with
 `-wall-backstop-N` in their names), records `WALL_BACKSTOP_WAIVED`, and the
-backstop then counts again from that moment. Runs frozen without the field
-(every START-wall-time run, and active-time runs frozen before it) have no
-backstop.
+backstop then counts again from that moment.
 
 ### Network-outage pause
 
@@ -281,8 +279,7 @@ the `mac-ssh` route keeps its egress pause (`slurm.egress_pause_s`, by default a
 long as the wall backstop). A probe is a
 verified TLS handshake on port 443 followed by an HTTP `HEAD /` that must get an
 answer (any status), every 5 s, with a 5 s timeout. A bare TCP connection is not
-enough: a local VPN tunnel accepts it even when its route to the API is gone, which
-on 2026-11-10 let eight runs fail their turns instead of pausing. After three consecutive
+enough: a local VPN tunnel accepts it even when its route to the API is gone. After three consecutive
 failures the world pauses exactly like a Slurm egress pause: physics stops
 stepping (arms hold mid-motion), dispatch is paused, new policy requests wait with
 their original call IDs, and an `OUTAGE_PAUSED` event is written. The time since
@@ -300,11 +297,12 @@ continues the same session and replays nothing; a second failure in the same
 pause, or a failure for another reason within it, holds the run for review.
 
 The probe pauses only a running trial (not before START or after the cutoff). It
-is off for runs with a Slurm egress pause, for frozen START-wall-time runs, and
-with `ROBOFRONTIER_OUTAGE_PROBE=off` (the test suite sets this). A pause has no
+is off for runs with a Slurm egress pause and with `ROBOFRONTIER_OUTAGE_PROBE=off` (the test suite sets this). A pause has no
 time limit of its own. A probe
 that never succeeds, because the world process has no direct route out, never
 pauses: after 12 failures it stops and records `OUTAGE_PROBE_UNAVAILABLE`.
+
+<a id="usage-limit-pause"></a>
 
 ### Usage-limit pause (every platform)
 
@@ -312,7 +310,7 @@ A subscription's 5-hour or weekly limit lasts until its reset, so it is not retr
 like a short rate limit. When a model turn fails on it (`runtime/quota.py`: Claude
 Code's "You've hit your … limit · resets …" or "usage limit reached|<time>", Codex's
 `usageLimitExceeded` or "try again at/in …"), the host reads the reset time and asks
-the world to pause (`runtime_cli quota-pause`, `QUOTA_PAUSE_REQUESTED`). The world
+the world to pause (the `quota-pause` operation of `robofrontier/runtime/cli.py`, `QUOTA_PAUSE_REQUESTED`). The world
 pauses exactly as in an outage (`QUOTA_PAUSED`): physics and dispatch held, original
 calls kept, the time counted neither as active time nor by the wall backstop. A second
 role's request joins the first (the later reset wins). The world resumes by itself a
@@ -335,16 +333,6 @@ engines. When the retries are used up, both hosts pause dispatch
 (`DISPATCH_PAUSED`, "Model capacity recovery attempts exhausted"); the run then ends
 as an unexpected stop and continues by itself once (see the stop table).
 
-### START wall time (frozen runs without `clock`)
-
-Runs frozen before the active-time clock keep their terms exactly. The effective
-deadline is `start_at + wall limit + downtime_s`: downtime does not count against
-the wall limit. Downtime is the new segment's start minus the previous segment's
-last activity (the later of the last database event written while it was alive
-and the last host log line), plus Slurm egress pauses. Hosts write a few log lines
-after the world dies, so downtime is underestimated by a few seconds. A stall or a
-sleep inside a segment counts.
-
 ## Reports and archives
 
 - A report's `segments` field gives the segment count, whether the run
@@ -352,7 +340,7 @@ sleep inside a segment counts.
   session; the cost of a turn cut off by the exit is counted as unreported.
 - Continued runs count in comparisons as usual and are marked as continued.
 - Motion readers and batch collection go through every segment's recording in
-  order (`run_segments.motion_dirs`); the timeline is continuous.
+  order (`segments.motion_dirs`); the timeline is continuous.
 - A run's transcripts are archived only once it can no longer continue
   ([evidence storage](evidence-storage.md#session-transcripts)).
 
@@ -407,7 +395,7 @@ agent session that started it. `--foreground` runs it in the current process ins
 as on Linux. In order, it:
 
 1. **Seals a live world.** A world that is still alive is sealed through its own
-   shutdown (`run_seal.seal_run`): a final observation, then exit. It is never
+   shutdown (`seal_run` in `robofrontier/runtime/seal.py`): a final observation, then exit. It is never
    killed, and no motion is replayed.
 2. **Validates the restore.** It rebuilds the world from the last recorded pose on
    a private copy and checks the pose, zero velocity, simulation time and grasp
@@ -418,10 +406,10 @@ as on Linux. In order, it:
    to the parent, which is told through the usual `delegation_failed` signal. The
    native fork may exist on disk; it is kept and never resumed or forked again.
 5. **Prepares the next segment.** It prepares the segment in the same run
-   (`run_segments.prepare_retry` with the manual sealed-host exception) and checks
+   (`segments.prepare_retry` with the manual sealed-host exception) and checks
    that the call and action ledger is unchanged.
 6. **Runs the frozen runner.** It starts the original runner
-   (`claude.engineering_run.run_task`) from `SOURCE`, with that checkout's
+   (`robofrontier.engines.claude.run.run_task`) from `SOURCE`, with that checkout's
    `.env` and the batch's frozen configuration. That runner restarts the world from
    the restore pose and resumes the Controller and every active delegate in their
    own sessions, each with its frozen resume message.
@@ -435,9 +423,8 @@ count, and the trial's remaining active time still applies.
 it is never repeated. An attempt that stopped at a check before that point may be
 run again; the record keeps it under `earlier_attempts`. The seal's own
 `observe` and `shutdown` calls are not task calls and are left out of the ledger
-comparison. Batches prepared from this version wait for a recovery in
-progress before they close and collect. An older batch closes without waiting, so
-collect its evidence once the recovered task has ended.
+comparison. The batch waits for a recovery in progress before it closes and
+collects.
 
 ### Continue again with a runtime upgrade
 
@@ -487,10 +474,10 @@ Its default mode only reports eligibility. It does not restart the allocation,
 the shared native app-server, another task, or the batch supervisor. The same
 native process remains the sole subscription refresh owner.
 
-The gateway and frozen policy host must have supported recovery when the batch
-was prepared and started. Synchronizing a checkout does not upgrade an already
-running gateway. An older gateway rejects the read-only capability query, and
-the entrypoint stops before segment preparation, model input or robot dispatch.
+The batch's running gateway must support recovery; a checkout change does not
+alter a running gateway. A gateway without it rejects the read-only capability
+query, and the entrypoint stops before segment preparation, model input or robot
+dispatch.
 Do not restart a shared engine to work around this rejection. A second native
 server also cannot take over a thread while the original server holds its writer
 lock; copying sessions to bypass that lock is not this recovery protocol.
@@ -551,8 +538,8 @@ workspace and frozen file/network permissions remain in use. No old turn or
 physical action is submitted again; the original host sends the frozen segment
 resume messages and subsequent model decisions use the normal durable ledger.
 
-Downtime follows the existing segment contract: it does not consume the trial's
-wall budget. Recovery does not grant a fresh 24 hours. The allocation must cover
+Time between segments is not active time, and recovery does not grant a fresh
+24 hours. The allocation must cover
 the remaining time. `private/state/control/recovery.json` records the separate
 recovery lifecycle. The batch supervisor waits for recovery ownership to close
 before stopping its engine or collecting evidence. A failed/uncertain recovery

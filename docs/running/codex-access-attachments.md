@@ -1,31 +1,26 @@
-# Access-only subscription attachments
+# Access-only Codex subscription attachments
 
-An explicitly selected `ROBOFRONTIER_BORROWED_AUTH` may reference the configured
-credential store's `current.json` when another running allocation step already
-owns its native refresh lease. This permits a separately prepared physical batch
-to use its own gateway and Codex home without stopping the existing batch.
+On Slurm, a second Codex subscription batch can use the login of a job that is already running,
+without stopping it and without becoming a second refresh owner. Set
+`ROBOFRONTIER_BORROWED_AUTH` to the configured credential store's `current.json`
+(`<slurm.credential_store>/current.json`; any other path is refused) in the second batch's
+environment. The running job keeps its own lease on the store
+([Slurm credential store](slurm.md#codex-credential-store)).
 
-The attachment uses native `chatgptAuthTokens` login and ephemeral credential
-storage. Only access/account/plan fields enter that native request. It creates no
-`auth.json`, does not acquire the refresh lease, does not perform custom OAuth,
-and never falls back to an API key. The private canonical store and both engine
-roots remain denied by every frozen policy permission table.
+What the attachment does:
 
-The original native owner alone refreshes credentials. Attachments watch the
-canonical account identity and expiry. On an unauthorized native request they
-wait at most eight seconds for the original owner to publish a changed access
-token, then return those new access fields through the native renewal callback.
-If no valid new generation is available, they fail closed rather than becoming
-a competing refresh owner. If the original owner ends, existing unexpired
-access can still be used; renewal is unavailable until custody is explicitly
-established again. Check validity against the entire planned run before START.
+- It logs native Codex in with `chatgptAuthTokens` and ephemeral storage, passing only the
+  access, account and plan fields. It writes no `auth.json`, takes no lease, runs no OAuth of
+  its own and never falls back to an API key.
+- It watches the store's account identity and expiry. On an unauthorized response it waits up
+  to eight seconds for the owning job to publish a new access token and passes that on. Without
+  one it fails closed.
+- If the owning job ends, unexpired access still works but cannot be renewed. Check that the
+  access lasts the whole planned run before START.
 
-This is authentication reuse, not session takeover. Fresh trials use fresh run
-directories, ledgers, native sessions and physical worlds. They do not read or
-replay interrupted trials' actions. Discarded trials remain identified as such
-and cleanup waits for any existing collector that still owns their evidence.
+The store and both engine homes stay closed in every run's access table. The second batch has
+its own runs, ledgers, sessions and worlds; it reads nothing from the first.
 
-Validation uses synthetic credentials and loopback provider responses with the
-real pinned CLI: the original 36-task engine remains alive while an access-only
-two-task engine starts roles, invokes tools, forks children and releases them.
-The canonical credential owner and its cache remain unchanged by the attachment.
+Tests: `tests/batch/test_slurm_auth.py`, `tests/engines/test_codex_borrowed_auth.js` and
+`tests/engines/test_slurm_gateway_native.py`, the last with the real pinned CLI, synthetic
+credentials and a loopback provider.

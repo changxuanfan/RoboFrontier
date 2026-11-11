@@ -1901,8 +1901,7 @@
     "policy": [
       "Selected timestamped RGB",
       "Robot proprioception and robot geometry",
-      "Action feedback",
-      "Visible dial count"
+      "Action feedback"
     ]
   },
   "completion": {

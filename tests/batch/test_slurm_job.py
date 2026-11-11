@@ -32,7 +32,7 @@ class SlurmJobTests(unittest.TestCase):
         receipt.write_text(json.dumps({'passed': True}))
         self.asset = self.root/'assets.tar.gz'
         self.asset.write_bytes(b'fixture verified only by hash; no simulator is launched')
-        self.config = load_configuration()
+        self.config = load_configuration(host='slurm')
         self.submission = self.root/'submission'
         self.local = self.root/'scratch/job'
         self.local.parent.mkdir()
@@ -226,7 +226,8 @@ class SlurmJobTests(unittest.TestCase):
             raise EgressError('route lost after the run sealed')
         result = {'archive': str(archive), 'status': 'closed', 'collection_complete': True}
         with patch.object(slurm, 'ROOT', source), patch.object(slurm, 'subscription_environment', fenced), \
-                patch('robofrontier.cli.prepare'), patch('robofrontier.cli.run', return_value=result):
+                patch('robofrontier.cli.prepare'), patch('robofrontier.runtime.policy_env.apply_default'), \
+                patch('robofrontier.cli.run', return_value=result):
             with self.assertRaises(EgressError):
                 slurm.execute(self.local)
         written = json.loads((self.local/'execution-result.json').read_text())
@@ -242,6 +243,7 @@ class SlurmJobTests(unittest.TestCase):
         source = (self.local/'source').resolve()
         (self.local/'STOP').touch()
         with patch.object(slurm, 'ROOT', source), patch('robofrontier.cli.prepare'), \
+                patch('robofrontier.runtime.policy_env.apply_default'), \
                 patch('robofrontier.cli.run') as run:
             self.assertEqual(slurm.execute(self.local), {'status': 'stopped_before_start'})
             run.assert_not_called()
@@ -283,7 +285,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_subscription_submission_is_one_allocation_serialized_by_credential_stream(self):
         from robofrontier.engines.codex.job_engine import fingerprint
-        self.config = load_configuration(overrides={
+        self.config = load_configuration(host='slurm', overrides={
             'policy': {'profile': 'luna_subscription'},
             'runtime': {'codex_home_scope': 'job', 'codex_tool_backend': 'landlock-v1'},
             'slurm': {'auth_mode': 'subscription', 'credential_store': str(self.root/'not-yet-provisioned')}})
@@ -304,7 +306,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertFalse((self.root/'not-yet-provisioned').exists())
 
     def test_subscription_requires_fresh_gateway_qualification_and_private_store(self):
-        self.config = load_configuration(overrides={
+        self.config = load_configuration(host='slurm', overrides={
             'policy': {'profile': 'luna_subscription'},
             'runtime': {'codex_home_scope': 'job', 'codex_tool_backend': 'landlock-v1'},
             'slurm': {'auth_mode': 'subscription', 'credential_store': str(self.root/'credentials')}})
@@ -319,7 +321,14 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_claude_token_runs_through_the_mac_route_without_a_credential_store(self):
         relay = self.root/'egress'
-        self.config = load_configuration(overrides={
+        # The submission carries the profile's two precheck receipts, which the job checks again.
+        receipts = {}
+        for name in ('basic', 'blocked'):
+            receipts[name] = self.root/(name+'-receipt.json'); receipts[name].write_text('{"passed": true}')
+        ready = patch('robofrontier.engines.claude.claude_readiness.require_ready',
+                      return_value={'basic_receipt': str(receipts['basic']), 'blocked_receipt': str(receipts['blocked'])})
+        ready.start(); self.addCleanup(ready.stop)
+        self.config = load_configuration(host='slurm', overrides={
             'schema_version': 8, 'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay), 'egress_pause_s': 120}})
         # The token must be in the checkout's .env (ignored by Git), never only in the shell.
@@ -332,6 +341,8 @@ class SlurmJobTests(unittest.TestCase):
         manifest, _ = slurm._verify_submission(self.submission)
         self.assertEqual((manifest['credential_env'], manifest['auth_mode']), ('CLAUDE_CODE_OAUTH_TOKEN', 'api'))
         self.assertEqual(manifest['credential_file'], str((self.repo/'.env').resolve()))
+        self.assertEqual({name for name in manifest['sha256'] if name.startswith('claude-')},
+                         {'claude-precheck.json', 'claude-blocked-precheck.json'})
         self.assertNotIn('fixture-not-a-token', ''.join(path.read_text(errors='ignore') for path in self.submission.rglob('*') if path.is_file()))
         self.assertNotIn('--dependency=singleton', slurm.queue_command(self.config['slurm'], self.submission))
         self.config['slurm']['egress_root'] = str(self.repo/'egress')
@@ -340,10 +351,10 @@ class SlurmJobTests(unittest.TestCase):
                 slurm.submit(self.config, self.root/'second', root=self.repo)
         # Only Claude carries a token this way; Codex keeps the job-scoped subscription store.
         with self.assertRaisesRegex(ValueError, 'Mac egress requires'):
-            load_configuration(overrides={'schema_version': 8, 'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay)}})
+            load_configuration(host='slurm', overrides={'schema_version': 8, 'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay)}})
 
     def test_claude_route_admits_egress_and_restores_the_environment(self):
-        config = load_configuration(overrides={
+        config = load_configuration(host='slurm', overrides={
             'schema_version': 8, 'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(self.root/'egress')}})
         self.local.mkdir()

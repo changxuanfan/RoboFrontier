@@ -25,7 +25,7 @@ observation_profile = "jpeg_896x560_q85"
 record_realtime_video = false
 
 [runtime]
-codex_tool_backend = "native"         # native | landlock-v1 (Linux namespace-restricted containers)
+codex_tool_backend = "auto"           # auto | native | landlock-v1; auto is native on macOS, landlock-v1 on Linux
 codex_home_scope = "task"             # task | shared | job (Slurm managed subscription only)
 codex_home = ""                      # Empty uses an automatically created private directory
 

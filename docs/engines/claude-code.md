@@ -1,688 +1,280 @@
 # Claude Code engine
 
-Claude Code runs every policy role as a native Claude CLI session with the robot tool over MCP,
-beside Codex and with the same inputs, rules, robot tool text and runtime. All four topologies
-run (centralized, adaptive, hierarchical, peer). A run needs passed precheck receipts for its
-profile and the pinned CLI version (2.1.316); see [Provider prechecks](#provider-prechecks).
-The [engine overview](README.md) has the component map, shared request IDs, recovery and
-reporting; [providers](README.md#providers) the authentication matrix.
+Every policy role is a native Claude Code session (`claude -p`, continued with `--resume`) with
+the robot tool served over MCP by `robofrontier/engines/claude/robot_mcp.py`. All four
+topologies run: `single`, `adaptive`, `controller-worker` and `worker-worker` (inside a run named
+centralized, adaptive, hierarchical and peer). The pinned CLI is Claude Code 2.1.316
+(`robofrontier/runtime/versions.py`); runs turn its self-update off (`DISABLE_AUTOUPDATER`). A run
+starts only with passed precheck receipts for its profile and that CLI version
+([Preflight and receipts](#preflight-and-receipts)). What both engines share is in the
+[engine overview](README.md); the [Codex guide](codex.md) has the same sections.
 
-## Current startup, time and finish contract
+## Install
 
-New Single/Adaptive policy inputs use direct Controller START. Once the world is
-ready and the Controller's native session is bound, the host persists START and
-sends an explicit started prompt. Initial task reading, observation and planning
-count toward the task clock. `ready` is an optional capability query; it is not
-a readiness barrier. Standing Controller + Worker and Worker-Worker runs bind
-all initial roles before one `direct_team_v3` START, then send each an explicit
-started task prompt (see [initial roles and START](#initial-roles-and-start)).
-
-The limit is 24 hours of active running time (`run_protocol.clock: active_time_v1`): outages,
-usage-limit pauses, host sleep and the gaps between segments do not count, and the world scores
-the run at the cutoff ([continuation](../running/continuation.md#time)). Normal policy turns have
-no separate timeout; startup, RPC, tool waits and delegate fork setup have their own bounds. The
-startup timeout is `batch.startup_timeout_s` in the configuration (600 s by default).
-
-The shared [policy rules](../../prompts/rules.md) require continued work and
-recovery while unfinished. Use `finish` after public evidence supports completion,
-or explain publicly supported unrecoverability. The runtime independently checks
-actions and delegation closure, and the private scorer evaluates the terminal
-world. Accepted finish does not imply success. Ending a CLI turn or returning a
-child does not itself finish the task. Dial retains unlock-once completion.
-
-Real-time MP4 is off by default (`render.record_realtime_video`); observations and motion are
-always recorded. With it on, FFmpeg and ffprobe are required, and sealing checks the stream and
-decodes its first frame. Requested video that cannot be verified needs review.
-
-## Installation
-
-Use the checked-out integration's [README](../../README.md),
-[unified CLI guide](../unified-cli.md) and [shared setup](README.md#shared-setup).
-The earlier public `codex/claude-code-harness` branch is a historical source;
-cloning it does not acquire all newer unified features automatically.
-
-Install Python 3.12, uv and the native Claude CLI on macOS/Linux, using the
-Claude Code version pinned in [`docker/Dockerfile`](../../docker/Dockerfile).
-Requalify changed versions. A native Claude-only path does not require the Codex
-CLI.
+Follow [shared setup](README.md#shared-setup), then install the pinned CLI and prepare without
+model calls:
 
 ```sh
-uv sync --locked --extra oracle
+npm install --global @anthropic-ai/claude-code@2.1.316
 claude --version
-.venv/bin/robofrontier bootstrap
-.venv/bin/robofrontier plan --engine claude --profile haiku --level 1 --min-arms --parallel 4
-.venv/bin/robofrontier prepare --engine claude --profile haiku --level 1 --min-arms --parallel 4 --render native --output runs/policy/claude-l1
+.venv/bin/robofrontier plan --engine claude --level 1 --min-arms --parallel 4
+.venv/bin/robofrontier prepare --engine claude --render native \
+  --level 1 --min-arms --parallel 4 --output runs/policy/claude-l1
 ```
 
-The renderer example is for macOS. On Linux select `--render nvidia` or
-`--render cpu`. Preparation restores pinned assets automatically, creates no
-world or model session and does not authorize inference. Offline asset
-installation is `python -m robofrontier.batch.handoff setup-assets --archive
-/path/to/archive` (see [policy assets](README.md#policy-assets)).
+Use `--render native` on macOS, `--render nvidia` or `--render cpu` on Linux. Preparation
+restores pinned assets when needed, freezes the run and starts no world or model session; it
+also freezes the Bash isolation chosen on this host, so prepare on the host that will run the
+batch. The Codex CLI is not needed. [`configs/examples/mac.toml`](../../configs/examples/mac.toml)
+is a complete Mac example.
 
 ## Authentication
 
-The model catalog is `the `claude` section of `configs/models.json``; every profile and its
-credential is listed in the [authentication matrix](README.md#authentication-matrix).
-Create the ignored `.env` without replacing an existing file
-([credentials file](README.md#credentials-file)), then edit it locally.
+Profiles are the `claude` section of `configs/models.json`; the
+[authentication matrix](README.md#authentication-matrix) lists each one's credential. Put
+credentials in `.env` ([credentials file](README.md#credentials-file)). An API-key profile passes
+only its own key and endpoint to the CLI; setting sources and unrelated MCP servers are turned off
+on the command line in every mode.
 
-`haiku` and `opus` use `ANTHROPIC_API_KEY`. Other API profiles use their
-catalog's credential variable; Qwen additionally uses
-`DASHSCOPE_ANTHROPIC_BASE_URL` matching the actual account/region (see
-[Claude-compatible endpoints](README.md#claude-compatible-endpoints)).
-Existing process environment values take precedence. Keep keys out of chat,
-TOML and Git. API profiles pass only their selected credential/endpoint into the
-native CLI; `--bare` avoids reading native OAuth.
+### Subscription token (default)
 
-### Default subscription token
-
-An engine-only Claude selection defaults to `haiku_subscription_token`: Haiku
-5.5 authenticated by the official `claude setup-token` flow. Run the official
-command locally:
+`haiku_subscription_token` (Haiku 5.5) is the default; `opus_subscription` uses the same mode
+with Opus. Generate a one-year token locally with the official command and store it in `.env` as
+`CLAUDE_CODE_OAUTH_TOKEN`:
 
 ```sh
 claude setup-token
 ```
 
-Store the returned value as `CLAUDE_CODE_OAUTH_TOKEN` in the ignored local `.env`,
-then restrict that file to its owner with `chmod 600 .env`. The script loader
-reads literal environment assignments; an already-set process variable takes
-precedence. Keep the value out of shell history, source files and evidence.
-The official command generates a one-year subscription token. Configured local
-MCP servers work with it; Remote Control and claude.ai connectors are unavailable.
-See [Anthropic's token instructions](https://code.claude.com/docs/en/authentication#generate-a-long-lived-token).
+The token is allowed only at the official Anthropic endpoint. The runner moves it out of the CLI's
+environment and passes it on a pipe (`CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR`), so a policy
+shell cannot read it from a parent environment. On Linux a run refuses to start when the token is
+in the starting environment of the runner or any ancestor process (`runner.require_hidden_token`):
+unset it in the shell or job and keep it only in `.env`, which runs load themselves. On Slurm the
+job reads it from the checkout's `.env` ([Slurm guide](../running/slurm.md)). Local MCP servers
+work with this token; Remote Control and claude.ai connectors do not. See
+[Anthropic's authentication guide](https://code.claude.com/docs/en/authentication).
 
-```sh
-robofrontier plan --engine claude
-robofrontier prepare --engine claude --render native \
-  --cases transport-a04-d1 --output runs/policy/haiku-token-example
-```
+### Saved login
 
-The engine-only default applies when neither the user TOML nor the explicit
-options select a profile. The legacy Claude planning/preparation script also
-defaults to `haiku_subscription_token` when `--models` is omitted. Explicit
-`haiku`, `haiku_subscription`, `haiku_subscription_directory`, and
-`opus_subscription` selections remain available. Existing frozen runs retain
-their selected profile. The repository's overall Codex default is unchanged.
-
-This token is a distinct authentication mode. It does not depend on the
-saved-login refresh experiment, and its receipt cannot certify that experiment.
-Formal Claude scoring remains closed. Cluster functionality remains available;
-cluster execution and full-video rerender are deferred.
-
-### Native saved login
-
-`haiku_subscription` retains native Claude Code saved login. Choose the native
-configuration directory explicitly before preparation:
+`haiku_subscription` and `haiku_subscription_directory` use a native Claude Code login. Name its
+configuration directory in `ROBOFRONTIER_CLAUDE_HOME` before preparing:
 
 ```sh
 export ROBOFRONTIER_CLAUDE_HOME="$HOME/.claude"
 claude auth login --claudeai
 claude auth status --json
-robofrontier prepare --engine claude --profile haiku_subscription \
-  --topology adaptive --render native --cases transport-a04-d1 \
-  --output runs/policy/haiku-subscription-example
+.venv/bin/robofrontier prepare --engine claude --profile haiku_subscription \
+  --render native --cases transport-a04-d1 --output runs/policy/haiku-login
 ```
 
-`haiku_subscription` uses the default native login namespace. It requires the
-selected directory to equal HOME/.claude and leaves CLAUDE_CONFIG_DIR unset.
-Claude Code 2.1.316 (the pin in `robofrontier/runtime/versions.py`) selects a distinct credential namespace when that variable is
-explicitly set, even to the same path. For an account authenticated with an
-explicit CLAUDE_CONFIG_DIR, choose `haiku_subscription_directory` and the same
-directory used during its native login. The selection is part of the profile
-fingerprint; receipts cannot be reused between these namespaces.
+`haiku_subscription` requires `$HOME/.claude` with `CLAUDE_CONFIG_DIR` unset. Claude Code keeps a
+separate credential store whenever `CLAUDE_CONFIG_DIR` is set, even to the same path, so for a
+login made with `CLAUDE_CONFIG_DIR` choose `haiku_subscription_directory` and set
+`ROBOFRONTIER_CLAUDE_HOME` to that directory. The choice is part of the profile fingerprint;
+receipts do not carry over between the two. The directory is frozen in the run, must lie outside
+the batch, and is never collected: collection copies only the bound transcripts and their
+sidecars. No API key or token variable is passed in this mode.
 
-The selected absolute directory is frozen in the private launch profile. Keep
-the authentication home outside the evidence batch. Preparation, batch admission
-and collection reject an authentication home inside that batch. Each role still
-uses a host-generated explicit native session ID and its bound robot MCP.
-Settings sources and unrelated MCP servers are disabled by command-line options.
-Provider API keys and token environment variables are not inherited in this mode.
-The unmodified native CLI owns authentication and credential persistence.
+### Doctor and redaction
 
-Evidence collection copies only the bound native transcripts and their session
-sidecars. It excludes the credential/configuration store and unrelated sessions.
-A collection marker lets restored provenance use the collected histories on a
-machine without the original account. Launching another native turn still
-requires the explicitly selected live authentication home.
+`robofrontier doctor --engine claude` checks the installed CLI version and a real render. It
+does not check credentials or call a model. The runner redacts exact occurrences of the selected
+credential from its event file, summary and stderr tail and writes them owner-only; native
+session files are not rewritten, so treat a whole run directory as private.
 
-### Older OAuth token mode
+## Isolation
 
-`opus_subscription` retains its older explicit `CLAUDE_CODE_OAUTH_TOKEN` mode for
-existing configurations. It disables project/user setting sources and automatic
-MCP discovery/tool search, and permits that token only at the official Anthropic
-endpoint. It does not copy Claude Desktop login. Native managed login does not
-require exporting that token. Its real subscription behavior, credits/cost
-reporting and refresh are not qualified; fresh login and a successful
-cached-login call do not by themselves verify automatic refresh after token
-expiry. The native loopback tests used a synthetic token. Follow the current
-[Anthropic authentication documentation](https://code.claude.com/docs/en/authentication)
-for account setup; do not share a generated token in chat or Git.
+Permission rules confine the file tools; a second layer confines Bash. Both come from the run's
+frozen access table (`robofrontier/runtime/access.py`), which closes the checkout, the home
+directory, other runs and shared storage. Preparation freezes the Bash layer as `bash_isolation`
+in `private/inputs/claude.json`, chosen by `robofrontier/engines/common/landlock.py` (`choose`):
 
-### Doctor and credential hygiene
-
-The engine-specific doctor only checks local CLI/assets, credential presence and
-FFmpeg/ffprobe availability. It reports whether credentials are present, not
-whether they work. It does not validate authentication, an encoder, model
-responses or a complete video. The unified doctor additionally checks a real
-renderer; neither calls a provider. A missing local permission should be
-resolved in the intended environment rather than bypassed: if a sandbox denies
-the provider host or writes under `runs/`, allow it in your own environment
-rather than bypassing the sandbox.
-
-The runner redacts exact occurrences of the selected credential (including
-JSON-escaped forms) from its event file, summary and stderr tail, and writes
-event files with owner-only permissions. This does not sanitize Claude's native
-session files or detect transformed/partial secrets; treat the entire run
-directory as private and inspect it before sharing.
-
-## Cost allowances and the shared ledger
-
-`--turn-budget-usd` and `--task-budget-usd` are optional and unset by default;
-new runs have no dollar ceiling. Without a turn allowance,
-`--max-budget-usd` is not injected into the Claude CLI. Reported cost is still
-retained. The run-local budget ledger is shared by the Adaptive Controller
-and its children; a child's fork is its first turn. Missing cost without a ceiling is recorded as
-unreported rather than zero, and does not alone block a confirmed normal turn.
-Unknown execution, uncertain cancellation or failed fork provenance still needs
-review regardless of whether a budget exists.
-
-With explicit allowances, the host reserves before launch; reservations and
-remaining estimated task funds bound new turns. A task-only allowance would
-reserve the entire remainder for one turn and deny every other role, so an
-adaptive, hierarchical or peer launch with a task budget needs a per-turn
-allowance, and the most roles that can hold a reservation at once (adaptive:
-the Controller plus one delegate per arm) times that allowance must fit the
-task budget; otherwise the launch is refused before any claim. A wake refused
-because the task budget is spent is recorded as not sent and pauses the run
-for its budget. Unknown/invalid/overspent cost or unresolved reservations
-under an allowance block further allocation. Reservations from uncertain or lost
-processes are not automatically released. These are CLI-reported estimates,
-not hard provider billing caps, subscription credits or one shared batch budget.
-
-### Native cumulative cost accounting
-
-Claude Code 2.1.316 persists a session-wide cost-state counter in its transcript.
-Resuming or forking a session inherits that counter. The runner retains the raw
-native total and subtracts only a verified prior native counter to report new
-invocation work. The CLI budget remains the unchanged per-invocation allowance;
-its semantics differ from the cumulative result counter. Task-wide reservations
-cover only new work; inherited history is not charged again. Raw event bytes
-remain unchanged.
-
-Missing historical cost bookkeeping permits no deduction: the complete native
-counter is kept as a conservative upper bound. Unknown native model cost blocks
-another invocation; a counter decrease or inconsistent final native state makes
-cost unknown. Neither an old stopped world's budget nor its outcome is repaired.
-Native modelUsage metadata remains unmodified and may contain cumulative usage;
-it is not an independent invoice or another amount to add to invocation cost.
-
-A bounded trial on 2026-10-28 exposed both cumulative-cost duplication
-and confusion about the native CLI ceiling. It completed eight physical actions
-and was stopped and sealed before repair. The counter regression uses the actual
-native CLI against a synthetic local provider: the sum of fresh text, image,
-resume and fork work must equal the final child's inherited cumulative counter.
-No genuine provider or credential is used by that regression.
-
-A second native CLI control verifies the budget independently: two fresh/resumed
-synthetic requests each fit the same invocation allowance while their reported
-cumulative total exceeds it. The first cost fix incorrectly added historical
-cost to the native ceiling. A genuine trial exposed that error and exceeded its
-US$0.50 sub-allocation, reporting US$0.67155931 before being stopped and sealed.
-The corrected budget reconciliation retains uncertain allowances and uses
-verified final native counters only for fully closed, known-cost sessions. It
-does not rewrite an old task ledger or turn a failed trial into a passing one.
-
-### Verify the imported checkout before paid launches
-
-Engineering launchers that share a virtual environment must verify the imported
-checkout before starting a paid process. An external-file invocation resolved
-the editable package from the older integration checkout despite a different
-working directory. That attempted finish-fix receipt is not source-qualified;
-future qualification entrypoints check the actual module root, tracked source
-cleanliness and commit, and use an explicit checkout PYTHONPATH.
-
-## Native sessions, tools and internal delegation
-
-`ClaudeSessionHost` owns one role's unique native session, fixed MCP connection,
-turn exclusion, explicit resume, evidence and cancellation. Unknown turn outcomes
-never automatically start another turn. A host's lifecycle result is not a task
-score. Public bootstrap text is packaged from allowlisted frozen inputs because
-policy file-reading tools are disabled.
-
-`robofrontier.engines.claude.robot_mcp` is an experimental role-bound MCP server. Its
-offline probe checks Claude CLI tool discovery, simulated tool-image forwarding and
-fork history against local stub servers. It does not validate real provider image
-handling, trusted session provenance, dynamic delegation or production physical
-runs. Do not launch it against an actual scored world.
-
-`robot public_image` returns only reference paths explicitly listed by the
-current public task, within its public input directory. It also accepts the
-listed `target.reference_image`, used for the Mosaic target. Historical public
-reference inputs remain PNG and retain their signed bytes; runtime camera
-observations use their separately frozen image profile. This distinction does
-not authorize rewriting source textures or old reference hashes.
-
-The 2026-10-28 offline Level 1 preparation covered twelve runs. Three Mosaic
-scales each exposed a target image; three Dial scales each exposed three reference
-images. A real CLI/local synthetic model check confirmed exact image bytes for
-the smallest Mosaic and Dial cases through MCP. It did not test real model
-understanding. Opt-in recheck:
-
-```sh
-ROBOFRONTIER_MOSAIC_IMAGE=1 .venv/bin/python -m unittest discover -s tests -p 'test_claude_mosaic_image_integration.py' -v
-```
-
-### Bash isolation
-
-Permission rules confine the file tools; a separate layer confines Bash. Both come
-from the run's frozen access table (`robofrontier/runtime/access.py`). Preparation
-freezes the Bash layer in `private/inputs/claude.json` as `bash_isolation`, chosen
-on the host that will run it (`landlock_shell.choose`):
-
-- `claude-sandbox`: Claude Code's own sandbox, Seatbelt on macOS and bubblewrap on
-  Linux. Runs prepared before this field use it.
-- `landlock-v1`: for a Linux host where bubblewrap cannot create namespaces, such
-  as a container under Docker's default seccomp profile (RunPod pods). Claude
-  Code's sandbox is turned off and every Bash command runs through
-  `CLAUDE_CODE_SHELL_PREFIX`, which restricts itself with Landlock to what the
-  table grants and denies all TCP connections and binds, then runs the command
-  with bash. It needs Landlock ABI 4 (Linux 6.7) and refuses to run a command
-  without it. Landlock does not cover UDP, named Unix sockets or, before ABI 6,
-  signals.
-
-Preparation fails when neither is available. As with Claude Code's sandbox, only
-Bash is confined; the CLI and the robot MCP are harness processes. Claude Code
-also starts each stdio MCP server through the prefix, as one shell-quoted string;
-the prefix runs exactly the run's own robot MCP strings unconfined and confines
-everything else. A Bash command never matches one, because Claude Code wraps it
-in its shell snapshot and an eval.
-`tests/engines/test_claude_landlock.py` checks the actual confinement on a Linux host
-with Landlock and is skipped elsewhere.
-
-### Trusted internal Adaptive fork
-
-General Claude `delegate-bind` remains closed. Transcript-prefix equality by
-itself cannot show that a trusted host created a child at the intended time or
-bound the correct MCP authority. The Adaptive host claims
-a delegation, checks the parent's outstanding native tool call and binds the
-delegation to that unique unmatched call
-([request binding](README.md#new-requests-queries-and-delegation)). It pins the
-parent's history at that pending call, then forks each child from the blocked
-Controller exactly as the Codex route does: the child's history ends at the
-delegate call and its first input is the frozen delegate message.
-
-Claude Code creates a fork only by running its first turn, so the fork is the
-child's first turn: `--resume CONTROLLER --fork-session --session-id CHILD` with
-the delegate message as its prompt and the role's ordinary tools and robot MCP.
-The child UUID is persisted before that turn. Until the batch is activated, a
-PreToolUse hook (`runner.gate_settings`) holds every tool call, robot or file,
-on gate files under `private/claude-forks/`; the runtime also refuses robot
-operations of a delegate that is not active. Setup verifies that the child's
-transcript copies the pinned parent history, or its verified compacted projection,
-with no later parent row, and that its first input is the delegate message. For a
-compacted projection, the latest boundary's preserved-message metadata determines
-the exact retained segment and the two reparented edges; the summary and message
-contents are still checked. Per-session cwd, slug, branch, and preserved assistant
-usage metadata are excluded from that comparison. Unrecognized compaction layouts
-fail closed. Setup then binds scope, activates
-the batch and opens each gate. A failure closes the gates of children not yet
-released, stops them and pauses the run for review; no tool of theirs runs.
-
-The fork turn is the child's first ordinary turn: it is charged to the shared
-ledger under the child's turn allowance, and no separate setup turn or setup
-allowance exists. The batch's `setup_deadline` (`native_setup_timeout_s`)
-bounds verification and the gate; a gate never opens after it. Native
-transcript writes can lag; the bounded match wait pauses on timeout/ambiguity.
-Unknown, failed or uncertain setup keeps its record and is never automatically
-reforked. Role hosts, original transcripts and referenced parent `tool-results`
-must stay available during the run.
-
-`fork_setup.py` supplies the creation boundary and `adaptive_setup.py` connects
-claiming, forking, provenance, scope binding, activation and the gates.
-`ClaudeSessionHost.fork_delegate` creates the role's MCP configuration for a
-delegate that is still being created; later turns resume the child's own
-session without fork or gate. Host-side evidence does not protect against
-another process with the same OS account tampering with files. Runs prepared
-before fork-at-call setup keep their tool-free snapshot/fork records; only their
-metrics are read now.
-
-The native blocked-parent loopback test
-(`tests/engines/test_claude_fork_boundary_integration.py`) forks a child while the parent
-waits on MCP: the model receives the parent's history up to the pending call,
-the CLI's own error result for that unanswered call, then the delegate message;
-the child's robot call waits until its gate opens, and a closed gate refuses it
-without reaching the world. This proves a finite native CLI boundary, not
-production security, full task qualification or arbitrary provider
-compatibility.
-
-`adaptive_dispatch.py` routes deterministic wakes to the bound parent/child
-sessions. A missing role, unknown state/send, leftover creation claim or failed
-setup pauses instead of guessing. Setup runs in a separate thread; stop cancels
-it and prevents new role starts. Accepted requests settle before eligible
-capacity recovery; uncertain actions and uncertain fork creation remain blocked.
-See [recovery rules](README.md#capacity-and-rate-limit-recovery).
-
-A returned child's authorized report is available to the Controller via
-`robot work` with `{"delegate_id":"Delegate_..."}` in `delegate_report`.
-The report is model-authored public evidence, not private evaluation. Missing
-return, mismatched references or an oversized report does not expose a body.
-
-## Standing teams
-
-Claude runs support all four shared collaboration modes.
-`single` and `adaptive` retain their existing hosts. `controller-worker` and
-`worker-worker` use native independent Claude sessions, the same role-bound robot
-MCP, and the existing runtime's durable mailbox, permissions, action IDs, wake
-leases and private evaluator. No Codex session interface is fabricated and no
-standing Worker is represented as an Adaptive fork.
-
-A configured provider and profile and a local synthetic test do not prove a real provider's
-capability, throughput, billing or task success; the precheck receipts are the gate.
-
-### Select and prepare
-
-Choose topology and model through the ordinary TOML or CLI. For example, prepare
-the four minimum-arm Level 1 tasks without model calls:
-
-```sh
-.venv/bin/robofrontier plan --engine claude --profile haiku \
-  --topology controller-worker --level 1 --min-arms --parallel 2
-.venv/bin/robofrontier prepare --engine claude --profile haiku --render native \
-  --topology controller-worker --level 1 --min-arms --parallel 2 \
-  --output runs/policy/claude-standing-l1
-```
-
-Use `--render nvidia` on Linux NVIDIA or explicit `--render cpu` for Linux
-software rendering. A preparation freezes the chosen mode, provider profile,
-shared task inputs, public Claude role prompts and source hashes. Changing TOML
-after preparation does not change this batch. Use a new output path to change
-settings. Pinned policy assets are installed automatically when needed.
-
-When authorized to spend against the selected credentials, execute:
-
-```sh
-.venv/bin/robofrontier run runs/policy/claude-standing-l1
-```
-
-Substitute `worker-worker` to prepare peer Workers; inside a run the topologies are named
-`hierarchical` and `peer`. Provider
-preflight remains a separate explicit operation; it is never a side effect of
-planning or preparation.
-
-### Initial roles and START
-
-| Mode | Initial native sessions | Robot and finish authority |
+| Host | `bash_isolation` | Mechanism |
 | --- | --- | --- |
-| Controller + Worker | One Controller plus one Worker per arm | Workers control only their own arms; Controller coordinates and may propose team finish |
-| Worker-Worker | One Worker per arm, with no Controller session | Workers control their own arms, communicate directly and may propose team finish |
+| macOS | `claude-sandbox` | Claude Code's sandbox (Seatbelt) |
+| Linux where `bwrap` and `socat` exist and bubblewrap can create namespaces | `claude-sandbox` | Claude Code's sandbox (bubblewrap) |
+| Other Linux, such as a RunPod pod under Docker's default seccomp profile | `landlock-v1` | Every Bash command runs through `CLAUDE_CODE_SHELL_PREFIX`, which restricts itself with Landlock and seccomp to what the table grants, denies TCP connections and binds, then runs the command with bash |
 
-Controller + Worker routes business messages through Controller. Worker-to-Worker
-business messages are rejected in that mode. Worker-Worker allows authorized
-peer messages. The runtime, rather than prompt wording alone, enforces these
-routes and robot authority. The lead's role kind is `team-controller` and its
-actor name is Controller. Runs prepared before the rename record the kind as
-`coordinator`; the runtime reads it as `team-controller`.
+`landlock-v1` needs Landlock ABI 4 (Linux 6.7) and libseccomp; preparation fails when neither
+mode is available. Landlock does not cover UDP, named Unix sockets or, before ABI 6, signals.
+Without user namespaces `/dev/shm` stays closed, so Python process pools fail inside the policy
+shell; other processes stay visible but their environments cannot be read. Only Bash is
+confined: the CLI and the robot MCP are harness processes, and the prefix runs exactly the run's
+own robot MCP command lines unconfined. `tests/engines/test_claude_landlock.py` checks the
+confinement on a Linux host with Landlock. On RunPod, put the Node.js and CLI folders on `PATH`
+([RunPod guide](../running/runpod.md)).
 
-The host creates all initial native session IDs, binds each role once, and asks
-the existing physical owner to START only after every binding is confirmed.
-IDs must be distinct. START persists the task's start time; each role then
-receives its own public task/skill/role prompt with an explicit started statement.
-Reading, model startup turns, observation, planning and subsequent communication
-are inside this clock. Initial model replies are not a READY gate.
-`ready` remains an optional capability query. Old frozen READY-barrier runs keep
-their previous behavior; new standing teams use `direct_team_v3`.
+## Preflight and receipts
 
-The host never fills a Worker's plan or decides allocations. Shared collaboration
-rules describe standing local authority. Workers remain available after local
-completion until the team ends. Their end of a model turn is an idle native
-session, not a completed task. Messages, self-selected review deadlines and
-saved work can wake that same session again. Controller is also a normal bound
-policy role for mailbox and wake purposes.
-
-### Resource and timing implications
-
-A batch's `parallel` limits simultaneous **tasks**, not role CLI processes.
-With N arms, a standing task has N or N+1 initial sessions. The four smallest
-Level 1 cases have 4, 4, 8 and 4 arms: all four at once mean 20 peer Workers, or
-24 roles with Controllers. A 36-task Adaptive resource estimate does not qualify
-36 standing tasks. Commission concurrency with actual memory, provider limits
-and process observations before increasing it.
-
-The default 0.3-second interval gates initial task-host launches. It is not a
-pause between robot operations, a message latency or a guarantee of serial model
-turns inside one team. All roles operate independently after START, subject to
-shared runtime authority and the provider. Native configuration is per task;
-each role has its own native session and transcript within that task's store.
-
-The limit is 24 hours of active time, as for every run. Status and stop use the same commands as other batches:
+A run needs two passed receipts for its profile, recorded with the installed CLI version and
+model configuration; `robofrontier run` picks the latest of each and refuses on any mismatch
+(`engines/claude/claude_readiness.py`). One command makes both, with real spend:
 
 ```sh
-.venv/bin/robofrontier status runs/policy/claude-standing-l1
-.venv/bin/robofrontier stop runs/policy/claude-standing-l1
+.venv/bin/robofrontier preflight --engine claude --profile haiku_subscription_token \
+  --max-budget-usd 1 --confirm-spend
 ```
 
-Stop first cancels every role's model turn and waits, then uses the existing
-physical seal. Unknown physical outcomes remain unresolved rather than being
-replayed. Inspect seal and final owner status before collecting.
+Without `--confirm-spend` it makes no call and reports `not_run`. `--max-budget-usd` is required
+and caps each of the two checks by CLI-reported cost, not provider billing.
 
-### Errors, budgets and evidence
+1. **Basic** (`engines/claude/preflight.py`): on one session, a text reply; a robot `observe`
+   call for the `top` view whose returned image color (one of six, chosen at random) the model
+   must name; a resumed turn; and a tool-free fork of the idle session that must recall the color
+   and have a matching transcript prefix. Receipt:
+   `<runs_root>/engineering/claude-precheck/<id>/receipt.json`.
+2. **Blocked parent** (`engines/claude/claude_blocked_precheck.py`), run only when the basic one
+   passed: initialize a parent, block it at an image tool call, fork while it is blocked, verify
+   the history prefix, release the parent and check its image answer. Receipt:
+   `<runs_root>/engineering/claude-blocked-precheck/<id>/receipt.json`.
 
-A lost bind acknowledgement blocks bootstrap instead of rebinding. A lost wake
-acknowledgement marks that wake uncertain, pauses dispatch and prevents automatic
-resend. An unavailable/mismatched role also pauses the team. Confirmed provider
-capacity errors use the existing bounded same-session recovery. One role's
-recoverable error cannot hide another role's unknown or fatal outcome.
+`--smoke-only` runs the basic check without the fork and skips the blocked one; it does not make
+a run eligible. A receipt records CLI version, requested and reported model, profile
+fingerprint, cost and per-check results, never credentials. Each check can also be run on its own
+(`--output DIR` chooses the receipt folder), and two receipts can be compared without model calls:
 
-Standing roles share one task-local cost ledger. Dollar caps are optional and
-unset by default. An explicit task allowance must cover simultaneous turn
-reservations; it is not a per-role allowance or provider-enforced spending cap.
-Unknown costs under configured allowances stay review findings. Model stop and
-physical sealing do not invent missing cost or session records.
+```sh
+.venv/bin/python -m robofrontier.engines.claude.preflight --profile haiku --max-budget-usd 0.5 --check-fork --confirm-spend
+.venv/bin/python -m robofrontier.engines.claude.claude_blocked_precheck --profile haiku --max-budget-usd 1 --confirm-spend
+.venv/bin/python -m robofrontier.engines.claude.claude_readiness --profile haiku \
+  --precheck PATH/receipt.json --blocked-precheck PATH/receipt.json
+.venv/bin/python -m robofrontier.engines.claude.claude_offline_probe   # local stubs, no model
+```
 
-The normal stopped collection includes all role-bound native transcripts and
-linked auxiliaries, motion, action/message/wake records and reports. Collectors
-identify roles from runtime metadata, so no Controller is required in peer mode.
-The normal ZIP archive, restore and replay path also applies. See
-[evidence storage](../running/evidence-storage.md) for locations and retention.
+A receipt for one profile says nothing about another, and a matching receipt does not prove which
+model the provider served.
 
 ## Run, status and stop
 
 ```sh
-.venv/bin/robofrontier run runs/policy/claude-l1            # under launchd on macOS
+.venv/bin/robofrontier run runs/policy/claude-l1        # launchd on macOS; --durable on Linux
 .venv/bin/robofrontier status runs/policy/claude-l1
 .venv/bin/robofrontier stop runs/policy/claude-l1
-.venv/bin/robofrontier continue runs/policy/claude-l1       # continue stopped runs by hand
+.venv/bin/robofrontier continue runs/policy/claude-l1   # by hand, as the same trials
 ```
 
-`run` makes paid model calls. `batch.parallel` runs at most that many runs at once. Optional
-per-turn and per-task cost allowances (CLI-reported cost, not billing) are off by default.
+`run` makes paid calls. It checks the receipts, the frozen configuration and every run's input
+inventory, claims each run once, starts an independent physical owner per run and supervises the
+role sessions, at most `batch.parallel` runs at a time. The startup timeout is
+`batch.startup_timeout_s` (600 s). Ctrl-C or SIGTERM stops the batch like `stop`: queued runs do
+not start, active runs stop their model turns and seal. `stop` writes stop markers; check the seal
+and status afterwards. SIGKILL or node loss can leave processes behind: inspect before relaunching.
 
-The runner validates a prepared run, claims it once, starts an independent physical
-owner and supervises existing role sessions. It never automatically restarts a
-world or an uncertain task. Sealing must explicitly report no unresolved actions;
-process exit alone is insufficient. If finish ended the world, a readable private
-`evaluation.json` with boolean `task_success` is required for a clean closure. `task_success: false` may be a normally sealed unsuccessful task.
-Missing/corrupt evaluation remains `needs_review`.
-
-Batch startup prechecks all tasks, respects concurrency and does not restart
-claimed tasks. Useful status values include:
-
-| State | Meaning |
+| Status | Meaning |
 | --- | --- |
-| `stopped_before_start` | Stop arrived before a task was launched. |
-| `stopped` | Stop skipped unstarted tasks or sealed active tasks. |
-| `closed` | Every run closed; not a statement about task success. |
-| `needs_review` | At least one task has unresolved execution/sealing/cost evidence; takes precedence over normal closure. |
-| `claim_without_status_needs_review` | A launch claim exists without a status file; do not treat it as a fresh unlaunched batch. |
-| `supervisor_lost_needs_review` | Supervisor loss needs inspection; claims remain and replay is refused. |
+| `stopped_before_start` | Stop arrived before the run launched |
+| `stopped` | Stop skipped unstarted runs or sealed active ones |
+| `closed` | Every run closed; says nothing about task success |
+| `needs_review` | Unresolved execution, sealing or cost evidence; overrides normal closure |
+| `claim_without_status_needs_review` | A launch claim exists without a status file |
+| `supervisor_lost_needs_review` | The supervisor was lost; claims stay and replay is refused |
 
-`stop_requested` is marker existence, not confirmation the owner received it.
-`claim_record_present` is likewise a file snapshot. Recorded `owner_pid` is not a
-live-process check and may be reused by the OS. When Controller state is unknown
-or failed, limited `session_evidence` records allowance status, recognized CLI
-result subtype and reported turn cost; a number does not reconcile an uncertain
-bill or authorize retry. A run with unknown execution, unresolved reservations
-or cost uncertainty under an allowance remains review-required even if its
-physical world sealed. Historical statuses are never retroactively rewritten.
+A clean closure after `finish` needs a readable private `evaluation.json` with a boolean
+`task_success` (`false` is a normal unsuccessful run) and drained native turns. `stop_requested`
+and `claim_record_present` are file snapshots; `owner_pid` is not a liveness check. A run that
+reaches the 48 h [wall backstop](../running/continuation.md#wall-backstop) is stopped, reported
+with `ended_by: wall_backstop` and left `needs_review`; if the world has not ended it 150 s after
+the backstop, the supervisor ends it.
 
-Ctrl-C/SIGTERM requests batch stop, skips pending launches and waits for active
-models/owners to stop and seal. Wait for exit and inspect status. SIGKILL, node
-loss or supervisor crashes can leave physical processes; do not infer sealing
-or blindly relaunch. A prelaunch cancellation check avoids creating the CLI when
-already canceled, and can release its unused reservation. A cancellation racing
-with process creation can still launch a request and incur cost; its outcome and
-reservation remain uncertain. Role/delegation state still needs inspection.
+## Sessions and delegation
 
-Only conclusively ended, matching-session structured capacity failures permit
-bounded recovery, under the [current recovery checks](README.md#capacity-and-rate-limit-recovery).
-Ordinary nonzero exits, unknown actions, uncertain fork creation and unknown
-identity remain review-required. Provider retries never replay physical actions.
+`ClaudeSessionHost` (`session_host.py`) owns one role's native session: a host-generated session
+ID, a fixed robot MCP connection, one turn at a time, explicit resume and cancellation. An unknown
+turn outcome never starts another turn automatically. `robot public_image` returns only reference
+images listed by the public task, including `target.reference_image` for Mosaic.
 
-A run whose protocol counts active time (`run_protocol.clock: active_time_v1`)
-also gets the Codex host's network continuation
-(`recovery.recover_network`). When the world resumes after a network-outage or
-Slurm egress pause it records `egress_recovery`. A role's failed turn found
-within that pause (30 s either side) is resent once per role and pause, in the
-same session (`--resume`), with the frozen `network-resume.md` notice, after the
-role has no robot work in flight and the runtime grants the claim
-(`runtime_cli network-recovery`). This applies when the turn's structured API
-error names a lost connection (`api_error` `connection_failed`, `no_response`,
-`stream_idle_timeout` or `computer_slept`, with no HTTP status) or does not say
-what failed. A typed network failure seen before any pause waits up to 30 s for
-the world to pause; without a pause it is an ordinary failed turn. A second
-failure in the same pause, or a turn that failed for another reason within it
-(an authentication error, a turn or budget limit), holds the run for review
-(`NETWORK_CONTINUATION_UNCERTAIN`) and is never resent. Nothing is replayed: the
-resent turn reads its saved work and original call IDs. Runs frozen without the
-clock never resend.
+**Adaptive delegate fork.** The host claims the delegation, binds it to the Controller's one
+unanswered `delegate` tool call ([request binding](README.md#new-requests-queries-and-delegation))
+and pins the parent history at that call. Each child is then created by its first turn,
+`--resume CONTROLLER --fork-session --session-id CHILD`, with the frozen delegate message as the
+prompt and the role's ordinary tools; the child UUID is persisted first. Until the batch is
+activated a PreToolUse hook (`runner.gate_settings`) holds every tool call on gate files under
+`private/claude-forks/`, and the runtime refuses robot operations of an inactive delegate. Setup
+verifies that each child's transcript copies the pinned parent history (or its verified compacted
+projection) with no later parent row and that its first input is the delegate message; an
+unrecognized compaction layout fails. It then binds scope, activates the batch and opens the
+gates. The batch's `setup_deadline` (`native_setup_timeout_s`, 120 s) bounds verification; a gate
+never opens after it. Any failure closes the remaining gates, stops those children and pauses the
+run for review; a failed or uncertain setup is never reforked. The fork turn is the child's first
+ordinary turn and is charged like one. Later turns resume the child's own session.
+`tests/engines/test_claude_fork_boundary_integration.py` exercises this against the real CLI.
 
-Such runs also have the 48-hour [wall backstop](../running/continuation.md#wall-backstop).
-The world stops the run; the supervisor waits for it to close, reports
-`ended_by: wall_backstop` and leaves the run `needs_review` (its result is not
-counted). If the world has not ended the run 150 s after the backstop, even
-while a pause holds it, the supervisor ends it itself with reason
-`wall_backstop`.
+`adaptive_dispatch.py` routes wakes to the bound sessions; a missing role, unknown send or leftover
+claim pauses instead of guessing. The Controller reads a returned child's report with `robot work`
+and `{"delegate_id":"Delegate_..."}` (`delegate_report`). General `delegate-bind` from outside the
+host stays refused.
 
-## Normal finish and native reply completion
+## Standing teams
 
-A genuine protocol commissioning witness exercises real observation, delegation,
-verified native snapshot/fork, a delegate's physical move, handback, parent
-continuation and finish. Its terminal evaluator remains false because this is a
-short declared interface fixture, not a solved Transport benchmark. At source
-1367d37 the world ends normally, but the supervisor cancels the parent's pending
-native final response and leaves its reservation uncertain. That failed
-qualification receipt and all raw evidence remain unchanged.
+`controller-worker` and `worker-worker` give every initial role its own native session with the
+same robot MCP, the runtime's mailbox, permissions, action IDs and wake leases. No standing Worker
+is an Adaptive fork.
 
-After normal world termination, the supervisor now gives only existing native
-turns up to 30 seconds to finish their reply and accounting. It neither dispatches
-another turn nor extends physical task execution. Adaptive children and standing
-roles are included. An external STOP interrupts this cleanup promptly; a timeout,
-unknown turn or failed cost record remains review-required. A recorded normal
-world end is checked before treating an exited physical owner as a crash. A normal
-closure requires readable terminal evaluation and drained native
-turns. The independent task score is never inferred from process closure.
+| Mode | Initial sessions | Authority |
+| --- | --- | --- |
+| `controller-worker` | One Controller plus one Worker per arm | Workers move only their own arms; messages route through the Controller, which may propose team finish |
+| `worker-worker` | One Worker per arm | Workers move their own arms, message each other and may propose team finish |
 
-## Reports, frozen inputs and provenance
+The runtime enforces the routes and robot authority. The lead's role kind is `team-controller`.
+The host binds every initial session, then the owner persists one START (`direct_team_v3`) and
+each role receives its started prompt. A Worker's ended turn is an idle session; messages, review
+deadlines and saved work wake it again.
 
-`robofrontier.batch.report` reads only the current Claude run's role/turn
-summaries, not unrelated Codex homes (see
-[reports and metric definitions](README.md#reports-and-metric-definitions)). A
-CLI-reported model name remains an observation; `all_requested_models_verified`
-stays false. It cannot rule out provider mapping or auxiliary requests. JSON
-audit reports declare `benchmark_qualified: false`; Markdown also labels the
-unqualified state. Task success and permission to claim a scored benchmark are
-different facts.
-
-A prepared run freezes its source (`robofrontier/`, with `batch/claude_prepare.py`) beside its
-inputs; prepare again after source changes.
-At historical Claude commit `85f9b91`, a merge preview against main `c8b4137` had
-no text conflicts; this was not a completed merge or behavioral proof. That
-branch descends from Codex handoff and brings its ancestors. Eight engine-neutral,
-ten benchmark and 24 Node dispatcher checks passed then; current integration
-must use its own source comparison and regressions.
-
-## Provider prechecks
-
-A Claude run starts only with passed basic and blocked-parent precheck receipts for its profile,
-recorded with this CLI version and model configuration (`engines/claude/claude_readiness.py`).
-`robofrontier preflight --confirm-spend --max-budget-usd N` runs the basic one. Offline checks:
+`batch.parallel` counts runs, not CLI processes: a standing run has N or N+1 sessions for N arms.
+The four smallest level-1 cases (4, 4, 8 and 4 arms) together mean 20 Workers, or 24 roles with
+Controllers. Raise concurrency only after checking memory and provider limits. A lost bind
+acknowledgement blocks bootstrap; a lost wake acknowledgement marks the wake uncertain and pauses
+dispatch without resending. Stop cancels every role's turn, then seals.
 
 ```sh
-.venv/bin/python -m robofrontier.engines.claude.claude_offline_probe
+.venv/bin/robofrontier prepare --engine claude --topology controller-worker --render native \
+  --level 1 --min-arms --parallel 2 --output runs/policy/claude-standing-l1
 ```
 
-### Text, image and resume precheck
+## Recovery
 
-Real precheck (spends money; needs a credential and an explicit cap):
+- **Capacity errors**: bounded same-session resume ([capacity recovery](README.md#capacity-recovery)).
+- **Network outage**: in a run whose clock is `active_time_v1`, a turn that failed within a
+  network-outage or Slurm egress pause (30 s either side) with an `api_error` of
+  `connection_failed`, `no_response`, `stream_idle_timeout` or `computer_slept` and no HTTP
+  status, or with no stated cause, is resent once per role and pause with `--resume` and the
+  frozen `network-resume.md`, after the role's robot work settles and the runtime grants the
+  claim (`runtime_cli network-recovery`). A second failure in the same pause, or another failure
+  type within it, holds the run for review (`NETWORK_CONTINUATION_UNCERTAIN`).
+- **Unexpected stop**: the run continues by itself once
+  ([continuation](../running/continuation.md#when-a-run-continues),
+  [Claude task recovery](../running/continuation.md#claude-task-recovery)).
+- Ordinary nonzero exits, unknown actions, uncertain fork creation and unknown identity need
+  review. Nothing replays a physical action.
 
-```sh
-.venv/bin/python -m robofrontier.engines.claude.preflight --profile haiku --max-budget-usd 0.5
-.venv/bin/python -m robofrontier.engines.claude.preflight --profile haiku --max-budget-usd 0.5 --confirm-spend
-.venv/bin/python -m robofrontier.engines.claude.preflight --profile haiku --max-budget-usd 0.5 --check-fork --confirm-spend
-```
+## Cost and context
 
-Without `--confirm-spend` it only prints the plan. With it, it makes three
-calls on one explicit session: a text reply, a robot tool call whose returned
-image must be identified, and a resumed turn. The receipt is `receipt.json`
-in the output directory; it records CLI version, requested and reported model,
-cost and per-check results, never key values. A profile passes only if all
-three checks pass within the cap. Choose the intended profile explicitly for
-each run and obtain the relevant precheck evidence for that
-profile; a Haiku precheck does not establish Opus or other provider readiness.
+`robofrontier run` sets no dollar allowance. Reported cost is kept per turn; missing cost is
+recorded as unreported, not zero. The allowances exist as the `turn_budget_usd` and
+`total_budget_usd` arguments of `robofrontier.engines.claude.run.run_task`. With them, every turn
+reserves before launch against one task ledger shared by all roles; a multi-role topology with a
+task allowance needs a per-turn allowance, and the most roles that can hold a reservation at once
+times it must fit the task allowance, or the launch is refused. Unknown, invalid or overspent
+cost, or an unresolved reservation, blocks further turns. These are CLI-reported estimates, not
+billing caps.
 
-The image color is chosen randomly from six colors for each new precheck; the
-receipt records the chosen color after the checks. A single correct answer can
-still be a lucky guess and does not establish general visual capability. The
-earlier Haiku receipt listed below used a fixed green image.
-Each local precheck server keeps its own image and request count, so concurrent
-checks do not share that state; this is not a provider concurrency guarantee.
-The check also requires the CLI event stream to show an `observe` call selecting
-the `top` view, a matching non-error tool result containing an image, and an
-`observe` request received by the local service. This is still not independent
-proof that a real provider processed the image. Older receipts lacking the
-new view-request or image-result evidence will not pass `claude_readiness`;
-the historical Haiku receipt has not been rerun under these checks.
+Claude Code 2.1.316 keeps a session-wide cost counter in the transcript that resume and fork
+inherit. The runner subtracts the verified previous counter to get each invocation's own cost;
+without a verified previous counter it keeps the whole counter as an upper bound, and a counter
+that decreases makes cost unknown.
 
-`--check-fork` adds a fourth paid call: a tool-free native fork of the idle
-session that must recall the image color and have a matching native transcript
-prefix. The receipt includes a profile fingerprint and whether the fork was
-checked. This idle-session check does not establish compatibility with a parent
-blocked in a tool call, concurrent delegate execution, or a real robot task.
-The cap is based on CLI-reported cost and is not a provider billing limit.
+Compaction: the runner sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to the frozen
+`auto_compact_token_limit` plus Claude Code's 33,000-token summary buffer, so it compacts at the
+same 267,000 tokens as Codex.
 
-### Blocked-parent fork precheck
+## Evidence and reports
 
-For an additional paid check of the adaptive fork boundary:
-
-```sh
-.venv/bin/python -m robofrontier.engines.claude.claude_blocked_precheck --profile opus --max-budget-usd 1
-.venv/bin/python -m robofrontier.engines.claude.claude_blocked_precheck --profile opus --max-budget-usd 1 --confirm-spend
-```
-
-It uses a synthetic local robot service and three CLI turns: initialize the
-parent, block the parent at an image tool call, and create a tool-free fork
-while that call is blocked. It verifies the native history prefix, releases the
-parent, and checks its image response. One turn can generate multiple provider
-requests. The two concurrent turn allowances share the remaining estimated
-budget. A receipt with `cost_complete: false` does not account for every turn;
-neither this check nor the CLI-reported budget proves a provider billing cap,
-physical execution, or scored-run qualification. Its fork is a tool-free CLI
-probe: it does not exercise the gated delegate fork the adaptive host now uses.
-
-### Receipt comparison
-
-After obtaining both real receipts, compare them with the current profile and
-CLI version without making model calls:
-
-```sh
-.venv/bin/python -m robofrontier.engines.claude.claude_readiness --profile opus --precheck /path/to/receipt.json --blocked-precheck /path/to/blocked/receipt.json
-```
-
-This checks required observations, session relationships, cost completeness,
-model/profile fingerprint and CLI version. `precheck_evidence_matches` is only
-receipt consistency: it cannot authenticate a receipt, distinguish accounts
-sharing the same profile, establish provider model identity, or authorize a
-scored benchmark. `formal_execution_available` remains false.
-
+Stopped collection copies every role-bound transcript and its tool-result and sidecar files,
+motion, action, message and wake records and reports; roles come from runtime metadata, so peer
+mode needs no Controller. Real-time MP4 is off by default (`render.record_realtime_video`); with
+it on, FFmpeg and ffprobe are required and sealing checks the stream. See
+[evidence storage](../running/evidence-storage.md) and
+[reports](README.md#reports-and-metric-definitions). A reported model name is an observation:
+`all_requested_models_verified` stays false. A prepared run freezes its source beside its inputs;
+prepare again after source changes.

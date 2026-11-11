@@ -1,115 +1,98 @@
-# Development checks and optional historical fixtures
+# Testing
 
-Install the locked Python environment and Node.js before running these checks.
-The selected native CLIs are needed only by tests that explicitly exercise them.
-See the acceptance ledger (`docs/archive/unified-main.md`, in the [archive tag](../history.md)) for exact results and limitations.
-
-## Protocol checks
+All tests run offline: none calls a model provider. Install the locked environment and restore
+the assets first ([getting started](../getting-started.md)):
 
 ```sh
-PYTHONPATH=tests:scripts .venv/bin/python -m scripts.check_harness \
-  --protocol-only --report runs/engineering/protocol.json
+uv sync --locked --extra oracle
+.venv/bin/robofrontier bootstrap
 ```
 
-This group prohibits MuJoCo model creation and physical stepping. It tests
-synthetic task/runtime contracts, private scoring,
-frozen inputs, recovery boundaries, JavaScript and portable documentation links.
-It starts no native policy session and calls no model/provider. Its passing
-result does not qualify actual robot dynamics, native provider behavior or
-multi-agent task solving.
+Node.js is needed for the Node host tests. Tests that drive an installed engine CLI run it against
+a local stub model and skip when the CLI is absent.
 
 ## Every test, in parallel
 
 ```sh
-.venv/bin/python -m scripts.run_tests                     # one worker per CPU
+.venv/bin/python -m scripts.run_tests                          # one worker per CPU
 .venv/bin/python -m scripts.run_tests runtime engines.test_codex_quota --workers 4
+.venv/bin/python -m scripts.run_tests --report runs/engineering/all-tests.json
 ```
 
 Each `tests/**/test_*.py` module runs in its own process and each `tests/**/test_*.js` with
-`node --test`; a failed module runs once more alone, and only a repeated failure counts. Tests
-that start a world open a hidden GLFW window: on macOS the screen must be unlocked (the window
-service does not answer otherwise), on Linux use a display such as `xvfb-run -a`. CI's
-`all-tests` job runs it that way.
+`node --test`. Arguments name modules (`runtime.test_run_segments`) or folders under `tests/`
+(`engines`). A failed module runs once more alone; only a repeated failure counts, and the report
+says which modules failed only in parallel. Other options: `--timeout-s`, `--no-node`,
+`--skip NAME ...`. The command exits 1 when a failure repeats.
 
-## Full local discovery
+Tests that start a world open a hidden GLFW window. On macOS the screen must be unlocked (the
+window service does not answer otherwise); on Linux use a display, for example
+`xvfb-run -a -s "-screen 0 1920x1080x24"`.
+
+## One module
 
 ```sh
-PYTHONPATH=tests:scripts .venv/bin/python -m scripts.check_harness \
-  --report runs/engineering/full.json
+PYTHONPATH=tests:scripts .venv/bin/python -m unittest runtime.test_pipeline
+node --test tests/engines/test_tool_errors.js
 ```
 
-Full discovery additionally exercises real robot/contact physics and media
-codecs. When installed, native CLIs may communicate with isolated synthetic
-loopback model endpoints. These are test sessions, not paid provider inference
-or measured model-solving runs. Existing explicit physical/provider qualification
-switches remain separate; inspect skipped tests rather than counting them as
-executed qualifications.
+## The harness checker
 
-The `c830202` follow-up passes 1,536 checks on each of macOS and Linux,
-with zero failures/errors and 17 conditional skips. Two captured-state placement
-regressions reproduce the prior search failures. All 19 related Transport/Oracle
-checks pass on both platforms, and a fresh current-scene Transport L1 reference
-completes all 12 goals with clean process/physics/action verdicts. This is private
-Oracle engineering, not model qualification or a new physical-candidate release.
-Older opt-in native/replay receipts retain their exact source and data scope.
+```sh
+.venv/bin/python -m scripts.check_harness --protocol-only --report runs/engineering/protocol.json
+.venv/bin/python -m scripts.check_harness --report runs/engineering/full.json
+```
 
-The ordinary policy bootstrap restores the current 36-case policy inputs. Full
-historical discovery also reads older scene assets/previews, the original
-source-preservation receipt, selected closed Oracle reports/streams and their
-frozen harness/evaluator source. They are ignored data, not Git source. Missing
-fixtures are errors; do not regenerate approximate images, rewrite old reports,
-change hashes or relabel a historical success as current physics qualification.
+`--protocol-only` runs a fixed set of contract modules with MuJoCo model creation and stepping
+blocked; the full mode discovers every Python test. Both also run the Node host tests, JavaScript
+syntax checks and the documentation link check. What each covers is in
+[harness check coverage](../harness-verification.md).
 
-The local 2026-11-02 passing discovery used independently copied historical
-fixtures from the preserved primary checkout. Scene XML identities and pinned
-asset/report/source hashes were verified, and original files were retained.
-The restoration receipts are under
-`runs/engineering/main-integration-oracle-final-20261102/`. The optional local
-delivery contains `legacy-test-fixtures-v4.tar.gz` and
-`legacy-test-fixtures-v4.json`. It contains original ignored test inputs, not
-new task qualification or native sessions. Its 45,141 files are pinned by
-individual SHA-256 checksums. The archive checksum is
-`b1ddf425f8c538a05fab705767f28d586905fc49944901a60c2cf0d5bb9bfe06`.
-The manifest checksum, supplied independently of its contents, is
-`909e9a42b2c4048bb9d5affc58fdc3930c449394b8efb1f83e854ae98ff9ba06`.
+## Physics validation
 
-Download the [optional archive](https://github.com/changxuanfan/RoboFrontier/releases/download/development-fixtures-20261102/legacy-test-fixtures-v4.tar.gz)
-and [manifest](https://github.com/changxuanfan/RoboFrontier/releases/download/development-fixtures-20261102/legacy-test-fixtures-v4.json)
-from the separate development-fixture prerelease and verify them against the
-independent pins above. Its checked installer, `scripts/install_historical_fixtures.py`,
-was removed on 2026-11-10 with the release freeze; restore it from tag
-`archive/pre-cleanup-20261110` to install the bundle (see the
-[cleanup log](../cleanup-20261110.md)). The dated Relay source aliases under
-`outputs/oracle/relay-edited-tracks-20261027/` are included only for the nine
-registered source directories and their original metadata/assets. Other output
-paths are rejected. The dated Mosaic review packages, design/coverage certificates,
-protected original media and separately extracted frozen-builder provenance are
-also included. Original source/recording bytes and qualification labels remain
-unchanged; current static projection/caption compatibility has explicit receipts.
+```sh
+.venv/bin/python -m scripts.validate_physics                    # every scenario, every case
+.venv/bin/python -m scripts.validate_physics carry dial --workers 4
+.venv/bin/python -m scripts.validate_physics rest --cases transport-a04-d1
+```
 
-The development bundle does not include all raw Mosaic motion chunks. Default
-package checks validate the original pinned reports/audits, stream indexes,
-frozen controls/evaluators and public artifacts. An explicit
-`--verify-recorded-chunks` additionally needs complete original motion trees.
-A read-only local verification of those originals checked 72,141 chunks across
-8,656,459 frames; that receipt does not claim the chunks were relocated into
-this development archive. This bundle is a test dependency set, not a full
-export of every historical experiment.
+Scenarios: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`. Results go to
+`runs/engineering/validate-physics/<time>.json`; `tests/physics/test_validation.py` runs a fast
+part. Criteria and the current status are in [physics](../physics.md#validation).
 
-This is an explicit optional development bundle, not an automatic download in
-the ordinary policy bootstrap. The separate release does not change that
-bootstrap. The policy download alone does not reproduce full historical
-discovery in a fresh clone.
+## CI
 
-## Filesystems and platform scope
+`.github/workflows/harness.yml` runs on every pull request and on pushes to `main`:
 
-Keep test databases, native homes, temporary executables and fixture outputs on
-the same local operating-system filesystem. In Linux containers, use writable
-local temporary directories for legacy fixture generation and Python bytecode;
-read-only source alone is not a writable test environment. Do not open active
-SQLite databases across a Docker/host boundary.
+| Job | What it runs |
+| --- | --- |
+| `harness` | `check_harness --protocol-only`, then the engine parity, run layout, segment, evidence storage and policy environment modules |
+| `all-tests` | `scripts.run_tests --workers 4` under `xvfb-run`, with the scene assets restored |
+| `analysis-and-scripts` | Analysis, script and record tests without scene assets, so nothing can load a scene |
 
-An existing dependency image with current source mounted or copied into it is
-distinct from a newly built image containing that source. Linux CPU/Mesa checks
-do not qualify NVIDIA/EGL, OPTIX, x86_64, real Slurm allocations, subscription
-refresh or 36-task resource capacity. Keep those boundaries in every receipt.
+`all-tests` sets `ROBOFRONTIER_OUTAGE_PROBE=off` and `ROBOFRONTIER_NO_NOTIFY=1`; set them locally
+too to keep the network-outage probe and desktop notifications out of test runs.
+
+## Skips and opt-in tests
+
+A test skips, rather than fails, when what it needs is absent: an engine CLI, Linux or a Landlock
+ABI, the restored scene assets, or ignored local data (finished runs, Oracle source edits under
+`outputs/oracle/`). Read the skipped count in the report; a skipped test is not a pass.
+
+These environment variables turn on longer tests that need a native CLI or local data:
+
+| Variable | Test |
+| --- | --- |
+| `ROBOFRONTIER_PHYSICS_SMOKE=1`, `ROBOFRONTIER_PHYSICS_VIDEO=1` | `engines.test_claude_physics_smoke`, with video |
+| `ROBOFRONTIER_PHYSICS_BATCH=1` | `engines.test_claude_parallel_physics_smoke` |
+| `ROBOFRONTIER_PHYSICS_STANDING=1`, `ROBOFRONTIER_PHYSICS_SIGNAL=1`, `ROBOFRONTIER_PHYSICS_FINISH=1`, `ROBOFRONTIER_MOSAIC_IMAGE=1` | Claude standing-team, signal, finish and Mosaic image integration tests |
+| `ROBOFRONTIER_NATIVE_TEST_RECEIPTS=1` | Keep the receipts of `engines.test_claude_standing_team_integration` |
+| `ROBOFRONTIER_PRESERVATION_CHECK=1` | `repo.test_oracle_preservation`, which hashes the protected Oracle files (several minutes) |
+
+## Filesystems
+
+Keep test databases, engine homes, temporary executables and fixture outputs on one local
+filesystem. Never open an active SQLite database across a Docker or network-filesystem boundary.
+In a Linux container, give the tests writable local temporary folders and a writable bytecode
+location. Linux CPU and Mesa results do not cover NVIDIA EGL, real Slurm allocations or
+36-run resource capacity.

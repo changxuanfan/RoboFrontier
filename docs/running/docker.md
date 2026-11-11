@@ -1,240 +1,128 @@
-# Docker execution with persistent local volumes
+# Running in Docker
 
-The unified image contains both native policy CLIs, the locked Python environment
-and the pinned policy assets. It supports CPU OSMesa and Linux NVIDIA EGL
-observations. It does not replace the native Codex or Claude session mechanisms.
+`robofrontier container ...` runs the unified CLI inside an image built from the committed
+source, with two persistent local Docker volumes for run data and native state. Only a stopped,
+verified evidence ZIP is copied back to the host.
 
-The policy image does not install Blender or expose `container factory`. Use the
-native [Factory workflow](../factory/replay.md) on a provisioned render host. Docker CPU
-MuJoCo observations and Blender Cycles background rendering are separate paths.
+**Current limit: a batch cannot be prepared in the image.** The image contains no policy Python
+environment and no way to name one (`ROBOFRONTIER_POLICY_ENV` and
+`ROBOFRONTIER_POLICY_ENV_BASE` are not passed in), and every run needs a checked one, so
+`container prepare` refuses with "No policy environment". `build`, `doctor`, `plan`,
+`preflight` and `auth` work; `run` has nothing to run until the image carries a checked policy
+environment. See [policy environment](policy-environment.md).
 
-Use the repository's command wrapper rather than manually mounting an entire
-checkout as a writable runtime directory. The wrapper creates all directories
-and two plain local Docker volumes. Active SQLite and original session files stay
-inside the Docker host's local filesystem. Only stopped, verified ZIP evidence is
-copied back to the operator's worktree.
+## 1. Prerequisites
 
-The implementation is being validated on the integration branch. Offline tests
-are not a claim of real model, NVIDIA, Slurm or 36-task resource qualification.
+- Docker Desktop on macOS, or a Docker engine on Linux. On macOS the container is Linux in
+  Docker's VM: CPU rendering only, no Metal.
+- For NVIDIA rendering: Linux, an NVIDIA GPU, host drivers and the NVIDIA container runtime.
+- A host checkout installed with `uv sync --locked --extra oracle`, with no uncommitted tracked
+  changes (the build uses `git archive HEAD`).
 
-## Build and configure
+## 2. Build
 
-Install Docker Desktop on macOS or the site's supported Docker engine on Linux.
-Run commands from a clean committed checkout installed with uv sync --locked.
+```sh
+.venv/bin/robofrontier container build
+```
 
-~~~bash
-robofrontier container build
-~~~
+The image ([`docker/Dockerfile`](../../docker/Dockerfile)) is `python:3.12-slim-bookworm` with
+Node.js 22, Codex 0.165.0, Claude Code 2.1.316, OSMesa, EGL and `ffmpeg`; it runs
+`uv sync --locked --extra oracle` and `robofrontier bootstrap`, so the pinned assets are inside.
+It is tagged `robofrontier:<commit[:12]>` (or `container.image`) and labelled with the commit;
+an existing image from another commit is refused. `.env`, logins and run data never enter it.
+It has no `bwrap` or `socat`, so Claude Code's Bash uses Landlock + seccomp (`landlock-v1`).
 
-Nested help is handled locally before configuration, Docker, credentials or
-runtime directories are accessed. This also works with Docker unavailable:
+Help for any subcommand works without Docker: `robofrontier container prepare --help`.
 
-~~~bash
-robofrontier container build --help
-robofrontier container prepare --help
-robofrontier container preflight --help
-robofrontier container auth --help
-~~~
+## 3. Site TOML
 
-`container build` accepts no extra arguments. Misspelled options and missing
-required native-command arguments are rejected before any Docker work. Auth
-help describes the allowed wrapper actions; actual login options are forwarded
-to the selected native CLI.
-
-The wrapper supplies git archive HEAD as the build context, excluding ignored
-.env, authentication, outputs and run data. The image is tagged with that source
-revision. An existing custom image with another revision is rejected. Commit
-tracked changes before rebuilding; a build never silently captures uncommitted
-experiments or credentials.
-
-The build installs the CLI pins Codex 0.165.0 and Claude Code 2.1.316 (`robofrontier/runtime/versions.py`).
-They are reproducibility pins, not a claim that they are the latest releases.
-The Python dependency lock is used unchanged. Policy assets are downloaded and
-verified during image construction. No model call occurs during build.
-
-The Linux default is NVIDIA EGL. For macOS Docker, explicitly prepare CPU tasks:
-
-~~~toml
-# cpu.toml
+```toml
+# docker.toml
 [render]
-device = "cpu"
+device = "cpu"                       # "nvidia" on a Linux GPU host
+
+[runtime]
+codex_tool_backend = "landlock-v1"   # the only Codex backend the Linux policy check admits
 
 [container]
-workspace = "cpu-bench"
-memory_gib = 0
+workspace = "default"                # names the volume pair
+memory_gib = 0                       # 0: no limit beyond Docker's
 cpus = 0.0
-seccomp_profile = "unconfined"
-~~~
+seccomp_profile = "default"          # "unconfined" removes Docker's seccomp filter for Codex doctor/preflight/run
+```
 
-Docker's default seccomp profile can deny the user namespaces required by the
-native Codex sandbox. This was reproduced on macOS Docker Desktop: the local
-sandbox probe failed with the default profile and passed with the explicit
-`unconfined` setting above. The repository default remains `default`; this option
-removes Docker's seccomp filter for Codex doctor/preflight/run containers only.
-It does not add `--privileged`, host directories or administrator capabilities,
-and does not disable Codex's own workspace sandbox. Treat it as an explicit
-container security choice. A site can instead enable the required namespace
-operations in its own approved Docker policy. This particular image does not
-accept arbitrary host seccomp file paths.
+Pass it before `container` (`robofrontier --config docker.toml container ...`); `--config`
+after `container` is refused. Docker Desktop's VM memory is a real bound; the wrapper never
+lowers `batch.parallel`.
 
-Run the free local check before an explicitly paid provider preflight:
+## 4. Credentials
 
-~~~bash
-robofrontier --config cpu.toml container doctor
-~~~
+Put the profile's variable in the host `.env` (or the shell). The wrapper forwards only the
+selected profile's `env_key` and `base_url_env`, by name; values never appear in Docker
+arguments, image layers, the TOML or evidence.
 
-Doctor checks the selected native CLI, the Codex sandbox when selected, and an
-actual MuJoCo RGB context. It does not authenticate or invoke a model. The CLI
-also checks native prerequisites before a confirmed provider preflight and
-checks both sandbox and rendering before starting a prepared task batch. A
-failure blocks model calls; there is no automatic permission escalation or
-renderer fallback. Claude's native CLI check does not establish its internal
-permission/agent lifecycle qualification.
+```sh
+.venv/bin/robofrontier container auth claude setup-token          # prints a token: store it as CLAUDE_CODE_OAUTH_TOKEN in .env
+.venv/bin/robofrontier --config docker.toml container auth codex login --device-auth
+```
 
-Zero resource limits add no quota beyond the Docker engine or allocation.
-Docker Desktop's VM memory is still a real bound. Defaults request 36 concurrent
-tasks; this is not a promise that a small VM can sustain that many simulators,
-model sessions and delegates. Supply enough resources or explicitly configure a
-smaller test. The wrapper does not silently change requested concurrency.
+The Codex login goes to the state volume's `/opt/RoboFrontier/.robofrontier/subscription`
+(file-backed), used by Codex subscription profiles with `runtime.codex_home_scope = "shared"`.
+The host's `~/.codex`, `~/.claude` and Keychain are never mounted.
 
-NVIDIA task execution adds the NVIDIA container GPU request and graphics driver
-capabilities. It requires Linux, an NVIDIA device, working host drivers and the
-NVIDIA container runtime. Actual GL vendor/renderer verification rejects silent
-software fallback. Docker on macOS uses its Linux VM; it does not expose Metal
-or the Mac GPU to MuJoCo through this image.
+## 5. Check and preflight
 
-## Prepare and run with commands
+```sh
+.venv/bin/robofrontier --config docker.toml container doctor
+.venv/bin/robofrontier --config docker.toml container plan
+.venv/bin/robofrontier --config docker.toml container preflight --confirm-spend                      # Codex
+.venv/bin/robofrontier --config docker.toml container preflight --confirm-spend --max-budget-usd 1   # Claude
+```
 
-Set the selected credential in the ignored local .env or process environment.
-The wrapper forwards the selected credential/base-URL variable by name. Secret
-values are not included in Docker command arguments, image layers, TOML, command
-receipts or exported evidence.
+`doctor` checks the CLI, the Codex sandbox and a real MuJoCo render context, without
+authenticating. Receipts land in the runs volume.
 
-~~~bash
-robofrontier --config cpu.toml container plan
-robofrontier --config cpu.toml container prepare \
-  --output runs/policy/example-l1 --level 1 --min-arms --parallel 4
-~~~
+## 6. Prepare, run, status, stop
 
-Planning and preparation do not call a model. Preparing another directory is an
-explicit new run, never an automatic restart of an existing world.
+```sh
+.venv/bin/robofrontier --config docker.toml container prepare --output runs/policy/my-batch
+.venv/bin/robofrontier --config docker.toml container run runs/policy/my-batch
+.venv/bin/robofrontier --config docker.toml container status runs/policy/my-batch
+.venv/bin/robofrontier --config docker.toml container stop runs/policy/my-batch
+```
 
-A provider preflight is a separate, explicitly billable action:
+(`prepare` refuses until the image has a policy environment; see the top.) Batch paths are
+relative paths under `runs/`, inside the runs volume. `container run` waits for the batch in the
+foreground and starts it with the batch's frozen configuration. Ctrl-C requests an orderly stop
+and waits up to 180 s for sealing and collection. A container still running afterwards is
+kept and reported `still_running_needs_review`; the wrapper never restarts it. Each command is
+recorded in `.robofrontier/containers/<workspace>/commands/rf-<id>.json`.
 
-~~~bash
-robofrontier --config cpu.toml container preflight --confirm-spend
-robofrontier --config cpu.toml container run runs/policy/example-l1
-~~~
+There is no `container continue`: a run that stops unexpectedly continues by itself once inside
+the batch, but stopped runs cannot be continued by hand through the wrapper.
 
-Use a full matching model compatibility receipt, not a smoke-only receipt.
-The run checks its frozen inputs, profile/catalog hashes and native CLI version
-before task execution. The container command uses the batch's frozen renderer,
-not the current host TOML default, when starting an existing batch.
+## 7. Results
 
-A Claude run needs passed precheck receipts. Select an actual Claude profile in TOML,
-perform its explicitly budgeted preflight, then run the batch.
-All four Claude topologies have native engineering entries, including persistent
-Controller + Worker and Worker-Worker sessions. See the
-[standing-team guide](../engines/claude-code.md#standing-teams). Formal scored qualification
-remains closed; local synthetic-provider checks do not qualify a real provider.
+After the batch closes and is collected, the wrapper checks the ZIP's SHA-256 against the
+container's result and copies it to `runs/container-exports/<workspace>/<batch>-<hash>.zip`.
+An identical existing ZIP is kept; a different one with that name is refused.
 
-Keep batch/output paths relative to runs/. Those paths refer to persistent
-container storage. They are not ordinary host paths while the task is running.
+The volumes, named from the checkout path and `container.workspace`, keep everything else:
 
-## Status, stop and export
+| Volume | Mounted at | Holds |
+| --- | --- | --- |
+| `robofrontier-<id>-<workspace>-runs` | `/opt/RoboFrontier/runs` | Batches, motion, asset cache, receipts, collections, ZIPs |
+| `robofrontier-<id>-<workspace>-state` | `/opt/RoboFrontier/.robofrontier` | Per-task Codex homes and sessions, the subscription login, Claude's config |
 
-~~~bash
-robofrontier --config cpu.toml container status runs/policy/example-l1
-robofrontier --config cpu.toml container stop runs/policy/example-l1
-~~~
+Do not copy a live SQLite file out of a volume. Deleting a volume deletes its runs; the wrapper
+never does.
 
-Status reads atomic supervisor JSON. Stop writes STOP markers through another
-container in the same local volumes; it does not open a writer's SQLite database.
+## Limits
 
-Ctrl-C during a wrapped run requests the same orderly stop, then allows time for
-sealing and collection. A disconnected or still-running container is retained
-and reported for review. The wrapper never restarts it or exports its active
-database. Its name is recorded under:
-
-~~~text
-.robofrontier/containers/WORKSPACE/commands/rf-ID.json
-~~~
-
-After normal task closure and automatic collection/archiving, the wrapper copies
-one ZIP to:
-
-~~~text
-runs/container-exports/WORKSPACE/BATCH-PATHHASH.zip
-~~~
-
-It checks the exported SHA-256 against the container's terminal command result
-before publishing the host file. An identical existing ZIP is reused; a different
-file with that name is rejected. Original batch data, sessions and motion remain
-inside the local volumes. No automatic destructive cleanup occurs.
-
-A sealed/collected archive does not mean the model succeeded. Inspect independent
-per-task evaluations, process events, collection issues and uncertain-action
-records. Failed or interrupted trials are not silently relabeled as model
-failures or successful tasks.
-
-## Where native sessions and credentials live
-
-Two separate plain local Docker volumes are named from the checkout identity and
-container.workspace. Different worktree paths/workspaces get different names:
-
-- runs volume -> /opt/RoboFrontier/runs: prepared batches, motion, asset cache,
-  native collected evidence, evaluation and ZIP archives.
-- state volume -> /opt/RoboFrontier/.robofrontier: API task Codex homes,
-  session rollouts and explicitly configured subscription authentication.
-
-Within the state volume, API task sessions are under
-codex/TASK_HASH/sessions/. Each task's Controller and native forks share its home;
-different tasks have different homes. All task homes are initialized before the
-0.3-second initial-host launch schedule.
-
-The host's ~/.codex, macOS Keychain, ~/.claude and default server login state are
-not mounted or cloned. Local Docker volumes are private runtime state, not an
-artifact to publish. Do not manually copy an active SQLite file from them.
-Deleting a volume deletes its original runtime data; the wrapper never does so.
-
-## Subscription authentication
-
-A native Codex subscription profile requires an explicitly shared home and a
-login in this workspace's own persistent subscription directory:
-
-~~~bash
-robofrontier --config subscription.toml container auth codex login --device-auth
-~~~
-
-Use policy.profile for an actual native Codex profile and
-runtime.codex_home_scope = "shared" in subscription.toml. The dedicated container
-CODEX_HOME is /opt/RoboFrontier/.robofrontier/subscription. This login is separate
-from the operator's host Desktop account. Availability of a subscription model
-and account credits still depends on that account. Shared-home refresh and
-multi-task subscription qualification remain explicit acceptance work.
-
-For Claude's explicit OAuth-token profile, obtain a token using the native CLI:
-
-~~~bash
-robofrontier container auth claude setup-token
-~~~
-
-Store the resulting token locally in the declared credential environment variable
-and select the corresponding subscription profile. Do not paste it into a prompt,
-commit or evidence archive. The runner supplies it to each native CLI through
-the environment; Desktop's stored credentials are not copied into run inputs.
-
-Authentication commands are explicit user actions. Building, planning, preparing,
-status and stop do not log in or invoke a model automatically.
-
-## Compatibility and limits
-
-Existing frozen data remain readable; new unified runs use this wrapper and
-`docker/Dockerfile`. The older `scripts.luna_cpu` entry was removed on 2026-11-10.
-
-The image's Python/CLI/system-library pins, source revision and asset lock define
-the executable environment. A later source change requires a new image and new
-prepared runs. This is not a standalone wheel distribution or a checkpoint/resume
-implementation. Slurm batch execution has its own node-local staging workflow;
-do not assume a cluster permits a Docker daemon or that Docker's GPU visibility
-matches a Slurm allocation without the site's configuration.
+- **No policy environment in the image**, so no batch can be prepared (top of this page).
+- **No `continue`** through the wrapper.
+- **Seccomp.** Docker's default profile can deny the user namespaces Codex's `native` sandbox
+  needs; `seccomp_profile = "unconfined"` drops it for Codex `doctor`, `preflight` and `run`
+  only, without `--privileged`.
+- **Slurm jobs do not use Docker**; they stage onto node-local scratch ([Slurm](slurm.md)).
+- The image has no Blender: Factory rendering runs natively ([Factory replay](../factory/replay.md)).

@@ -7,12 +7,9 @@ editable files. The checked-in project starts at
 It targets the pinned 36-station R14 Factory bundle. The font and its SIL Open
 Font License are already in the repository; rendering does not download a font.
 
-The [original full Factory movie](https://github.com/changxuanfan/RoboFrontier/releases/tag/factory-tour-media-20261102)
-is published unchanged (1080p, 30 fps, 210.5 seconds), with checksums and a
-historical-media receipt. At the user's request, the new full Cycles render is
-deferred and that existing movie is used for presentation. The editable English
-project remains available. The published original is not a new current-source
-render seal or model-performance claim.
+The published full tour (1080p, 30 fps, 210.5 seconds) is the GitHub release
+[`factory-tour-media-20261102`](https://github.com/changxuanfan/RoboFrontier/releases/tag/factory-tour-media-20261102),
+with its checksums. It shows Oracle reference recordings, not model results.
 
 Read the [Factory installation guide](replay.md) first. Offline video uses
 Blender Cycles, ffmpeg and ffprobe with libass and libx264. It is independent of
@@ -169,7 +166,7 @@ both movie hashes, the correct frozen project and complete video decoding. A
 caption encoder failure cannot leave the raw render marked as a completed new
 tour. Attempts without a completion seal remain available for diagnosis.
 
-## The page-matched film style (v2)
+## The project-page film style (v2)
 
 [`assets/robo_factory/film-project.json`](../../assets/robo_factory/film-project.json) is the
 published film's project. Its schema `robofrontier.factory-editorial.v2` replaces `font` and
@@ -185,8 +182,8 @@ sizes (`display_size`, `deck_size`, `label_size`, `caption_size`), margins, `pan
   to `usWinAscent + usWinDescent`, and matches `\fn` against the full name (such as
   `JetBrains Mono Medium`), so both are read from the font files.
 
-Version 1 projects keep their exact rendering. Render a quick draft by downscaling the raw
-movie first; the timeline and every check are unchanged.
+Version 1 projects (`tour-project.json`) render as described above. Render a quick draft by
+downscaling the raw movie first; the timeline and every check are unchanged.
 
 ## Revise text without rerendering Cycles
 
@@ -213,11 +210,8 @@ correct task outcomes, or edited camera plan. Its report states that limitation.
 It does not generate a Factory render-plan completion marker. Source-qualified
 camera changes must go through `prepare` and `run`.
 
-## Compatibility
+## Plans without a project
 
-Historical plans without an editorial project retain their original raw-video
-completion contract and code/input checks. They do not acquire a new project's
-captions or scene identity implicitly. Status remains available after local code
-changes; execution requires the original compatible source or a newly prepared
-plan. Historical movies can be reused for explicitly labeled text-only editing
-without reclassifying them as current-source renders.
+A desk-mode plan has no editorial project: each job completes on its raw video and gets no
+captions. `status` works on any plan; `run` needs the plan's own source code, or a newly
+prepared plan.
