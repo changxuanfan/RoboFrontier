@@ -10,7 +10,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from scripts.github_pat_gateway import Gateway, MAX_BODY, genai_to_chat, json_schema, read_token
+from scripts.github_pat_gateway import Gateway, MAX_BODY, genai_to_chat, json_schema, read_token, usage_metadata
 
 TOKEN = 'local-test-pat-not-a-credential'
 STREAM = (b'event: response.output_item.done\ndata: {"type":"function_call","name":"robot","arguments":"{}"}\n\n'
@@ -18,6 +18,12 @@ STREAM = (b'event: response.output_item.done\ndata: {"type":"function_call","nam
 
 
 class GatewayTests(unittest.TestCase):
+    def test_opaque_reasoning_state_is_rejected_instead_of_silently_discarded(self):
+        for field in ('thoughtSignature', 'thought_signature'):
+            with self.assertRaisesRegex(ValueError, 'thought signatures'):
+                genai_to_chat({'contents': [{'role': 'model', 'parts': [
+                    {'text': 'prior answer', field: 'opaque-state'}]}]}, 'gemini-test', True)
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.directory = Path(self.temporary.name)
@@ -262,6 +268,44 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual([message['role'] for message in request['messages']], ['assistant', 'tool', 'user'])
         self.assertEqual(request['messages'][1]['tool_call_id'], 'view-1')
         self.assertEqual(request['messages'][2]['content'][-1]['image_url']['url'], 'data:image/png;base64,image')
+
+    def test_parallel_image_results_split_across_native_contents_are_not_rejected(self):
+        request = genai_to_chat({'contents': [
+            {'role': 'model', 'parts': [{'functionCall': {'id': 'a', 'name': 'camera', 'args': {}}},
+                                        {'functionCall': {'id': 'b', 'name': 'camera', 'args': {}}}]},
+            {'role': 'model', 'parts': [{'functionResponse': {'id': 'b', 'name': 'camera', 'response': {},
+                'parts': [{'inlineData': {'mimeType': 'image/png', 'data': 'second'}}]}}]},
+            {'role': 'user', 'parts': [{'functionResponse': {'id': 'a', 'name': 'camera', 'response': {},
+                'parts': [{'inlineData': {'mimeType': 'image/png', 'data': 'first'}}]}}]}]}, 'gemini-4-argon', True)
+        self.assertEqual([m['role'] for m in request['messages']], ['assistant', 'tool', 'tool', 'user'])
+        self.assertEqual([m['tool_call_id'] for m in request['messages'][1:3]], ['b', 'a'])
+        self.assertEqual([part['image_url']['url'] for part in request['messages'][-1]['content'] if part['type'] == 'image_url'],
+                         ['data:image/png;base64,second', 'data:image/png;base64,first'])
+
+    def test_reasoning_tokens_are_not_counted_twice_in_genai_usage(self):
+        result = usage_metadata({'prompt_tokens': 100, 'completion_tokens': 80, 'total_tokens': 180,
+                                 'completion_tokens_details': {'reasoning_tokens': 60},
+                                 'prompt_tokens_details': {'cached_tokens': 20}})
+        self.assertEqual(result, {'promptTokenCount': 100, 'candidatesTokenCount': 20, 'thoughtsTokenCount': 60,
+                                  'totalTokenCount': 180, 'cachedContentTokenCount': 20})
+        with self.assertRaisesRegex(ValueError, 'inconsistent'):
+            usage_metadata({'completion_tokens': 5, 'completion_tokens_details': {'reasoning_tokens': 6}})
+
+    def test_refusal_text_is_preserved_for_both_response_modes(self):
+        self.stream = json.dumps({'choices': [{'message': {'content': None, 'refusal': 'Request declined.'}, 'finish_reason': 'stop'}]}).encode()
+        _, _, body = self.request('/v1beta/models/gemini-4-argon:generateContent', {'contents': []})
+        self.assertEqual(json.loads(body)['candidates'][0]['content']['parts'], [{'text': 'Request declined.'}])
+        self.stream = b'data: {"choices":[{"delta":{"refusal":"Request declined."},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'
+        _, _, body = self.request('/v1beta/models/gemini-4-argon:streamGenerateContent', {'contents': []})
+        self.assertIn(b'Request declined.', body)
+
+    def test_json_error_instead_of_sse_is_not_mistaken_for_success(self):
+        self.stream = b'{"error":{"code":"overloaded","message":"synthetic-secret-response"}}\n'
+        _, _, body = self.request('/v1beta/models/gemini-4-argon:streamGenerateContent', {'contents': []})
+        self.assertIn(b'"error"', body)
+        self.assertNotIn(b'finishReason', body)
+        log = (self.directory / 'metadata.jsonl').read_text()
+        self.assertNotIn('synthetic-secret-response', log)
 
 
 if __name__ == '__main__':

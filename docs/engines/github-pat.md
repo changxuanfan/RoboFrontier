@@ -174,6 +174,37 @@ has its own frozen launch/environment rules and needs explicit gateway support
 and a fresh preflight before using this route; adding these shell variables to an
 already prepared native-Gemini experiment does not migrate it.
 
+## Compatibility is not model or harness equivalence
+
+The transport does not make GitHub access interchangeable with an OpenAI API key
+or a ChatGPT subscription. Account entitlements, quotas, billing, hosting,
+filtering, available endpoints and model aliases remain provider-specific. A
+matching model name and a successful image/tool preflight do not establish
+identical model snapshots, output quality or latency. Compare matched tasks,
+tool modes, prompts and budgets before making a performance claim.
+
+Codex retains its native Responses agent; Antigravity retains its native agent,
+auxiliary requests, history and compaction behavior. The translator supports the
+documented GenAI subset, rejecting opaque Google thought signatures rather than
+silently dropping their reasoning state. Native Claude Code uses Anthropic Messages, which
+this connector does not implement; it is not connected by selecting a model
+name. Shared RoboFrontier robot tools do not imply a shared native harness.
+
+The regression suite covers parallel image-bearing tool results split across
+native history entries, fragmented streamed function calls, refusal text,
+cached-token reporting and reasoning-token accounting. OpenAI completion usage
+includes reasoning tokens; the translated GenAI candidate count excludes those
+tokens and reports them separately as thoughts. These counts are upstream
+reports, not independently measured usage or a billing-equivalence guarantee.
+
+Live testing also observed HTTP 200 responses whose streams ended without a
+finish reason. The connector reports those as failures. Metadata diagnostics
+record event/key shapes and fragment lengths, without prompt, argument or
+response text, to distinguish malformed streams from successful requests. A
+healthy listener or HTTP 200 alone does not qualify an experiment. Native resume,
+delegation under concurrency and long-context behavior require their own tests;
+a short preflight does not validate all of them.
+
 ## Migration from GHC API
 
 New deployments need only the standalone file (if a connector is needed), the

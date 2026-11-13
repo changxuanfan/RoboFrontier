@@ -74,6 +74,8 @@ def conversation_parts(contents):
     for content in contents:
         role, parts = None, []
         for part in content.get('parts', []):
+            if part.get('thoughtSignature') or part.get('thought_signature'):
+                raise ValueError('Opaque GenAI thought signatures cannot be preserved on Chat Completions')
             semantic_role = 'user' if 'functionResponse' in part else content.get('role', 'user')
             if role is not None and semantic_role != role:
                 yield role, parts
@@ -88,7 +90,7 @@ def genai_to_chat(payload, model, stream):
     """Stateless protocol conversion, including images attached to tool results."""
     if any(payload.get(key) for key in ('cachedContent', 'safetySettings')):
         raise ValueError('cachedContent and safetySettings overrides are not supported by this transport')
-    messages, pending = [], []
+    messages, pending, deferred_parts = [], [], []
     system = payload.get('systemInstruction', payload.get('system_instruction', {}))
     if system:
         parts = system.get('parts', [])
@@ -99,6 +101,8 @@ def genai_to_chat(payload, model, stream):
             messages.append({'role': 'system', 'content': text})
     for turn, (role, parts) in enumerate(conversation_parts(payload.get('contents', []))):
         if role == 'model':
+            if pending:
+                raise ValueError('GenAI history has unanswered function calls before a model turn')
             texts, thoughts, calls = [], [], []
             for index, part in enumerate(parts):
                 if 'functionCall' in part:
@@ -139,10 +143,10 @@ def genai_to_chat(payload, model, stream):
                     user_parts.append(image_part(part))
             # OpenAI tool messages are text-only. Put their image attachments in
             # a user image message after all results of this parallel tool group.
-            if user_parts:
-                if pending:
-                    raise ValueError('GenAI tool images arrived before all parallel tool results')
-                messages.append({'role': 'user', 'content': user_parts})
+            deferred_parts.extend(user_parts)
+            if deferred_parts and not pending:
+                messages.append({'role': 'user', 'content': deferred_parts})
+                deferred_parts = []
         else:
             raise ValueError('Unsupported GenAI conversation role')
     if pending:
@@ -194,7 +198,15 @@ def usage_metadata(usage):
         ('prompt_tokens', 'promptTokenCount'), ('completion_tokens', 'candidatesTokenCount'), ('total_tokens', 'totalTokenCount')) if source in usage}
     details = usage.get('completion_tokens_details') or {}
     if 'reasoning_tokens' in details:
-        result['thoughtsTokenCount'] = details['reasoning_tokens']
+        thoughts = details['reasoning_tokens']
+        if not isinstance(thoughts, int) or thoughts < 0 or thoughts > usage.get('completion_tokens', thoughts):
+            raise ValueError('Upstream returned inconsistent reasoning token counts')
+        result['thoughtsTokenCount'] = thoughts
+        if 'candidatesTokenCount' in result:
+            result['candidatesTokenCount'] -= thoughts
+    cached = (usage.get('prompt_tokens_details') or {}).get('cached_tokens')
+    if cached is not None:
+        result['cachedContentTokenCount'] = cached
     return result
 
 
@@ -214,6 +226,8 @@ def message_parts(message):
         parts.append({'text': message['reasoning_content'], 'thought': True})
     if message.get('content'):
         parts.append({'text': message['content']})
+    if message.get('refusal'):
+        parts.append({'text': message['refusal']})
     for call in message.get('tool_calls', []):
         function = call['function']
         args = json.loads(function['arguments'])
@@ -231,26 +245,43 @@ def genai_response(document):
     return result
 
 
-def sse_documents(response):
+def sse_documents(response, diagnostics=None):
+    diagnostics = {} if diagnostics is None else diagnostics
     data = []
     for raw in response:
+        diagnostics['response_lines'] = diagnostics.get('response_lines', 0) + 1
         line = raw.decode('utf-8').rstrip('\r\n')
         if not line:
             if data:
                 value = '\n'.join(data)
                 if value == '[DONE]':
+                    diagnostics['done_marker'] = True
                     return
-                yield json.loads(value)
+                document = json.loads(value)
+                diagnostics['last_event_keys'] = list(document) if isinstance(document, dict) else [type(document).__name__]
+                if not isinstance(document, dict):
+                    raise ValueError('Upstream SSE data must be a JSON object')
+                yield document
                 data = []
         elif line.startswith('data:'):
             data.append(line[5:].lstrip(' '))
+        elif line and not line.startswith((':', 'event:', 'id:', 'retry:')):
+            diagnostics['non_sse_lines'] = diagnostics.get('non_sse_lines', 0) + 1
+            if line.startswith('{'):
+                document = json.loads(line)
+                diagnostics['non_sse_json_keys'] = list(document)
+                if isinstance(document.get('error'), dict):
+                    diagnostics['upstream_error_code'] = document['error'].get('code')
+                    raise ValueError('Upstream returned a non-SSE error response')
     if data:
         raise ValueError('Truncated upstream SSE event')
 
 
-def genai_stream(response):
+def genai_stream(response, diagnostics=None):
+    diagnostics = {} if diagnostics is None else diagnostics
     calls, finish, usage = {}, None, None
-    for document in sse_documents(response):
+    for document in sse_documents(response, diagnostics):
+        diagnostics['event_count'] = diagnostics.get('event_count', 0) + 1
         if 'error' in document:
             raise ValueError('Upstream returned an in-stream error')
         if document.get('usage'):
@@ -260,21 +291,30 @@ def genai_stream(response):
             continue
         choice = choices[0]
         delta = choice.get('delta', {})
-        for source, thought in (('reasoning_content', True), ('content', False)):
+        diagnostics['last_delta_keys'] = list(delta)
+        for source, thought in (('reasoning_content', True), ('content', False), ('refusal', False)):
             if delta.get(source):
                 part = {'text': delta[source]}
                 if thought:
                     part['thought'] = True
                 yield genai_candidate([part])
         for item in delta.get('tool_calls', []):
+            argument = (item.get('function') or {}).get('arguments')
+            shape = {'index': item.get('index'), 'has_id': bool(item.get('id')),
+                     'arguments_type': type(argument).__name__, 'argument_chars': len(argument) if isinstance(argument, str) else None}
+            shapes = diagnostics.setdefault('tool_delta_shapes', [])
+            shapes.append(shape)
+            del shapes[:-12]
             entry = calls.setdefault(item['index'], {'id': '', 'function': {'name': '', 'arguments': ''}})
             entry['id'] += item.get('id', '')
             for key in ('name', 'arguments'):
                 entry['function'][key] += item.get('function', {}).get(key, '')
         if choice.get('finish_reason'):
             finish = choice['finish_reason']
+            diagnostics['finish_reason'] = finish
     if finish is None:
         raise ValueError('Upstream stream ended without a finish reason')
+    diagnostics['assembled_calls'] = [{'index': index, 'argument_chars': len(call['function']['arguments'])} for index, call in calls.items()]
     result = genai_candidate(message_parts({'tool_calls': [calls[index] for index in sorted(calls)]}), finish)
     if usage:
         result['usageMetadata'] = usage
@@ -410,6 +450,7 @@ class Handler(BaseHTTPRequestHandler):
                                headers=headers(token, payload.get('stream', False)))
             response = connection.getresponse()
             record['http'] = response.status
+            record['upstream_content_type'] = response.getheader('Content-Type')
             if genai and response.status == 200 and not payload['stream']:
                 try:
                     result = genai_response(json.load(response))
@@ -425,12 +466,19 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             sent, self.close_connection = True, True
             if genai and response.status == 200:
+                diagnostics = {}
                 try:
-                    for item in genai_stream(response):
+                    for item in genai_stream(response, diagnostics):
                         self.wfile.write(('data: ' + json.dumps(item) + '\n\n').encode())
                         self.wfile.flush()
-                except (KeyError, TypeError, ValueError, IndexError):
+                except (KeyError, TypeError, ValueError, IndexError) as exc:
                     record['error_type'] = 'InvalidUpstreamStream'
+                    record['cause'] = type(exc).__name__
+                    record['stream_shape'] = diagnostics
+                    if isinstance(exc, json.JSONDecodeError):
+                        record['reason'] = exc.msg
+                    elif isinstance(exc, ValueError) and str(exc).startswith(('Upstream ', 'Unsupported upstream ')):
+                        record['reason'] = str(exc)
                     self.wfile.write(b'data: {"error":{"code":502,"status":"INTERNAL","message":"Invalid or incomplete upstream model stream"}}\n\n')
                     self.wfile.flush()
             else:
