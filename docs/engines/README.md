@@ -8,6 +8,7 @@ guides cover the rest, in the same section order so they can be read side by sid
 | Guide | Contents |
 | --- | --- |
 | [Codex](codex.md) | app-server sessions, Codex homes, tool backends, receipts |
+| [GitHub PAT transport](github-pat.md) | Direct Codex provider and a portable Chat Completions/Responses connector |
 | [Claude Code](claude-code.md) | `claude -p` sessions over MCP, authentication modes, Bash isolation, prechecks, cost ledger |
 | [Providers](#providers) | Profiles, the authentication matrix, third-party endpoints |
 | [Unified CLI](../unified-cli.md) | Configuration and the `robofrontier` commands |
@@ -220,6 +221,7 @@ selects `haiku_subscription_token`.
 | --- | --- | --- | --- |
 | Codex | OpenAI API key | `luna` | `OPENAI_API_KEY` |
 | Codex | OpenLux API key | `openlux-luna`, `openlux-terra` | `OPENLUX_API_KEY` |
+| Codex | GitHub Copilot PAT, experimental | `sol61_github_pat` | `ROBOFRONTIER_GITHUB_PAT` ([setup](github-pat.md)) |
 | Codex | ChatGPT login | `luna_subscription`, `sol61_subscription`, `terra61_subscription`, `astra` | Login in the Codex home ([Codex authentication](codex.md#authentication)) |
 | Codex | Third-party Responses API | `deepseek`, `qwen`, `glm`, `kimi` | `DEEPSEEK_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_BASE_URL`; `ZAI_API_KEY`; `KIMI_API_KEY` |
 | Claude | Subscription token (`claude setup-token`) | `haiku_subscription_token`, `opus_subscription` | `CLAUDE_CODE_OAUTH_TOKEN` |
