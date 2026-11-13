@@ -443,11 +443,20 @@ class Handler(BaseHTTPRequestHandler):
                                       'empty': not message.get('content')} for message in payload.get('messages', [])],
                   'image_parts': sum(part.get('type') == 'image_url' for message in payload.get('messages', [])
                                      if isinstance(message.get('content'), list) for part in message['content'])}
-        connection, sent = None, False
+        connection, sent, phase = None, False, 'upstream_connect'
+        diagnostics = {}
+        def invalid_stream(exc):
+            record.update(error_type='InvalidUpstreamStream', cause=type(exc).__name__,
+                          failure_phase='upstream_stream_read', stream_shape=diagnostics)
+            if isinstance(exc, json.JSONDecodeError):
+                record['reason'] = exc.msg
+            elif isinstance(exc, ValueError) and str(exc).startswith(('Upstream ', 'Unsupported upstream ')):
+                record['reason'] = str(exc)
         try:
             connection = self.server.upstream_connection()
             connection.request(self.command, path, body=body or None,
                                headers=headers(token, payload.get('stream', False)))
+            phase = 'upstream_headers'
             response = connection.getresponse()
             record['http'] = response.status
             record['upstream_content_type'] = response.getheader('Content-Type')
@@ -457,6 +466,18 @@ class Handler(BaseHTTPRequestHandler):
                 except (KeyError, TypeError, ValueError, IndexError):
                     return self.error(502, 'Invalid upstream model response')
                 return self.reply(200, result)
+            translated = None
+            if genai and response.status == 200:
+                phase = 'upstream_stream_read'
+                translated = iter(genai_stream(response, diagnostics))
+                try:
+                    first = next(translated)
+                except (KeyError, TypeError, ValueError, IndexError, StopIteration) as exc:
+                    invalid_stream(exc)
+                    record['downstream_http'] = 502
+                    return self.error(502, 'Invalid or incomplete upstream model stream')
+            phase = 'downstream_headers'
+            record['downstream_http'] = response.status
             self.send_response(response.status)
             self.send_header('Content-Type', 'text/event-stream' if genai and response.status == 200 else response.getheader('Content-Type', 'application/json'))
             self.send_header('Connection', 'close')
@@ -466,29 +487,47 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             sent, self.close_connection = True, True
             if genai and response.status == 200:
-                diagnostics = {}
                 try:
-                    for item in genai_stream(response, diagnostics):
+                    item = first
+                    while True:
+                        phase = 'downstream_write'
                         self.wfile.write(('data: ' + json.dumps(item) + '\n\n').encode())
                         self.wfile.flush()
+                        phase = 'upstream_stream_read'
+                        try:
+                            item = next(translated)
+                        except StopIteration:
+                            record['stream_complete'] = True
+                            break
                 except (KeyError, TypeError, ValueError, IndexError) as exc:
-                    record['error_type'] = 'InvalidUpstreamStream'
-                    record['cause'] = type(exc).__name__
-                    record['stream_shape'] = diagnostics
-                    if isinstance(exc, json.JSONDecodeError):
-                        record['reason'] = exc.msg
-                    elif isinstance(exc, ValueError) and str(exc).startswith(('Upstream ', 'Unsupported upstream ')):
-                        record['reason'] = str(exc)
+                    invalid_stream(exc)
+                    phase = 'downstream_error_write'
                     self.wfile.write(b'data: {"error":{"code":502,"status":"INTERNAL","message":"Invalid or incomplete upstream model stream"}}\n\n')
                     self.wfile.flush()
             else:
-                while chunk := response.read1(16384):
+                while True:
+                    phase = 'upstream_body_read'
+                    chunk = response.read1(16384)
+                    if not chunk:
+                        record['body_forwarded'] = True
+                        break
+                    phase = 'downstream_write'
                     self.wfile.write(chunk)
                     self.wfile.flush()
         except (OSError, http.client.HTTPException) as exc:
             record['error_type'] = type(exc).__name__
+            record['failure_phase'] = phase
+            if diagnostics:
+                record['stream_shape'] = diagnostics
             if not sent:
+                record['downstream_http'] = 502
                 self.error(502, 'Upstream model transport failed')
+            elif genai and response.status == 200 and phase.startswith('upstream_'):
+                try:
+                    self.wfile.write(b'data: {"error":{"code":502,"status":"INTERNAL","message":"Upstream model transport interrupted"}}\n\n')
+                    self.wfile.flush()
+                except OSError:
+                    record['downstream_error_delivery_failed'] = True
         finally:
             if connection:
                 connection.close()

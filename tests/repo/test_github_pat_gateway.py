@@ -61,6 +61,12 @@ class GatewayTests(unittest.TestCase):
 
         self.upstream = ThreadingHTTPServer(('127.0.0.1', 0), Upstream)
         self.gateway = Gateway(('127.0.0.1', 0), self.token, log_file=self.directory / 'metadata.jsonl')
+        self.recorded = threading.Event()
+        record = self.gateway.record
+        def recorded(value):
+            record(value)
+            self.recorded.set()
+        self.gateway.record = recorded
         self.gateway.upstream_connection = lambda: http.client.HTTPConnection('127.0.0.1', self.upstream.server_port, timeout=5)
         self.threads = [threading.Thread(target=s.serve_forever, kwargs={'poll_interval': .02}) for s in (self.upstream, self.gateway)]
         for thread in self.threads:
@@ -75,12 +81,17 @@ class GatewayTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def request(self, path='/v1/responses', payload=None, token=TOKEN, method='POST', extra=None):
+        before = len(self.requests)
+        self.recorded.clear()
         body = json.dumps(payload if payload is not None else {'model': 'gpt-6.1-sol', 'stream': True})
         headers = {'Authorization': 'Bearer ' + token, **(extra or {})}
         with closing(http.client.HTTPConnection('127.0.0.1', self.gateway.server_port, timeout=5)) as client:
             client.request(method, path, body=None if method == 'GET' else body, headers=headers)
             response = client.getresponse()
-            return response.status, dict(response.getheaders()), response.read()
+            result = response.status, dict(response.getheaders()), response.read()
+            if len(self.requests) > before:
+                self.assertTrue(self.recorded.wait(2))
+            return result
 
     def test_responses_stream_and_function_arguments_are_not_rewritten(self):
         payload = {'model': 'gpt-6.1-sol', 'stream': True, 'input': [{'type': 'function_call_output', 'call_id': 'a', 'output': 'private-prompt-canary'}],
@@ -301,11 +312,47 @@ class GatewayTests(unittest.TestCase):
 
     def test_json_error_instead_of_sse_is_not_mistaken_for_success(self):
         self.stream = b'{"error":{"code":"overloaded","message":"synthetic-secret-response"}}\n'
-        _, _, body = self.request('/v1beta/models/gemini-4-argon:streamGenerateContent', {'contents': []})
+        status, _, body = self.request('/v1beta/models/gemini-4-argon:streamGenerateContent', {'contents': []})
+        self.assertEqual(status, 502)
         self.assertIn(b'"error"', body)
         self.assertNotIn(b'finishReason', body)
+        self.assertTrue(self.recorded.wait(2))
         log = (self.directory / 'metadata.jsonl').read_text()
         self.assertNotIn('synthetic-secret-response', log)
+
+    def test_empty_200_stream_is_a_real_502_before_any_client_output(self):
+        self.stream = b'data: [DONE]\n\n'
+        status, _, body = self.request('/v1beta/models/gemini-4-argon:streamGenerateContent', {'contents': []})
+        self.assertEqual(status, 502)
+        self.assertIn(b'Invalid or incomplete', body)
+        self.assertTrue(self.recorded.wait(2))
+        row = json.loads((self.directory / 'metadata.jsonl').read_text())
+        self.assertEqual((row['http'], row['downstream_http'], row['failure_phase']), (200, 502, 'upstream_stream_read'))
+        self.assertNotIn('stream_complete', row)
+
+    def test_upstream_connection_reset_after_partial_output_remains_a_stream_error(self):
+        class Response:
+            status = 200
+            def getheader(self, name, default=None):
+                return 'text/event-stream' if name == 'Content-Type' else default
+            def __iter__(self):
+                yield b'data: {"choices":[{"delta":{"content":"partial"}}]}\n'
+                yield b'\n'
+                raise ConnectionResetError('synthetic-private-upstream-detail')
+        class Connection:
+            def request(self, *args, **kwargs): pass
+            def getresponse(self): return Response()
+            def close(self): pass
+        self.gateway.upstream_connection = Connection
+        status, _, body = self.request('/v1beta/models/gemini-4-argon:streamGenerateContent', {'contents': []})
+        self.assertEqual(status, 200)
+        self.assertIn(b'partial', body)
+        self.assertIn(b'Upstream model transport interrupted', body)
+        self.assertNotIn(b'finishReason', body)
+        log = (self.directory / 'metadata.jsonl').read_text()
+        row = json.loads(log)
+        self.assertEqual((row['error_type'], row['failure_phase']), ('ConnectionResetError', 'upstream_stream_read'))
+        self.assertNotIn('synthetic-private-upstream-detail', log)
 
 
 if __name__ == '__main__':

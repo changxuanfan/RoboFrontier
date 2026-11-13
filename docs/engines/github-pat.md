@@ -156,6 +156,13 @@ content, safety-setting overrides and exact `thinkingBudget` translation are
 unsupported and return an error rather than silently discarding input. Upstream
 HTTP errors retain their status and retry metadata. An invalid or incomplete
 translated stream emits an error without inventing a successful finish.
+If the stream fails before producing any translated event, the client receives
+HTTP 502 before response headers are committed. A failure after partial output
+remains an in-stream error. Metadata distinguishes upstream reads from downstream
+writes and records a completed GenAI stream only after validating its finish.
+There is no automatic replay of the model request or tool actions. Drain active
+requests before restarting a deployed connector; one completed request does not
+mean other clients have finished.
 
 PowerShell uses `$env:AGY_LLM_GATEWAY_URL = 'http://127.0.0.1:18450'` and the same
 other variable names; read the credential with `Get-Content -Raw` and `.Trim()`.
