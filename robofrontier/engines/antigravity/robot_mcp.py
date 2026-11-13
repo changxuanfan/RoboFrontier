@@ -7,12 +7,12 @@ from pathlib import Path
 import threading
 import time
 
-from robofrontier.engines.common.robot_mcp import TOOL, RobotBridge, serve
+from robofrontier.engines.common.robot_mcp import TOOL, DelegationBindingError, RobotBridge, serve
 from robofrontier.runtime.store import RuntimeStore
 from robofrontier.runtime.setup import write_json
 from .driver import native_id
 from .profile import fingerprint
-from .provenance import steps, tool_call
+from .provenance import PENDING, steps, tool_call
 from .settings import mcp_tools
 from robofrontier.engines.common.policy_tools import TOOLS, execute as file_tool
 
@@ -83,12 +83,18 @@ class Router:
         deadline = time.monotonic() + 10
         while True:
             rows = steps(home, session)
-            if len(rows) == at + 1:
+            if len(rows) >= at + 1:
                 found = tool_call(rows[at])
                 original = dict(found['args'])
                 original.pop('toolSummary', None)
                 if found['name'] != 'mcp_robofrontier_robot' or original != args:
                     raise ValueError('Native delegation parameters differ from MCP request')
+                if rows[at][2] != PENDING:
+                    raise ValueError('Native delegation step is not pending')
+                if len(rows) != at + 1:
+                    raise DelegationBindingError('DELEGATE_REQUIRES_EXCLUSIVE_STEP',
+                        'No delegation was submitted: later native tool steps prevent a verified fork. '
+                        'Wait for concurrent tools to finish, then issue delegate alone in a new tool-call turn.')
                 break
             if time.monotonic() >= deadline:
                 raise ValueError('Native pending delegation history unavailable')

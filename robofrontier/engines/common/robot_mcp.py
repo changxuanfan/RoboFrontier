@@ -21,6 +21,13 @@ TOOL = json.loads((Path(__file__).resolve().parents[1]/'common/robot_tool.json')
 from robofrontier.runtime.robot_ops import POLICY_OPS, check_request
 
 
+class DelegationBindingError(ValueError):
+    """A trusted host binding refusal with a safe policy-facing recovery hint."""
+    def __init__(self, code, note):
+        super().__init__(note)
+        self.code, self.note = code, note
+
+
 class RobotBridge:
     def __init__(self, run, connection, invoke=client_call, *, bind_delegation=None, bind_all_delegations=False):
         self.bind_delegation = bind_delegation
@@ -77,13 +84,16 @@ class RobotBridge:
                 if binder is None:
                     raise ValueError('Native delegation binding required')
                 binder(self.run, self.actor, args, call_id)
-            except ValueError:
+            except ValueError as exc:
+                code = exc.code if isinstance(exc, DelegationBindingError) else 'DELEGATE_IDENTITY_UNVERIFIED'
+                note = exc.note if isinstance(exc, DelegationBindingError) else (
+                    'No delegation was submitted: native tool identity could not be verified.')
                 host_event(self.run, 'robot_tool_failed', actor=self.actor, op=op, call_id=call_id,
-                           duration_s=time.monotonic()-began, error_code='DELEGATE_IDENTITY_UNVERIFIED')
+                           duration_s=time.monotonic()-began, error_code=code)
                 return {'isError': True, 'content': [{'type': 'text', 'text': json.dumps({
-                    'call_id': call_id, 'error_code': 'DELEGATE_IDENTITY_UNVERIFIED',
+                    'call_id': call_id, 'error_code': code,
                     'request_status': 'rejected', 'execution_status': 'not_submitted',
-                    'note': 'No delegation was submitted: native tool identity could not be verified.'})}]}
+                    'note': note})}]}
         if op in ('move', 'gripper', 'action_batch') and 'cameras' not in data:
             data = {**data, 'cameras': views}
         try:
