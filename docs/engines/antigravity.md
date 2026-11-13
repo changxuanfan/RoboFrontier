@@ -1,6 +1,6 @@
 # Antigravity engine
 
-The adapter runs pinned Antigravity CLI 1.5.5 (`agy`, distinct from `gemini`).
+The adapter runs pinned Antigravity CLI 1.5.7 (`agy`, distinct from `gemini`).
 It supports centralized, hierarchical, peer and adaptive policies using the
 released tasks and existing runtime. Python orchestration, supervision, recovery,
 robot MCP handling and accounting lifecycle are shared with Claude Code under
@@ -29,7 +29,7 @@ Profiles live in the `antigravity` section of `configs/models.json`:
 | --- | --- | --- |
 | `flash_subscription` | Native Antigravity account login | Native subscription service |
 | `flash_api` | Host reads `GEMINI_API_KEY` | Official Gemini API |
-| `flash_service` | Host reads `ANTIGRAVITY_SERVICE_API_KEY` | HTTPS Gemini-compatible `ANTIGRAVITY_SERVICE_BASE_URL` |
+| `flash_service` | Host reads `ANTIGRAVITY_SERVICE_API_KEY` | HTTPS or loopback HTTP Gemini-compatible `ANTIGRAVITY_SERVICE_BASE_URL` |
 
 Native login is a separate mode: API keys and endpoint overrides are rejected in
 that profile. On macOS the adapter uses a private HOME with fixed configuration,
@@ -50,6 +50,14 @@ access that listener, the CLI home, parent environments or the repository. The
 relay forbids redirects and suppresses provider error bodies that might echo
 credentials. A service must implement Gemini's API and tool/image semantics;
 an arbitrary OpenAI-compatible endpoint is insufficient.
+
+Loopback HTTP is accepted only for `localhost` and loopback IP addresses; remote
+services still require HTTPS. A GenAI-compatible relay does not change its
+upstream model limits. GitHub's Gemini Chat Completions route accepted 10 images
+and rejected 11 in account-specific checks, including images in earlier turns.
+This engine does not automatically remove historical images or create collages.
+Such context changes require a separate experiment and are not qualified by the
+native transport preflight.
 
 ## Isolation
 

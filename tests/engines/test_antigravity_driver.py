@@ -17,6 +17,22 @@ from robofrontier.runtime.setup import write_json
 
 
 class ProfileTests(unittest.TestCase):
+    def test_service_accepts_https_and_only_loopback_http(self):
+        profile = {'model': 'flash', 'effort': 'low', 'auth_mode': 'api_key', 'env_key': 'RF_TEST_KEY'}
+        for endpoint in ('https://example.com', 'http://localhost:18450', 'http://127.0.0.1:18450', 'http://[::1]:18450'):
+            with self.subTest(endpoint=endpoint):
+                self.assertEqual(validate({**profile, 'base_url': endpoint+'/'})['base_url'], endpoint)
+        for endpoint in ('http://example.com', 'http://localhost.example.com', 'http://127.0.0.1.example.com',
+                         'http://0.0.0.0', 'http://192.168.1.2'):
+            with self.subTest(endpoint=endpoint), self.assertRaises(ValueError):
+                validate({**profile, 'base_url': endpoint})
+
+    def test_loopback_exception_does_not_allow_embedded_credentials_query_or_fragment(self):
+        profile = {'model': 'flash', 'effort': 'low', 'auth_mode': 'api_key', 'env_key': 'RF_TEST_KEY'}
+        for endpoint in ('http://user:password@localhost', 'http://localhost?key=synthetic', 'http://localhost#fragment'):
+            with self.subTest(endpoint=endpoint), self.assertRaises(ValueError):
+                validate({**profile, 'base_url': endpoint})
+
     def test_subscription_cannot_be_redirected_to_a_service(self):
         with self.assertRaises(ValueError):
             validate({'model': 'flash', 'effort': 'low', 'auth_mode': 'native_login', 'base_url': 'https://example.com'})

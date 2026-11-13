@@ -1,5 +1,6 @@
 """Non-secret launch profiles; authentication belongs to the trusted host."""
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -7,7 +8,7 @@ from urllib.parse import urlsplit
 
 from robofrontier.engines.common.identity import fingerprint
 
-VERSION = '1.5.5'
+VERSION = '1.5.7'
 AUTH_MODES = ('native_login', 'api_key')
 
 
@@ -24,8 +25,14 @@ def validate(value):
         if not isinstance(value.get('env_key'), str) or not value['env_key'].isidentifier():
             raise ValueError('An API profile names a credential variable, never a credential')
         url = urlsplit(value.get('base_url', 'https://generativelanguage.googleapis.com'))
-        if url.scheme != 'https' or not url.hostname or url.username or url.password or url.query or url.fragment:
-            raise ValueError('Gemini-compatible service URL must be HTTPS without credentials, query or fragment')
+        local = url.hostname == 'localhost'
+        if not local:
+            try:
+                local = ipaddress.ip_address(url.hostname or '').is_loopback
+            except ValueError:
+                pass
+        if not (url.scheme == 'https' or url.scheme == 'http' and local) or not url.hostname or url.username or url.password or url.query or url.fragment:
+            raise ValueError('Gemini-compatible service URL must be HTTPS or local HTTP, without credentials, query or fragment')
         value['base_url'] = url.geturl().rstrip('/')
     return value
 

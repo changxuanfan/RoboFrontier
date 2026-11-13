@@ -8,12 +8,12 @@ import tarfile
 import tempfile
 import urllib.request
 
-VERSION = '1.5.5'
-ROOT = 'https://storage.googleapis.com/antigravity-public/antigravity-cli/1.5.5-6740358537805824/'
+VERSION = '1.5.7'
+ROOT = 'https://storage.googleapis.com/antigravity-public/antigravity-cli/1.5.7-6190022064472064/'
 ARCHIVES = {
-    ('Darwin', 'arm64'): ('darwin-arm/cli_mac_arm64.tar.gz', 'ca6424867a4527698e54b805c2456605b905a49ffc9b664ae2ee0fd4510fcd7b82d9721b2622a1d46048156a44431dc894359177fae44207363c8c878687b647'),
-    ('Linux', 'x86_64'): ('linux-x64/cli_linux_x64.tar.gz', '746a2bd73f83b65d9b44f2fc55d0f0f511ff7f89702846213eeabd76d06bc9c98576b424c2babc7b947f15e518447b946ba02dca260b778363c55c07a7f7a277'),
-    ('Linux', 'aarch64'): ('linux-arm/cli_linux_arm64.tar.gz', 'eb3e025c125c1c60a1493a0c1d9cdf15e8372277d6d3b015e8d29e1bd095344eece5cbc2447f238148bd259d5f2daa0f75641adc0ac02b5fad57edc4ed842d59'),
+    ('Darwin', 'arm64'): ('darwin-arm/cli_mac_arm64.tar.gz', 'c9746409083a9b15c217757aa2ef399ee7d4398602a30038583ea45196fc27d1662745341e45a116c07be19c08587de1e5929e365d2a46aea385fa33f0c2396a'),
+    ('Linux', 'x86_64'): ('linux-x64/cli_linux_x64.tar.gz', '60bca280414ed11723f58b3b671962ae394cc2d0c25e3f58e32e1c6847c978cbc77ec6f40e7f3992001c399d80aeb8b64c9ec892abddd591b12413c5ee6d9fce'),
+    ('Linux', 'aarch64'): ('linux-arm/cli_linux_arm64.tar.gz', 'bebd69ad1713414b82e370aec6be0e678a413332bf3c835d9ba22e4befff040b6c74e1bf974fd83ebc4c733ed6e37d2bdc1caae58027c2b326dd04d630bfebb1'),
 }
 
 
