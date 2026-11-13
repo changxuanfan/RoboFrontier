@@ -251,6 +251,9 @@ def retry_eligibility(run, store, *, manual=False, source_root=None, manual_auth
         if reason == 'wall_backstop': return False, BACKSTOP_REFUSAL
         if not rule['automatic']: return False, 'run reached a normal end or was stopped (' + rule['text'] + ')'
         if store.get('after_score'): return False, 'a continuation after the score continues only by hand'
+        # A network continuation that could not be confirmed waits for an operator's review;
+        # continuing by hand is that review (prepare_retry lifts the hold).
+        if store.get('egress_review_hold'): return False, 'held for network review; continue by hand (robofrontier continue)'
         if automatic_continues(store) >= AUTOMATIC_CONTINUES and not journal:
             return False, 'already continued automatically once; continue by hand (robofrontier continue)'
     # A preparation that stopped part way may have left its own restore files unverified.
@@ -368,6 +371,12 @@ def prepare_retry(run, store, reason, *, manual=False, source_root=None, manual_
                                       'manual': bool(journal.get('manual')), 'stop': stop,
                                       'after_score': after_score is not None})
         store.put('segment', segment)
+        if store.get('egress_review_hold'):
+            # Only a manual continuation gets here held (retry_eligibility). Left set, the hold would
+            # keep the new world from serving its own resume request.
+            store.put('egress_review_hold', False)
+            store.event('REVIEW_HOLD_LIFTED', 'Meta', {'segment': segment, 'by': 'manual continue',
+                                                      'egress_recovery': store.get('egress_recovery')})
         store.put('dispatch_paused', True)
         store.put('physics_state', 'stopped')
         store.put('execution_owner_attached', False)

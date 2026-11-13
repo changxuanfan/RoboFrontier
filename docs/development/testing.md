@@ -8,6 +8,8 @@ uv sync --locked --extra oracle
 .venv/bin/robofrontier bootstrap
 ```
 
+The CI `all-tests` job installs the same Oracle extra so the complete suite can import its reference controllers.
+
 Node.js is needed for the Node host tests. Tests that drive an installed engine CLI run it against
 a local stub model and skip when the CLI is absent.
 
