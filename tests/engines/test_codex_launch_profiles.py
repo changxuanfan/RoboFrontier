@@ -8,6 +8,24 @@ from robofrontier.engines.codex.launch import profile, launch_config
 
 
 class CodexLaunchProfileTests(unittest.TestCase):
+    def test_github_pat_profile_keeps_auth_in_environment_and_adds_integration_headers(self):
+        p = profile('sol61_github_pat')
+        with tempfile.TemporaryDirectory() as folder:
+            launch = launch_config(p, Path(folder))
+        self.assertEqual((p['model'], p['provider'], p['effort']), ('gpt-6.1-sol', 'github_pat', 'high'))
+        self.assertIn('model_providers.github_pat.env_key="ROBOFRONTIER_GITHUB_PAT"', launch['args'])
+        self.assertIn('model_providers.github_pat.requires_openai_auth=false', launch['args'])
+        self.assertIn('model_providers.github_pat.supports_websockets=false', launch['args'])
+        self.assertIn('model_providers.github_pat.http_headers.X-GitHub-Api-Version="2025-04-01"', launch['args'])
+        self.assertNotIn('Authorization', json.dumps(launch))
+
+    def test_credentials_and_invalid_header_names_cannot_enter_frozen_args(self):
+        for headers in ({'Authorization': 'secret'}, {'Cookie': 'secret'}, {'X.Token': 'bad'}, {'X-Test': 'bad\r\nvalue'}):
+            with self.subTest(headers=headers), tempfile.TemporaryDirectory() as folder:
+                p = {**profile('sol61_github_pat'), 'http_headers': headers}
+                with self.assertRaises(ValueError):
+                    launch_config(p, Path(folder))
+
     def test_openlux_luna_has_separate_provider_and_high_effort(self):
         p = profile('openlux-luna')
         with tempfile.TemporaryDirectory() as folder:

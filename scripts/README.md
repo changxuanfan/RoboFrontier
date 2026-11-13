@@ -3,7 +3,20 @@
 Experiments run through the `robofrontier` command ([getting started](../docs/getting-started.md),
 [command-line guide](../docs/unified-cli.md)). The scripts here are the engineering commands
 around it. Run each from the repository root as `.venv/bin/python -m scripts.NAME`; `--help`
-lists its options. None calls a model provider.
+lists its options. The GitHub PAT gateway below calls a model provider only when
+listing models or forwarding an authenticated client request; the other scripts do not.
+
+## GitHub PAT model transport
+
+| Script | Purpose |
+| --- | --- |
+| `github_pat_gateway.py` | Loopback PAT transport for model catalogs, Chat Completions and Responses; no agent runtime |
+
+`python scripts/github_pat_gateway.py --token-file /private/github_token.txt`
+starts a standard-library-only loopback connector usable without installing
+RoboFrontier, Copilot CLI or GHC API. It forwards Chat Completions and Responses,
+including streamed tool calls. `--list-models` queries the current account's model
+catalog. See [setup, Codex and Antigravity examples](../docs/engines/github-pat.md).
 
 ## Policy environment
 
