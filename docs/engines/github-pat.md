@@ -149,6 +149,27 @@ containing a random code from an MCP tool and checking both the outgoing image
 parts and the model's exact answer. This workaround needs no Copilot CLI, image
 captioning model, extra model call or conversation store.
 
+### Image limits belong to the upstream model route
+
+Account-specific checks on 2026-11-13 found that GitHub Chat Completions accepts
+10 images for `gemini-4-argon`, `gemini-4-carbon` and `gemini-3.8-flash`, and
+rejects 11. The count includes historical messages and tool-result attachments;
+splitting the same images across messages does not reset it. These three model
+IDs rejected requests to GitHub's Responses endpoint as unsupported.
+
+Catalog limits alone do not establish the effective request boundary. Although
+the catalog advertised one image for `gpt-6.1-sol`, its GitHub Responses route
+completed a request containing 512 synthetic 128-by-128 images at low detail.
+The native Codex CLI also completed a second turn whose outgoing request
+contained two historical images plus 11 new images. These checks establish
+accepted inputs, not a maximum, high-resolution capacity, or task-quality parity.
+
+The connector preserves image parts and does not automatically trim history,
+summarize images or create collages. Clients must manage their image budget or
+handle the upstream rejection. Changing the local GenAI URL does not change the
+upstream GitHub limit. A direct Google route requires its own credentials and
+has its own model-specific limits.
+
 This implements the GenAI subset needed by the native CLI: text and inline
 images, function tools, one candidate, common sampling settings, structured JSON
 responses and `thinkingLevel`. File URI fetching, audio/video input, cached
