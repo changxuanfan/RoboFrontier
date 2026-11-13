@@ -44,11 +44,19 @@ Forwarded routes, with or without the `/v1` prefix:
 | Method | Route | Intended client |
 | --- | --- | --- |
 | GET | `/models` | Current account catalog |
-| POST | `/chat/completions` | OpenAI Chat Completions clients, including Antigravity's gateway mode |
+| POST | `/chat/completions` | OpenAI Chat Completions clients |
 | POST | `/responses` | Codex and other Responses clients |
 | POST | `/responses/compact` | Passed through if supported by the upstream |
+| POST | `/v1beta/models/MODEL:generateContent` | Antigravity native GenAI gateway mode |
+| POST | `/v1beta/models/MODEL:streamGenerateContent?alt=sse` | Streaming GenAI gateway mode, including MCP images |
 
-HTTP status, streamed response bytes, tool calls and `Retry-After` pass through.
+On OpenAI routes, HTTP status, streamed response bytes, tool calls and
+`Retry-After` pass through. GenAI routes translate requests and responses to/from
+upstream Chat Completions, preserving text, inline images, function arguments,
+tool results, reasoning text and token usage. Images attached to a GenAI
+`functionResponse` become user image parts after that group of tool results;
+they are not replaced by filenames or image descriptions. The native GenAI
+client can authenticate with `x-goog-api-key`; Bearer authentication also works.
 There is no conversation store, agent loop, tool execution, synthetic successful
 response, automatic request replay or fallback to a different account/model.
 WebSocket connections and other API routes are not implemented. Disable
@@ -116,20 +124,38 @@ supports_websockets = false
 
 See the official [Codex gateway requirements](https://learn.chatgpt.com/docs/enterprise/gateway-compatibility).
 
-## Antigravity: OpenAI gateway mode
+## Antigravity: GenAI gateway mode with MCP images
 
 With an Antigravity CLI version that supports the
-[OpenAI gateway variables](https://docs.cloud.google.com/gemini/enterprise/docs/ai-developer-tools/connect-enterprise-gateway),
+[gateway variables](https://docs.cloud.google.com/gemini/enterprise/docs/ai-developer-tools/connect-enterprise-gateway),
 run the connector with `--flash-helper`, then launch the native CLI from a shell
 with these variables (shown for macOS/Linux):
 
 ```sh
 export AGY_LLM_GATEWAY_URL=http://127.0.0.1:18450
 export AGY_LLM_GATEWAY_API_KEY="$(cat /private/github_token.txt)"
-export AGY_LLM_GATEWAY_WIRE_PROTOCOL=openai
+export AGY_LLM_GATEWAY_WIRE_PROTOCOL=genai
 export AGY_LLM_GATEWAY_MODELS=gemini-4-argon,gemini-3.8-flash
 agy
 ```
+
+Use **`genai` for image tools**. Antigravity CLI 1.5.5 was observed dropping MCP
+image attachments from its OpenAI-mode model requests: the tool completed, but
+the model received text only. The same CLI preserves those attachments in its
+native GenAI requests, which this connector converts to real Chat Completions
+image parts. A direct image API test or successful text tool call alone does not
+validate the native tool-image round trip. Validate it by returning an image
+containing a random code from an MCP tool and checking both the outgoing image
+parts and the model's exact answer. This workaround needs no Copilot CLI, image
+captioning model, extra model call or conversation store.
+
+This implements the GenAI subset needed by the native CLI: text and inline
+images, function tools, one candidate, common sampling settings, structured JSON
+responses and `thinkingLevel`. File URI fetching, audio/video input, cached
+content, safety-setting overrides and exact `thinkingBudget` translation are
+unsupported and return an error rather than silently discarding input. Upstream
+HTTP errors retain their status and retry metadata. An invalid or incomplete
+translated stream emits an error without inventing a successful finish.
 
 PowerShell uses `$env:AGY_LLM_GATEWAY_URL = 'http://127.0.0.1:18450'` and the same
 other variable names; read the credential with `Get-Content -Raw` and `.Trim()`.

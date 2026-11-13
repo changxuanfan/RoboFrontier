@@ -11,10 +11,12 @@ import http.client
 import json
 import os
 from pathlib import Path
+import re
 import ssl
 import sys
 import threading
 import time
+from urllib.parse import unquote, urlsplit
 
 UPSTREAM = 'api.githubcopilot.com'
 MAX_BODY = 64 * 1024 * 1024
@@ -26,6 +28,242 @@ HEADERS = {
     'User-Agent': 'GitHubCopilotChat/0.26.7', 'OpenAI-Intent': 'conversation-panel',
     'X-Initiator': 'agent', 'Copilot-Vision-Request': 'true',
 }
+
+
+def json_schema(value):
+    """Translate GenAI's schema spelling without changing tool semantics."""
+    if isinstance(value, list):
+        return [json_schema(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    result = {}
+    for key, child in value.items():
+        if key == 'propertyOrdering':
+            continue
+        if key == 'type' and isinstance(child, str):
+            child = child.lower()
+        elif key in ('minLength', 'maxLength', 'minItems', 'maxItems', 'minProperties', 'maxProperties') and isinstance(child, str):
+            child = int(child)
+        if key in ('properties', '$defs', 'definitions', 'patternProperties') and isinstance(child, dict):
+            result[key] = {name: json_schema(schema) for name, schema in child.items()}
+        elif key in ('enum', 'default', 'const', 'examples'):
+            result[key] = child
+        else:
+            result[key] = json_schema(child)
+    if result.pop('nullable', False):
+        if isinstance(result.get('type'), str):
+            result['type'] = [result['type'], 'null']
+        else:
+            result = {'anyOf': [result, {'type': 'null'}]}
+    return result
+
+
+def image_part(part):
+    inline = part.get('inlineData', part.get('inline_data'))
+    if not isinstance(inline, dict):
+        raise ValueError('Only inline GenAI images are supported; file/audio/video inputs are not fetched')
+    mime, data = inline.get('mimeType', inline.get('mime_type', '')), inline.get('data')
+    if not mime.startswith('image/') or not isinstance(data, str) or not data:
+        raise ValueError('Expected a nonempty inline image with an image MIME type')
+    return {'type': 'image_url', 'image_url': {'url': 'data:' + mime + ';base64,' + data}}
+
+
+def genai_to_chat(payload, model, stream):
+    """Stateless protocol conversion, including images attached to tool results."""
+    if any(payload.get(key) for key in ('cachedContent', 'safetySettings')):
+        raise ValueError('cachedContent and safetySettings overrides are not supported by this transport')
+    messages, pending = [], []
+    system = payload.get('systemInstruction', payload.get('system_instruction', {}))
+    if system:
+        parts = system.get('parts', [])
+        if any('text' not in part for part in parts):
+            raise ValueError('GenAI system instructions must contain text')
+        text = '\n'.join(part['text'] for part in parts)
+        if text:
+            messages.append({'role': 'system', 'content': text})
+    for turn, content in enumerate(payload.get('contents', [])):
+        role, parts = content.get('role', 'user'), content.get('parts', [])
+        if role == 'model':
+            texts, thoughts, calls = [], [], []
+            for index, part in enumerate(parts):
+                if 'functionCall' in part:
+                    call = part['functionCall']
+                    call_id = call.get('id') or 'call_' + str(turn) + '_' + str(index)
+                    pending.append((call_id, call['name']))
+                    calls.append({'id': call_id, 'type': 'function', 'function': {
+                        'name': call['name'], 'arguments': json.dumps(call.get('args', {}), ensure_ascii=False)}})
+                elif 'text' in part:
+                    (thoughts if part.get('thought') else texts).append(part['text'])
+                else:
+                    raise ValueError('Unsupported GenAI model content part')
+            message = {'role': 'assistant', 'content': ''.join(texts) or None}
+            if thoughts:
+                message['reasoning_content'] = ''.join(thoughts)
+            if calls:
+                message['tool_calls'] = calls
+            messages.append(message)
+        elif role == 'user':
+            user_parts = []
+            for part in parts:
+                if 'functionResponse' in part:
+                    result = part['functionResponse']
+                    match = next((item for item in pending if
+                                  (item[0] == result['id'] if result.get('id') else item[1] == result['name'])), None)
+                    if match is None:
+                        raise ValueError('GenAI tool result does not match a preceding function call')
+                    pending.remove(match)
+                    messages.append({'role': 'tool', 'tool_call_id': match[0],
+                                     'content': json.dumps(result.get('response', {}), ensure_ascii=False)})
+                    attachments = result.get('parts', [])
+                    if attachments:
+                        user_parts.append({'type': 'text', 'text': 'Images returned by tool ' + result['name'] + ' (call ' + match[0] + '):'})
+                        user_parts.extend(image_part(item) for item in attachments)
+                elif 'text' in part:
+                    user_parts.append({'type': 'text', 'text': part['text']})
+                else:
+                    user_parts.append(image_part(part))
+            # OpenAI tool messages are text-only. Put their image attachments in
+            # a user image message after all results of this parallel tool group.
+            if user_parts:
+                if pending:
+                    raise ValueError('GenAI tool images arrived before all parallel tool results')
+                messages.append({'role': 'user', 'content': user_parts})
+        else:
+            raise ValueError('Unsupported GenAI conversation role')
+    if pending:
+        raise ValueError('GenAI history has unanswered function calls')
+    request = {'model': model, 'messages': messages, 'stream': stream}
+    if stream:
+        request['stream_options'] = {'include_usage': True}
+    declarations = [item for tool in payload.get('tools', []) for item in tool.get('functionDeclarations', [])]
+    if any(set(tool) - {'functionDeclarations'} for tool in payload.get('tools', [])):
+        raise ValueError('Only GenAI function declarations are supported')
+    if declarations:
+        request['tools'] = [{'type': 'function', 'function': {
+            'name': item['name'], 'description': item.get('description', ''),
+            'parameters': json_schema(item.get('parametersJsonSchema', item.get('parameters', {'type': 'object'})))}}
+            for item in declarations]
+        calling = payload.get('toolConfig', {}).get('functionCallingConfig', {})
+        mode = calling.get('mode', 'AUTO')
+        if mode not in ('AUTO', 'NONE', 'ANY'):
+            raise ValueError('Unsupported GenAI function calling mode')
+        allowed = calling.get('allowedFunctionNames')
+        if allowed:
+            request['tools'] = [tool for tool in request['tools'] if tool['function']['name'] in allowed]
+            if len(request['tools']) != len(set(allowed)):
+                raise ValueError('Unknown allowed GenAI function name')
+        request['tool_choice'] = {'AUTO': 'auto', 'NONE': 'none', 'ANY': 'required'}[mode]
+    config = payload.get('generationConfig', {})
+    fields = {'maxOutputTokens': 'max_completion_tokens', 'temperature': 'temperature', 'topP': 'top_p', 'stopSequences': 'stop'}
+    supported = set(fields) | {'thinkingConfig', 'responseMimeType', 'responseSchema', 'responseJsonSchema', 'candidateCount'}
+    if set(config) - supported or config.get('candidateCount', 1) != 1:
+        raise ValueError('Unsupported GenAI generation configuration')
+    request.update({target: config[source] for source, target in fields.items() if source in config})
+    thinking = config.get('thinkingConfig', {})
+    if 'thinkingBudget' in thinking:
+        raise ValueError('Use thinkingLevel; an exact thinkingBudget cannot be preserved on Chat Completions')
+    if thinking.get('thinkingLevel'):
+        request['reasoning_effort'] = thinking['thinkingLevel'].lower()
+    schema = config.get('responseJsonSchema', config.get('responseSchema'))
+    if schema:
+        request['response_format'] = {'type': 'json_schema', 'json_schema': {'name': 'response', 'schema': json_schema(schema)}}
+    elif config.get('responseMimeType') == 'application/json':
+        request['response_format'] = {'type': 'json_object'}
+    elif config.get('responseMimeType', 'text/plain') != 'text/plain':
+        raise ValueError('Unsupported GenAI response MIME type')
+    return request
+
+
+def usage_metadata(usage):
+    result = {target: usage[source] for source, target in (
+        ('prompt_tokens', 'promptTokenCount'), ('completion_tokens', 'candidatesTokenCount'), ('total_tokens', 'totalTokenCount')) if source in usage}
+    details = usage.get('completion_tokens_details') or {}
+    if 'reasoning_tokens' in details:
+        result['thoughtsTokenCount'] = details['reasoning_tokens']
+    return result
+
+
+def genai_candidate(parts, finish=None):
+    candidate = {'index': 0, 'content': {'role': 'model', 'parts': parts}}
+    if finish:
+        try:
+            candidate['finishReason'] = {'stop': 'STOP', 'tool_calls': 'STOP', 'length': 'MAX_TOKENS', 'content_filter': 'SAFETY'}[finish]
+        except KeyError:
+            raise ValueError('Unsupported upstream finish reason') from None
+    return {'candidates': [candidate]}
+
+
+def message_parts(message):
+    parts = []
+    if message.get('reasoning_content'):
+        parts.append({'text': message['reasoning_content'], 'thought': True})
+    if message.get('content'):
+        parts.append({'text': message['content']})
+    for call in message.get('tool_calls', []):
+        function = call['function']
+        args = json.loads(function['arguments'])
+        if not isinstance(args, dict):
+            raise ValueError('Upstream function arguments must be a JSON object')
+        parts.append({'functionCall': {'id': call['id'], 'name': function['name'], 'args': args}})
+    return parts
+
+
+def genai_response(document):
+    choice = document['choices'][0]
+    result = genai_candidate(message_parts(choice['message']), choice['finish_reason'])
+    if document.get('usage'):
+        result['usageMetadata'] = usage_metadata(document['usage'])
+    return result
+
+
+def sse_documents(response):
+    data = []
+    for raw in response:
+        line = raw.decode('utf-8').rstrip('\r\n')
+        if not line:
+            if data:
+                value = '\n'.join(data)
+                if value == '[DONE]':
+                    return
+                yield json.loads(value)
+                data = []
+        elif line.startswith('data:'):
+            data.append(line[5:].lstrip(' '))
+    if data:
+        raise ValueError('Truncated upstream SSE event')
+
+
+def genai_stream(response):
+    calls, finish, usage = {}, None, None
+    for document in sse_documents(response):
+        if 'error' in document:
+            raise ValueError('Upstream returned an in-stream error')
+        if document.get('usage'):
+            usage = usage_metadata(document['usage'])
+        choices = document.get('choices', [])
+        if not choices:
+            continue
+        choice = choices[0]
+        delta = choice.get('delta', {})
+        for source, thought in (('reasoning_content', True), ('content', False)):
+            if delta.get(source):
+                part = {'text': delta[source]}
+                if thought:
+                    part['thought'] = True
+                yield genai_candidate([part])
+        for item in delta.get('tool_calls', []):
+            entry = calls.setdefault(item['index'], {'id': '', 'function': {'name': '', 'arguments': ''}})
+            entry['id'] += item.get('id', '')
+            for key in ('name', 'arguments'):
+                entry['function'][key] += item.get('function', {}).get(key, '')
+        if choice.get('finish_reason'):
+            finish = choice['finish_reason']
+    if finish is None:
+        raise ValueError('Upstream stream ended without a finish reason')
+    result = genai_candidate(message_parts({'tool_calls': [calls[index] for index in sorted(calls)]}), finish)
+    if usage:
+        result['usageMetadata'] = usage
+    yield result
 
 
 def read_token(token_file=None):
@@ -87,16 +325,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def handle_api(self):
         path = self.path[3:] if self.path.startswith('/v1/') else self.path
+        genai = re.fullmatch(r'/v1beta/models/([^/:]+):(streamGenerateContent|generateContent)', unquote(urlsplit(path).path)) if self.command == 'POST' else None
         if self.command == 'GET' and path == '/healthz':
             return self.reply(200, {'ready': True, 'upstream': UPSTREAM,
                                     'scope': 'Local transport ready; not an upstream credential check'})
-        if path not in ROUTES[self.command]:
+        if path not in ROUTES[self.command] and not genai:
             return self.error(404, 'Unsupported model endpoint')
         try:
             token = read_token(self.server.token_file)
         except ValueError:
             return self.error(503, 'PAT configuration is unavailable')
-        if not hmac.compare_digest(self.headers.get('Authorization', '').encode(), ('Bearer ' + token).encode()):
+        supplied = self.headers.get('Authorization', '')
+        if genai and not supplied and self.headers.get('x-goog-api-key'):
+            supplied = 'Bearer ' + self.headers['x-goog-api-key']
+        if not hmac.compare_digest(supplied.encode(), ('Bearer ' + token).encode()):
             return self.error(401, 'Gateway authentication required')
         body, payload = b'', {}
         if self.command == 'POST':
@@ -115,6 +357,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.error(400, 'Invalid JSON')
             if not isinstance(payload, dict):
                 return self.error(400, 'Expected a JSON object')
+            if genai:
+                try:
+                    payload = genai_to_chat(payload, genai[1], genai[2] == 'streamGenerateContent')
+                except (KeyError, TypeError, ValueError, AttributeError):
+                    return self.error(400, 'Invalid or unsupported GenAI request configuration or content')
+                path = '/chat/completions'
+                body = json.dumps(payload).encode()
             if self.server.flash_helper and path == '/chat/completions':
                 changed = False
                 if payload.get('model') == 'gemini-3.1-flash-lite-preview':
@@ -125,7 +374,15 @@ class Handler(BaseHTTPRequestHandler):
                     changed = True
                 if changed:
                     body = json.dumps(payload).encode()
-        record = {'at': time.time(), 'path': path, 'model': payload.get('model')}
+        record = {'at': time.time(), 'path': path, 'model': payload.get('model'),
+                  'wire_protocol': 'genai' if genai else 'openai',
+                  'reasoning_effort': payload.get('reasoning_effort'),
+                  'max_completion_tokens': payload.get('max_completion_tokens'),
+                  'response_format': (payload.get('response_format') or {}).get('type'),
+                  'message_shapes': [{'role': message.get('role'), 'parts': len(message['content']) if isinstance(message.get('content'), list) else None,
+                                      'empty': not message.get('content')} for message in payload.get('messages', [])],
+                  'image_parts': sum(part.get('type') == 'image_url' for message in payload.get('messages', [])
+                                     if isinstance(message.get('content'), list) for part in message['content'])}
         connection, sent = None, False
         try:
             connection = self.server.upstream_connection()
@@ -133,17 +390,33 @@ class Handler(BaseHTTPRequestHandler):
                                headers=headers(token, payload.get('stream', False)))
             response = connection.getresponse()
             record['http'] = response.status
+            if genai and response.status == 200 and not payload['stream']:
+                try:
+                    result = genai_response(json.load(response))
+                except (KeyError, TypeError, ValueError, IndexError):
+                    return self.error(502, 'Invalid upstream model response')
+                return self.reply(200, result)
             self.send_response(response.status)
-            self.send_header('Content-Type', response.getheader('Content-Type', 'application/json'))
+            self.send_header('Content-Type', 'text/event-stream' if genai and response.status == 200 else response.getheader('Content-Type', 'application/json'))
             self.send_header('Connection', 'close')
             for name in ('Retry-After', 'x-request-id'):
                 if response.getheader(name):
                     self.send_header(name, response.getheader(name))
             self.end_headers()
             sent, self.close_connection = True, True
-            while chunk := response.read1(16384):
-                self.wfile.write(chunk)
-                self.wfile.flush()
+            if genai and response.status == 200:
+                try:
+                    for item in genai_stream(response):
+                        self.wfile.write(('data: ' + json.dumps(item) + '\n\n').encode())
+                        self.wfile.flush()
+                except (KeyError, TypeError, ValueError, IndexError):
+                    record['error_type'] = 'InvalidUpstreamStream'
+                    self.wfile.write(b'data: {"error":{"code":502,"status":"INTERNAL","message":"Invalid or incomplete upstream model stream"}}\n\n')
+                    self.wfile.flush()
+            else:
+                while chunk := response.read1(16384):
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
         except (OSError, http.client.HTTPException) as exc:
             record['error_type'] = type(exc).__name__
             if not sent:

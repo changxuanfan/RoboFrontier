@@ -10,7 +10,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from scripts.github_pat_gateway import Gateway, MAX_BODY, read_token
+from scripts.github_pat_gateway import Gateway, MAX_BODY, genai_to_chat, json_schema, read_token
 
 TOKEN = 'local-test-pat-not-a-credential'
 STREAM = (b'event: response.output_item.done\ndata: {"type":"function_call","name":"robot","arguments":"{}"}\n\n'
@@ -161,6 +161,98 @@ class GatewayTests(unittest.TestCase):
         self.token.write_text('two\ntokens')
         with self.assertRaises(ValueError):
             read_token(self.token)
+
+    def test_genai_mcp_images_and_parallel_tool_results_reach_the_model(self):
+        self.stream = json.dumps({'choices': [{'message': {'content': '371802'}, 'finish_reason': 'stop'}],
+                                  'usage': {'prompt_tokens': 40, 'completion_tokens': 6, 'total_tokens': 46}}).encode()
+        payload = {'systemInstruction': {'parts': [{'text': 'Read tool images.'}]}, 'contents': [
+            {'role': 'user', 'parts': [{'text': 'Read the code.'}]},
+            {'role': 'model', 'parts': [{'functionCall': {'name': 'camera', 'args': {'view': 1}}},
+                                        {'functionCall': {'name': 'camera', 'args': {'view': 2}}}]},
+            {'role': 'user', 'parts': [
+                {'functionResponse': {'name': 'camera', 'response': {'output': 'first'}, 'parts': [
+                    {'inlineData': {'mimeType': 'image/png', 'data': 'image-one'}}]}},
+                {'functionResponse': {'name': 'camera', 'response': {'output': 'second'}, 'parts': [
+                    {'inlineData': {'mimeType': 'image/jpeg', 'data': 'image-two'}}]}}]}],
+            'tools': [{'functionDeclarations': [{'name': 'camera', 'parameters': {
+                'type': 'OBJECT', 'properties': {'view': {'type': 'INTEGER'}}, 'required': ['view']}}]}],
+            'generationConfig': {'thinkingConfig': {'thinkingLevel': 'HIGH'}, 'maxOutputTokens': 100}}
+        status, _, body = self.request('/v1beta/models/gemini-4-argon:generateContent', payload,
+                                       extra={'Authorization': '', 'x-goog-api-key': TOKEN})
+        self.assertEqual(status, 200)
+        output = json.loads(body)
+        self.assertEqual(output['candidates'][0]['content']['parts'], [{'text': '371802'}])
+        self.assertEqual(output['usageMetadata']['totalTokenCount'], 46)
+        request = json.loads(self.requests[-1][3])
+        self.assertEqual(self.requests[-1][1], '/chat/completions')
+        self.assertEqual([m['role'] for m in request['messages']], ['system', 'user', 'assistant', 'tool', 'tool', 'user'])
+        self.assertEqual([m['tool_call_id'] for m in request['messages'] if m['role'] == 'tool'], ['call_1_0', 'call_1_1'])
+        urls = [part['image_url']['url'] for part in request['messages'][-1]['content'] if part['type'] == 'image_url']
+        self.assertEqual(urls, ['data:image/png;base64,image-one', 'data:image/jpeg;base64,image-two'])
+        self.assertEqual((request['reasoning_effort'], request['max_completion_tokens']), ('high', 100))
+        self.assertEqual(request['tools'][0]['function']['parameters']['properties']['view']['type'], 'integer')
+        log = (self.directory / 'metadata.jsonl').read_text()
+        self.assertNotIn('image-one', log)
+        self.assertNotIn(TOKEN, log)
+
+    def test_genai_stream_preserves_reasoning_usage_and_fragmented_tool_arguments(self):
+        chunks = [
+            {'choices': [{'delta': {'reasoning_content': 'Inspecting the scene.'}}]},
+            {'choices': [{'delta': {'content': 'Reading image.'}}]},
+            {'choices': [{'delta': {'tool_calls': [{'index': 0, 'id': 'call_x', 'function': {'name': 'camera', 'arguments': '{"view":'}}]}}]},
+            {'choices': [{'delta': {'tool_calls': [{'index': 0, 'function': {'arguments': '2}'}}]}, 'finish_reason': 'tool_calls'}]},
+            {'choices': [], 'usage': {'prompt_tokens': 50, 'completion_tokens': 10, 'total_tokens': 60}}]
+        self.stream = b''.join(('data: ' + json.dumps(chunk) + '\n\n').encode() for chunk in chunks) + b'data: [DONE]\n\n'
+        status, _, body = self.request('/v1beta/models/gemini-4-argon:streamGenerateContent?alt=sse',
+                                       {'contents': [{'role': 'user', 'parts': [{'text': 'Read.'}]}]})
+        self.assertEqual(status, 200)
+        events = [json.loads(line[6:]) for line in body.decode().splitlines() if line.startswith('data: ')]
+        self.assertEqual(events[0]['candidates'][0]['content']['parts'], [{'text': 'Inspecting the scene.', 'thought': True}])
+        final = events[-1]
+        self.assertEqual(final['candidates'][0]['content']['parts'], [
+            {'functionCall': {'id': 'call_x', 'name': 'camera', 'args': {'view': 2}}}])
+        self.assertEqual(final['candidates'][0]['finishReason'], 'STOP')
+        self.assertEqual(final['usageMetadata']['totalTokenCount'], 60)
+
+    def test_genai_stream_does_not_invent_success_after_truncation(self):
+        self.stream = b'data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'
+        status, _, body = self.request('/v1beta/models/gemini-4-argon:streamGenerateContent', {'contents': []})
+        self.assertEqual(status, 200)
+        self.assertIn(b'"error"', body)
+        self.assertNotIn(b'finishReason', body)
+        self.assertNotIn(b'STOP', body)
+
+    def test_genai_invalid_auth_and_unsupported_inputs_never_contact_upstream(self):
+        path = '/v1beta/models/gemini-4-argon:generateContent'
+        self.assertEqual(self.request(path, {}, token='wrong')[0], 401)
+        self.assertEqual(self.request(path, {'contents': [{'parts': [{'fileData': {'fileUri': 'file:///private'}}]}]})[0], 400)
+        self.assertEqual(self.request(path, {'safetySettings': [{'category': 'any'}]})[0], 400)
+        self.assertEqual(self.request(path, {'generationConfig': {'thinkingConfig': {'thinkingBudget': 100}}})[0], 400)
+        self.assertEqual(self.requests, [])
+
+    def test_schema_conversion_preserves_property_names_and_default_values(self):
+        converted = json_schema({'type': 'OBJECT', 'propertyOrdering': ['nullable'], 'properties': {
+            'nullable': {'type': 'STRING', 'minLength': '1', 'nullable': True},
+            'propertyOrdering': {'type': 'OBJECT', 'default': {'type': 'STRING'}}}})
+        self.assertEqual(converted['properties']['nullable']['type'], ['string', 'null'])
+        self.assertEqual(converted['properties']['nullable']['minLength'], 1)
+        self.assertEqual(converted['properties']['propertyOrdering']['default'], {'type': 'STRING'})
+
+    def test_genai_helpers_keep_flash_low_and_upstream_errors_remain_errors(self):
+        self.gateway.flash_helper = True
+        self.status, self.stream = 429, b'{"error":{"message":"quota"}}'
+        status, headers, body = self.request('/v1beta/models/gemini-3.8-flash:streamGenerateContent',
+            {'contents': [], 'generationConfig': {'thinkingConfig': {'thinkingLevel': 'MINIMAL'}}})
+        self.assertEqual((status, body, headers['Retry-After']), (429, self.stream, '7'))
+        self.assertEqual(json.loads(self.requests[-1][3])['reasoning_effort'], 'low')
+
+    def test_genai_auxiliary_empty_system_instruction_is_omitted(self):
+        # Native auxiliary monitors send this empty instruction. The upstream
+        # rejects an empty OpenAI system message with invalid_request_body.
+        request = genai_to_chat({'systemInstruction': {'role': 'user', 'parts': [{'text': ''}]},
+                                 'contents': [{'role': 'user', 'parts': [{'text': 'Review the request.'}]}]},
+                                'gemini-3.8-flash', True)
+        self.assertEqual(request['messages'], [{'role': 'user', 'content': [{'type': 'text', 'text': 'Review the request.'}]}])
 
 
 if __name__ == '__main__':
