@@ -139,7 +139,7 @@ export AGY_LLM_GATEWAY_MODELS=gemini-4-argon,gemini-3.8-flash
 agy
 ```
 
-Use **`genai` for image tools**. Antigravity CLI 1.5.5 was observed dropping MCP
+Use **`genai` for image tools**. Antigravity CLI 1.5.7 was observed dropping MCP
 image attachments from its OpenAI-mode model requests: the tool completed, but
 the model received text only. The same CLI preserves those attachments in its
 native GenAI requests, which this connector converts to real Chat Completions
