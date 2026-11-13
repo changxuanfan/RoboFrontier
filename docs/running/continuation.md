@@ -72,7 +72,11 @@ own records, and `segments.STOP_REASONS` what may follow:
 - a motion frame was recorded.
 
 A continuation by itself further needs more than 60 s of the limit left, by the
-run's own clock (see [Time](#time)), and none after a continuation past the score.
+run's own clock (see [Time](#time)), none after a continuation past the score, and
+no network review hold (`egress_review_hold`, from `NETWORK_CONTINUATION_UNCERTAIN`).
+Continuing a held run by hand is the operator's review: preparing the segment lifts
+the hold (`REVIEW_HOLD_LIFTED`), since a new world never serves its own resume
+request while held.
 
 The Codex batch asks after every host exit, clean or not, and the Claude batch
 after every supervisor end except its own wall limit, a STOP, a finished run or a

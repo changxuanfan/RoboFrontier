@@ -29,7 +29,7 @@ class QuotaPauseTests(NetworkResendTests):
         self.assertIsNotNone(self.s.store.get('quota_pause'))
         self.s.pump(); self.assertEqual(self.s.store.get('physics_state'), 'paused_by_egress')
         self.assertTrue(self.recover()); self.assertEqual(len(self.calls), 1)  # waiting for the reset
-        self.s.egress_pause.quota['resets_at'] = time.time() - 120
+        self.s.egress_pause.quota.update(paused_at=time.time() - 300, resets_at=time.time() - 120)  # paused before its reset, which has passed
         self.s.pump(); self.assertEqual(self.s.store.get('physics_state'), 'running')
         self.assertTrue(self.recover())
         self.host.wait(3)
