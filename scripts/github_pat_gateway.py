@@ -68,6 +68,22 @@ def image_part(part):
     return {'type': 'image_url', 'image_url': {'url': 'data:' + mime + ';base64,' + data}}
 
 
+def conversation_parts(contents):
+    # Some native API-key clients retain role=model when appending a function
+    # result. Its semantic role is still a tool response, even in a mixed turn.
+    for content in contents:
+        role, parts = None, []
+        for part in content.get('parts', []):
+            semantic_role = 'user' if 'functionResponse' in part else content.get('role', 'user')
+            if role is not None and semantic_role != role:
+                yield role, parts
+                parts = []
+            role = semantic_role
+            parts.append(part)
+        if parts:
+            yield role, parts
+
+
 def genai_to_chat(payload, model, stream):
     """Stateless protocol conversion, including images attached to tool results."""
     if any(payload.get(key) for key in ('cachedContent', 'safetySettings')):
@@ -81,8 +97,7 @@ def genai_to_chat(payload, model, stream):
         text = '\n'.join(part['text'] for part in parts)
         if text:
             messages.append({'role': 'system', 'content': text})
-    for turn, content in enumerate(payload.get('contents', [])):
-        role, parts = content.get('role', 'user'), content.get('parts', [])
+    for turn, (role, parts) in enumerate(conversation_parts(payload.get('contents', []))):
         if role == 'model':
             texts, thoughts, calls = [], [], []
             for index, part in enumerate(parts):
@@ -95,7 +110,7 @@ def genai_to_chat(payload, model, stream):
                 elif 'text' in part:
                     (thoughts if part.get('thought') else texts).append(part['text'])
                 else:
-                    raise ValueError('Unsupported GenAI model content part')
+                    raise ValueError('Unsupported GenAI model content part: ' + ','.join(sorted(part)))
             message = {'role': 'assistant', 'content': ''.join(texts) or None}
             if thoughts:
                 message['reasoning_content'] = ''.join(thoughts)
@@ -360,8 +375,13 @@ class Handler(BaseHTTPRequestHandler):
             if genai:
                 try:
                     payload = genai_to_chat(payload, genai[1], genai[2] == 'streamGenerateContent')
-                except (KeyError, TypeError, ValueError, AttributeError):
-                    return self.error(400, 'Invalid or unsupported GenAI request configuration or content')
+                except (KeyError, TypeError, ValueError, AttributeError) as exc:
+                    message = str(exc)
+                    detail = message if message.startswith(('GenAI ', 'Unsupported GenAI ', 'Only inline GenAI ',
+                        'Only GenAI ', 'Expected a nonempty inline image', 'Use thinkingLevel', 'cachedContent', 'Unknown allowed GenAI ')) else 'Invalid GenAI request structure'
+                    self.server.record({'at': time.time(), 'wire_protocol': 'genai', 'http': 400,
+                                        'error_type': 'InvalidGenAIInput', 'reason': detail})
+                    return self.error(400, detail)
                 path = '/chat/completions'
                 body = json.dumps(payload).encode()
             if self.server.flash_helper and path == '/chat/completions':

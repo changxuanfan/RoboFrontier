@@ -254,6 +254,15 @@ class GatewayTests(unittest.TestCase):
                                 'gemini-3.8-flash', True)
         self.assertEqual(request['messages'], [{'role': 'user', 'content': [{'type': 'text', 'text': 'Review the request.'}]}])
 
+    def test_native_api_key_mixed_model_turn_keeps_tool_response_and_image(self):
+        request = genai_to_chat({'contents': [{'role': 'model', 'parts': [
+            {'functionCall': {'name': 'camera', 'args': {}, 'id': 'view-1'}},
+            {'functionResponse': {'name': 'camera', 'id': 'view-1', 'response': {'output': 'Frame'},
+                'parts': [{'inlineData': {'mimeType': 'image/png', 'data': 'image'}}]}}]}]}, 'gemini-4-argon', True)
+        self.assertEqual([message['role'] for message in request['messages']], ['assistant', 'tool', 'user'])
+        self.assertEqual(request['messages'][1]['tool_call_id'], 'view-1')
+        self.assertEqual(request['messages'][2]['content'][-1]['image_url']['url'], 'data:image/png;base64,image')
+
 
 if __name__ == '__main__':
     unittest.main()
