@@ -89,7 +89,7 @@ def load_harness(path=None):
         raise ValueError('Use Meta and Controller; legacy Coordinator is accepted for frozen runs')
     if c['topology'] not in ('hierarchical','peer','centralized','adaptive'):
         raise ValueError('Unknown topology')
-    if c.get('engine','codex') not in ('codex','claude'):
+    if c.get('engine','codex') not in ('codex','claude','antigravity'):
         raise ValueError('Unknown policy engine')
     from ..runtime.tool_mode import of as tool_mode
     tool_mode(c)  # Absent in every earlier run, which is a full run.

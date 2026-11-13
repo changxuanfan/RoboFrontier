@@ -20,6 +20,7 @@ ENGINE_SCRIPTS = {
               'robofrontier/engines/codex/codex_preflight.js', 'robofrontier/engines/codex/tool_broker.js',
               'robofrontier/engines/codex/gateway_rpc.js', 'robofrontier/engines/codex/job_gateway.js', 'robofrontier/engines/codex/borrowed_auth.js'),
     'claude': (),
+    'antigravity': (),
 }
 
 
@@ -155,6 +156,10 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     from .access import record as access_record
     write_json(directory/'private/inputs/policy-access.json',
                access_record(directory, no_environment=mode == tool_mode.ROBOT_ONLY))
+    if cfg.get('engine') == 'antigravity' and mode != tool_mode.ROBOT_ONLY:
+        # The brokered file tools of a full run; a robot_only run has none.
+        from robofrontier.engines.antigravity.settings import prepare_tools
+        prepare_tools(directory)
     paths = list((ROOT/'robofrontier').rglob('*.py'))
     paths += [path for path in (ROOT/'prompts').rglob('*.md') if 'archive' not in path.relative_to(ROOT/'prompts').parts]
     # Freeze only the policy-host scripts of this run's engine, so editing the other
@@ -181,6 +186,9 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         inputs[str(puzzle_relative)]=hashlib.sha256(p.read_bytes()).hexdigest()
     p=directory/'private/inputs/policy-access.json'
     inputs[str(p.relative_to(directory))]=hashlib.sha256(p.read_bytes()).hexdigest()
+    p=directory/'private/inputs/policy-tools.json'
+    if p.is_file():
+        inputs[str(p.relative_to(directory))]=hashlib.sha256(p.read_bytes()).hexdigest()
     for folder in ('private/inputs/meta','private/inputs/bootstrap','private/inputs/release-family'):
         for p in sorted((directory/folder).glob('*')):
             if p.is_file():inputs[str(p.relative_to(directory))]=hashlib.sha256(p.read_bytes()).hexdigest()

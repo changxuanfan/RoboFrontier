@@ -167,6 +167,15 @@ class Delegations:
     def activate(self, key, owner):
         with self.s.transaction():
             b = self.owned(key,owner)
+            # Checked with the grant itself: a host's own check before its last native step
+            # can be stale by the time it asks, and activation hands robots to the children.
+            if b['status']!='creating':
+                raise ValueError('Fork batch is not being created')
+            if (self.s.get('lifecycle')!='running' or self.s.get('dispatch_paused',False)
+                    or self.s.get('physics_state')=='paused_by_user'):
+                raise ValueError('Delegation activation requires a running unpaused world')
+            if time.time()>=b.get('setup_deadline',float('inf')):
+                raise ValueError('Native setup deadline passed before activation')
             if b.get('snapshot_thread_id') and not b.get('snapshot_provenance'):
                 raise ValueError('Snapshot is not verified')
             if not all(c['thread_id'] and c.get('verified') for c in b['children']):

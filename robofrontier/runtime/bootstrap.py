@@ -17,7 +17,8 @@ ENGINE_LINES = {
     'codex': ('View images listed in the task with view_image. Do not use Codex collaboration tools '
               '(spawn_agent and similar); split work only through robot delegate.'),
 }
-# The last line of a robot_only run's first message, the same on both engines: the robot
+ENGINE_LINES['antigravity'] = ENGINE_LINES['claude']
+# The last line of a robot_only run's first message, the same on every engine: the robot
 # tool is the role's only tool (runtime/tool_mode.py).
 ROBOT_ONLY_LINE = ('To view an image listed in the task (initial_reference_images, robot_layout_image, '
                    'target.reference_image), call robot with op public_file and data {"path": "<listed path>"}. '

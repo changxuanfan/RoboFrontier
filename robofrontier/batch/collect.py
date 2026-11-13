@@ -67,6 +67,9 @@ def native_matches(engine, run, home, tid):
     """Where one native session is looked up and its transcripts there, plain or archived.
 
     A run-v6 Codex run carries its own copies; earlier Codex runs use the shared home."""
+    if engine == 'antigravity':
+        folder = run/'private/engine/transcripts'
+        return folder, [p for p in (folder/(tid+'.jsonl'),) if p.is_file()]
     if engine == 'claude':
         root = history_directory(run)
         return root, [p for p in session_glob(root/'projects', tid+'.jsonl') if p.parent.parent == root/'projects']
@@ -134,7 +137,7 @@ def _files(root, tolerated=(), skipped=None):
                     raise ValueError('Symlink inside evidence; resolve explicitly before collecting: ' + str(parent/name))
                 linked.add(name)
         # run-v3 keeps the native configuration in private/claude-config, run-v6 in private/engine/config.
-        dirs[:] = sorted(d for d in dirs if d not in linked and d != 'claude-config' and not (d == 'config' and parent.name == 'engine'))
+        dirs[:] = sorted(d for d in dirs if d not in linked and d != 'claude-config' and not (d in ('config', 'home') and parent.name == 'engine'))
         # Finder writes .DS_Store into any folder it shows, even during collection;
         # it is desktop metadata, not run evidence.
         for name in sorted(f for f in files if f != '.DS_Store' and f not in linked):
@@ -222,10 +225,10 @@ def collect_batch(batch_path, output, *, codex_home=None):
     batch = load(batch_path/'batch.json')
     # Claude batches prepared before 2026-11-11 are 'robofrontier.claude-draft.v1'.
     claude = ('robofrontier.claude-batch.v2', 'robofrontier.claude-draft.v1')
-    engine = 'claude' if batch.get('schema') in claude else 'codex'
-    if batch.get('schema') not in (None, 'robofrontier.cli-benchmark.v1', *claude):
+    engine = 'antigravity' if batch.get('schema') == 'robofrontier.antigravity-batch.v1' else 'claude' if batch.get('schema') in claude else 'codex'
+    if batch.get('schema') not in (None, 'robofrontier.cli-benchmark.v1', *claude, 'robofrontier.antigravity-batch.v1'):
         raise ValueError('Unsupported batch schema')
-    state_path = run_layout.batch_path(batch_path, 'engineering_status') if engine == 'claude' else batch_path/'batch.json'
+    state_path = run_layout.batch_path(batch_path, 'engineering_status') if engine in ('claude', 'antigravity') else batch_path/'batch.json'
     state = load(state_path)
     if state.get('status') not in TERMINAL:
         raise ValueError('Collect only a stopped batch; inspect runner status first')
@@ -326,7 +329,7 @@ def collect_batch(batch_path, output, *, codex_home=None):
                     if not isinstance(tid, str) or not ID.fullmatch(tid):
                         issues.append(str(actor)+': missing or invalid session id')
                         continue
-                    config = history_directory(run)
+                    config = history_directory(run) if engine == 'claude' else run/'private/engine'
                     _, matches = native_matches(engine, run, home, tid)
                     native_queries.append((run, home, tid, matches))
                     if len(matches) != 1:
@@ -361,7 +364,7 @@ def collect_batch(batch_path, output, *, codex_home=None):
                     issues.append('no recorded policy role sessions')
                 # Snapshot anchors are not policy actors, but are required to
                 # reconstruct and audit the native lineage of their delegates.
-                if engine in ('codex', 'claude'):
+                if engine in ('codex', 'claude', 'antigravity'):
                     for delegation_id, delegation in meta.get('delegations', {}).items():
                         tid = delegation.get('snapshot_thread_id')
                         if tid is None:

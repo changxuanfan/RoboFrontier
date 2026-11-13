@@ -239,6 +239,37 @@
           }
         }
       }
+    },
+    "antigravity": {
+      "schema": "robofrontier.antigravity-models.v1",
+      "cli_version": "1.5.5",
+      "profiles": {
+        "flash_subscription": {
+          "provider": "google",
+          "model": "gemini-3.8-flash-high",
+          "effort": "high",
+          "vision": true,
+          "auth_mode": "native_login"
+        },
+        "flash_api": {
+          "provider": "gemini",
+          "model": "gemini-3.8-flash-high",
+          "effort": "high",
+          "vision": true,
+          "auth_mode": "api_key",
+          "env_key": "GEMINI_API_KEY",
+          "base_url": "https://generativelanguage.googleapis.com"
+        },
+        "flash_service": {
+          "provider": "gemini_compatible",
+          "model": "gemini-3.8-flash-high",
+          "effort": "high",
+          "vision": true,
+          "auth_mode": "api_key",
+          "env_key": "ANTIGRAVITY_SERVICE_API_KEY",
+          "base_url_env": "ANTIGRAVITY_SERVICE_BASE_URL"
+        }
+      }
     }
   }
 }

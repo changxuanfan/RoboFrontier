@@ -25,6 +25,15 @@ def occupancy(intervals, start, end):
 
 
 def model_evidence(directory, actor, thread, config, codex_home=None):
+    if config.get('engine') == 'antigravity':
+        turns = []
+        for path in (directory/'private/engine/turns').glob('*-summary.json'):
+            value = json.loads(path.read_text())
+            if value.get('session_id') == thread:
+                turns.append({'turn_id': value.get('turn_id'), 'model': config['model'],
+                              'effort': config['effort'], 'status': value.get('status')})
+        return {'thread_id': thread, 'turns': turns, 'verified': False, 'native_subagent_calls': {},
+                'source': 'antigravity_host_requested_model_not_provider_identity'}
     if config.get('engine', 'codex') == 'claude':
         # CLI reports are useful observations but do not establish the effective
         # provider model or rule out remapping and auxiliary requests.
@@ -122,6 +131,18 @@ def export(directory, codex_home=None):
             'interpretation':'Action overlap covers active tool executions, excluding idle pose/grasp holding. It does not establish independent useful work or an architecture advantage.'}
     # Both engines report the same way; a run's precheck receipts gate it before it starts.
     report['engine'] = config.get('engine', 'codex')
+    if report['engine'] == 'antigravity':
+        launch = json.loads((directory/'private/inputs/antigravity.json').read_text())
+        contexts = [json.loads(p.read_text()) for p in sorted((directory/'private/engine/context').glob('*.json'))
+                    if not p.name.endswith('-creation.json')]
+        report['engine_contract'] = {
+            'requested_context_capacity': launch['context_window'],
+            'requested_auto_compact_token_limit': launch['requested_auto_compact_token_limit'],
+            'context_receipts': contexts, 'differences': launch['differences'],
+            'provider_context_capacity_verified': False,
+            'effective_compaction_configuration_verified': bool(contexts) and all(
+                c.get('effective_auto_compact_token_limit') == launch['requested_auto_compact_token_limit']
+                for c in contexts)}
     if isinstance(metric_evaluation,dict) and 'metrics' in metric_evaluation:
         report['task_metrics']={**metric_evaluation['metrics'],
             'robot_action_count':sum('started_sim_s' in a for a in actions.values()),
@@ -136,8 +157,8 @@ def export(directory, codex_home=None):
            f"Wall time: {report['wall_seconds']} seconds; actions: {sum(report['actions_by_arm'].values())}; messages: {len(messages)}.",'',
            f"Requested model settings verified: {report['all_requested_models_verified']}; frozen input changes: {report['changed_inputs']}.",'',
            'Action overlap excludes idle holding. Interpret it alongside task progress and video; one pilot does not establish architectural superiority.']
-    if config.get('engine', 'codex') == 'claude':
-        lines[2:2]=['Claude engineering run: not qualified for formal benchmark scoring; do not report it as a scored result.','']
+    if config.get('engine', 'codex') in ('claude', 'antigravity'):
+        lines[2:2]=[config['engine'].capitalize()+' engineering run: not qualified for formal benchmark scoring; do not report it as a scored result.','']
     if 'task_metrics' in report:
         lines+=['',f"Task metrics: {report['task_metrics']}."]
     (output/'report.md').write_text('\n'.join(lines)+'\n')

@@ -210,11 +210,60 @@ def run_codex_landlock(run, command, scratch, seen, shared):
     seen.append({'content': done.stdout + done.stderr, 'is_error': done.returncode != 0})
 
 
-ENGINES = {'codex': run_codex_landlock if sys.platform == 'linux' else run_codex, 'claude': run_claude}
+def run_antigravity(run, command, scratch, seen, shared):
+    from robofrontier.engines.antigravity.driver import Driver
+    from robofrontier.engines.antigravity.gateway import Gateway
+    calls = [('mcp_robofrontier_policy_exec', {'command': command, 'timeout_s': 60,
+                             'toolSummary': 'Check policy environment'}),
+             ('write_file', {'Path': str(shared/'tool-written.txt'), 'Content': 'x', 'Overwrite': True})]
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *args): pass
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            done = [p['functionResponse'] for c in body.get('contents', []) for p in c.get('parts', [])
+                    if 'functionResponse' in p]
+            seen.extend(item for item in done if item not in seen)
+            parts = ([{'functionCall': {'name': calls[len(done)][0], 'args': calls[len(done)][1]}}]
+                     if len(done) < len(calls) else [{'text': 'done'}])
+            value = {'candidates': [{'content': {'role': 'model', 'parts': parts}, 'finishReason': 'STOP', 'index': 0}],
+                     'usageMetadata': {'promptTokenCount': 11, 'candidatesTokenCount': 2, 'totalTokenCount': 13}}
+            _stream(self, ('data: ' + json.dumps(value) + '\r\n\r\n').encode())
+    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    (run/'private/inputs/bootstrap').mkdir(parents=True, exist_ok=True)
+    (run/'private/inputs/bootstrap/system.md').write_text('You are a RoboFrontier policy agent.\n')
+    from robofrontier.engines.antigravity.settings import prepare_tools
+    from robofrontier.runtime.store import RuntimeStore
+    prepare_tools(run)
+    config = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
+    config.update(engine='antigravity', topology='centralized')
+    store = RuntimeStore(run/'private/state/runtime.sqlite')
+    store.initialize(run.name, config, ['Arm1'])
+    store.put('lifecycle', 'running')
+    selected = {'model': 'gemini-3.8-flash-low', 'effort': 'low', 'auth_mode': 'api_key',
+                'env_key': 'ROBOFRONTIER_OFFLINE_STUB_TOKEN', 'base_url': 'https://generativelanguage.googleapis.com'}
+    driver = Driver(run, 'Controller', selected, {**os.environ, HOST_ONLY: '1',
+        'ROBOFRONTIER_OFFLINE_STUB_TOKEN': 'host-only-probe-credential'},
+        gateway_factory=lambda base, key: Gateway('http://127.0.0.1:' + str(server.server_port), key))
+    try:
+        store.update_agent('Controller', thread_id=driver.open())
+        driver(selected, selected['model'], 'low', None, 'go', run, {}, timeout=PROBE_LIMIT_S)
+    finally:
+        driver.close()
+        server.shutdown()
+        server.server_close()
+        store.close()
+
+
+ENGINES = {'codex': run_codex_landlock if sys.platform == 'linux' else run_codex, 'claude': run_claude,
+           'antigravity': run_antigravity}
 
 
 def isolation(name):
     """The sandbox the check runs `name` in, which a run prepared on this host would freeze."""
+    if name == 'antigravity':
+        from robofrontier.engines.antigravity.settings import isolation as agy_isolation
+        return agy_isolation()
     if name == 'codex':
         return 'landlock-v1' if ENGINES['codex'] is run_codex_landlock else 'native'
     from robofrontier.engines.common.landlock import choose

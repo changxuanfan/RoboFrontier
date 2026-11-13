@@ -29,7 +29,7 @@ def _native_probe(engine, backend='native', robot_only=False):
                    CLAUDE_CONFIG_DIR=str(Path(temporary)/'claude'))
         for name in ('CODEX_HOME', 'CLAUDE_CONFIG_DIR'):
             Path(env[name]).mkdir(mode=0o700)
-        version = _checked([engine, '--version'], env=env)
+        version = _checked(['agy' if engine == 'antigravity' else engine, '--version'], env=env)
         if engine == 'codex':
             if backend == 'landlock-v1':
                 checked = json.loads(_checked([sys.executable, '-m', 'robofrontier.engines.codex.tool_backend'], env=env))

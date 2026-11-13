@@ -93,6 +93,10 @@ def load_configuration(path=None, overrides=None, *, host=None):
             and 'profile' not in updates.get('policy', {})
             and 'profile' not in (overrides or {}).get('policy', {})):
         result['policy']['profile'] = 'haiku_subscription_token'
+    if (result['policy']['engine'] == 'antigravity'
+            and 'profile' not in updates.get('policy', {})
+            and 'profile' not in (overrides or {}).get('policy', {})):
+        result['policy']['profile'] = 'flash_subscription'
     # `auto` values are settled here, before anything is frozen: for this host, for the Slurm
     # nodes a submission will run on (host='slurm', from the job's GPU request), or for the
     # Linux container a Docker command starts (host='container', with this host's GPU if any).
@@ -176,7 +180,7 @@ def validate_configuration(config):
         if config[section][field] not in allowed:
             raise ValueError(f'Invalid {section}.{field}: choose from {", ".join(map(str, allowed))}')
 
-    choice('policy', 'engine', ('codex', 'claude'))
+    choice('policy', 'engine', ('codex', 'claude', 'antigravity'))
     choice('policy', 'topology', TOPOLOGIES)
     choice('policy', 'effort', ('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
     robot_only = False

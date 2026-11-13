@@ -24,6 +24,7 @@ catalog. See [setup, Codex and Antigravity examples](../docs/engines/github-pat.
 | --- | --- |
 | `build_policy_env.py` | Build the read-only Python environment and offline wheel store for policy scripts, once per host (`--base FOLDER`) |
 | `check_policy_env.py` | Check a built environment and each engine's sandbox with a local stub model before a batch uses them (`ENVIRONMENT --scratch FOLDER [--engine]`) |
+| `install_antigravity.py` | Download and verify the pinned Antigravity CLI for the current platform (`--output PATH`) |
 
 See [policy environment](../docs/running/policy-environment.md).
 

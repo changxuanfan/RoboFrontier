@@ -21,6 +21,7 @@ def packed(value):
 SESSION_SOURCES = {
     'codex': ('codex.wait_threads', 'codex.app-server'),
     'claude': ('claude.host',),
+    'antigravity': ('antigravity.host',),
 }
 
 # Runs prepared before the rename record the controller-worker lead as 'coordinator'.
