@@ -93,6 +93,11 @@ class EligibilityTests(unittest.TestCase):
         self.assertIn('only by hand', self.reason())
         self.assertEqual(self.manual(), 'no recorded motion frame')
 
+    def test_a_run_held_for_network_review_continues_only_by_hand(self):
+        self.store.put('egress_review_hold', True)
+        self.assertIn('held for network review', self.reason())
+        self.assertEqual(self.manual(), 'no recorded motion frame')
+
     def test_process_statistics_combine_the_last_snapshot_of_each_segment(self):
         out = self.run / 'private/outputs'; header = {'schema': 'x', 'format': 'events-1s'}
         snap = lambda t, samples, contacts, peak, violations: {'type': 'snapshot', 'sim_time_s': t, 'result': {
@@ -217,6 +222,17 @@ class PreparationTests(unittest.TestCase):
         run_segments.prepare_retry(self.run, self.store, 'manual continue', manual=True)
         self.assertFalse(stop.exists())
         self.assertIsNone(self.store.get('after_score'))
+
+    def test_continuing_a_network_review_hold_by_hand_lifts_the_hold(self):
+        # 2026-11-13: two runs held for review were continued by hand; the hold survived into the
+        # new world, which kept the resume request waiting until the host gave up, twice.
+        self.store.put('egress_review_hold', True); self.store.put('dispatch_paused', True)
+        with self.assertRaisesRegex(ValueError, 'held for network review'):
+            run_segments.prepare_retry(self.run, self.store, 'automatic')
+        run_segments.prepare_retry(self.run, self.store, 'manual continue', manual=True)
+        self.assertFalse(self.store.get('egress_review_hold'))
+        lifted = [e for e in self.store.events() if e['kind'] == 'REVIEW_HOLD_LIFTED']
+        self.assertEqual(len(lifted), 1); self.assertEqual(lifted[0]['details']['segment'], 1)
 
     def test_a_preparation_stopped_part_way_completes_in_the_same_segment(self):
         self.running_action('Controller-call_1')
