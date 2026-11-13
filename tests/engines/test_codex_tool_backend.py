@@ -32,6 +32,25 @@ def fixture(base, name):
 
 
 class WorkerRequestTests(unittest.TestCase):
+    def test_apparmor_restriction_is_checked_before_entering_a_namespace(self):
+        from robofrontier.engines.codex import tool_worker
+        with patch.object(Path, 'exists', return_value=True), \
+                patch.object(Path, 'read_text', return_value='1\n'), \
+                patch.object(tool_worker.os, 'unshare') as unshare:
+            with self.assertRaisesRegex(PermissionError, 'AppArmor'):
+                tool_worker.private_shared_memory()
+            unshare.assert_not_called()
+
+    def test_unrestricted_apparmor_keeps_the_native_namespace_attempt(self):
+        from robofrontier.engines.codex import tool_worker
+        for exists, value in ((False, ''), (True, '0\n')):
+            with self.subTest(exists=exists), patch.object(Path, 'exists', return_value=exists), \
+                    patch.object(Path, 'read_text', return_value=value), \
+                    patch.object(tool_worker.os, 'unshare', side_effect=PermissionError('native denial')) as unshare:
+                with self.assertRaisesRegex(PermissionError, 'native denial'):
+                    tool_worker.private_shared_memory()
+                unshare.assert_called_once()
+
     def test_any_command_the_broker_admits_reaches_the_worker_whole_however_it_is_escaped(self):
         import io
         from robofrontier.engines.codex import tool_worker

@@ -101,6 +101,9 @@ a permission profile; Claude Code as file-tool rules plus its Bash isolation.
   unprivileged user namespaces. Without them (a RunPod pod), and always for Claude's Landlock
   Bash, `/dev/shm` stays closed, so `multiprocessing.Pool` and `ProcessPoolExecutor` fail;
   threads and plain subprocesses work. The check records this as a known limit.
+  When AppArmor restricts unprivileged user namespaces, the worker checks that
+  restriction before entering an unmapped namespace and keeps `/dev/shm` closed.
+  It does not change the host's AppArmor settings or grant access to shared locks.
 - **`ProcessPoolExecutor` fails under Claude on macOS.** Its sandbox refuses a system limit the
   executor reads first; `multiprocessing.Pool` works.
 - **Under Landlock, processes stay visible.** A policy shell can list other processes but cannot
