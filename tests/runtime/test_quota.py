@@ -3,7 +3,7 @@ from datetime import datetime
 import unittest
 from zoneinfo import ZoneInfo
 
-from robofrontier.runtime.quota import MARGIN_S, RECHECK_S, resume_at, usage_limit
+from robofrontier.runtime.quota import MARGIN_S, PAST_RESET_S, RECHECK_S, resume_at, usage_limit
 
 NY = ZoneInfo('America/New_York')
 NOW = datetime(2026, 11, 10, 14, 31, tzinfo=NY).timestamp()
@@ -15,9 +15,30 @@ class QuotaTests(unittest.TestCase):
         self.assertEqual(found['resets_at'], datetime(2026, 11, 10, 15, 0, tzinfo=NY).timestamp())
         found = usage_limit("You've hit your weekly limit · resets Nov 14, 9am (America/New_York)", NOW)
         self.assertEqual(found['resets_at'], datetime(2026, 11, 14, 9, 0, tzinfo=NY).timestamp())
-        # A time already past today is tomorrow's.
+        # A time that passed more than three hours ago is tomorrow's; a more recent one is today's,
+        # a reset still under way.
+        found = usage_limit("You've hit your session limit · resets 10am (America/New_York)", NOW)
+        self.assertEqual(found['resets_at'], datetime(2026, 11, 11, 10, 0, tzinfo=NY).timestamp())
         found = usage_limit("You've hit your session limit · resets 1:30pm (America/New_York)", NOW)
-        self.assertEqual(found['resets_at'], datetime(2026, 11, 11, 13, 30, tzinfo=NY).timestamp())
+        self.assertEqual(found['resets_at'], datetime(2026, 11, 10, 13, 30, tzinfo=NY).timestamp())
+
+    def test_a_limit_that_outlasts_its_stated_reset(self):
+        # 2026-11-13: worlds resumed at 15:21 after "resets 3:20pm"; the continuation failed again
+        # with the same text. It was read as tomorrow's 3:20pm, and in other runs it ended the new
+        # pause at once, spending the roles' one continuation on a limit still in force.
+        hk = ZoneInfo('Asia/Hong_Kong')
+        now = datetime(2026, 11, 13, 15, 21, tzinfo=hk).timestamp()
+        found = usage_limit("You've hit your 5-hour limit \u00b7 resets 3:20pm (Asia/Hong_Kong)", now)
+        self.assertEqual(found['resets_at'], datetime(2026, 11, 13, 15, 20, tzinfo=hk).timestamp())
+        self.assertEqual(resume_at({'resets_at': found['resets_at'], 'paused_at': now}), now + PAST_RESET_S)
+
+    def test_a_hyphenated_window_name_is_a_usage_limit(self):
+        # The message that stopped ten Opus runs on 2026-11-11: it was read as a session error.
+        now = datetime(2026, 11, 11, 17, 45, tzinfo=ZoneInfo('Asia/Hong_Kong')).timestamp()
+        found = usage_limit("You've hit your 5-hour limit \u00b7 resets 9:10pm (Asia/Hong_Kong)", now)
+        self.assertIsNotNone(found)
+        self.assertEqual(found['resets_at'], datetime(2026, 11, 11, 21, 10, tzinfo=ZoneInfo('Asia/Hong_Kong')).timestamp())
+        self.assertIsNotNone(usage_limit("You\u2019ve hit your 7-day limit \u00b7 resets Nov 14, 9am (America/New_York)", now))
 
     def test_older_claude_and_codex_texts(self):
         self.assertEqual(usage_limit('Claude AI usage limit reached|1700000000', NOW)['resets_at'], None)  # far past
@@ -74,7 +95,8 @@ class WorldQuotaPauseTests(active.Fixture):
         self.assertEqual(self.s.store.get('physics_state'), 'paused_by_egress')
         self.assertEqual(len(self.events('QUOTA_PAUSED')), 1)
         self.s.pump(); self.assertEqual(self.events('QUOTA_RESUMED'), [])
-        self.s.egress_pause.quota['resets_at'] = time.time() - 120  # the reset has passed
+        # The pause began before its reset, and the reset has passed.
+        self.s.egress_pause.quota.update(paused_at=time.time() - 300, resets_at=time.time() - 120)
         self.s.pump()
         self.assertEqual(len(self.events('QUOTA_RESUMED')), 1)
         self.assertIsNone(self.s.store.get('quota_pause'))

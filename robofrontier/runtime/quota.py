@@ -19,12 +19,17 @@ import time
 from datetime import datetime, timedelta
 
 # Text that names a plan limit (not a short rate limit).
-LIMIT = re.compile(r"(you[\u2019']?ve hit your (?:\w+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|"
+# The window's name may be hyphenated: Claude Code says "You've hit your 5-hour limit".
+LIMIT = re.compile(r"(you[\u2019']?ve hit your (?:[\w-]+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|"
                    r"usageLimitExceeded|weekly limit|session limit)", re.I)
 # When a reset time cannot be read, the world tries again after this long.
 RECHECK_S = 1800.
 # The world resumes this long after the stated reset, as reset times are rounded.
 MARGIN_S = 60.
+# A reset the limit has outlasted is tried again this long after the pause begins.
+PAST_RESET_S = 600.
+# A stated clock time this recent is the current reset, not the same time tomorrow.
+JUST_PASSED_S = 3 * 3600.
 # A reset further away than this is not believed; the world tries again after RECHECK_S.
 LONGEST_S = 8 * 86400.
 
@@ -69,7 +74,10 @@ def _at(when, now, zone):
     clock = _clock(when)
     if clock is None: return None
     moment = local.replace(hour=clock[0], minute=clock[1], second=0, microsecond=0)
-    if moment.timestamp() <= now: moment += timedelta(days=1)
+    # A stated time that passed less than JUST_PASSED_S ago is that reset, still under way: a
+    # turn sent a minute after "resets 3:20pm" can fail with the same text. Only an older time
+    # means the next day.
+    if moment.timestamp() <= now - JUST_PASSED_S: moment += timedelta(days=1)
     return moment.timestamp()
 
 
@@ -108,16 +116,20 @@ def usage_limit(error, now=None):
     if not text or not LIMIT.search(text): return None
     now = time.time() if now is None else now
     reset = resets_at(text, now)
-    if reset is not None and not now - 3600 < reset < now + LONGEST_S: reset = None
+    if reset is not None and not now - JUST_PASSED_S < reset < now + LONGEST_S: reset = None
     return {'text': text[:500], 'resets_at': reset}
 
 
 def resume_at(request, now=None):
     """When a world paused for this request resumes: after the stated reset, else RECHECK_S after
-    the pause began."""
+    the pause began. A reset that has already passed when the pause begins (the limit outlasted
+    its stated time) is waited on for PAST_RESET_S, not resumed at once: an instant resume would
+    spend each role's one continuation of the pause on a limit that is still in force."""
     reset = request.get('resets_at')
     started = request.get('paused_at') or (time.time() if now is None else now)
-    return reset + MARGIN_S if isinstance(reset, (int, float)) else started + RECHECK_S
+    if not isinstance(reset, (int, float)):
+        return started + RECHECK_S
+    return max(reset + MARGIN_S, started + PAST_RESET_S) if reset <= started else reset + MARGIN_S
 
 
 def main(argv=None):

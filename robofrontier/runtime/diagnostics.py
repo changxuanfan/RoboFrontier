@@ -20,7 +20,7 @@ def _checked(command, *, env, timeout=60):
     return result.stdout.strip()
 
 
-def _native_probe(engine, backend='native'):
+def _native_probe(engine, backend='native', robot_only=False):
     with tempfile.TemporaryDirectory(prefix='rf-native-probe-') as temporary:
         # Do not import another Desktop/session's mutable config or credentials.
         env = {key: value for key, value in os.environ.items() if key in (
@@ -36,6 +36,10 @@ def _native_probe(engine, backend='native'):
                 return {'version': version, **checked}
             if backend != 'native':
                 raise ValueError('Unknown Codex tool backend')
+            if robot_only:
+                # No command is ever run for a robot_only role, so Codex's own sandbox is not
+                # needed; a host that forbids user namespaces (a RunPod pod) can run it.
+                return {'version': version, 'sandbox_checked': False, 'tool_mode': 'robot_only'}
             _checked(['codex', 'sandbox', '--', 'sh', '-c', 'test -r configs/models.json'], env=env, timeout=30)
         return {'version': version, 'sandbox_checked': engine == 'codex'}
 
@@ -70,7 +74,8 @@ def inspect_runtime(config, *, render=True):
     """Return separate local checks; success does not qualify a provider or run."""
     checks = {}
     backend = config['runtime'].get('codex_tool_backend', 'native')
-    probes = [('native_cli', lambda: _native_probe(config['policy']['engine'], backend))]
+    robot_only = config['policy'].get('tool_mode', 'full') == 'robot_only'
+    probes = [('native_cli', lambda: _native_probe(config['policy']['engine'], backend, robot_only))]
     if render:
         probes.append(('render', lambda: _render_probe(config['render']['device'])))
     for name, probe in probes:
