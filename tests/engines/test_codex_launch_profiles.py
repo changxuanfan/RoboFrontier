@@ -19,6 +19,16 @@ class CodexLaunchProfileTests(unittest.TestCase):
         self.assertIn('model_providers.github_pat.http_headers.X-GitHub-Api-Version="2025-04-01"', launch['args'])
         self.assertNotIn('Authorization', json.dumps(launch))
 
+    def test_astra_github_pat_profile_is_the_same_provider_for_gpt_6_astra(self):
+        p, base = profile('astra_github_pat'), profile('sol61_github_pat')
+        self.assertEqual((p['model'], p['provider'], p['effort'], p['context_capacity']),
+                         ('gpt-6-astra', 'github_pat', 'high', profile('astra')['context_capacity']))
+        self.assertEqual((p['base_url'], p['env_key'], p['http_headers']), (base['base_url'], base['env_key'], base['http_headers']))
+        with tempfile.TemporaryDirectory() as folder:
+            launch = launch_config(p, Path(folder))
+        self.assertIn('model_providers.github_pat.env_key="ROBOFRONTIER_GITHUB_PAT"', launch['args'])
+        self.assertNotIn('Authorization', json.dumps(launch))
+
     def test_credentials_and_invalid_header_names_cannot_enter_frozen_args(self):
         for headers in ({'Authorization': 'secret'}, {'Cookie': 'secret'}, {'X.Token': 'bad'}, {'X-Test': 'bad\r\nvalue'}):
             with self.subTest(headers=headers), tempfile.TemporaryDirectory() as folder:
