@@ -35,6 +35,9 @@ def private_shared_memory():
     Runs before Landlock and seccomp, which forbid these calls, and fails rather than fall
     back to the shared folder.
     """
+    apparmor = Path('/proc/sys/kernel/apparmor_restrict_unprivileged_userns')
+    if apparmor.exists() and apparmor.read_text().strip() == '1':
+        raise PermissionError(errno.EPERM, 'AppArmor restricts unprivileged user namespaces')
     uid, gid = os.getuid(), os.getgid()
     os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNS)
     Path('/proc/self/setgroups').write_text('deny')
