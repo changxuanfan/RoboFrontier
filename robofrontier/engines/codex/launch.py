@@ -129,6 +129,12 @@ def launch_config(p, folder, run_dir=None):
             prefix+'env_key':p['env_key'], prefix+'wire_api':'responses',
             prefix+'requires_openai_auth':False, prefix+'supports_websockets':False,
             prefix+'request_max_retries':3, prefix+'stream_max_retries':3})
+        for name, value in p.get('http_headers', {}).items():
+            if not re.fullmatch(r'[A-Za-z0-9_-]+', name) or not isinstance(value, str):
+                raise ValueError('Provider HTTP headers require simple names and string values')
+            if name.lower() in ('authorization', 'proxy-authorization', 'cookie') or '\r' in value or '\n' in value:
+                raise ValueError('Keep credentials out of frozen HTTP headers; use env_key')
+            values[prefix+'http_headers.'+name] = value
     # Local Codex model catalog teaches the CLI that this exact model accepts
     # images. No global provider/auth/default settings are modified.
     cache_path=codex_home()/'models_cache.json'
