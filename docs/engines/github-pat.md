@@ -82,6 +82,9 @@ process. The checked-in `sol61_github_pat` profile uses `gpt-6.1-sol` with `high
 effort and host-only `ROBOFRONTIER_GITHUB_PAT`. Its non-secret integration headers
 are frozen with the provider profile; the credential remains an environment lookup.
 It disables OpenAI subscription authentication and provider WebSockets.
+`astra_github_pat` is the same provider for `gpt-6-astra` (listed by `--list-models` with
+`/responses` on 2026-11-13); it keeps the 300,000-token context capacity of the `astra`
+subscription profile, so the two are compared at the same context.
 
 In RoboFrontier, put the variable in the Git-ignored `.env`, or load the private
 file into the environment in the shell that runs the commands:
