@@ -100,8 +100,21 @@ class WorldQuotaPauseTests(active.Fixture):
         self.s.pump()
         self.assertEqual(len(self.events('QUOTA_RESUMED')), 1)
         self.assertIsNone(self.s.store.get('quota_pause'))
-        self.assertEqual(self.s.store.get('egress_recovery')['claim'], 'quota-1')
+        self.assertEqual(self.s.store.get('egress_recovery')['claim'], 'quota-s0-1')
         self.assertEqual(self.s.store.get('physics_state'), 'running')
         self.assertGreaterEqual(self.s.store.get('pause_wall_s'), 0.)
         lines = (self.run/'private/outputs/notifications.jsonl').read_text().splitlines()
         self.assertEqual(len(lines), 2)
+
+    def test_a_pause_in_a_later_segment_gets_a_new_claim(self):
+        # 2026-11-13 relay-a16-d2: the owner process restarts at each segment, so a per-process
+        # counter named a later pause 'quota-1' again; network-recovery then saw the role's
+        # once-per-pause claim as already used and held the run for review for good.
+        from robofrontier.runtime.egress_pause import WorldPause
+        names = []
+        for segment in (4, 5):
+            self.s.store.put('segment', segment)
+            pause = WorldPause(self.s, None)  # a new owner process for this segment
+            names.append(pause.claim_name('quota', 1))
+        self.assertEqual(names, ['quota-s4-1', 'quota-s5-1'])
+        self.assertTrue(all(n.startswith('quota-') for n in names))  # still read as a quota pause

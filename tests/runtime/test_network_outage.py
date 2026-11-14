@@ -125,16 +125,16 @@ class OutagePauseTests(active.Fixture):
         self.assertEqual(self.s.store.get('physics_state'), 'paused_by_egress')
         self.assertFalse(self.s.step_physics())
         paused = self.events('OUTAGE_PAUSED')[0]
-        self.assertEqual((paused['claim'], paused['failed_probes']), ('outage-1', 3))
+        self.assertEqual((paused['claim'], paused['failed_probes']), ('outage-s0-1', 3))
         held = self.s.accept('B', 'move', {'target_m': [.4, 0, .5]}, 'during'); self.s.pump()
         self.assertFalse(held['done'].is_set()); self.assertEqual(len(self.s.world.executed), 1)
         active = self.s.policy_budget.active
         self.s.pump(); self.assertEqual(self.s.policy_budget.active, active)
         self.probe(True)
-        self.assertEqual(self.events('OUTAGE_RESUMED')[0]['claim'], 'outage-1')
+        self.assertEqual(self.events('OUTAGE_RESUMED')[0]['claim'], 'outage-s0-1')
         self.assertEqual(self.s.store.get('physics_state'), 'running'); self.assertTrue(self.s.step_physics())
         self.assertEqual([x[1] for x in self.s.world.executed], ['before', 'during'])
-        self.assertEqual(self.s.store.get('egress_recovery')['claim'], 'outage-1')
+        self.assertEqual(self.s.store.get('egress_recovery')['claim'], 'outage-s0-1')
         self.assertFalse(first['done'].is_set())
 
     def test_failed_probes_before_the_pause_are_taken_back(self):
@@ -151,7 +151,7 @@ class OutagePauseTests(active.Fixture):
         self.probe(True, False, False, False)
         self.s.store.put('dispatch_paused', True); self.s.store.event('DISPATCH_PAUSED', 'Meta', {'reason': 'operator'})
         self.probe(True)
-        self.assertEqual(self.events('OUTAGE_HELD_FOR_REVIEW')[0]['claim'], 'outage-1')
+        self.assertEqual(self.events('OUTAGE_HELD_FOR_REVIEW')[0]['claim'], 'outage-s0-1')
         self.assertTrue(self.s.store.get('dispatch_paused'))
 
     def test_no_pause_before_start_or_after_the_cutoff(self):
