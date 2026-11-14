@@ -12,6 +12,8 @@ import threading
 
 import numpy as np
 
+from .observation_image import save_observation
+
 MAX_GEOM = 5000
 
 
@@ -57,7 +59,7 @@ def render_images(mujoco, Image, model, data, scene, options, context, request):
         mujoco.mjr_render(viewport, scene, context)
         rgb = np.empty((height, width, 3), dtype=np.uint8)
         mujoco.mjr_readPixels(rgb, None, viewport, context)
-        Image.fromarray(rgb[::-1]).save(path, format=request['format'], **request['save_options'])
+        save_observation(Image, rgb, path, request['format'], request['save_options'], request.get('output_size'))
 
 
 def _serve(connection, model_bytes):
