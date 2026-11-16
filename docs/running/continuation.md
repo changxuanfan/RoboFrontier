@@ -124,6 +124,11 @@ guard and the Claude supervisor set no limit and no backstop for such a segment.
    `restore-pose.json` also carries the game record at the frame (`evaluator`:
    valid trials, BEST, success, and whether a scored input was being held),
    read from the shared process log.
+   If a startup segment ends before any motion frame is flushed, its manifest-bound
+   restore pose may still identify the last recorded state. Continuation follows
+   that chain only when the source frame, time, scene, case and saved pose all
+   match the previous recording exactly. It creates no substitute motion frame;
+   missing, changed or inconsistent restore records remain errors.
 3. **Start the world.** Seeing `resuming`, the world process builds the world
    from `restore-pose`; the simulation clock continues from the frame, and
    motion and video go to the segment's folder.

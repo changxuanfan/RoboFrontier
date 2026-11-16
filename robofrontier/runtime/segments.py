@@ -168,11 +168,35 @@ def owner_released(run):
 def _last_frame(run, segment):
     from ..media.motion_recording import MotionReader
     folder = output_dir(run, segment) / 'motion'
-    if not (folder / 'stream.json').is_file(): return None
-    reader = MotionReader(folder)
-    if not reader.meta.get('frames'): return None
-    index, sim_s, pose = next(reader.selected_frames([reader.meta['frames'] - 1]))
-    return reader, index, float(sim_s), pose
+    if (folder / 'stream.json').is_file():
+        reader = MotionReader(folder)
+        if reader.meta.get('frames'):
+            index, sim_s, pose = next(reader.selected_frames([reader.meta['frames'] - 1]))
+            return reader, index, float(sim_s), pose
+    # A host can die before its recorder flushes the initial chunk. Its bound
+    # restore pose remains the last recorded state; never fabricate a new frame.
+    if segment == 0:return None
+    note_path=input_dir(run,segment)/'restore-pose.json'
+    pose_path=input_dir(run,segment)/'restore-pose.npy'
+    if not note_path.is_file() or not pose_path.is_file():return None
+    import hashlib
+    manifest=json.loads((Path(run)/'private/inputs/manifest.json').read_text())
+    for path in (note_path,pose_path):
+        if manifest['input_sha256'].get(str(path.relative_to(run)))!=hashlib.sha256(path.read_bytes()).hexdigest():
+            raise ValueError('Empty segment restore input changed')
+    note=json.loads(note_path.read_text())
+    if (note.get('schema')!=RESTORE_SCHEMA or note.get('segment')!=segment
+            or note.get('from_segment')!=segment-1):
+        raise ValueError('Empty segment restore chain is invalid')
+    previous=_last_frame(run,segment-1)
+    if previous is None:return None
+    reader,index,sim_s,pose=previous
+    if (note.get('source_frame')!=index or note.get('source_sim_s')!=sim_s
+            or note.get('source_scene_sha256')!=reader.meta['source_scene_sha256']
+            or note.get('case_id')!=reader.meta['case_id']
+            or not np.array_equal(np.load(pose_path,allow_pickle=False),pose)):
+        raise ValueError('Empty segment restore does not match its recorded source')
+    return previous
 
 
 # Events that end a trial normally: a finish or the time limit.
