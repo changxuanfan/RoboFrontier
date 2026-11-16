@@ -9,7 +9,8 @@ import numpy as np
 from PIL import Image
 
 from robofrontier.physics.cocoa import start_glfw
-from robofrontier.physics.render_worker import RenderWorker, apply_state, render_images
+from robofrontier.physics.observation_look import TO_DISPLAY, TO_LINEAR, display, look_model
+from robofrontier.physics.render_worker import LocalRenderer, RenderWorker
 
 SCENE = '''<mujoco><visual><global offwidth="1280" offheight="800"/></visual><worldbody>
 <light pos="0 0 2"/><camera name="front" pos="0 -1 .5" xyaxes="1 0 0 0 .4 .9"/><geom type="plane" size="1 1 .1" rgba=".4 .5 .6 1"/>
@@ -46,21 +47,15 @@ class RenderWorkerTests(unittest.TestCase):
         window = glfw.create_window(1280, 800, 'test', None, None)
         if not window: self.skipTest('No window here')
         glfw.make_context_current(window)
-        data = mujoco.MjData(source_model)
-        context = mujoco.MjrContext(source_model, mujoco.mjtFontScale.mjFONTSCALE_150)
-        scene = mujoco.MjvScene(source_model, maxgeom=5000)
-        options = mujoco.MjvOption()
-        options.geomgroup[3] = 0
-        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, context)
-        job = request(source_model, source_data, path)
-        apply_state(mujoco, source_model, data, job['state'])
-        render_images(mujoco, Image, source_model, data, scene, options, context, job)
+        del source_data, path  # self.job carries the state and the path
+        LocalRenderer(mujoco, source_model).render(mujoco, Image, self.job)
         glfw.destroy_window(window)
 
     def test_worker_draws_what_the_owner_would(self):
         apart, here = self.folder/'worker.png', self.folder/'here.png'
         self.assertTrue(self.worker.submit(request(self.model, self.data, apart)))
         self.assertTrue(self.worker.wait(30))
+        self.job = request(self.model, self.data, here)
         self.local_image(self.model, self.data, here)
         self.assertTrue(np.array_equal(np.asarray(Image.open(apart)), np.asarray(Image.open(here))))
 
@@ -88,6 +83,30 @@ class RenderWorkerTests(unittest.TestCase):
         job = request(self.model, self.data, self.folder/'gone.png')
         self.assertFalse(self.worker.submit(job))
 
+
+
+class ObservationLookTests(unittest.TestCase):
+    def setUp(self):
+        self.model = mujoco.MjModel.from_xml_string(SCENE)
+
+    def test_the_worlds_own_model_is_left_alone(self):
+        colours, light = self.model.geom_rgba.copy(), self.model.vis.headlight.ambient.copy()
+        visual = look_model(self.model)
+        self.assertTrue(np.array_equal(self.model.geom_rgba, colours))
+        self.assertTrue(np.array_equal(self.model.vis.headlight.ambient, light))
+        self.assertFalse(np.array_equal(visual.geom_rgba, colours))
+
+    def test_colours_are_lit_in_linear_light(self):
+        box = self.model.geom('box').id
+        self.assertTrue(np.allclose(look_model(self.model).geom_rgba[box, :3], self.model.geom_rgba[box, :3] ** 2.2))
+        self.assertEqual(look_model(self.model).geom_rgba[box, 3], 1)
+
+    def test_display_keeps_black_white_grey_and_order(self):
+        self.assertEqual((int(TO_DISPLAY[0]), int(TO_DISPLAY[255])), (0, 255))
+        self.assertTrue((np.diff(TO_DISPLAY.astype(int)) >= 0).all() and (np.diff(TO_LINEAR.astype(int)) >= 0).all())
+        grey = display(np.full((2, 2, 3), 90, np.uint8))
+        self.assertTrue((grey[..., 0] == grey[..., 1]).all() and (grey[..., 1] == grey[..., 2]).all())
+        self.assertGreater(int(grey[0, 0, 0]), 90)  # mid tones come out lighter than the renderer wrote them
 
 
 class LocalRenderWaitTests(unittest.TestCase):

@@ -12,6 +12,8 @@ import threading
 
 import numpy as np
 
+from .observation_look import display, look_model, set_colours
+
 MAX_GEOM = 5000
 
 
@@ -34,12 +36,14 @@ def _graphics_context():
 
 
 def apply_state(mujoco, model, data, state):
-    """Pose and appearance of the capture moment; everything drawn derives from these."""
+    """Pose and appearance of the capture moment; everything drawn derives from these.
+
+    `model` is the copy that `look_model` made, never the world's own model."""
     data.qpos[:] = state['qpos']
     if model.nmocap:
         data.mocap_pos[:] = state['mocap_pos']
         data.mocap_quat[:] = state['mocap_quat']
-    model.geom_rgba[:] = state['geom_rgba']
+    set_colours(model, state['geom_rgba'])
     mujoco.mj_kinematics(model, data)
     mujoco.mj_comPos(model, data)
     mujoco.mj_camlight(model, data)
@@ -57,13 +61,13 @@ def render_images(mujoco, Image, model, data, scene, options, context, request):
         mujoco.mjr_render(viewport, scene, context)
         rgb = np.empty((height, width, 3), dtype=np.uint8)
         mujoco.mjr_readPixels(rgb, None, viewport, context)
-        Image.fromarray(rgb[::-1]).save(path, format=request['format'], **request['save_options'])
+        Image.fromarray(display(rgb[::-1])).save(path, format=request['format'], **request['save_options'])
 
 
 def _serve(connection, model_bytes):
     import mujoco
     from PIL import Image
-    model = pickle.loads(model_bytes)
+    model = look_model(pickle.loads(model_bytes))
     # Held for the life of the process: an EGL or OSMesa context object frees its context when
     # it is collected, and MjrContext then fails (gladLoadGL error).
     graphics = _graphics_context()
@@ -164,3 +168,21 @@ class RenderWorker:
         except (OSError, ValueError): pass
         self.process.join(10)
         if self.process.is_alive(): self.process.terminate()
+
+
+class LocalRenderer:
+    """The same drawing in the owner's process, for captures the worker did not finish.
+
+    It needs a current graphics context and draws to its own offscreen buffer."""
+    def __init__(self, mujoco, model):
+        self.model = look_model(model)
+        self.data = mujoco.MjData(self.model)
+        self.context = mujoco.MjrContext(self.model, mujoco.mjtFontScale.mjFONTSCALE_150)
+        self.scene = mujoco.MjvScene(self.model, maxgeom=MAX_GEOM)
+        self.options = mujoco.MjvOption()
+        self.options.geomgroup[3] = 0
+
+    def render(self, mujoco, Image, request):
+        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, self.context)
+        apply_state(mujoco, self.model, self.data, request['state'])
+        render_images(mujoco, Image, self.model, self.data, self.scene, self.options, self.context, request)

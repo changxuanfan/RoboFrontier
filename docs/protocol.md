@@ -40,6 +40,15 @@ freezes it as `observation_image_profile`, and the public task states the format
 When a published camera calibration names an image size, the run gets a copy at the observation
 resolution and the published file stays as it is. Video recording has its own resolution.
 
+Every observation image has one look, set in `robofrontier/physics/observation_look.py`. The
+renderer draws from a copy of the world's model whose colours and textures are converted to linear
+light, with fill light added so that a white object comes out white, and each image gets one display
+transform before it is saved. The world's own model is not changed, so physics, the live view and the
+recording are as before. The conversion is done once per model and the transform is a table lookup, so
+an image costs about what it did: 15 to 55 ms on a laptop GPU, depending on the task and the profile.
+Runs made before this change (including the released results) show the scene as MuJoCo draws it
+directly, which is darker and more contrasty; compare images across that boundary with care.
+
 ## Robot requests and IDs
 
 For a new robot request on either engine, omit the outer `call_id`; the host generates one and

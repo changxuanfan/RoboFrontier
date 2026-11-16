@@ -40,9 +40,11 @@ class ObservationImageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, mujoco.Renderer(model,width=1280,height=800) as renderer:
             root=Path(tmp);(root/'public/observations').mkdir(parents=True)
             world=SimpleNamespace(model=model,data=data,time=0,arms={})
-            service=SimpleNamespace(obs=0,directory=root,world=world,context=renderer._mjr_context,
-                scene=renderer._scene,options=mujoco.MjvOption(),offscreen_context=True,
+            # No worker here, so the owner draws the capture itself; it needs only a current graphics context.
+            service=SimpleNamespace(obs=0,directory=root,world=world,context=renderer._mjr_context,offscreen_context=True,
                 perf={'capture_wall_s':0.,'captures':0})
+            service.capture_request=lambda cameras:Service.capture_request(service,cameras)
+            service.render_here=lambda request:Service.render_here(service,request)
             for name,size,fmt,suffix in ((DEFAULT_PROFILE,(896,560),'JPEG','.jpg'),(LEGACY_PROFILE,(1280,800),'PNG','.png')):
                 service.observation_image=observation_profile({'observation_image_profile':name})
                 result=Service.capture(service,['top']);path=Path(result['images']['top'])

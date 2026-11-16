@@ -302,8 +302,8 @@ class Service(RuntimeService):
         # unexpected host exit never leaves an orphan holding the world.
         self.parent_pid=os.getppid()
 
-    def capture_in_worker(self,cameras):
-        """Queue this capture's images; a response waits for the files, not the world."""
+    def capture_request(self,cameras):
+        """This capture's image paths and the state they are drawn from."""
         world=self.world;self.obs+=1;images=[];paths={}
         for name in cameras:
             path=self.directory/'public/observations'/f"obs-{uuid.uuid4().hex[:8]}-{self.obs:05d}-{name}{self.observation_image['extension']}"
@@ -313,21 +313,16 @@ class Service(RuntimeService):
         if model.nmocap:state.update(mocap_pos=data.mocap_pos.copy(),mocap_quat=data.mocap_quat.copy())
         request={'state':state,'images':images,'width':self.observation_image['width'],'height':self.observation_image['height'],
                  'format':self.observation_image['format'],'save_options':Service.image_save_options(self.observation_image)}
-        if not self.render_worker.submit(request):self.render_here(request)
-        return {'sim_time_s':world.time,'captured_at':time.time(),'images':paths,
-                'robot':{a:r.observe() for a,r in world.arms.items()}}
+        return paths,request
 
     def render_here(self,request):
-        """A capture the worker could not finish, drawn from its own recorded state."""
-        from ..physics.render_worker import apply_state,render_images
-        model=self.world.model;scratch=mujoco.MjData(model);colors=model.geom_rgba.copy()
-        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN,self.context)
-        try:
-            apply_state(mujoco,model,scratch,request['state'])
-            render_images(mujoco,Image,model,scratch,self.scene,self.options,self.context,request)
+        """A capture the worker could not take or finish, drawn here from its own recorded state."""
+        from ..physics.render_worker import LocalRenderer
+        if getattr(self,'local_renderer',None) is None:self.local_renderer=LocalRenderer(mujoco,self.world.model)
+        try:self.local_renderer.render(mujoco,Image,request)
         finally:
-            model.geom_rgba[:]=colors
-            if not getattr(self,'offscreen_context',None):mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_WINDOW,self.context)
+            # The view and the recording draw with the owner's own context: give it its buffer back.
+            mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN if getattr(self,'offscreen_context',None) else mujoco.mjtFramebuffer.mjFB_WINDOW,self.context)
 
     def finish_failed_captures(self):
         requests=self.render_worker.failed_captures()
@@ -335,24 +330,11 @@ class Service(RuntimeService):
         if requests:self.render_worker.rendered_locally()
 
     def capture(self,cameras):
+        """Queue this capture's images with the worker; a response waits for the files, not the world."""
         capture_start=time.perf_counter()
-        if getattr(self,'render_worker',None) is not None:
-            result=self.capture_in_worker(cameras)
-            self.perf['capture_wall_s']+=time.perf_counter()-capture_start;self.perf['captures']+=1
-            return result
-        self.obs+=1;paths={}
-        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN,self.context)
-        width, height = self.observation_image['width'], self.observation_image['height']
-        viewport=mujoco.MjrRect(0,0,width,height)
-        for name in cameras:
-            cam=mujoco.MjvCamera();cam.type=mujoco.mjtCamera.mjCAMERA_FIXED;cam.fixedcamid=self.world.model.camera(name).id
-            mujoco.mjv_updateScene(self.world.model,self.world.data,self.options,None,cam,mujoco.mjtCatBit.mjCAT_ALL,self.scene)
-            mujoco.mjr_render(viewport,self.scene,self.context)
-            rgb=np.empty((height,width,3),dtype=np.uint8);mujoco.mjr_readPixels(rgb,None,viewport,self.context)
-            path=self.directory/'public/observations'/f"obs-{uuid.uuid4().hex[:8]}-{self.obs:05d}-{name}{self.observation_image['extension']}"
-            Image.fromarray(rgb[::-1]).save(path, format=self.observation_image['format'], **Service.image_save_options(self.observation_image));paths[name]=str(path)
-        if not getattr(self,'offscreen_context',None):
-            mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_WINDOW,self.context)
+        paths,request=self.capture_request(cameras)
+        worker=getattr(self,'render_worker',None)
+        if worker is None or not worker.submit(request):self.render_here(request)
         result={'sim_time_s':self.world.time,'captured_at':time.time(),'images':paths,
                 'robot':{a:r.observe() for a,r in self.world.arms.items()}}
         self.perf['capture_wall_s']+=time.perf_counter()-capture_start;self.perf['captures']+=1
