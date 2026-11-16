@@ -122,6 +122,10 @@ beyond it still fails.
 ## Freezing the release
 
 `benchmark/release.json` names every case file by hash and carries `release_id`, a hash of the
-whole release. The release is frozen: `frozen` records release `020a26c59223ce50`, 2026-11-11, and
+whole release. The release is frozen: `frozen` records release `627dd831f1a06c00`, 2026-11-17, and
 the validation run it passed. Every step of `scripts/build_release.py` that writes the release
 refuses from then on, so physics, scenes and task files no longer change.
+
+Release `627dd831f1a06c00` replaces `020a26c59223ce50`, frozen on 2026-11-11. The only difference
+is that the nine Relay public tasks now list their camera mounts ([Relay](tasks/relay.md)). No
+scene, physics value or other task file changed, so the validation run of 2026-11-11 still stands.

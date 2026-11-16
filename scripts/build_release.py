@@ -353,6 +353,34 @@ def codes(args):
 RUN_ONLY = ('observation_image',)  # added to the public task by each run
 
 
+def camera_mounts(model, names):
+    """Each named camera's pose in the world frame and its vertical field of view, as MuJoCo
+    compiled them: what the renderer uses. The form is Transport's `static_camera_mounts`."""
+    if sorted(names) != sorted(model.camera(c).name for c in range(model.ncam)):
+        raise ValueError('Camera list differs from the compiled scene')
+    mounts = []
+    for name in names:
+        c = model.camera(name).id
+        if int(model.cam_bodyid[c]) or int(model.cam_mode[c]) != int(mujoco.mjtCamLight.mjCAMLIGHT_FIXED):
+            raise ValueError('Camera is not fixed in the world: '+name)
+        mounts.append({'id': name, 'frame': 'world', 'position_m': model.cam_pos[c].tolist(),
+                       'quaternion_wxyz': model.cam_quat[c].tolist(),
+                       'vertical_fov_deg': float(model.cam_fovy[c]), 'fixed_world': True})
+    return mounts
+
+
+def with_camera_mounts(public, mounts):
+    """The public task with `static_camera_mounts` where Transport has it, before the
+    family materials."""
+    result = {}
+    for key, value in public.items():
+        if key == 'static_camera_mounts': continue
+        if key == 'family_materials': result['static_camera_mounts'] = mounts
+        result[key] = value
+    result.setdefault('static_camera_mounts', mounts)
+    return result
+
+
 def public(args):
     """Write each case's public task exactly as a run receives it, and its materials.
 
@@ -360,12 +388,15 @@ def public(args):
     applied at run time (tasks.families.freeze_public). This writes the result once:
     public/task.json (without the run's own protocol and image profile) and every family
     material a run receives, except the family skill, which runs copy from prompts/skills.
-    The release then names these files, and a run only copies them."""
+    The release then names these files, and a run only copies them.
+
+    A Relay public task also gets its cameras' mounts, read from the compiled scene; the
+    other families' public tasks already carry their camera calibration."""
     require_unfrozen()
     import shutil, tempfile
     from robofrontier.tasks.families import prepare
     path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
-    for family in release['families'].values():
+    for family_name, family in release['families'].items():
         for case in family['gpt']:
             folder = ROOT/case['directory']; target = folder/'public'
             with tempfile.TemporaryDirectory(prefix='rf-public-') as temporary:
@@ -383,6 +414,8 @@ def public(args):
             for name in RUN_ONLY: received.pop(name, None)
             from robofrontier.tasks.public import clean
             received = clean(received)
+            if family_name == 'relay':
+                received = with_camera_mounts(received, camera_mounts(compile_scene(folder), received['cameras']))
             (target/'task.json').write_text(json.dumps(received, indent=2, ensure_ascii=False)+'\n')
             for stale in ('public-task.json',):
                 if (folder/stale).exists(): (folder/stale).unlink()

@@ -712,7 +712,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a08-d1/public/task.json",
-            "sha256": "b147ca82f8dc4819273f8a9b35d5e2254c5724e37c2c3866751fceaccb9c388f"
+            "sha256": "52ab86400761c8e3b940d1a8173af5bbbf778bb1fbd3fdee96ba79ca226dc215"
           }
         },
         {
@@ -728,7 +728,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a08-d2/public/task.json",
-            "sha256": "70ed6e51a20e25945d4d899505fe4d8135d79d51c72551e0b15ea1518d7e0826"
+            "sha256": "1c16dc4784f826a126e2614755f2b34275672d928e2283e4f3e2a7579888f7a2"
           }
         },
         {
@@ -744,7 +744,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a08-d3/public/task.json",
-            "sha256": "e5f6f5a20199cc8007c51d19089737afcdfd3e63b47fe0d9d0b88127f335cfd1"
+            "sha256": "62dfc593738957788e2bf5d1879f0eaae7769f69cd53203b11fa81e71ec8044f"
           }
         },
         {
@@ -760,7 +760,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a12-d1/public/task.json",
-            "sha256": "f864f3ad0edd24f3df593283b2a6e0f7536c3c1bdb58345e8334fab6c9ec5bba"
+            "sha256": "1e1d16b0c39c7a7c4247b436c5564360f22ea316ce270cbdfc426c14dccee08d"
           }
         },
         {
@@ -776,7 +776,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a12-d2/public/task.json",
-            "sha256": "7c7caf906ab02b1ab1b10c6547bfb2c15a17546970e88e8a24870614ad2615d7"
+            "sha256": "0332a3ada348857f907ff25667d42614b3be11ee2c621dcac541c441d6f7e9a3"
           }
         },
         {
@@ -792,7 +792,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a12-d3/public/task.json",
-            "sha256": "48e81017fcc331ea03f620282c27f9055cf4f30a4f29506274d71ca91c84965e"
+            "sha256": "c4d01610d222e38d636324d151fd12fa6f8f47745359dc7199ea7ee3cd393070"
           }
         },
         {
@@ -808,7 +808,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a16-d1/public/task.json",
-            "sha256": "5a87a57e8a5bde16fa4581ac0d0b1440fe60b5a08b940581bfb4edb1021bbd37"
+            "sha256": "38311111a4998a92daba6996a892d7d4f0fb6a35e72f30fd79c9eca17ef1859a"
           }
         },
         {
@@ -824,7 +824,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a16-d2/public/task.json",
-            "sha256": "cbb9284fee10c2b9b584bea88256c42b91df024ac63039087622bb08ef67a323"
+            "sha256": "1595fd27bce87ff18d3fa2be5aacbcff09bc76beb94ce5a02fce00dc6fe76f63"
           }
         },
         {
@@ -840,7 +840,7 @@
           "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a16-d3/public/task.json",
-            "sha256": "309ae57fafabe24cb2866bff527296234a5dde62ce8a7fa04981c8d3ca2880c0"
+            "sha256": "a096aeed42be3ae151d776f2ef09296425ec858048f497dcd7acb7cd95efc98e"
           }
         }
       ],
@@ -1565,10 +1565,10 @@
       ]
     }
   },
-  "release_id": "020a26c59223ce50",
+  "release_id": "627dd831f1a06c00",
   "frozen": {
-    "release_id": "020a26c59223ce50",
-    "date": "2026-11-11",
+    "release_id": "627dd831f1a06c00",
+    "date": "2026-11-17",
     "physics_validation": "20261111-143742.json"
   }
 }
