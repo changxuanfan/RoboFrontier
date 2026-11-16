@@ -9,6 +9,7 @@ specific to each CLI.
 | --- | --- |
 | [Codex](codex.md) | app-server sessions, Codex homes, tool backends, receipts |
 | [GitHub PAT transport](github-pat.md) | Direct Codex provider and a portable Chat Completions/Responses connector |
+| [Codex with Claude](codex-claude-api.md) | Experimental loopback Responses-to-Messages adapter, thinking blocks, prompt-cache monitor |
 | [Claude Code](claude-code.md) | `claude -p` sessions over MCP, authentication modes, Bash isolation, prechecks, cost ledger |
 | [Antigravity](antigravity.md) | Persistent `agy` sessions, native static checkpoint configuration, brokered tools, native forks and current validation limits |
 | [Providers](#providers) | Profiles, the authentication matrix, third-party endpoints |
@@ -227,6 +228,7 @@ selects `haiku_subscription_token`.
 | Codex | OpenAI API key | `luna` | `OPENAI_API_KEY` |
 | Codex | OpenLux API key | `openlux-luna`, `openlux-terra` | `OPENLUX_API_KEY` |
 | Codex | GitHub Copilot PAT, experimental | `sol61_github_pat`, `astra_github_pat` | `ROBOFRONTIER_GITHUB_PAT` ([setup](github-pat.md)) |
+| Codex | Anthropic API key behind a loopback adapter, experimental | `opus_claude_api` | `ROBOFRONTIER_CLAUDE_GATEWAY_KEY`, a local key; the Anthropic key stays with the adapter ([setup](codex-claude-api.md)) |
 | Codex | ChatGPT login | `luna_subscription`, `sol61_subscription`, `terra61_subscription`, `astra` | Login in the Codex home ([Codex authentication](codex.md#authentication)) |
 | Codex | Third-party Responses API | `deepseek`, `qwen`, `glm`, `kimi` | `DEEPSEEK_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_BASE_URL`; `ZAI_API_KEY`; `KIMI_API_KEY` |
 | Claude | Subscription token (`claude setup-token`) | `haiku_subscription_token`, `opus_subscription` | `CLAUDE_CODE_OAUTH_TOKEN` |

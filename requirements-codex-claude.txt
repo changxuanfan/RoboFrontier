@@ -1,0 +1,2 @@
+# Optional: the Codex / Claude loopback gateway (scripts/codex_claude_gateway.py). Not a core dependency.
+anthropic>=2.8,<3

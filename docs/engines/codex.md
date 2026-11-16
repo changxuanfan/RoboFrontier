@@ -44,6 +44,10 @@ provider settings are process-local and never change the user's global Codex con
 (or under `runtime.codex_home`), shared by that run's Controller, snapshots and delegates so fork
 lineage stays readable. Homes are initialized one at a time before any task host starts.
 
+**Claude through the Messages adapter** (`opus_claude_api`) is an experimental ablation: Codex
+talks to a loopback process that holds the Anthropic key and translates the protocol. See
+[Codex with Claude](codex-claude-api.md) before using it; it is not an Anthropic-supported route.
+
 **ChatGPT login** (`luna_subscription`, `sol61_subscription`, `terra61_subscription`, `astra`)
 uses Codex's own login and needs `runtime.codex_home_scope = "shared"` (task scope refuses these
 profiles). The shared home is `runtime.codex_home`, else `CODEX_HOME`, else

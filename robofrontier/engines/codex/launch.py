@@ -29,9 +29,64 @@ def profile(name, config=None):
     if p['provider'] != 'openai':
         from urllib.parse import urlsplit
         url = urlsplit(p['base_url'])
-        if url.scheme != 'https' or url.username or url.password or url.query:
+        if loopback_gateway(p):
+            # Plain HTTP only for a profile that declares a local protocol adapter, and only to
+            # the literal loopback address: the key it sends is that adapter's local key.
+            if (url.scheme != 'http' or url.hostname != '127.0.0.1' or not url.port or url.username or url.password
+                    or url.query or url.fragment or not p.get('env_key') or 'base_url_env' in p
+                    or not p.get('transport_revision') or p.get('http_headers')):
+                raise ValueError('A loopback gateway profile needs http://127.0.0.1:PORT, a local key variable '
+                                 'and a transport revision')
+        elif 'transport' in p:
+            raise ValueError('Unknown model transport: '+str(p['transport']))
+        elif url.scheme != 'https' or url.username or url.password or url.query:
             raise ValueError('Use an HTTPS base URL without embedded credentials')
+    elif 'transport' in p:
+        raise ValueError('A native OpenAI profile has no separate model transport')
     return p
+
+
+LOOPBACK_GATEWAY = 'loopback_gateway'
+# Upstream credentials a loopback adapter owns. The Codex process and its shells get the
+# adapter's local key only, never these.
+GATEWAY_UPSTREAM_SECRETS = ('ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN')
+
+
+def loopback_gateway(p):
+    """Whether a profile explicitly routes its model through a local protocol adapter."""
+    return p.get('transport') == LOOPBACK_GATEWAY
+
+
+def gateway_environment(p, env):
+    """The environment for Codex: a loopback gateway profile never passes upstream credentials."""
+    if loopback_gateway(p):
+        for name in GATEWAY_UPSTREAM_SECRETS:
+            env.pop(name, None)
+    return env
+
+
+def require_gateway(p, timeout_s=5):
+    """Refuse to start unless the profile's own adapter, at its frozen revision, is listening.
+
+    A local check with no credential and no model call. It keeps the local key from being sent
+    to some other process on that port, and a changed adapter from reusing an old receipt.
+    """
+    if not loopback_gateway(p):
+        return
+    from urllib.parse import urlsplit
+    from urllib.request import ProxyHandler, build_opener
+    url = urlsplit(p['base_url'])
+    try:
+        # No proxy: the address is this machine's loopback interface.
+        with build_opener(ProxyHandler({})).open('http://127.0.0.1:%d/healthz' % url.port, timeout=timeout_s) as response:
+            health = json.loads(response.read(65536))
+    except (OSError, ValueError) as error:
+        raise ValueError('The model gateway for this profile is not listening on 127.0.0.1:%d; start it first (%s)'
+                         % (url.port, type(error).__name__)) from None
+    if not isinstance(health, dict) or health.get('model') != p['model'] \
+            or health.get('transport_revision') != p['transport_revision']:
+        raise ValueError('The listener on 127.0.0.1:%d is not this profile\'s gateway (model or transport revision '
+                         'differs)' % url.port)
 
 
 POLICY_PROFILE = 'robofrontier'
@@ -135,6 +190,10 @@ def launch_config(p, folder, run_dir=None):
             if name.lower() in ('authorization', 'proxy-authorization', 'cookie') or '\r' in value or '\n' in value:
                 raise ValueError('Keep credentials out of frozen HTTP headers; use env_key')
             values[prefix+'http_headers.'+name] = value
+    if loopback_gateway(p):
+        # Model shells never inherit the adapter's local key or an upstream credential. Their
+        # network is off as well, so the loopback port is out of reach either way.
+        values['shell_environment_policy.exclude'] = [p['env_key'], *GATEWAY_UPSTREAM_SECRETS]
     # Local Codex model catalog teaches the CLI that this exact model accepts
     # images. No global provider/auth/default settings are modified.
     cache_path=codex_home()/'models_cache.json'
@@ -150,6 +209,10 @@ def launch_config(p, folder, run_dir=None):
         experimental_supported_tools=[],node_repl_disabled=True,
         default_reasoning_level=p['effort'],supported_reasoning_levels=[{'effort':p['effort'],'description':'Declared benchmark effort'}])
     model['model_messages']=None
+    if loopback_gateway(p):
+        # Output verbosity is an OpenAI-only request control that the adapter cannot translate
+        # and would reject; the model's own default applies.
+        model.update(support_verbosity=False, default_verbosity=None)
     # Replaces Codex's own instructions. The catalog stays the same for every run, since the
     # model preflight receipt pins its hash; each thread receives the run's frozen system
     # prompt (role statement and rules) as baseInstructions (codex_policy_host.js).

@@ -206,7 +206,8 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
         key = selected.get('env_key')
         if key and not os.environ.get(key):
             raise ValueError('Missing credential environment variable: ' + key)
-        env = dict(os.environ)
+        from robofrontier.engines.codex.launch import gateway_environment
+        env = gateway_environment(selected, dict(os.environ))
         if config['runtime']['codex_home_scope'] == 'task':
             if selected['provider'] == 'openai':
                 raise ValueError('Native subscription preflight requires explicit shared authentication configuration')

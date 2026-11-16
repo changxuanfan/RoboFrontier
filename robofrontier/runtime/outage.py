@@ -2,7 +2,7 @@
 
 Runs that count active time (run_protocol clock active_time_v1) and have no Slurm egress pause
 (a Mac, a RunPod host, or a Slurm job with direct egress) probe the model API host the run's
-profile names (its `base_url`), or their engine's default hosts, from the world process with a verified HTTPS request (a bare TCP connect succeeds through a
+profile names (its `upstream_host` or `base_url`), or their engine's default hosts, from the world process with a verified HTTPS request (a bare TCP connect succeeds through a
 local VPN tunnel whose route is gone). After `FAILURES` consecutive failed probes the world pauses as for a
 Slurm egress outage; the first successful probe resumes it. Slurm runs keep their egress
 pause. See docs/running/continuation.md#time.
@@ -133,7 +133,8 @@ def model_hosts(run, engine):
     if run is not None:
         try: profile = json.loads((Path(run)/'private/inputs'/(engine+'.json')).read_text()).get('profile') or {}
         except (OSError, ValueError, AttributeError): profile = {}
-        host = urlsplit(profile.get('base_url') or '').hostname
+        # A profile behind a local protocol adapter names the API host its adapter calls.
+        host = profile.get('upstream_host') or urlsplit(profile.get('base_url') or '').hostname
         if host: return (host,)
     return ENGINE_HOSTS.get(engine)
 
