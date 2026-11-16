@@ -151,6 +151,23 @@
     "claude": {
       "schema": "robofrontier.claude-models.v1",
       "profiles": {
+        "sol61_chatgpt_plan": {
+          "provider": "openai_chatgpt_plan",
+          "transport_revision": "websocket-incremental-v4",
+          "model": "gpt-6.1-sol",
+          "env_key": "ROBOFRONTIER_CHATGPT_GATEWAY_KEY",
+          "base_url": "http://127.0.0.1:18461",
+          "effort": "high",
+          "context_capacity": 300000,
+          "compatibility": "Experimental native Claude Code harness with a loopback Messages-to-Responses adapter and explicitly authorized ChatGPT plan use. API-equivalent dollar estimates are not subscription invoices.",
+          "managed_settings": {
+            "modelPricing": {
+              "overrides": {
+                "gpt-6.1-sol": {"input": 2.0, "output": 10.0, "cacheRead": 0.1, "cacheWrite": 2.5}
+              }
+            }
+          }
+        },
         "haiku": {
           "provider": "anthropic",
           "model": "claude-haiku-5-5",

@@ -30,6 +30,11 @@ is a complete Mac example.
 
 ## Authentication
 
+For the experimental GPT model / ChatGPT plan ablation, see
+[Claude Code with ChatGPT plan use](claude-chatgpt-plan.md). This is a separate
+loopback protocol adapter, not Claude subscription authentication or a native
+Anthropic-supported non-Claude model route.
+
 Profiles are the `claude` section of `configs/models.json`; the
 [authentication matrix](README.md#authentication-matrix) lists each one's credential. Put
 credentials in `.env` ([credentials file](README.md#credentials-file)). An API-key profile passes

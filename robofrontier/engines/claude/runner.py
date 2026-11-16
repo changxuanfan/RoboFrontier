@@ -254,7 +254,8 @@ def settings_folder(run_dir):
 
 def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget_usd=None, binary='claude', resume=None,
                   fork_from=None, enable_robot=True, auth_mode='api_key', prompt_via_stdin=False, settings=None,
-                  system_prompt=None, stream_input=False, gate=None, settings_dir=None, robot_only=False):
+                  system_prompt=None, stream_input=False, gate=None, settings_dir=None, robot_only=False,
+                  managed_settings=None):
     """Return argv for one headless turn.
 
     With `settings` (see `policy_settings`) a policy turn gets the bound robot tool plus
@@ -289,6 +290,10 @@ def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget
                  else ['--setting-sources', ''])
     cmd = [binary, '-p'] + isolation + ['--model', model, '--effort', effort] + session_flags + [
            '--mcp-config', mcp_arg, '--strict-mcp-config']
+    if managed_settings is not None:
+        if not isinstance(managed_settings, dict) or set(managed_settings) != {'modelPricing'}:
+            raise ValueError('Host-managed model settings may only supply pricing estimates')
+        cmd += ['--managed-settings', json.dumps(managed_settings, separators=(',', ':'))]
     if enable_robot and settings is not None:
         cmd += ['--tools', ','.join(POLICY_TOOLS), '--permission-mode', 'acceptEdits', '--permission-prompts', 'none',
                 '--settings', settings_argument({**settings, **(hooks or {})}, settings_dir),
@@ -376,6 +381,19 @@ def start_cli(cmd, env, **options):
         os.close(read)
 
 
+def bind_gateway_session(profile, command, env):
+    """Bind loopback replay state to the same native IDs used by the CLI."""
+    if profile.get('provider') != 'openai_chatgpt_plan':
+        return
+    flag = '--session-id' if '--session-id' in command else '--resume'
+    session = str(uuid.UUID(command[command.index(flag)+1]))
+    headers = ['X-RoboFrontier-Session: '+session]
+    if '--fork-session' in command:
+        source = str(uuid.UUID(command[command.index('--resume')+1]))
+        headers.append('X-RoboFrontier-Fork-Source: '+source)
+    env['ANTHROPIC_CUSTOM_HEADERS'] = '\n'.join(headers)
+
+
 def build_env(profile, base_env, config_dir):
     """Pass only this profile's endpoint and credential; never inherit other providers' keys."""
     auth_mode=profile.get('auth_mode','api_key')
@@ -431,6 +449,15 @@ def build_env(profile, base_env, config_dir):
         env.pop('CLAUDE_CONFIG_DIR', None)
     if profile.get('base_url'):
         env['ANTHROPIC_BASE_URL'] = profile['base_url']
+    if profile.get('provider') == 'openai_chatgpt_plan' and 'context_capacity' in profile:
+        capacity = profile['context_capacity']
+        if type(capacity) is not int or not 100000 <= capacity <= 1000000:
+            raise ValueError('ChatGPT plan context_capacity must be an integer from 100000 to 1000000')
+        # The auto-compact window is capped by the native client's model window.
+        # A GPT ID is unknown to Claude Code and otherwise defaults to 200k.
+        env['CLAUDE_CODE_MAX_CONTEXT_TOKENS'] = str(capacity)
+    if profile.get('managed_settings'):
+        env['CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST'] = '1'
     if base_env.get('ROBOFRONTIER_EGRESS_INSTANCE'):
         # A managed allocation route (robofrontier/batch/slurm_proxy.py) is the CLI's only way out.
         env.update({name: base_env[name] for name in ('HTTPS_PROXY', 'NO_PROXY') if name in base_env})
@@ -547,8 +574,9 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
                         fork_from=fork_from, enable_robot=enable_robot, auth_mode=profile.get('auth_mode','api_key'),
                         prompt_via_stdin=True, settings=settings, system_prompt=policy_system_prompt(run_dir),
                         gate=gate, settings_dir=settings_folder(run_dir),
-                        robot_only=enable_robot and robot_only(run_dir))
+                        robot_only=enable_robot and robot_only(run_dir), managed_settings=profile.get('managed_settings'))
     env = {**build_env(profile, base_env, config_dir), **confined}
+    bind_gateway_session(profile,cmd,env)
     launch = run_dir/'private/inputs/claude.json'
     frozen = json.loads(launch.read_text()) if launch.is_file() else {}
     if frozen.get('auto_compact_token_limit'):
@@ -683,8 +711,10 @@ class PersistentSession:
         cmd = build_command(model, effort, mcp_config, None, session_id, None, binary, resume, fork_from=fork_from,
                             auth_mode=profile.get('auth_mode', 'api_key'), settings=settings,
                             system_prompt=policy_system_prompt(run_dir), stream_input=True, gate=gate,
-                            settings_dir=settings_folder(run_dir), robot_only=robot_only(run_dir))
+                            settings_dir=settings_folder(run_dir), robot_only=robot_only(run_dir),
+                            managed_settings=profile.get('managed_settings'))
         env = {**build_env(profile, base_env, config_dir), **confined}
+        bind_gateway_session(profile,cmd,env)
         launch = Path(run_dir)/'private/inputs/claude.json'
         frozen = json.loads(launch.read_text()) if launch.is_file() else {}
         if frozen.get('auto_compact_token_limit'):
