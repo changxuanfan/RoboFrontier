@@ -5,7 +5,7 @@ schema_version = 10
 engine = "codex"                     # codex | claude
 profile = "luna"                     # An engine-specific model catalog entry
 effort = "high"
-topology = "adaptive"                # single | controller-worker | worker-worker | adaptive
+topology = "adaptive"                # adaptive | single-agent | hierarchical | decentralized
 tool_mode = "full"                   # full | robot_only (the robot tool alone: no shell, code execution or file tools)
 
 [batch]

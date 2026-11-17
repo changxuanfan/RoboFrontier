@@ -26,7 +26,7 @@ class BatchTests(unittest.TestCase):
             profile = {'provider': 'anthropic', 'model': 'fake', 'effort': 'high', 'env_key': 'FAKE_KEY'}
             (run/'private/inputs/claude.json').write_text(json.dumps({'schema':'robofrontier.claude-launch.v2',
                 'profile':profile}))
-            (run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude', 'topology':'centralized',
+            (run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude', 'topology':'single-agent',
                                                                        'model':'fake','effort':'high'}))
             self.jobs.append({'profile':'fake', 'case_id':case, 'run_directory':str(run), 'status':'draft'})
         (self.root/'batch.json').write_text(json.dumps({'schema':'robofrontier.claude-batch.v2',
@@ -40,7 +40,7 @@ class BatchTests(unittest.TestCase):
                          runner=runner, verifier=lambda _: [], startup_interval_s=0)
 
     def test_standing_topologies_pass_shared_batch_preflight(self):
-        for job, topology in zip(self.jobs, ('hierarchical', 'peer', 'hierarchical', 'peer')):
+        for job, topology in zip(self.jobs, ('hierarchical', 'decentralized', 'hierarchical', 'decentralized')):
             path = Path(job['run_directory'])/'private/inputs/harness.json'
             data = json.loads(path.read_text())
             data.update(topology=topology, startup_protocol='direct_team_v3')
@@ -55,7 +55,7 @@ class BatchTests(unittest.TestCase):
 
     def test_a_task_cap_concurrent_roles_could_exhaust_fails_preflight_before_any_claim(self):
         path = Path(self.jobs[2]['run_directory'])/'private/inputs/harness.json'
-        data = json.loads(path.read_text()); data.update(topology='peer', startup_protocol='direct_team_v3')
+        data = json.loads(path.read_text()); data.update(topology='decentralized', startup_protocol='direct_team_v3')
         path.write_text(json.dumps(data))
         with self.assertRaisesRegex(ValueError, 'concurrent roles'):
             run_batch(self.root, self.env, parallel=2, turn_budget_usd=.6, total_budget_usd=1, wall_limit_s=5,

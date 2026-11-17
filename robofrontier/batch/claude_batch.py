@@ -104,7 +104,7 @@ def _preflight(jobs, env, verifier, continuing=False, budgets=(None, None)):
         profile = launch['profile']
         expected_schema = LAUNCH_SCHEMA if engine == 'claude' else 'robofrontier.antigravity-launch.v1'
         if (launch.get('schema') != expected_schema or config.get('engine') != engine
-                or config.get('topology') not in ('centralized', 'adaptive', 'hierarchical', 'peer') or config.get('model') != profile.get('model')
+                or config.get('topology') not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized') or config.get('model') != profile.get('model')
                 or config.get('effort') != profile.get('effort')):
             label = 'Claude' if engine == 'claude' else 'Antigravity'
             raise ValueError('Run does not match its ' + label + ' launch profile')

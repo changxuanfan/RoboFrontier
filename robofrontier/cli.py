@@ -96,7 +96,7 @@ def prepare(output, config):
     if output.exists():
         raise ValueError('Choose a new output directory; prepared runs are never overwritten')
     setup_assets()
-    topology = TOPOLOGIES[policy['topology']]
+    topology = policy['topology']
     harness = {'topology': topology,
                'startup_protocol': startup_protocol(topology),
                'observation_image_profile': config['render']['observation_profile'],

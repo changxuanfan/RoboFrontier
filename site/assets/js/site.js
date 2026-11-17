@@ -476,9 +476,9 @@ function table(ms) {
 
 // ---------- analysis ----------
 const TOPOLOGIES = [
-  {key: 'single', label: 'Single', text: 'One agent drives every arm.'},
-  {key: 'controller-worker', label: 'Controller–Worker', text: 'A permanent worker per arm.'},
-  {key: 'worker-worker', label: 'Worker–Worker', text: 'Peers coordinate directly.'},
+  {key: 'single-agent', label: 'Single-agent', text: 'One agent drives every arm.'},
+  {key: 'hierarchical', label: 'Hierarchical', text: 'A permanent worker per arm.'},
+  {key: 'decentralized', label: 'Decentralized', text: 'Peers coordinate directly.'},
   {key: 'adaptive', label: 'Adaptive', text: 'Delegates on demand.'},
 ];
 function topoGlyph(key) {
@@ -486,10 +486,10 @@ function topoGlyph(key) {
   const node = (x, y, lead) => svg('circle', {cx: x, cy: y, r: lead ? 10 : 7, class: lead ? 'lead' : null});
   const line = (a, b, msg) => svg('line', {x1: a[0], y1: a[1], x2: b[0], y2: b[1], class: msg ? 'msg' : null});
   const arms = [[30, 88], [75, 88], [125, 88], [170, 88]];
-  if (key === 'single') s.append(...arms.map(a => line([100, 24], a)), node(100, 24, true), ...arms.map(a => node(...a)));
-  if (key === 'controller-worker') { const w = [[30, 60], [75, 60], [125, 60], [170, 60]];
+  if (key === 'single-agent') s.append(...arms.map(a => line([100, 24], a)), node(100, 24, true), ...arms.map(a => node(...a)));
+  if (key === 'hierarchical') { const w = [[30, 60], [75, 60], [125, 60], [170, 60]];
     s.append(...w.map(p => line([100, 18], p, true)), ...w.map((p, i) => line(p, arms[i])), node(100, 18, true), ...w.map(p => node(...p)), ...arms.map(a => svg('rect', {x: a[0] - 4, y: a[1] - 4, width: 8, height: 8, class: 'arm'}))); }
-  if (key === 'worker-worker') { const w = [[30, 40], [75, 70], [125, 40], [170, 70]];
+  if (key === 'decentralized') { const w = [[30, 40], [75, 70], [125, 40], [170, 70]];
     s.append(line(w[0], w[1], true), line(w[1], w[2], true), line(w[2], w[3], true), line(w[0], w[2], true), line(w[1], w[3], true), ...w.map(p => node(...p))); }
   if (key === 'adaptive') { const d = [[55, 72], [145, 72]];
     s.append(...d.map(p => line([100, 20], p, true)), node(100, 20, true), ...d.map(p => node(...p)), line(d[0], arms[0]), line(d[0], arms[1]), line(d[1], arms[3]),

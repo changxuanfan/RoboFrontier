@@ -1,7 +1,7 @@
 # Antigravity engine
 
 The adapter runs pinned Antigravity CLI 1.5.7 (`agy`, distinct from `gemini`).
-It supports centralized, hierarchical, peer and adaptive policies using the
+It supports single-agent, hierarchical, decentralized and adaptive policies using the
 released tasks and existing runtime. Python orchestration, supervision, recovery,
 robot MCP handling and accounting lifecycle are shared with Claude Code under
 `robofrontier/engines/common/`. Linux file tools use the same Landlock worker as

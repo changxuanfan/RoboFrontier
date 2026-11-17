@@ -1,4 +1,4 @@
-"""Engineering lifecycle for an existing centralized Claude policy/world.
+"""Engineering lifecycle for an existing single-agent Claude policy/world.
 
 This does not admit benchmark batches or create worlds. The caller owns the
 physical process; seal is the only normal shutdown path and never replays work.

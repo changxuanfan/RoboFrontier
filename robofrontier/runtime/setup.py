@@ -99,7 +99,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     roles = {cfg['manager']: {'kind':'manager'}}
     if cfg['topology'] == 'hierarchical':
         roles[cfg['coordinator']] = {'kind':'team-controller'}
-    if cfg['topology'] in ('centralized','adaptive'):
+    if cfg['topology'] in ('single-agent','adaptive'):
         roles['Controller'] = {'kind':'controller', 'robots':list(task['arms'])}
     else:
         roles.update({a: {'kind':'worker', 'robot':a} for a in task['arms']})
@@ -132,7 +132,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         values = {'RUN_DIR':str(directory),'REPO_ROOT':str(ROOT),'PYTHON':str(python), 'ACTOR':actor,
                   'CONNECTION':str(directory/'private/state/connections'/f'{actor}.json'),
                   'TOPOLOGY':cfg['topology'],
-                  'FINISH_AUTHORITY':cfg['coordinator'] if cfg['topology']=='hierarchical' else 'any peer Worker' if cfg['topology']=='peer' else 'Controller',
+                  'FINISH_AUTHORITY':cfg['coordinator'] if cfg['topology']=='hierarchical' else 'any peer Worker' if cfg['topology']=='decentralized' else 'Controller',
                   'COMMUNICATION_ROUTE':('Coordinate joint commitments and shared resources through '+cfg['coordinator']+'. Worker-to-Worker business messages are unavailable.' if cfg['topology']=='hierarchical' else 'Negotiate affected commitments and shared resources directly with relevant Workers.')}
         text = (templates/'roles'/f'{filename}.md').read_text()
         for key,value in values.items():

@@ -620,7 +620,7 @@ class RuntimeService:
             elif op == 'state':
                 self.respond(job, self.snapshot())
             elif op == 'finish':
-                authorized = kind=={'hierarchical':'team-controller','peer':'worker','centralized':'controller','adaptive':'controller'}[self.config['topology']]
+                authorized = kind=={'hierarchical':'team-controller','decentralized':'worker','single-agent':'controller','adaptive':'controller'}[self.config['topology']]
                 if not authorized:
                     raise ValueError('Task-team finish proposal required')
                 if any(v['status'] in ('pending','running','uncertain') for v in self.store.actions().values()):

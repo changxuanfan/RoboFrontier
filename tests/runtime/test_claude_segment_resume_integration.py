@@ -61,7 +61,7 @@ class ClaudeSegmentResumeTests(unittest.TestCase):
             base = Path(tmp).resolve() / 'batch'
             # A local fake model with a fake key: nothing to expose (claude_prepare.exposed_api_keys).
             with patch('robofrontier.batch.claude_prepare.exposed_api_keys', return_value=[]):
-                prepare_batch(base, ['opus'], cases=[CASE], topology='centralized')
+                prepare_batch(base, ['opus'], cases=[CASE], topology='single-agent')
             run = base / 'opus' / CASE
             task = json.loads((run / 'private/inputs/task.json').read_text())
             SlowMoveModel.camera, SlowMoveModel.robot = camera_names(task)[0], sorted(task['arms'])[0]

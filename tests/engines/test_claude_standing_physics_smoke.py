@@ -36,7 +36,7 @@ class PhysicalStandingModel(StandingModel):
                      'Opt-in requires Claude CLI, current scene assets and a native renderer')
 class StandingPhysicsSmokeTests(unittest.TestCase):
     def test_both_topologies_run_real_world_mailboxes_images_actions_and_seal(self):
-        for topology in ('hierarchical', 'peer'):
+        for topology in ('hierarchical', 'decentralized'):
             with self.subTest(topology=topology):
                 directory = Path(tempfile.mkdtemp(prefix='claude-standing-physics-'))
                 server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), PhysicalStandingModel)

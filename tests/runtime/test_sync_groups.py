@@ -19,7 +19,7 @@ class SyncTests(unittest.TestCase):
     def tearDown(self):
         for s in self.services:s.close()
         self.tmp.cleanup()
-    def service(self,mode='peer'):
+    def service(self,mode='decentralized'):
         root=Path(self.tmp.name)/str(len(self.services));root.mkdir();cfg=load_harness();cfg['topology']=mode;cfg['startup_protocol']=startup_protocol(mode)
         path=root/'cfg.json';path.write_text(json.dumps(cfg));run=prepare_run(root/'run',harness_path=path)
         s=RuntimeService(run,FakeWorld,fake_capture);self.services.append(s)
@@ -41,12 +41,12 @@ class SyncTests(unittest.TestCase):
         d.bind('fork-b',child['actor'],'delegate-b',dict(source_thread_id='Controller',source_ordinal=1,source_sha256='lineage'),'manager')
         d.activate('fork-b','manager');d.started('fork-b',child['actor'],'sent','manager');s.pump();return child['actor']
     def test_all_four_modes_use_same_executor_with_same_cycle_start(self):
-        for mode in ('peer','hierarchical','adaptive','centralized'):
+        for mode in ('decentralized','hierarchical','adaptive','single-agent'):
             with self.subTest(mode=mode):
                 s=self.service(mode);times=[];original=s.world.start_action
                 def start(*args):times.append(s.world.time);original(*args)
                 s.world.start_action=start
-                if mode=='centralized':
+                if mode=='single-agent':
                     data=self.part('A');data['actions']+=self.part('B')['actions']
                     s.world.time=5;parts=[self.call(s,'Controller','action_batch',data)]
                 else:
@@ -126,7 +126,7 @@ class SyncTests(unittest.TestCase):
         r=self.call(s,'A','job',{'call_id':j['id']})['result']
         self.assertEqual(r['execution_status'],'failed');self.assertFalse(r['execution_started']);self.assertEqual(s.world.executed,[])
     def test_single_owner_must_submit_all_its_roster_members_once(self):
-        s=self.service('centralized')
+        s=self.service('single-agent')
         self.assertIn('error',self.call(s,'Controller','action_batch',self.part('A'))['result'])
         self.assertEqual(s.store.actions(),{})
 
@@ -142,7 +142,7 @@ class SyncTests(unittest.TestCase):
 
     def test_stopping_member_notifies_both_owners_and_preserves_independent_work(self):
         from types import SimpleNamespace
-        s=self.service('peer')
+        s=self.service('decentralized')
         self.call(s,'C','move',{'delta_m':[0,0,.01],'wait':False},'independent')
         a=self.call(s,'A','action_batch',self.part('A',wait=True),'part-a')
         b=self.call(s,'B','action_batch',self.part('B',wait=True),'part-b')

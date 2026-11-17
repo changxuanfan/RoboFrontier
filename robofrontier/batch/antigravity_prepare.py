@@ -24,7 +24,7 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
     from robofrontier.tasks.families import prepare, policy_task, dial_code
     from robofrontier.batch.tasks import check_case_assets
     from robofrontier.tasks.families import RELEASE, read
-    if topology not in ('centralized', 'hierarchical', 'peer', 'adaptive'):
+    if topology not in ('single-agent', 'hierarchical', 'decentralized', 'adaptive'):
         raise ValueError('Unknown Antigravity topology')
     profiles = {name: profile(name, catalog) for name in names}
     selected = select_cases(families, cases, level, min_arms)
@@ -51,7 +51,7 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
         cfg = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
         cfg.update(engine='antigravity', topology=topology, model=selected_profile['model'], effort=selected_profile['effort'],
                    record_realtime_video=record_video)
-        if topology in ('hierarchical', 'peer'):
+        if topology in ('hierarchical', 'decentralized'):
             cfg['startup_protocol'] = 'direct_team_v3'
         # Written only for a robot_only run, so a full run's frozen harness is unchanged.
         if tool_mode != 'full':

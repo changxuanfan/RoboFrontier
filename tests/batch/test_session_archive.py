@@ -29,7 +29,7 @@ def finished_run(root, lifecycle='ended', engine='codex'):
     (run/'private/inputs').mkdir()
     (run/'private/inputs/manifest.json').write_text(json.dumps({'engine': engine, **run_layout.manifest_record(engine)}))
     store = RuntimeStore(run/'private/state/runtime.sqlite')
-    cfg = load_harness(); cfg['topology'] = 'centralized'; cfg['engine'] = engine
+    cfg = load_harness(); cfg['topology'] = 'single-agent'; cfg['engine'] = engine
     store.initialize('run', cfg, ['A'])
     store.update_agent('Controller', thread_id=THREAD)
     store.put('delegations', {'d1': {'snapshot_thread_id': SNAPSHOT}})

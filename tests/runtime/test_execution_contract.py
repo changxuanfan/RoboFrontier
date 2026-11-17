@@ -207,7 +207,7 @@ class SceneTopologyContractTests(unittest.TestCase):
 
     def test_both_tasks_all_modes_share_facts_commands_and_ownership(self):
         for scene,geometry in self.worlds.items():
-            for mode in ('hierarchical','peer','centralized','adaptive'):
+            for mode in ('hierarchical','decentralized','single-agent','adaptive'):
                 with self.subTest(scene=scene,mode=mode):self.check_mode(scene,geometry,mode)
 
     def check_mode(self,scene,geometry,mode):
@@ -249,10 +249,10 @@ class SceneTopologyContractTests(unittest.TestCase):
             self.assertLess(len(json.dumps(selected).encode()),20000)
             self.assertEqual(selected['model_id'],full['model_id']);self.assertEqual(stamp,report.stat().st_mtime_ns)
             self.assertIn('error',call(viewer,'robot_model',{'robot':'missing'})['result'])
-            owner='Controller' if mode in ('centralized','adaptive') else 'A'
+            owner='Controller' if mode in ('single-agent','adaptive') else 'A'
             self.assertIn('error',call(owner,'gripper',{'robot':'A','width_m':.05})['result'])
             ok(call('Meta','start'))
-            owner_b='Controller' if mode in ('centralized','adaptive') else 'B'
+            owner_b='Controller' if mode in ('single-agent','adaptive') else 'B'
             first=ok(call(owner,'gripper',{'robot':'A','width_m':.05,'wait':False},'action-A'))
             ok(call(owner_b,'gripper',{'robot':'B','width_m':.06,'wait':False},'action-B'))
             self.assertEqual(set(s.world.running),{'A','B'});self.assertIn('execution_timing',first['execution'])
@@ -266,7 +266,7 @@ class SceneTopologyContractTests(unittest.TestCase):
             if mode=='hierarchical':
                 self.assertIn('error',call('A','send',{'to':['B'],'text':'route test'})['result'])
                 ok(call('A','send',{'to':['Controller'],'text':'route test'}))
-            elif mode=='peer':ok(call('A','send',{'to':['B'],'text':'route test'}))
+            elif mode=='decentralized':ok(call('A','send',{'to':['B'],'text':'route test'}))
             elif mode=='adaptive':
                 pending=call('Controller','delegate',{'scopes':[{'robots':['A'],'goal':'offline only','done_when':'synthetic return'}]},'batch')
                 d=Delegations(s.store);d.claim('batch','test');child=d.batch('batch')['children'][0]

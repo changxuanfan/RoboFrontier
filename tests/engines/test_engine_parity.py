@@ -10,8 +10,8 @@ from robofrontier.tasks.config import ROOT
 from robofrontier.tasks.families import prepare
 
 HARNESS = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
-STARTUP = {'centralized': 'direct_controller_v2', 'adaptive': 'direct_controller_v2',
-           'hierarchical': 'direct_team_v3', 'peer': 'direct_team_v3'}
+STARTUP = {'single-agent': 'direct_controller_v2', 'adaptive': 'direct_controller_v2',
+           'hierarchical': 'direct_team_v3', 'decentralized': 'direct_team_v3'}
 
 
 def snapshot(run):
@@ -72,7 +72,7 @@ class EngineParityTests(unittest.TestCase):
 
     def test_every_topology_gets_identical_inputs_on_both_engines(self):
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
-            for topology in ('centralized', 'hierarchical', 'peer'):
+            for topology in ('single-agent', 'hierarchical', 'decentralized'):
                 with self.subTest(topology=topology):
                     runs = self.prepare_pair(tmp, 'transport-a04-d1', topology)
                     self.assert_same_inputs(runs)

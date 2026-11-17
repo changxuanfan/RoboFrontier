@@ -74,7 +74,7 @@ class StandingNativeIntegrationTests(unittest.TestCase):
         env = {k:os.environ[k] for k in ('PATH','HOME','LANG','LC_ALL','TMPDIR') if k in os.environ}
         env['FAKE_KEY'] = 'synthetic'
         try:
-            for topology in ('hierarchical', 'peer'):
+            for topology in ('hierarchical', 'decentralized'):
                 StandingModel.topology = topology
                 with self.subTest(topology=topology), standing_fixture(
                         topology, factory=ClaudeSessionHost, endpoint=f'http://127.0.0.1:{model.server_port}',

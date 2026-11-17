@@ -236,7 +236,7 @@ def run_antigravity(run, command, scratch, seen, shared):
     from robofrontier.runtime.store import RuntimeStore
     prepare_tools(run)
     config = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
-    config.update(engine='antigravity', topology='centralized')
+    config.update(engine='antigravity', topology='single-agent')
     store = RuntimeStore(run/'private/state/runtime.sqlite')
     store.initialize(run.name, config, ['Arm1'])
     store.put('lifecycle', 'running')

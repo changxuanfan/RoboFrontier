@@ -59,7 +59,7 @@ class StandingTeamPolicyHost:
         self.hosts = {}
         try:
             cfg = self.store.get('config')
-            if (cfg.get('engine') != self.engine or cfg.get('topology') not in ('hierarchical', 'peer')
+            if (cfg.get('engine') != self.engine or cfg.get('topology') not in ('hierarchical', 'decentralized')
                     or cfg.get('startup_protocol') != 'direct_team_v3'):
                 raise ValueError('Expected a direct-team Native standing-team engineering run')
             if cfg.get('model') != profile.get('model') or cfg.get('effort') != profile.get('effort'):

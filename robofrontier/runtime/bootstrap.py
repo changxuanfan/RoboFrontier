@@ -137,7 +137,7 @@ def bootstrap_text(run, actor):
         raise ValueError('Not a policy role: ' + actor)
     paths = ['rules.md', 'task.json', 'roles.json', 'roles/' + actor + '.md', 'skill/SKILL.md',
              'skill/references/tools.md', 'skill/references/motion-check.md']
-    if topology != 'centralized': paths.append('skill/references/communication.md')
+    if topology != 'single-agent': paths.append('skill/references/communication.md')
     if topology == 'adaptive': paths.append('skill/references/adaptive.md')
     if (public / 'environment.md').is_file(): paths.append('environment.md')
     for name in task.get('family_materials', []):

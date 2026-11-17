@@ -36,7 +36,7 @@ class FinishPhysicsSmokeTests(unittest.TestCase):
         FinishModel.requests.clear()
         try:
             batch=directory/'batch'; case='transport-a04-d1'
-            prepare_batch(batch,['opus'],cases=[case],topology='centralized')
+            prepare_batch(batch,['opus'],cases=[case],topology='single-agent')
             run=batch/'opus'/case
             launch=run/'private/inputs/claude.json'; data=json.loads(launch.read_text())
             data['profile'].update(base_url=f'http://127.0.0.1:{server.server_port}',env_key='FAKE_KEY')

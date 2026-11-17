@@ -30,7 +30,7 @@ class DirectTeamStartTests(unittest.TestCase):
         return service, call
 
     def test_all_initial_roles_bind_before_one_start_and_ready_is_optional(self):
-        for topology in ('hierarchical', 'peer'):
+        for topology in ('hierarchical', 'decentralized'):
             with self.subTest(topology=topology), tempfile.TemporaryDirectory() as temporary:
                 service, call = self.make_service(Path(temporary), topology)
                 policy = {a: v for a, v in service.store.agents().items() if v['kind'] != 'manager'}
@@ -66,7 +66,7 @@ class DirectTeamStartTests(unittest.TestCase):
         from unittest.mock import patch
         for readiness in ('environment_preview_only', 'prepared_policy_trial'):
             with self.subTest(readiness=readiness), tempfile.TemporaryDirectory() as temporary:
-                service, call = self.make_service(Path(temporary), 'peer')
+                service, call = self.make_service(Path(temporary), 'decentralized')
                 videos = []
                 service.video_factory = lambda: videos.append(1)
                 for actor in ('A', 'B', 'C', 'D'):
@@ -86,7 +86,7 @@ class DirectTeamStartTests(unittest.TestCase):
 
     def test_duplicate_native_session_cannot_bind_two_initial_roles_at_start(self):
         with tempfile.TemporaryDirectory() as temporary:
-            service, call = self.make_service(Path(temporary), 'peer')
+            service, call = self.make_service(Path(temporary), 'decentralized')
             for actor in ('A', 'B', 'C', 'D'):
                 call('Meta', 'bind', {'actor': actor, 'thread_id': 'same-thread'})
             response = call('Meta', 'start')

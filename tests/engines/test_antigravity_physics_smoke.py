@@ -32,7 +32,7 @@ class PhysicsTests(unittest.TestCase):
                 op, data = ('return_task', {'outcome': 'completed', 'result': 'synthetic evidence'})
             elif topology == 'adaptive':
                 op, data = 'delegate', {'scopes': [{'robots': [r], 'goal': 'synthetic', 'done_when': 'synthetic'} for r in robots]}
-            elif topology == 'centralized':
+            elif topology == 'single-agent':
                 op, data = 'finish', {'note': 'synthetic early finish'}
             else:
                 op, data = 'observe', {'cameras': ['global']}
@@ -96,7 +96,7 @@ class PhysicsTests(unittest.TestCase):
                         self.assertEqual(fork['status'], 'verified')
                         self.assertEqual(fork['proof']['pending_tool_id'], fork['binding']['tool_id'])
                     self.assertEqual(batches[0]['source_provenance']['pending_tool_id'], fork['binding']['tool_id'])
-                elif topology == 'centralized':
+                elif topology == 'single-agent':
                     self.assertEqual(result['reason'], 'world_ended')
                     self.assertFalse(json.loads((run/'private/outputs/evaluation.json').read_text())['task_success'])
                 else:
@@ -109,7 +109,7 @@ class PhysicsTests(unittest.TestCase):
             print('Antigravity physics evidence:', directory)
 
     def test_single(self):
-        self.exercise('centralized')
+        self.exercise('single-agent')
 
     def test_adaptive(self):
         self.exercise('adaptive')
@@ -121,13 +121,13 @@ class PhysicsTests(unittest.TestCase):
         self.exercise('adaptive', robots=('A', 'B'), tool_mode='robot_only')
 
     def test_single_robot_only(self):
-        self.exercise('centralized', tool_mode='robot_only')
+        self.exercise('single-agent', tool_mode='robot_only')
 
     def test_controller_worker(self):
         self.exercise('hierarchical')
 
     def test_worker_worker(self):
-        self.exercise('peer')
+        self.exercise('decentralized')
 
 
 if __name__ == '__main__':

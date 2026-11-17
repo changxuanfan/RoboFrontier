@@ -42,7 +42,7 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(self.s.pending('A')['messages'],40)
         with self.assertRaises(ValueError):self.s.send('Controller',['A'],'different','key-0')
     def test_a_run_recorded_with_the_old_lead_kind_keeps_its_authority(self):
-        # Runs prepared before the rename stored the controller-worker lead as 'coordinator'.
+        # Runs prepared before the rename stored the hierarchical lead as 'coordinator'.
         self.assertEqual(self.s.agent('Controller')['kind'],'team-controller')
         value=json.loads(self.s.db.execute("SELECT value FROM agents WHERE id='Controller'").fetchone()[0])
         value['kind']='coordinator'
@@ -71,7 +71,7 @@ class StoreTests(unittest.TestCase):
         self.assertIsNone(self.s.delivery('A')['delivery_id'])
     def test_peers_can_route_directly_without_a_hidden_coordinator(self):
         self.s.close();self.s=RuntimeStore(Path(self.tmp.name)/'peer.sqlite')
-        config=load_harness();config['topology']='peer';config['startup_protocol']=startup_protocol('peer');self.s.initialize('peer',config,['A','B'])
+        config=load_harness();config['topology']='decentralized';config['startup_protocol']=startup_protocol('decentralized');self.s.initialize('decentralized',config,['A','B'])
         self.assertNotIn('Controller',self.s.agents())
         self.s.send('A',['B'],'peer work','peer-key')
         self.assertEqual(self.s.pending('B')['messages'],1)
@@ -86,7 +86,7 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(len(self.s.history('Controller')),1)
         self.assertFalse(self.s.events()[-1]['details']['business_acceptance'])
     def test_start_activates_every_policy_role_without_assigning_work(self):
-        for mode in ('hierarchical','peer','centralized'):
+        for mode in ('hierarchical','decentralized','single-agent'):
             store=RuntimeStore(Path(self.tmp.name)/(mode+'-start.sqlite'))
             try:
                 cfg=load_harness();cfg['topology']=mode;cfg['startup_protocol']=startup_protocol(mode);store.initialize(mode,cfg,['A','B','C'])

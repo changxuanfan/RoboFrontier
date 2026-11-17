@@ -68,7 +68,7 @@ def _check_shared_budget(run, topology, turn_budget_usd, total_budget_usd):
 
     A turn without its own allowance reserves the whole remainder, so one role would deny
     every other; with an allowance, the roles' reservations together must fit the cap."""
-    if total_budget_usd is None or topology == 'centralized':
+    if total_budget_usd is None or topology == 'single-agent':
         return
     if turn_budget_usd is None:
         raise ValueError('A task budget for a multi-role run needs a per-turn budget')
@@ -135,7 +135,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
     profile = launch['profile']
     config = json.loads((run / 'private/inputs/harness.json').read_text())
     topology = config.get('topology')
-    if topology not in ('centralized', 'adaptive', 'hierarchical', 'peer') or config.get('engine') != engine:
+    if topology not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized') or config.get('engine') != engine:
         raise ValueError('Expected a supported Claude run')
     if profile.get('auth_mode') != 'native_login' and not base_env.get(profile['env_key']):
         raise ValueError('Missing credential variable: ' + profile['env_key'])
@@ -168,7 +168,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
         if claim.exists() and not resuming: raise ValueError('Run already claimed; never restart the world')
         if run_layout.path(run, 'stop', 'claude').exists(): raise ValueError('Run was stopped before launch')
         if verifier(run): raise ValueError('Frozen inputs changed before launch')
-        if topology == 'centralized':
+        if topology == 'single-agent':
             # The run's persistent ledger, as for every topology, so a model restart or a
             # continued segment keeps the costs already spent.
             fresh_ledger = not (resuming and run_layout.path(run, 'budget_ledger', 'claude').exists())
@@ -187,7 +187,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
             policy = adaptive_policy_factory(run, profile, base_env, ledger,
                                              turn_budget_usd=turn_budget_usd,
                                              **({'resume': True} if resuming else {}))
-        elif topology in ('hierarchical', 'peer'):
+        elif topology in ('hierarchical', 'decentralized'):
             ledger = _ledger(run, total_budget_usd, resuming)
             policy = standing_policy_factory(run, profile, base_env, ledger,
                                               turn_budget_usd=turn_budget_usd,
@@ -262,7 +262,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
                 budget_status = 'unavailable'
                 budget_review_required = True
         # Nothing was claimed, so the launch may be retried: a ledger this attempt created
-        # before its claim (centralized) would otherwise make every retry fail to create it.
+        # before its claim (single-agent) would otherwise make every retry fail to create it.
         discard = not claimed and fresh_ledger and ledger is not None and policy_closed and budget is not None \
             and not budget['reservations']
         if ledger is not None and policy_closed:

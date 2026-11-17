@@ -16,7 +16,7 @@ class CentralizedTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
-        cfg = load_harness(); cfg['topology'] = 'centralized'; cfg['startup_protocol'] = startup_protocol('centralized')
+        cfg = load_harness(); cfg['topology'] = 'single-agent'; cfg['startup_protocol'] = startup_protocol('single-agent')
         path = root/'config.json'; path.write_text(json.dumps(cfg))
         self.run = prepare_run(root/'run', harness_path=path)
         self.service = RuntimeService(self.run, FakeWorld, fake_capture)

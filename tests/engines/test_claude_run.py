@@ -35,7 +35,7 @@ class RunTaskTests(unittest.TestCase):
             'profile': {'env_key': 'FAKE_KEY', 'model': 'fake', 'effort': 'high'}}))
         (self.run / 'private/inputs/manifest.json').write_text(json.dumps({
             'status': 'prepared', 'engine': 'claude'}))
-        (self.run / 'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'centralized'}))
+        (self.run / 'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'single-agent'}))
         (self.run / 'private/state/connections/Meta.json').write_text('{}')
         self.env = {'FAKE_KEY': 'secret', 'PATH': '/bin'}
         self.verify = patch('robofrontier.engines.claude.run.verify_inputs', return_value=[])
@@ -89,7 +89,7 @@ class RunTaskTests(unittest.TestCase):
         self.assertTrue(result['owner_alive'])  # live owner is recorded, never killed implicitly
 
     def test_standing_launch_creates_one_run_ledger_before_world(self):
-        for topology in ('hierarchical', 'peer'):
+        for topology in ('hierarchical', 'decentralized'):
             with self.subTest(topology=topology), tempfile.TemporaryDirectory() as tmp:
                 import shutil
                 run = Path(tmp)/'run'; shutil.copytree(self.run, run)
@@ -155,7 +155,7 @@ class RunTaskTests(unittest.TestCase):
 
     def test_requested_unreadable_recording_requires_review_even_after_seal(self):
         config = self.run/'private/inputs/harness.json'
-        config.write_text(json.dumps({'engine':'claude','topology':'centralized','record_realtime_video':True}))
+        config.write_text(json.dumps({'engine':'claude','topology':'single-agent','record_realtime_video':True}))
         (self.run/'private/state/connections/Meta.json').write_text('{"url":"http://127.0.0.1:1234"}')
         class Attached(Policy):
             def __init__(self,*a,**k): super().__init__(*a,**k); self.store.attached = True
@@ -223,7 +223,7 @@ class RunTaskTests(unittest.TestCase):
         (self.run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
             'Meta': {'kind': 'manager'}, 'Coordinator': {'kind': 'team-controller'},
             'A1': {'kind': 'worker', 'robot': 'A1'}, 'A2': {'kind': 'worker', 'robot': 'A2'}}}))
-        for topology, turn, total in (('hierarchical', None, 1), ('hierarchical', .5, 1), ('peer', .6, 1.7)):
+        for topology, turn, total in (('hierarchical', None, 1), ('hierarchical', .5, 1), ('decentralized', .6, 1.7)):
             with self.subTest(topology=topology, turn=turn, total=total):
                 (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine': 'claude', 'topology': topology}))
                 with self.assertRaisesRegex(ValueError, 'budget'):

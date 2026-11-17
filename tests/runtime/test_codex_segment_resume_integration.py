@@ -83,7 +83,7 @@ class CodexSegmentResumeTests(unittest.TestCase):
             requests = []
             # A centralized run: one Controller thread and no delegates.
             harness = json.loads((ROOT / 'configs/harnesses/policy.json').read_text())
-            harness.update(engine='codex', topology='centralized', model=STUB['model'], effort=STUB['effort'],
+            harness.update(engine='codex', topology='single-agent', model=STUB['model'], effort=STUB['effort'],
                            record_realtime_video=False)
             (t / 'harness.json').write_text(json.dumps(harness))
             run = prepare(CASE, t / 'batch/stub' / CASE, t / 'harness.json', wall_limit_s=900).resolve()

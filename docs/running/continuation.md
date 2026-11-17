@@ -3,7 +3,7 @@
 A run that stops can continue. The continued part is **the same trial**: the same
 run directory, runtime database, workspace and model sessions. Only the physical
 world is new, rebuilt approximately from the last recorded motion frame. Both
-engines and all four topologies (single, controller-worker, worker-worker,
+engines and all four agent systems (single-agent, hierarchical, decentralized,
 adaptive) continue the same way. The functions named `segments.*` below are in
 `robofrontier/runtime/segments.py`.
 

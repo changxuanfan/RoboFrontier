@@ -17,8 +17,8 @@ class ClaudeDispatcher:
         self.host = host
         self.owner = owner or self.engine + '-meta-' + uuid.uuid4().hex
         cfg = store.get('config')
-        if cfg.get('engine') != self.engine or cfg.get('topology') != 'centralized':
-            raise ValueError('Only an engine=claude centralized run is supported; adaptive is not qualified')
+        if cfg.get('engine') != self.engine or cfg.get('topology') != 'single-agent':
+            raise ValueError('Only an engine=claude single-agent run is supported; adaptive is not qualified')
         if host.actor != 'Controller':
             raise ValueError('Expected the bound Controller host')
         if store.agent('Controller')['thread_id'] != host.session_id:

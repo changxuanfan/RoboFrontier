@@ -95,7 +95,7 @@ def standing_fixture(topology, *, factory=RoleHost, endpoint=None, env=None):
 
 class StandingTeamTests(unittest.TestCase):
     def test_a_continued_segment_resumes_every_role_in_its_own_session(self):
-        for topology in ('hierarchical', 'peer'):
+        for topology in ('hierarchical', 'decentralized'):
             with self.subTest(topology=topology), standing_fixture(topology) as (policy, service, call):
                 policy.bind_and_bootstrap()
                 sessions = {a: h.session_id for a, h in policy.hosts.items()}
@@ -123,7 +123,7 @@ class StandingTeamTests(unittest.TestCase):
                     resumed.stop(); resumed.close()
 
     def test_all_roles_bind_before_start_and_first_prompt_without_ready(self):
-        for topology in ('hierarchical', 'peer'):
+        for topology in ('hierarchical', 'decentralized'):
             with self.subTest(topology=topology), standing_fixture(topology) as (policy, service, _):
                 expected = {'A', 'B', 'C', 'D'} | ({'Controller'} if topology == 'hierarchical' else set())
                 self.assertEqual(set(policy.hosts), expected)
@@ -151,7 +151,7 @@ class StandingTeamTests(unittest.TestCase):
                     policy.bind_and_bootstrap()
 
     def test_mailbox_wakes_bound_recipient_and_preserves_communication_authority(self):
-        for topology in ('hierarchical', 'peer'):
+        for topology in ('hierarchical', 'decentralized'):
             with self.subTest(topology=topology), standing_fixture(topology) as (policy, service, call):
                 policy.bind_and_bootstrap()
                 for h in policy.hosts.values(): h.state = 'idle'
@@ -173,7 +173,7 @@ class StandingTeamTests(unittest.TestCase):
                     self.assertNotIn('Controller', service.store.agents())
 
     def test_lost_binding_acknowledgement_never_launches_or_rebinds_roles(self):
-        with standing_fixture('peer') as (policy, service, call):
+        with standing_fixture('decentralized') as (policy, service, call):
             calls = []
             def lost(*args, **kwargs):
                 calls.append(args[1]); call(*args, **kwargs)
@@ -187,7 +187,7 @@ class StandingTeamTests(unittest.TestCase):
             self.assertEqual(calls, ['bind'])
 
     def test_lost_wake_acknowledgement_pauses_without_resending(self):
-        with standing_fixture('peer') as (policy, service, call):
+        with standing_fixture('decentralized') as (policy, service, call):
             policy.bind_and_bootstrap()
             for h in policy.hosts.values(): h.state = 'idle'
             call(policy.run/'private/state/connections/A.json', 'send', {'to':['B'],'text':'new fact'}, 'fact-1')
@@ -205,7 +205,7 @@ class StandingTeamTests(unittest.TestCase):
 
     def test_a_wake_refused_by_an_exhausted_task_budget_is_not_sent_and_pauses_for_the_budget(self):
         from robofrontier.engines.claude.budget import BudgetExhausted
-        with standing_fixture('peer') as (policy, service, call):
+        with standing_fixture('decentralized') as (policy, service, call):
             policy.bind_and_bootstrap()
             for h in policy.hosts.values(): h.state = 'idle'
             call(policy.run/'private/state/connections/A.json', 'send', {'to':['B'],'text':'new fact'}, 'fact-1')
@@ -220,7 +220,7 @@ class StandingTeamTests(unittest.TestCase):
             self.assertEqual(paused[-1]['details']['reason'], 'Claude task budget exhausted')
 
     def test_unknown_role_pauses_and_other_role_recovery_does_not_mask_failure(self):
-        with standing_fixture('peer') as (policy, service, _):
+        with standing_fixture('decentralized') as (policy, service, _):
             policy.bind_and_bootstrap()
             policy.hosts['A'].state = 'error'; policy.hosts['A'].recovering = True
             policy.hosts['B'].state = 'error'

@@ -24,7 +24,7 @@ SESSION_SOURCES = {
     'antigravity': ('antigravity.host',),
 }
 
-# Runs prepared before the rename record the controller-worker lead as 'coordinator'.
+# Runs prepared before the rename record the hierarchical lead as 'coordinator'.
 LEGACY_KINDS = {'coordinator': 'team-controller'}
 
 
@@ -121,7 +121,7 @@ class RuntimeStore:
             roles = [(config['manager'], 'manager')]
             if config['topology'] == 'hierarchical':
                 roles.append((config['coordinator'], 'team-controller'))
-            roles += [('Controller', 'controller')] if config['topology'] in ('centralized','adaptive') else [(w, 'worker') for w in workers]
+            roles += [('Controller', 'controller')] if config['topology'] in ('single-agent','adaptive') else [(w, 'worker') for w in workers]
             for actor, kind in roles:
                 self.db.execute('INSERT INTO agents VALUES (?,?)', (actor, packed({
                     'kind': kind, 'thread_id': None, 'requested_model': config['model'] if kind!='manager' else None, 'requested_effort': config['effort'] if kind!='manager' else None,

@@ -2,7 +2,7 @@
 
 Every policy role is a native Codex app-server thread (`thread/start`, `turn/start`,
 `thread/fork`) with the robot tool as an app-server dynamic tool. All four topologies run:
-`single`, `adaptive` (the default), `controller-worker` and `worker-worker`. The pinned CLI is
+`adaptive` (the default), `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is
 Codex 0.165.0 (`robofrontier/runtime/versions.py`). A run starts only with a passed compatibility
 receipt for its profile, catalog and CLI version ([Preflight and receipts](#preflight-and-receipts)).
 What both engines share is in the [engine overview](README.md); the
@@ -171,7 +171,7 @@ under the default runs root) and register it once; the entry sets
 
 ## Standing teams
 
-`controller-worker` and `worker-worker` start one thread per initial role, with the same roles,
+`hierarchical` and `decentralized` start one thread per initial role, with the same roles,
 routes, single START (`direct_team_v3`) and mailbox as
 [Claude Code standing teams](claude-code.md#standing-teams). Delegates and standing Workers add
 model requests inside each run; `batch.parallel` counts runs.

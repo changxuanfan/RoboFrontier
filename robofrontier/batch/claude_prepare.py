@@ -100,7 +100,7 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
     from robofrontier.tasks.families import prepare, policy_task
     from robofrontier.tasks.families import dial_code
 
-    if topology not in ('adaptive', 'centralized', 'hierarchical', 'peer'):
+    if topology not in ('adaptive', 'single-agent', 'hierarchical', 'decentralized'):
         raise ValueError('Unknown Claude topology')
     if type(record_video) is not bool:
         raise ValueError('record_video must be a boolean')
@@ -145,7 +145,7 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
             puzzles[case] = target
     for name, p in profiles.items():
         cfg = read(ROOT / 'configs/harnesses/policy.json')
-        if topology in ('hierarchical', 'peer'): cfg['startup_protocol'] = 'direct_team_v3'
+        if topology in ('hierarchical', 'decentralized'): cfg['startup_protocol'] = 'direct_team_v3'
         cfg.update(engine='claude', topology=topology, model=p['model'], effort=p['effort'], record_realtime_video=record_video)
         if observation_image_profile is not None:cfg['observation_image_profile']=observation_image_profile
         if startup_timeout_s is not None:cfg['startup_timeout_s']=startup_timeout_s

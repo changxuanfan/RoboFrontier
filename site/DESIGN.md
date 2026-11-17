@@ -21,7 +21,7 @@ One long page with a chapter rail and a lightbox video player.
 | 02 Benchmark | Family cards; per-family explainer of levels × team sizes from the task initial states (`assets/atlas/`); the Robo World map drawn from `tasks.json`; the adaptive protocol diagram | `tasks.json` |
 | 03 Videos | Video wall: source tabs (Oracle, then each model), family and front/side switches; each Oracle video states its provenance | `media.json` |
 | 04 Results | Failures per model, completion over time, tokens over time, metric definitions | `results.json` |
-| 05 Studies | Skills (with and without `skills.md`), communication (single, controller-worker, worker-worker, adaptive), cameras (own arms vs every camera) | `results.json` |
+| 05 Studies | Skills (with and without `skills.md`), communication (single-agent, hierarchical, decentralized, adaptive), cameras (own arms vs every camera) | `results.json` |
 | 06 Cite | BibTeX | static |
 
 No number is hard-coded in HTML. Missing data renders an explicit "pending" state or an empty
@@ -90,7 +90,7 @@ aggregate, so one file serves Results and Studies. Fields the page reads:
            "token_curve": [[0, 0]]}]}
 ```
 
-`topology` is one of `single`, `controller-worker`, `worker-worker`, `adaptive`;
+`topology` is one of `single-agent`, `hierarchical`, `decentralized`, `adaptive`;
 `camera_access` is `ego` or `all`.
 
 ## Files

@@ -2,8 +2,7 @@
 
 Every policy role is a native Claude Code session (`claude -p`, continued with `--resume`) with
 the robot tool served over MCP by `robofrontier/engines/claude/robot_mcp.py`. All four
-topologies run: `single`, `adaptive`, `controller-worker` and `worker-worker` (inside a run named
-centralized, adaptive, hierarchical and peer). The pinned CLI is Claude Code 2.1.316
+agent systems run: `adaptive`, `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is Claude Code 2.1.316
 (`robofrontier/runtime/versions.py`); runs turn its self-update off (`DISABLE_AUTOUPDATER`). A run
 starts only with passed precheck receipts for its profile and that CLI version
 ([Preflight and receipts](#preflight-and-receipts)). What both engines share is in the
@@ -207,14 +206,14 @@ host stays refused.
 
 ## Standing teams
 
-`controller-worker` and `worker-worker` give every initial role its own native session with the
+`hierarchical` and `decentralized` give every initial role its own native session with the
 same robot MCP, the runtime's mailbox, permissions, action IDs and wake leases. No standing Worker
 is an Adaptive fork.
 
 | Mode | Initial sessions | Authority |
 | --- | --- | --- |
-| `controller-worker` | One Controller plus one Worker per arm | Workers move only their own arms; messages route through the Controller, which may propose team finish |
-| `worker-worker` | One Worker per arm | Workers move their own arms, message each other and may propose team finish |
+| `hierarchical` | One Controller plus one Worker per arm | Workers move only their own arms; messages route through the Controller, which may propose team finish |
+| `decentralized` | One Worker per arm | Workers move their own arms, message each other and may propose team finish |
 
 The runtime enforces the routes and robot authority. The lead's role kind is `team-controller`.
 The host binds every initial session, then the owner persists one START (`direct_team_v3`) and
@@ -228,7 +227,7 @@ acknowledgement blocks bootstrap; a lost wake acknowledgement marks the wake unc
 dispatch without resending. Stop cancels every role's turn, then seals.
 
 ```sh
-.venv/bin/robofrontier prepare --engine claude --topology controller-worker --render native \
+.venv/bin/robofrontier prepare --engine claude --topology hierarchical --render native \
   --level 1 --min-arms --parallel 2 --output runs/policy/claude-standing-l1
 ```
 

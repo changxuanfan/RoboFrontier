@@ -6,7 +6,7 @@ description: Execute a RoboFrontier run as Controller, Worker or adaptive delega
 # Robot collaboration
 
 Read [tools](references/tools.md) before robot operations. Read
-[communication](references/communication.md) in hierarchical, peer and adaptive
+[communication](references/communication.md) in hierarchical, decentralized and adaptive
 runs, and [bounded forks](references/adaptive.md) in adaptive runs. Read
 [motion screening](references/motion-check.md) when you consider `check_motion`.
 The task's family Skill (`task_skill`) covers that family's manipulation.
@@ -15,7 +15,7 @@ The task's family Skill (`task_skill`) covers that family's manipulation.
 
 Use the current mode. Centralized has one Controller planning and operating all
 robots, including concurrent actions. Hierarchical has a Controller and standing
-Workers; peer has standing Workers negotiating directly. Adaptive has a Controller
+Workers; decentralized has standing Workers negotiating directly. Adaptive has a Controller
 and temporary delegates that execute a bounded scope and promptly hand it back
 with `return_task`. Standing Workers stay team members after local completion; an
 ended reply ends neither membership nor a delegation. Runtime forks follow their

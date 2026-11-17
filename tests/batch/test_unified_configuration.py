@@ -139,7 +139,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
                 _frozen_configuration(batch)
 
     def test_standing_team_batches_freeze_direct_team_start(self):
-        for topology in ('controller-worker', 'worker-worker'):
+        for topology in ('hierarchical', 'decentralized'):
             with self.subTest(topology=topology), tempfile.TemporaryDirectory() as temporary:
                 config = load_configuration(overrides={'policy': {'topology': topology},
                     'selection': {'cases': ['transport-a04-d1']}, 'batch': {'parallel': 1}})
@@ -150,11 +150,11 @@ class UnifiedConfigurationTests(unittest.TestCase):
                 harness = json.loads((run/'private/inputs/harness.json').read_text())
                 self.assertEqual(harness['startup_protocol'], 'direct_team_v3')
                 roles = json.loads((run/'public/inputs/roles.json').read_text())['roles']
-                self.assertEqual(set(roles), {'Meta', 'Controller', 'A', 'B', 'C', 'D'} if topology == 'controller-worker' else {'Meta', 'A', 'B', 'C', 'D'})
+                self.assertEqual(set(roles), {'Meta', 'Controller', 'A', 'B', 'C', 'D'} if topology == 'hierarchical' else {'Meta', 'A', 'B', 'C', 'D'})
                 self.assertEqual(verify_inputs(run), [])
 
     def test_claude_standing_prepare_freezes_role_prompts_and_direct_start(self):
-        for topology in ('controller-worker', 'worker-worker'):
+        for topology in ('hierarchical', 'decentralized'):
             with self.subTest(topology=topology), tempfile.TemporaryDirectory() as tmp:
                 config = load_configuration(overrides={
                     'policy': {'engine':'claude','profile':'haiku','topology':topology},
@@ -171,7 +171,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
                 self.assertEqual(harness['startup_protocol'], 'direct_team_v3')
                 roles = json.loads((run/'public/inputs/roles.json').read_text())['roles']
                 self.assertEqual(set(roles), {'Meta','A','B','C','D'} |
-                    ({'Controller'} if topology == 'controller-worker' else set()))
+                    ({'Controller'} if topology == 'hierarchical' else set()))
                 for actor, value in roles.items():
                     if value['kind'] == 'manager': continue
                     # Each role's frozen first message, shared with the Codex route.

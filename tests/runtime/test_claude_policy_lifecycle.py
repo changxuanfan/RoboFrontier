@@ -41,7 +41,7 @@ class LifecycleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             cfg = json.loads((ROOT / 'configs/harnesses/policy.json').read_text())
-            cfg.update(engine='claude', topology='centralized', model='fake', effort='high')
+            cfg.update(engine='claude', topology='single-agent', model='fake', effort='high')
             config_path = root / 'config.json'
             config_path.write_text(json.dumps(cfg))
             run = prepare_run(root / 'run', harness_path=config_path)

@@ -30,12 +30,12 @@ it is not the measured policy and must not supply solutions or private evaluatio
 history, forking and transport stay engine-specific; the shared contracts define authority, robot
 actions, permitted observations, scoring and evidence.
 
-| Topology | Internal name | Initial policy roles |
-| --- | --- | --- |
-| `single` | `centralized` | One Controller operates all robots; no delegates |
-| `controller-worker` | `hierarchical` | A coordinating Controller and one standing Worker per robot |
-| `worker-worker` | `peer` | One standing Worker per robot, coordinating directly |
-| `adaptive` | `adaptive` | One Controller that creates and retires temporary delegates as it decides |
+| Agent system (`policy.topology`) | Initial policy roles |
+| --- | --- |
+| `adaptive` | One Controller that creates and retires temporary delegates as it decides |
+| `single-agent` | One Controller operates all robots; no delegates |
+| `hierarchical` | A coordinating Controller and one standing Worker per robot |
+| `decentralized` | One standing Worker per robot, coordinating directly |
 
 The coordinating Controller does not get its Workers' action authority. A Single Controller
 names the robot in each command and can move independent arms concurrently. An Adaptive run may

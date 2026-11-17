@@ -62,7 +62,7 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 | `policy.engine` | `codex`, `claude` or `antigravity` |
 | `policy.profile` | Entry in the engine's section of `configs/models.json`. Claude defaults to `haiku_subscription_token` and Antigravity to `flash_subscription`. |
 | `policy.effort` | Requested reasoning effort; must match the preflight receipt |
-| `policy.topology` | `single`, `controller-worker`, `worker-worker` or `adaptive` |
+| `policy.topology` | `adaptive`, `single-agent`, `hierarchical` or `decentralized` |
 | `policy.tool_mode` | `full` (default) or `robot_only`: the robot tool alone ([robot-only runs](running/robot-only.md)) |
 | `batch.parallel` | Runs at once, 1 to 36 |
 | `batch.startup_interval_s` | Gap between host launches (0.3 s); never between robot calls |
@@ -88,12 +88,12 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 
 ## Startup in all four modes
 
-| Topology | Inside a run | START |
-| --- | --- | --- |
-| `single` | centralized | `direct_controller_v2` |
-| `adaptive` | adaptive | `direct_controller_v2` |
-| `controller-worker` | hierarchical | `direct_team_v3` |
-| `worker-worker` | peer | `direct_team_v3` |
+| Agent system | START |
+| --- | --- |
+| `adaptive` | `direct_controller_v2` |
+| `single-agent` | `direct_controller_v2` |
+| `hierarchical` | `direct_team_v3` |
+| `decentralized` | `direct_team_v3` |
 
 The owner prepares the world and the host binds every initial session; then the runtime persists
 one START and the host tells each initial role that the run has started. Reading, observing and

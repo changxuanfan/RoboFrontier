@@ -71,7 +71,7 @@ def setup_run(run):
     write_json(run/'private/state/connections/Controller.json', {'schema_version': 3, 'run_id': run.name,
         'actor': 'Controller', 'url': 'http://127.0.0.1:' + str(server.server_port), 'token': 'local-probe'})
     cfg = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
-    cfg.update(engine='antigravity', topology='centralized')
+    cfg.update(engine='antigravity', topology='single-agent')
     store = RuntimeStore(run/'private/state/runtime.sqlite')
     store.initialize(run.name, cfg, ['Arm1'])
     store.put('lifecycle', 'running')

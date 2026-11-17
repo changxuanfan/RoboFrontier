@@ -97,7 +97,7 @@ class SetupTests(unittest.TestCase):
         # The template marks its tool-dependent passages; a full run gets the full wording.
         from robofrontier.runtime.tool_mode import render
         skill=render((Path(__file__).resolve().parents[2]/'prompts/skills/robot-collaboration/SKILL.md').read_text(),'full').encode()
-        for topology in ('hierarchical','peer'):
+        for topology in ('hierarchical','decentralized'):
             cfg=load_harness();cfg['topology']=topology;cfg['startup_protocol']=startup_protocol(topology)
             c=self.root/(topology+'.json');c.write_text(json.dumps(cfg))
             run=prepare_run(self.root/topology,p,c)

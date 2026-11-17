@@ -55,7 +55,7 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
             allowed={'topology','startup_protocol','observation_image_profile','record_realtime_video','startup_timeout_s','render_device','tool_mode'}
             if set(harness_overrides)-allowed:raise ValueError('Unsupported harness overrides')
             harness.update(harness_overrides)
-        if not harness_overrides and p.get('benchmark_topology') in ('hierarchical', 'peer'):
+        if not harness_overrides and p.get('benchmark_topology') in ('hierarchical', 'decentralized'):
             harness.update(topology=p['benchmark_topology'], startup_protocol='direct_team_v3')
         harness_path=config_dir/'harness.json';write_json(harness_path,harness)
         for case in selected:

@@ -95,8 +95,8 @@ cp configs/examples/mac.toml site.toml      # or slurm.toml, runpod.toml
 ```
 
 `config` prints the resolved settings. Unknown fields and invalid values are errors. Command
-options override the TOML: `--engine`, `--profile`, `--effort`, `--topology` (`single`,
-`controller-worker`, `worker-worker`, `adaptive`), `--parallel`, `--render`, `--level`,
+options override the TOML: `--engine`, `--profile`, `--effort`, `--topology` (`single-agent`,
+`hierarchical`, `decentralized`, `adaptive`), `--parallel`, `--render`, `--level`,
 `--min-arms`, `--cases`, `--families`. Runs, receipts, exports and caches go under
 `paths.runs_root`; empty means `<repo>/runs`, and `ROBOFRONTIER_RUNS_ROOT` overrides both.
 

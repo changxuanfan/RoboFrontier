@@ -8,7 +8,7 @@ Adaptive mode routes Controller ↔ active delegates; returned scopes do not rec
 
 Business messages have one format: `to` (explicit recipients), `text` (natural language), optional `reply_to` (an accessible message ID). The service adds message ID, sender, submission order and time. No request/result/cancel categories are required. Text can discuss any of these subjects.
 
-In hierarchical mode Controller ↔ Worker is allowed, Worker ↔ Worker is rejected. In peer mode Workers may address each other and there is no Controller. Meta cannot send business messages or control a robot. Global/local camera access does not grant access to another role's private mailbox.
+In hierarchical mode Controller ↔ Worker is allowed, Worker ↔ Worker is rejected. In decentralized mode Workers may address each other and there is no Controller. Meta cannot send business messages or control a robot. Global/local camera access does not grant access to another role's private mailbox.
 
 Controller relays relevant decisions and readiness so Workers can coordinate without contacting forbidden peers. Peers negotiate only with affected teammates. The message format remains the same in both modes.
 

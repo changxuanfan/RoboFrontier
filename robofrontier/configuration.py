@@ -7,12 +7,7 @@ import tomllib
 from .io import ROOT
 
 DEFAULT = ROOT / 'robofrontier.toml'
-TOPOLOGIES = {
-    'single': 'centralized',
-    'controller-worker': 'hierarchical',
-    'worker-worker': 'peer',
-    'adaptive': 'adaptive',
-}
+TOPOLOGIES = ('adaptive', 'single-agent', 'hierarchical', 'decentralized')
 SCHEMA = {
     'schema_version': int,
     'policy': dict.fromkeys(('engine', 'profile', 'effort', 'topology', 'tool_mode'), str),

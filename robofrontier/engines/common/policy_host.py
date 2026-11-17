@@ -1,4 +1,4 @@
-"""Experimental centralized policy orchestration for an existing world.
+"""Experimental single-agent policy orchestration for an existing world.
 
 This module deliberately does not launch worlds, admit scored batches, or
 support adaptive delegation. A caller owns the world process and final seal.
@@ -23,8 +23,8 @@ class CentralizedPolicyHost:
         self.store = RuntimeStore(self.run / 'private/state/runtime.sqlite')
         try:
             config = self.store.get('config')
-            if not config or config.get('engine') != self.engine or config.get('topology') != 'centralized':
-                raise ValueError('Only centralized Claude engineering runs are supported')
+            if not config or config.get('engine') != self.engine or config.get('topology') != 'single-agent':
+                raise ValueError('Only single-agent Claude engineering runs are supported')
             if config.get('model') != profile.get('model') or config.get('effort') != profile.get('effort'):
                 raise ValueError('Profile differs from frozen runtime configuration')
             # A run continued after an unexpected exit (docs/running/continuation.md) keeps its session.
