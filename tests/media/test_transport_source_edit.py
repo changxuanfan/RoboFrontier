@@ -64,6 +64,7 @@ class ActualSourceAdapterTests(unittest.TestCase):
         import json
         paths=sorted(EDITS.glob('transport-*/edit.json'))
         if len(paths)!=9:self.skipTest('Private source edits are not materialized')
+        if not all(Path(json.loads(p.read_text())['source_recording']).exists() for p in paths):self.skipTest('Private source recordings are not materialized')
         for path in paths:
             with self.subTest(case=path.parent.name):
                 edit=TransportEdit(path);self.assertEqual(edit.at_video_time(0)['source_index'],0)
@@ -73,6 +74,7 @@ class ActualSourceAdapterTests(unittest.TestCase):
         from pathlib import Path
         source=EDITS/'transport-a04-d1/edit.json'
         if not source.exists():self.skipTest('Private source edit is not materialized')
+        if not Path(json.loads(source.read_text())['source_recording']).exists():self.skipTest('Private source recording is not materialized')
         with tempfile.TemporaryDirectory()as td:
             meta=json.loads(source.read_text());meta['source_hz']=61.;path=Path(td)/'edit.json';path.write_text(json.dumps(meta))
             with self.assertRaisesRegex(ValueError,'frame/rate'):TransportEdit(path)

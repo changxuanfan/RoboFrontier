@@ -36,17 +36,18 @@ class WorkerRequestTests(unittest.TestCase):
         from robofrontier.engines.codex import tool_worker
         with patch.object(Path, 'exists', return_value=True), \
                 patch.object(Path, 'read_text', return_value='1\n'), \
-                patch.object(tool_worker.os, 'unshare') as unshare:
+                patch.object(tool_worker.os, 'unshare', create=True) as unshare:
             with self.assertRaisesRegex(PermissionError, 'AppArmor'):
                 tool_worker.private_shared_memory()
             unshare.assert_not_called()
 
+    @unittest.skipUnless(hasattr(os, 'CLONE_NEWUSER'), 'Linux namespaces only')
     def test_unrestricted_apparmor_keeps_the_native_namespace_attempt(self):
         from robofrontier.engines.codex import tool_worker
         for exists, value in ((False, ''), (True, '0\n')):
             with self.subTest(exists=exists), patch.object(Path, 'exists', return_value=exists), \
                     patch.object(Path, 'read_text', return_value=value), \
-                    patch.object(tool_worker.os, 'unshare', side_effect=PermissionError('native denial')) as unshare:
+                    patch.object(tool_worker.os, 'unshare', create=True, side_effect=PermissionError('native denial')) as unshare:
                 with self.assertRaisesRegex(PermissionError, 'native denial'):
                     tool_worker.private_shared_memory()
                 unshare.assert_called_once()

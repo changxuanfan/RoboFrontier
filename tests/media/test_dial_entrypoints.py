@@ -33,6 +33,7 @@ class DialEntrypointTests(unittest.TestCase):
         folder=ROOT/'outputs/robo-factory/dial-best5-edited-10x-20261027/dial-best5-n04-d2'
         if not (folder/'report.json').exists():self.skipTest('Published artifacts unavailable')
         report=json.loads((folder/'report.json').read_text())
+        if not Path(report['edit_file']).exists():self.skipTest('Published artifacts unavailable')
         view=EditedMotion(json.loads(Path(report['edit_file']).read_text())['recording'],report['edit_file'])
         self.assertEqual(view.video_indices(30,10).tolist(),report['video_source_frame_indices'])
 
