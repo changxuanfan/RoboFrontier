@@ -27,10 +27,6 @@ SCHEMA = {
                 'blender': str, 'mode': str, 'views': list, 'width': int, 'height': int,
                 'samples': int, 'duration_s': float, 'import_speedup': float, 'parallel': int},
     'paths': {'runs_root': str},
-    'oracle': {'wall_limit_s': float, 'stop_grace_s': float,
-               'evaluation_mode': str,
-               'mosaic_planning_workers': int, 'mosaic_physics_workers': int,
-               'mosaic_max_goals': int},
 }
 
 
@@ -77,8 +73,9 @@ def load_configuration(path=None, overrides=None, *, host=None):
     shape = _configuration_shape(version)
     # Select versioned defaults before merging. Only default fields are pruned;
     # explicitly supplied options from a different schema are still errors.
+    # A section an older version had and nothing reads now has no defaults and loads empty.
     result = {key: ({field: result[key][field] for field in kind}
-                    if isinstance(kind, dict) else result[key]) for key,kind in shape.items()}
+                    if isinstance(kind, dict) else result.get(key, {})) for key,kind in shape.items()}
     _merge(result, updates)
     if overrides:
         _merge(result, deepcopy(overrides))
@@ -122,14 +119,16 @@ def detected_render_device(system=None):
 
 
 def _configuration_shape(version):
-    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10):
+    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11):
         raise ValueError('Unsupported configuration schema_version')
-    # Older frozen configurations remain exact. Do not append new Factory or
-    # Oracle defaults to an already-hashed experiment configuration.
+    # Older frozen configurations remain exact: an already-hashed experiment
+    # configuration never gains a later option.
     shape = {k: dict(v) if isinstance(v, dict) else v for k, v in SCHEMA.items()
-             if (version >= 2 or k != 'factory') and (version >= 3 or k != 'oracle') and (version >= 9 or k != 'paths')}
-    if version == 3:
-        shape['oracle'].pop('evaluation_mode')
+             if (version >= 2 or k != 'factory') and (version >= 9 or k != 'paths')}
+    # Configurations frozen at versions 3 to 10 hold an [oracle] section. Nothing reads it;
+    # it is accepted as it is so that those files still validate.
+    if 3 <= version <= 10:
+        shape['oracle'] = dict
     if version < 5:
         shape['runtime'].pop('codex_tool_backend')
     if version < 6:
@@ -284,16 +283,6 @@ def validate_configuration(config):
             # duration_s 0 keeps the full timeline; import_speedup 0 uses the family's release speedup.
             if not math.isfinite(value) or value < 0:
                 raise ValueError('Invalid factory.'+field)
-    if version >= 3:
-        oracle = config['oracle']
-        if version >= 4:
-            choice('oracle', 'evaluation_mode', ('task-reference', 'strict-process'))
-        for field in ('wall_limit_s', 'stop_grace_s'):
-            if not math.isfinite(oracle[field]) or oracle[field] <= 0:
-                raise ValueError('oracle.'+field+' must be positive and finite')
-        for field in ('mosaic_planning_workers', 'mosaic_physics_workers', 'mosaic_max_goals'):
-            if oracle[field] < 0:
-                raise ValueError('oracle.'+field+' must be nonnegative')
 
 
 def rendering_environment(device, system, base):

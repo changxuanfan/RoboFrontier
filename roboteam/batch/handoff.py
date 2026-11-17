@@ -14,7 +14,7 @@ import tarfile
 import tempfile
 import urllib.request
 
-from roboteam.tasks.families import ROOT, RELEASE, LEGACY_PATHS, current_path, read
+from roboteam.tasks.families import ROOT, RELEASE, read
 from roboteam.batch.prepare import load_env
 from roboteam.engines.codex.launch import profile
 from roboteam.batch.tasks import check_case_assets
@@ -98,18 +98,10 @@ def restore_assets(archive_path, root=ROOT):
         if len(set(names))!=len(names):raise ValueError('Duplicate archive members')
         manifest=json.load(archive.extractfile('assets-manifest.json'))
         release = digest(root/RELEASE)
-        current = lambda name: name
         if manifest.get('release_sha256') != release and (root/'configs/policy-assets.json').is_file():
             release = pinned_asset_release(root, read(root/'configs/policy-assets.json'))
-            if (root/LEGACY_PATHS).is_file():
-                # The pinned archive predates benchmark/: its case folders restore
-                # under their current names, and every byte is still checked.
-                current = lambda name: current_path(name, root)
         if schema_of(manifest)!='roboteam.policy-assets.v1' or manifest['release_sha256']!=release:
             raise ValueError('Asset archive belongs to a different task release')
-        member = {current(name): name for name in names}
-        names = list(member)
-        manifest['files'] = {current(name): checksum for name, checksum in manifest['files'].items()}
         expected=scene_assets(root)
         for name,checksum in expected.items():
             if manifest['files'].get(name)!=checksum:raise ValueError('Scene asset manifest mismatch: '+name)
@@ -127,7 +119,7 @@ def restore_assets(archive_path, root=ROOT):
             relative=PurePosixPath(name)
             if relative.is_absolute() or '..' in relative.parts:raise ValueError('Unsafe archive path')
             path=staged/name;path.parent.mkdir(parents=True,exist_ok=True)
-            with archive.extractfile(member[name]) as stream,path.open('wb') as output:shutil.copyfileobj(stream,output)
+            with archive.extractfile(name) as stream,path.open('wb') as output:shutil.copyfileobj(stream,output)
             if digest(path)!=checksum:raise ValueError('Corrupt archive asset: '+name)
             destination=root/name
             if destination.exists():
@@ -183,33 +175,12 @@ def setup_assets(root=ROOT, archive_path=None):
             raise ValueError('Existing Panda source manifest does not match the pinned release')
         expected.update(panda_assets(root))
         if all((root/name).is_file() and digest(root/name) == checksum for name, checksum in expected.items()):
-            link_oracle_assets(root)
             return {'status': 'already_complete', 'files': len(expected)}
     except (FileNotFoundError, KeyError):
         pass
     archive_path = ensure_asset_archive(root, archive_path)
     result = restore_assets(archive_path, root)
-    link_oracle_assets(root)
     return {'status': 'restored', 'archive': str(archive_path), **result}
-
-
-def link_oracle_assets(root=ROOT):
-    """Give each Oracle copy of a case (benchmark/oracle/) the released case's asset files.
-
-    The assets are the same files; they are hard-linked, or copied where links fail."""
-    import os, shutil
-    for family in read(root/RELEASE)['families'].values():
-        for case in family['gpt']:
-            source = root/case['directory']/'assets'; target = root/'benchmark/oracle'/Path(case['directory']).name/'assets'
-            if not source.is_dir() or not target.parent.is_dir(): continue
-            if target.is_symlink(): target.unlink()
-            for path in sorted(source.rglob('*')):
-                destination = target/path.relative_to(source)
-                if path.is_dir(): destination.mkdir(parents=True, exist_ok=True); continue
-                if destination.is_file() and destination.stat().st_size == path.stat().st_size: continue
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                try: os.link(path, destination)
-                except OSError: shutil.copyfile(path, destination)
 
 
 def doctor(names, root=ROOT):

@@ -82,7 +82,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
                 self.assertEqual(config['batch']['parallel'],2)
                 self.assertEqual('factory' in config,version>=2)
                 self.assertEqual('oracle' in config,version>=3)
-                if version==3:self.assertNotIn('evaluation_mode',config['oracle'])
+                if version==3:self.assertEqual(config['oracle'],{})
                 with self.assertRaises(ValueError):
                     load_configuration(path,{'oracle':{'evaluation_mode':'task-reference'}})
 

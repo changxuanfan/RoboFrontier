@@ -54,27 +54,6 @@ class HandoffAssetsTests(unittest.TestCase):
                 setup_assets(target, archive)
             self.assertFalse((target/'configs/environments/test/assets/table.obj').exists())
 
-    def test_the_pinned_archive_restores_into_moved_case_folders(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); source, target = root/'source', root/'target'
-            self.fixture(source); self.fixture(target)
-            archive = root/'assets.tar.gz'
-            export_assets(source, archive, source)
-            old, new = 'configs/environments/test', 'benchmark/test/case'
-            (target/new).parent.mkdir(parents=True); (target/old).rename(target/new)
-            path = target/'benchmark/release.json'
-            release = json.loads(path.read_text()); release['families']['test']['gpt'][0]['directory'] = new
-            path.write_text(json.dumps(release))
-            (target/'benchmark/legacy-paths.json').write_text(json.dumps({'paths': {old: new}}))
-            (target/'configs/policy-assets.json').write_text(json.dumps(dict(
-                release_sha256=digest(path), archive_release_sha256=digest(source/'benchmark/release.json'),
-                archive_sha256=digest(archive), panda_source_sha256=digest(target/'vendor/panda/SOURCE.json'),
-                url='https://example.invalid/assets')))
-            (target/new/'assets/table.obj').unlink()
-            self.assertEqual(setup_assets(target, archive)['restored'], 1)
-            self.assertEqual((target/new/'assets/table.obj').read_text(), 'geometry')
-            self.assertFalse((target/old).exists())
-
     def test_a_changed_scene_asset_is_never_restored_from_the_pinned_archive(self):
         with tempfile.TemporaryDirectory() as tmp:
             _, target, archive, config = self.revision_fixture(Path(tmp), self.new_rule)

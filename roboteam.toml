@@ -1,5 +1,5 @@
 # Shared defaults for new runs. Secrets belong in the environment or .env.
-schema_version = 10
+schema_version = 11
 
 [policy]
 engine = "codex"                     # codex | claude
@@ -77,11 +77,3 @@ parallel = 1                        # Slurm render array concurrency, independen
 
 [paths]
 runs_root = ""                        # Where runs, receipts and caches go; empty is <repo>/runs. ROBOTEAM_RUNS_ROOT overrides
-
-[oracle]
-evaluation_mode = "task-reference" # Terminal task outcome; strict-process additionally requires clean process history
-wall_limit_s = 86400.0              # Engineering elapsed time from owner launch, including planning and pauses
-stop_grace_s = 120.0                # Cleanup allowance after STOP/deadline; not extra task execution time
-mosaic_planning_workers = 1         # Independent scratch planners; 0 uses available CPUs
-mosaic_physics_workers = 0          # Opt-in MuJoCo worker threads in the single live world
-mosaic_max_goals = 0                # 0 attempts the full task; positive is explicitly partial commissioning

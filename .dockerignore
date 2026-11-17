@@ -4,7 +4,6 @@
 !.env.example
 .codex-tools
 .roboteam
-.oracle-deps
 runs
 outputs
 vendor

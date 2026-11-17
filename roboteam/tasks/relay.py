@@ -13,7 +13,6 @@ RULE_REVISION = 'relay-timber-goal-70pct-v1'
 BOUNDARY_TOLERANCE_M = .050
 LOW_RELEASE_GAP_M = .030
 CATALOG_RELATIVE = 'benchmark/relay/catalog.json'
-HARNESS_RELATIVE = 'configs/harnesses/oracle.json'
 
 
 def is_current(task):

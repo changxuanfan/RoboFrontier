@@ -19,9 +19,6 @@ roboteam = "roboteam.cli:main"
 [project.urls]
 Repository = "https://github.com/changxuanfan/RoboTeam"
 
-[project.optional-dependencies]
-oracle = ["greenlet==3.2.4"]
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

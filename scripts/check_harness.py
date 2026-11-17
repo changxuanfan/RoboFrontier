@@ -58,8 +58,7 @@ def main():
         modules=('runtime.test_action_batch','runtime.test_sync_groups','runtime.test_pipeline','runtime.test_pipeline_client',
                  'runtime.test_runtime_store','runtime.test_run_setup','runtime.test_scheduling','runtime.test_centralized','runtime.test_delegation',
                  'runtime.test_delegate_callbacks','tasks.test_private_evaluation','runtime.test_run_seal','batch.test_run_report',
-                 'media.test_recording','repo.test_harness_checker','repo.test_policy_batch_viewer',
-                 'oracle.test_oracle_protocol','oracle.test_oracle_terminal_recovery')
+                 'media.test_recording','repo.test_harness_checker','repo.test_policy_batch_viewer')
         suite=unittest.defaultTestLoader.loadTestsFromNames(modules)
     else:suite=unittest.defaultTestLoader.discover(str(ROOT/'tests'),pattern='test_*.py')
     try:result=unittest.TextTestRunner(verbosity=2).run(suite)

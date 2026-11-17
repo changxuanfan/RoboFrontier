@@ -26,20 +26,15 @@ class FamilyReleaseTests(unittest.TestCase):
             save('../outside')
             with self.assertRaisesRegex(ValueError,'Invalid asset path'):check_case_assets(case,root)
 
-    def test_all_purposes_have_36_exact_sources_and_preserve_version_split(self):
+    def test_the_release_has_36_exact_sources(self):
         release = read(ROOT/RELEASE)
-        for purpose in ('gpt', 'oracle'):
-            rows = [c for f in release['families'].values() for c in f[purpose]]
-            self.assertEqual(len(rows), 36)
-            self.assertEqual(len({c['id'] for c in rows}), 36)
-            # The Oracle's recorded sources are local run data (runs/oracle), absent in CI.
-            if purpose == 'oracle' and not (ROOT/'runs/oracle').is_dir(): continue
-            for c in rows:
-                resolve_case(c['id'], purpose)
+        rows = [c for f in release['families'].values() for c in f['gpt']]
+        self.assertEqual(len(rows), 36)
+        self.assertEqual(len({c['id'] for c in rows}), 36)
+        for c in rows:
+            resolve_case(c['id'])
         mosaic = release['families']['mosaic']
         self.assertEqual(read(ROOT/mosaic['gpt'][0]['directory']/'task.json')['scale']['scene_revision'], 15)
-        self.assertNotEqual(mosaic['gpt'][0]['source_files']['scene.xml'],
-                            mosaic['oracle'][0]['source_files']['scene.xml'])
 
     def test_prepared_task_is_not_an_inherited_oracle_pass_and_detects_edits(self):
         task = policy_task('transport-a04-d1')
@@ -192,31 +187,6 @@ class FrozenReleaseTests(unittest.TestCase):
         self.assertTrue((ROOT/'runs/engineering/validate-physics'/release['frozen']['physics_validation']).name)
         with self.assertRaises(SystemExit):
             build_release.require_unfrozen()
-
-
-class OracleRecordingTests(unittest.TestCase):
-    # Relay rows name the roomscript2 checkout they were recorded in.
-    OLD = '/Users/fanchangxuan/Repos/roomscript2/runs/oracle/relay-test/relay-a08-d1/attempt-001/motion'
-    NEW = 'runs/oracle/relay-test/relay-a08-d1/attempt-001/motion'
-
-    def test_every_released_recording_maps_into_the_checkout(self):
-        from roboteam.tasks.families import current_path
-        for family in read(ROOT/RELEASE)['families'].values():
-            for row in family['oracle']:
-                with self.subTest(case=row['id']):
-                    self.assertFalse(Path(current_path(row['recording'])).is_absolute())
-
-    def test_a_recording_resolves_under_root_or_is_named_when_missing(self):
-        import re
-        from roboteam.tasks.families import oracle_recording
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            with self.assertRaisesRegex(FileNotFoundError, 'not on this host: '+re.escape(self.OLD)):
-                oracle_recording(self.OLD, root)
-            (root/self.NEW).mkdir(parents=True)
-            self.assertEqual(oracle_recording(self.OLD, root), root/self.NEW)
-            self.assertEqual(oracle_recording(self.NEW, root), root/self.NEW)
-            self.assertEqual(oracle_recording(str(root/self.NEW), ROOT), root/self.NEW)
 
 
 if __name__ == '__main__':

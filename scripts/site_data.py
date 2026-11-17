@@ -2,7 +2,7 @@
 
 tasks:  site/data/tasks.json, the 36 released cases with their public facts (family, level,
         arms, workload) and the one-line level differences, from the release and each case's
-        public policy task.
+        public policy task, with the note on each Oracle video from site/data/oracle-videos.json.
 media:  site/data/media.json, every video set (Oracle, then one per model) with its base URL
         and per-task front/side files, from the manifests that scripts.site_media writes.
 
@@ -22,6 +22,7 @@ import re
 from roboteam.tasks.config import ROOT
 
 SITE = ROOT / 'site/data'
+ORACLE_VIDEOS = ROOT / 'site/data/oracle-videos.json'
 
 FAMILIES = {
     'transport': {'name': 'Transport', 'verb': 'Deliver ordered items to their boards, by handover or staging',
@@ -39,25 +40,11 @@ FAMILIES = {
 }
 
 
-# How each released Oracle recording was qualified (benchmark/release.json), in plain words.
-ORACLE_KINDS = {
-    'r13_frozen_oracle': ('program', 'R13'),
-    'r13_pure_program': ('program', 'R13'),
-    'r13_privileged_assisted': ('assisted', 'R13'),
-    'pure_program': ('program', 'R11'),
-    'privileged_assisted': ('assisted', 'R11'),
-    'historical_user_goal_completion_not_relabelled_native': ('reviewed', 'historical'),
-}
+def oracle_videos():
+    """Per case: how its Oracle video was made, its scene revision and its playback speed.
 
-
-def oracle(release):
-    """Per case: how its Oracle video was made, its revision and its playback speed."""
-    out = {}
-    for family in release['families'].values():
-        for record in family['oracle']:
-            kind, revision = ORACLE_KINDS[record['qualification']]
-            out[record['id']] = {'kind': kind, 'revision': revision, 'speedup': family['speedup']}
-    return out
+    A fixed record (site/data/oracle-videos.json); the Oracle programs are not in this repository."""
+    return json.loads(ORACLE_VIDEOS.read_text())['videos']
 
 
 def workload(case):
@@ -77,7 +64,7 @@ def tasks():
     from roboteam.tasks.families import RELEASE, freeze_public, policy_task
     payload = (ROOT / RELEASE).read_bytes()
     release = json.loads(payload)
-    references = oracle(release)
+    references = oracle_videos()
     rows = []
     for family in FAMILIES:
         for record in release['families'][family]['gpt']:

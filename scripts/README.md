@@ -57,7 +57,6 @@ See [physics](../docs/physics.md) and [benchmark](../benchmark/README.md).
 | --- | --- |
 | `run_tests.py` | Run every Python and Node test in parallel, rerunning a failed module alone; CI's `all-tests` job |
 | `check_harness.py` | Offline checks: fake services, robot and contact physics, Node hosts, syntax and documentation links; `--protocol-only` blocks physics |
-| `check_oracle_preservation.py` | Verify the protected Oracle bytes with inode-aware hashing; never repairs data |
 
 See [testing](../docs/development/testing.md).
 
@@ -70,7 +69,6 @@ These read finished runs; none starts a model or physics.
 | `run_analysis.py` | Extract archived runs and compute timing, outcomes and atomic-step metrics: `extract`, `compute`, `dial-turns`, `atomic`, `session-archive`. The data root, run list and outputs are arguments; no run data lives in the repository |
 | `paired_tests.py` | Compare conditions task by task from a JSON file of outcomes: exact McNemar tests with Holm's correction, and bootstrap intervals for tasks completed and for speed |
 | `communication_report.py` | Summarize recorded multi-role communication without inferring model intent |
-| `summarize_oracle_batch.py` | Read-only summary of complete Oracle results, pilots and ongoing attempts |
 | `verify_evidence_replay.py` | Compare restored evidence with the original: all motion states and events, and sampled renders |
 | `view_policy_batch.py` | Loopback, read-only batch viewer using existing JSON and images only ([viewer](../docs/running/local-viewer.md)) |
 

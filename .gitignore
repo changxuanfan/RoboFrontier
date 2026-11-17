@@ -13,7 +13,6 @@ __pycache__/
 /outputs
 /docs/generated
 /configs/evaluations/private
-/.oracle-deps/
 /.codex-tools/
 /.roboteam/
 /.claude/

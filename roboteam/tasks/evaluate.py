@@ -5,8 +5,8 @@ from pathlib import Path
 import mujoco,numpy as np
 
 DIGITS={0:'abcdef',1:'bc',2:'abged',3:'abgcd',4:'fgbc',5:'afgcd',6:'afgedc',7:'abc',8:'abcdefg',9:'abfgcd'}
-# Process-log formats. 'full': a snapshot with object poses every 0.1 s (Oracle
-# tooling reads this). 'events-1s': an event whenever a non-continuous result
+# Process-log formats. 'full': a snapshot with object poses every 0.1 s.
+# 'events-1s': an event whenever a non-continuous result
 # field changes, checked at every 20 ms sample, plus a full snapshot every 1 s
 # and at the end. Detection itself is identical in both. 'events-10s' (the policy
 # default) and 'events-60s' write the same events with snapshots every 10 s or 60 s

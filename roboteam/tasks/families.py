@@ -1,7 +1,6 @@
 """Resolve released family inputs and freeze only their permitted public facts.
 
-Historical Oracle registries remain immutable. This release records which scene
-and reviewed public projection a new policy trial actually uses.
+The release records which scene and reviewed public projection a policy trial uses.
 """
 from copy import deepcopy
 import json
@@ -11,7 +10,6 @@ from ..io import file_sha256 as sha
 from ..io import ROOT
 
 RELEASE = 'benchmark/release.json'
-LEGACY_PATHS = 'benchmark/legacy-paths.json'
 READINESS = 'prepared_policy_trial'
 
 
@@ -19,42 +17,11 @@ def read(path):
     return json.loads(Path(path).read_text())
 
 
-def _moved(root):
-    path = Path(root)/LEGACY_PATHS
-    return read(path if path.is_file() else ROOT/LEGACY_PATHS)['paths']
-
-
-def current_path(name, root=ROOT):
-    """Where a file that a frozen record names by an earlier path lives now."""
-    name = str(name)
-    moved = _moved(root)
-    for old in sorted(moved, key=len, reverse=True):
-        if name == old or name.startswith(old+'/'):
-            return moved[old]+name[len(old):]
-    return name
-
-
-def oracle_recording(name, root=ROOT):
-    """The motion folder a released Oracle row names, on this host.
-
-    Some rows name the checkout they were recorded in; legacy-paths maps those to
-    their place under root. The recorded location is still accepted where it exists."""
-    mapped = Path(current_path(name, root))
-    candidates = list(dict.fromkeys([Path(root)/mapped, Path(name)]))
-    for path in candidates:
-        if path.is_dir():
-            return path
-    raise FileNotFoundError('Released Oracle recording is not on this host: '+str(name)
-                            +' (looked in '+', '.join(map(str, candidates))+')')
-
-
-def resolve_case(case_id, purpose='gpt', root=ROOT):
+def resolve_case(case_id, root=ROOT):
     root = Path(root)
     release = read(root/RELEASE)
-    if purpose not in ('gpt', 'oracle'):
-        raise ValueError('Unknown task purpose')
     matches = [(name, family, c) for name, family in release['families'].items()
-               for c in family[purpose] if c['id'] == case_id]
+               for c in family['gpt'] if c['id'] == case_id]
     if len(matches) != 1:
         raise ValueError('Case must identify exactly one released family input')
     name, family, case = matches[0]
@@ -120,20 +87,6 @@ def case_specs(root=ROOT):
     """Each released case's catalog row: id, family, level, arm count and scene revision."""
     release = read(Path(root)/RELEASE)
     return [row for family in release['families'].values() for row in read(Path(root)/family['catalog']['path'])['cases']]
-
-
-FOLDERS = {'transport': 'cube_transport', 'mosaic': 'mosaic', 'relay': 'beam_handoff', 'dial': 'spring_dial'}
-
-
-def oracle_directory(case, root=ROOT):
-    """The Oracle's copy of a released case: the scene its recordings were made with.
-
-    A case row naming an earlier scene revision resolves to that revision's folder,
-    where an Oracle recording of it was made (configs/environments)."""
-    if isinstance(case, str): return Path(root)/'benchmark/oracle'/case
-    revision = case.get('scene_revision', 1)
-    prefix = 'frontier-v2-' if revision == 1 else f'frontier-v2-r{revision}-'
-    return Path(root)/current_path(f"configs/environments/{FOLDERS[case['family']]}/{prefix}{case['id']}", root)
 
 
 def dial_code(case_id, root=ROOT):

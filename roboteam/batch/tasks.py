@@ -49,9 +49,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     listing = commands.add_parser('list')
-    listing.add_argument('--purpose', choices=('gpt', 'oracle'), default='gpt')
     check = commands.add_parser('check')
-    check.add_argument('--purpose', choices=('gpt', 'oracle'), default='gpt')
     check.add_argument('--assets', action='store_true', help='Verify every released workstation asset hash')
     setup = commands.add_parser('prepare')
     setup.add_argument('case_id')
@@ -70,15 +68,15 @@ def main():
         return
     rows = []; failed = False
     for family in read(ROOT/RELEASE)['families'].values():
-        for case in family[args.purpose]:
+        for case in family['gpt']:
             if args.command == 'check':
-                resolve_case(case['id'], args.purpose)
+                resolve_case(case['id'])
             row=dict(id=case['id'], directory=case['directory'],qualification=case['qualification'])
             if args.command=='check' and args.assets:
                 row['assets']=check_case_assets(case)
                 failed = failed or bool(row['assets']['missing'] or row['assets']['changed'])
             rows.append(row)
-    print(json.dumps(dict(purpose=args.purpose, cases=rows, count=len(rows)), indent=2))
+    print(json.dumps(dict(cases=rows, count=len(rows)), indent=2))
     if failed:raise SystemExit(1)
 
 

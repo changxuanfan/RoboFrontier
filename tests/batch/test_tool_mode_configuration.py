@@ -7,7 +7,7 @@ from roboteam.configuration import load_configuration, validate_configuration
 class ToolModeConfigurationTests(unittest.TestCase):
     def test_the_default_is_a_full_run_and_older_files_have_no_such_option(self):
         self.assertEqual(load_configuration()['policy']['tool_mode'], 'full')
-        self.assertEqual(load_configuration()['schema_version'], 10)
+        self.assertEqual(load_configuration()['schema_version'], 11)
         old = load_configuration(overrides={'schema_version': 9})
         self.assertNotIn('tool_mode', old['policy'])
         with self.assertRaises(ValueError):
