@@ -22,7 +22,7 @@ external Skill format check; valid formatting does not show better coordination.
 - **`--protocol-only`** runs a fixed list of contract modules with MuJoCo model creation and
   stepping replaced by errors. It covers synthetic task and runtime contracts, private scoring on
   synthetic records, frozen inputs and recovery boundaries. It does not cover contacts,
-  rendering or provider behavior. CI runs it in the `harness` job of `.github/workflows/harness.yml`.
+  rendering or provider behavior. CI runs it in `.github/workflows/harness.yml`, before the tests.
 
 ## Contracts the tests cover
 

@@ -64,13 +64,11 @@ part. Criteria and the current status are in [physics](../physics.md#validation)
 
 ## CI
 
-`.github/workflows/harness.yml` runs on every pull request and on pushes to `main`:
-
-| Job | What it runs |
-| --- | --- |
-| `harness` | `check_harness --protocol-only`, then the engine parity, run layout, segment, evidence storage and policy environment modules |
-| `all-tests` | `scripts.run_tests --workers 4` under `xvfb-run`, with the scene assets restored |
-| `analysis-and-scripts` | Analysis, script and record tests without scene assets, so nothing can load a scene |
+`.github/workflows/harness.yml` has one job, `all-tests`, on a clean Linux machine. It runs
+`check_harness --protocol-only`, then `scripts.run_tests --workers 4` under `xvfb-run` with the
+scene assets restored. It starts on pull requests and on pushes to `main`, except when a change
+touches only `docs/`, `site/`, `README.md` or the licenses; the files under those folders that
+tests read (`docs/running/continuation.md`, `site/data/`) still start it.
 
 `all-tests` sets `ROBOTEAM_OUTAGE_PROBE=off` and `ROBOTEAM_NO_NOTIFY=1`; set them locally
 too to keep the network-outage probe and desktop notifications out of test runs.

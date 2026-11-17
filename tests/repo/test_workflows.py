@@ -15,15 +15,22 @@ class WorkflowTests(unittest.TestCase):
                  if not re.fullmatch(r'(-\s+)?uses: [\w.-]+/[\w./-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+', entry[1])]
         self.assertEqual(loose, [])
 
-    def test_analysis_job_runs_existing_paper_statistics_and_script_tests(self):
+    def test_one_job_runs_the_protocol_check_and_every_test(self):
         text = (ROOT/'.github/workflows/harness.yml').read_text()
-        job = text.split('  analysis-and-scripts:', 1)[1]
-        self.assertNotIn('bootstrap', job)  # No scene assets: the job cannot load scenes or step physics.
-        modules = re.findall(r'\b\w+\.test_\w+', job.split('-m unittest', 1)[1])
-        self.assertEqual([m for m in modules if not (ROOT/'tests'/(m.replace('.', '/')+'.py')).is_file()], [])
-        self.assertLessEqual({'batch.test_run_metrics', 'analysis.test_run_analysis_atomic', 'repo.test_scripts_index', 'repo.test_workflows'},
-                             set(modules))
+        self.assertEqual(re.findall(r'^  ([\w-]+):$', text.split('\njobs:\n', 1)[1], flags=re.M), ['all-tests'])
+        self.assertIn('scripts.check_harness --protocol-only', text)
+        self.assertIn('scripts.run_tests', text)
 
+    def test_documentation_changes_do_not_start_the_tests_but_files_tests_read_do(self):
+        text = (ROOT/'.github/workflows/harness.yml').read_text()
+        for trigger in ('pull_request', 'push'):
+            paths = re.findall(r"- '([^']+)'", text.split('  '+trigger+':', 1)[1].split('\n  workflow_dispatch', 1)[0].split('\n  push:', 1)[0])
+            self.assertEqual(paths[0], '**')
+            self.assertLessEqual({'!docs/**', '!site/**', '!README.md'}, set(paths))
+            # Later patterns win: the files tests read are named after the exclusions.
+            for kept in ('docs/running/continuation.md', 'site/data/**'):
+                self.assertGreater(paths.index(kept), paths.index('!docs/**'))
+                self.assertTrue((ROOT/kept.replace('/**', '')).exists())
 
 if __name__ == '__main__':
     unittest.main()
