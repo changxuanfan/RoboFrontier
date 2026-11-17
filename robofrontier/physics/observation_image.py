@@ -1,16 +1,19 @@
 """Frozen per-run policy observation formats; absent fields mean legacy PNG."""
 from copy import deepcopy
 
-DEFAULT_PROFILE = 'jpeg_896x560_q85'
+DEFAULT_PROFILE = 'jpeg_1280x800_q90'
+COMPACT_PROFILE = 'jpeg_896x560_q85'
 LEGACY_PROFILE = 'png_1280x800'
-# The default camera at one seventh of its resolution on each side: rendered as the default,
-# then every 7 x 7 block of pixels averaged into one, encoded at quality 95. Deterministic, no noise.
+# The low-resolution condition: the default camera at one tenth of its resolution on each side.
+# Rendered as the default, then every 10 x 10 block of pixels averaged into one, encoded at
+# quality 95. Deterministic, no noise.
 LOW_RESOLUTION_PROFILE = 'jpeg_128x80_q95'
 PROFILES = {
-    DEFAULT_PROFILE: {'width': 896, 'height': 560, 'format': 'JPEG', 'quality': 85, 'extension': '.jpg'},
+    DEFAULT_PROFILE: {'width': 1280, 'height': 800, 'format': 'JPEG', 'quality': 90, 'extension': '.jpg'},
+    COMPACT_PROFILE: {'width': 896, 'height': 560, 'format': 'JPEG', 'quality': 85, 'extension': '.jpg'},
     LEGACY_PROFILE: {'width': 1280, 'height': 800, 'format': 'PNG', 'extension': '.png'},
     LOW_RESOLUTION_PROFILE: {'width': 128, 'height': 80, 'format': 'JPEG', 'quality': 95, 'extension': '.jpg',
-                             'render_size': [896, 560]},
+                             'render_size': [1280, 800]},
 }
 
 

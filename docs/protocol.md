@@ -34,10 +34,10 @@ equal rules do not make model context or tool behavior equal.
 
 ## Observation images
 
-`render.observation_profile = "jpeg_896x560_q85"` (the default) makes every observation camera
-produce an 896 × 560 JPEG at quality 85; `png_1280x800` is the other sharp choice.
-`jpeg_128x80_q95` is the default camera at one seventh of its resolution: each image is rendered
-at 896 × 560 and every 7 × 7 block of pixels is averaged into one before encoding at quality 95. The run's harness
+`render.observation_profile = "jpeg_1280x800_q90"` (the default) makes every observation camera
+produce a 1280 × 800 JPEG at quality 90; `jpeg_896x560_q85` and `png_1280x800` are the other sharp
+choices. `jpeg_128x80_q95` is the low-resolution condition: each image is rendered
+at 1280 × 800 and every 10 × 10 block of pixels is averaged into one before encoding at quality 95. The run's harness
 freezes it as `observation_image_profile`, and the public task states the format and resolution.
 When a published camera calibration names an image size, the run gets a copy at the observation
 resolution and the published file stays as it is. Video recording has its own resolution.
@@ -47,7 +47,7 @@ renderer draws from a copy of the world's model whose colours and textures are c
 light, with fill light added so that a white object comes out white, and each image gets one display
 transform before it is saved. The world's own model is not changed, so physics, the live view and the
 recording are as before. The conversion is done once per model and the transform is a table lookup, so
-an image costs about what it did: 15 to 55 ms on a laptop GPU, depending on the task and the profile.
+an image costs about what it did: about 30 ms on a laptop GPU.
 Runs made before this change (including the released results) show the scene as MuJoCo draws it
 directly, which is darker and more contrasty; compare images across that boundary with care.
 

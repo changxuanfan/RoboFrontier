@@ -15,7 +15,7 @@
 
 <a href="https://changxuanfan.github.io/RoboFrontier/#film"><img src="docs/media/readme/teaser.webp" alt="One moment from each Robo World zone: Transport, Mosaic, Relay and Dial" width="100%"></a>
 
-<sub>One moment from each zone of Robo World. Oracle reference runs, not model results. Select to watch the full film.</sub>
+<sub>One moment from each zone of Robo World. Oracle reference runs. Select to watch the full film.</sub>
 
 </div>
 
@@ -42,9 +42,10 @@ team brings more arms and more work; a higher level changes the physics of the j
 
 <sub>Initial states of the largest team of each family at Levels 1–3.</sub>
 
-The videos below are **Oracle** reference runs rendered in Robo World: privileged programs
-that read hidden task state. They show that each task can be done; they are not model
-results. The Mosaic 6- and 8-arm runs and `dial-best5-n08-d3` were operator-assisted;
+The videos below are **Oracle** reference runs rendered in Robo World. The Oracle is
+gpt-6.1-sol in Codex as a single agent, given the ground-truth position of every object instead
+of camera images; its programs read hidden task state. The runs show that each task can be
+done. The Mosaic 6- and 8-arm runs and `dial-best5-n08-d3` were operator-assisted;
 Transport and Mosaic were recorded with the scenes' earlier physics settings, not the
 released ones, and the Mosaic 6- and 8-arm Level 3 clips replay their Level 2 runs; the Relay
 runs' completion was confirmed by review. Idle time is removed and
@@ -128,12 +129,12 @@ the plan and either drives arms itself or forks a delegate for a bounded job, wh
 its arms back with `return_task`. We compare it with three fixed organizations on the
 same tasks:
 
-| Mode | Organization |
+| Agent system | Organization |
 | --- | --- |
-| `single` | One Controller drives every arm. |
-| `controller-worker` | A coordinating Controller and one permanent Worker per arm. |
-| `worker-worker` | One Worker per arm; Workers coordinate as peers. |
-| `adaptive` | One Controller that creates and retires delegates as it sees fit. |
+| `adaptive` | One Controller that forks delegates, hands them arms and takes the arms back. |
+| `single-agent` | One agent controls every arm. |
+| `hierarchical` | One Worker per arm under a Controller. |
+| `decentralized` | One Worker per arm and no Controller; Workers coordinate directly. |
 
 Each run gets 24 hours of active time from its START: reading, planning and waiting count,
 pauses the harness makes for a network outage or a usage limit do not. Benchmark

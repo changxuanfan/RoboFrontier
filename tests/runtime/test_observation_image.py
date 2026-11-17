@@ -27,7 +27,7 @@ class ObservationImageTests(unittest.TestCase):
             cfg = json.loads((new/'private/inputs/harness.json').read_text())
             public = json.loads((new/'public/inputs/task.json').read_text())
             self.assertEqual(cfg['observation_image_profile'], DEFAULT_PROFILE)
-            self.assertEqual(public['observation_image'], {'width':896, 'height':560, 'format':'JPEG', 'quality':85})
+            self.assertEqual(public['observation_image'], {'width':1280, 'height':800, 'format':'JPEG', 'quality':90})
             self.assertEqual(verify_inputs(new), [])
             cfg = load_harness(); cfg['observation_image_profile'] = LEGACY_PROFILE
             write_json(root/'old-config.json', cfg)
@@ -50,7 +50,7 @@ class ObservationImageTests(unittest.TestCase):
                 perf={'capture_wall_s':0.,'captures':0})
             service.capture_request=lambda cameras:Service.capture_request(service,cameras)
             service.render_here=lambda request:Service.render_here(service,request)
-            for name,size,fmt,suffix in ((DEFAULT_PROFILE,(896,560),'JPEG','.jpg'),(LEGACY_PROFILE,(1280,800),'PNG','.png')):
+            for name,size,fmt,suffix in ((DEFAULT_PROFILE,(1280,800),'JPEG','.jpg'),('jpeg_896x560_q85',(896,560),'JPEG','.jpg'),(LEGACY_PROFILE,(1280,800),'PNG','.png')):
                 service.observation_image=observation_profile({'observation_image_profile':name})
                 result=Service.capture(service,['top']);path=Path(result['images']['top'])
                 self.assertEqual(path.suffix,suffix)
@@ -86,7 +86,7 @@ class ObservationImageTests(unittest.TestCase):
         from robofrontier.physics.observation_image import reduced_size, render_size
         rgb=np.random.default_rng(7).integers(0,256,(560,896,3),dtype=np.uint8)
         with tempfile.TemporaryDirectory() as tmp:
-            for name,size in ((DEFAULT_PROFILE,(896,560)),(LEGACY_PROFILE,(1280,800))):
+            for name,size in ((DEFAULT_PROFILE,(1280,800)),('jpeg_896x560_q85',(896,560)),(LEGACY_PROFILE,(1280,800))):
                 profile=observation_profile({'observation_image_profile':name});path=Path(tmp)/('x'+profile['extension'])
                 self.assertIsNone(reduced_size(profile));self.assertEqual(render_size(profile),size)
                 save_observation(Image,rgb,path,profile['format'],Service.image_save_options(profile))
@@ -97,8 +97,8 @@ class ObservationImageTests(unittest.TestCase):
         model=self.scene();data=mujoco.MjData(model);mujoco.mj_forward(model,data)
         sharp_profile=observation_profile({'observation_image_profile':DEFAULT_PROFILE})
         low_profile=observation_profile({'observation_image_profile':LOW_RESOLUTION_PROFILE})
-        # Drawn exactly as the default camera, then one pixel for every 7 x 7.
-        self.assertEqual(render_size(low_profile),(896,560));self.assertEqual((low_profile['width'],low_profile['height']),(128,80))
+        # Drawn exactly as the default camera, then one pixel for every 10 x 10.
+        self.assertEqual(render_size(low_profile),(1280,800));self.assertEqual((low_profile['width'],low_profile['height']),(128,80))
         self.assertEqual((low_profile['format'],low_profile['quality'],low_profile['extension']),('JPEG',95,'.jpg'))
         with tempfile.TemporaryDirectory() as tmp, mujoco.Renderer(model,width=1280,height=800) as renderer:
             root=Path(tmp);(root/'public/observations').mkdir(parents=True)
@@ -119,16 +119,16 @@ class ObservationImageTests(unittest.TestCase):
                 # The capture a render worker receives: drawn at the default size, reduced only under the low profile.
                 service.render_worker=Queue()
                 path=Path(Service.capture(service,['top'])['images']['top']);request=service.render_worker.request
-                self.assertEqual((request['width'],request['height']),(896,560))
+                self.assertEqual((request['width'],request['height']),(1280,800))
                 self.assertEqual(request.get('output_size'),[128,80] if profile is low_profile else None)
                 # Drawn from that request, it is the same file as the owner's own capture.
                 service.render_worker=None;Service.render_here(service,request)
                 self.assertEqual(path.read_bytes(),first)
                 written[profile['width']]=first
-            with Image.open(io.BytesIO(written[128])) as low, Image.open(io.BytesIO(written[896])) as sharp:
+            with Image.open(io.BytesIO(written[128])) as low, Image.open(io.BytesIO(written[1280])) as sharp:
                 self.assertEqual((low.size,low.format),((128,80),'JPEG'))
-                # Each pixel is the mean of its 7 x 7 block of the sharp frame.
-                mean=np.asarray(sharp.convert('RGB'),dtype=float).reshape(80,7,128,7,3).mean(axis=(1,3))
+                # Each pixel is the mean of its 10 x 10 block of the sharp frame.
+                mean=np.asarray(sharp.convert('RGB'),dtype=float).reshape(80,10,128,10,3).mean(axis=(1,3))
                 self.assertLess(np.abs(np.asarray(low.convert('RGB'),dtype=float)-mean).mean(),6)
 
     def test_low_resolution_run_states_its_size_and_keeps_every_other_public_input(self):
@@ -158,7 +158,7 @@ class ObservationImageTests(unittest.TestCase):
                 if task_low.get('camera_calibration'):
                     name='inputs/'+task_low['camera_calibration']
                     cal_sharp,cal_low=json.loads(before.pop(name)),json.loads(after.pop(name))
-                    self.assertEqual((cal_sharp['image_size_pixel'],cal_low['image_size_pixel']),([896,560],[128,80]))
+                    self.assertEqual((cal_sharp['image_size_pixel'],cal_low['image_size_pixel']),([1280,800],[128,80]))
                     self.assertEqual({k:v for k,v in cal_low.items() if k!='image_size_pixel'},
                                      {k:v for k,v in cal_sharp.items() if k!='image_size_pixel'})
                 # Rules, roles, reference pictures and every other public file are those of a default run.
@@ -174,7 +174,7 @@ class ObservationImageTests(unittest.TestCase):
             original=json.loads((run/'private/inputs/release-family/camera-calibration.json').read_text())
             derived=json.loads((run/'public/inputs'/public['camera_calibration']).read_text())
             self.assertEqual(original['image_size_pixel'],[1280,800])
-            self.assertEqual(derived['image_size_pixel'],[896,560])
+            self.assertEqual(derived['image_size_pixel'],[1280,800])
             self.assertEqual(derived['cameras'],original['cameras'])
             self.assertEqual(verify_inputs(run),[])
 

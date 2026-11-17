@@ -107,7 +107,7 @@ another machine. Restoring does not restart a world or repeat physical actions.
 
 - Motion is `robofrontier.motion.v1`: float32 states (capture's float64-to-float32 conversion
   is the only quantization), XOR deltas and NPZ chunks; archiving reconstructs them exactly.
-- Observations are JPEG 896 x 560, quality 85 (`render.observation_profile`). The archiver never
+- Observations are JPEG 1280 x 800, quality 90 (`render.observation_profile`). The archiver never
   re-encodes them.
 - Session transcripts keep their full history; the archiver does not drop repeated messages.
 - Replay uses the recording's own `motion/source/`. Factory replay needs a matching Factory scene

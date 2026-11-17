@@ -206,7 +206,7 @@ The settings do not enlarge the provider's real context.
 `private/outputs/codex-host.jsonl` holds host scheduling, tool and timing events; the native
 `<session-id>.jsonl` transcripts are under the home's `sessions/` directory, with verified copies
 in `private/engine/transcripts/` ([session transcripts](../running/evidence-storage.md#session-transcripts)).
-Observations are JPEG 896 x 560 at quality 85 ([observation images](../protocol.md#observation-images));
+Observations are JPEG 1280 x 800 at quality 90 ([observation images](../protocol.md#observation-images));
 motion is sampled at 60 Hz for later [Factory rendering](../factory/replay.md); real-time MP4 is off
 by default. Collection copies the relevant transcripts without authentication, configuration or
 state databases. Read metrics from stopped evidence in the environment that ran the batch, never

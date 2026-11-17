@@ -192,7 +192,7 @@ and its window. These are neither policy inputs nor checkpoints. Simulation dura
 from the START simulation time.
 
 The engines own the native session history; host events and robot evidence complement it, and
-live session files are append-only. Observations are JPEG 896 × 560 at quality 85; offline video
+live session files are append-only. Observations are JPEG 1280 × 800 at quality 90; offline video
 size is independent. Motion keeps actual times, float32 poses, appearance events and lossless
 XOR/ZIP compression; the float64-to-float32 conversion is the one lossy step
 ([evidence storage](running/evidence-storage.md)).

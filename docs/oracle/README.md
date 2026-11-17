@@ -1,9 +1,13 @@
 # The Oracle
 
-The Oracle is a set of privileged reference programs, one per family. Unlike a policy, an
-Oracle reads hidden state: the scene file, live object poses, the evaluator and, for Dial, the
-code. Its runs show that a task can be done and supply the reference videos; they are not
-model results and are never scored as one. The Oracle makes no model calls.
+The Oracle is the reference condition: gpt-6.1-sol in Codex, as a single agent, with the
+ground-truth position of every object instead of camera images. Working in one Codex session,
+the agent wrote a program for each family that reads hidden state (the scene file, live object
+poses and the evaluator) and drives the arms through the same robot commands as a policy. Its
+runs show that every task can be done and supply the reference videos.
+
+The programs it wrote are kept in `robofrontier/oracle/`. Running one replays the Oracle's
+solution and makes no further model calls.
 
 Each Oracle run uses its own copy of the case, `benchmark/oracle/<case>/`: the scene its
 recordings were made on, with that scene's physics. The release physics in

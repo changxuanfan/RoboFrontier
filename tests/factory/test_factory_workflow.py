@@ -42,7 +42,7 @@ class FactoryWorkflowTests(unittest.TestCase):
         document = bundle.read(plan)
         self.assertEqual((document['width'], document['height'], document['samples']), (1280, 720, 8))
         self.assertEqual(document['device'], 'CPU')
-        self.assertEqual(document['effective_configuration']['render']['observation_profile'], 'jpeg_896x560_q85')
+        self.assertEqual(document['effective_configuration']['render']['observation_profile'], 'jpeg_1280x800_q90')
         self.assertEqual(document['effective_configuration']['batch']['parallel'], 36)
         self.assertEqual(document['effective_configuration']['factory']['parallel'], 1)
         self.assertEqual(result['model_calls'], 0)
