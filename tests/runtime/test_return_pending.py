@@ -6,7 +6,7 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from robofrontier.runtime.pipeline_client import client_call
+from roboteam.runtime.pipeline_client import client_call
 
 
 class Pending(BaseHTTPRequestHandler):

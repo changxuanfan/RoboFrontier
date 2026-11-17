@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.batch.archive_policy_batch import create, verify, verify_collection, transform_session, read_object
+from roboteam.batch.archive_policy_batch import create, verify, verify_collection, transform_session, read_object
 
 
 class PolicyArchiveTest(unittest.TestCase):
@@ -18,7 +18,7 @@ class PolicyArchiveTest(unittest.TestCase):
                 session=source/'sessions/a.jsonl';session.write_bytes(b'{}\n')
                 (source/'batch/batch.json').write_text('{"status":"closed","jobs":[]}')
                 checksum=hashlib.sha256(session.read_bytes()).hexdigest()
-                report={'schema':'robofrontier.luna-collection.v1' if legacy else 'robofrontier.policy-collection.v1',
+                report={'schema':'roboteam.luna-collection.v1' if legacy else 'roboteam.policy-collection.v1',
                         'engine':'codex','complete':True,'writers_stopped':True,'job_count':1,
                         'jobs':[{'roles':[{'session':'sessions/a.jsonl','sha256':checksum}]}]}
                 if not legacy:
@@ -28,7 +28,7 @@ class PolicyArchiveTest(unittest.TestCase):
                     result=verify_collection(*args,**kwargs)
                     session.write_bytes(b'{"late":true}\n')
                     return result
-                with patch('robofrontier.batch.archive_policy_batch.verify_collection',side_effect=validated):
+                with patch('roboteam.batch.archive_policy_batch.verify_collection',side_effect=validated):
                     with self.assertRaises(ValueError):create(source,root/'archive')
                 self.assertFalse((root/'archive').exists())
 
@@ -56,7 +56,7 @@ class PolicyArchiveTest(unittest.TestCase):
             for rel in ('sessions/native.jsonl','batch/private/evidence/turn.jsonl'):
                 (source_dir/rel).write_bytes(raw)
             (source_dir/'batch/batch.json').write_text('{"status":"closed","jobs":[]}')
-            (source_dir/'collection.json').write_text(json.dumps({'schema':'robofrontier.luna-collection.v1','complete':True,'job_count':1,'jobs':[{'roles':[{'session':'sessions/native.jsonl','sha256':hashlib.sha256(raw).hexdigest()}]}]}))
+            (source_dir/'collection.json').write_text(json.dumps({'schema':'roboteam.luna-collection.v1','complete':True,'job_count':1,'jobs':[{'roles':[{'session':'sessions/native.jsonl','sha256':hashlib.sha256(raw).hexdigest()}]}]}))
             create(source_dir,root/'archive');verify(root/'archive',root/'restore')
             for rel in ('sessions/native.jsonl','batch/private/evidence/turn.jsonl'):
                 self.assertEqual((root/'restore'/rel).read_bytes(),raw)
@@ -81,7 +81,7 @@ class PolicyArchiveTest(unittest.TestCase):
             raw = b'{"image":"' + uri + b'","again":"' + uri + b'"}\n'
             session = source/'sessions/a/abc.jsonl'; session.write_bytes(raw)
             import hashlib
-            report = {'schema':'robofrontier.luna-collection.v1','complete':True,'job_count':1,'jobs':[{'roles':[{'session':'sessions/a/abc.jsonl','sha256':hashlib.sha256(raw).hexdigest()}]}]}
+            report = {'schema':'roboteam.luna-collection.v1','complete':True,'job_count':1,'jobs':[{'roles':[{'session':'sessions/a/abc.jsonl','sha256':hashlib.sha256(raw).hexdigest()}]}]}
             (source/'collection.json').write_text(json.dumps(report))
             (source/'batch/batch.json').write_text(json.dumps({'status':'closed','jobs':[{'status':'closed'}]}))
             (source/'batch/motion.npz').write_bytes(b'motion\x00')
@@ -104,7 +104,7 @@ class PolicyArchiveTest(unittest.TestCase):
     def test_incomplete_collection_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); source = root/'source'; source.mkdir()
-            (source/'collection.json').write_text(json.dumps({'schema':'robofrontier.luna-collection.v1','complete':False}))
+            (source/'collection.json').write_text(json.dumps({'schema':'roboteam.luna-collection.v1','complete':False}))
             with self.assertRaises(ValueError): create(source, root/'archive')
             self.assertFalse((root/'archive').exists())
 

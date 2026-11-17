@@ -16,7 +16,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from robofrontier.analysis import paired  # noqa: E402
+from roboteam.analysis import paired  # noqa: E402
 
 
 def main():

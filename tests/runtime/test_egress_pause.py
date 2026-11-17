@@ -3,9 +3,9 @@ import json,os,sys,tempfile,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 from tests.fake_pipeline import FakeWorld,fake_capture
-from robofrontier.runtime.setup import prepare_run
-from robofrontier.runtime.service import RuntimeService
-from robofrontier.batch.slurm_proxy import atomic
+from roboteam.runtime.setup import prepare_run
+from roboteam.runtime.service import RuntimeService
+from roboteam.batch.slurm_proxy import atomic
 
 class SteppingWorld(FakeWorld):
     def step(self): self.time += .02
@@ -15,7 +15,7 @@ class EgressPauseTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name).resolve();self.private=self.root/'engine';self.private.mkdir(mode=0o700)
         self.marker=self.private/'EGRESS_PAUSED';self.run=self.root/'run';prepare_run(self.run)
-        self.env=patch.dict(os.environ,{'ROBOFRONTIER_EGRESS_PAUSE_FILE':str(self.marker),'ROBOFRONTIER_EGRESS_INSTANCE':'a'*32,'SLURM_JOB_ID':'123'})
+        self.env=patch.dict(os.environ,{'ROBOTEAM_EGRESS_PAUSE_FILE':str(self.marker),'ROBOTEAM_EGRESS_INSTANCE':'a'*32,'SLURM_JOB_ID':'123'})
         self.env.start();self.addCleanup(self.env.stop)
         self.service=RuntimeService(self.run,SteppingWorld,fake_capture);self.addCleanup(self.service.close)
         self.counter=0
@@ -27,7 +27,7 @@ class EgressPauseTests(unittest.TestCase):
         self.counter+=1
         job=self.service.accept(actor,op,data or {},call_id or str(self.counter));self.service.pump();return job
     def pause(self):
-        atomic(self.marker,{'schema':'robofrontier.egress-pause.v1','job_id':'123','instance':'a'*32,'claim':'fixture','at':time.time()})
+        atomic(self.marker,{'schema':'roboteam.egress-pause.v1','job_id':'123','instance':'a'*32,'claim':'fixture','at':time.time()})
         self.service.pump()
     def test_pause_freezes_world_and_holds_new_actions_then_resumes_original_once(self):
         first=self.call('A','gripper',{'state':'close','wait':False},'original')
@@ -62,7 +62,7 @@ class EgressPauseTests(unittest.TestCase):
         self.assertFalse(self.service.step_physics());self.assertTrue(self.service.shutdown)
 
     def test_network_continuation_waits_for_original_receipt_and_claims_only_once(self):
-        from robofrontier.runtime.cli import execute
+        from roboteam.runtime.cli import execute
         self.call('A','gripper',{'state':'close','wait':False},'original-before-network')
         self.pause();self.marker.unlink();self.service.pump()
         data={'actor':'A','thread_id':'thread-A','failed_turn_id':'failed-native-turn','error_observed_at':time.time()}
@@ -77,7 +77,7 @@ class EgressPauseTests(unittest.TestCase):
 
     def test_world_that_missed_a_short_resume_continues_the_pause_unfenced(self):
         # B-12: the watcher resumed and re-paused between two reads of this world.
-        from robofrontier.batch.slurm_proxy import pause_marker
+        from roboteam.batch.slurm_proxy import pause_marker
         world=self.service.world;self.service.step_physics();sim=world.time;watcher='w'*32
         atomic(self.marker,pause_marker('123','a'*32,watcher,1,'first-pause'));self.service.pump()
         time.sleep(.02)
@@ -93,7 +93,7 @@ class EgressPauseTests(unittest.TestCase):
         self.assertGreaterEqual(self.service.store.get('downtime_s'),.02)
 
     def test_new_claim_from_another_watcher_or_an_older_pause_still_fences(self):
-        from robofrontier.batch.slurm_proxy import pause_marker
+        from roboteam.batch.slurm_proxy import pause_marker
         for watcher,pause_id in (('x'*32,2),('w'*32,1),('w'*32,'2')):
             with self.subTest(watcher=watcher,pause_id=pause_id):
                 self.setUp()
@@ -105,11 +105,11 @@ class EgressPauseTests(unittest.TestCase):
 @unittest.skipUnless(sys.platform=='linux','MuJoCo qualification runs on allocated Linux CPU')
 class RealPhysicsPauseTests(unittest.TestCase):
     def test_qpos_qvel_and_sim_time_remain_exactly_frozen_in_original_world(self):
-        from robofrontier.runtime.pipeline import World
+        from roboteam.runtime.pipeline import World
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder).resolve();private=root/'engine';private.mkdir(mode=0o700)
             run=root/'run';prepare_run(run);marker=private/'EGRESS_PAUSED'
-            with patch.dict(os.environ,{'ROBOFRONTIER_EGRESS_PAUSE_FILE':str(marker),'ROBOFRONTIER_EGRESS_INSTANCE':'a'*32,'SLURM_JOB_ID':'123'}):
+            with patch.dict(os.environ,{'ROBOTEAM_EGRESS_PAUSE_FILE':str(marker),'ROBOTEAM_EGRESS_INSTANCE':'a'*32,'SLURM_JOB_ID':'123'}):
                 service=RuntimeService(run,World,fake_capture)
                 try:
                     for i,actor in enumerate(('Controller','A','B','C','D')):
@@ -120,7 +120,7 @@ class RealPhysicsPauseTests(unittest.TestCase):
                     job=service.accept('Meta','start',{},'start');service.pump();self.assertTrue(job['result']['started'])
                     service.step_physics();world=service.world
                     before=(world.data.qpos.tobytes(),world.data.qvel.tobytes(),world.time)
-                    atomic(marker,{'schema':'robofrontier.egress-pause.v1','job_id':'123','instance':'a'*32,'claim':'real-physics','at':time.time()})
+                    atomic(marker,{'schema':'roboteam.egress-pause.v1','job_id':'123','instance':'a'*32,'claim':'real-physics','at':time.time()})
                     service.pump()
                     for _ in range(100):self.assertFalse(service.step_physics())
                     self.assertEqual(before,(world.data.qpos.tobytes(),world.data.qvel.tobytes(),world.time))

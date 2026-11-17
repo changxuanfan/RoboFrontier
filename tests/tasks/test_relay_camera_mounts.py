@@ -7,7 +7,7 @@ import unittest
 import mujoco
 import numpy as np
 
-from robofrontier.tasks.families import ROOT, RELEASE, read, prepare
+from roboteam.tasks.families import ROOT, RELEASE, read, prepare
 
 sys.path.insert(0, str(ROOT/'scripts'))
 import build_release

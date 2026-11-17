@@ -1,6 +1,6 @@
 # Factory replay and offline rendering
 
-`robofrontier factory` replays saved robot and object poses in Robo World and renders them with
+`roboteam factory` replays saved robot and object poses in Robo World and renders them with
 Blender Cycles. It never runs actions or physics, never calls a model and never reads policy
 credentials. A recording keeps its own frozen scene, asset hashes, timestamps and appearance
 events; rendering it does not certify its task outcome.
@@ -29,7 +29,7 @@ ffmpeg and ffprobe; set `factory.blender`, `BLENDER_BIN` or put `blender` on PAT
 usual application folder is also searched).
 
 ```sh
-.venv/bin/robofrontier factory setup
+.venv/bin/roboteam factory setup
 ```
 
 Setup installs the pinned R14 bundle into `factory.data_root` (default
@@ -40,7 +40,7 @@ at least 20 GB free. If the folder exists, setup only verifies it and refuses a 
 bundle. With an already assembled archive:
 
 ```sh
-.venv/bin/robofrontier factory setup --archive /path/to/factory.tar.gz
+.venv/bin/roboteam factory setup --archive /path/to/factory.tar.gz
 ```
 
 `prepare`, `import-motion` and `project` run setup themselves when the folder is missing.
@@ -72,14 +72,14 @@ missing GPU backend fails rather than falling back to CPU. Width and height must
 even; they are independent of policy observation images.
 
 ```sh
-.venv/bin/robofrontier --config factory-local.toml factory verify
-.venv/bin/robofrontier --config factory-local.toml factory doctor
+.venv/bin/roboteam --config factory-local.toml factory verify
+.venv/bin/roboteam --config factory-local.toml factory doctor
 ```
 
 ## Prepare and render desks
 
 ```sh
-.venv/bin/robofrontier --config factory-local.toml factory prepare \
+.venv/bin/roboteam --config factory-local.toml factory prepare \
   --output runs/factory/all-desks
 ```
 
@@ -88,7 +88,7 @@ Without filters this makes one job per desk and view: 72 jobs. `--families`, `--
 smallest Level 1 desks, front view only:
 
 ```sh
-.venv/bin/robofrontier --config factory-local.toml factory prepare \
+.venv/bin/roboteam --config factory-local.toml factory prepare \
   --level 1 --min-arms --views front --output runs/factory/l1-front
 ```
 
@@ -97,8 +97,8 @@ samples, frame counts and code hashes into `plan.json` and `plan.sha256`. It nee
 folder; later TOML edits do not change a plan, and editing `plan.json` invalidates it.
 
 ```sh
-.venv/bin/robofrontier factory run runs/factory/l1-front/plan.json --index 0
-.venv/bin/robofrontier factory status runs/factory/l1-front/plan.json
+.venv/bin/roboteam factory run runs/factory/l1-front/plan.json --index 0
+.venv/bin/roboteam factory status runs/factory/l1-front/plan.json
 ```
 
 `run` takes `--blender` to override the executable and `--scratch DIR` for temporary frames. Each
@@ -114,11 +114,11 @@ Stop the run and collect or restore its evidence first. The recording folder is 
 `source/`).
 
 ```sh
-.venv/bin/robofrontier --config factory-local.toml factory import-motion \
+.venv/bin/roboteam --config factory-local.toml factory import-motion \
   /path/to/run/private/outputs/motion \
   --timeline /path/to/motion-cut.json \
   --output runs/factory-data/my-recording
-.venv/bin/robofrontier --config factory-local.toml factory prepare \
+.venv/bin/roboteam --config factory-local.toml factory prepare \
   --source imported --data-root runs/factory-data/my-recording \
   --output runs/factory/my-recording
 ```
@@ -129,8 +129,8 @@ alters the recording or infers a task outcome.
 
 | Option | Effect |
 | --- | --- |
-| `--timeline FILE` | Keep exactly the states of the `motion-cut.json` that `robofrontier/media/render.py` wrote for this run, so the Robo World video matches the checked simple-background video |
-| (neither) | Keep the meaningful motion found by `robofrontier/media/motion_cut.py`: an arm joint, finger or object moving in one direction; jitter, drift and settling count as still |
+| `--timeline FILE` | Keep exactly the states of the `motion-cut.json` that `roboteam/media/render.py` wrote for this run, so the Robo World video matches the checked simple-background video |
+| (neither) | Keep the meaningful motion found by `roboteam/media/motion_cut.py`: an arm joint, finger or object moving in one direction; jitter, drift and settling count as still |
 | `--keep-idle` | Keep every recorded state |
 | `--speedup X` | Playback speed; default `factory.import_speedup`, else the family speedup |
 
@@ -140,7 +140,7 @@ The command's result includes `next_prepare`, the arguments for the `prepare` ab
 ## Full tour
 
 ```sh
-.venv/bin/robofrontier --config factory-local.toml factory prepare \
+.venv/bin/roboteam --config factory-local.toml factory prepare \
   --mode promo --output runs/factory/full-tour
 ```
 
@@ -157,8 +157,8 @@ simultaneous array jobs, independent of `batch.parallel`. CUDA and OPTIX jobs ta
 need `slurm.gpus = 1`; CPU jobs need `slurm.gpus = 0`; METAL is refused.
 
 ```sh
-.venv/bin/robofrontier factory submit runs/factory/full-tour/plan.json
-.venv/bin/robofrontier factory submit runs/factory/full-tour/plan.json --queue
+.venv/bin/roboteam factory submit runs/factory/full-tour/plan.json
+.venv/bin/roboteam factory submit runs/factory/full-tour/plan.json --queue
 ```
 
 Only the second command calls `sbatch`. Empty `partition`, `account` and `qos` omit those flags.

@@ -1,4 +1,4 @@
-# Frozen source is supplied by `robofrontier container build` using git archive.
+# Frozen source is supplied by `roboteam container build` using git archive.
 FROM node:22-bookworm-slim AS node
 FROM python:3.12-slim-bookworm
 
@@ -16,16 +16,16 @@ RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && npm cache clean --force \
     && pip install --no-cache-dir uv==${UV_VERSION}
 
-WORKDIR /opt/RoboFrontier
+WORKDIR /opt/RoboTeam
 COPY . .
 ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 RUN uv sync --locked --extra oracle \
     && .venv/bin/python -m scripts.install_antigravity --output /usr/local/bin/agy \
-    && .venv/bin/python -m robofrontier.cli bootstrap \
+    && .venv/bin/python -m roboteam.cli bootstrap \
     && rm -rf /root/.cache/uv /root/.cache/pip runs/asset-cache \
-    && mkdir -p .robofrontier runs /var/tmp/robofrontier /opt/robofrontier-policy
-ENV PATH="/opt/RoboFrontier/.venv/bin:${PATH}" \
-    TMPDIR=/var/tmp/robofrontier ROBOFRONTIER_POLICY_ENV_BASE=/opt/robofrontier-policy \
+    && mkdir -p .roboteam runs /var/tmp/roboteam /opt/roboteam-policy
+ENV PATH="/opt/RoboTeam/.venv/bin:${PATH}" \
+    TMPDIR=/var/tmp/roboteam ROBOTEAM_POLICY_ENV_BASE=/opt/roboteam-policy \
     OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 # The CLI sets CPU OSMesa or NVIDIA EGL explicitly from frozen task settings.
-ENTRYPOINT ["python", "-m", "robofrontier.batch.container_entrypoint"]
+ENTRYPOINT ["python", "-m", "roboteam.batch.container_entrypoint"]

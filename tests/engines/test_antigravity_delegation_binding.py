@@ -6,8 +6,8 @@ import unittest
 import uuid
 from unittest.mock import Mock, patch
 
-from robofrontier.engines.antigravity.robot_mcp import Router, binding_path
-from robofrontier.engines.common.robot_mcp import DelegationBindingError, RobotBridge
+from roboteam.engines.antigravity.robot_mcp import Router, binding_path
+from roboteam.engines.common.robot_mcp import DelegationBindingError, RobotBridge
 from tests.engines.test_antigravity_accounting import history, tool_metadata
 
 
@@ -27,10 +27,10 @@ class BindingTests(unittest.TestCase):
 
     def native(self, tail=False, status=2):
         rows = [(14,3,b'input',b'm0'), (15,3,b'plan',b'm1'),
-                (132,status,b'tool',tool_metadata('delegate-call','mcp_robofrontier_robot',
+                (132,status,b'tool',tool_metadata('delegate-call','mcp_roboteam_robot',
                                                {**self.args,'toolSummary':'Delegate'}))]
         if tail:
-            rows.append((132,2,b'parallel',tool_metadata('other-call','mcp_robofrontier_policy_image',{})))
+            rows.append((132,2,b'parallel',tool_metadata('other-call','mcp_roboteam_policy_image',{})))
         history(self.home,self.session,rows)
 
     def bind(self, args=None):
@@ -45,7 +45,7 @@ class BindingTests(unittest.TestCase):
 
     def test_parallel_tail_is_immediately_rejected_with_recovery_hint(self):
         self.native(tail=True)
-        with patch('robofrontier.engines.antigravity.robot_mcp.time.sleep') as sleep:
+        with patch('roboteam.engines.antigravity.robot_mcp.time.sleep') as sleep:
             with self.assertRaises(DelegationBindingError) as caught:
                 self.bind()
         self.assertEqual(caught.exception.code,'DELEGATE_REQUIRES_EXCLUSIVE_STEP')

@@ -13,7 +13,7 @@ untracked file (here `site.toml`) and edit it.
   Claude Code's bubblewrap sandbox cannot run and both engines use Landlock + seccomp
   (`landlock-v1`).
 - Python 3.12, [uv](https://docs.astral.sh/uv/) (with `uvx`), Node.js, `ffmpeg`, and the engine
-  CLI at its pinned version (`robofrontier/runtime/versions.py`: Claude Code 2.1.316, Codex
+  CLI at its pinned version (`roboteam/runtime/versions.py`: Claude Code 2.1.316, Codex
   0.165.0).
 - Put the Node.js and CLI folders on `PATH` in every shell that prepares, runs or checks (on the
   author's pod `/workspace/tools/node/bin` and `/workspace/tools/npm/bin`):
@@ -26,10 +26,10 @@ untracked file (here `site.toml`) and edit it.
 
 ```sh
 cd /workspace
-git clone https://github.com/changxuanfan/RoboFrontier.git
-cd RoboFrontier
+git clone https://github.com/changxuanfan/RoboTeam.git
+cd RoboTeam
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap
+.venv/bin/roboteam bootstrap
 ```
 
 ## 3. Credentials
@@ -40,7 +40,7 @@ cp .env.example .env && chmod 600 .env
 
 Fill in only your profile's variable (`CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY`, ...; see `configs/models.json`). For a Codex subscription profile log in once
-with `CODEX_HOME=~/.robofrontier/codex-home codex login` (the example uses
+with `CODEX_HOME=~/.roboteam/codex-home codex login` (the example uses
 `runtime.codex_home_scope = "shared"`). Keep credentials in `.env`, not exported: runs load it
 themselves and the background service is started without them.
 
@@ -56,7 +56,7 @@ device = "cpu"                       # Mesa llvmpipe; the world limits it to two
 codex_tool_backend = "landlock-v1"   # the only Codex backend the Linux policy check admits
 
 [paths]
-runs_root = "/workspace/robofrontier-runs"   # receipts, exports and caches on the persistent volume
+runs_root = "/workspace/roboteam-runs"   # receipts, exports and caches on the persistent volume
 ```
 
 ## 5. Policy environment
@@ -65,10 +65,10 @@ Build it on the pod, outside `/tmp` and the checkout, and name the base in every
 prepares runs:
 
 ```sh
-export ROBOFRONTIER_POLICY_ENV_BASE=/workspace/robofrontier-env
-.venv/bin/python -m scripts.build_policy_env --base $ROBOFRONTIER_POLICY_ENV_BASE   # prints its root
-.venv/bin/python -m scripts.check_policy_env $ROBOFRONTIER_POLICY_ENV_BASE/policy-env-<id> \
-  --scratch /workspace/robofrontier-runs
+export ROBOTEAM_POLICY_ENV_BASE=/workspace/roboteam-env
+.venv/bin/python -m scripts.build_policy_env --base $ROBOTEAM_POLICY_ENV_BASE   # prints its root
+.venv/bin/python -m scripts.check_policy_env $ROBOTEAM_POLICY_ENV_BASE/policy-env-<id> \
+  --scratch /workspace/roboteam-runs
 ```
 
 `prepare` refuses without a checked build. The check passes for both engines on a pod (48 CPUs,
@@ -78,9 +78,9 @@ kernel 6.8, Landlock ABI 4), with process pools as a recorded known limit (below
 ## 6. Local check and preflight
 
 ```sh
-.venv/bin/robofrontier --config site.toml doctor
-.venv/bin/robofrontier --config site.toml preflight --confirm-spend                      # Codex
-.venv/bin/robofrontier --config site.toml preflight --confirm-spend --max-budget-usd 1   # Claude
+.venv/bin/roboteam --config site.toml doctor
+.venv/bin/roboteam --config site.toml preflight --confirm-spend                      # Codex
+.venv/bin/roboteam --config site.toml preflight --confirm-spend --max-budget-usd 1   # Claude
 ```
 
 Receipts go under `<runs root>/engineering/`; `run` refuses a batch without matching ones.
@@ -88,16 +88,16 @@ Receipts go under `<runs root>/engineering/`; `run` refuses a batch without matc
 ## 7. Prepare and run
 
 ```sh
-B=/workspace/robofrontier-runs/policy/my-batch
-.venv/bin/robofrontier --config site.toml prepare --output $B
-.venv/bin/robofrontier run $B --durable
-.venv/bin/robofrontier status $B          # includes "durable": the service record and whether it runs
-.venv/bin/robofrontier stop $B            # an orderly stop
-.venv/bin/robofrontier continue $B --durable   # continue stopped runs by hand, in the background
+B=/workspace/roboteam-runs/policy/my-batch
+.venv/bin/roboteam --config site.toml prepare --output $B
+.venv/bin/roboteam run $B --durable
+.venv/bin/roboteam status $B          # includes "durable": the service record and whether it runs
+.venv/bin/roboteam stop $B            # an orderly stop
+.venv/bin/roboteam continue $B --durable   # continue stopped runs by hand, in the background
 ```
 
 Without a systemd user manager (RunPod containers have none), `--durable` starts a `setsid`
-daemon in its own session; with one, a transient user service (`robofrontier/batch/linux.py`).
+daemon in its own session; with one, a transient user service (`roboteam/batch/linux.py`).
 `<batch>/control/durable/` holds `service.json`, `stdout.log` and `stderr.log`; a second
 submission of the same batch is refused. Without `--durable`, `run` and `continue` run in the
 current shell and end with it.

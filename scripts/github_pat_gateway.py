@@ -324,11 +324,11 @@ def genai_stream(response, diagnostics=None):
 def read_token(token_file=None):
     try:
         value = (Path(token_file).read_text(encoding='utf-8-sig') if token_file
-                 else os.environ.get('ROBOFRONTIER_GITHUB_PAT', '')).strip()
+                 else os.environ.get('ROBOTEAM_GITHUB_PAT', '')).strip()
     except OSError:
         raise ValueError('Cannot read the PAT file') from None
     if not value or any(c.isspace() for c in value):
-        raise ValueError('Set ROBOFRONTIER_GITHUB_PAT or provide a file containing one PAT')
+        raise ValueError('Set ROBOTEAM_GITHUB_PAT or provide a file containing one PAT')
     return value
 
 

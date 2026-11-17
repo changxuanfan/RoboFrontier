@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import mujoco
-from robofrontier.media.mosaic_equivalence import check,compare_models,check_prefix_candidate
+from roboteam.media.mosaic_equivalence import check,compare_models,check_prefix_candidate
 
 ROOT=Path(__file__).resolve().parents[2]
 SOURCE=ROOT/'benchmark/mosaic/mosaic-a04-6x12-d2'

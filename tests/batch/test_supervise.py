@@ -1,7 +1,7 @@
 """The per-run loop both batch supervisors share (batch/supervise.py)."""
 import unittest
 
-from robofrontier.batch.supervise import supervise_run
+from roboteam.batch.supervise import supervise_run
 
 
 class SuperviseRunTests(unittest.TestCase):

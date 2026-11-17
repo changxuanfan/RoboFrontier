@@ -10,8 +10,8 @@ import unittest
 
 from engines.test_claude_adaptive_integration import StubModel
 from engines.test_claude_standing_team import standing_fixture
-from robofrontier.runtime import layout as run_layout
-from robofrontier.engines.claude.session_host import ClaudeSessionHost
+from roboteam.runtime import layout as run_layout
+from roboteam.engines.claude.session_host import ClaudeSessionHost
 
 POST_IDLE_PROMPT = 'RF_NATIVE_POST_IDLE_MAIL'
 POST_IDLE_MESSAGE = 'Synthetic post-idle milestone from A'
@@ -180,7 +180,7 @@ class StandingNativeIntegrationTests(unittest.TestCase):
                         else:
                             self.assertNotIn('Controller', service.store.agents())
                             self.assertTrue(any(m == ['B'] for m in messages))
-                        if os.environ.get('ROBOFRONTIER_NATIVE_TEST_RECEIPTS') == '1':
+                        if os.environ.get('ROBOTEAM_NATIVE_TEST_RECEIPTS') == '1':
                             print('STANDING_NATIVE_RECEIPT '+json.dumps({
                                 'topology':topology, 'bootstrap_wakes':bootstrap_wakes,
                                 'bootstrap_pending':bootstrap_pending, 'post_idle_wakes':len(resumed),

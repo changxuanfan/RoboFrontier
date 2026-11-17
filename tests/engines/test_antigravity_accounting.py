@@ -8,12 +8,12 @@ import unittest
 import uuid
 from unittest.mock import patch
 
-from robofrontier.batch import metrics
-from robofrontier.engines.antigravity import provenance
-from robofrontier.engines.antigravity.driver import Driver, ForkUnacknowledged, usage_baseline, usage_delta
-from robofrontier.engines.common.identity import fingerprint
-from robofrontier.runtime import layout
-from robofrontier.runtime.setup import write_json
+from roboteam.batch import metrics
+from roboteam.engines.antigravity import provenance
+from roboteam.engines.antigravity.driver import Driver, ForkUnacknowledged, usage_baseline, usage_delta
+from roboteam.engines.common.identity import fingerprint
+from roboteam.runtime import layout
+from roboteam.runtime.setup import write_json
 
 
 def prepared(folder):
@@ -174,7 +174,7 @@ class DriverTests(unittest.TestCase):
 
 class StopTests(unittest.TestCase):
     def test_one_failed_child_cleanup_does_not_skip_the_others(self):
-        from robofrontier.engines.antigravity.orchestration import ForkSetup
+        from roboteam.engines.antigravity.orchestration import ForkSetup
         calls = []
         class Host:
             def __init__(self, name, fail):
@@ -208,7 +208,7 @@ class SystemPromptTests(unittest.TestCase):
                                        'hooks': {'inheritUser': True}}}}
 
     def test_only_the_frozen_prompt_remains_and_user_customizations_are_off(self):
-        from robofrontier.engines.antigravity.context import DISCOVERY, policy_spec, prompt_only
+        from roboteam.engines.antigravity.context import DISCOVERY, policy_spec, prompt_only
         system = 'Role statement.\n\n# Rules\n- one'
         native = self.native('Role statement.')
         # As the CLI parses the agent file: the heading became a second section's title.
@@ -224,7 +224,7 @@ class SystemPromptTests(unittest.TestCase):
         self.assertTrue(prompt_only(spec, system))
 
     def test_a_native_session_with_other_sections_or_text_is_refused(self):
-        from robofrontier.engines.antigravity.context import policy_spec, prompt_only
+        from roboteam.engines.antigravity.context import policy_spec, prompt_only
         system = 'Role statement.'
         self.assertFalse(prompt_only(self.native(system), system))
         spec = policy_spec(self.native(system), 267000, system)
@@ -246,9 +246,9 @@ class RobotOnlyTests(unittest.TestCase):
         return run
 
     def test_only_the_robot_tool_is_served_and_allowed(self):
-        from robofrontier.engines.antigravity.hook import decision
-        from robofrontier.engines.antigravity.robot_mcp import Router
-        from robofrontier.engines.antigravity.settings import mcp_tools
+        from roboteam.engines.antigravity.hook import decision
+        from roboteam.engines.antigravity.robot_mcp import Router
+        from roboteam.engines.antigravity.settings import mcp_tools
         call = lambda run, name, args=None: decision(run, {'tool_name': name, 'tool_input': args or {}})['decision']
         with tempfile.TemporaryDirectory() as folder:
             run = self.run_folder(folder, 'robot_only')
@@ -258,20 +258,20 @@ class RobotOnlyTests(unittest.TestCase):
             for name in ('policy_exec', 'policy_image'):
                 with self.assertRaisesRegex(ValueError, 'Unknown tool'):
                     router.call_tool(name, {'command': 'pwd', 'path': 'x'})
-            self.assertEqual(call(run, 'mcp_robofrontier_robot', {'op': 'observe'}), 'allow')
-            for name, args in (('mcp_robofrontier_policy_exec', {}), ('mcp_robofrontier_policy_image', {}),
+            self.assertEqual(call(run, 'mcp_roboteam_robot', {'op': 'observe'}), 'allow')
+            for name, args in (('mcp_roboteam_policy_exec', {}), ('mcp_roboteam_policy_image', {}),
                                ('manage_task', {'Action': 'list'}), ('list_resources', {}), ('read_resource', {}),
                                ('run_command', {}), ('read_file', {})):
                 self.assertEqual(call(run, name, args), 'deny', name)
 
     def test_a_full_run_keeps_its_file_tools(self):
-        from robofrontier.engines.antigravity.hook import decision
-        from robofrontier.engines.antigravity.robot_mcp import Router
+        from roboteam.engines.antigravity.hook import decision
+        from roboteam.engines.antigravity.robot_mcp import Router
         call = lambda run, name, args=None: decision(run, {'tool_name': name, 'tool_input': args or {}})['decision']
         with tempfile.TemporaryDirectory() as folder:
             run = self.run_folder(folder, 'full')
             self.assertEqual([tool['name'] for tool in Router(run).tools], ['robot', 'policy_exec', 'policy_image'])
-            for name in ('mcp_robofrontier_robot', 'mcp_robofrontier_policy_exec', 'mcp_robofrontier_policy_image'):
+            for name in ('mcp_roboteam_robot', 'mcp_roboteam_policy_exec', 'mcp_roboteam_policy_image'):
                 self.assertEqual(call(run, name), 'allow')
             self.assertEqual(call(run, 'manage_task', {'Action': 'status'}), 'allow')
             self.assertEqual(call(run, 'run_command'), 'deny')
@@ -279,10 +279,10 @@ class RobotOnlyTests(unittest.TestCase):
 
 class PreflightBudgetTests(unittest.TestCase):
     def test_a_dollar_cap_is_refused_before_any_provider_call(self):
-        from robofrontier import cli
+        from roboteam import cli
         config = {'policy': {'engine': 'antigravity', 'profile': 'flash_subscription', 'effort': 'low'}}
-        with patch('robofrontier.batch.prepare.load_env'), \
-                patch('robofrontier.engines.antigravity.preflight.run_precheck') as precheck:
+        with patch('roboteam.batch.prepare.load_env'), \
+                patch('roboteam.engines.antigravity.preflight.run_precheck') as precheck:
             for confirmed in (True, False):
                 with self.assertRaisesRegex(ValueError, 'max-budget-usd'):
                     cli.preflight(config, confirm_spend=confirmed, max_budget_usd=0)

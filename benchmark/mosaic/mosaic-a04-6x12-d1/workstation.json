@@ -1,5 +1,5 @@
 {
-  "schema": "robofrontier.workstation.v2",
+  "schema": "roboteam.workstation.v2",
   "case": {
     "family": "mosaic",
     "level": 1,
@@ -20683,7 +20683,7 @@
     }
   ],
   "physics_sha256": "f8fcff430b5a767aeb5657cea1fa977b455108edd765b52b36247cf0d6c08e02",
-  "scene_sha256": "a657566744a800bcb21020f603f3c43bc04466fe57a2e0de4afc90304dad2cf4",
+  "scene_sha256": "c108b7880cb824541f676b0e554feda22b9a013fe0a292fdcff31e1259a58bc2",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

@@ -9,13 +9,13 @@ import uuid
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.engines.antigravity import orchestration
-from robofrontier.engines.antigravity.driver import ForkUnacknowledged
-from robofrontier.engines.antigravity.robot_mcp import binding_path
-from robofrontier.runtime.delegation import Delegations
-from robofrontier.runtime.service import RuntimeService
-from robofrontier.runtime.setup import prepare_run, write_json
-from robofrontier.tasks.config import load_harness, startup_protocol
+from roboteam.engines.antigravity import orchestration
+from roboteam.engines.antigravity.driver import ForkUnacknowledged
+from roboteam.engines.antigravity.robot_mcp import binding_path
+from roboteam.runtime.delegation import Delegations
+from roboteam.runtime.service import RuntimeService
+from roboteam.runtime.setup import prepare_run, write_json
+from roboteam.tasks.config import load_harness, startup_protocol
 
 
 class Runner:

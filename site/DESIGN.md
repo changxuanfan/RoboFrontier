@@ -1,11 +1,11 @@
-# RoboFrontier project page and README: design
+# RoboTeam project page and README: design
 
 The project page is `site/index.html` with `assets/` and `data/`, deployed to GitHub Pages by
 `.github/workflows/site.yml` on pushes to `main` that touch `site/`.
 
 ## Audience and promise
 
-A visitor should understand in 30 seconds what RoboFrontier is (multimodal agents controlling
+A visitor should understand in 30 seconds what RoboTeam is (multimodal agents controlling
 up to 16 robot arms in Robo World, one physical simulation), see it working and find the
 headline result. A researcher should then be able to drill into every task, every video and
 every metric.
@@ -69,18 +69,18 @@ facts are in the [Oracle guide](../docs/oracle/README.md#published-reference-vid
   tasks, including each Oracle row's provenance), `media` (writes `data/media.json` from the
   encode manifests) and `readme-gallery`.
 - Videos live in one public media repository per set, served by its own GitHub Pages
-  (`RoboFrontier-media-oracle`; one `RoboFrontier-media-<model>` per model), so the main
+  (`RoboTeam-media-oracle`; one `RoboTeam-media-<model>` per model), so the main
   repository stays small. `media.json` lists every file URL, size, duration and SHA-256.
   Model sets use the same keys as the Oracle set.
 
 ## Results data
 
-`data/results.json` (schema `robofrontier.site-results.v1`) holds one row per run and is empty
+`data/results.json` (schema `roboteam.site-results.v1`) holds one row per run and is empty
 until runs are exported; no script in the repository writes it yet. The page computes every
 aggregate, so one file serves Results and Studies. Fields the page reads:
 
 ```json
-{"schema": "robofrontier.site-results.v1",
+{"schema": "roboteam.site-results.v1",
  "runs": [{"model": "...", "model_label": "...", "engine": "codex", "topology": "adaptive",
            "skills": true, "camera_access": "all", "case": "mosaic-a08-12x24-d3",
            "success": false, "progress": 0.41, "wall_s": 86400,

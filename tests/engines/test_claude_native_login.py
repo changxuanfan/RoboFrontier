@@ -6,10 +6,10 @@ from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
-from robofrontier.engines.claude.runner import build_command, build_env, run_turn
+from roboteam.engines.claude.runner import build_command, build_env, run_turn
 from engines.test_claude_runner import fake_claude
-from robofrontier.engines.claude.native_home import config_directory
-from robofrontier.batch.claude_prepare import profile
+from roboteam.engines.claude.native_home import config_directory
+from roboteam.batch.claude_prepare import profile
 
 
 class NativeLoginTests(unittest.TestCase):
@@ -30,7 +30,7 @@ class NativeLoginTests(unittest.TestCase):
                 build_env(selected, {'HOME':str(home)}, home)
 
     def test_runtime_verifies_fork_history_in_the_frozen_native_home(self):
-        from robofrontier.runtime.cli import native_fork_provenance
+        from roboteam.runtime.cli import native_fork_provenance
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); home = root/'native'; project = home/'projects/task'
             project.mkdir(parents=True)
@@ -54,7 +54,7 @@ class NativeLoginTests(unittest.TestCase):
             self.assertEqual(selected['model'], 'claude-haiku-5-5')
             with self.assertRaises(ValueError):
                 config_directory('.', selected)
-        with tempfile.TemporaryDirectory() as tmp, patch.dict('os.environ', {'ROBOFRONTIER_CLAUDE_HOME': tmp}):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict('os.environ', {'ROBOTEAM_CLAUDE_HOME': tmp}):
             selected = profile('haiku_subscription')
             self.assertEqual(selected['native_config_dir'], str(Path(tmp).resolve()))
 

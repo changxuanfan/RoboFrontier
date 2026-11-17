@@ -1,5 +1,5 @@
 {
-  "schema": "robofrontier.workstation.v2",
+  "schema": "roboteam.workstation.v2",
   "case": {
     "family": "relay",
     "level": 1,
@@ -55306,7 +55306,7 @@
     }
   ],
   "physics_sha256": "3e7ea3696201fd9d9935c3d692899b86ee787f71e2fd603a78a9a856aee257cc",
-  "scene_sha256": "0083fdd3ee44d80a9f04be8c7247b0402fc234edd4bd106a08e7bcb94587d80d",
+  "scene_sha256": "e68f07eeb16767cbd64234e9fa99f8510ecadc34192698b6eae28b55cc4507e7",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

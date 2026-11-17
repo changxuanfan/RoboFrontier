@@ -16,19 +16,19 @@ import tempfile
 import time
 import unittest
 
-from robofrontier.runtime.pipeline_client import client_call
-from robofrontier.runtime.layout import path as run_path
-from robofrontier.runtime.segments import motion_dirs, output_dir, owner_released, prepare_retry, retry_eligibility
-from robofrontier.runtime.setup import verify_inputs
-from robofrontier.runtime.store import RuntimeStore
-from robofrontier.tasks.scene import camera_names
+from roboteam.runtime.pipeline_client import client_call
+from roboteam.runtime.layout import path as run_path
+from roboteam.runtime.segments import motion_dirs, output_dir, owner_released, prepare_retry, retry_eligibility
+from roboteam.runtime.setup import verify_inputs
+from roboteam.runtime.store import RuntimeStore
+from roboteam.tasks.scene import camera_names
 from engines.test_engine_parity import prepared
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def owner_command(run):
-    return [sys.executable, '-m', 'robofrontier.runtime.pipeline', '--run-dir', str(run), '--hidden']
+    return [sys.executable, '-m', 'roboteam.runtime.pipeline', '--run-dir', str(run), '--hidden']
 
 
 def wait_until(check, timeout=120, message='condition'):
@@ -127,7 +127,7 @@ class SegmentIntegrationTests(unittest.TestCase):
             store = self.store(run)
             try:
                 self.assertTrue(any(e['kind'] == 'HOST_LOST' for e in store.events(50)))
-                self.assertEqual(retry_eligibility(run, store), (False, 'already continued automatically once; continue by hand (robofrontier continue)'))
+                self.assertEqual(retry_eligibility(run, store), (False, 'already continued automatically once; continue by hand (roboteam continue)'))
             finally: store.close()
             self.assertTrue((output_dir(run, 1) / 'interruption-evaluation.json').is_file())
 

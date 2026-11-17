@@ -1,4 +1,4 @@
-// RoboFrontier project page. Everything shown comes from data/*.json; missing data is shown
+// RoboTeam project page. Everything shown comes from data/*.json; missing data is shown
 // as pending, never as a placeholder number.
 (() => {
 'use strict';
@@ -327,7 +327,7 @@ function playerControls() {
   d.addEventListener('keydown', e => { if (e.key === 'ArrowRight') step(1); if (e.key === 'ArrowLeft') step(-1); });
   $$('[data-film]').forEach(b => b.addEventListener('click', () => {
     const film = state.media?.film; if (!film) return;
-    $('#player-kicker').textContent = 'RoboFrontier · film'; $('#player-title').textContent = 'Robo World: four families, 36 tasks';
+    $('#player-kicker').textContent = 'RoboTeam · film'; $('#player-title').textContent = 'Robo World: four families, 36 tasks';
     $('#player-facts').textContent = film.note || ''; $('#player-view').hidden = true; $('#player-prev').hidden = $('#player-next').hidden = true;
     v.poster = film.poster || ''; v.src = film.video; d.showModal(); v.play().catch(() => {});
     d.addEventListener('close', () => { $('#player-view').hidden = false; $('#player-prev').hidden = $('#player-next').hidden = false; }, {once: true});

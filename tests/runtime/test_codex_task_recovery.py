@@ -10,13 +10,13 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier.engines.codex import recover_task as recovery
-from robofrontier.engines.common import recovery as common_recovery
-from robofrontier.engines.codex.job_engine import task_id
-from robofrontier.runtime.layout import path as run_path
-from robofrontier.runtime.setup import write_json
-from robofrontier.runtime.store import RuntimeStore
-from robofrontier.tasks.config import ROOT
+from roboteam.engines.codex import recover_task as recovery
+from roboteam.engines.common import recovery as common_recovery
+from roboteam.engines.codex.job_engine import task_id
+from roboteam.runtime.layout import path as run_path
+from roboteam.runtime.setup import write_json
+from roboteam.runtime.store import RuntimeStore
+from roboteam.tasks.config import ROOT
 from engines.test_engine_parity import prepared
 
 
@@ -44,7 +44,7 @@ class RecoveryTests(unittest.TestCase):
         reader = SimpleNamespace(meta={'case_id': 'fixture', 'source_scene_sha256': 'fixture'},
                                  selected_frames=lambda indices: iter([(0, 1., pose)]))
         self.frame = (reader, 0, 1., pose)
-        self.motion = patch('robofrontier.runtime.segments._last_frame', return_value=self.frame); self.motion.start(); self.addCleanup(self.motion.stop)
+        self.motion = patch('roboteam.runtime.segments._last_frame', return_value=self.frame); self.motion.start(); self.addCleanup(self.motion.stop)
 
     def control(self, endpoint, method, params=None):
         if method == 'gateway/capabilities': return {'singleTaskRecovery': 1}
@@ -103,16 +103,16 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(self.store.get('segment'), 1)
         self.assertEqual(self.store.get('pending_segment')['interrupted'], {})
         arguments, options = start.call_args
-        self.assertEqual(arguments[0][1], str(ROOT/'robofrontier/engines/codex/codex_policy_host.js'))
+        self.assertEqual(arguments[0][1], str(ROOT/'roboteam/engines/codex/codex_policy_host.js'))
         self.assertEqual(arguments[0][2], str(self.run))
-        self.assertEqual(options['env']['ROBOFRONTIER_CODEX_TASK'], self.identity)
-        self.assertIn('ROBOFRONTIER_CODEX_RECOVERY_NONCE', options['env'])
+        self.assertEqual(options['env']['ROBOTEAM_CODEX_TASK'], self.identity)
+        self.assertIn('ROBOTEAM_CODEX_RECOVERY_NONCE', options['env'])
         self.assertLess(self.store.get('pending_segment')['previous_ended_at'], result['at'])
 
 
 class PhysicalRestoreTests(unittest.TestCase):
     def test_private_mosaic_clone_restores_pose_and_force_hold_without_stepping(self):
-        from robofrontier.runtime.pipeline import World
+        from roboteam.runtime.pipeline import World
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve(); run = prepared(root, 'codex', case='mosaic-a04-6x12-d1').resolve()
             task = json.loads((run/'private/inputs/task.json').read_text()); world = World(run, task)
@@ -126,7 +126,7 @@ class PhysicalRestoreTests(unittest.TestCase):
             snapshot = {str(p.relative_to(run)): hashlib.sha256(p.read_bytes()).hexdigest()
                         for p in run.rglob('*') if p.is_file() and p.name not in ('runtime.sqlite-wal', 'runtime.sqlite-shm')}
             frame = (SimpleNamespace(meta={}), 0, 1., pose)
-            with patch('robofrontier.runtime.segments._last_frame', return_value=frame):
+            with patch('roboteam.runtime.segments._last_frame', return_value=frame):
                 result = recovery.validate_physical_restore(run, ROOT, os.sys.executable, root,
                                                            {'segment': 1, 'sim_s': 1.})
             self.assertTrue(result['verified']); self.assertEqual(result['physics_steps'], 0)

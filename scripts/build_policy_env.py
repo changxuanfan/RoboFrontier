@@ -3,13 +3,13 @@
 Downloads the pinned Python and the hash-locked packages of configs/policy-env/, so it
 needs the network and is run once per host, by an operator, before preparing runs. The
 folder name carries a hash of the locks, Python version and platform; an existing valid
-environment is kept. Point prepared runs at it with ROBOFRONTIER_POLICY_ENV.
+environment is kept. Point prepared runs at it with ROBOTEAM_POLICY_ENV.
 
-    .venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier
+    .venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam
 
 Each host builds its own folder from the same locks. Linux needs glibc 2.28 or newer,
 which the wheels in the locks require. To move to newer versions, update PYTHON (in
-robofrontier/runtime/policy_env.py) and UV,
+roboteam/runtime/policy_env.py) and UV,
 then relock; --upgrade matters, since compile otherwise keeps a lock's existing versions:
 
     uv pip compile --universal --python-version 3.12 --generate-hashes --no-header --upgrade core.in store.in -o all.lock
@@ -28,7 +28,7 @@ import stat
 import subprocess
 import sys
 
-from robofrontier.runtime import policy_env
+from roboteam.runtime import policy_env
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = policy_env.CONFIG

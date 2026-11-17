@@ -42,7 +42,7 @@ freezes it as `observation_image_profile`, and the public task states the format
 When a published camera calibration names an image size, the run gets a copy at the observation
 resolution and the published file stays as it is. Video recording has its own resolution.
 
-Every observation image has one look, set in `robofrontier/physics/observation_look.py`. The
+Every observation image has one look, set in `roboteam/physics/observation_look.py`. The
 renderer draws from a copy of the world's model whose colours and textures are converted to linear
 light, with fill light added so that a white object comes out white, and each image gets one display
 transform before it is saved. The world's own model is not changed, so physics, the live view and the
@@ -102,7 +102,7 @@ solution is rejected before execution with its `error` and an `ik_detail`:
 
 The solver searches locally from the current joint references, so these are solver facts, not a
 proof of the reach limit or a suggested target. No object state is used. The extra
-home-orientation solve runs only after a rejection (`robofrontier/physics/robot_control.py`).
+home-orientation solve runs only after a rejection (`roboteam/physics/robot_control.py`).
 
 ## Terminal outcome
 
@@ -143,7 +143,7 @@ The run store uses SQLite WAL with a 30-second busy timeout. A non-nested `BEGIN
 returns plain `SQLITE_BUSY` is tried at most four times, 0.25 s apart, about 120.75 s in all.
 Warnings go to standard logging, not the contested database, with elapsed time, attempts and
 outcome. Nested savepoints, errors inside a transaction, commits, extended busy codes and other
-errors are not retried (`robofrontier/runtime/sqlite_busy.py`).
+errors are not retried (`roboteam/runtime/sqlite_busy.py`).
 
 The local HTTP client's default timeout is that maximum wait plus 45 s; a caller's explicit
 timeout is kept. A timeout does not establish whether an action ran: reconcile or query its

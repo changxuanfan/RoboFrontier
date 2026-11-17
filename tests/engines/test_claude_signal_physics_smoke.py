@@ -14,11 +14,11 @@ import time
 import unittest
 
 from engines.test_claude_physics_smoke import MotionModel
-from robofrontier.batch.claude_batch import status_batch
-from robofrontier.batch.claude_prepare import prepare_batch
+from roboteam.batch.claude_batch import status_batch
+from roboteam.batch.claude_prepare import prepare_batch
 
 
-@unittest.skipUnless(os.environ.get('ROBOFRONTIER_PHYSICS_SIGNAL') == '1' and shutil.which('claude'),
+@unittest.skipUnless(os.environ.get('ROBOTEAM_PHYSICS_SIGNAL') == '1' and shutil.which('claude'),
                      'Opt-in signal smoke requires Claude CLI and scene assets')
 class SignalPhysicsSmokeTests(unittest.TestCase):
     def test_sigterm_stops_and_seals_actual_owner(self):
@@ -51,8 +51,8 @@ class SignalPhysicsSmokeTests(unittest.TestCase):
                 manifest.write_text(json.dumps(frozen))
             env={key:os.environ[key] for key in ('PATH','HOME','LANG','LC_ALL','TMPDIR','DISPLAY','MUJOCO_GL') if key in os.environ}
             env['FAKE_KEY']='synthetic'
-            # The batch supervisor as `robofrontier run` starts it, with small budgets: SIGTERM must stop it in order.
-            script=('import os,sys;from robofrontier.batch.claude_batch import run_until_signal;'
+            # The batch supervisor as `roboteam run` starts it, with small budgets: SIGTERM must stop it in order.
+            script=('import os,sys;from roboteam.batch.claude_batch import run_until_signal;'
                     'run_until_signal(sys.argv[1],dict(os.environ),parallel=int(sys.argv[2]),'
                     'turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=120)')
             cmd=[sys.executable,'-c',script,str(batch),str(len(jobs))]

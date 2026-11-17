@@ -9,8 +9,8 @@ import unittest
 
 import numpy as np
 
-from robofrontier.factory import bundle
-from robofrontier.factory import server
+from roboteam.factory import bundle
+from roboteam.factory import server
 
 
 def fixture(root):
@@ -25,13 +25,13 @@ def fixture(root):
     for name in ('actions.json','process.jsonl'):(motion.parent/name).write_text('{}\n')
     times=np.array([0.,.1,.2]);states=np.zeros((3,1),dtype='<u4')
     np.savez_compressed(motion/'chunk-000000.npz',base=states[0],xor=states,time_s=times)
-    bundle.write(motion/'stream.json',dict(schema='robofrontier.motion.v1',case_id='transport-a04-d1',
+    bundle.write(motion/'stream.json',dict(schema='roboteam.motion.v1',case_id='transport-a04-d1',
         source_scene_sha256=bundle.digest(scene),sample_hz=10,nq=1,frames=3,
         chunks=[dict(file='chunk-000000.npz',sha256=bundle.digest(motion/'chunk-000000.npz'),frames=3)]))
     edit=source/'edit/edit.json'
     edit.parent.mkdir()
     np.savez_compressed(edit.parent/'selection.npz',source_time_s=times,keep=np.ones(3,dtype=bool))
-    bundle.write(edit,dict(schema='robofrontier.station-edit.v2',case_id='transport-a04-d1',
+    bundle.write(edit,dict(schema='roboteam.station-edit.v2',case_id='transport-a04-d1',
         source_scene_sha256=bundle.digest(scene),source_stream_sha256=bundle.digest(motion/'stream.json'),
         events_sha256=bundle.digest(motion/'events.jsonl'),source_end_frame=2,source_hz=10,
         input_evidence_sha256={n:bundle.digest(motion.parent/n) for n in ('actions.json','process.jsonl')},
@@ -154,7 +154,7 @@ class FactoryBundleTests(unittest.TestCase):
             script='''
 import subprocess,sys
 from unittest.mock import patch
-from robofrontier.factory import server
+from roboteam.factory import server
 original=subprocess.Popen
 def launch(argv,**kwargs):
     return original([sys.executable,'-c',

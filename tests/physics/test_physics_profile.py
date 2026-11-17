@@ -8,8 +8,8 @@ from types import SimpleNamespace
 import mujoco
 import numpy as np
 
-from robofrontier.physics.profile import FAMILIES, SLEEP, IdleSleep, attach, forward_after_step
-from robofrontier.analysis.motion_query import object_poses
+from roboteam.physics.profile import FAMILIES, SLEEP, IdleSleep, attach, forward_after_step
+from roboteam.analysis.motion_query import object_poses
 from scripts.build_release import (FINGER_FRICTION, MODULE, SURFACE_FRICTION, cases, check_physics, compile_scene,
                                    contact_parameters)
 
@@ -87,7 +87,7 @@ class ReleaseContactRuleTests(unittest.TestCase):
 
 
 @unittest.skipUnless(all((folder/'assets').is_dir() for folder in cases()),
-                     'Generated scene assets missing; run `python -m robofrontier.cli bootstrap`')
+                     'Generated scene assets missing; run `python -m roboteam.cli bootstrap`')
 class ReleasedScenePhysicsTests(unittest.TestCase):
     def test_every_released_scene_carries_the_release_physics(self):
         for folder in cases():
@@ -126,11 +126,11 @@ class MotionQueryTests(unittest.TestCase):
 class ControlFingerprintTests(unittest.TestCase):
     PATHS = ('physics/robot_control.py', 'physics/kinematics.py', 'physics/motion_check.py', 'tasks/config.py',
              'runtime/pipeline.py', 'physics/profile.py')
-    HASHES = {'robofrontier/'+path: str(i)*64 for i, path in enumerate(PATHS)}
+    HASHES = {'roboteam/'+path: str(i)*64 for i, path in enumerate(PATHS)}
     CONFIG = {'action_timeout_sim_s': 30.}
 
     def test_each_control_file_is_in_the_fingerprint(self):
-        from robofrontier.tasks.config import physical_control_fingerprint
+        from roboteam.tasks.config import physical_control_fingerprint
         base = physical_control_fingerprint(self.HASHES, self.CONFIG)
         for path in self.HASHES:
             with self.subTest(path=path):

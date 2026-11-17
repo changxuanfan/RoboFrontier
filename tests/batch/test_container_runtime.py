@@ -11,8 +11,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from robofrontier.batch import container as runtime
-from robofrontier.configuration import load_configuration
+from roboteam.batch import container as runtime
+from roboteam.configuration import load_configuration
 
 
 class ContainerRuntimeTests(unittest.TestCase):
@@ -23,7 +23,7 @@ class ContainerRuntimeTests(unittest.TestCase):
         self.config = load_configuration(overrides={'render': {'device': 'cpu'}})
 
     def test_nested_build_help_never_contacts_docker(self):
-        from robofrontier.cli import main
+        from roboteam.cli import main
         output = io.StringIO()
         with contextlib.redirect_stdout(output), patch.object(runtime.subprocess, 'run',
                 side_effect=AssertionError('help attempted Docker execution')):
@@ -34,23 +34,23 @@ class ContainerRuntimeTests(unittest.TestCase):
         self.assertIn('build', output.getvalue())
 
     def test_nested_help_is_available_without_configuration_or_docker(self):
-        from robofrontier.cli import main
+        from roboteam.cli import main
         for arguments in (['build', '-h'], ['plan', '--help'], ['prepare', '--help'],
                           ['preflight', '--help'], ['run', '--help'],
                           ['auth', '--help'], ['auth', 'codex', 'login', '--help']):
             with self.subTest(arguments=arguments), contextlib.redirect_stdout(io.StringIO()), \
-                    patch('robofrontier.cli.load_configuration', side_effect=AssertionError('read config')), \
+                    patch('roboteam.cli.load_configuration', side_effect=AssertionError('read config')), \
                     patch.object(runtime.subprocess, 'run', side_effect=AssertionError('contacted Docker')):
                 with self.assertRaises(SystemExit) as raised:
                     main(['--config', str(self.root/'missing.toml'), 'container', *arguments])
                 self.assertEqual(raised.exception.code, 0)
 
     def test_invalid_nested_syntax_fails_before_configuration_or_docker(self):
-        from robofrontier.cli import main
+        from roboteam.cli import main
         for arguments in (['build', '--mistyped'], ['build', 'unexpected'],
                           ['prepare', '--outpt', 'runs/new'], ['run'], ['auth', 'shell']):
             with self.subTest(arguments=arguments), contextlib.redirect_stderr(io.StringIO()), \
-                    patch('robofrontier.cli.load_configuration', side_effect=AssertionError('read config')), \
+                    patch('roboteam.cli.load_configuration', side_effect=AssertionError('read config')), \
                     patch.object(runtime.subprocess, 'run', side_effect=AssertionError('contacted Docker')):
                 with self.assertRaises(SystemExit) as raised:
                     main(['container', *arguments])
@@ -77,7 +77,7 @@ class ContainerRuntimeTests(unittest.TestCase):
     def test_the_policy_environment_lives_in_its_own_volume_and_is_built_and_checked_there(self):
         command = self.command(['policy-env'])
         self.assertIn('type=volume,src=policy,dst='+runtime.POLICY_BASE, command)
-        self.assertIn('ROBOFRONTIER_POLICY_ENV_BASE='+runtime.POLICY_BASE, command)
+        self.assertIn('ROBOTEAM_POLICY_ENV_BASE='+runtime.POLICY_BASE, command)
         self.assertIn('TMPDIR='+runtime.CONTAINER_TMPDIR, command)
         self.assertFalse(runtime.CONTAINER_TMPDIR.startswith('/tmp/'))
         script = command[-1]
@@ -89,8 +89,8 @@ class ContainerRuntimeTests(unittest.TestCase):
     def test_commands_use_named_volumes_and_never_put_api_values_in_arguments(self):
         with patch.object(runtime.platform, 'system', return_value='Darwin'):
             command = self.command(['run', 'runs/policy/batch'], credentials={'OPENAI_API_KEY': 'SECRET_VALUE'})
-        self.assertIn('type=volume,src=runs,dst=/opt/RoboFrontier/runs', command)
-        self.assertIn('type=volume,src=state,dst=/opt/RoboFrontier/.robofrontier', command)
+        self.assertIn('type=volume,src=runs,dst=/opt/RoboTeam/runs', command)
+        self.assertIn('type=volume,src=state,dst=/opt/RoboTeam/.roboteam', command)
         self.assertIn('OPENAI_API_KEY', command)
         self.assertNotIn('SECRET_VALUE', ' '.join(command))
         self.assertNotIn('--gpus', command)
@@ -130,7 +130,7 @@ class ContainerRuntimeTests(unittest.TestCase):
             result = runtime._frozen_settings(['run', 'runs/policy/batch'], load_configuration(),
                                               'image', {'runs': 'runs', 'state': 'state', 'policy': 'policy'})
         self.assertEqual(result['render']['device'], 'cpu')
-        self.assertIn('/opt/RoboFrontier/runs/policy/batch/effective-config.json', read.call_args.args[0])
+        self.assertIn('/opt/RoboTeam/runs/policy/batch/effective-config.json', read.call_args.args[0])
         self.assertIn('--rm', read.call_args.args[0])
         for path in ('/host/batch', '../batch', 'runs/../batch'):
             with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'relative paths'):
@@ -144,7 +144,7 @@ class ContainerRuntimeTests(unittest.TestCase):
 
     def test_verified_archive_export_is_atomic_and_idempotent(self):
         content = b'exact archive bytes'
-        receipt = {'archive': '/opt/RoboFrontier/runs/exports/batch.zip',
+        receipt = {'archive': '/opt/RoboTeam/runs/exports/batch.zip',
                    'archive_sha256': hashlib.sha256(content).hexdigest()}
         def copy(command, **kwargs):
             Path(command[-1]).write_bytes(content)
@@ -160,7 +160,7 @@ class ContainerRuntimeTests(unittest.TestCase):
             runtime._export_archive('stopped', receipt, destination)
 
     def test_corrupt_export_never_publishes_output(self):
-        receipt = {'archive': '/opt/RoboFrontier/runs/exports/batch.zip', 'archive_sha256': '0'*64}
+        receipt = {'archive': '/opt/RoboTeam/runs/exports/batch.zip', 'archive_sha256': '0'*64}
         def corrupt(command, **kwargs):
             Path(command[-1]).write_bytes(b'corrupt')
         destination = self.root/'exports'
@@ -185,7 +185,7 @@ class ContainerRuntimeTests(unittest.TestCase):
         result, control = self.execute()
         self.assertEqual(result['exit_code'], 0)
         self.assertEqual(result['status'], 'closed')
-        records = list((self.root/'.robofrontier/containers/default/commands').glob('*.json'))
+        records = list((self.root/'.roboteam/containers/default/commands').glob('*.json'))
         self.assertEqual(len(records), 1)
         self.assertEqual(json.loads(records[0].read_text())['source_commit'], 'commit')
         self.assertEqual(control.call_args.args[0][:2], ['docker', 'rm'])
@@ -207,7 +207,7 @@ class ContainerRuntimeTests(unittest.TestCase):
             result = runtime.execute(['plan'], self.config, root=self.root)
         self.assertEqual(result['status'], 'still_running_needs_review')
         self.assertTrue(result['interrupted'])
-        records = list((self.root/'.robofrontier/containers/default/commands').glob('*.json'))
+        records = list((self.root/'.roboteam/containers/default/commands').glob('*.json'))
         self.assertEqual(json.loads(records[0].read_text())['status'], 'still_running_needs_review')
 
     def test_live_or_disconnected_container_is_retained_without_copy_or_restart(self):
@@ -219,7 +219,7 @@ class ContainerRuntimeTests(unittest.TestCase):
     def test_authentication_uses_persistent_private_state_without_printing_a_key(self):
         with patch.object(runtime.sys.stdin, 'isatty', return_value=False):
             command = self.command(['auth', 'codex', 'login', '--device-auth'])
-        self.assertIn('CODEX_HOME=/opt/RoboFrontier/.robofrontier/subscription', command)
+        self.assertIn('CODEX_HOME=/opt/RoboTeam/.roboteam/subscription', command)
         self.assertEqual(command[-3:], ['cli_auth_credentials_store="file"', 'login', '--device-auth'])
         self.assertNotIn('--result-file', command)
         with self.assertRaisesRegex(ValueError, 'Supported auth'):
@@ -243,7 +243,7 @@ class ContainerRuntimeTests(unittest.TestCase):
                 load_configuration(overrides={'container': value})
 
     def test_cli_publishes_an_offline_result_receipt(self):
-        from robofrontier.cli import main
+        from roboteam.cli import main
         output = self.root/'result.json'
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(main(['--result-file', str(output), 'plan']), 0)

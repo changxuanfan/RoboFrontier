@@ -10,15 +10,15 @@ import unittest
 from unittest.mock import patch
 
 from engines.test_antigravity_driver import Stub
-from robofrontier.batch.antigravity_prepare import prepare_batch
-from robofrontier.configuration import rendering_environment
-from robofrontier.engines.antigravity.driver import Driver
-from robofrontier.engines.antigravity.gateway import Gateway
-from robofrontier.engines.common.run import run_task
-from robofrontier.runtime.store import RuntimeStore
+from roboteam.batch.antigravity_prepare import prepare_batch
+from roboteam.configuration import rendering_environment
+from roboteam.engines.antigravity.driver import Driver
+from roboteam.engines.antigravity.gateway import Gateway
+from roboteam.engines.common.run import run_task
+from roboteam.runtime.store import RuntimeStore
 
 
-@unittest.skipUnless(os.environ.get('ROBOFRONTIER_ANTIGRAVITY_PHYSICS') == '1' and shutil.which('agy'),
+@unittest.skipUnless(os.environ.get('ROBOTEAM_ANTIGRAVITY_PHYSICS') == '1' and shutil.which('agy'),
                      'opt-in real CLI and MuJoCo against a local model service')
 class PhysicsTests(unittest.TestCase):
     def exercise(self, topology, robots=('A',), tool_mode='full'):
@@ -47,13 +47,13 @@ class PhysicsTests(unittest.TestCase):
             args = {'op': op, 'data': data, 'toolSummary': 'Synthetic robot call'}
             if op == 'observe':
                 args['views'] = ['global']
-            return [{'functionCall': {'name': 'mcp_robofrontier_robot', 'args': args}}]
+            return [{'functionCall': {'name': 'mcp_roboteam_robot', 'args': args}}]
         declared = []
         def recorded(body):
             declared.append(sorted(f['name'] for t in body.get('tools', []) for f in t.get('functionDeclarations', [])))
             return response(body)
         stub = Stub(recorded)
-        scratch = Path(os.environ.get('ROBOFRONTIER_TEST_SCRATCH', str(Path.home()/'.cache/robofrontier-antigravity')))
+        scratch = Path(os.environ.get('ROBOTEAM_TEST_SCRATCH', str(Path.home()/'.cache/roboteam-antigravity')))
         scratch.mkdir(parents=True, exist_ok=True)
         directory = Path(tempfile.mkdtemp(prefix='physics-', dir=scratch)).resolve()
         result = None
@@ -62,19 +62,19 @@ class PhysicsTests(unittest.TestCase):
             catalog.write_text(json.dumps({'profiles': {'stub': {'model': 'gemini-3.8-flash-low', 'effort': 'low',
                 'auth_mode': 'api_key', 'env_key': 'RF_STUB_KEY', 'base_url': 'https://generativelanguage.googleapis.com'}}}))
             system = platform.system()
-            render = os.environ.get('ROBOFRONTIER_TEST_RENDER', 'native' if system == 'Darwin' else 'cpu')
+            render = os.environ.get('ROBOTEAM_TEST_RENDER', 'native' if system == 'Darwin' else 'cpu')
             env = rendering_environment(render, system, {**os.environ, 'RF_STUB_KEY': 'host-only-synthetic'})
             prepare_batch(directory/'batch', ['stub'], cases=['transport-a04-d1'], topology=topology,
                           catalog=catalog, render_device=render, wall_limit_s=12, tool_mode=tool_mode)
             run = directory/'batch/stub/transport-a04-d1'
             driver = functools.partial(Driver, gateway_factory=lambda base, key: Gateway(stub.url, key))
-            with patch('robofrontier.engines.antigravity.session_host.Driver', driver):
+            with patch('roboteam.engines.antigravity.session_host.Driver', driver):
                 result = run_task(run, env, wall_limit_s=12, startup_timeout_s=90, poll_s=.1)
             self.assertEqual(result['status'], 'finished', {'result': result, 'retained': str(directory)})
             # Every request of every role, forked children included, declares the same tools.
-            file_tools = ['mcp_robofrontier_policy_exec', 'mcp_robofrontier_policy_image']
+            file_tools = ['mcp_roboteam_policy_exec', 'mcp_roboteam_policy_image']
             native = ['list_resources', 'manage_task', 'read_resource']  # Declared by the CLI; refused in robot_only.
-            expected = sorted(['mcp_robofrontier_robot', *native, *([] if tool_mode == 'robot_only' else file_tools)])
+            expected = sorted(['mcp_roboteam_robot', *native, *([] if tool_mode == 'robot_only' else file_tools)])
             self.assertTrue(declared and all(tools == expected for tools in declared), declared[:3])
             if tool_mode == 'robot_only':
                 self.assertFalse((run/'private/inputs/policy-tools.json').exists())

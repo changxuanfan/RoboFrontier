@@ -7,7 +7,7 @@ tools. Everything else is the same: task inputs, robot operations, physics, scor
 budget, context window and compaction.
 
 ```sh
-.venv/bin/robofrontier prepare --output runs/policy/<batch> --engine claude --tool-mode robot_only
+.venv/bin/roboteam prepare --output runs/policy/<batch> --engine claude --tool-mode robot_only
 ```
 
 ## What a role has
@@ -31,7 +31,7 @@ first message in a robot-only run.
 - **Codex** switches its own tools off with the feature flags and model catalog the Landlock tool
   worker uses, and registers `robot` as the only dynamic tool. `runtime.codex_tool_backend` is
   `native` on every host, since there is nothing to confine. A robot-only profile needs its own
-  `robofrontier preflight --tool-mode robot_only`: the receipt is tied to the launch profile and
+  `roboteam preflight --tool-mode robot_only`: the receipt is tied to the launch profile and
   is kept beside the full one, under `<profile>.robot_only/`.
 - **Antigravity** serves `robot` as its only MCP tool: `policy_exec` and `policy_image` are not
   registered, and its tool hook refuses every other call. The CLI itself still declares

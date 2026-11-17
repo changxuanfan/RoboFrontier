@@ -1,4 +1,4 @@
-<mujoco model="RoboFrontier | transport-a08-d1">
+<mujoco model="RoboTeam | transport-a08-d1">
   <compiler angle="radian" meshdir="assets/robot" autolimits="true" />
   <option integrator="implicitfast" timestep="0.002" gravity="0.0 0.0 -9.81" solver="Newton" iterations="100" noslip_iterations="10" cone="elliptic" impratio="1" noslip_tolerance="1e-9" />
   <default>

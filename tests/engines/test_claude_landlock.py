@@ -9,9 +9,9 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from robofrontier.runtime import layout as run_layout
-from robofrontier.engines.common import landlock as landlock_shell
-from robofrontier.engines.claude.runner import confine
+from roboteam.runtime import layout as run_layout
+from roboteam.engines.common import landlock as landlock_shell
+from roboteam.engines.claude.runner import confine
 
 
 def tree(base):
@@ -75,7 +75,7 @@ class AllowlistTests(unittest.TestCase):
     def test_a_link_beside_a_denied_folder_gets_no_rule(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp).resolve(); repo, run, table = tree(base)
-            (base/'alias').symlink_to(repo)                 # /root/RoboFrontier -> /workspace/RoboFrontier
+            (base/'alias').symlink_to(repo)                 # /root/RoboTeam -> /workspace/RoboTeam
             (base/'data-link').symlink_to(base/'outside')   # its target keeps its own rule
             rules = dict(landlock_shell.allowlist(table))
             self.assertNotIn(str(base/'alias'), rules)
@@ -119,7 +119,7 @@ class ConfineTests(unittest.TestCase):
         repo, run, table = tree(base)
         (run/'private/inputs').mkdir()
         (run/'private/inputs/policy-access.json').write_text(json.dumps({'filesystem': table, 'network': False}))
-        launch = {'schema': 'robofrontier.claude-launch.v2'}
+        launch = {'schema': 'roboteam.claude-launch.v2'}
         if isolation: launch['bash_isolation'] = isolation
         (run/'private/inputs/claude.json').write_text(json.dumps(launch))
         return run
@@ -179,13 +179,13 @@ class ConfineTests(unittest.TestCase):
             servers = run_layout.path(run, 'engine_mcp', 'claude'); servers.mkdir(parents=True, exist_ok=True)
             for actor in ('A', 'Controller'):
                 (servers/(actor+'.json')).write_text(json.dumps({'mcpServers': {'robot': {
-                    'command': '/v/bin/python', 'args': ['-m', 'robofrontier.engines.claude.robot_mcp', '--connection',
+                    'command': '/v/bin/python', 'args': ['-m', 'roboteam.engines.claude.robot_mcp', '--connection',
                                                          '/r un/%s.json' % actor], 'env': {}}}}))
             confine(run, settings, run/'private/engine/config')
             rules = json.loads((prefix.parent/'rules.json').read_text())
             self.assertEqual(rules['unconfined'], [
-                "/v/bin/python -m robofrontier.engines.claude.robot_mcp --connection '/r un/A.json'",
-                "/v/bin/python -m robofrontier.engines.claude.robot_mcp --connection '/r un/Controller.json'"])
+                "/v/bin/python -m roboteam.engines.claude.robot_mcp --connection '/r un/A.json'",
+                "/v/bin/python -m roboteam.engines.claude.robot_mcp --connection '/r un/Controller.json'"])
             with self.assertRaisesRegex(ValueError, 'Unknown Bash isolation'):
                 (run/'private/inputs/claude.json').write_text(json.dumps({'bash_isolation': 'none'}))
                 confine(run, settings, run/'private/engine/config')

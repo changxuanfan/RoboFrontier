@@ -10,11 +10,11 @@ import numpy as np
 
 from fake_pipeline import FakeWorld, fake_capture
 from physics.test_motion_check import robot_fixture
-from robofrontier.physics.robot_control import quat_matrix, matrix_quat, rotation_vector, advance_rotation
-from robofrontier.physics.motion_check import RobotGeometry, prepare_check, state_id
-from robofrontier.runtime.setup import prepare_run
-from robofrontier.runtime.service import RuntimeService
-from robofrontier.tasks.config import load_harness
+from roboteam.physics.robot_control import quat_matrix, matrix_quat, rotation_vector, advance_rotation
+from roboteam.physics.motion_check import RobotGeometry, prepare_check, state_id
+from roboteam.runtime.setup import prepare_run
+from roboteam.runtime.service import RuntimeService
+from roboteam.tasks.config import load_harness
 from motion import filled, MOVE
 
 
@@ -150,7 +150,7 @@ class StopProtocolTests(unittest.TestCase):
         self.assertEqual(self.service.world.running['A'],'next-a')
 
     def test_a_rejected_move_returns_the_ik_detail_and_other_errors_do_not(self):
-        from robofrontier.physics.robot_control import IKNoSolution, IK_MESSAGE
+        from roboteam.physics.robot_control import IKNoSolution, IK_MESSAGE
         detail={'robot':'A','closest_found_tcp_m':[.5,0,.7],'home_orientation':{'solvable':True}}
         def unreachable(actor,op,data,cfg):raise IKNoSolution(detail)
         self.service.world.validate_action=unreachable

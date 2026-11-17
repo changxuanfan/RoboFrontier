@@ -9,9 +9,9 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier.runtime import segments as run_segments, upgrade as runtime_upgrade
-from robofrontier.runtime.setup import verify_inputs, write_json
-from robofrontier.runtime.store import RuntimeStore
+from roboteam.runtime import segments as run_segments, upgrade as runtime_upgrade
+from roboteam.runtime.setup import verify_inputs, write_json
+from roboteam.runtime.store import RuntimeStore
 from engines.test_engine_parity import prepared
 from runtime.test_run_segments import FakeReader
 
@@ -32,7 +32,7 @@ class RuntimeUpgradeTests(unittest.TestCase):
         self.before = self.store.call('settled')
         self.manifest = self.run/'private/inputs/manifest.json'
         value = json.loads(self.manifest.read_text())
-        name = 'robofrontier/runtime/egress_pause.py'
+        name = 'roboteam/runtime/egress_pause.py'
         del value['source_sha256'][name]
         (self.run/'private/inputs/frozen-source'/name).unlink()
         notice = self.run/'private/inputs/bootstrap/network-resume.md'
@@ -55,7 +55,7 @@ class RuntimeUpgradeTests(unittest.TestCase):
         self.assertEqual(parent.read_bytes(), self.original)
         self.assertEqual(verify_inputs(self.run), [])
         self.assertEqual(self.store.call('settled'), self.before)
-        self.assertEqual(run_segments.retry_eligibility(self.run, self.store), (False,'already continued automatically once; continue by hand (robofrontier continue)'))
+        self.assertEqual(run_segments.retry_eligibility(self.run, self.store), (False,'already continued automatically once; continue by hand (roboteam continue)'))
         note = run_segments.prepare_retry(self.run, self.store, 'Authorized outage restore',
                                          manual=True, manual_authorization=grant)
         self.assertEqual(note['segment'], 2)

@@ -1,6 +1,6 @@
 # Experimental Codex / Claude ablation
 
-This adapter is RoboFrontier code, not an official OpenAI or Anthropic connector. OpenAI does
+This adapter is RoboTeam code, not an official OpenAI or Anthropic connector. OpenAI does
 not support routing the Codex CLI to Claude, and Anthropic does not support Codex as a client.
 A passing preflight qualifies only the measured combination; it does not establish parity with
 native Claude Code or with Codex on a GPT model.
@@ -22,13 +22,13 @@ Two different keys are involved, and they never mix:
 | Key | Holder | Where it lives |
 | --- | --- | --- |
 | Anthropic API key | The gateway process only | An owner-only file given with `--anthropic-key-file`, or `ANTHROPIC_API_KEY` in the gateway's own environment |
-| Local gateway key | Codex (as `ROBOFRONTIER_CLAUDE_GATEWAY_KEY`) and the gateway | A random key in the owner-only `--key-file`, created on first start |
+| Local gateway key | Codex (as `ROBOTEAM_CLAUDE_GATEWAY_KEY`) and the gateway | A random key in the owner-only `--key-file`, created on first start |
 
 Neither key is accepted on a command line. The gateway refuses to start with
 `ANTHROPIC_AUTH_TOKEN` set, ignores `ANTHROPIC_BASE_URL`, and sends the API key only to
 `https://api.anthropic.com`. It listens on `127.0.0.1` only and answers model requests only
 to a caller that presents the local key. Keep both files, the log and the state folder under
-`~/.robofrontier/`, which the [access table](codex.md#isolation) closes to the policy, and
+`~/.roboteam/`, which the [access table](codex.md#isolation) closes to the policy, and
 out of every checkout and evidence folder. Keep the Anthropic key out of the batch's `.env`
 if you can; if it is there for a Claude Code profile, the harness removes `ANTHROPIC_API_KEY`
 and `ANTHROPIC_AUTH_TOKEN` from the environment of every Codex process it starts for this
@@ -50,14 +50,14 @@ The SDK is an optional dependency, kept out of the core environment:
 ```sh
 python3 -m venv .venv-gateway
 .venv-gateway/bin/python -m pip install -r requirements-codex-claude.txt
-mkdir -p -m 700 ~/.robofrontier/secrets ~/.robofrontier/codex-claude
-# Put the Anthropic key, alone, in ~/.robofrontier/secrets/anthropic-api-key.txt (chmod 600).
+mkdir -p -m 700 ~/.roboteam/secrets ~/.roboteam/codex-claude
+# Put the Anthropic key, alone, in ~/.roboteam/secrets/anthropic-api-key.txt (chmod 600).
 
 .venv-gateway/bin/python scripts/codex_claude_gateway.py \
-  --anthropic-key-file ~/.robofrontier/secrets/anthropic-api-key.txt \
-  --key-file ~/.robofrontier/secrets/codex-claude-gateway-key.json \
-  --log ~/.robofrontier/codex-claude/transport-metadata.jsonl \
-  --state-dir ~/.robofrontier/codex-claude/state
+  --anthropic-key-file ~/.roboteam/secrets/anthropic-api-key.txt \
+  --key-file ~/.roboteam/secrets/codex-claude-gateway-key.json \
+  --log ~/.roboteam/codex-claude/transport-metadata.jsonl \
+  --state-dir ~/.roboteam/codex-claude/state
 ```
 
 | Option | Meaning |
@@ -85,7 +85,7 @@ a session's next compaction request is refused.
 | `provider` | `claude_gateway` (Responses wire API, no OpenAI authentication, no WebSockets) |
 | `transport`, `transport_revision` | `loopback_gateway`, `messages-adapter-v1` |
 | `base_url` | `http://127.0.0.1:18470/v1` |
-| `env_key` | `ROBOFRONTIER_CLAUDE_GATEWAY_KEY`: the local gateway key, not an Anthropic key |
+| `env_key` | `ROBOTEAM_CLAUDE_GATEWAY_KEY`: the local gateway key, not an Anthropic key |
 | `upstream_host` | `api.anthropic.com`, the host the [outage probe](../running/continuation.md#network-outage-pause) watches |
 | `context_capacity` | 1,000,000; the run still uses the catalog's 300,000 window and 267,000 compaction limit |
 
@@ -226,7 +226,7 @@ instead, give the key file as `{"keys": {"label": "key", ...}}`.
 Watch the cache while a batch runs, from any terminal:
 
 ```sh
-.venv/bin/python scripts/codex_claude_monitor.py ~/.robofrontier/codex-claude/transport-metadata.jsonl \
+.venv/bin/python scripts/codex_claude_monitor.py ~/.roboteam/codex-claude/transport-metadata.jsonl \
   --batch runs/policy/codex-claude-l1 --min-hit-rate 0.7
 .venv/bin/python scripts/codex_claude_monitor.py LOG --once --json --min-hit-rate 0.7   # for scripts
 ```
@@ -281,7 +281,7 @@ PYTHONPATH=tests:scripts .venv-gateway/bin/python -m unittest repo.test_codex_cl
 ```
 
 The first command runs in the core environment: translation in both directions, the monitor
-arithmetic, the profile rules and, when `.venv-gateway` (or `ROBOFRONTIER_GATEWAY_PYTHON`)
+arithmetic, the profile rules and, when `.venv-gateway` (or `ROBOTEAM_GATEWAY_PYTHON`)
 has the SDK, the native test. That test drives the installed Codex CLI through the gateway
 against a local stand-in for the Anthropic API: an image attachment, two parallel tool calls
 whose results carry images, reasoning replayed over several turns, a sandboxed shell command,
@@ -298,16 +298,16 @@ then, in the shell that runs the commands:
 
 ```sh
 curl -s http://127.0.0.1:18470/healthz
-export ROBOFRONTIER_CLAUDE_GATEWAY_KEY="$(.venv/bin/python -c 'import json,sys; print(json.load(open(sys.argv[1]))["key"])' \
-  ~/.robofrontier/secrets/codex-claude-gateway-key.json)"
-.venv/bin/robofrontier preflight --engine codex --profile opus_claude_api --confirm-spend
-.venv/bin/robofrontier prepare --engine codex --profile opus_claude_api --level 1 --min-arms --parallel 4 --output runs/policy/codex-claude-l1
-.venv/bin/robofrontier run runs/policy/codex-claude-l1
+export ROBOTEAM_CLAUDE_GATEWAY_KEY="$(.venv/bin/python -c 'import json,sys; print(json.load(open(sys.argv[1]))["key"])' \
+  ~/.roboteam/secrets/codex-claude-gateway-key.json)"
+.venv/bin/roboteam preflight --engine codex --profile opus_claude_api --confirm-spend
+.venv/bin/roboteam prepare --engine codex --profile opus_claude_api --level 1 --min-arms --parallel 4 --output runs/policy/codex-claude-l1
+.venv/bin/roboteam run runs/policy/codex-claude-l1
 ```
 
 A service that does not inherit the shell (launchd on macOS, a durable Linux service) reads
 the variable from the checkout's Git-ignored `.env` instead; add a
-`ROBOFRONTIER_CLAUDE_GATEWAY_KEY=` line there. Use the same `--config` and options for
+`ROBOTEAM_CLAUDE_GATEWAY_KEY=` line there. Use the same `--config` and options for
 `preflight` and `prepare`, and the default `runtime.codex_home_scope = "task"`.
 
 The preflight is the first real contact with the API. It exercises an image and function

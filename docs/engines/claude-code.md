@@ -1,9 +1,9 @@
 # Claude Code engine
 
 Every policy role is a native Claude Code session (`claude -p`, continued with `--resume`) with
-the robot tool served over MCP by `robofrontier/engines/claude/robot_mcp.py`. All four
+the robot tool served over MCP by `roboteam/engines/claude/robot_mcp.py`. All four
 agent systems run: `adaptive`, `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is Claude Code 2.1.316
-(`robofrontier/runtime/versions.py`); runs turn its self-update off (`DISABLE_AUTOUPDATER`). A run
+(`roboteam/runtime/versions.py`); runs turn its self-update off (`DISABLE_AUTOUPDATER`). A run
 starts only with passed precheck receipts for its profile and that CLI version
 ([Preflight and receipts](#preflight-and-receipts)). What both engines share is in the
 [engine overview](README.md); the [Codex guide](codex.md) has the same sections.
@@ -16,8 +16,8 @@ model calls:
 ```sh
 npm install --global @anthropic-ai/claude-code@2.1.316
 claude --version
-.venv/bin/robofrontier plan --engine claude --level 1 --min-arms --parallel 4
-.venv/bin/robofrontier prepare --engine claude --render native \
+.venv/bin/roboteam plan --engine claude --level 1 --min-arms --parallel 4
+.venv/bin/roboteam prepare --engine claude --render native \
   --level 1 --min-arms --parallel 4 --output runs/policy/claude-l1
 ```
 
@@ -62,27 +62,27 @@ work with this token; Remote Control and claude.ai connectors do not. See
 ### Saved login
 
 `haiku_subscription` and `haiku_subscription_directory` use a native Claude Code login. Name its
-configuration directory in `ROBOFRONTIER_CLAUDE_HOME` before preparing:
+configuration directory in `ROBOTEAM_CLAUDE_HOME` before preparing:
 
 ```sh
-export ROBOFRONTIER_CLAUDE_HOME="$HOME/.claude"
+export ROBOTEAM_CLAUDE_HOME="$HOME/.claude"
 claude auth login --claudeai
 claude auth status --json
-.venv/bin/robofrontier prepare --engine claude --profile haiku_subscription \
+.venv/bin/roboteam prepare --engine claude --profile haiku_subscription \
   --render native --cases transport-a04-d1 --output runs/policy/haiku-login
 ```
 
 `haiku_subscription` requires `$HOME/.claude` with `CLAUDE_CONFIG_DIR` unset. Claude Code keeps a
 separate credential store whenever `CLAUDE_CONFIG_DIR` is set, even to the same path, so for a
 login made with `CLAUDE_CONFIG_DIR` choose `haiku_subscription_directory` and set
-`ROBOFRONTIER_CLAUDE_HOME` to that directory. The choice is part of the profile fingerprint;
+`ROBOTEAM_CLAUDE_HOME` to that directory. The choice is part of the profile fingerprint;
 receipts do not carry over between the two. The directory is frozen in the run, must lie outside
 the batch, and is never collected: collection copies only the bound transcripts and their
 sidecars. No API key or token variable is passed in this mode.
 
 ### Doctor and redaction
 
-`robofrontier doctor --engine claude` checks the installed CLI version and a real render. It
+`roboteam doctor --engine claude` checks the installed CLI version and a real render. It
 does not check credentials or call a model. The runner redacts exact occurrences of the selected
 credential from its event file, summary and stderr tail and writes them owner-only; native
 session files are not rewritten, so treat a whole run directory as private.
@@ -90,9 +90,9 @@ session files are not rewritten, so treat a whole run directory as private.
 ## Isolation
 
 Permission rules confine the file tools; a second layer confines Bash. Both come from the run's
-frozen access table (`robofrontier/runtime/access.py`), which closes the checkout, the home
+frozen access table (`roboteam/runtime/access.py`), which closes the checkout, the home
 directory, other runs and shared storage. Preparation freezes the Bash layer as `bash_isolation`
-in `private/inputs/claude.json`, chosen by `robofrontier/engines/common/landlock.py` (`choose`):
+in `private/inputs/claude.json`, chosen by `roboteam/engines/common/landlock.py` (`choose`):
 
 | Host | `bash_isolation` | Mechanism |
 | --- | --- | --- |
@@ -112,11 +112,11 @@ confinement on a Linux host with Landlock. On RunPod, put the Node.js and CLI fo
 ## Preflight and receipts
 
 A run needs two passed receipts for its profile, recorded with the installed CLI version and
-model configuration; `robofrontier run` picks the latest of each and refuses on any mismatch
+model configuration; `roboteam run` picks the latest of each and refuses on any mismatch
 (`engines/claude/claude_readiness.py`). One command makes both, with real spend:
 
 ```sh
-.venv/bin/robofrontier preflight --engine claude --profile haiku_subscription_token \
+.venv/bin/roboteam preflight --engine claude --profile haiku_subscription_token \
   --max-budget-usd 1 --confirm-spend
 ```
 
@@ -139,11 +139,11 @@ fingerprint, cost and per-check results, never credentials. Each check can also 
 (`--output DIR` chooses the receipt folder), and two receipts can be compared without model calls:
 
 ```sh
-.venv/bin/python -m robofrontier.engines.claude.preflight --profile haiku --max-budget-usd 0.5 --check-fork --confirm-spend
-.venv/bin/python -m robofrontier.engines.claude.claude_blocked_precheck --profile haiku --max-budget-usd 1 --confirm-spend
-.venv/bin/python -m robofrontier.engines.claude.claude_readiness --profile haiku \
+.venv/bin/python -m roboteam.engines.claude.preflight --profile haiku --max-budget-usd 0.5 --check-fork --confirm-spend
+.venv/bin/python -m roboteam.engines.claude.claude_blocked_precheck --profile haiku --max-budget-usd 1 --confirm-spend
+.venv/bin/python -m roboteam.engines.claude.claude_readiness --profile haiku \
   --precheck PATH/receipt.json --blocked-precheck PATH/receipt.json
-.venv/bin/python -m robofrontier.engines.claude.claude_offline_probe   # local stubs, no model
+.venv/bin/python -m roboteam.engines.claude.claude_offline_probe   # local stubs, no model
 ```
 
 A receipt for one profile says nothing about another, and a matching receipt does not prove which
@@ -152,10 +152,10 @@ model the provider served.
 ## Run, status and stop
 
 ```sh
-.venv/bin/robofrontier run runs/policy/claude-l1        # launchd on macOS; --durable on Linux
-.venv/bin/robofrontier status runs/policy/claude-l1
-.venv/bin/robofrontier stop runs/policy/claude-l1
-.venv/bin/robofrontier continue runs/policy/claude-l1   # by hand, as the same trials
+.venv/bin/roboteam run runs/policy/claude-l1        # launchd on macOS; --durable on Linux
+.venv/bin/roboteam status runs/policy/claude-l1
+.venv/bin/roboteam stop runs/policy/claude-l1
+.venv/bin/roboteam continue runs/policy/claude-l1   # by hand, as the same trials
 ```
 
 `run` makes paid calls. It checks the receipts, the frozen configuration and every run's input
@@ -232,7 +232,7 @@ acknowledgement blocks bootstrap; a lost wake acknowledgement marks the wake unc
 dispatch without resending. Stop cancels every role's turn, then seals.
 
 ```sh
-.venv/bin/robofrontier prepare --engine claude --topology hierarchical --render native \
+.venv/bin/roboteam prepare --engine claude --topology hierarchical --render native \
   --level 1 --min-arms --parallel 2 --output runs/policy/claude-standing-l1
 ```
 
@@ -254,9 +254,9 @@ dispatch without resending. Stop cancels every role's turn, then seals.
 
 ## Cost and context
 
-`robofrontier run` sets no dollar allowance. Reported cost is kept per turn; missing cost is
+`roboteam run` sets no dollar allowance. Reported cost is kept per turn; missing cost is
 recorded as unreported, not zero. The allowances exist as the `turn_budget_usd` and
-`total_budget_usd` arguments of `robofrontier.engines.claude.run.run_task`. With them, every turn
+`total_budget_usd` arguments of `roboteam.engines.claude.run.run_task`. With them, every turn
 reserves before launch against one task ledger shared by all roles; a multi-role topology with a
 task allowance needs a per-turn allowance, and the most roles that can hold a reservation at once
 times it must fit the task allowance, or the launch is refused. Unknown, invalid or overspent

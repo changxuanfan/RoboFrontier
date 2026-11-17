@@ -59,8 +59,8 @@ class Bench:
     """One prepared run of a released case and its World."""
 
     def __init__(self, case_id, folder):
-        from robofrontier.tasks.families import prepare
-        from robofrontier.runtime.pipeline import World
+        from roboteam.tasks.families import prepare
+        from roboteam.runtime.pipeline import World
         run = Path(folder)/'run'
         prepare(case_id, run)
         self.task = json.loads((run/'private/inputs/task.json').read_text())
@@ -235,7 +235,7 @@ def place(name='transport-cube'):
 
 def push():
     """Push a cube 5 cm along the table with the closed hand, in the first direction the arm reaches."""
-    from robofrontier.physics.robot_control import IKNoSolution
+    from roboteam.physics.robot_control import IKNoSolution
     with task_dir() as folder:
         b = Bench('transport-a04-d1', folder); arm = 'A'; body = 'A_item1'
         base = b.data.body(arm+'_link0').xpos.copy(); item, _ = b.body(body)
@@ -363,7 +363,7 @@ def timing(case_id):
 
 
 def jobs(selected, cases):
-    from robofrontier.tasks.families import read
+    from roboteam.tasks.families import read
     release = read(ROOT/'benchmark/release.json')
     ids = [c['id'] for f in release['families'].values() for c in f['gpt']]
     if cases: ids = [i for i in ids if i in cases]

@@ -7,9 +7,9 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier.configuration import ROOT
-from robofrontier.media.motion_recording import MotionReader
-from robofrontier.oracle.trial import Trial
+from roboteam.configuration import ROOT
+from roboteam.media.motion_recording import MotionReader
+from roboteam.oracle.trial import Trial
 
 
 class OracleStopRecordingTests(unittest.TestCase):

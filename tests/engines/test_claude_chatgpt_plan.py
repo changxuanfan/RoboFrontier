@@ -15,8 +15,8 @@ import uuid
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from robofrontier.batch.claude_prepare import profile
-from robofrontier.engines.claude import runner
+from roboteam.batch.claude_prepare import profile
+from roboteam.engines.claude import runner
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]/'scripts'))
 import claude_chatgpt_gateway as gateway
@@ -26,7 +26,7 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
     def selected(self, endpoint):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary)/'models.json'
-            path.write_text(json.dumps({'schema': 'robofrontier.claude-models.v1', 'profiles': {'plan': {
+            path.write_text(json.dumps({'schema': 'roboteam.claude-models.v1', 'profiles': {'plan': {
                 'provider': 'openai_chatgpt_plan', 'model': 'gpt-6.1-sol', 'effort': 'high',
                 'env_key': 'LOCAL_GATEWAY_KEY', 'base_url': endpoint}}}))
             return profile('plan', path)
@@ -62,8 +62,8 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
             (['claude','--resume',parent],parent,None),
             (['claude','--resume',parent,'--fork-session','--session-id',child],child,parent)):
             env={};runner.bind_gateway_session(selected,command,env)
-            self.assertIn('X-RoboFrontier-Session: '+identity,env['ANTHROPIC_CUSTOM_HEADERS'])
-            self.assertEqual('X-RoboFrontier-Fork-Source' in env['ANTHROPIC_CUSTOM_HEADERS'],bool(source))
+            self.assertIn('X-RoboTeam-Session: '+identity,env['ANTHROPIC_CUSTOM_HEADERS'])
+            self.assertEqual('X-RoboTeam-Fork-Source' in env['ANTHROPIC_CUSTOM_HEADERS'],bool(source))
         unchanged={'ANTHROPIC_CUSTOM_HEADERS':'Existing: header'}
         runner.bind_gateway_session({'provider':'anthropic'},['claude'],unchanged)
         self.assertEqual(unchanged['ANTHROPIC_CUSTOM_HEADERS'],'Existing: header')
@@ -289,8 +289,8 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which('claude'), 'requires the real pinned CLI and local fixture responses')
     def test_native_pending_tool_fork_keeps_exact_replay_and_identity_checks(self):
-        from robofrontier.engines.claude import claude_blocked_precheck as blocked
-        from robofrontier.engines.claude import preflight
+        from roboteam.engines.claude import claude_blocked_precheck as blocked
+        from roboteam.engines.claude import preflight
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary);audits=[];calls=[];fork_projection=[]
             class Response(io.BytesIO):

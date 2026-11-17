@@ -7,10 +7,10 @@ import threading
 import unittest
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.engines.claude.policy_host import CentralizedPolicyHost
-from robofrontier.runtime.pipeline_client import client_call
-from robofrontier.runtime.setup import prepare_run
-from robofrontier.runtime.service import RuntimeService
+from roboteam.engines.claude.policy_host import CentralizedPolicyHost
+from roboteam.runtime.pipeline_client import client_call
+from roboteam.runtime.setup import prepare_run
+from roboteam.runtime.service import RuntimeService
 
 ROOT = Path(__file__).resolve().parents[2]
 

@@ -18,17 +18,17 @@ import threading
 import time
 import unittest
 
-from robofrontier.engines.codex.check_codex_broker import NATIVE
-from robofrontier.engines.codex.launch import launch_config
-from robofrontier.tasks.config import ROOT
+from roboteam.engines.codex.check_codex_broker import NATIVE
+from roboteam.engines.codex.launch import launch_config
+from roboteam.tasks.config import ROOT
 
 OFF = ('shell_tool', 'view_image', 'shell_snapshot', 'unified_exec', 'plugins', 'browser_use', 'computer_use',
        'code_mode', 'code_mode_only', 'code_mode_host', 'multi_agent', 'multi_agent_v2', 'apps', 'goals')
 CLIENT = r'''
 const fs=require('fs'),path=require('path'),root=process.argv[1],out=process.argv[2];
-const {CodexRpc}=require(root+'/robofrontier/engines/codex/codex_rpc');
-const {robotTool}=require(root+'/robofrontier/engines/codex/codex_policy_host');
-const broker=require(root+'/robofrontier/engines/codex/tool_broker');
+const {CodexRpc}=require(root+'/roboteam/engines/codex/codex_rpc');
+const {robotTool}=require(root+'/roboteam/engines/codex/codex_policy_host');
+const broker=require(root+'/roboteam/engines/codex/tool_broker');
 const launch=JSON.parse(fs.readFileSync(out+'/launch.json')),scenarios=JSON.parse(fs.readFileSync(out+'/scenarios.json'));
 let waits=new Map(),robotCalls=0,otherCalls=[];
 const rpc=new CodexRpc(launch.args,{stderr:fs.openSync(out+'/server.log','w'),
@@ -73,7 +73,7 @@ async function turn(id,scenario){
 def offline_profile(**extra):
     return dict(model='offline-robot-only', provider='offline_protocol', effort='high', vision=True,
                 context_window=300000, auto_compact_token_limit=267000, use_cached_model_metadata=False,
-                base_url='http://127.0.0.1:1', env_key='ROBOFRONTIER_OFFLINE_STUB_TOKEN', **extra)
+                base_url='http://127.0.0.1:1', env_key='ROBOTEAM_OFFLINE_STUB_TOKEN', **extra)
 
 
 def overrides(launch):
@@ -186,7 +186,7 @@ class RealCliTests(unittest.TestCase):
                 scenarios = ['robot', *NATIVE, 'policy_exec', 'policy_image']
                 (output/'scenarios.json').write_text(json.dumps(scenarios))
                 env = {'PATH': os.environ['PATH'], 'LANG': 'C.UTF-8', 'CODEX_HOME': str(home),
-                       'ROBOFRONTIER_OFFLINE_STUB_TOKEN': 'local-stub-no-credential'}
+                       'ROBOTEAM_OFFLINE_STUB_TOKEN': 'local-stub-no-credential'}
                 result = subprocess.run(['node', '-e', CLIENT, str(ROOT), str(output)], env=env, capture_output=True,
                                         text=True, timeout=240)
             finally:

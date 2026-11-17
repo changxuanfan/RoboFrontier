@@ -3,7 +3,7 @@ from datetime import datetime
 import unittest
 from zoneinfo import ZoneInfo
 
-from robofrontier.runtime.quota import MARGIN_S, PAST_RESET_S, RECHECK_S, resume_at, usage_limit
+from roboteam.runtime.quota import MARGIN_S, PAST_RESET_S, RECHECK_S, resume_at, usage_limit
 
 NY = ZoneInfo('America/New_York')
 NOW = datetime(2026, 11, 10, 14, 31, tzinfo=NY).timestamp()
@@ -79,13 +79,13 @@ class WorldQuotaPauseTests(active.Fixture):
     """A host's quota-pause request holds the world until the reset, then it resumes by itself."""
     def setUp(self):
         super().setUp()
-        patcher = patch.dict(os.environ, {'ROBOFRONTIER_NO_NOTIFY': '1'}); patcher.start(); self.addCleanup(patcher.stop)
-        from robofrontier.runtime.egress_pause import WorldPause
+        patcher = patch.dict(os.environ, {'ROBOTEAM_NO_NOTIFY': '1'}); patcher.start(); self.addCleanup(patcher.stop)
+        from roboteam.runtime.egress_pause import WorldPause
         self.s.egress_pause = WorldPause(self.s, None)
         self.s.store.put('physics_state', 'running')
 
     def test_held_until_the_reset_then_resumed_with_a_continuation_window(self):
-        from robofrontier.runtime.cli import execute
+        from roboteam.runtime.cli import execute
         request = {'actor': 'Controller', 'thread_id': 'Controller', 'resets_at': time.time() + 100,
                    'text': "You've hit your limit · resets 3pm"}
         self.assertTrue(execute(self.s.store, 'quota-pause', request, 'host', time.time())['paused'])
@@ -110,7 +110,7 @@ class WorldQuotaPauseTests(active.Fixture):
         # 2026-11-13 relay-a16-d2: the owner process restarts at each segment, so a per-process
         # counter named a later pause 'quota-1' again; network-recovery then saw the role's
         # once-per-pause claim as already used and held the run for review for good.
-        from robofrontier.runtime.egress_pause import WorldPause
+        from roboteam.runtime.egress_pause import WorldPause
         names = []
         for segment in (4, 5):
             self.s.store.put('segment', segment)

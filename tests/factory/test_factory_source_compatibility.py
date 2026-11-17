@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from robofrontier.factory.workstations import colour_compatible_signature
+from roboteam.factory.workstations import colour_compatible_signature
 
 
 class FactorySourceCompatibilityTest(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from robofrontier.factory.blender.factory_mesh_rotation import asset_frame_rotation
+from roboteam.factory.blender.factory_mesh_rotation import asset_frame_rotation
 
 class MeshRotationChecks(unittest.TestCase):
     def test_cross_platform_mesh_axis_flip_is_compared_in_asset_frame(self):

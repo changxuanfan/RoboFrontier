@@ -12,22 +12,22 @@ import time
 import unittest
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.engines.claude.adaptive_policy_host import AdaptivePolicyHost
-from robofrontier.engines.claude.adaptive_setup import AdaptiveForkSetup, child_prompt
-from robofrontier.engines.claude.fork_setup import create_fork
-from robofrontier.engines.claude.budget import BudgetLedger
-from robofrontier.engines.claude.native_home import history_directory
-from robofrontier.engines.claude.provenance import first_input, history, transcript_rows
-from robofrontier.engines.claude.robot_mcp import RobotBridge
-from robofrontier.runtime.setup import prepare_run
-from robofrontier.runtime.service import RuntimeService
+from roboteam.engines.claude.adaptive_policy_host import AdaptivePolicyHost
+from roboteam.engines.claude.adaptive_setup import AdaptiveForkSetup, child_prompt
+from roboteam.engines.claude.fork_setup import create_fork
+from roboteam.engines.claude.budget import BudgetLedger
+from roboteam.engines.claude.native_home import history_directory
+from roboteam.engines.claude.provenance import first_input, history, transcript_rows
+from roboteam.engines.claude.robot_mcp import RobotBridge
+from roboteam.runtime.setup import prepare_run
+from roboteam.runtime.service import RuntimeService
 
 ROOT=Path(__file__).resolve().parents[2]
 # Runs the Codex route's own dispatcher with a fake native adapter and prints the first
 # message it sends the child (argv: repository, run directory, child scope).
 CODEX_FIRST_MESSAGE='''
 const [root,runDir,given]=process.argv.slice(1),child=JSON.parse(given);
-const {runMetaDispatcher}=require(root+'/robofrontier/engines/codex/meta_dispatcher.js');
+const {runMetaDispatcher}=require(root+'/roboteam/engines/codex/meta_dispatcher.js');
 const batch={id:'b',source_thread_id:'parent',status:'creating',claimed_by:null,
   children:[{actor:child.actor,robots:child.robots,goal:child.goal,done_when:child.done_when,constraints:child.constraints}]};
 let forks=0,prompt=null;

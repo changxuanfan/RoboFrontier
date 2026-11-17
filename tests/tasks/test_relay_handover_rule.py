@@ -6,9 +6,9 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 
-from robofrontier.runtime import segments as run_segments
-from robofrontier.tasks.relay import final_task
-from robofrontier.tasks.families import (RELAY_HANDOVER_RULE, expected_protocol, policy_task,
+from roboteam.runtime import segments as run_segments
+from roboteam.tasks.relay import final_task
+from roboteam.tasks.families import (RELAY_HANDOVER_RULE, expected_protocol, policy_task,
                                         protocol_for, resolve_case, sha, RELEASE, ROOT)
 from tests.tasks.test_relay_goal_support import GoalSupportTests
 
@@ -34,7 +34,7 @@ def score(handovers, rule=RELAY_HANDOVER_RULE):
     mon.released = lambda geoms: True
     for ident, state in relay.states.items():
         state.update(airborne=True, landed=False, transitions=list(handovers.get(ident, [])))
-    with patch('robofrontier.tasks.relay_goal_fraction.timber_fraction', return_value=np.float64(.9)):
+    with patch('roboteam.tasks.relay_goal_fraction.timber_fraction', return_value=np.float64(.9)):
         relay.sample()
     return mon.result_cache
 
@@ -96,7 +96,7 @@ class Scenario:
         if inside is not None: self.inside = inside
         for _ in range(int(round(seconds/.02))):
             self.t += .02; self.data.time = self.t
-            with patch('robofrontier.tasks.relay_goal_fraction.timber_fraction', return_value=np.float64(.9)):
+            with patch('roboteam.tasks.relay_goal_fraction.timber_fraction', return_value=np.float64(.9)):
                 self.relay.sample()
         return self
 
@@ -224,7 +224,7 @@ class RestartTests(unittest.TestCase):
         _, _, relay = GoalSupportTests().world()
         relay.mon.w = type('World', (), {'directory': Path('/run')})()
         note = {'evaluator': {'relay_payloads': {'p1': {'handovers': [HANDOVER], 'drops': 2}, 'gone': {'handovers': [], 'drops': 0}}}}
-        with patch('robofrontier.runtime.segments.current_restore', return_value=(note, Path('/run/pose.npy'))):
+        with patch('roboteam.runtime.segments.current_restore', return_value=(note, Path('/run/pose.npy'))):
             relay.continue_record()
         self.assertEqual(relay.states['p1']['transitions'], [HANDOVER])
         self.assertEqual(relay.states['p1']['drops'], 2)
@@ -235,7 +235,7 @@ class RestartTests(unittest.TestCase):
         for state in s.relay.states.values(): state.update(airborne=False, custody=set())
         s.relay.mon.w = type('World', (), {'directory': Path('/run')})()
         note = {'evaluator': {'relay_payloads': {'p1': item, 'p2': item}}}
-        with patch('robofrontier.runtime.segments.current_restore', return_value=(note, Path('/run/pose.npy'))):
+        with patch('roboteam.runtime.segments.current_restore', return_value=(note, Path('/run/pose.npy'))):
             s.relay.continue_record()
         return s
 
@@ -274,7 +274,7 @@ class RestartTests(unittest.TestCase):
         path = run/'private/outputs/suite-process.jsonl'; path.parent.mkdir(parents=True)
         lines = []
         for block in blocks:
-            lines.append(json.dumps({'schema': 'robofrontier.suite-process.v2'}))
+            lines.append(json.dumps({'schema': 'roboteam.suite-process.v2'}))
             for t, payloads in block:
                 lines.append(json.dumps({'type': 'event', 'sim_time_s': t, 'result': {'payloads': payloads}}))
         path.write_text('\n'.join(lines)+'\n')

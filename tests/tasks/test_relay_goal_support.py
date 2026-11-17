@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import unittest
 import mujoco
 import numpy as np
-from robofrontier.tasks.evaluate import Relay
+from roboteam.tasks.evaluate import Relay
 
 
 class GoalSupportTests(unittest.TestCase):

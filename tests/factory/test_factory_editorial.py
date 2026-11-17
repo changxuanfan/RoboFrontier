@@ -10,10 +10,10 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
-from robofrontier.factory import bundle
-from robofrontier.factory import editorial
-from robofrontier.factory import server
-from robofrontier.cli import main
+from roboteam.factory import bundle
+from roboteam.factory import editorial
+from roboteam.factory import server
+from roboteam.cli import main
 from factory.test_factory_bundle import tour_fixture
 
 
@@ -52,10 +52,10 @@ class EditorialTests(unittest.TestCase):
         plan_path = Path(result['plan'])
         plan = server.load_plan(plan_path)[1]
         titles = self.project.parent/'titles.srt'
-        titles.write_text(titles.read_text().replace('RoboFrontier','Edited locally'))
+        titles.write_text(titles.read_text().replace('RoboTeam','Edited locally'))
         self.assertEqual(server.load_plan(plan_path)[1],plan)
         frozen = plan_path.parent/'editorial/titles.srt'
-        frozen.write_text(frozen.read_text().replace('RoboFrontier','Changed after freeze'))
+        frozen.write_text(frozen.read_text().replace('RoboTeam','Changed after freeze'))
         with self.assertRaisesRegex(ValueError,'editorial inputs changed'):
             server.load_plan(plan_path)
 
@@ -146,7 +146,7 @@ class EditorialTests(unittest.TestCase):
         def fake_process(argv, **kwargs):
             output = Path(argv[argv.index('--output')+1])
             output.mkdir(parents=True)
-            if 'robofrontier.factory.tour' in argv:
+            if 'roboteam.factory.tour' in argv:
                 bundle.write(output/'animation.json',{'frames':[{}, {}, {}]})
             else:
                 (output/'factory.mp4').write_bytes(b'raw')
@@ -174,7 +174,7 @@ class EditorialTests(unittest.TestCase):
                         'project_files':loaded['files']})
                     if mode == 'changed_during_render':
                         file = Path(project).parent/'titles.srt'
-                        file.write_text(file.read_text().replace('RoboFrontier','Changed mid-render'))
+                        file.write_text(file.read_text().replace('RoboTeam','Changed mid-render'))
                 with patch.object(server.subprocess,'Popen',side_effect=fake_process), \
                         patch.object(server,'blender_path',return_value='/fake/blender'), \
                         patch.object(editorial,'render',side_effect=composite):
@@ -194,7 +194,7 @@ class EditorialTests(unittest.TestCase):
                     self.assertTrue(state['source_video'].endswith('/render/factory.mp4'))
                     retained = attempt.parent/'editorial/project/titles.srt'
                     original = retained.read_bytes()
-                    retained.write_bytes(original.replace(b'RoboFrontier',b'Changed after seal'))
+                    retained.write_bytes(original.replace(b'RoboTeam',b'Changed after seal'))
                     with self.assertRaisesRegex(ValueError,'project differs'):
                         server.status(plan)
                     retained.write_bytes(original)

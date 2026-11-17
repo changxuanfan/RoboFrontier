@@ -1,5 +1,5 @@
 {
-  "schema": "robofrontier.models.v2",
+  "schema": "roboteam.models.v2",
   "scope": "Every model profile, one section per engine. A run freezes its own engine section as private/inputs/models.json.",
   "engines": {
     "codex": {
@@ -26,7 +26,7 @@
           "model": "gpt-6.1-sol",
           "provider": "github_pat",
           "base_url": "https://api.githubcopilot.com",
-          "env_key": "ROBOFRONTIER_GITHUB_PAT",
+          "env_key": "ROBOTEAM_GITHUB_PAT",
           "effort": "high",
           "vision": true,
           "context_capacity": 1050000,
@@ -46,7 +46,7 @@
           "model": "gpt-6-astra",
           "provider": "github_pat",
           "base_url": "https://api.githubcopilot.com",
-          "env_key": "ROBOFRONTIER_GITHUB_PAT",
+          "env_key": "ROBOTEAM_GITHUB_PAT",
           "effort": "high",
           "vision": true,
           "context_capacity": 300000,
@@ -68,7 +68,7 @@
           "transport": "loopback_gateway",
           "transport_revision": "messages-adapter-v1",
           "base_url": "http://127.0.0.1:18470/v1",
-          "env_key": "ROBOFRONTIER_CLAUDE_GATEWAY_KEY",
+          "env_key": "ROBOTEAM_CLAUDE_GATEWAY_KEY",
           "upstream_host": "api.anthropic.com",
           "effort": "high",
           "vision": true,
@@ -163,13 +163,13 @@
       }
     },
     "claude": {
-      "schema": "robofrontier.claude-models.v1",
+      "schema": "roboteam.claude-models.v1",
       "profiles": {
         "sol61_chatgpt_plan": {
           "provider": "openai_chatgpt_plan",
           "transport_revision": "websocket-incremental-v4",
           "model": "gpt-6.1-sol",
-          "env_key": "ROBOFRONTIER_CHATGPT_GATEWAY_KEY",
+          "env_key": "ROBOTEAM_CHATGPT_GATEWAY_KEY",
           "base_url": "http://127.0.0.1:18461",
           "effort": "high",
           "context_capacity": 300000,
@@ -205,7 +205,7 @@
           "effort": "high",
           "auth_mode": "native_login",
           "native_config_scope": "default",
-          "native_config_dir_env": "ROBOFRONTIER_CLAUDE_HOME"
+          "native_config_dir_env": "ROBOTEAM_CLAUDE_HOME"
         },
         "haiku_subscription_directory": {
           "provider": "anthropic",
@@ -215,7 +215,7 @@
           "effort": "high",
           "auth_mode": "native_login",
           "native_config_scope": "directory",
-          "native_config_dir_env": "ROBOFRONTIER_CLAUDE_HOME"
+          "native_config_dir_env": "ROBOTEAM_CLAUDE_HOME"
         },
         "opus": {
           "provider": "anthropic",
@@ -292,7 +292,7 @@
       }
     },
     "antigravity": {
-      "schema": "robofrontier.antigravity-models.v1",
+      "schema": "roboteam.antigravity-models.v1",
       "cli_version": "1.5.5",
       "profiles": {
         "flash_subscription": {

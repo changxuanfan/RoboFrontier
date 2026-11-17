@@ -9,10 +9,10 @@ import threading
 import unittest
 
 from PIL import Image
-from robofrontier.engines.claude.session_host import ClaudeSessionHost
-from robofrontier.engines.claude.dispatch import ClaudeDispatcher
-from robofrontier.runtime.store import RuntimeStore
-from robofrontier.engines.claude import claude_offline_probe as probe
+from roboteam.engines.claude.session_host import ClaudeSessionHost
+from roboteam.engines.claude.dispatch import ClaudeDispatcher
+from roboteam.runtime.store import RuntimeStore
+from roboteam.engines.claude import claude_offline_probe as probe
 
 
 @unittest.skipUnless(shutil.which('claude'), 'Claude CLI is not installed')

@@ -9,10 +9,10 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier.runtime import segments as run_segments
-from robofrontier.runtime.layout import path as run_path
-from robofrontier.runtime.segments import MIN_REMAINING_S, deadline, process_summary, retry_eligibility
-from robofrontier.runtime.store import RuntimeStore
+from roboteam.runtime import segments as run_segments
+from roboteam.runtime.layout import path as run_path
+from roboteam.runtime.segments import MIN_REMAINING_S, deadline, process_summary, retry_eligibility
+from roboteam.runtime.store import RuntimeStore
 from engines.test_engine_parity import prepared
 
 
@@ -207,7 +207,7 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(self.store.get('pending_segment')['after_score'], True)
         record = self.store.get('continuations')[-1]
         self.assertEqual((record['manual'], record['stop'], record['after_score']), (True, 'finish', True))
-        from robofrontier.runtime.clock import BudgetGuard
+        from roboteam.runtime.clock import BudgetGuard
         self.assertTrue(BudgetGuard.after_score(self.store))
         # A later finish rewrites evaluation.json; the scored copy stays.
         (out/'evaluation.json').write_text('{"task_success": false}')

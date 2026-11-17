@@ -8,12 +8,12 @@ import tempfile
 import threading
 import unittest
 
-from robofrontier.engines.antigravity.driver import Driver, summarize
-from robofrontier.engines.antigravity.gateway import Gateway
-from robofrontier.engines.antigravity.hook import decision
-from robofrontier.engines.antigravity.profile import validate
-from robofrontier.runtime import access, policy_env
-from robofrontier.runtime.setup import write_json
+from roboteam.engines.antigravity.driver import Driver, summarize
+from roboteam.engines.antigravity.gateway import Gateway
+from roboteam.engines.antigravity.hook import decision
+from roboteam.engines.antigravity.profile import validate
+from roboteam.runtime import access, policy_env
+from roboteam.runtime.setup import write_json
 
 
 class ProfileTests(unittest.TestCase):
@@ -102,16 +102,16 @@ def fixture(run):
     root = policy_env.apply_default()
     policy_env.prepare_run(run, root)
     write_json(run/'private/inputs/policy-access.json', access.record(run, environment=root, unchecked=True))
-    (run/'private/inputs/bootstrap/system.md').write_text('You are a RoboFrontier policy agent. Keep the task contract.\n')
+    (run/'private/inputs/bootstrap/system.md').write_text('You are a RoboTeam policy agent. Keep the task contract.\n')
 
 
-@unittest.skipUnless(os.environ.get('ROBOFRONTIER_ANTIGRAVITY_INTEGRATION') == '1' and shutil.which('agy'),
+@unittest.skipUnless(os.environ.get('ROBOTEAM_ANTIGRAVITY_INTEGRATION') == '1' and shutil.which('agy'),
                      'opt-in real agy CLI against a local service; no provider calls')
 class NativeTests(unittest.TestCase):
     def test_full_preflight_with_native_blocked_parent_and_fork(self):
         import functools
         from unittest.mock import patch
-        from robofrontier.engines.antigravity import preflight
+        from roboteam.engines.antigravity import preflight
         def response(body):
             contents = body.get('contents', [])
             users = [' '.join(p.get('text', '') for p in c.get('parts', []))
@@ -126,7 +126,7 @@ class NativeTests(unittest.TestCase):
                 return [{'text': 'red green'}]
             if parts and 'functionResponse' in parts[-1]:
                 return [{'text': 'parent done' if 'parent done' in text else 'red green'}]
-            return [{'functionCall': {'name': 'mcp_robofrontier_robot', 'args': {
+            return [{'functionCall': {'name': 'mcp_roboteam_robot', 'args': {
                 'op': 'observe', 'data': {}, 'views': ['top'], 'toolSummary': 'Read compatibility image'}}}]
         stub = Stub(response)
         selected = {'model': 'gemini-3.8-flash-low', 'effort': 'low', 'auth_mode': 'api_key',
@@ -145,9 +145,9 @@ class NativeTests(unittest.TestCase):
             stub.close()
 
     def test_model_service_receives_exactly_the_frozen_system_prompt(self):
-        from robofrontier.engines.antigravity.provenance import steps
-        from robofrontier.runtime.bootstrap import SYSTEM_PROMPT
-        from robofrontier.configuration import ROOT
+        from roboteam.engines.antigravity.provenance import steps
+        from roboteam.runtime.bootstrap import SYSTEM_PROMPT
+        from roboteam.configuration import ROOT
         stub = Stub()
         self.addCleanup(stub.close)
         with tempfile.TemporaryDirectory(prefix='rf-agy-system-') as folder:
@@ -184,7 +184,7 @@ class NativeTests(unittest.TestCase):
     def test_tool_hook_refuses_the_native_tools_the_cli_still_declares(self):
         # (tool mode, native call, refused). manage_task list/status is allowed in a full run.
         cases = (('robot_only', 'manage_task', {'Action': 'list'}, True),
-                 ('robot_only', 'list_resources', {'ServerName': 'robofrontier'}, True),
+                 ('robot_only', 'list_resources', {'ServerName': 'roboteam'}, True),
                  ('full', 'manage_task', {'Action': 'kill', 'TaskId': 'x'}, True),
                  ('full', 'manage_task', {'Action': 'list'}, False))
         for mode, name, args, refused in cases:
@@ -263,7 +263,7 @@ class NativeTests(unittest.TestCase):
             self.assertEqual(driver.session, sid)
             third = driver(selected, selected['model'], 'low', None, 'Third input', run, {}, events_name='three.jsonl', timeout=30)
             self.assertEqual(third['summary']['turn_status'], 'ended')
-            from robofrontier.engines.antigravity.provenance import steps
+            from roboteam.engines.antigravity.provenance import steps
             forked = driver.fork(len(steps(driver.home, sid))-1)
             child = Driver(run, 'ForkProbe', selected, {**os.environ, 'RF_TEST_KEY': 'host-secret-sentinel'},
                 session=forked, gateway_factory=lambda base, key: Gateway(stub.url, key))

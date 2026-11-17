@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.cli import _frozen_configuration, plan, prepare, preflight
-from robofrontier.configuration import load_configuration, rendering_environment
-from robofrontier.runtime.setup import verify_inputs
+from roboteam.cli import _frozen_configuration, plan, prepare, preflight
+from roboteam.configuration import load_configuration, rendering_environment
+from roboteam.runtime.setup import verify_inputs
 
 
 
@@ -14,7 +14,7 @@ from robofrontier.runtime.setup import verify_inputs
 # itself is tested in runtime.test_versions.
 def setUpModule():
     from unittest.mock import patch
-    from robofrontier.runtime import versions
+    from roboteam.runtime import versions
     global _versions
     _versions = patch.object(versions, 'engine_version', side_effect=lambda engine, run=None: versions.ENGINES[engine])
     _versions.start()
@@ -26,7 +26,7 @@ def tearDownModule():
 
 class UnifiedConfigurationTests(unittest.TestCase):
     def test_claude_engine_defaults_to_setup_token_without_replacing_explicit_profiles(self):
-        from robofrontier.batch.claude_prepare import profile
+        from roboteam.batch.claude_prepare import profile
         config = load_configuration(overrides={'policy': {'engine': 'claude'}})
         self.assertEqual(config['policy']['profile'], 'haiku_subscription_token')
         self.assertEqual(plan(config)['model'], 'claude-haiku-5-5')
@@ -61,11 +61,11 @@ class UnifiedConfigurationTests(unittest.TestCase):
             self.assertEqual(config['batch']['parallel'], 4)
             self.assertEqual(plan(config)['task_count'], 4)
             # The default `auto` is resolved for this host before anything is frozen.
-            from robofrontier.configuration import detected_render_device
+            from roboteam.configuration import detected_render_device
             self.assertEqual(config['render']['device'], detected_render_device())
 
     def test_auto_rendering_follows_the_host(self):
-        from robofrontier.configuration import detected_render_device
+        from roboteam.configuration import detected_render_device
         self.assertEqual(detected_render_device('Darwin'), 'native')
         with patch('pathlib.Path.exists', return_value=False), patch('shutil.which', return_value=None):
             self.assertEqual(detected_render_device('Linux'), 'cpu')
@@ -161,7 +161,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
                     'render': {'device':'native'}, 'selection': {'cases':['transport-a04-d1']}})
                 batch = Path(tmp)/'batch'
                 # Preparing only; no key is used (claude_prepare.exposed_api_keys).
-                with patch('robofrontier.batch.claude_prepare.exposed_api_keys', return_value=[]):
+                with patch('roboteam.batch.claude_prepare.exposed_api_keys', return_value=[]):
                     prepare(batch, config)
                 data = json.loads((batch/'batch.json').read_text())
                 self.assertEqual(data['status'], 'prepared_not_started')

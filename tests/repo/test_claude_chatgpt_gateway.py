@@ -35,7 +35,7 @@ class MessagesBridgeTests(unittest.TestCase):
         source=[row('user','prior')]
         source.append(row('assistant',[control],'<synthetic>',source[-1]['uuid']))
         source.append(row('assistant',[{'type':'text','text':'done'}],gateway.MODEL,source[-1]['uuid']))
-        from robofrontier.engines.claude.provenance import history
+        from roboteam.engines.claude.provenance import history
         digest=gateway.hashlib.sha256(json.dumps(history(source,parent),sort_keys=True).encode()).hexdigest()
         child_rows=[{**r,'sessionId':child} for r in source]
         child_rows.append({**row('user','child setup',previous=source[-1]['uuid']),'sessionId':child})

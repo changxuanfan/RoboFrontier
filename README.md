@@ -1,11 +1,11 @@
 <div align="center">
 
-<img src="docs/media/readme/banner.png" alt="RoboFrontier. Can multimodal agents run a robot world? 36 tasks, 4 families, up to 16 arms; a map of Robo World's four zones" width="100%">
+<img src="docs/media/readme/banner.png" alt="RoboTeam. Can multimodal agents run a robot world? 36 tasks, 4 families, up to 16 arms; a map of Robo World's four zones" width="100%">
 
 **Can Multimodal Agents Work Together on Long Physical Tasks?**
 
-[Project page](https://changxuanfan.github.io/RoboFrontier/) ·
-[Film](https://changxuanfan.github.io/RoboFrontier/#film) ·
+[Project page](https://changxuanfan.github.io/RoboTeam/) ·
+[Film](https://changxuanfan.github.io/RoboTeam/#film) ·
 [Tasks](docs/tasks/README.md) ·
 [Getting started](docs/getting-started.md)
 
@@ -13,7 +13,7 @@
 [![Data: CC BY 4.0](https://img.shields.io/badge/data%20%26%20media-CC%20BY%204.0-3f9440?style=flat-square)](LICENSE-DATA.md)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-d65b3c?style=flat-square)](pyproject.toml)
 
-<a href="https://changxuanfan.github.io/RoboFrontier/#film"><img src="docs/media/readme/teaser.webp" alt="One moment from each Robo World zone: Transport, Mosaic, Relay and Dial" width="100%"></a>
+<a href="https://changxuanfan.github.io/RoboTeam/#film"><img src="docs/media/readme/teaser.webp" alt="One moment from each Robo World zone: Transport, Mosaic, Relay and Dial" width="100%"></a>
 
 <sub>One moment from each zone of Robo World. Oracle reference runs. Select to watch the full film.</sub>
 
@@ -21,7 +21,7 @@
 
 ## What it is
 
-RoboFrontier asks multimodal agents to **organize, communicate and collaborate**
+RoboTeam asks multimodal agents to **organize, communicate and collaborate**
 across many robot arms. Every model drives the same simulated Franka arms through the
 same robot tool, sees the same cameras and follows the same rules. Nothing is scripted:
 who does what, when to wait, how to talk and how to recover are the agent's choices.
@@ -103,19 +103,19 @@ https://github.com/user-attachments/assets/f4abfc06-8e7c-433a-bc16-aa3cb9df9641
 <!-- gallery -->
 <b>Transport</b>
 
-<table><tr><th></th><th>4 arms</th><th>8 arms</th><th>12 arms</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a04-d1"><img src="docs/media/readme/tasks/transport-a04-d1.jpg" width="240" alt="transport-a04-d1"></a><br><sub>transport-a04-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a08-d1"><img src="docs/media/readme/tasks/transport-a08-d1.jpg" width="240" alt="transport-a08-d1"></a><br><sub>transport-a08-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a12-d1"><img src="docs/media/readme/tasks/transport-a12-d1.jpg" width="240" alt="transport-a12-d1"></a><br><sub>transport-a12-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a04-d2"><img src="docs/media/readme/tasks/transport-a04-d2.jpg" width="240" alt="transport-a04-d2"></a><br><sub>transport-a04-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a08-d2"><img src="docs/media/readme/tasks/transport-a08-d2.jpg" width="240" alt="transport-a08-d2"></a><br><sub>transport-a08-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a12-d2"><img src="docs/media/readme/tasks/transport-a12-d2.jpg" width="240" alt="transport-a12-d2"></a><br><sub>transport-a12-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a04-d3"><img src="docs/media/readme/tasks/transport-a04-d3.jpg" width="240" alt="transport-a04-d3"></a><br><sub>transport-a04-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a08-d3"><img src="docs/media/readme/tasks/transport-a08-d3.jpg" width="240" alt="transport-a08-d3"></a><br><sub>transport-a08-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=transport-a12-d3"><img src="docs/media/readme/tasks/transport-a12-d3.jpg" width="240" alt="transport-a12-d3"></a><br><sub>transport-a12-d3</sub></td></tr></table>
+<table><tr><th></th><th>4 arms</th><th>8 arms</th><th>12 arms</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=transport-a04-d1"><img src="docs/media/readme/tasks/transport-a04-d1.jpg" width="240" alt="transport-a04-d1"></a><br><sub>transport-a04-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=transport-a08-d1"><img src="docs/media/readme/tasks/transport-a08-d1.jpg" width="240" alt="transport-a08-d1"></a><br><sub>transport-a08-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=transport-a12-d1"><img src="docs/media/readme/tasks/transport-a12-d1.jpg" width="240" alt="transport-a12-d1"></a><br><sub>transport-a12-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=transport-a04-d2"><img src="docs/media/readme/tasks/transport-a04-d2.jpg" width="240" alt="transport-a04-d2"></a><br><sub>transport-a04-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=transport-a08-d2"><img src="docs/media/readme/tasks/transport-a08-d2.jpg" width="240" alt="transport-a08-d2"></a><br><sub>transport-a08-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=transport-a12-d2"><img src="docs/media/readme/tasks/transport-a12-d2.jpg" width="240" alt="transport-a12-d2"></a><br><sub>transport-a12-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=transport-a04-d3"><img src="docs/media/readme/tasks/transport-a04-d3.jpg" width="240" alt="transport-a04-d3"></a><br><sub>transport-a04-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=transport-a08-d3"><img src="docs/media/readme/tasks/transport-a08-d3.jpg" width="240" alt="transport-a08-d3"></a><br><sub>transport-a08-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=transport-a12-d3"><img src="docs/media/readme/tasks/transport-a12-d3.jpg" width="240" alt="transport-a12-d3"></a><br><sub>transport-a12-d3</sub></td></tr></table>
 
 <b>Mosaic</b>
 
-<table><tr><th></th><th>4 arms</th><th>6 arms</th><th>8 arms</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a04-6x12-d1"><img src="docs/media/readme/tasks/mosaic-a04-6x12-d1.jpg" width="240" alt="mosaic-a04-6x12-d1"></a><br><sub>mosaic-a04-6x12-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a06-9x18-d1"><img src="docs/media/readme/tasks/mosaic-a06-9x18-d1.jpg" width="240" alt="mosaic-a06-9x18-d1"></a><br><sub>mosaic-a06-9x18-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a08-12x24-d1"><img src="docs/media/readme/tasks/mosaic-a08-12x24-d1.jpg" width="240" alt="mosaic-a08-12x24-d1"></a><br><sub>mosaic-a08-12x24-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a04-6x12-d2"><img src="docs/media/readme/tasks/mosaic-a04-6x12-d2.jpg" width="240" alt="mosaic-a04-6x12-d2"></a><br><sub>mosaic-a04-6x12-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a06-9x18-d2"><img src="docs/media/readme/tasks/mosaic-a06-9x18-d2.jpg" width="240" alt="mosaic-a06-9x18-d2"></a><br><sub>mosaic-a06-9x18-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a08-12x24-d2"><img src="docs/media/readme/tasks/mosaic-a08-12x24-d2.jpg" width="240" alt="mosaic-a08-12x24-d2"></a><br><sub>mosaic-a08-12x24-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a04-6x12-d3"><img src="docs/media/readme/tasks/mosaic-a04-6x12-d3.jpg" width="240" alt="mosaic-a04-6x12-d3"></a><br><sub>mosaic-a04-6x12-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a06-9x18-d3"><img src="docs/media/readme/tasks/mosaic-a06-9x18-d3.jpg" width="240" alt="mosaic-a06-9x18-d3"></a><br><sub>mosaic-a06-9x18-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=mosaic-a08-12x24-d3"><img src="docs/media/readme/tasks/mosaic-a08-12x24-d3.jpg" width="240" alt="mosaic-a08-12x24-d3"></a><br><sub>mosaic-a08-12x24-d3</sub></td></tr></table>
+<table><tr><th></th><th>4 arms</th><th>6 arms</th><th>8 arms</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=mosaic-a04-6x12-d1"><img src="docs/media/readme/tasks/mosaic-a04-6x12-d1.jpg" width="240" alt="mosaic-a04-6x12-d1"></a><br><sub>mosaic-a04-6x12-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=mosaic-a06-9x18-d1"><img src="docs/media/readme/tasks/mosaic-a06-9x18-d1.jpg" width="240" alt="mosaic-a06-9x18-d1"></a><br><sub>mosaic-a06-9x18-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=mosaic-a08-12x24-d1"><img src="docs/media/readme/tasks/mosaic-a08-12x24-d1.jpg" width="240" alt="mosaic-a08-12x24-d1"></a><br><sub>mosaic-a08-12x24-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=mosaic-a04-6x12-d2"><img src="docs/media/readme/tasks/mosaic-a04-6x12-d2.jpg" width="240" alt="mosaic-a04-6x12-d2"></a><br><sub>mosaic-a04-6x12-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=mosaic-a06-9x18-d2"><img src="docs/media/readme/tasks/mosaic-a06-9x18-d2.jpg" width="240" alt="mosaic-a06-9x18-d2"></a><br><sub>mosaic-a06-9x18-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=mosaic-a08-12x24-d2"><img src="docs/media/readme/tasks/mosaic-a08-12x24-d2.jpg" width="240" alt="mosaic-a08-12x24-d2"></a><br><sub>mosaic-a08-12x24-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=mosaic-a04-6x12-d3"><img src="docs/media/readme/tasks/mosaic-a04-6x12-d3.jpg" width="240" alt="mosaic-a04-6x12-d3"></a><br><sub>mosaic-a04-6x12-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=mosaic-a06-9x18-d3"><img src="docs/media/readme/tasks/mosaic-a06-9x18-d3.jpg" width="240" alt="mosaic-a06-9x18-d3"></a><br><sub>mosaic-a06-9x18-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=mosaic-a08-12x24-d3"><img src="docs/media/readme/tasks/mosaic-a08-12x24-d3.jpg" width="240" alt="mosaic-a08-12x24-d3"></a><br><sub>mosaic-a08-12x24-d3</sub></td></tr></table>
 
 <b>Relay</b>
 
-<table><tr><th></th><th>8 arms</th><th>12 arms</th><th>16 arms</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a08-d1"><img src="docs/media/readme/tasks/relay-a08-d1.jpg" width="240" alt="relay-a08-d1"></a><br><sub>relay-a08-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a12-d1"><img src="docs/media/readme/tasks/relay-a12-d1.jpg" width="240" alt="relay-a12-d1"></a><br><sub>relay-a12-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a16-d1"><img src="docs/media/readme/tasks/relay-a16-d1.jpg" width="240" alt="relay-a16-d1"></a><br><sub>relay-a16-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a08-d2"><img src="docs/media/readme/tasks/relay-a08-d2.jpg" width="240" alt="relay-a08-d2"></a><br><sub>relay-a08-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a12-d2"><img src="docs/media/readme/tasks/relay-a12-d2.jpg" width="240" alt="relay-a12-d2"></a><br><sub>relay-a12-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a16-d2"><img src="docs/media/readme/tasks/relay-a16-d2.jpg" width="240" alt="relay-a16-d2"></a><br><sub>relay-a16-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a08-d3"><img src="docs/media/readme/tasks/relay-a08-d3.jpg" width="240" alt="relay-a08-d3"></a><br><sub>relay-a08-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a12-d3"><img src="docs/media/readme/tasks/relay-a12-d3.jpg" width="240" alt="relay-a12-d3"></a><br><sub>relay-a12-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=relay-a16-d3"><img src="docs/media/readme/tasks/relay-a16-d3.jpg" width="240" alt="relay-a16-d3"></a><br><sub>relay-a16-d3</sub></td></tr></table>
+<table><tr><th></th><th>8 arms</th><th>12 arms</th><th>16 arms</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=relay-a08-d1"><img src="docs/media/readme/tasks/relay-a08-d1.jpg" width="240" alt="relay-a08-d1"></a><br><sub>relay-a08-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=relay-a12-d1"><img src="docs/media/readme/tasks/relay-a12-d1.jpg" width="240" alt="relay-a12-d1"></a><br><sub>relay-a12-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=relay-a16-d1"><img src="docs/media/readme/tasks/relay-a16-d1.jpg" width="240" alt="relay-a16-d1"></a><br><sub>relay-a16-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=relay-a08-d2"><img src="docs/media/readme/tasks/relay-a08-d2.jpg" width="240" alt="relay-a08-d2"></a><br><sub>relay-a08-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=relay-a12-d2"><img src="docs/media/readme/tasks/relay-a12-d2.jpg" width="240" alt="relay-a12-d2"></a><br><sub>relay-a12-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=relay-a16-d2"><img src="docs/media/readme/tasks/relay-a16-d2.jpg" width="240" alt="relay-a16-d2"></a><br><sub>relay-a16-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=relay-a08-d3"><img src="docs/media/readme/tasks/relay-a08-d3.jpg" width="240" alt="relay-a08-d3"></a><br><sub>relay-a08-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=relay-a12-d3"><img src="docs/media/readme/tasks/relay-a12-d3.jpg" width="240" alt="relay-a12-d3"></a><br><sub>relay-a12-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=relay-a16-d3"><img src="docs/media/readme/tasks/relay-a16-d3.jpg" width="240" alt="relay-a16-d3"></a><br><sub>relay-a16-d3</sub></td></tr></table>
 
 <b>Dial</b>
 
-<table><tr><th></th><th>4 dials</th><th>6 dials</th><th>8 dials</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n04-d1"><img src="docs/media/readme/tasks/dial-best5-n04-d1.jpg" width="240" alt="dial-best5-n04-d1"></a><br><sub>dial-best5-n04-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n06-d1"><img src="docs/media/readme/tasks/dial-best5-n06-d1.jpg" width="240" alt="dial-best5-n06-d1"></a><br><sub>dial-best5-n06-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n08-d1"><img src="docs/media/readme/tasks/dial-best5-n08-d1.jpg" width="240" alt="dial-best5-n08-d1"></a><br><sub>dial-best5-n08-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n04-d2"><img src="docs/media/readme/tasks/dial-best5-n04-d2.jpg" width="240" alt="dial-best5-n04-d2"></a><br><sub>dial-best5-n04-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n06-d2"><img src="docs/media/readme/tasks/dial-best5-n06-d2.jpg" width="240" alt="dial-best5-n06-d2"></a><br><sub>dial-best5-n06-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n08-d2"><img src="docs/media/readme/tasks/dial-best5-n08-d2.jpg" width="240" alt="dial-best5-n08-d2"></a><br><sub>dial-best5-n08-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n04-d3"><img src="docs/media/readme/tasks/dial-best5-n04-d3.jpg" width="240" alt="dial-best5-n04-d3"></a><br><sub>dial-best5-n04-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n06-d3"><img src="docs/media/readme/tasks/dial-best5-n06-d3.jpg" width="240" alt="dial-best5-n06-d3"></a><br><sub>dial-best5-n06-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboFrontier/#task=dial-best5-n08-d3"><img src="docs/media/readme/tasks/dial-best5-n08-d3.jpg" width="240" alt="dial-best5-n08-d3"></a><br><sub>dial-best5-n08-d3</sub></td></tr></table>
+<table><tr><th></th><th>4 dials</th><th>6 dials</th><th>8 dials</th></tr><tr><th>L1</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=dial-best5-n04-d1"><img src="docs/media/readme/tasks/dial-best5-n04-d1.jpg" width="240" alt="dial-best5-n04-d1"></a><br><sub>dial-best5-n04-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=dial-best5-n06-d1"><img src="docs/media/readme/tasks/dial-best5-n06-d1.jpg" width="240" alt="dial-best5-n06-d1"></a><br><sub>dial-best5-n06-d1</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=dial-best5-n08-d1"><img src="docs/media/readme/tasks/dial-best5-n08-d1.jpg" width="240" alt="dial-best5-n08-d1"></a><br><sub>dial-best5-n08-d1</sub></td></tr><tr><th>L2</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=dial-best5-n04-d2"><img src="docs/media/readme/tasks/dial-best5-n04-d2.jpg" width="240" alt="dial-best5-n04-d2"></a><br><sub>dial-best5-n04-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=dial-best5-n06-d2"><img src="docs/media/readme/tasks/dial-best5-n06-d2.jpg" width="240" alt="dial-best5-n06-d2"></a><br><sub>dial-best5-n06-d2</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=dial-best5-n08-d2"><img src="docs/media/readme/tasks/dial-best5-n08-d2.jpg" width="240" alt="dial-best5-n08-d2"></a><br><sub>dial-best5-n08-d2</sub></td></tr><tr><th>L3</th><td><a href="https://changxuanfan.github.io/RoboTeam/#task=dial-best5-n04-d3"><img src="docs/media/readme/tasks/dial-best5-n04-d3.jpg" width="240" alt="dial-best5-n04-d3"></a><br><sub>dial-best5-n04-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=dial-best5-n06-d3"><img src="docs/media/readme/tasks/dial-best5-n06-d3.jpg" width="240" alt="dial-best5-n06-d3"></a><br><sub>dial-best5-n06-d3</sub></td><td><a href="https://changxuanfan.github.io/RoboTeam/#task=dial-best5-n08-d3"><img src="docs/media/readme/tasks/dial-best5-n08-d3.jpg" width="240" alt="dial-best5-n08-d3"></a><br><sub>dial-best5-n08-d3</sub></td></tr></table>
 <!-- /gallery -->
 
 </details>
@@ -139,7 +139,7 @@ same tasks:
 Each run gets 24 hours of active time from its START: reading, planning and waiting count,
 pauses the harness makes for a network outage or a usage limit do not. Benchmark
 results, the communication study and the skills study are on the
-[project page](https://changxuanfan.github.io/RoboFrontier/#results).
+[project page](https://changxuanfan.github.io/RoboTeam/#results).
 
 ## Getting started
 
@@ -155,10 +155,10 @@ results, the communication study and the skills study are on the
 ### 2. Install
 
 ```sh
-git clone https://github.com/changxuanfan/RoboFrontier.git
-cd RoboFrontier
+git clone https://github.com/changxuanfan/RoboTeam.git
+cd RoboTeam
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap
+.venv/bin/roboteam bootstrap
 ```
 
 `bootstrap` downloads the pinned task assets and checks every file against its hash.
@@ -177,14 +177,14 @@ hand the Claude token to the CLI on a pipe, so no policy shell can read it.
 
 ### 4. Choose what to run
 
-Defaults are in [`robofrontier.toml`](robofrontier.toml): Codex with `luna`, the adaptive
+Defaults are in [`roboteam.toml`](roboteam.toml): Codex with `luna`, the adaptive
 protocol, all 36 tasks, and a renderer picked for the host. Change them with options or a
-small TOML of your own, passed before the command (`robofrontier --config site.toml ...`);
+small TOML of your own, passed before the command (`roboteam --config site.toml ...`);
 [`configs/examples/`](configs/examples) has one for the Mac, RunPod and Slurm.
 
 ```sh
-.venv/bin/robofrontier doctor --engine claude                  # CLI version, sandbox, renderer, credentials
-.venv/bin/robofrontier plan --engine claude --families relay --level 1
+.venv/bin/roboteam doctor --engine claude                  # CLI version, sandbox, renderer, credentials
+.venv/bin/roboteam plan --engine claude --families relay --level 1
 ```
 
 `plan` lists each task, its arms and the model, and makes no model calls.
@@ -196,12 +196,12 @@ host. Build it once per host, in a folder outside your home folder and the repos
 check that its sandbox holds:
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier   # prints its root
-.venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id>
+.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam   # prints its root
+.venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id>
 ```
 
 On macOS that base is the default. On Linux pick one (outside `/tmp`) and set
-`ROBOFRONTIER_POLICY_ENV_BASE` to it in the shell that prepares runs. The check starts each
+`ROBOTEAM_POLICY_ENV_BASE` to it in the shell that prepares runs. The check starts each
 engine's real CLI against a local stub, with no model calls, and tries about 50 things a policy
 must and must not be able to do; `prepare` refuses an environment that has not passed it.
 [Policy environment](docs/running/policy-environment.md) covers what each platform allows.
@@ -209,10 +209,10 @@ must and must not be able to do; `prepare` refuses an environment that has not p
 ### 6. Preflight, then run
 
 ```sh
-.venv/bin/robofrontier preflight --engine claude --confirm-spend --max-budget-usd 1
-.venv/bin/robofrontier prepare --engine claude --families relay --level 1 --output runs/policy/claude-relay-l1
-.venv/bin/robofrontier run runs/policy/claude-relay-l1
-.venv/bin/robofrontier status runs/policy/claude-relay-l1
+.venv/bin/roboteam preflight --engine claude --confirm-spend --max-budget-usd 1
+.venv/bin/roboteam prepare --engine claude --families relay --level 1 --output runs/policy/claude-relay-l1
+.venv/bin/roboteam run runs/policy/claude-relay-l1
+.venv/bin/roboteam status runs/policy/claude-relay-l1
 ```
 
 - `preflight` makes a few small, paid calls to confirm the model and CLI behave as the harness
@@ -223,7 +223,7 @@ must and must not be able to do; `prepare` refuses an environment that has not p
   add `--durable` for the same. Each run has 24 hours of active time from its START and is
   scored then, or when the model finishes.
 - `stop` ends a batch in order. A run that stopped unexpectedly continues by itself once;
-  `robofrontier continue` continues stopped runs by hand, as the same trials.
+  `roboteam continue` continues stopped runs by hand, as the same trials.
 
 Each run's results, videos and evidence stay in the batch folder; when the batch ends they are
 also collected into `runs/exports/<batch>-<hash>/` and a verified ZIP beside it (the runs root
@@ -233,7 +233,7 @@ is `paths.runs_root`, default `runs/`). [Getting started](docs/getting-started.m
 | Path | What is there |
 | --- | --- |
 | [`benchmark/`](benchmark/README.md) | The 36 released tasks and `release.json` |
-| [`robofrontier/`](robofrontier) | Simulation, engine hosts, runtime protocol, evidence |
+| [`roboteam/`](roboteam) | Simulation, engine hosts, runtime protocol, evidence |
 | [`prompts/`](prompts) | Every text a model reads: rules, roles, skills |
 | [`configs/`](configs/README.md) | Model profiles, harness settings, pinned asset archives, examples |
 | [`site/`](site/DESIGN.md) | The project page |
@@ -242,12 +242,12 @@ is `paths.runs_root`, default `runs/`). [Getting started](docs/getting-started.m
 ## Citation
 
 ```bibtex
-@misc{robofrontier2026,
-  title  = {RoboFrontier: Can Multimodal Agents Work Together on Long
+@misc{roboteam2026,
+  title  = {RoboTeam: Can Multimodal Agents Work Together on Long
             Physical Tasks?},
   author = {Fan, Changxuan and others},
   year   = {2026},
-  url    = {https://github.com/changxuanfan/RoboFrontier}
+  url    = {https://github.com/changxuanfan/RoboTeam}
 }
 ```
 

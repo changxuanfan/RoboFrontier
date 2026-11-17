@@ -14,16 +14,16 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.runtime import access as policy_access, bootstrap as policy_bootstrap, policy_env
-from robofrontier.engines.claude.runner import confine, policy_settings
-from robofrontier.engines.codex.launch import launch_config
-from robofrontier.runtime.layout import manifest_record
+from roboteam.runtime import access as policy_access, bootstrap as policy_bootstrap, policy_env
+from roboteam.engines.claude.runner import confine, policy_settings
+from roboteam.engines.codex.launch import launch_config
+from roboteam.runtime.layout import manifest_record
 from scripts import check_policy_env
 
 CHECKED = [{'engine': 'codex', 'tool_backend': 'landlock-v1', 'cli': 'codex-cli 0.165.0'},
            {'engine': 'claude', 'bash_isolation': 'claude-sandbox', 'cli': '2.1.312 (Claude Code)'}]
 STUB = dict(model='offline-protocol', provider='offline_protocol', effort='high', vision=True, context_window=272000,
-            auto_compact_token_limit=258400, env_key='ROBOFRONTIER_OFFLINE_STUB_TOKEN', base_url='https://stub.invalid')
+            auto_compact_token_limit=258400, env_key='ROBOTEAM_OFFLINE_STUB_TOKEN', base_url='https://stub.invalid')
 
 
 def fake_environment(folder):
@@ -81,7 +81,7 @@ class AccessTableTests(Fixture):
 
     def test_record_freezes_the_environment_and_a_changed_environment_refuses(self):
         record = self.freeze()
-        self.assertEqual(record['schema'], 'robofrontier.policy-access.v2')
+        self.assertEqual(record['schema'], 'roboteam.policy-access.v2')
         self.assertEqual(record['policy_env']['id'], self.root.name)
         self.assertEqual(record['policy_env']['variables']['TMPDIR'], str(self.run_dir/'workspace/.tmp'))
         self.assertFalse(record['network'] or record['web_search'])
@@ -140,7 +140,7 @@ class AccessTableTests(Fixture):
             policy_env.require_combination('codex', 'native')
 
     def test_preparing_a_batch_refuses_a_combination_the_check_did_not_run(self):
-        from robofrontier.batch.codex_batch import prepare_batch
+        from roboteam.batch.codex_batch import prepare_batch
         with patch.dict(os.environ, {policy_env.ENV_VAR: str(self.root)}):
             with self.assertRaisesRegex(ValueError, 'has not checked.*native'):
                 prepare_batch(self.tmp/'batch', ['astra'], cases=['dial-best5-n04-d1'])
@@ -185,16 +185,16 @@ class AccessTableTests(Fixture):
         with patch.dict(os.environ):
             os.environ.pop(policy_env.ENV_VAR, None)
             record = policy_access.record(self.run_dir, repo=self.repo, home=self.home, tmp_dirs=(), checkouts=[self.repo])
-        self.assertEqual(record['schema'], 'robofrontier.policy-access.v1')
+        self.assertEqual(record['schema'], 'roboteam.policy-access.v1')
         self.assertNotIn('policy_env', record)
         self.assertEqual(record['filesystem'][str(self.run_dir)], 'read')
 
 
 class DefaultTests(Fixture):
-    """robofrontier prepare uses the checked environment of the current locks by default on macOS."""
+    """roboteam prepare uses the checked environment of the current locks by default on macOS."""
     def place(self, receipt=True, system='darwin', **change):
         # The build's name carries its platform, so name it for the platform the test looks on.
-        from robofrontier.runtime.policy_env import identity
+        from roboteam.runtime.policy_env import identity
         with patch('sys.platform', system): root = self.tmp/('policy-env-' + identity())
         self.root.rename(root); self.root = root
         if receipt:
@@ -267,13 +267,13 @@ class RenderingTests(Fixture):
         record = self.freeze()
         out = self.tmp/'out'
         out.mkdir()
-        with patch('robofrontier.engines.codex.launch.hidden_skills', lambda: []):
+        with patch('roboteam.engines.codex.launch.hidden_skills', lambda: []):
             args = launch_config(STUB, out, run_dir=self.run_dir)['args']
         settings = [args[i + 1] for i, value in enumerate(args) if value == '-c']
         for expected in ('allow_login_shell=false', 'shell_environment_policy.inherit="none"',
                          'shell_environment_policy.set.TMPDIR=' + json.dumps(record['policy_env']['variables']['TMPDIR'])):
             self.assertIn(expected, settings)
-        self.assertTrue(any(s.startswith('permissions.robofrontier.filesystem=') and json.dumps(str(self.run_dir)) + '="deny"' in s
+        self.assertTrue(any(s.startswith('permissions.roboteam.filesystem=') and json.dumps(str(self.run_dir)) + '="deny"' in s
                             for s in settings))
 
     def test_claude_gets_the_table_as_written_and_the_variables_only_in_shells(self):
@@ -333,7 +333,7 @@ class PinnedCliTests(unittest.TestCase):
         return {'PATH': folder + ':/usr/bin:/bin'}
 
     def test_only_the_pinned_codex_cli_is_accepted(self):
-        from robofrontier.engines.codex.job_engine import ROOT as source, require_pinned_cli
+        from roboteam.engines.codex.job_engine import ROOT as source, require_pinned_cli
         pinned = re.search(r'CODEX_VERSION=(\S+)', (Path(source)/'docker/Dockerfile').read_text()).group(1)
         with tempfile.TemporaryDirectory() as folder:
             require_pinned_cli(self.cli(folder, 'codex-cli ' + pinned))
@@ -344,7 +344,7 @@ class PinnedCliTests(unittest.TestCase):
 
     def test_a_hung_cli_or_an_unpinned_dockerfile_is_refused_clearly(self):
         import time
-        from robofrontier.engines.codex import job_engine
+        from roboteam.engines.codex import job_engine
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'codex'
             path.write_text('#!/bin/sh\nsleep 60\n')

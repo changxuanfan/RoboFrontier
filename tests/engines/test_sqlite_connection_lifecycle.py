@@ -5,8 +5,8 @@ import tempfile
 import threading
 import unittest
 
-from robofrontier.engines.claude.budget import BudgetLedger
-from robofrontier.runtime.store import RuntimeStore
+from roboteam.engines.claude.budget import BudgetLedger
+from roboteam.runtime.store import RuntimeStore
 
 
 class ConnectionLifecycleTests(unittest.TestCase):

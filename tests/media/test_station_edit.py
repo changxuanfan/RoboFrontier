@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 from unittest.mock import patch
 import numpy as np
-from robofrontier.media.station_edit import classify_window, build, StationEdit
+from roboteam.media.station_edit import classify_window, build, StationEdit
 
 
 class MotionClassificationTests(unittest.TestCase):
@@ -21,9 +21,9 @@ class MotionClassificationTests(unittest.TestCase):
 
     @unittest.skipUnless((Path(__file__).resolve().parents[2]/'runs/oracle').is_dir(), 'needs the local Oracle recordings')
     def test_real_stream_cuts_idle_but_preserves_fail_recover_progress_and_appearance(self):
-        from robofrontier.tasks.families import ROOT,RELEASE,read
-        from robofrontier.physics.workstation import Workstation
-        from robofrontier.media.motion_recording import MotionWriter,MotionReader,digest
+        from roboteam.tasks.families import ROOT,RELEASE,read
+        from roboteam.physics.workstation import Workstation
+        from roboteam.media.motion_recording import MotionWriter,MotionReader,digest
         spec=read(ROOT/RELEASE)['families']['transport']['oracle'][0]
         source=Workstation(ROOT/spec['directory'])
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step',side_effect=AssertionError('No physics')):
@@ -38,7 +38,7 @@ class MotionClassificationTests(unittest.TestCase):
             (root/'process.jsonl').write_text(json.dumps(dict(sim_time_s=32.,result=dict(task_success=True)))+'\n')
             old=root/'old.json';old.write_text('{}')
             new_spec=dict(spec,recording=str(recording),edit=str(old),edit_sha256=digest(old))
-            with patch('robofrontier.media.station_edit._base_keep',side_effect=lambda spec,reader,times:(np.ones(len(times),bool),len(times)-1)):
+            with patch('roboteam.media.station_edit._base_keep',side_effect=lambda spec,reader,times:(np.ones(len(times),bool),len(times)-1)):
                 build(new_spec,root/'edited')
             reader=MotionReader(recording);edited=StationEdit(root/'edited/edit.json',reader)
             self.assertFalse(edited.keep[240]) # Ordinary idle at four seconds.

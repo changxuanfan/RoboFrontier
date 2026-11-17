@@ -11,10 +11,10 @@ import unittest
 import uuid
 
 from PIL import Image
-from robofrontier.engines.claude.provenance import first_input, fork_provenance, history, transcript_rows
-from robofrontier.engines.claude.runner import run_turn
-from robofrontier.engines.claude.session_host import ClaudeSessionHost
-from robofrontier.runtime.bootstrap import DELEGATE
+from roboteam.engines.claude.provenance import first_input, fork_provenance, history, transcript_rows
+from roboteam.engines.claude.runner import run_turn
+from roboteam.engines.claude.session_host import ClaudeSessionHost
+from roboteam.runtime.bootstrap import DELEGATE
 
 
 def conversation(body):

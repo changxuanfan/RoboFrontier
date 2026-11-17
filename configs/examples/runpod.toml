@@ -1,6 +1,6 @@
 # RunPod or another plain Linux host without a GPU: four level-3 runs on the CPU renderer.
-# Codex with ChatGPT login: log in once to ~/.robofrontier/codex-home. Start with
-# `robofrontier run BATCH --durable` (a systemd user service, or a setsid daemon).
+# Codex with ChatGPT login: log in once to ~/.roboteam/codex-home. Start with
+# `roboteam run BATCH --durable` (a systemd user service, or a setsid daemon).
 schema_version = 9
 
 [policy]
@@ -26,4 +26,4 @@ codex_home_scope = "shared"
 
 [paths]
 # Keep runs on the pod's persistent volume; the policy can never read it (access table).
-runs_root = "/workspace/robofrontier-runs"
+runs_root = "/workspace/roboteam-runs"

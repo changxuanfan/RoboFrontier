@@ -1,9 +1,9 @@
 {
- "schema": "robofrontier.site-media-index.v1",
+ "schema": "roboteam.site-media-index.v1",
  "sets": [
   {
    "key": "oracle",
-   "base": "https://changxuanfan.github.io/RoboFrontier-media-oracle/oracle/",
+   "base": "https://changxuanfan.github.io/RoboTeam-media-oracle/oracle/",
    "tasks": {
     "dial-best5-n04-d1": {
      "front": {
@@ -585,7 +585,7 @@
   }
  ],
  "film": {
-  "video": "https://changxuanfan.github.io/RoboFrontier-media-oracle/film/robofrontier-film-1080p.mp4",
+  "video": "https://changxuanfan.github.io/RoboTeam-media-oracle/film/roboteam-film-1080p.mp4",
   "poster": "assets/img/film.jpg",
   "note": "A tour of Robo World: one moment from each zone, then every family and scale; 3 min 41 s, 1080p. Oracle reference runs, not model results."
  }

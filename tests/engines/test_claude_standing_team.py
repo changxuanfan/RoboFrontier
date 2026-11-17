@@ -9,11 +9,11 @@ import uuid
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.engines.claude.budget import BudgetLedger
-from robofrontier.engines.claude.standing_team import StandingTeamPolicyHost
-from robofrontier.runtime.setup import verify_inputs
-from robofrontier.runtime.service import RuntimeService
-from robofrontier.batch.claude_prepare import prepare_batch
+from roboteam.engines.claude.budget import BudgetLedger
+from roboteam.engines.claude.standing_team import StandingTeamPolicyHost
+from roboteam.runtime.setup import verify_inputs
+from roboteam.runtime.service import RuntimeService
+from roboteam.batch.claude_prepare import prepare_batch
 
 
 class RoleHost:
@@ -57,7 +57,7 @@ def standing_fixture(topology, *, factory=RoleHost, endpoint=None, env=None):
     with tempfile.TemporaryDirectory(prefix='claude-standing-') as tmp:
         batch = Path(tmp)/'batch'
         # A local fake model and a fake key: nothing to expose (claude_prepare.exposed_api_keys).
-        with patch('robofrontier.batch.claude_prepare.exposed_api_keys', return_value=[]):
+        with patch('roboteam.batch.claude_prepare.exposed_api_keys', return_value=[]):
             prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], topology=topology)
         run = batch/'haiku/transport-a04-d1'
         launch = run/'private/inputs/claude.json'
@@ -83,7 +83,7 @@ def standing_fixture(topology, *, factory=RoleHost, endpoint=None, env=None):
         policy = None
         try:
             policy = StandingTeamPolicyHost(run, profile, env or {}, ledger, host_factory=factory, client=call)
-            with patch('robofrontier.runtime.pipeline_client.client_call', call):
+            with patch('roboteam.runtime.pipeline_client.client_call', call):
                 yield policy, service, call
         finally:
             if policy is not None:
@@ -204,7 +204,7 @@ class StandingTeamTests(unittest.TestCase):
             self.assertTrue(any(r['status'] == 'uncertain' for r in service.store.wake_rows()))
 
     def test_a_wake_refused_by_an_exhausted_task_budget_is_not_sent_and_pauses_for_the_budget(self):
-        from robofrontier.engines.claude.budget import BudgetExhausted
+        from roboteam.engines.claude.budget import BudgetExhausted
         with standing_fixture('decentralized') as (policy, service, call):
             policy.bind_and_bootstrap()
             for h in policy.hosts.values(): h.state = 'idle'

@@ -6,9 +6,9 @@ import tarfile
 import tempfile
 import unittest
 
-from robofrontier.analysis import atomic
-from robofrontier.analysis import metrics as M
-from robofrontier.analysis.archive import Run
+from roboteam.analysis import atomic
+from roboteam.analysis import metrics as M
+from roboteam.analysis.archive import Run
 
 BASE = 1_000_000.0
 

@@ -8,7 +8,7 @@ receipt lists each engine with the sandbox and CLI version it ran, and preparati
 other combination. Give --scratch where batches will really run, since where a run sits changes
 what can be opened.
 
-    .venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id>
+    .venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id>
 """
 import argparse
 import http.server
@@ -24,8 +24,8 @@ import tempfile
 import threading
 import time
 
-from robofrontier.runtime import access as policy_access, policy_env, policy_env_probe
-from robofrontier.runtime.layout import manifest_record
+from roboteam.runtime import access as policy_access, policy_env, policy_env_probe
+from roboteam.runtime.layout import manifest_record
 
 ROOT = Path(__file__).resolve().parents[1]
 MUST_WORK = ('python_is_environment', 'python_on_path_is_environment', 'tmpdir_in_workspace', 'home_in_workspace',
@@ -38,11 +38,11 @@ MUST_FAIL = ('read_host_shared_memory', 'read_home', 'read_home_file', 'read_peo
              'write_environment', 'run_other_python', 'import_mujoco', 'pip_install_absent_package', 'network_tcp',
              'network_external', 'unix_socket_shared', 'unix_socket_connect', 'network_udp', 'signal_other_process',
              'see_host_processes', 'read_parent_environ', 'ps_parent_environment')
-HOST_ONLY = 'ROBOFRONTIER_PROBE_HOST_ONLY'
+HOST_ONLY = 'ROBOTEAM_PROBE_HOST_ONLY'
 # What the parent-environment probes look for: a subscription credential in any ancestor's
 # environment. The local stub's fake API key stays in the CLI's environment; Claude API-key
 # profiles are refused where the sandbox shows other processes (claude_prepare.prepare_batch).
-CREDENTIALS = ('CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY', 'ROBOFRONTIER_OFFLINE_STUB_TOKEN')
+CREDENTIALS = ('CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY', 'ROBOTEAM_OFFLINE_STUB_TOKEN')
 CLOSED_FOLDERS = {'darwin': {'read_people': '/Users', 'read_disks': '/Volumes', 'read_system_secrets': '/Library/Keychains', 'read_var_tmp': '/var/tmp'},
                   'linux': {'read_people': '/home', 'read_disks': '/raid', 'read_system_secrets': '/root', 'read_var_tmp': '/var/tmp'}}
 FEW_PROCESSES = 15
@@ -134,9 +134,9 @@ def codex_stub(command, seen):
 
 
 CODEX_DRIVER = r'''
-const fs=require('fs'),{CodexRpc}=require(process.argv[1]+'/robofrontier/engines/codex/codex_rpc');
+const fs=require('fs'),{CodexRpc}=require(process.argv[1]+'/roboteam/engines/codex/codex_rpc');
 const out=process.argv[2],launch=JSON.parse(fs.readFileSync(out+'/launch.json')),run=fs.readFileSync(out+'/cwd.txt','utf8');
-process.env.ROBOFRONTIER_OFFLINE_STUB_TOKEN='local-stub-no-credential';
+process.env.ROBOTEAM_OFFLINE_STUB_TOKEN='local-stub-no-credential';
 (async()=>{let done;
 const rpc=new CodexRpc(launch.args,{stderr:fs.openSync(out+'/server.log','w'),
   onEvent:m=>{if(m.method==='turn/completed'&&done)done();},onRequest:async()=>{throw new Error('no host tools');}});
@@ -149,7 +149,7 @@ await rpc.close();process.exit(0);})().catch(e=>{console.error(e.stack);process.
 
 
 def run_claude(run, command, scratch, seen, shared):
-    from robofrontier.engines.claude.runner import build_command, confine, policy_settings, start_cli
+    from roboteam.engines.claude.runner import build_command, confine, policy_settings, start_cli
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), claude_stub(command, seen, shared))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     config = run/'private/engine/config'
@@ -174,14 +174,14 @@ def run_claude(run, command, scratch, seen, shared):
 
 
 def run_codex(run, command, scratch, seen, shared):
-    from robofrontier.engines.codex.launch import launch_config
+    from roboteam.engines.codex.launch import launch_config
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), codex_stub(command, seen))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     out = scratch/'codex-host'
     out.mkdir()
     (scratch/'codex-home').mkdir()
     stub = dict(model='offline-protocol', provider='offline_protocol', effort='high', vision=True, context_window=272000,
-                auto_compact_token_limit=258400, env_key='ROBOFRONTIER_OFFLINE_STUB_TOKEN',
+                auto_compact_token_limit=258400, env_key='ROBOTEAM_OFFLINE_STUB_TOKEN',
                 base_url='http://127.0.0.1:%d' % server.server_port)
     env = {**os.environ, 'CODEX_HOME': str(scratch/'codex-home'), 'HOME': str(scratch/'cli-home'), HOST_ONLY: '1'}
     previous = os.environ.get('CODEX_HOME')
@@ -204,16 +204,16 @@ def run_codex(run, command, scratch, seen, shared):
 
 def run_codex_landlock(run, command, scratch, seen, shared):
     """The Linux Codex path: its tools run in a confined worker, with no shell in the CLI."""
-    from robofrontier.engines.codex import tool_backend
+    from roboteam.engines.codex import tool_backend
     tool_backend.prepare(run, {'tool_backend': 'landlock-v1', 'runner_backend': 'slurm-managed-v1'})
     done = tool_backend.execute(run, {'tool': 'policy_exec', 'command': command}, timeout=PROBE_LIMIT_S)
     seen.append({'content': done.stdout + done.stderr, 'is_error': done.returncode != 0})
 
 
 def run_antigravity(run, command, scratch, seen, shared):
-    from robofrontier.engines.antigravity.driver import Driver
-    from robofrontier.engines.antigravity.gateway import Gateway
-    calls = [('mcp_robofrontier_policy_exec', {'command': command, 'timeout_s': 60,
+    from roboteam.engines.antigravity.driver import Driver
+    from roboteam.engines.antigravity.gateway import Gateway
+    calls = [('mcp_roboteam_policy_exec', {'command': command, 'timeout_s': 60,
                              'toolSummary': 'Check policy environment'}),
              ('write_file', {'Path': str(shared/'tool-written.txt'), 'Content': 'x', 'Overwrite': True})]
     class Handler(http.server.BaseHTTPRequestHandler):
@@ -231,9 +231,9 @@ def run_antigravity(run, command, scratch, seen, shared):
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     (run/'private/inputs/bootstrap').mkdir(parents=True, exist_ok=True)
-    (run/'private/inputs/bootstrap/system.md').write_text('You are a RoboFrontier policy agent.\n')
-    from robofrontier.engines.antigravity.settings import prepare_tools
-    from robofrontier.runtime.store import RuntimeStore
+    (run/'private/inputs/bootstrap/system.md').write_text('You are a RoboTeam policy agent.\n')
+    from roboteam.engines.antigravity.settings import prepare_tools
+    from roboteam.runtime.store import RuntimeStore
     prepare_tools(run)
     config = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
     config.update(engine='antigravity', topology='single-agent')
@@ -241,9 +241,9 @@ def run_antigravity(run, command, scratch, seen, shared):
     store.initialize(run.name, config, ['Arm1'])
     store.put('lifecycle', 'running')
     selected = {'model': 'gemini-3.8-flash-low', 'effort': 'low', 'auth_mode': 'api_key',
-                'env_key': 'ROBOFRONTIER_OFFLINE_STUB_TOKEN', 'base_url': 'https://generativelanguage.googleapis.com'}
+                'env_key': 'ROBOTEAM_OFFLINE_STUB_TOKEN', 'base_url': 'https://generativelanguage.googleapis.com'}
     driver = Driver(run, 'Controller', selected, {**os.environ, HOST_ONLY: '1',
-        'ROBOFRONTIER_OFFLINE_STUB_TOKEN': 'host-only-probe-credential'},
+        'ROBOTEAM_OFFLINE_STUB_TOKEN': 'host-only-probe-credential'},
         gateway_factory=lambda base, key: Gateway('http://127.0.0.1:' + str(server.server_port), key))
     try:
         store.update_agent('Controller', thread_id=driver.open())
@@ -262,11 +262,11 @@ ENGINES = {'codex': run_codex_landlock if sys.platform == 'linux' else run_codex
 def isolation(name):
     """The sandbox the check runs `name` in, which a run prepared on this host would freeze."""
     if name == 'antigravity':
-        from robofrontier.engines.antigravity.settings import isolation as agy_isolation
+        from roboteam.engines.antigravity.settings import isolation as agy_isolation
         return agy_isolation()
     if name == 'codex':
         return 'landlock-v1' if ENGINES['codex'] is run_codex_landlock else 'native'
-    from robofrontier.engines.common.landlock import choose
+    from roboteam.engines.common.landlock import choose
     return choose()
 
 
@@ -278,7 +278,7 @@ def throwaway_run(scratch, name, environment):
         (run/folder).mkdir(parents=True)
     (other/'private/inputs').mkdir(parents=True)
     (other/'private/inputs/task.json').write_text('OTHER-RUN')
-    # A link beside the run to a folder holding it, as ~/Repos/roomscript2 -> RoboFrontier: a
+    # A link beside the run to a folder holding it, as ~/Repos/roomscript2 -> RoboTeam: a
     # rule on the link closes its target, so it would close this run's workspace too.
     (scratch/name/'alias').symlink_to(scratch/name)
     (run/'public/inputs/task.json').write_text('PUBLIC')
@@ -309,9 +309,9 @@ def check_engine(name, environment, scratch, mode):
     if name == 'claude':
         # Read by claude.runner.confine, as a prepared run's launch record is.
         (run/'private/inputs/claude.json').write_text(json.dumps({'bash_isolation': mode}))
-    shared = Path('/tmp')/('robofrontier-probe-' + scratch.name)
+    shared = Path('/tmp')/('roboteam-probe-' + scratch.name)
     shared.mkdir()
-    shared_memory = Path('/dev/shm')/('robofrontier-probe-' + scratch.name)
+    shared_memory = Path('/dev/shm')/('roboteam-probe-' + scratch.name)
     if shared_memory.parent.is_dir():
         shared_memory.write_text('SHARED')
     (shared/'canary.txt').write_text('SHARED')
@@ -326,11 +326,11 @@ def check_engine(name, environment, scratch, mode):
     datagrams.setblocking(False)
     bystander = subprocess.Popen(['sleep', '900'])
     other_python = next((path for path in OTHER_PYTHONS if Path(path).exists()), '/missing/python3')
-    fixtures = {'credentials': list(CREDENTIALS), 'real_home': str(Path.home().resolve()), 'run': str(run), 'env': str(environment), 'host_only': [HOST_ONLY, 'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'ROBOFRONTIER_OFFLINE_STUB_TOKEN'],
+    fixtures = {'credentials': list(CREDENTIALS), 'real_home': str(Path.home().resolve()), 'run': str(run), 'env': str(environment), 'host_only': [HOST_ONLY, 'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'ROBOTEAM_OFFLINE_STUB_TOKEN'],
                 'home_file': next((str(p) for p in (Path.home()/'.zshrc', Path.home()/'.bashrc', Path.home()/'.profile') if p.is_file()), '/missing'),
                 'shared_memory_file': str(shared_memory), 'closed_folders': CLOSED_FOLDERS[sys.platform], 'few_processes': FEW_PROCESSES,
                 'core_packages': policy_env.load(environment)['packages'],
-                'tmp_file': str(Path('/tmp')/('robofrontier-probe-new-' + scratch.name)),
+                'tmp_file': str(Path('/tmp')/('roboteam-probe-new-' + scratch.name)),
                 'other_run_file': str(other/'private/inputs/task.json'), 'repo_file': str(ROOT/'pyproject.toml'),
                 'shared_tmp': str(shared), 'other_python': other_python, 'listener_port': listener.getsockname()[1],
                 'host_socket': str(shared/'host.sock'), 'udp_port': datagrams.getsockname()[1], 'host_pid': bystander.pid}
@@ -369,7 +369,7 @@ def check_engine(name, environment, scratch, mode):
 
 def private_shared_memory_possible():
     """Whether a command here can get an empty /dev/shm of its own, as a Codex command does."""
-    probe = 'from robofrontier.engines.codex.tool_worker import private_shared_memory as p; p()'
+    probe = 'from roboteam.engines.codex.tool_worker import private_shared_memory as p; p()'
     return subprocess.run([sys.executable, '-c', probe], cwd=ROOT, capture_output=True, timeout=60).returncode == 0
 
 

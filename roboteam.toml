@@ -1,0 +1,87 @@
+# Shared defaults for new runs. Secrets belong in the environment or .env.
+schema_version = 10
+
+[policy]
+engine = "codex"                     # codex | claude
+profile = "luna"                     # An engine-specific model catalog entry
+effort = "high"
+topology = "adaptive"                # adaptive | single-agent | hierarchical | decentralized
+tool_mode = "full"                   # full | robot_only (the robot tool alone: no shell, code execution or file tools)
+
+[batch]
+parallel = 36
+startup_interval_s = 0.3              # Between host launches, never robot calls
+task_wall_limit_s = 86400.0           # From persisted START, independently per task
+startup_timeout_s = 600.0
+
+[selection]
+families = []                        # Empty selects all four released families
+cases = []                           # Empty selects every matching released case
+level = 0                            # 0 selects all levels; otherwise 1, 2 or 3
+min_arms = false
+
+[render]
+device = "auto"                      # auto | nvidia (Linux EGL) | cpu (Linux OSMesa) | native (macOS); auto picks native on macOS, nvidia with an NVIDIA GPU, else cpu
+observation_profile = "jpeg_1280x800_q90"
+record_realtime_video = false
+
+[runtime]
+codex_tool_backend = "auto"           # auto | native | landlock-v1; auto is native on macOS, landlock-v1 on Linux
+codex_home_scope = "task"             # task | shared | job (Slurm managed subscription only)
+codex_home = ""                      # Empty uses an automatically created private directory
+
+[evidence]
+auto_collect = true
+auto_archive = true
+archive_format = "zip"
+delete_sources = false               # Destructive cleanup is not part of automatic collection
+
+[slurm]
+partition = ""                       # Site-specific: use the cluster default when empty
+account = ""
+qos = ""
+gpus = 1                             # Set to 0 with render.device = "cpu"
+cpus_per_task = 36
+memory_gib = 128                      # A resource request, not a measured capacity guarantee
+time_limit_s = 90000                  # Allocation lifetime, separate from the task clock
+stop_warning_s = 600                 # Stop and collect before allocation expiry
+scratch_root = ""                    # Empty requires the node's SLURM_TMPDIR
+auth_mode = "api"                    # api | subscription (explicit job-scoped native manager)
+credential_store = ""                # Subscription: private persistent directory, outside checkout/evidence
+egress_mode = "direct"               # direct | mac-ssh (managed HTTP CONNECT over SSH)
+egress_root = ""                     # Private node-local relay state, separate from credentials and evidence
+egress_wait_s = 120                   # Admission wait after allocation; no task clock starts here
+egress_pause_s = 172800               # mac-ssh: how long a route outage may hold the world (the 48 h backstop); 0 fences at once
+
+[container]
+image = ""                           # Empty selects a tag from the committed source revision
+workspace = "default"                # Persistent local Docker volumes, separate from host Codex state
+memory_gib = 0                       # 0 adds no limit beyond the Docker daemon/allocation
+cpus = 0.0                           # 0 adds no CPU quota
+seccomp_profile = "default"          # default | unconfined; explicit opt-in for nested Codex sandboxes
+
+[factory]
+data_root = "runs/factory-data/r14"
+asset_lock = "configs/factory-assets.json"
+source = "release"                   # release (pinned installer) | imported (existing closed-recording bundle)
+device = "OPTIX"                     # OPTIX | CUDA | METAL | CPU; separate from policy observations
+blender = ""                         # Empty resolves BLENDER_BIN or the installed executable
+mode = "desks"                       # desks | promo; full promo defaults to 210.5 seconds
+views = ["front", "side"]
+width = 1920
+height = 1080
+samples = 64
+duration_s = 0.0                     # 0 preserves the full reviewed timeline; positive values cap a preview
+import_speedup = 0.0                 # Newly imported recording only; 0 uses the family release speedup
+parallel = 1                        # Slurm render array concurrency, independent of benchmark parallelism
+
+[paths]
+runs_root = ""                        # Where runs, receipts and caches go; empty is <repo>/runs. ROBOTEAM_RUNS_ROOT overrides
+
+[oracle]
+evaluation_mode = "task-reference" # Terminal task outcome; strict-process additionally requires clean process history
+wall_limit_s = 86400.0              # Engineering elapsed time from owner launch, including planning and pauses
+stop_grace_s = 120.0                # Cleanup allowance after STOP/deadline; not extra task execution time
+mosaic_planning_workers = 1         # Independent scratch planners; 0 uses available CPUs
+mosaic_physics_workers = 0          # Opt-in MuJoCo worker threads in the single live world
+mosaic_max_goals = 0                # 0 attempts the full task; positive is explicitly partial commissioning

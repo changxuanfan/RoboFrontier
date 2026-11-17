@@ -2,7 +2,7 @@
 
 Synthetic runs only: an events-60s log as Monitor.log_sample writes it for a scene that records
 motion (poses only in the final row, angles only every 60 s) beside a 30 Hz recording written in
-the robofrontier.motion.v1 layout (2 s chunks of XOR deltas over float32 qpos).
+the roboteam.motion.v1 layout (2 s chunks of XOR deltas over float32 qpos).
 """
 
 import hashlib
@@ -13,9 +13,9 @@ import unittest
 
 import numpy as np
 
-from robofrontier.analysis import atomic, extract, motion
-from robofrontier.analysis import metrics as M
-from robofrontier.analysis.archive import Run
+from roboteam.analysis import atomic, extract, motion
+from roboteam.analysis import metrics as M
+from roboteam.analysis.archive import Run
 from analysis.test_run_analysis_segments import BASE, Fixture, action, header, snap
 
 HZ = 30
@@ -42,7 +42,7 @@ def write_motion(folder, task, joints, times, states, chunk_frames=60, listed=No
                            frames=len(bits), start_sim_s=float(times[s]),
                            end_sim_s=float(times[min(s + chunk_frames, len(q)) - 1])))
         prev = bits[-1].copy()
-    meta = dict(schema='robofrontier.motion.v1', nq=q.shape[1], sample_hz=HZ,
+    meta = dict(schema='roboteam.motion.v1', nq=q.shape[1], sample_hz=HZ,
                 status='complete' if listed is None else 'recording', chunks=chunks[:listed])
     (folder / 'stream.json').write_text(json.dumps(meta))
 

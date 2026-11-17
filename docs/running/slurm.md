@@ -1,7 +1,7 @@
 # Running on Slurm
 
 A Slurm batch is one `sbatch` job: one node, one `srun` step. On the login node,
-`robofrontier slurm-submit` freezes a submission (committed source, assets, configuration,
+`roboteam slurm-submit` freezes a submission (committed source, assets, configuration,
 receipts, job script) and queues it. On the compute node the job stages that submission onto
 node-local scratch, prepares and runs the batch there, and after the step ends copies one
 verified evidence ZIP back into the submission folder. Live databases, sessions and temporary
@@ -21,7 +21,7 @@ runs, Codex subscription): copy it to an untracked file (here `site.toml`) and e
 - Node-local scratch: `SLURM_TMPDIR` or `slurm.scratch_root`. The job accepts only ext2/ext3,
   xfs, btrfs, tmpfs, overlayfs or zfs, and the policy environment refuses runs under `/tmp`, so
   set `slurm.scratch_root` to a node-local folder outside `/tmp`, such as `/var/tmp`.
-- The pinned CLI first on `PATH` on the compute nodes (`robofrontier/runtime/versions.py`: Codex
+- The pinned CLI first on `PATH` on the compute nodes (`roboteam/runtime/versions.py`: Codex
   0.165.0, Claude Code 2.1.316). A shared account's own copy can drift; every run refuses
   another version.
 - Claude Code: `bwrap` and `socat` on the compute-node `PATH` where user namespaces work (Bash
@@ -31,10 +31,10 @@ runs, Codex subscription): copy it to an untracked file (here `site.toml`) and e
 ## 2. Install (login node)
 
 ```sh
-git clone https://github.com/changxuanfan/RoboFrontier.git
-cd RoboFrontier
+git clone https://github.com/changxuanfan/RoboTeam.git
+cd RoboTeam
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap
+.venv/bin/roboteam bootstrap
 ```
 
 Install on Linux; never copy a Mac `.venv`. `slurm-submit` refuses a checkout with uncommitted
@@ -75,7 +75,7 @@ each refresh back atomically. Jobs on the same store are serialized with
 `--dependency=singleton`. A wrong owner, an outside change to the generation or a failed write
 fences the job. A revoked grant, or a node lost right after a refresh, can require a fresh
 login; never restore an older `auth.json` over `current.json`.
-`robofrontier.batch.slurm_auth.migrate_store(source, destination)` moves a stopped store. A
+`roboteam.batch.slurm_auth.migrate_store(source, destination)` moves a stopped store. A
 second batch can borrow an existing job's access without refreshing it:
 [access-only attachments](codex-access-attachments.md).
 
@@ -125,32 +125,32 @@ Build it once on shared storage, outside `/tmp` and every checkout, then check i
 node, with `--scratch` under the scratch root the batch will use:
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /shared/robofrontier-env     # login node; prints its root
+.venv/bin/python -m scripts.build_policy_env --base /shared/roboteam-env     # login node; prints its root
 srun --time=60 --cpus-per-task=4 .venv/bin/python -m scripts.check_policy_env \
-  /shared/robofrontier-env/policy-env-<id> --scratch /var/tmp
+  /shared/roboteam-env/policy-env-<id> --scratch /var/tmp
 ```
 
 Then, in the shell that runs `slurm-submit`, export the build itself and the shared roots
 policies must not read:
 
 ```sh
-export ROBOFRONTIER_POLICY_ENV=/shared/robofrontier-env/policy-env-<id>
-export ROBOFRONTIER_SHARED_DENY_ROOTS='["/shared"]'
+export ROBOTEAM_POLICY_ENV=/shared/roboteam-env/policy-env-<id>
+export ROBOTEAM_SHARED_DENY_ROOTS='["/shared"]'
 ```
 
-The job prepares its batch on the node and reads only `ROBOFRONTIER_POLICY_ENV`;
-`ROBOFRONTIER_POLICY_ENV_BASE` is not applied there, and without the variable `run` refuses the
+The job prepares its batch on the node and reads only `ROBOTEAM_POLICY_ENV`;
+`ROBOTEAM_POLICY_ENV_BASE` is not applied there, and without the variable `run` refuses the
 prepared runs. Details: [policy environment](policy-environment.md).
 
 ## 6. Local check and preflight
 
 ```sh
-srun --time=10 --gpus=1 .venv/bin/robofrontier --config site.toml doctor   # on a compute node
+srun --time=10 --gpus=1 .venv/bin/roboteam --config site.toml doctor   # on a compute node
 ```
 
 | Engine and mode | Preflight | What `slurm-submit` checks |
 | --- | --- | --- |
-| Codex API | `.venv/bin/robofrontier --config site.toml preflight --confirm-spend` on the login node | A passed `<runs root>/engineering/model-compatibility/<profile>/report.json`, copied into the submission |
+| Codex API | `.venv/bin/roboteam --config site.toml preflight --confirm-spend` on the login node | A passed `<runs root>/engineering/model-compatibility/<profile>/report.json`, copied into the submission |
 | Codex subscription | The same command inside an allocation (`srun ...`), which needs node-local scratch and, with the Mac route, the connector running | That report with a `job_gateway_sha256` matching the current job gateway |
 | Claude | `... preflight --confirm-spend --max-budget-usd 1` | Nothing; see the limit below |
 
@@ -161,8 +161,8 @@ cannot start a Claude batch as it stands.
 ## 7. Submit
 
 ```sh
-.venv/bin/robofrontier --config site.toml slurm-submit --output runs/submissions/my-batch          # freeze only
-.venv/bin/robofrontier --config site.toml slurm-submit --output runs/submissions/my-batch --queue  # freeze and sbatch
+.venv/bin/roboteam --config site.toml slurm-submit --output runs/submissions/my-batch          # freeze only
+.venv/bin/roboteam --config site.toml slurm-submit --output runs/submissions/my-batch --queue  # freeze and sbatch
 ```
 
 Without `--queue` nothing is queued and no model is called. The output folder must be new. It
@@ -180,7 +180,7 @@ holds:
 
 `sbatch` gets `--nodes=1 --ntasks=1`, the CPU, memory, time and GPU requests,
 `--signal=B:USR1@<stop_warning_s>`, `--export=ALL` and, when set, partition, account and QOS.
-On the node the job uses `<scratch>/robofrontier-<JOB_ID>/` (`source/`, `tmp/`, `config.json`,
+On the node the job uses `<scratch>/roboteam-<JOB_ID>/` (`source/`, `tmp/`, `config.json`,
 `local-job.json`) and refuses to reuse an existing one.
 
 ## 8. Monitor and stop
@@ -191,7 +191,7 @@ cat runs/submissions/my-batch/status.json          # supervisor JSON, refreshed 
 scancel --signal=USR1 --batch JOB_ID                # orderly stop: STOP markers, seal, collect
 ```
 
-`robofrontier status`, `stop` and `continue` do not apply to a submission folder; the batch
+`roboteam status`, `stop` and `continue` do not apply to a submission folder; the batch
 lives on the node. At `stop_warning_s` before the time limit Slurm sends the same USR1. A plain
 `scancel`, node failure, out-of-memory kill or SIGKILL can prevent stage-out.
 
@@ -231,20 +231,20 @@ CLI and the provider.
 ```toml
 [slurm]
 egress_mode = "mac-ssh"
-egress_root = "/var/tmp/USER/robofrontier-egress"   # private, node-local, outside /tmp and checkouts
+egress_root = "/var/tmp/USER/roboteam-egress"   # private, node-local, outside /tmp and checkouts
 egress_wait_s = 120                                  # how long admission waits for the route
 egress_pause_s = 172800                              # how long an outage may hold the world; 0 fences at once
 ```
 
 Once the job is `RUNNING`, keep this running on the Mac (from a checkout whose
-`robofrontier/batch/slurm_proxy.py` matches the cluster's):
+`roboteam/batch/slurm_proxy.py` matches the cluster's):
 
 ```sh
-.venv/bin/python -m robofrontier.batch.slurm_proxy connect \
+.venv/bin/python -m roboteam.batch.slurm_proxy connect \
   --ssh-host CLUSTER_SSH_ALIAS --job-id JOB_ID --engine codex --pause-grace-s 172800 \
-  --remote-script /CLUSTER/CHECKOUT/robofrontier/batch/slurm_proxy.py \
+  --remote-script /CLUSTER/CHECKOUT/roboteam/batch/slurm_proxy.py \
   --remote-python /CLUSTER/CHECKOUT/.venv/bin/python \
-  --state-root /var/tmp/USER/robofrontier-egress \
+  --state-root /var/tmp/USER/roboteam-egress \
   --srun /CLUSTER/SLURM/bin/srun --slurm-conf /CLUSTER/SLURM/slurm.conf
 ```
 
@@ -253,7 +253,7 @@ Once the job is `RUNNING`, keep this running on the Mac (from a checkout whose
   `api.anthropic.com`, or `chatgpt.com` and `auth.openai.com`.
 - `--state-root` is the job's `slurm.egress_root`. The command adds a one-CPU relay step to the
   existing allocation; it queues nothing and holds a Mac sleep assertion while connected.
-  Status goes to `~/.robofrontier/slurm-egress/status.json` (`--status-file`).
+  Status goes to `~/.roboteam/slurm-egress/status.json` (`--status-file`).
 - Start it within `egress_wait_s` of the job starting, or admission fails before any run's clock
   starts. A Claude job uses the same route without a credential store.
 - During an outage the world pauses (physics and dispatch held, time not counted) and resumes

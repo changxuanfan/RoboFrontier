@@ -1,9 +1,9 @@
 {
-  "schema": "robofrontier.dial-family-review.v1",
+  "schema": "roboteam.dial-family-review.v1",
   "family": "dial",
   "revision": "best5-r11",
   "catalog": "benchmark/dial/catalog.json",
-  "catalog_sha256": "7a4dbcbf189c9a1031d025d1daf9916fdbab0b5ba4ab8c40e8d0c050e94c7119",
+  "catalog_sha256": "039b094c28501734aa4e23fc1e8ec33ee73da76ddd63461747f04566ea0761b8",
   "selection": "runs/oracle/dial-best5-recovery-20261026/batch-status.json",
   "selection_sha256": "f98d3437a3a5a7cac54d6394382b3a81e98de65a382c78d3f4c5d36df4f4ee51",
   "presentation": {
@@ -31,7 +31,7 @@
       "source_sha256": {
         "scene.xml": "64158f82832ed88b3d15939230be9fb002b1dcf818d8dae7a857ff5143e149c1",
         "task.json": "70cc1f38928e9d9122a7f2e94f3ceb33b12807129e1ea1eda4d4f487ba5940f9",
-        "environment.json": "d9aafa35efd42452e1ab1896751905fe481d13ce4a2d27a9990ac91099d5b348",
+        "environment.json": "b3bd13bd38bba14601a3f646b5e174f01023df8b2258d465e70c65626fd4de28",
         "workstation.json": "abf817d2e7f865fff366cda22bb79d582bc1a5bc323aa5a61c054c06ca668b5f"
       },
       "oracle_evidence": {
@@ -57,7 +57,7 @@
       "source_sha256": {
         "scene.xml": "336bbc14aaf8892419f58dcef6d09a83c07bf3e97483ab01bc0479cc9e41ff2a",
         "task.json": "7cef37f0e405aea8925715392b099302a5af0a4e07e7412794fe5be731e997bd",
-        "environment.json": "7ce1035b14032b39b8e339cb9a5cf227685b2e036beb69151c4c6228860f474a",
+        "environment.json": "003334ca45d45d13848a2beb1f5a594ffcc8d5f9c06041c82a485aa6ae517459",
         "workstation.json": "f90f59b5cd8ec1b8b93b20d903fc347c4937046f561095a7463306899181cbb8"
       },
       "oracle_evidence": {
@@ -83,7 +83,7 @@
       "source_sha256": {
         "scene.xml": "ef2185ffed8571c7e26c9a58c38cfc17294785416abd8fc5a06cb7443d888349",
         "task.json": "20dd490f57c288a326e2f43d17ddad76161f2e07b361b0a831c229e8f9632423",
-        "environment.json": "4af39190245c6fced12e29eb7a6743f35ce88018f799627d2afefc6c5157940d",
+        "environment.json": "0c96d741e27c421c3f93792ab367c29d1d167f34b3b795e3904c51fa292d7363",
         "workstation.json": "700ec66f52eed0ccc1669ac5de3fb983f727c6616e5be9d563f7ab0658fb2840"
       },
       "oracle_evidence": {
@@ -109,7 +109,7 @@
       "source_sha256": {
         "scene.xml": "88fed05ed351d9709f45d8db8c0d2c89695fae9a4f417b55a5af7d9cf5a1d772",
         "task.json": "5fa6c6e28242571d42f7c1a4879e25b85ed584fc18a046937ba23a366406a2f0",
-        "environment.json": "788f48d43ca2d489c38e9d29eaabbf4fbd5cba17854ff10b9512054ca8f3009c",
+        "environment.json": "bceac7dbb32fc276d05df3eb5dbd8ee727b9a1fa0126ea9fde41c6222cb94aae",
         "workstation.json": "e33d182994b4dc8d24e36f08a65017f2e71e76bf53b96c5b75e605487b39a6f7"
       },
       "oracle_evidence": {
@@ -135,7 +135,7 @@
       "source_sha256": {
         "scene.xml": "a8029d124a47a786e25ca949db07985459592e12e3a9c6f8fc7298493e2b42c7",
         "task.json": "fc475e2e65e2b42e7bad500faa492d82ead1da7aca4317c9e08ac759c0f87a55",
-        "environment.json": "53021333bcde182e960046168153807582ad6d59bb888f16ac71a28c4da69dea",
+        "environment.json": "b3069d20499d14253a120081f83add711c375ad6958061ce85ff23ce350a0498",
         "workstation.json": "d487ec06bf55bf133cedc3368215ef5650f36faa5d9ce45f3de410244303ca9a"
       },
       "oracle_evidence": {
@@ -161,7 +161,7 @@
       "source_sha256": {
         "scene.xml": "d4f2d67f5b036782beef27dbb7856e44eff1be1b3f7b47cc9c0875b30120aefc",
         "task.json": "c52a801532e1f5c4e394cf32eb3e3b8b4f7261c0079cc92cacf46a42b5ba2452",
-        "environment.json": "14f71bf368e3cc543e067425ef6048294cd1a11f5bc02ddfd226e86f43737a6b",
+        "environment.json": "948e1c5864b7a2cd43bd2f17a2e797e78b86799cde934443a6147735e8861989",
         "workstation.json": "f7baa753838ff159f67919c534c244b481ba52537f88878b1df69e221e69b026"
       },
       "oracle_evidence": {
@@ -187,7 +187,7 @@
       "source_sha256": {
         "scene.xml": "d4a25d60ddee17ba40678f735b88d39def5133e6725a811fdfb3d781286a32c2",
         "task.json": "524f22f875c73121c48fc286e630da86c4d77d67c24e2298fb0dfff229661620",
-        "environment.json": "415199f7a6290928682c1c37e71b917d0bb5d2936845f82e1c0e31f4670c0340",
+        "environment.json": "a5b05081cebf059f4ce95512c5b1cea11601e17e98cac5a575b1a40128f59d79",
         "workstation.json": "ebdc8107fe7f9ec3ddc79e33fa978a19f682fb5c3c00b6c04b2f889ce96980eb"
       },
       "oracle_evidence": {
@@ -213,7 +213,7 @@
       "source_sha256": {
         "scene.xml": "82a80c7a51de35318d14bea976bc577ff6ba49809ba385293369ccd43b3fac87",
         "task.json": "75018d263c588c7b4c0a90bf540448c93f73813d61ce3b442e9fbe688a4f9628",
-        "environment.json": "d61a30eda857e5453f6bbe16992dcb221f2bef174d3a54640255dc98e6853c52",
+        "environment.json": "c2d31dbcdb774f36c08e5ed2537f85a71cbcca3c5e10ac75a6297c9f3914301f",
         "workstation.json": "633cdf404041eeac878bfb041f41975f5d0111fd02cf139cc1518c616b45fa36"
       },
       "oracle_evidence": {
@@ -239,7 +239,7 @@
       "source_sha256": {
         "scene.xml": "7aa387ddd7859380d72bc215aaff6fdb48c4ff186e41eb042a3c6918d0b8ea83",
         "task.json": "75ce91b2a2859284cdc7c31852dca6efa865f2b9b3bcff57ecd223b0a846c455",
-        "environment.json": "79be3dbeb775257f1db3307d65b0ca60359c87f465883cf9fe037c068bb46062",
+        "environment.json": "a125511911b5bd4071faeda42838de136f5fe70c276540f178b01f7987e50ede",
         "workstation.json": "6615beecef9f5e233219a73dc4b0c4029c121be1730cb5c663614cb430dc5d94"
       },
       "oracle_evidence": {

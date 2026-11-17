@@ -7,9 +7,9 @@ from unittest.mock import Mock, patch
 import mujoco
 import numpy as np
 
-from robofrontier.media.dial_pose_timeline import EditedMotion, IdleSettings, build_edit, idle_mask, playback_speed
-from robofrontier.media.motion_recording import MotionWriter
-from robofrontier.physics.workstation import Workstation
+from roboteam.media.dial_pose_timeline import EditedMotion, IdleSettings, build_edit, idle_mask, playback_speed
+from roboteam.media.motion_recording import MotionWriter
+from roboteam.physics.workstation import Workstation
 
 
 class MotionEditTests(unittest.TestCase):
@@ -99,8 +99,8 @@ class MotionEditTests(unittest.TestCase):
                 EditedMotion(path, edit)
 
     def test_factory_translation_yaw_preserve_every_visible_geometry(self):
-        from robofrontier.factory.workstations import FactoryPlayback, compose
-        from robofrontier.physics.robot_control import quat_matrix
+        from roboteam.factory.workstations import FactoryPlayback, compose
+        from roboteam.physics.robot_control import quat_matrix
         root = Path(__file__).resolve().parents[2]
         case = json.loads((root/'benchmark/dial/catalog.json').read_text())['cases'][0]
         source = Workstation(root/case['directory'])
@@ -116,7 +116,7 @@ class MotionEditTests(unittest.TestCase):
             catalog.write_text(json.dumps(dict(cases=[case])))
             yaw = .63
             shift = np.array([9.,-4.,.25])
-            with patch('robofrontier.factory.workstations.placements',return_value=[place]):
+            with patch('roboteam.factory.workstations.placements',return_value=[place]):
                 scene = compose(shell,catalog,folder/'factory',{case['id']:dict(translation_m=shift.tolist(),yaw_rad=yaw)})
             play = FactoryPlayback(scene)
             source.data.qpos[source.model.joint('A_joint1').qposadr[0]] += .12

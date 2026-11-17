@@ -1,5 +1,5 @@
 {
-  "schema": "robofrontier.workstation.v2",
+  "schema": "roboteam.workstation.v2",
   "id": "transport-a04-d3",
   "collection": "frontier_suite",
   "arm_count": 4,
@@ -780,7 +780,7 @@
   ],
   "transport_variant": {
     "id": "r14-half-opening",
-    "source_scene_sha256": "52e2db3f48c3f15bff6a65b2df694fc01e89fe4dc5af2d4fac5582308c17db85",
+    "source_scene_sha256": "6dc2eedcd39beb5b5b0eb49437c97a9ffe80c5ef297e851d1bc162ed0f4dd5df",
     "linear_opening_scale": 0.5,
     "physical_geometry_changed": false,
     "source_task_pass_inherited": false

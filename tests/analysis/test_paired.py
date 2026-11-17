@@ -1,6 +1,6 @@
 import unittest
 
-from robofrontier.analysis import paired
+from roboteam.analysis import paired
 
 
 class PairedTests(unittest.TestCase):

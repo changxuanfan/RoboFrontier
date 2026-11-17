@@ -1,6 +1,6 @@
 # Running in Docker
 
-`robofrontier container ...` runs the unified CLI inside an image built from the committed
+`roboteam container ...` runs the unified CLI inside an image built from the committed
 source, with three persistent local Docker volumes: run data, native state, and the policy Python
 environment. Only a stopped, verified evidence ZIP is copied back to the host.
 
@@ -20,17 +20,17 @@ prepares.
 ## 2. Build
 
 ```sh
-.venv/bin/robofrontier container build
+.venv/bin/roboteam container build
 ```
 
 The image ([`docker/Dockerfile`](../../docker/Dockerfile)) is `python:3.12-slim-bookworm` with
 Node.js 22, Codex 0.165.0, Claude Code 2.1.316, OSMesa, EGL and `ffmpeg`; it runs
-`uv sync --locked --extra oracle` and `robofrontier bootstrap`, so the pinned assets are inside.
-It is tagged `robofrontier:<commit[:12]>` (or `container.image`) and labelled with the commit;
+`uv sync --locked --extra oracle` and `roboteam bootstrap`, so the pinned assets are inside.
+It is tagged `roboteam:<commit[:12]>` (or `container.image`) and labelled with the commit;
 an existing image from another commit is refused. `.env`, logins and run data never enter it.
 It has no `bwrap` or `socat`, so Claude Code's Bash uses Landlock + seccomp (`landlock-v1`).
 
-Help for any subcommand works without Docker: `robofrontier container prepare --help`.
+Help for any subcommand works without Docker: `roboteam container prepare --help`.
 
 ## 3. Site TOML
 
@@ -49,7 +49,7 @@ cpus = 0.0
 seccomp_profile = "default"          # "unconfined" removes Docker's seccomp filter for Codex doctor/preflight/run
 ```
 
-Pass it before `container` (`robofrontier --config docker.toml container ...`); `--config`
+Pass it before `container` (`roboteam --config docker.toml container ...`); `--config`
 after `container` is refused. Docker Desktop's VM memory is a real bound; the wrapper never
 lowers `batch.parallel`.
 
@@ -60,25 +60,25 @@ selected profile's `env_key` and `base_url_env`, by name; values never appear in
 arguments, image layers, the TOML or evidence.
 
 ```sh
-.venv/bin/robofrontier container auth claude setup-token          # prints a token: store it as CLAUDE_CODE_OAUTH_TOKEN in .env
-.venv/bin/robofrontier --config docker.toml container auth codex login --device-auth
+.venv/bin/roboteam container auth claude setup-token          # prints a token: store it as CLAUDE_CODE_OAUTH_TOKEN in .env
+.venv/bin/roboteam --config docker.toml container auth codex login --device-auth
 ```
 
-The Codex login goes to the state volume's `/opt/RoboFrontier/.robofrontier/subscription`
+The Codex login goes to the state volume's `/opt/RoboTeam/.roboteam/subscription`
 (file-backed), used by Codex subscription profiles with `runtime.codex_home_scope = "shared"`.
 The host's `~/.codex`, `~/.claude` and Keychain are never mounted.
 
 ## 5. Policy environment, check and preflight
 
 ```sh
-.venv/bin/robofrontier --config docker.toml container policy-env
-.venv/bin/robofrontier --config docker.toml container doctor
-.venv/bin/robofrontier --config docker.toml container plan
-.venv/bin/robofrontier --config docker.toml container preflight --confirm-spend                      # Codex
-.venv/bin/robofrontier --config docker.toml container preflight --confirm-spend --max-budget-usd 1   # Claude
+.venv/bin/roboteam --config docker.toml container policy-env
+.venv/bin/roboteam --config docker.toml container doctor
+.venv/bin/roboteam --config docker.toml container plan
+.venv/bin/roboteam --config docker.toml container preflight --confirm-spend                      # Codex
+.venv/bin/roboteam --config docker.toml container preflight --confirm-spend --max-budget-usd 1   # Claude
 ```
 
-`policy-env` builds the policy Python environment in its volume (`/opt/robofrontier-policy`)
+`policy-env` builds the policy Python environment in its volume (`/opt/roboteam-policy`)
 and runs its sandbox check against both engines' real CLIs, with no model calls; runs then use it.
 If the check reports that Landlock is unavailable, Docker's seccomp profile is refusing it: set
 `seccomp_profile = "unconfined"` (Limits). `doctor` checks the CLI, the sandbox and a real
@@ -87,10 +87,10 @@ MuJoCo render context, without authenticating. Receipts land in the runs volume.
 ## 6. Prepare, run, status, stop
 
 ```sh
-.venv/bin/robofrontier --config docker.toml container prepare --output runs/policy/my-batch
-.venv/bin/robofrontier --config docker.toml container run runs/policy/my-batch
-.venv/bin/robofrontier --config docker.toml container status runs/policy/my-batch
-.venv/bin/robofrontier --config docker.toml container stop runs/policy/my-batch
+.venv/bin/roboteam --config docker.toml container prepare --output runs/policy/my-batch
+.venv/bin/roboteam --config docker.toml container run runs/policy/my-batch
+.venv/bin/roboteam --config docker.toml container status runs/policy/my-batch
+.venv/bin/roboteam --config docker.toml container stop runs/policy/my-batch
 ```
 
 (`prepare` refuses until `container policy-env` has passed.) Batch paths are
@@ -98,7 +98,7 @@ relative paths under `runs/`, inside the runs volume. `container run` waits for 
 foreground and starts it with the batch's frozen configuration. Ctrl-C requests an orderly stop
 and waits up to 180 s for sealing and collection. A container still running afterwards is
 kept and reported `still_running_needs_review`; the wrapper never restarts it. Each command is
-recorded in `.robofrontier/containers/<workspace>/commands/rf-<id>.json`.
+recorded in `.roboteam/containers/<workspace>/commands/rf-<id>.json`.
 
 There is no `container continue`: a run that stops unexpectedly continues by itself once inside
 the batch, but stopped runs cannot be continued by hand through the wrapper.
@@ -113,8 +113,8 @@ The volumes, named from the checkout path and `container.workspace`, keep everyt
 
 | Volume | Mounted at | Holds |
 | --- | --- | --- |
-| `robofrontier-<id>-<workspace>-runs` | `/opt/RoboFrontier/runs` | Batches, motion, asset cache, receipts, collections, ZIPs |
-| `robofrontier-<id>-<workspace>-state` | `/opt/RoboFrontier/.robofrontier` | Per-task Codex homes and sessions, the subscription login, Claude's config |
+| `roboteam-<id>-<workspace>-runs` | `/opt/RoboTeam/runs` | Batches, motion, asset cache, receipts, collections, ZIPs |
+| `roboteam-<id>-<workspace>-state` | `/opt/RoboTeam/.roboteam` | Per-task Codex homes and sessions, the subscription login, Claude's config |
 
 Do not copy a live SQLite file out of a volume. Deleting a volume deletes its runs; the wrapper
 never does.

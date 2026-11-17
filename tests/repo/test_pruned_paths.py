@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PREFIXES = ('configs/', 'benchmark/', 'benchmarks/', 'prompts/', 'robofrontier/', 'scripts/', 'docs/', 'tests/', 'site/')
+PREFIXES = ('configs/', 'benchmark/', 'benchmarks/', 'prompts/', 'roboteam/', 'scripts/', 'docs/', 'tests/', 'site/')
 
 
 def tracked():

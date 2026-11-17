@@ -1,6 +1,6 @@
 """Opt-in, unscored MuJoCo smoke with real Claude CLI and loopback fake model.
 
-Run with ROBOFRONTIER_PHYSICS_SMOKE=1; requires the R14 assets and graphics.
+Run with ROBOTEAM_PHYSICS_SMOKE=1; requires the R14 assets and graphics.
 No provider requests or genuine credentials are used. A failed live owner is
 left on disk for inspection rather than deleting its working directory.
 """
@@ -15,9 +15,9 @@ import threading
 import unittest
 
 from engines.test_claude_adaptive_integration import StubModel
-from robofrontier.engines.claude.run import run_task
-from robofrontier.runtime.store import RuntimeStore
-from robofrontier.batch.claude_prepare import prepare_batch
+from roboteam.engines.claude.run import run_task
+from roboteam.runtime.store import RuntimeStore
+from roboteam.batch.claude_prepare import prepare_batch
 
 
 class MotionModel(StubModel):
@@ -35,13 +35,13 @@ class MotionModel(StubModel):
         return super().choose_tool(names,text,blocks,has_result)
 
 
-@unittest.skipUnless(os.environ.get('ROBOFRONTIER_PHYSICS_SMOKE') == '1' and shutil.which('claude'),
+@unittest.skipUnless(os.environ.get('ROBOTEAM_PHYSICS_SMOKE') == '1' and shutil.which('claude'),
                      'Opt-in real physics smoke requires Claude CLI and scene assets')
 class PhysicsSmokeTests(unittest.TestCase):
     def test_adaptive_unscored_lifecycle_with_synthetic_model(self):
         directory = Path(tempfile.mkdtemp(prefix='claude-physics-synthetic-'))
-        case = os.environ.get('ROBOFRONTIER_PHYSICS_CASE', 'transport-a04-d1')
-        record_video = os.environ.get('ROBOFRONTIER_PHYSICS_VIDEO') == '1'
+        case = os.environ.get('ROBOTEAM_PHYSICS_CASE', 'transport-a04-d1')
+        record_video = os.environ.get('ROBOTEAM_PHYSICS_VIDEO') == '1'
         MotionModel.requests.clear()
         server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), MotionModel)
         threading.Thread(target=server.serve_forever, daemon=True).start()

@@ -3,9 +3,9 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
-from robofrontier.runtime.store import RuntimeStore
-from robofrontier.runtime.store import packed
-from robofrontier.tasks.config import load_harness, startup_protocol
+from roboteam.runtime.store import RuntimeStore
+from roboteam.runtime.store import packed
+from roboteam.tasks.config import load_harness, startup_protocol
 
 class StoreTests(unittest.TestCase):
     def setUp(self):

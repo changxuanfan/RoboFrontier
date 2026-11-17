@@ -3,9 +3,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from robofrontier.runtime.setup import prepare_run,verify_inputs
-from robofrontier.tasks.config import ROOT,load_task,load_harness, startup_protocol
-from robofrontier.runtime.store import RuntimeStore
+from roboteam.runtime.setup import prepare_run,verify_inputs
+from roboteam.tasks.config import ROOT,load_task,load_harness, startup_protocol
+from roboteam.runtime.store import RuntimeStore
 
 class SetupTests(unittest.TestCase):
     def setUp(self):self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
@@ -40,7 +40,7 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(access['filesystem'][str(run.resolve()/'workspace')],'write')
         self.assertEqual(access['filesystem'][str(run.resolve()/'private')],'deny')
         self.assertFalse(access['network']);self.assertFalse(access['web_search'])
-        self.assertTrue((run/'private/inputs/frozen-source/robofrontier/runtime/scheduling.py').exists())
+        self.assertTrue((run/'private/inputs/frozen-source/roboteam/runtime/scheduling.py').exists())
         self.assertFalse((run/'private/outputs/global-realtime.mp4').exists())
         before=(run/'private/inputs/manifest.json').read_bytes()
         with self.assertRaises(ValueError):prepare_run(run)
@@ -63,8 +63,8 @@ class SetupTests(unittest.TestCase):
         run=prepare_run(self.root/'run')
         (run/'public/observations/new.png').write_bytes(b'not real pixels')
         self.assertEqual(verify_inputs(run),[])
-        (run/'private/inputs/frozen-source/robofrontier/runtime/scheduling.py').write_text('# changed')
-        self.assertIn('frozen:robofrontier/runtime/scheduling.py',verify_inputs(run))
+        (run/'private/inputs/frozen-source/roboteam/runtime/scheduling.py').write_text('# changed')
+        self.assertIn('frozen:roboteam/runtime/scheduling.py',verify_inputs(run))
 
     def test_run_local_experience_is_mutable_and_not_imported_into_next_run(self):
         run=prepare_run(self.root/'first')
@@ -83,7 +83,7 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(verify_inputs(fresh),[])
 
     def test_legacy_layout_is_not_migrated_or_modified(self):
-        from robofrontier.runtime.service import RuntimeService
+        from roboteam.runtime.service import RuntimeService
         from fake_pipeline import FakeWorld,fake_capture
         run=self.root/'legacy';(run/'private').mkdir(parents=True)
         old=run/'private/manifest.json';old.write_text('{"schema_version":2}')
@@ -95,7 +95,7 @@ class SetupTests(unittest.TestCase):
     def test_eight_workers_prepare_with_same_skill_in_both_topologies(self):
         p=ROOT/'benchmark/transport/transport-a08-d1/task.json'
         # The template marks its tool-dependent passages; a full run gets the full wording.
-        from robofrontier.runtime.tool_mode import render
+        from roboteam.runtime.tool_mode import render
         skill=render((Path(__file__).resolve().parents[2]/'prompts/skills/robot-collaboration/SKILL.md').read_text(),'full').encode()
         for topology in ('hierarchical','decentralized'):
             cfg=load_harness();cfg['topology']=topology;cfg['startup_protocol']=startup_protocol(topology)

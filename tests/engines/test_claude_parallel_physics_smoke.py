@@ -11,9 +11,9 @@ import time
 import unittest
 
 from engines.test_claude_physics_smoke import MotionModel
-from robofrontier.batch.claude_batch import run_batch, status_batch
-from robofrontier.runtime.store import RuntimeStore
-from robofrontier.batch.claude_prepare import prepare_batch
+from roboteam.batch.claude_batch import run_batch, status_batch
+from roboteam.runtime.store import RuntimeStore
+from roboteam.batch.claude_prepare import prepare_batch
 
 
 class CompactRequests(list):
@@ -29,7 +29,7 @@ class BatchMotionModel(MotionModel):
     requests = CompactRequests()
 
 
-@unittest.skipUnless(os.environ.get('ROBOFRONTIER_PHYSICS_BATCH') == '1' and shutil.which('claude'),
+@unittest.skipUnless(os.environ.get('ROBOTEAM_PHYSICS_BATCH') == '1' and shutil.which('claude'),
                      'Opt-in four-process physics smoke requires Claude CLI and scene assets')
 class ParallelPhysicsSmokeTests(unittest.TestCase):
     def test_four_cases_use_distinct_worlds_and_close(self):

@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.engines.antigravity import auth
-from robofrontier.batch.collect import _files
+from roboteam.engines.antigravity import auth
+from roboteam.batch.collect import _files
 
 
 class AuthenticationIsolationTests(unittest.TestCase):

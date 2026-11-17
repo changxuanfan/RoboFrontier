@@ -1,8 +1,8 @@
 // A robot_only Codex run: no file tools beside robot, and public_file results reach the model.
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {PolicyHost}=require('../../robofrontier/engines/codex/codex_policy_host');
-const broker=require('../../robofrontier/engines/codex/tool_broker');
+const {PolicyHost}=require('../../roboteam/engines/codex/codex_policy_host');
+const broker=require('../../roboteam/engines/codex/tool_broker');
 const PNG=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),Buffer.alloc(32)]);
 function host(answer,launch={tool_backend:'native',tool_mode:'robot_only'}){
   const run=fs.mkdtempSync(path.join(os.tmpdir(),'rf-robot-only-'));

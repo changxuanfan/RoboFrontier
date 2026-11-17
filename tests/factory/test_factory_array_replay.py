@@ -5,7 +5,7 @@ from unittest.mock import patch
 import mujoco
 import numpy as np
 
-from robofrontier.factory.workstations import FactoryPlayback
+from roboteam.factory.workstations import FactoryPlayback
 
 
 class FactoryArrayReplayTests(unittest.TestCase):

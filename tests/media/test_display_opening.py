@@ -1,7 +1,7 @@
 """Videos show the run's own table; only R13 Transport recordings show the opening halved (PR 7)."""
 import unittest
 
-from robofrontier.media.table_presentation import display_opening_scale
+from roboteam.media.table_presentation import display_opening_scale
 
 
 class DisplayOpeningTests(unittest.TestCase):

@@ -10,8 +10,8 @@ import unittest
 import zipfile
 from unittest.mock import patch
 
-from robofrontier.configuration import load_configuration
-from robofrontier.batch import slurm_job as slurm
+from roboteam.configuration import load_configuration
+from roboteam.batch import slurm_job as slurm
 
 
 class SlurmJobTests(unittest.TestCase):
@@ -21,8 +21,8 @@ class SlurmJobTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.repo = self.root/'repo'
         self.repo.mkdir()
-        (self.repo/'robofrontier').mkdir()
-        (self.repo/'robofrontier/__init__.py').write_text('"""Frozen fixture."""\n')
+        (self.repo/'roboteam').mkdir()
+        (self.repo/'roboteam/__init__.py').write_text('"""Frozen fixture."""\n')
         subprocess.run(['git', 'init', '-q', str(self.repo)], check=True)
         subprocess.run(['git', 'add', '.'], cwd=self.repo, check=True)
         subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
@@ -38,7 +38,7 @@ class SlurmJobTests(unittest.TestCase):
         self.local.parent.mkdir()
 
     def prepare(self):
-        with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
+        with patch('roboteam.batch.handoff.ensure_asset_archive', return_value=self.asset):
             return slurm.submit(self.config, self.submission, root=self.repo)
 
     def stage(self):
@@ -59,7 +59,7 @@ class SlurmJobTests(unittest.TestCase):
         with tarfile.open(self.submission/'source.tar') as archive:
             self.assertNotIn('.env', archive.getnames())
             self.assertNotIn('auth.json', archive.getnames())
-        self.assertIn('launcher/robofrontier/__init__.py', manifest['sha256'])
+        self.assertIn('launcher/roboteam/__init__.py', manifest['sha256'])
         script = (self.submission/'job.sbatch').read_text()
         self.assertLess(script.index('srun '), script.index('stage-out '))
         self.assertIn('cd "$submission/launcher"', script)
@@ -67,8 +67,8 @@ class SlurmJobTests(unittest.TestCase):
         subprocess.run(['bash', '-n', str(self.submission/'job.sbatch')], check=True)
 
     def test_dirty_tracked_source_is_rejected_before_snapshot(self):
-        (self.repo/'robofrontier/__init__.py').write_text('changed')
-        with patch('robofrontier.batch.handoff.ensure_asset_archive') as assets:
+        (self.repo/'roboteam/__init__.py').write_text('changed')
+        with patch('roboteam.batch.handoff.ensure_asset_archive') as assets:
             with self.assertRaisesRegex(ValueError, 'Commit tracked changes'):
                 slurm.submit(self.config, self.submission, root=self.repo)
             assets.assert_not_called()
@@ -85,7 +85,7 @@ class SlurmJobTests(unittest.TestCase):
         report = self.stage()
         self.assertEqual(report['status'], 'staged')
         source = self.local/'source'
-        self.assertTrue((source/'robofrontier/__init__.py').is_file())
+        self.assertTrue((source/'roboteam/__init__.py').is_file())
         cache = source/'runs/asset-cache'/(slurm.checksum(self.asset)+'.tar.gz')
         self.assertEqual(cache.read_bytes(), self.asset.read_bytes())
         self.assertFalse((source/'.env').exists())
@@ -138,9 +138,9 @@ class SlurmJobTests(unittest.TestCase):
             'runs/policy/batch/luna/case/private/state/runtime.sqlite': b'stopped SQLite fixture',
             'runs/policy/batch/luna/case/private/outputs/motion/frames.bin': b'exact motion',
             'runs/state-assets/abc': b'frozen asset',
-            '.robofrontier/codex/task/sessions/session.jsonl': b'exact native session\n',
-            '.robofrontier/codex/task/auth.json': b'PRIVATE AUTH',
-            '.robofrontier/codex/task/state.sqlite': b'private CLI runtime state',
+            '.roboteam/codex/task/sessions/session.jsonl': b'exact native session\n',
+            '.roboteam/codex/task/auth.json': b'PRIVATE AUTH',
+            '.roboteam/codex/task/state.sqlite': b'private CLI runtime state',
             'runs/policy/batch/haiku/case/private/claude-config/.credentials.json': b'PRIVATE CLAUDE AUTH',
             'runs/policy/batch/haiku/case/private/claude-config/projects/project/session.jsonl': b'Claude session',
         }
@@ -159,7 +159,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertTrue(any(p.name == 'session.jsonl' and 'claude-config' in str(p) for p in output.rglob('*')))
         for name, expected in report['sha256'].items():
             self.assertEqual(slurm.checksum(output/name), expected)
-        self.assertTrue((source/'.robofrontier/codex/task/auth.json').exists())
+        self.assertTrue((source/'.roboteam/codex/task/auth.json').exists())
         with self.assertRaisesRegex(ValueError, 'destination exists'):
             slurm.stage_out(self.local, self.submission, 1)
 
@@ -200,10 +200,10 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_codex_session_symlink_is_recorded_not_fatal(self):
         self.stage()
-        sessions = self.local/'source/.robofrontier/codex/task/sessions'
+        sessions = self.local/'source/.roboteam/codex/task/sessions'
         sessions.mkdir(parents=True)
         (sessions/'session.jsonl').write_bytes(b'exact native session\n')
-        (sessions/'other.jsonl').symlink_to(self.local/'source/.robofrontier/codex/task/sessions/session.jsonl')
+        (sessions/'other.jsonl').symlink_to(self.local/'source/.roboteam/codex/task/sessions/session.jsonl')
         report = slurm.stage_out(self.local, self.submission, 1)
         output = self.submission/'results'
         self.assertEqual((output/'native-sessions/task/sessions/session.jsonl').read_bytes(), b'exact native session\n')
@@ -213,7 +213,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_a_fence_failing_on_exit_keeps_the_collected_archive(self):
         from contextlib import contextmanager
-        from robofrontier.batch.slurm_proxy import EgressError
+        from roboteam.batch.slurm_proxy import EgressError
         self.stage()
         source = (self.local/'source').resolve()
         archive = source/'runs/exports/collected.zip'
@@ -226,8 +226,8 @@ class SlurmJobTests(unittest.TestCase):
             raise EgressError('route lost after the run sealed')
         result = {'archive': str(archive), 'status': 'closed', 'collection_complete': True}
         with patch.object(slurm, 'ROOT', source), patch.object(slurm, 'subscription_environment', fenced), \
-                patch('robofrontier.cli.prepare'), patch('robofrontier.runtime.policy_env.apply_default'), \
-                patch('robofrontier.cli.run', return_value=result):
+                patch('roboteam.cli.prepare'), patch('roboteam.runtime.policy_env.apply_default'), \
+                patch('roboteam.cli.run', return_value=result):
             with self.assertRaises(EgressError):
                 slurm.execute(self.local)
         written = json.loads((self.local/'execution-result.json').read_text())
@@ -242,9 +242,9 @@ class SlurmJobTests(unittest.TestCase):
         self.stage()
         source = (self.local/'source').resolve()
         (self.local/'STOP').touch()
-        with patch.object(slurm, 'ROOT', source), patch('robofrontier.cli.prepare'), \
-                patch('robofrontier.runtime.policy_env.apply_default'), \
-                patch('robofrontier.cli.run') as run:
+        with patch.object(slurm, 'ROOT', source), patch('roboteam.cli.prepare'), \
+                patch('roboteam.runtime.policy_env.apply_default'), \
+                patch('roboteam.cli.run') as run:
             self.assertEqual(slurm.execute(self.local), {'status': 'stopped_before_start'})
             run.assert_not_called()
         self.assertEqual(json.loads((self.local/'execution-result.json').read_text()), {'status': 'stopped_before_start'})
@@ -284,7 +284,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertEqual(self.config['batch']['task_wall_limit_s'], 86400)
 
     def test_subscription_submission_is_one_allocation_serialized_by_credential_stream(self):
-        from robofrontier.engines.codex.job_engine import fingerprint
+        from roboteam.engines.codex.job_engine import fingerprint
         self.config = load_configuration(host='slurm', overrides={
             'policy': {'profile': 'luna_subscription'},
             'runtime': {'codex_home_scope': 'job', 'codex_tool_backend': 'landlock-v1'},
@@ -325,7 +325,7 @@ class SlurmJobTests(unittest.TestCase):
         receipts = {}
         for name in ('basic', 'blocked'):
             receipts[name] = self.root/(name+'-receipt.json'); receipts[name].write_text('{"passed": true}')
-        ready = patch('robofrontier.engines.claude.claude_readiness.require_ready',
+        ready = patch('roboteam.engines.claude.claude_readiness.require_ready',
                       return_value={'basic_receipt': str(receipts['basic']), 'blocked_receipt': str(receipts['blocked'])})
         ready.start(); self.addCleanup(ready.stop)
         self.config = load_configuration(host='slurm', overrides={
@@ -333,10 +333,10 @@ class SlurmJobTests(unittest.TestCase):
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay), 'egress_pause_s': 120}})
         # The token must be in the checkout's .env (ignored by Git), never only in the shell.
         with self.assertRaisesRegex(ValueError, 'keep CLAUDE_CODE_OAUTH_TOKEN in'):
-            with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
+            with patch('roboteam.batch.handoff.ensure_asset_archive', return_value=self.asset):
                 slurm.submit(self.config, self.root/'without-env', root=self.repo)
         (self.repo/'.env').write_text('CLAUDE_CODE_OAUTH_TOKEN=fixture-not-a-token\n')
-        with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
+        with patch('roboteam.batch.handoff.ensure_asset_archive', return_value=self.asset):
             slurm.submit(self.config, self.submission, root=self.repo)
         manifest, _ = slurm._verify_submission(self.submission)
         self.assertEqual((manifest['credential_env'], manifest['auth_mode']), ('CLAUDE_CODE_OAUTH_TOKEN', 'api'))
@@ -347,7 +347,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertNotIn('--dependency=singleton', slurm.queue_command(self.config['slurm'], self.submission))
         self.config['slurm']['egress_root'] = str(self.repo/'egress')
         with self.assertRaisesRegex(ValueError, 'egress state outside'):
-            with patch('robofrontier.batch.handoff.ensure_asset_archive', return_value=self.asset):
+            with patch('roboteam.batch.handoff.ensure_asset_archive', return_value=self.asset):
                 slurm.submit(self.config, self.root/'second', root=self.repo)
         # Only Claude carries a token this way; Codex keeps the job-scoped subscription store.
         with self.assertRaisesRegex(ValueError, 'Mac egress requires'):
@@ -362,12 +362,12 @@ class SlurmJobTests(unittest.TestCase):
         from contextlib import contextmanager
         @contextmanager
         def route(cfg, *, on_failure):
-            seen['private'] = os.environ['ROBOFRONTIER_JOB_PRIVATE_ROOT']; seen['failure'] = on_failure
+            seen['private'] = os.environ['ROBOTEAM_JOB_PRIVATE_ROOT']; seen['failure'] = on_failure
             os.environ['HTTPS_PROXY'] = 'http://rf:x@127.0.0.1:1'
             yield
         stops = []
         with patch.object(slurm.platform, 'system', return_value='Linux'), \
-                patch.dict(os.environ, {'SLURM_JOB_ID': '123'}), patch('robofrontier.batch.slurm_proxy.environment', route):
+                patch.dict(os.environ, {'SLURM_JOB_ID': '123'}), patch('roboteam.batch.slurm_proxy.environment', route):
             before = dict(os.environ)
             with slurm.subscription_environment(config, self.local, on_failure=lambda: stops.append(1)):
                 self.assertEqual(Path(seen['private']), (self.local/'engine').resolve())

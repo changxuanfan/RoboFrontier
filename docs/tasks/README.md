@@ -50,13 +50,13 @@ time and input tokens.
   position. A step fails if any attempt at it goes wrong, even if it is completed later. The
   rate of a run is the share of its steps that fail at least once. Failures are read from the
   records of the robot tool and the simulator, never from the agents' reports
-  (`robofrontier/analysis/atomic.py`, `scripts/run_analysis.py`).
+  (`roboteam/analysis/atomic.py`, `scripts/run_analysis.py`).
 - **Grasp failure rate.** A grasp fails when the gripper closes on a width that does not match
   the object: the grasp command states the expected width, and the gripper stops outside it.
   The rate of a condition is the share of all its grasps that fail.
 - **Paired tests.** Every condition runs the same tasks, so two conditions are compared task
   by task with an exact McNemar test, Holm's correction and bootstrap intervals
-  (`robofrontier/analysis/paired.py`, `scripts/paired_tests.py`).
+  (`roboteam/analysis/paired.py`, `scripts/paired_tests.py`).
 
 The Oracle (the reference condition with ground-truth positions) uses its own copy of each case in
 `benchmark/oracle/<case>/`; see the [Oracle](../oracle/README.md).

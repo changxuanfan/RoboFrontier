@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 import subprocess
 
-from robofrontier.tasks.families import ROOT,RELEASE,current_path,oracle_recording,read
-from robofrontier.runtime.setup import write_json
+from roboteam.tasks.families import ROOT,RELEASE,current_path,oracle_recording,read
+from roboteam.runtime.setup import write_json
 
 
 def check_historical():
@@ -122,7 +122,7 @@ def check():
             failed.append(dict(path=name,error='changed'));continue
         if digest(ROOT/name)!=row['sha256'] if (ROOT/name).is_file() else True:moved+=1
     bindings=[]
-    from robofrontier.tasks.families import resolve_case
+    from roboteam.tasks.families import resolve_case
     for f in read(ROOT/RELEASE)['families'].values():
         for c in f['oracle']:
             resolve_case(c['id'],'oracle')

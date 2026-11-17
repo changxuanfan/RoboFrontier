@@ -2,7 +2,7 @@
 
 On Slurm, a second Codex subscription batch can use the login of a job that is already running,
 without stopping it and without becoming a second refresh owner. Set
-`ROBOFRONTIER_BORROWED_AUTH` to the configured credential store's `current.json`
+`ROBOTEAM_BORROWED_AUTH` to the configured credential store's `current.json`
 (`<slurm.credential_store>/current.json`; any other path is refused) in the second batch's
 environment. The running job keeps its own lease on the store
 ([Slurm credential store](slurm.md#codex-credential-store)).

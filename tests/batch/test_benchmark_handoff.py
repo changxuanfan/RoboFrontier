@@ -6,7 +6,7 @@ import tempfile
 import tarfile
 import unittest
 
-from robofrontier.batch.handoff import export_assets,restore_assets,setup_assets,digest
+from roboteam.batch.handoff import export_assets,restore_assets,setup_assets,digest
 
 
 class HandoffAssetsTests(unittest.TestCase):

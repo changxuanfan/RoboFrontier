@@ -35,9 +35,9 @@ A timber is complete when, at scoring:
 - it has a counted airborne handover (`relay-airborne-handover-v1`), reported as
   `airborne_handover_met`.
 
-The case is complete when every timber is. `robofrontier/tasks/relay.py` holds the rule,
-`robofrontier/tasks/relay_goal_fraction.py` measures the fraction and the `Relay` class in
-`robofrontier/tasks/evaluate.py` tracks custody, handovers and drops.
+The case is complete when every timber is. `roboteam/tasks/relay.py` holds the rule,
+`roboteam/tasks/relay_goal_fraction.py` measures the fraction and the `Relay` class in
+`roboteam/tasks/evaluate.py` tracks custody, handovers and drops.
 
 ## Handovers
 

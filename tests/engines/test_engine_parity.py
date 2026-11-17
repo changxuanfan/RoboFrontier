@@ -5,9 +5,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.runtime import access as policy_access, bootstrap as policy_bootstrap
-from robofrontier.tasks.config import ROOT
-from robofrontier.tasks.families import prepare
+from roboteam.runtime import access as policy_access, bootstrap as policy_bootstrap
+from roboteam.tasks.config import ROOT
+from roboteam.tasks.families import prepare
 
 HARNESS = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
 STARTUP = {'single-agent': 'direct_controller_v2', 'adaptive': 'direct_controller_v2',
@@ -60,7 +60,7 @@ class EngineParityTests(unittest.TestCase):
             self.assertEqual(policy_access.mode(access['filesystem'], run/'workspace/notes.md'), 'write')
             self.assertEqual(policy_access.mode(access['filesystem'], run/'public/inputs/task.json'), 'read')
             self.assertEqual(policy_access.mode(access['filesystem'], run/'private/inputs/task.json'), 'deny')
-            self.assertEqual(policy_access.mode(access['filesystem'], ROOT/'robofrontier/runtime/pipeline.py'), 'deny')
+            self.assertEqual(policy_access.mode(access['filesystem'], ROOT/'roboteam/runtime/pipeline.py'), 'deny')
             self.assertFalse(access['network'])
             self.assertFalse(access['web_search'])
 
@@ -123,7 +123,7 @@ class PolicyAccessTests(unittest.TestCase):
             run = repo/'runs/policy/batch/p/case'
             (run/'workspace').mkdir(parents=True)
             with patch.dict('os.environ', {'CODEX_HOME': str(Path(tmp)/'codex-auth'),
-                                           'ROBOFRONTIER_CLAUDE_HOME': str(Path(tmp)/'claude-auth')}):
+                                           'ROBOTEAM_CLAUDE_HOME': str(Path(tmp)/'claude-auth')}):
                 table = policy_access.table(run, repo=repo, home=home, tmp_dirs=[tmp+'/scratch'], checkouts=[repo, Path(tmp)/'worktree'])
             mode = lambda path: policy_access.mode(table, path)
             self.assertEqual(mode(run/'workspace/skills.md'), 'write')
@@ -133,7 +133,7 @@ class PolicyAccessTests(unittest.TestCase):
             self.assertEqual(mode(repo/'.env'), 'deny')
             self.assertEqual(mode(Path(tmp)/'worktree/scripts/oracle.py'), 'deny')
             for secret in (home/'.codex/auth.json', home/'.claude/.credentials.json', home/'.ssh/id_ed25519',
-                           home/'.robofrontier/codex-home/auth.json', Path(tmp)/'codex-auth/auth.json',
+                           home/'.roboteam/codex-home/auth.json', Path(tmp)/'codex-auth/auth.json',
                            Path(tmp)/'claude-auth/.credentials.json'):
                 self.assertEqual(mode(secret), 'deny', secret)
             self.assertEqual(mode(Path(tmp)/'scratch/a.py'), 'write')
@@ -154,7 +154,7 @@ class EngineRenderingTests(unittest.TestCase):
         return prepare('transport-a04-d1', Path(tmp)/engine, path)
 
     def test_claude_policy_turns_get_confined_file_tools_and_the_frozen_system_prompt(self):
-        from robofrontier.engines.claude.runner import build_command, policy_settings, policy_system_prompt, policy_cwd
+        from roboteam.engines.claude.runner import build_command, policy_settings, policy_system_prompt, policy_cwd
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
             run = self.prepared(tmp, 'claude')
             settings = policy_settings(run)
@@ -194,13 +194,13 @@ class EngineRenderingTests(unittest.TestCase):
             self.assertIn('PreToolUse', forked['hooks'])
 
     def test_codex_runs_under_the_frozen_permission_profile_without_web_search(self):
-        from robofrontier.engines.codex.launch import launch_config, profile
+        from roboteam.engines.codex.launch import launch_config, profile
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
             run = self.prepared(tmp, 'codex')
             launch = launch_config(profile('luna'), run/'private/inputs', run)
             args = ' '.join(launch['args'])
-            self.assertIn('default_permissions="robofrontier"', args)
-            self.assertIn('permissions.robofrontier.network.enabled=false', args)
+            self.assertIn('default_permissions="roboteam"', args)
+            self.assertIn('permissions.roboteam.network.enabled=false', args)
             self.assertIn(json.dumps(str((run/'private').resolve()))+'="deny"', args)
             self.assertIn(json.dumps(str((run/'workspace').resolve()))+'="write"', args)
             self.assertIn('web_search="disabled"', args)
@@ -222,11 +222,11 @@ class SharedConstantTests(unittest.TestCase):
 
     def test_the_codex_host_uses_the_shared_limits(self):
         import re
-        from robofrontier.configuration import load_configuration
-        host = (ROOT/'robofrontier/engines/codex/codex_policy_host.js').read_text()
+        from roboteam.configuration import load_configuration
+        host = (ROOT/'roboteam/engines/codex/codex_policy_host.js').read_text()
         def constant(name): return float(re.search(r'const %s=([0-9.]+);' % name, host).group(1))
         self.assertEqual(constant('MAX_CAPACITY_RETRIES'), policy_bootstrap.MAX_CAPACITY_RETRIES)
         self.assertEqual(constant('STARTUP_TIMEOUT_S'), policy_bootstrap.STARTUP_TIMEOUT_S)
         self.assertEqual(load_configuration()['batch']['startup_timeout_s'], policy_bootstrap.STARTUP_TIMEOUT_S)
-        from robofrontier.engines.claude.recovery import NETWORK_WINDOW_S
+        from roboteam.engines.claude.recovery import NETWORK_WINDOW_S
         self.assertEqual(constant('NETWORK_WINDOW_S'), NETWORK_WINDOW_S)

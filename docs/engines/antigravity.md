@@ -4,7 +4,7 @@ The adapter runs pinned Antigravity CLI 1.5.7 (`agy`, distinct from `gemini`).
 It supports single-agent, hierarchical, decentralized and adaptive policies using the
 released tasks and existing runtime. Python orchestration, supervision, recovery,
 robot MCP handling and accounting lifecycle are shared with Claude Code under
-`robofrontier/engines/common/`. Linux file tools use the same Landlock worker as
+`roboteam/engines/common/`. Linux file tools use the same Landlock worker as
 Codex. The native transport and fork provenance remain engine specific.
 
 ## Install
@@ -96,7 +96,7 @@ Python environment or sandbox check. Its hook refuses `manage_task`, `list_resou
 The unified command requires explicit authorization for provider calls:
 
 ```sh
-.venv/bin/robofrontier preflight --engine antigravity \
+.venv/bin/roboteam preflight --engine antigravity \
   --profile flash_subscription --confirm-spend
 ```
 
@@ -112,11 +112,11 @@ cannot apply.
 ## Run, status and stop
 
 ```sh
-.venv/bin/robofrontier prepare --engine antigravity --profile flash_api \
+.venv/bin/roboteam prepare --engine antigravity --profile flash_api \
   --render native --cases transport-a04-d1 --output runs/policy/agy-example
-.venv/bin/robofrontier run runs/policy/agy-example
-.venv/bin/robofrontier status runs/policy/agy-example
-.venv/bin/robofrontier stop runs/policy/agy-example
+.venv/bin/roboteam run runs/policy/agy-example
+.venv/bin/roboteam status runs/policy/agy-example
+.venv/bin/roboteam stop runs/policy/agy-example
 ```
 
 Preparation starts no model or world. Run requires matching provider and sandbox
@@ -241,9 +241,9 @@ Opt-in tests use the real pinned CLI and a local fake Gemini service, so they do
 not establish provider quality, subscription eligibility or real task success:
 
 ```sh
-ROBOFRONTIER_ANTIGRAVITY_INTEGRATION=1 PYTHONPATH=tests \
+ROBOTEAM_ANTIGRAVITY_INTEGRATION=1 PYTHONPATH=tests \
   .venv/bin/python -m unittest engines.test_antigravity_driver
-ROBOFRONTIER_ANTIGRAVITY_PHYSICS=1 PYTHONPATH=tests \
+ROBOTEAM_ANTIGRAVITY_PHYSICS=1 PYTHONPATH=tests \
   .venv/bin/python -m unittest engines.test_antigravity_physics_smoke
 ```
 

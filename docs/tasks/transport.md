@@ -41,7 +41,7 @@ The public task's `completion.acceptance` holds every threshold. In short:
 | Assignment | The right source item on every target at the same time, one item per target |
 
 Every item must be delivered and completed placements must stay in place: a placement that is
-later knocked out stops counting. `robofrontier/tasks/evaluate.py` (`placement_candidates`)
+later knocked out stops counting. `roboteam/tasks/evaluate.py` (`placement_candidates`)
 implements these checks.
 
 ## Presentation
@@ -49,5 +49,5 @@ implements these checks.
 Robo World and simple-background videos play Transport at 20× and 30 fps (`speedup` in
 `benchmark/release.json`). Each station keeps its own clock and loops independently; motion edits
 are read from the recording's own states and events
-(`robofrontier/media/edit_transport.py`, `robofrontier/media/transport_motion_signals.py`).
+(`roboteam/media/edit_transport.py`, `roboteam/media/transport_motion_signals.py`).
 See [Factory replay](../factory/replay.md).

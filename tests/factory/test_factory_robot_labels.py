@@ -4,9 +4,9 @@ import unittest
 import mujoco
 import numpy as np
 
-from robofrontier.factory.labels import robot_label_moves, ROBOT_LABEL
-from robofrontier.tasks.families import ROOT, resolve_case
-from robofrontier.physics.workstation import Workstation
+from roboteam.factory.labels import robot_label_moves, ROBOT_LABEL
+from roboteam.tasks.families import ROOT, resolve_case
+from roboteam.physics.workstation import Workstation
 
 
 class RobotLabelTests(unittest.TestCase):
@@ -37,7 +37,7 @@ class RobotLabelTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256((source/'scene.xml').read_bytes()).hexdigest(), before)
 
     def test_a_run_places_its_labels_where_its_videos_do(self):
-        from robofrontier.factory.labels import place_robot_labels
+        from roboteam.factory.labels import place_robot_labels
         case = resolve_case('mosaic-a04-6x12-d2')[2]
         world = Workstation(ROOT/case['directory']); world.frame()
         expected = robot_label_moves(world.model, world.data, avoid_objects=False)

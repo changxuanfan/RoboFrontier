@@ -1,4 +1,4 @@
-/* RoboFrontier project page. A clean paper page: light by default, dark on request (the
+/* RoboTeam project page. A clean paper page: light by default, dark on request (the
    Theme button sets data-theme on <html>). Family colors come from the Robo World floor zones. */
 :root,[data-theme="light"]{
   --bg:#ffffff;--bg2:#f7f7f5;--card:#ffffff;--card2:#f4f5f6;--line:#e6e7ea;--line2:#d3d6db;

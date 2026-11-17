@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from unittest import mock
 
-from robofrontier.engines.claude.policy_host import CentralizedPolicyHost
-from robofrontier.runtime.store import RuntimeStore
+from roboteam.engines.claude.policy_host import CentralizedPolicyHost
+from roboteam.runtime.store import RuntimeStore
 
 
 class FakeHost:
@@ -47,7 +47,7 @@ class PolicyHostTests(unittest.TestCase):
         def start(dispatcher, op, data=None):
             admin.append((op, host.host.prompts[:])); dispatcher.store.start(); return {'started': True}
         try:
-            with mock.patch('robofrontier.engines.claude.policy_host.ClaudeDispatcher.admin', start):
+            with mock.patch('roboteam.engines.claude.policy_host.ClaudeDispatcher.admin', start):
                 host.bind_and_bootstrap()
             self.assertEqual(self.calls, ['bind'])
             self.assertEqual(admin, [('request-start', [])])

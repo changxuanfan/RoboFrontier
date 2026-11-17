@@ -3,7 +3,7 @@
 This guide takes a fresh clone to a finished, collected run on one machine. Every step names
 the command, what it checks and what to do when it fails. Commands run from the repository
 root. Global options such as `--config FILE` go before the subcommand:
-`.venv/bin/robofrontier --config site.toml plan`.
+`.venv/bin/roboteam --config site.toml plan`.
 
 Platform details are in the [Mac](running/mac.md), [RunPod and plain Linux](running/runpod.md),
 [Slurm](running/slurm.md) and [Docker](running/docker.md) guides; every setting is in the
@@ -16,7 +16,7 @@ Platform details are in the [Mac](running/mac.md), [RunPod and plain Linux](runn
 | Operating system | macOS, or Linux with glibc 2.28 or newer |
 | [uv](https://docs.astral.sh/uv/) | Installs Python 3.12 (`.python-version`) and the locked packages from `uv.lock` |
 | Node.js and npm | Node.js 22 is what CI uses; the Codex host and the engine CLIs need it |
-| Engine CLI | Exactly the pinned version in `robofrontier/runtime/versions.py`: Codex `0.165.0`, Claude Code `2.1.316`. Install only the engine you will run |
+| Engine CLI | Exactly the pinned version in `roboteam/runtime/versions.py`: Codex `0.165.0`, Claude Code `2.1.316`. Install only the engine you will run |
 | Rendering | macOS: native OpenGL (`render.device = "native"`). Linux: NVIDIA EGL (`nvidia`, the default) or Mesa OSMesa (`cpu`, needs the system `libosmesa6` package or equivalent) |
 | Network | For `bootstrap` (about 186 MB of pinned assets), building the policy environment, and the model provider |
 
@@ -26,8 +26,8 @@ pinned ones.
 ## 2. Install
 
 ```sh
-git clone https://github.com/changxuanfan/RoboFrontier.git
-cd RoboFrontier
+git clone https://github.com/changxuanfan/RoboTeam.git
+cd RoboTeam
 uv sync --locked --extra oracle
 ```
 
@@ -47,7 +47,7 @@ off for runs.
 ## 3. Restore the assets
 
 ```sh
-.venv/bin/robofrontier bootstrap
+.venv/bin/roboteam bootstrap
 ```
 
 `bootstrap` downloads the policy asset archive pinned in `configs/policy-assets.json`, checks its
@@ -56,12 +56,12 @@ SHA-256, and restores every referenced file (the scene meshes and textures under
 each file's hash. It reuses files that already verify and calls no model. On failure it names
 the file or hash that differs: do not substitute another archive. For a machine without network
 access, copy the archive named in `configs/policy-assets.json` over and run
-`.venv/bin/python -m robofrontier.batch.handoff setup-assets --archive /path/to/the-archive.tar.gz`.
+`.venv/bin/python -m roboteam.batch.handoff setup-assets --archive /path/to/the-archive.tar.gz`.
 
 ## 4. Credentials: `.env`
 
 ```sh
-.venv/bin/python -m robofrontier.batch.handoff init-env
+.venv/bin/python -m roboteam.batch.handoff init-env
 ```
 
 This copies `.env.example` to `.env` with mode 0600 and refuses to overwrite an existing `.env`.
@@ -78,32 +78,32 @@ process environment wins.
 | `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, `KIMI_API_KEY`, `KIMI_CODE_API_KEY`, `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_ANTHROPIC_BASE_URL` | Third-party profiles of either engine |
 
 Codex subscription profiles (`luna_subscription` and others) use a login in
-`~/.robofrontier/codex-home` instead: `CODEX_HOME=~/.robofrontier/codex-home codex login`. Never
+`~/.roboteam/codex-home` instead: `CODEX_HOME=~/.roboteam/codex-home codex login`. Never
 put credentials in a TOML file, a command argument or a commit. The Claude subscription token
 reaches the CLI on a pipe, never in an environment variable. Profiles and their authentication
 are listed in the [provider guide](engines/README.md#providers).
 
 ## 5. A site TOML
 
-`robofrontier.toml` holds the defaults: Codex, profile `luna`, effort `high`, topology
+`roboteam.toml` holds the defaults: Codex, profile `luna`, effort `high`, topology
 `adaptive`, all 36 released cases, 36 parallel runs, NVIDIA rendering. Override what differs in
 a partial, untracked TOML, starting from the example for your platform:
 
 ```sh
 cp configs/examples/mac.toml site.toml      # or slurm.toml, runpod.toml
-.venv/bin/robofrontier --config site.toml config
+.venv/bin/roboteam --config site.toml config
 ```
 
 `config` prints the resolved settings. Unknown fields and invalid values are errors. Command
 options override the TOML: `--engine`, `--profile`, `--effort`, `--topology` (`single-agent`,
 `hierarchical`, `decentralized`, `adaptive`), `--parallel`, `--render`, `--level`,
 `--min-arms`, `--cases`, `--families`. Runs, receipts, exports and caches go under
-`paths.runs_root`; empty means `<repo>/runs`, and `ROBOFRONTIER_RUNS_ROOT` overrides both.
+`paths.runs_root`; empty means `<repo>/runs`, and `ROBOTEAM_RUNS_ROOT` overrides both.
 
 ## 6. Check the machine: `doctor`
 
 ```sh
-.venv/bin/robofrontier --config site.toml doctor
+.venv/bin/roboteam --config site.toml doctor
 ```
 
 Doctor starts the selected engine CLI (and Codex's tool sandbox when selected) and renders a real
@@ -115,7 +115,7 @@ without an NVIDIA GPU. A backend never falls back to another one.
 ## 7. See what would run: `plan`
 
 ```sh
-.venv/bin/robofrontier --config site.toml plan
+.venv/bin/roboteam --config site.toml plan
 ```
 
 `plan` lists the selected cases (`jobs`), the engine, profile and topology, and
@@ -129,20 +129,20 @@ reach. Build it once per host, into a folder outside the home folder and the rep
 needs network access and `uvx`):
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier
+.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam
 ```
 
 Then check it where the runs will run (on Slurm, on a compute node). The check drives each
 engine CLI with a local stub model, so it contacts no provider:
 
 ```sh
-.venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id> \
+.venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id> \
   --scratch <folder next to where batches go>
 ```
 
-On macOS `prepare` uses the build under `/Users/Shared/robofrontier` by default. On Linux set
-`ROBOFRONTIER_POLICY_ENV_BASE` to the base folder you built into; without it `prepare` refuses.
-`ROBOFRONTIER_POLICY_ENV=PATH` names a specific build. Preparation also refuses a build that is
+On macOS `prepare` uses the build under `/Users/Shared/roboteam` by default. On Linux set
+`ROBOTEAM_POLICY_ENV_BASE` to the base folder you built into; without it `prepare` refuses.
+`ROBOTEAM_POLICY_ENV=PATH` names a specific build. Preparation also refuses a build that is
 missing, changed, or has no passing check for this engine and its CLI version, and prints the two
 commands above; run the check again after changing a CLI. On Linux keep runs and `TMPDIR`
 outside `/tmp` (for example under `/var/tmp`). Details and known limits:
@@ -151,7 +151,7 @@ outside `/tmp` (for example under `/var/tmp`). Details and known limits:
 ## 9. Check the provider: `preflight`
 
 ```sh
-.venv/bin/robofrontier --config site.toml preflight --confirm-spend
+.venv/bin/roboteam --config site.toml preflight --confirm-spend
 ```
 
 Preflight makes real, possibly billable model calls: it checks that the selected profile and
@@ -164,7 +164,7 @@ or CLI version without a matching passed receipt, so check again after changing 
 ## 10. Freeze a batch: `prepare`
 
 ```sh
-.venv/bin/robofrontier --config site.toml prepare --output runs/policy/my-batch
+.venv/bin/roboteam --config site.toml prepare --output runs/policy/my-batch
 ```
 
 `prepare` writes the batch folder and freezes, per run, the task, scene, rules, prompts, source
@@ -176,7 +176,7 @@ prepared batch; prepare a new one instead. To try four small cases first:
 ## 11. Run: `run`
 
 ```sh
-.venv/bin/robofrontier run runs/policy/my-batch
+.venv/bin/roboteam run runs/policy/my-batch
 ```
 
 `run` loads `.env`, checks the frozen configuration's fingerprint, every run's input hashes, the
@@ -193,8 +193,8 @@ in place and it resumes by itself.
 ## 12. Watch and stop: `status`, `stop`
 
 ```sh
-.venv/bin/robofrontier status runs/policy/my-batch
-.venv/bin/robofrontier stop runs/policy/my-batch
+.venv/bin/roboteam status runs/policy/my-batch
+.venv/bin/roboteam stop runs/policy/my-batch
 ```
 
 `status` prints the supervisor's snapshot (each run's state, and the service's state on Mac or
@@ -210,8 +210,8 @@ database and model sessions, with the world rebuilt from the last recorded frame
 continuation is by hand:
 
 ```sh
-.venv/bin/robofrontier continue runs/policy/my-batch                     # every run that may continue
-.venv/bin/robofrontier continue runs/policy/my-batch --cases transport-a04-d1
+.venv/bin/roboteam continue runs/policy/my-batch                     # every run that may continue
+.venv/bin/roboteam continue runs/policy/my-batch --cases transport-a04-d1
 ```
 
 A continuation after the finish or the cutoff keeps the score recorded at that stop. If the
@@ -236,9 +236,9 @@ When every run has stopped, the batch collects its evidence into
 To do it by hand:
 
 ```sh
-.venv/bin/robofrontier collect runs/policy/my-batch --output runs/exports/my-batch
-.venv/bin/robofrontier archive runs/exports/my-batch --output runs/exports/my-batch.zip
-.venv/bin/robofrontier extract runs/exports/my-batch.zip --output runs/restored/my-batch
+.venv/bin/roboteam collect runs/policy/my-batch --output runs/exports/my-batch
+.venv/bin/roboteam archive runs/exports/my-batch --output runs/exports/my-batch.zip
+.venv/bin/roboteam extract runs/exports/my-batch.zip --output runs/restored/my-batch
 ```
 
 None of `runs/` is in Git; back it up separately ([evidence storage](running/evidence-storage.md)).

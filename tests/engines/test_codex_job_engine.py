@@ -8,13 +8,13 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier.engines.codex.job_engine import build_manifest
-from robofrontier.runtime.setup import write_json
+from roboteam.engines.codex.job_engine import build_manifest
+from roboteam.runtime.setup import write_json
 
 
 class JobManifestTests(unittest.TestCase):
     def test_pause_admission_refuses_historical_runtimes_without_physics_freeze(self):
-        with patch.dict(os.environ,{'ROBOFRONTIER_EGRESS_PAUSE_FILE':str(self.root/'engine/EGRESS_PAUSED')}):
+        with patch.dict(os.environ,{'ROBOTEAM_EGRESS_PAUSE_FILE':str(self.root/'engine/EGRESS_PAUSED')}):
             with self.assertRaisesRegex(ValueError,'newly frozen supported runtime'):
                 self.build()
     def setUp(self):
@@ -33,8 +33,8 @@ class JobManifestTests(unittest.TestCase):
             write_json(run/'private/inputs/codex.json', {'model': 'gpt-6-luna', 'provider': 'managed', 'effort': 'high',
                 'model_catalog': str(run/'private/inputs/models.json'), 'tool_backend': 'landlock-v1',
                 'profile': {'provider': 'openai', 'runner_backend': 'slurm-managed-v1'},
-                'args': ['-c', 'model="gpt-6-luna"', '-c', 'default_permissions="robofrontier"',
-                         '-c', 'permissions.robofrontier.filesystem={"/"="read"}',
+                'args': ['-c', 'model="gpt-6-luna"', '-c', 'default_permissions="roboteam"',
+                         '-c', 'permissions.roboteam.filesystem={"/"="read"}',
                          '-c', 'model_catalog_json='+json.dumps(str(run/'private/inputs/models.json'))]})
             self.jobs.append({'run_directory': str(run)})
 
@@ -45,7 +45,7 @@ class JobManifestTests(unittest.TestCase):
         manifest = self.build()
         self.assertEqual(len({t['permissions'] for t in manifest['tasks']}), 2)
         self.assertIn('default_permissions="rf_closed"', manifest['args'])
-        self.assertNotIn('default_permissions="robofrontier"', manifest['args'])
+        self.assertNotIn('default_permissions="roboteam"', manifest['args'])
         self.assertTrue(all(t['model'] == 'gpt-6-luna' for t in manifest['tasks']))
 
     def test_readable_credential_control_device_or_other_task_path_blocks_admission(self):
@@ -69,22 +69,22 @@ class JobManifestTests(unittest.TestCase):
         path = Path(self.jobs[0]['run_directory'])/'private/inputs/policy-access.json'
         access = json.loads(path.read_text()); access['filesystem'][str(egress)] = 'read'
         write_json(path, access)
-        with patch.dict(os.environ, {'ROBOFRONTIER_EGRESS_ROOT':str(egress)}):
+        with patch.dict(os.environ, {'ROBOTEAM_EGRESS_ROOT':str(egress)}):
             with self.assertRaisesRegex(ValueError, 'frozen deny table'):
                 self.build()
 
-    @patch('robofrontier.engines.codex.job_engine.require_pinned_cli', lambda env=None: None)
+    @patch('roboteam.engines.codex.job_engine.require_pinned_cli', lambda env=None: None)
     def test_proxy_loss_terminates_only_the_owned_native_process_group(self):
-        from robofrontier.engines.codex.job_engine import engine
+        from roboteam.engines.codex.job_engine import engine
         self.private.mkdir(mode=0o700)
         native = subprocess.Popen
         def start(args, **options):
             code = ('from pathlib import Path;import time;'
                     'Path('+repr(str(self.private/'control/ready.json'))+').write_text("{}");time.sleep(30)')
             return native([sys.executable,'-c',code],**options)
-        env={**os.environ,'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(self.private),
-             'ROBOFRONTIER_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
-        with patch('robofrontier.engines.codex.job_engine.subprocess.Popen',side_effect=start):
+        env={**os.environ,'ROBOTEAM_JOB_PRIVATE_ROOT':str(self.private),
+             'ROBOTEAM_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
+        with patch('roboteam.engines.codex.job_engine.subprocess.Popen',side_effect=start):
             with self.assertRaisesRegex(RuntimeError,'did not close cleanly'):
                 with engine(self.jobs,env=env,timeout_s=3) as (manifest,process):
                     (self.private/'EGRESS_ERROR').touch()
@@ -92,10 +92,10 @@ class JobManifestTests(unittest.TestCase):
                     while process.poll() is None and time.monotonic()<deadline:time.sleep(.05)
                     self.assertIsNotNone(process.poll())
 
-    @patch('robofrontier.engines.codex.job_engine.require_pinned_cli', lambda env=None: None)
+    @patch('roboteam.engines.codex.job_engine.require_pinned_cli', lambda env=None: None)
     def test_a_zombie_only_engine_group_does_not_abort_cleanup(self):
         # macOS answers killpg with EPERM once only zombies remain in the engine's group.
-        from robofrontier.engines.codex import job_engine
+        from roboteam.engines.codex import job_engine
         self.private.mkdir(mode=0o700)
         native = subprocess.Popen
         def start(args, **options):
@@ -103,12 +103,12 @@ class JobManifestTests(unittest.TestCase):
                     'signal.signal(signal.SIGTERM,lambda *a:sys.exit(0));'
                     'Path('+repr(str(self.private/'control/ready.json'))+').write_text("{}");time.sleep(30)')
             return native([sys.executable,'-c',code],**options)
-        env={**os.environ,'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(self.private),
-             'ROBOFRONTIER_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
+        env={**os.environ,'ROBOTEAM_JOB_PRIVATE_ROOT':str(self.private),
+             'ROBOTEAM_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
         exported = []
-        with patch('robofrontier.engines.codex.job_engine.subprocess.Popen',side_effect=start), \
-                patch('robofrontier.engines.codex.job_engine.os.killpg',side_effect=PermissionError(1,'Operation not permitted')) as killpg, \
-                patch('robofrontier.engines.codex.job_engine.export_sessions',side_effect=lambda *a: exported.append(a)):
+        with patch('roboteam.engines.codex.job_engine.subprocess.Popen',side_effect=start), \
+                patch('roboteam.engines.codex.job_engine.os.killpg',side_effect=PermissionError(1,'Operation not permitted')) as killpg, \
+                patch('roboteam.engines.codex.job_engine.export_sessions',side_effect=lambda *a: exported.append(a)):
             with job_engine.engine(self.jobs,env=env,timeout_s=3) as (manifest,process):
                 pass
         killpg.assert_called()

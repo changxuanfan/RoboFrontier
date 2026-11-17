@@ -11,11 +11,11 @@ import io
 
 import numpy as np
 
-from robofrontier.physics.observation_image import (DEFAULT_PROFILE, LEGACY_PROFILE, LOW_RESOLUTION_PROFILE,
+from roboteam.physics.observation_image import (DEFAULT_PROFILE, LEGACY_PROFILE, LOW_RESOLUTION_PROFILE,
                                                     observation_profile, save_observation)
-from robofrontier.runtime.pipeline import Service
-from robofrontier.runtime.setup import prepare_run, verify_inputs, write_json
-from robofrontier.tasks.config import load_harness
+from roboteam.runtime.pipeline import Service
+from roboteam.runtime.setup import prepare_run, verify_inputs, write_json
+from roboteam.tasks.config import load_harness
 
 
 class ObservationImageTests(unittest.TestCase):
@@ -83,7 +83,7 @@ class ObservationImageTests(unittest.TestCase):
         mujoco.mjr_readPixels(rgb,None,viewport,renderer._mjr_context);return rgb
 
     def test_profiles_that_do_not_reduce_encode_the_rendered_pixels_unchanged(self):
-        from robofrontier.physics.observation_image import reduced_size, render_size
+        from roboteam.physics.observation_image import reduced_size, render_size
         rgb=np.random.default_rng(7).integers(0,256,(560,896,3),dtype=np.uint8)
         with tempfile.TemporaryDirectory() as tmp:
             for name,size in ((DEFAULT_PROFILE,(1280,800)),('jpeg_896x560_q85',(896,560)),(LEGACY_PROFILE,(1280,800))):
@@ -93,7 +93,7 @@ class ObservationImageTests(unittest.TestCase):
                 self.assertEqual(path.read_bytes(),self.as_rendered(rgb,profile))
 
     def test_capture_reduces_only_under_the_low_resolution_profile_on_both_render_routes(self):
-        from robofrontier.physics.observation_image import render_size
+        from roboteam.physics.observation_image import render_size
         model=self.scene();data=mujoco.MjData(model);mujoco.mj_forward(model,data)
         sharp_profile=observation_profile({'observation_image_profile':DEFAULT_PROFILE})
         low_profile=observation_profile({'observation_image_profile':LOW_RESOLUTION_PROFILE})
@@ -132,11 +132,11 @@ class ObservationImageTests(unittest.TestCase):
                 self.assertLess(np.abs(np.asarray(low.convert('RGB'),dtype=float)-mean).mean(),6)
 
     def test_low_resolution_run_states_its_size_and_keeps_every_other_public_input(self):
-        from robofrontier.configuration import load_configuration
+        from roboteam.configuration import load_configuration
         self.assertEqual(load_configuration()['render']['observation_profile'],DEFAULT_PROFILE)
         self.assertEqual(load_configuration(overrides={'render':{'observation_profile':LOW_RESOLUTION_PROFILE}})
                          ['render']['observation_profile'],LOW_RESOLUTION_PROFILE)
-        from robofrontier.tasks.families import prepare
+        from roboteam.tasks.families import prepare
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);cfg=load_harness()
             for name in (DEFAULT_PROFILE,LOW_RESOLUTION_PROFILE):
@@ -166,7 +166,7 @@ class ObservationImageTests(unittest.TestCase):
             self.assertIn('camera_calibration',task_low)
 
     def test_dial_calibration_copy_keeps_frozen_original(self):
-        from robofrontier.tasks.families import prepare
+        from roboteam.tasks.families import prepare
         with tempfile.TemporaryDirectory() as tmp:
             run=prepare('dial-best5-n04-d1',Path(tmp)/'dial')
             public=json.loads((run/'public/inputs/task.json').read_text())

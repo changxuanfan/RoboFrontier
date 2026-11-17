@@ -1,7 +1,7 @@
 """Blue-handle support counts only over continuously sampled time."""
 import unittest
 
-from robofrontier.tasks.evaluate import SupportQualification
+from roboteam.tasks.evaluate import SupportQualification
 
 
 class SupportQualificationTests(unittest.TestCase):

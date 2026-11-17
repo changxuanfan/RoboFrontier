@@ -11,15 +11,15 @@ import sqlite3
 import tempfile
 import unittest
 
-from robofrontier.analysis import atomic, extract
-from robofrontier.analysis import metrics as M
-from robofrontier.analysis.archive import Run
+from roboteam.analysis import atomic, extract
+from roboteam.analysis import metrics as M
+from roboteam.analysis.archive import Run
 
 BASE = 1_000_000.0  # wall time = BASE + sim time
 
 
 def header(fmt='events-1s'):
-    return {'schema': 'robofrontier.suite-process.v2', 'format': fmt}
+    return {'schema': 'roboteam.suite-process.v2', 'format': fmt}
 
 
 def snap(t, objects=None, **result):

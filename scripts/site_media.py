@@ -7,7 +7,7 @@ montage: one 1920 x 1080 video per family, a 3 x 3 grid of its nine tasks (rows 
          difficulty levels, columns scales), each tile sped up to a common length.
 explainer: the README benchmark figure: per family, its largest team at Levels 1-3, with what
          each level changes. IMAGES holds initial-state renders named <case>-top.jpg and
-         <case>-global.jpg (the retired task atlas made them; see docs/cleanup-20261110.md).
+         <case>-global.jpg (the retired task atlas made them).
 stills:  README images: montage posters with a play badge and a 400-px thumbnail of every
          task. The README banner and teaser come from scripts/site_film.py.
 
@@ -69,7 +69,7 @@ def encode(sources, out, workers=2):
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     manifest_path = out / 'manifest.json'
     manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {
-        'schema': 'robofrontier.site-media.v1', 'set': spec['set'], 'tasks': {}}
+        'schema': 'roboteam.site-media.v1', 'set': spec['set'], 'tasks': {}}
     jobs = []
     for case, views in sorted(spec['tasks'].items()):
         for view, source in sorted(views.items()):

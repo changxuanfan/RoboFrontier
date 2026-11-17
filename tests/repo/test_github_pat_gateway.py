@@ -173,7 +173,7 @@ class GatewayTests(unittest.TestCase):
     def test_bom_and_environment_token_reading(self):
         self.token.write_text('\ufeff' + TOKEN + '\n', encoding='utf-8')
         self.assertEqual(read_token(self.token), TOKEN)
-        with patch.dict(os.environ, {'ROBOFRONTIER_GITHUB_PAT': TOKEN}):
+        with patch.dict(os.environ, {'ROBOTEAM_GITHUB_PAT': TOKEN}):
             self.assertEqual(read_token(), TOKEN)
         self.token.write_text('two\ntokens')
         with self.assertRaises(ValueError):

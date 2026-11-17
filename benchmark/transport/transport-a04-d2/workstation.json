@@ -1,5 +1,5 @@
 {
-  "schema": "robofrontier.workstation.v2",
+  "schema": "roboteam.workstation.v2",
   "case": {
     "family": "transport",
     "level": 2,
@@ -22819,7 +22819,7 @@
     }
   ],
   "physics_sha256": "de1b271f0aa30ba5c11d66196a3557209fbd01e2e4870682b51bc5201ca1fdb3",
-  "scene_sha256": "1ca5c95e58c5a61102f787be8da47e6e402ea5156134ec013d6ab58a983f3544",
+  "scene_sha256": "1ec51472dad599f78d499e177de3cdfc4941a877eabcccb76ddd179170091a94",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

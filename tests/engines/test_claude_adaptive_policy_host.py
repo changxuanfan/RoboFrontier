@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-from robofrontier.engines.claude.adaptive_policy_host import AdaptivePolicyHost
-from robofrontier.engines.claude.budget import BudgetLedger
-from robofrontier.runtime.store import RuntimeStore
+from roboteam.engines.claude.adaptive_policy_host import AdaptivePolicyHost
+from roboteam.engines.claude.budget import BudgetLedger
+from roboteam.runtime.store import RuntimeStore
 
 
 class FakeHost:
@@ -48,7 +48,7 @@ class AdaptiveHostTests(unittest.TestCase):
             self.assertEqual((op,host.host.prompts),('request-start',[]))
             host.store.start(); return {'started':True}
         try:
-            with mock.patch('robofrontier.engines.claude.adaptive_policy_host.AdaptiveDispatcher.admin',start):
+            with mock.patch('roboteam.engines.claude.adaptive_policy_host.AdaptiveDispatcher.admin',start):
                 host.bind_and_bootstrap()
             self.assertEqual(host.host.prompts,['frozen adaptive start'])
             self.assertEqual(host.store.get('lifecycle'),'running')

@@ -38,8 +38,8 @@ all of it stable for 0.25 s of simulation.
 Every new stable valid configuration is a trial, including ones passed through during motion.
 **Success latches**: once a valid input is entirely correct the case is solved, and later dial
 changes do not undo it. Collisions and support losses before the unlock stay recorded as
-process events. `robofrontier/tasks/dial.py` holds the feedback state machine;
-`robofrontier/tasks/evaluate.py` (`sample_dial`) decides validity.
+process events. `roboteam/tasks/dial.py` holds the feedback state machine;
+`roboteam/tasks/evaluate.py` (`sample_dial`) decides validity.
 
 ## Presentation
 

@@ -1,8 +1,8 @@
 // Invoked only by the loopback native test with synthetic credentials.
 const assert=require('node:assert/strict'),fs=require('node:fs');
-const {GatewayRpc}=require('../robofrontier/engines/codex/gateway_rpc');
-const {robotTool}=require('../robofrontier/engines/codex/codex_policy_host');
-const fileTools=require('../robofrontier/engines/codex/tool_broker');
+const {GatewayRpc}=require('../roboteam/engines/codex/gateway_rpc');
+const {robotTool}=require('../roboteam/engines/codex/codex_policy_host');
+const fileTools=require('../roboteam/engines/codex/tool_broker');
 async function main(manifest){
   let toolCalls=0,completed=0;
   const clients=manifest.tasks.map(t=>{
@@ -55,7 +55,7 @@ async function main(manifest){
     assert.equal(status.state,'closed');assert.equal(status.pendingTools,0);
     control.socket.destroy();
     fs.writeFileSync(manifest.recovery_directory+'/'+task.id+'.json',JSON.stringify({
-      schema:'robofrontier.task-recovery-grant.v1',taskId:task.id,run:task.run,
+      schema:'roboteam.task-recovery-grant.v1',taskId:task.id,run:task.run,
       threads:status.threads,nonce,expiresAt:Date.now()/1000+120}),{mode:0o600});
     let recoveryTools=0,finished;
     const recovered=new GatewayRpc(manifest.endpoint,task.id,{recoveryNonce:nonce,

@@ -4,8 +4,8 @@ import subprocess
 import unittest
 from types import SimpleNamespace
 
-from robofrontier.io import ROOT
-from robofrontier.runtime import versions
+from roboteam.io import ROOT
+from roboteam.runtime import versions
 
 
 def cli(output):

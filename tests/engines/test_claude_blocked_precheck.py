@@ -8,8 +8,8 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from robofrontier.engines.claude import claude_blocked_precheck as check
-from robofrontier.engines.claude import preflight as claude_precheck
+from roboteam.engines.claude import claude_blocked_precheck as check
+from roboteam.engines.claude import preflight as claude_precheck
 from engines.test_claude_precheck_integration import PrecheckModel
 
 

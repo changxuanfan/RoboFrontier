@@ -1,5 +1,5 @@
 {
-  "schema": "robofrontier.workstation.v2",
+  "schema": "roboteam.workstation.v2",
   "case": {
     "family": "dial",
     "level": 1,
@@ -32417,7 +32417,7 @@
     }
   ],
   "physics_sha256": "522cf0319d03e6b67d53eb86bde74319b3ab3a3ccc5931c6b0184f55bbc0a61e",
-  "scene_sha256": "66ad670c13a8f96053c1536508d3d48d09843a61230e8a291aa2b26bf08f6923",
+  "scene_sha256": "39ec5d5f220a9076a23c1cd01c3062c5b4c663c01f43d3ddd5e3793a20fd0d2c",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

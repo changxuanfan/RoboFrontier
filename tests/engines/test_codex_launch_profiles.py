@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from robofrontier.engines.codex.launch import profile, launch_config
+from roboteam.engines.codex.launch import profile, launch_config
 
 
 class CodexLaunchProfileTests(unittest.TestCase):
@@ -13,7 +13,7 @@ class CodexLaunchProfileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             launch = launch_config(p, Path(folder))
         self.assertEqual((p['model'], p['provider'], p['effort']), ('gpt-6.1-sol', 'github_pat', 'high'))
-        self.assertIn('model_providers.github_pat.env_key="ROBOFRONTIER_GITHUB_PAT"', launch['args'])
+        self.assertIn('model_providers.github_pat.env_key="ROBOTEAM_GITHUB_PAT"', launch['args'])
         self.assertIn('model_providers.github_pat.requires_openai_auth=false', launch['args'])
         self.assertIn('model_providers.github_pat.supports_websockets=false', launch['args'])
         self.assertIn('model_providers.github_pat.http_headers.X-GitHub-Api-Version="2025-04-01"', launch['args'])
@@ -26,7 +26,7 @@ class CodexLaunchProfileTests(unittest.TestCase):
         self.assertEqual((p['base_url'], p['env_key'], p['http_headers']), (base['base_url'], base['env_key'], base['http_headers']))
         with tempfile.TemporaryDirectory() as folder:
             launch = launch_config(p, Path(folder))
-        self.assertIn('model_providers.github_pat.env_key="ROBOFRONTIER_GITHUB_PAT"', launch['args'])
+        self.assertIn('model_providers.github_pat.env_key="ROBOTEAM_GITHUB_PAT"', launch['args'])
         self.assertNotIn('Authorization', json.dumps(launch))
 
     def test_credentials_and_invalid_header_names_cannot_enter_frozen_args(self):

@@ -3,13 +3,13 @@
 Every policy role is a native Codex app-server thread (`thread/start`, `turn/start`,
 `thread/fork`) with the robot tool as an app-server dynamic tool. All four topologies run:
 `adaptive` (the default), `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is
-Codex 0.165.0 (`robofrontier/runtime/versions.py`). A run starts only with a passed compatibility
+Codex 0.165.0 (`roboteam/runtime/versions.py`). A run starts only with a passed compatibility
 receipt for its profile, catalog and CLI version ([Preflight and receipts](#preflight-and-receipts)).
 What both engines share is in the [engine overview](README.md); the
 [Claude Code guide](claude-code.md) has the same sections.
 
-The engine is `robofrontier/engines/codex/`: `launch.py` builds the app-server configuration and
-Codex home, `robofrontier/batch/codex_batch.py` prepares and supervises batches, and the Node
+The engine is `roboteam/engines/codex/`: `launch.py` builds the app-server configuration and
+Codex home, `roboteam/batch/codex_batch.py` prepares and supervises batches, and the Node
 `codex_policy_host.js`, `codex_rpc.js`, `codex_preflight.js` and `codex_initialize.js` drive
 app-server.
 
@@ -21,8 +21,8 @@ model calls:
 ```sh
 npm install --global @openai/codex@0.165.0      # or: npm install --prefix "$PWD/.codex-tools" @openai/codex@0.165.0
 codex --version
-.venv/bin/robofrontier plan --level 1 --min-arms --parallel 4
-.venv/bin/robofrontier prepare --render native \
+.venv/bin/roboteam plan --level 1 --min-arms --parallel 4
+.venv/bin/roboteam prepare --render native \
   --level 1 --min-arms --parallel 4 --output runs/policy/codex-l1
 ```
 
@@ -40,7 +40,7 @@ Profiles are the `codex` section of `configs/models.json`; the
 provider settings are process-local and never change the user's global Codex configuration.
 
 **API profiles** (`luna`, OpenLux, third-party) read their key from `.env`. With the default
-`runtime.codex_home_scope = "task"` each run gets its own Codex home under `.robofrontier/codex/`
+`runtime.codex_home_scope = "task"` each run gets its own Codex home under `.roboteam/codex/`
 (or under `runtime.codex_home`), shared by that run's Controller, snapshots and delegates so fork
 lineage stays readable. Homes are initialized one at a time before any task host starts.
 
@@ -51,12 +51,12 @@ talks to a loopback process that holds the Anthropic key and translates the prot
 **ChatGPT login** (`luna_subscription`, `sol61_subscription`, `terra61_subscription`, `astra`)
 uses Codex's own login and needs `runtime.codex_home_scope = "shared"` (task scope refuses these
 profiles). The shared home is `runtime.codex_home`, else `CODEX_HOME`, else
-`~/.robofrontier/codex-home`, never the personal `~/.codex`. Log in there once; a batch refuses
+`~/.roboteam/codex-home`, never the personal `~/.codex`. Log in there once; a batch refuses
 to start without the login:
 
 ```sh
-CODEX_HOME=~/.robofrontier/codex-home codex login
-CODEX_HOME=~/.robofrontier/codex-home codex login status
+CODEX_HOME=~/.roboteam/codex-home codex login
+CODEX_HOME=~/.roboteam/codex-home codex login status
 ```
 
 ```toml
@@ -78,12 +78,12 @@ command-line overrides that disable every MCP server found in the native and pro
 configuration, and the host and preflight check that none is enabled before inference; the user's
 files are not rewritten. A home's location is recorded in each run's `codex-home.json`.
 
-`robofrontier doctor` checks the installed CLI version, the sandbox or tool backend and a real
+`roboteam doctor` checks the installed CLI version, the sandbox or tool backend and a real
 render. It does not check credentials or call a model.
 
 ## Isolation
 
-The frozen access table (`robofrontier/runtime/access.py`) closes the checkout, the home
+The frozen access table (`roboteam/runtime/access.py`) closes the checkout, the home
 directory, other runs and shared storage to the policy. `runtime.codex_tool_backend` selects how
 model shell, patch and image tools are confined:
 
@@ -109,14 +109,14 @@ The installed-CLI broker test, without inference, inspects the model's tool inve
 forged native calls and runs fork/resume with eight concurrent roles:
 
 ```sh
-.venv/bin/python -m robofrontier.engines.codex.check_codex_broker --output runs/engineering/broker-check
+.venv/bin/python -m roboteam.engines.codex.check_codex_broker --output runs/engineering/broker-check
 ```
 
 ## Preflight and receipts
 
 ```sh
-.venv/bin/robofrontier preflight --confirm-spend               # full check, real spend
-.venv/bin/robofrontier preflight --confirm-spend --smoke-only  # image/tool round trip only
+.venv/bin/roboteam preflight --confirm-spend               # full check, real spend
+.venv/bin/roboteam preflight --confirm-spend --smoke-only  # image/tool round trip only
 ```
 
 Without `--confirm-spend` it makes no call and reports `not_run`. Pass the same `--config` and
@@ -129,17 +129,17 @@ hash, CLI version and tool backend, and refuses on any mismatch; a smoke receipt
 run. Local checks of the real CLI against a synthetic Responses service, with no billing:
 
 ```sh
-.venv/bin/python -m robofrontier.engines.codex.check_codex_cli --output runs/engineering/cli-check
-.venv/bin/python -m robofrontier.engines.codex.check_codex_snapshot
+.venv/bin/python -m roboteam.engines.codex.check_codex_cli --output runs/engineering/cli-check
+.venv/bin/python -m roboteam.engines.codex.check_codex_snapshot
 ```
 
 ## Run, status and stop
 
 ```sh
-.venv/bin/robofrontier run runs/policy/codex-l1        # launchd on macOS; --durable on Linux
-.venv/bin/robofrontier status runs/policy/codex-l1
-.venv/bin/robofrontier stop runs/policy/codex-l1
-.venv/bin/robofrontier continue runs/policy/codex-l1   # by hand, as the same trials
+.venv/bin/roboteam run runs/policy/codex-l1        # launchd on macOS; --durable on Linux
+.venv/bin/roboteam status runs/policy/codex-l1
+.venv/bin/roboteam stop runs/policy/codex-l1
+.venv/bin/roboteam continue runs/policy/codex-l1   # by hand, as the same trials
 ```
 
 `run` makes paid calls. It checks the receipt, the frozen configuration and every run's input
@@ -149,7 +149,7 @@ actions, brakes, evaluates and seals. An ended world never restarts. Each run's 
 `stopped_before_start`, `closed` (host exited cleanly; says nothing about task success) or
 `needs_review` (any other exit, a stop between segments, or the 48 h
 [wall backstop](../running/continuation.md#wall-backstop), whose result is not counted). On Slurm, use
-`robofrontier slurm-submit` ([Slurm](../running/slurm.md)).
+`roboteam slurm-submit` ([Slurm](../running/slurm.md)).
 
 ## Sessions and delegation
 
@@ -163,7 +163,7 @@ acknowledgements keep their evidence and stop automatic replay.
 Do not start a turn by hand in a live run's thread. Codex Desktop's `notLoaded` label does not mean
 an app-server stopped; when auditing with `thread/list`, include the app-server and exec sources.
 Threads that Codex Desktop creates cannot receive the dynamic `robot` tool;
-`python -m robofrontier.engines.codex.desktop_robot_mcp` is a global MCP server that gives them
+`python -m roboteam.engines.codex.desktop_robot_mcp` is a global MCP server that gives them
 the same role API by mapping the calling thread (from each call's `_meta`) to its bound role.
 Print its Desktop `config.toml` entry with `--print-config` (add `--runs-root` when runs are not
 under the default runs root) and register it once; the entry sets

@@ -12,9 +12,9 @@ import unittest
 
 from engines.test_claude_parallel_physics_smoke import CompactRequests
 from engines.test_claude_standing_team_integration import StandingModel
-from robofrontier.batch.claude_batch import run_batch
-from robofrontier.runtime.store import RuntimeStore
-from robofrontier.batch.claude_prepare import prepare_batch
+from roboteam.batch.claude_batch import run_batch
+from roboteam.runtime.store import RuntimeStore
+from roboteam.batch.claude_prepare import prepare_batch
 
 
 class PhysicalStandingModel(StandingModel):
@@ -32,7 +32,7 @@ class PhysicalStandingModel(StandingModel):
         return super().choose_tool(names, text, blocks, has_result)
 
 
-@unittest.skipUnless(os.environ.get('ROBOFRONTIER_PHYSICS_STANDING') == '1' and shutil.which('claude'),
+@unittest.skipUnless(os.environ.get('ROBOTEAM_PHYSICS_STANDING') == '1' and shutil.which('claude'),
                      'Opt-in requires Claude CLI, current scene assets and a native renderer')
 class StandingPhysicsSmokeTests(unittest.TestCase):
     def test_both_topologies_run_real_world_mailboxes_images_actions_and_seal(self):

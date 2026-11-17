@@ -9,9 +9,9 @@ import unittest
 import uuid
 from unittest.mock import patch
 
-from robofrontier.engines.claude.profile_identity import fingerprint
-from robofrontier.engines.claude.claude_readiness import BASIC, BLOCKED, check_receipts
-from robofrontier.engines.claude import preflight as claude_precheck, claude_blocked_precheck
+from roboteam.engines.claude.profile_identity import fingerprint
+from roboteam.engines.claude.claude_readiness import BASIC, BLOCKED, check_receipts
+from roboteam.engines.claude import preflight as claude_precheck, claude_blocked_precheck
 from engines.test_claude_precheck_integration import PrecheckModel
 
 
@@ -22,10 +22,10 @@ class ReadinessTests(unittest.TestCase):
         self.version='test-cli 1'; parent=str(uuid.uuid4()); child=str(uuid.uuid4())
         identity={'profile':'test','requested_model':'test-model','profile_sha256':fingerprint(self.profile),
                   'claude_version':self.version,'budget_usd':1,'passed':True}
-        self.basic={**identity,'schema':'robofrontier.claude-precheck.v1','fork_checked':True,'total_cost_usd':.04,
+        self.basic={**identity,'schema':'roboteam.claude-precheck.v1','fork_checked':True,'total_cost_usd':.04,
                     'checks':[{'name':name,'passed':True,'checks':{k:True for k in facts},'cost_usd':.01,
                                'session_id':child if name=='fork' else parent} for name,facts in BASIC.items()]}
-        self.blocked={**identity,'schema':'robofrontier.claude-blocked-precheck.v1','cost_complete':True,
+        self.blocked={**identity,'schema':'roboteam.claude-blocked-precheck.v1','cost_complete':True,
                       'reported_cost_usd':.03,'checks':{k:True for k in BLOCKED},'error_type':None,
                       'parent_session':parent,'child_session':child}
     def tearDown(self): self.tmp.cleanup()
@@ -84,7 +84,7 @@ class ReadinessTests(unittest.TestCase):
 class RequireReadyTests(unittest.TestCase):
     def test_a_claude_run_without_receipts_is_refused(self):
         import tempfile
-        from robofrontier.engines.claude.claude_readiness import require_ready
+        from roboteam.engines.claude.claude_readiness import require_ready
         with tempfile.TemporaryDirectory() as root:
             with self.assertRaisesRegex(ValueError, 'No Claude precheck receipts'):
                 require_ready('haiku', runs=root)

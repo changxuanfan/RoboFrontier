@@ -9,7 +9,7 @@ import tempfile
 import unittest
 import zlib
 
-from robofrontier.analysis.archive import Run
+from roboteam.analysis.archive import Run
 
 LOG = 'private/outputs/suite-process.jsonl'
 

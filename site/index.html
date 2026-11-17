@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RoboFrontier — Multimodal agents in a multi-robot world</title>
-<meta name="description" content="RoboFrontier: a benchmark where multimodal agents organize, communicate and collaborate across up to sixteen robot arms in one physical world.">
-<meta property="og:title" content="RoboFrontier">
+<title>RoboTeam — Multimodal agents in a multi-robot world</title>
+<meta name="description" content="RoboTeam: a benchmark where multimodal agents organize, communicate and collaborate across up to sixteen robot arms in one physical world.">
+<meta property="og:title" content="RoboTeam">
 <meta property="og:description" content="Multimodal agents in charge of up to sixteen robot arms: 36 physical tasks in four families, in one simulated robot world.">
 <meta property="og:image" content="assets/img/og.jpg">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -21,7 +21,7 @@
 <body>
 <a class="skip" href="#overview">Skip to content</a>
 <header class="rail" id="rail">
-  <a class="brand" href="#top" aria-label="RoboFrontier home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>RoboFrontier</a>
+  <a class="brand" href="#top" aria-label="RoboTeam home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>RoboTeam</a>
   <nav aria-label="Sections">
     <a href="#overview" data-chapter="overview">Overview</a>
     <a href="#benchmark" data-chapter="benchmark">Benchmark</a>
@@ -31,7 +31,7 @@
     <a href="#cite" data-chapter="cite">Cite</a>
   </nav>
   <div class="rail-links">
-    <a href="https://github.com/changxuanfan/RoboFrontier">GitHub</a>
+    <a href="https://github.com/changxuanfan/RoboTeam">GitHub</a>
     <button class="theme" type="button" id="theme" aria-label="Switch to dark theme" aria-pressed="false"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><span>Theme</span></button>
   </div>
 </header>
@@ -40,11 +40,11 @@
 <section class="hero" aria-labelledby="hero-title">
   <div class="hero-text">
     <p class="plate"><i aria-hidden="true"></i>Multi-robot benchmark · Multimodal agents</p>
-    <h1 id="hero-title">RoboFrontier</h1>
+    <h1 id="hero-title">RoboTeam</h1>
     <p class="title-line">Can Multimodal Agents Work Together on Long Physical Tasks?</p>
-    <p class="lede"><b>Can multimodal agents run a robot world?</b> RoboFrontier puts multimodal agents in charge of up to sixteen robot arms in Robo World, a physical simulation. They read the task, split the work, talk and recover from mistakes, and are measured on all of it.</p>
+    <p class="lede"><b>Can multimodal agents run a robot world?</b> RoboTeam puts multimodal agents in charge of up to sixteen robot arms in Robo World, a physical simulation. They read the task, split the work, talk and recover from mistakes, and are measured on all of it.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/changxuanfan/RoboFrontier"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg>Code</a>
+      <a class="btn primary" href="https://github.com/changxuanfan/RoboTeam"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg>Code</a>
       <button class="btn" type="button" data-film><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>Film <span>3:41</span></button>
       <a class="btn" href="data/tasks.json" download>Task data</a>
       <a class="btn" href="#cite">BibTeX</a>
@@ -242,31 +242,31 @@
 <section class="chapter cite" id="cite" aria-labelledby="cite-title">
   <div class="chapter-head reveal">
     <p class="kicker">06 · Cite</p>
-    <h2 id="cite-title">Use RoboFrontier.</h2>
+    <h2 id="cite-title">Use RoboTeam.</h2>
   </div>
   <div class="cite-grid reveal">
     <div class="code-card">
       <button class="copy" type="button" data-copy="bibtex">Copy</button>
-<pre id="bibtex">@misc{robofrontier2026,
-  title  = {RoboFrontier: Can Multimodal Agents Work Together on Long
+<pre id="bibtex">@misc{roboteam2026,
+  title  = {RoboTeam: Can Multimodal Agents Work Together on Long
             Physical Tasks?},
   author = {Fan, Changxuan and others},
   year   = {2026},
-  url    = {https://github.com/changxuanfan/RoboFrontier}
+  url    = {https://github.com/changxuanfan/RoboTeam}
 }</pre>
     </div>
     <ul class="link-list">
-      <li><a href="https://github.com/changxuanfan/RoboFrontier">Source code <span>MIT</span></a></li>
+      <li><a href="https://github.com/changxuanfan/RoboTeam">Source code <span>MIT</span></a></li>
       <li><a href="data/tasks.json">Public task data <span>JSON</span></a></li>
       <li><a href="data/media.json">Video index <span>JSON</span></a></li>
       <li><a href="data/results.json">Benchmark results <span>JSON</span></a></li>
-      <li><a href="https://github.com/changxuanfan/RoboFrontier/blob/main/LICENSE-DATA.md">Data and media <span>CC BY 4.0</span></a></li>
+      <li><a href="https://github.com/changxuanfan/RoboTeam/blob/main/LICENSE-DATA.md">Data and media <span>CC BY 4.0</span></a></li>
     </ul>
   </div>
 </section>
 </main>
 
-<footer class="foot"><span>RoboFrontier · 2026</span><span>All videos are simulation renders in Robo World, not real hardware.</span></footer>
+<footer class="foot"><span>RoboTeam · 2026</span><span>All videos are simulation renders in Robo World, not real hardware.</span></footer>
 
 <dialog class="player" id="player" aria-label="Video player">
   <div class="player-top">

@@ -6,9 +6,9 @@ import time
 import unittest
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.runtime.setup import prepare_run
-from robofrontier.runtime.service import RuntimeService
-from robofrontier.tasks.config import load_harness
+from roboteam.runtime.setup import prepare_run
+from roboteam.runtime.service import RuntimeService
+from roboteam.tasks.config import load_harness
 
 
 class DirectTeamStartTests(unittest.TestCase):
@@ -74,7 +74,7 @@ class DirectTeamStartTests(unittest.TestCase):
                 started = []
                 service.world.start_trial = lambda: started.append(1)
                 service.task['execution_readiness'] = readiness
-                with patch('robofrontier.tasks.families.validate_frozen_policy',
+                with patch('roboteam.tasks.families.validate_frozen_policy',
                            side_effect=ValueError('Frozen policy release differs')):
                     result = call('Meta', 'start')
                 self.assertIn('error', result)

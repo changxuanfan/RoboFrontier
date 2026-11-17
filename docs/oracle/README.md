@@ -6,14 +6,14 @@ the agent wrote a program for each family that reads hidden state (the scene fil
 poses and the evaluator) and drives the arms through the same robot commands as a policy. Its
 runs show that every task can be done and supply the reference videos.
 
-The programs it wrote are kept in `robofrontier/oracle/`. Running one replays the Oracle's
+The programs it wrote are kept in `roboteam/oracle/`. Running one replays the Oracle's
 solution and makes no further model calls.
 
 Each Oracle run uses its own copy of the case, `benchmark/oracle/<case>/`: the scene its
 recordings were made on, with that scene's physics. The release physics in
 `benchmark/<family>/<case>/scene.xml` does not apply to it ([physics](../physics.md)).
 
-| Family | Native entry (`robofrontier/oracle/`) | Strategy |
+| Family | Native entry (`roboteam/oracle/`) | Strategy |
 | --- | --- | --- |
 | Transport | `run_transport_full_oracle.py` | Full-order solver |
 | Mosaic | `run_mosaic_oracle.py` | Parallel endpoint planning in scratch models, one live world |
@@ -44,7 +44,7 @@ playback runs at the family speed (Transport and Relay 20×, Mosaic 30×, Dial 1
 
 ```sh
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap
+.venv/bin/roboteam bootstrap
 ```
 
 ## Run a reference
@@ -53,17 +53,17 @@ Every command takes `--config FILE` before `oracle`, makes no model calls and ne
 world.
 
 ```sh
-.venv/bin/robofrontier oracle plan --families mosaic --level 1 --min-arms
-.venv/bin/robofrontier oracle prepare --cases mosaic-a04-6x12-d1 \
+.venv/bin/roboteam oracle plan --families mosaic --level 1 --min-arms
+.venv/bin/roboteam oracle prepare --cases mosaic-a04-6x12-d1 \
   --output runs/oracle/mosaic-a04-d1 --render native
-.venv/bin/robofrontier oracle run runs/oracle/mosaic-a04-d1
+.venv/bin/roboteam oracle run runs/oracle/mosaic-a04-d1
 ```
 
 From another terminal:
 
 ```sh
-.venv/bin/robofrontier oracle status runs/oracle/mosaic-a04-d1
-.venv/bin/robofrontier oracle stop runs/oracle/mosaic-a04-d1
+.venv/bin/roboteam oracle status runs/oracle/mosaic-a04-d1
+.venv/bin/roboteam oracle stop runs/oracle/mosaic-a04-d1
 ```
 
 | Command | What it does |
@@ -74,7 +74,7 @@ From another terminal:
 | `status` | Reads `oracle-status.json` and the owner lock; never a live database |
 | `stop` | Writes `STOP`; the supervisor sends SIGTERM to the native owner. A stop before launch prevents launch |
 
-`prepare` options (defaults from `[oracle]` and `[render]` in `robofrontier.toml`):
+`prepare` options (defaults from `[oracle]` and `[render]` in `roboteam.toml`):
 
 | Option | Default | Meaning |
 | --- | --- | --- |
@@ -107,12 +107,12 @@ evaluator log, `report.json`, recovery files). `oracle-status.json` ends in one 
 | `incomplete` | Finished without passing; read `trial/report.json` and `oracle.log` |
 | `interrupted` | Stopped by `STOP`, a signal or the deadline |
 
-From `robofrontier.oracle-report.v2` reports, status also copies `task_goal_met` (evaluator
+From `roboteam.oracle-report.v2` reports, status also copies `task_goal_met` (evaluator
 outcome), `task_completed` (with valid physics and resolved execution), `process_clean`,
 `execution_resolved`, `physics_valid` and `strategy_completed`. If a supervisor is killed its
 native child can outlive it: check the recorded PID before collecting. Once every process has
 stopped, `trial/motion` can be imported into Robo World with
-[`robofrontier factory import-motion`](../factory/replay.md#import-a-closed-benchmark-recording).
+[`roboteam factory import-motion`](../factory/replay.md#import-a-closed-benchmark-recording).
 
 ## Review and assistance
 

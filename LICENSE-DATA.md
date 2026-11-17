@@ -1,6 +1,6 @@
 # Data and media license
 
-Copyright (c) 2026 The RoboFrontier Authors
+Copyright (c) 2026 The RoboTeam Authors
 
 The benchmark data and media in this repository are licensed under the
 [Creative Commons Attribution 4.0 International License (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
@@ -34,5 +34,5 @@ These keep their own licenses and are not relicensed here:
 
 ## Attribution
 
-Cite RoboFrontier and link to <https://github.com/changxuanfan/RoboFrontier>, state
+Cite RoboTeam and link to <https://github.com/changxuanfan/RoboTeam>, state
 the license, and indicate any changes you made.

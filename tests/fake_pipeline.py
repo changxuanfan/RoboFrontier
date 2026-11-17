@@ -2,8 +2,8 @@
 import os
 from pathlib import Path
 
-# Tests never probe the real model API hosts (robofrontier/runtime/outage.py).
-os.environ.setdefault('ROBOFRONTIER_OUTAGE_PROBE', 'off')
+# Tests never probe the real model API hosts (roboteam/runtime/outage.py).
+os.environ.setdefault('ROBOTEAM_OUTAGE_PROBE', 'off')
 
 class FakeWorld:
     def __init__(self,directory,task):

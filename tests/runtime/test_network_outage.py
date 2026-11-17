@@ -4,10 +4,10 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier.runtime import outage as network_outage
-from robofrontier.runtime.egress_pause import WorldPause
-from robofrontier.runtime.outage import OutageMonitor, monitor_for
-from robofrontier.runtime.clock import BudgetGuard, protocol
+from roboteam.runtime import outage as network_outage
+from roboteam.runtime.egress_pause import WorldPause
+from roboteam.runtime.outage import OutageMonitor, monitor_for
+from roboteam.runtime.clock import BudgetGuard, protocol
 from runtime import test_active_time as active
 
 ACTIVE = active.ACTIVE
@@ -35,13 +35,13 @@ class OutageMonitorTests(unittest.TestCase):
     def test_only_local_active_time_policy_runs_probe_their_engine_hosts(self):
         task = {'execution_readiness': 'prepared_policy_trial', 'run_protocol': {'clock': ACTIVE}}
         with patch.dict(os.environ, {network_outage.SWITCH: 'on'}):
-            os.environ.pop('SLURM_JOB_ID', None); os.environ.pop('ROBOFRONTIER_EGRESS_PAUSE_FILE', None)
+            os.environ.pop('SLURM_JOB_ID', None); os.environ.pop('ROBOTEAM_EGRESS_PAUSE_FILE', None)
             self.assertEqual(monitor_for(task, {'engine': 'claude'}).hosts, ('api.anthropic.com',))
             self.assertEqual(monitor_for(task, {'engine': 'codex'}).hosts, ('chatgpt.com', 'auth.openai.com'))
             self.assertIsNone(monitor_for({**task, 'run_protocol': {}}, {'engine': 'codex'}))
             # A Slurm job with direct egress probes too; one with an egress pause does not.
             with patch.dict(os.environ, {'SLURM_JOB_ID': '1'}): self.assertIsNotNone(monitor_for(task, {'engine': 'codex'}))
-            with patch.dict(os.environ, {'ROBOFRONTIER_EGRESS_PAUSE_FILE': '/x'}): self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
+            with patch.dict(os.environ, {'ROBOTEAM_EGRESS_PAUSE_FILE': '/x'}): self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
         with patch.dict(os.environ, {network_outage.SWITCH: 'off'}):
             self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
 

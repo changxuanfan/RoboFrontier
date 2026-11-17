@@ -7,9 +7,9 @@ from unittest.mock import patch
 import mujoco
 import numpy as np
 
-from robofrontier.tasks.config import load_harness
+from roboteam.tasks.config import load_harness
 from single_arm_scene import make_world
-from robofrontier.physics.motion_check import prepare_check,state_id
+from roboteam.physics.motion_check import prepare_check,state_id
 from physics.test_motion_check import robot_fixture
 from motion import filled, MOVE
 

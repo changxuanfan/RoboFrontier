@@ -1,5 +1,5 @@
 {
-  "schema": "robofrontier.workstation.v2",
+  "schema": "roboteam.workstation.v2",
   "id": "transport-a08-d3",
   "collection": "frontier_suite",
   "arm_count": 8,

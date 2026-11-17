@@ -36,7 +36,7 @@ public task's `completion` block holds the thresholds:
 | Level 1 position | Whole rotated footprint inside the pocket (0.3 mm margin), bottom within 0.8 mm of the pocket floor and touching it |
 | Levels 2, 3 position | Center within 6 mm in xy (`mosaic-center-6mm-v1`) and 3 mm in z |
 
-A placement that is later disturbed stops counting. `robofrontier/tasks/evaluate.py`
+A placement that is later disturbed stops counting. `roboteam/tasks/evaluate.py`
 (`mosaic_candidates`) implements these checks.
 
 ## Presentation

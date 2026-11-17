@@ -6,8 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from robofrontier.batch import linux
-from robofrontier.runtime import layout as run_layout
+from roboteam.batch import linux
+from roboteam.runtime import layout as run_layout
 
 
 class LinuxServiceTests(unittest.TestCase):

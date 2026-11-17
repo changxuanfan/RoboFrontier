@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {PolicyHost}=require('../../robofrontier/engines/codex/codex_policy_host');
+const {PolicyHost}=require('../../roboteam/engines/codex/codex_policy_host');
 
 // A run folder holding the frozen system and start messages a prepared run has.
 function frozenRun() {

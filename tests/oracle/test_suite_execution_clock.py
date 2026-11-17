@@ -2,11 +2,11 @@
 import copy,tempfile,unittest
 from pathlib import Path
 import mujoco,numpy as np
-from robofrontier.runtime.pipeline import World
-from robofrontier.physics.robot_control import PandaArm
-from robofrontier.tasks.evaluate import Monitor
-from robofrontier.oracle.trial import Trial
-from robofrontier.tasks.families import oracle_directory
+from roboteam.runtime.pipeline import World
+from roboteam.physics.robot_control import PandaArm
+from roboteam.tasks.evaluate import Monitor
+from roboteam.oracle.trial import Trial
+from roboteam.tasks.families import oracle_directory
 
 class SuiteExecutionClockTests(unittest.TestCase):
     def test_reference_and_policy_loops_match_on_identical_commands(self):

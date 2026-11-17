@@ -7,13 +7,13 @@ from unittest.mock import patch
 import mujoco
 import numpy as np
 
-from robofrontier.media.motion_recording import MotionWriter
-from robofrontier.runtime.setup import write_json
-from robofrontier.media.edit_dial import (
+from roboteam.media.motion_recording import MotionWriter
+from roboteam.runtime.setup import write_json
+from roboteam.media.edit_dial import (
     DialReplayTrack, build_dial_edit, classify, command_evidence, event_evidence,
     process_covered,
 )
-from robofrontier.physics.workstation import Workstation
+from roboteam.physics.workstation import Workstation
 
 
 class DialMotionEditTests(unittest.TestCase):

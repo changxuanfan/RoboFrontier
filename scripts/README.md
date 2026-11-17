@@ -1,6 +1,6 @@
 # Engineering scripts
 
-Experiments run through the `robofrontier` command ([getting started](../docs/getting-started.md),
+Experiments run through the `roboteam` command ([getting started](../docs/getting-started.md),
 [command-line guide](../docs/unified-cli.md)). The scripts here are the engineering commands
 around it. Run each from the repository root as `.venv/bin/python -m scripts.NAME`; `--help`
 lists its options. The gateways below access model providers when listing models or
@@ -15,7 +15,7 @@ service only when explicitly invoked. The other scripts do not call a model prov
 
 `python scripts/github_pat_gateway.py --token-file /private/github_token.txt`
 starts a standard-library-only loopback connector usable without installing
-RoboFrontier, Copilot CLI or GHC API. It forwards Chat Completions and Responses,
+RoboTeam, Copilot CLI or GHC API. It forwards Chat Completions and Responses,
 including streamed tool calls. `--list-models` queries the current account's model
 catalog. See [setup, Codex and Antigravity examples](../docs/engines/github-pat.md).
 
@@ -102,14 +102,14 @@ Some lower-level commands live in the package and run as `.venv/bin/python -m MO
 
 | Module | Purpose |
 | --- | --- |
-| `robofrontier.batch.handoff` | `doctor`, `init-env` (create `.env` from `.env.example` with mode 0600), `assets`, `setup-assets` (install the asset archive offline), `restore` |
-| `robofrontier.batch.tasks` | `list`, `check`, `prepare`, `prepare-batch`: audit released tasks and their inputs, or prepare runs directly |
-| `robofrontier.batch.archive_policy_batch` | `create`, `verify`, `restore`: the lower-level evidence archive; `restore` rebuilds an extracted archive in its original layout |
-| `robofrontier.engines.codex.check_codex_cli` | Exercise the installed Codex CLI's tools, images and forks against a local stub |
-| `robofrontier.factory.commands` | `build`, `view`, `poses`, `video`: build, view and render the Oracle workstations in one Factory |
+| `roboteam.batch.handoff` | `doctor`, `init-env` (create `.env` from `.env.example` with mode 0600), `assets`, `setup-assets` (install the asset archive offline), `restore` |
+| `roboteam.batch.tasks` | `list`, `check`, `prepare`, `prepare-batch`: audit released tasks and their inputs, or prepare runs directly |
+| `roboteam.batch.archive_policy_batch` | `create`, `verify`, `restore`: the lower-level evidence archive; `restore` rebuilds an extracted archive in its original layout |
+| `roboteam.engines.codex.check_codex_cli` | Exercise the installed Codex CLI's tools, images and forks against a local stub |
+| `roboteam.factory.commands` | `build`, `view`, `poses`, `video`: build, view and render the Oracle workstations in one Factory |
 
-`robofrontier/factory/blender/export.py` and `render.py` run inside Blender to export and render
-Cycles scenes. `robofrontier/engines/codex/meta_dispatcher.js` executes frozen Meta operations; it
+`roboteam/factory/blender/export.py` and `render.py` run inside Blender to export and render
+Cycles scenes. `roboteam/engines/codex/meta_dispatcher.js` executes frozen Meta operations; it
 is not a task-solving agent.
 
 Do not modify frozen inputs or delete evidence to make a preparation or archive check pass.

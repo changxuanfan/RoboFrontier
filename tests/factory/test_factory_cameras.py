@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from robofrontier.factory.cameras import place_station_camera
+from roboteam.factory.cameras import place_station_camera
 
 
 class StationCameraChecks(unittest.TestCase):

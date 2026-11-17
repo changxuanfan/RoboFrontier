@@ -3,7 +3,7 @@
 .env*
 !.env.example
 .codex-tools
-.robofrontier
+.roboteam
 .oracle-deps
 runs
 outputs

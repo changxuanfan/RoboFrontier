@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 import re
 
-from robofrontier.tasks.config import ROOT
+from roboteam.tasks.config import ROOT
 
 SITE = ROOT / 'site/data'
 
@@ -73,8 +73,8 @@ def workload(case):
 
 def tasks():
     import tempfile
-    from robofrontier.tasks.config import public_task
-    from robofrontier.tasks.families import RELEASE, freeze_public, policy_task
+    from roboteam.tasks.config import public_task
+    from roboteam.tasks.families import RELEASE, freeze_public, policy_task
     payload = (ROOT / RELEASE).read_bytes()
     release = json.loads(payload)
     references = oracle(release)
@@ -96,7 +96,7 @@ def tasks():
                          'objective': public['objective'], 'rules': public['rules'],
                          'oracle': references[case['id']]})
     rows.sort(key=lambda r: (list(FAMILIES).index(r['family']), r['arms'], r['workload'], r['level']))
-    document = {'schema': 'robofrontier.site-tasks.v1', 'release_sha256': hashlib.sha256(payload).hexdigest(),
+    document = {'schema': 'roboteam.site-tasks.v1', 'release_sha256': hashlib.sha256(payload).hexdigest(),
                 'families': FAMILIES, 'tasks': rows}
     return write(SITE / 'tasks.json', document)
 
@@ -106,19 +106,19 @@ def media(specs, film=None):
     for spec in specs:
         key, base, manifest = spec.split('=', 2)
         data = json.loads(Path(manifest).read_text())
-        if data.get('schema') != 'robofrontier.site-media.v1':
+        if data.get('schema') != 'roboteam.site-media.v1':
             raise ValueError('Not a site media manifest: ' + manifest)
         sets.append({'key': key, 'base': base, 'tasks': {
             case: {view: {k: record[k] for k in ('video', 'poster', 'size', 'duration_s', 'sha256')}
                    for view, record in views.items()} for case, views in sorted(data['tasks'].items())}})
-    document = {'schema': 'robofrontier.site-media-index.v1', 'sets': sets}
+    document = {'schema': 'roboteam.site-media-index.v1', 'sets': sets}
     if film:
         document['film'] = {'video': film[0], 'poster': film[1],
                             'note': 'A tour of Robo World: one moment from each zone, then every family and scale; 3 min 41 s, 1080p. Oracle reference runs, not model results.'}
     return write(SITE / 'media.json', document)
 
 
-def readme_gallery(page='https://changxuanfan.github.io/RoboFrontier/', readme=ROOT / 'README.md'):
+def readme_gallery(page='https://changxuanfan.github.io/RoboTeam/', readme=ROOT / 'README.md'):
     """Fill the README's gallery block: per family a 3 x 3 table of task thumbnails."""
     data = json.loads((SITE / 'tasks.json').read_text())
     blocks = []

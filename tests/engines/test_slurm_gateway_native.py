@@ -18,12 +18,12 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier.runtime import access as policy_access
-from robofrontier.engines.codex.job_engine import build_manifest, engine
-from robofrontier.engines.codex.launch import launch_config, profile
-from robofrontier.engines.codex.tool_backend import prepare as prepare_tools
-from robofrontier.runtime.setup import write_json
-from robofrontier.batch.slurm_auth import CredentialLease, BorrowedAccess
+from roboteam.runtime import access as policy_access
+from roboteam.engines.codex.job_engine import build_manifest, engine
+from roboteam.engines.codex.launch import launch_config, profile
+from roboteam.engines.codex.tool_backend import prepare as prepare_tools
+from roboteam.runtime.setup import write_json
+from roboteam.batch.slurm_auth import CredentialLease, BorrowedAccess
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -131,8 +131,8 @@ class NativeGatewayTests(unittest.TestCase):
                 'id_token': jwt(0), 'access_token': jwt(0), 'refresh_token': 'fixture-refresh-0', 'account_id': 'fixture-account'},
                 'last_refresh': '2000-01-01T00:00:00Z'})
             environment = {k: os.environ[k] for k in ('PATH', 'HOME', 'LANG') if k in os.environ}
-            environment.update(CODEX_HOME=str(private/'codex'), ROBOFRONTIER_JOB_PRIVATE_ROOT=str(private),
-                               ROBOFRONTIER_CREDENTIAL_STORE=str(store),
+            environment.update(CODEX_HOME=str(private/'codex'), ROBOTEAM_JOB_PRIVATE_ROOT=str(private),
+                               ROBOTEAM_CREDENTIAL_STORE=str(store),
                                CODEX_REFRESH_TOKEN_URL_OVERRIDE=address+'/oauth/token', NO_PROXY='127.0.0.1,localhost')
             jobs = []
             with CredentialLease(store, private/'codex') as lease, patch.dict(os.environ, environment, clear=True):
@@ -148,8 +148,8 @@ class NativeGatewayTests(unittest.TestCase):
                     prepare_tools(run, selected)
                     launch = launch_config(selected, run/'private/inputs', run)
                     for key, value in {'chatgpt_base_url': address, 'analytics.enabled': False,
-                                       'model_providers.robofrontier_openai_http.base_url': address+'/v1',
-                                       'model_providers.robofrontier_openai_http.name': 'Offline fixture'}.items():
+                                       'model_providers.roboteam_openai_http.base_url': address+'/v1',
+                                       'model_providers.roboteam_openai_http.name': 'Offline fixture'}.items():
                         launch['args'] += ['-c', key+'='+json.dumps(value)]
                     write_json(run/'private/inputs/codex.json', launch)
                     jobs.append({'run_directory': str(run)})
@@ -168,8 +168,8 @@ class NativeGatewayTests(unittest.TestCase):
                         before=(private/'codex/auth.json').read_bytes()
                         borrower=root/'borrower';borrower.mkdir(mode=0o700)
                         borrowed_env={**environment,'CODEX_HOME':str(borrower/'codex'),
-                                      'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(borrower),
-                                      'ROBOFRONTIER_BORROWED_AUTH':str(store/'current.json')}
+                                      'ROBOTEAM_JOB_PRIVATE_ROOT':str(borrower),
+                                      'ROBOTEAM_BORROWED_AUTH':str(store/'current.json')}
                         with BorrowedAccess(store,borrower/'codex') as reader:
                             with engine(jobs[36:],env=borrowed_env,timeout_s=35):
                                 attached=subprocess.run(['node',str(ROOT/'tests/slurm_gateway_native_client.js'),
@@ -191,8 +191,8 @@ class NativeGatewayTests(unittest.TestCase):
                     owned=json.loads((private/'control/ownership.json').read_text())[:2]
                     cold=root/'cold';cold.mkdir(mode=0o700)
                     cold_env={**environment,'CODEX_HOME':str(cold/'codex'),
-                              'ROBOFRONTIER_JOB_PRIVATE_ROOT':str(cold),
-                              'ROBOFRONTIER_BORROWED_AUTH':str(store/'current.json')}
+                              'ROBOTEAM_JOB_PRIVATE_ROOT':str(cold),
+                              'ROBOTEAM_BORROWED_AUTH':str(store/'current.json')}
                     with BorrowedAccess(store,cold/'codex'):
                         cold_jobs=[]
                         for job,row in zip(jobs[:2],owned):

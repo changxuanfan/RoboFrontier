@@ -8,9 +8,9 @@ import tempfile
 import unittest
 import zipfile
 
-from robofrontier.cli import archive_collection
-from robofrontier.batch.archive import unpack
-from robofrontier.batch.archive_policy_batch import verify
+from roboteam.cli import archive_collection
+from roboteam.batch.archive import unpack
+from roboteam.batch.archive_policy_batch import verify
 
 
 class EvidenceZipTests(unittest.TestCase):
@@ -28,10 +28,10 @@ class EvidenceZipTests(unittest.TestCase):
             (source/'batch/motion.npz').write_bytes(motion)
             (source/'batch/batch.json').write_text('{"status":"closed","jobs":[]}')
             (source/'collection.json').write_text(json.dumps({
-                'schema': 'robofrontier.luna-collection.v1', 'complete': True, 'job_count': 1,
+                'schema': 'roboteam.luna-collection.v1', 'complete': True, 'job_count': 1,
                 'jobs': [{'roles': [{'session': 'sessions/role.jsonl',
                                     'sha256': hashlib.sha256(raw).hexdigest()}]}]}))
-            from robofrontier.cli import main
+            from roboteam.cli import main
             result = root/'result.json'
             output = root/'result.zip'
             with contextlib.redirect_stdout(io.StringIO()):

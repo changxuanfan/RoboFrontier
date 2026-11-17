@@ -17,9 +17,9 @@ import threading
 import unittest
 from unittest import mock
 
-from robofrontier.engines.codex import launch
-from robofrontier.engines.codex.launch import launch_config, profile
-from robofrontier.runtime import outage
+from roboteam.engines.codex import launch
+from roboteam.engines.codex.launch import launch_config, profile
+from roboteam.runtime import outage
 
 from anthropic_upstream_fixture import AnthropicStub, text, thinking, tool_use, usage
 
@@ -29,8 +29,8 @@ UPSTREAM_KEY = 'fake-anthropic-key-for-offline-tests'
 
 
 def gateway_python():
-    """A Python that can import the optional SDK: ROBOFRONTIER_GATEWAY_PYTHON, else .venv-gateway."""
-    for candidate in (os.environ.get('ROBOFRONTIER_GATEWAY_PYTHON'), ROOT/'.venv-gateway/bin/python'):
+    """A Python that can import the optional SDK: ROBOTEAM_GATEWAY_PYTHON, else .venv-gateway."""
+    for candidate in (os.environ.get('ROBOTEAM_GATEWAY_PYTHON'), ROOT/'.venv-gateway/bin/python'):
         if candidate and Path(candidate).is_file() and subprocess.run(
                 [str(candidate), '-c', 'import anthropic'], capture_output=True).returncode == 0:
             return str(candidate)
@@ -56,14 +56,14 @@ class LoopbackProfileTests(unittest.TestCase):
         self.assertEqual((p['context_window'], p['auto_compact_token_limit'], p['context_capacity']),
                          (300000, 267000, 1000000))
         self.assertEqual((p['base_url'], p['env_key'], p['upstream_host']),
-                         ('http://127.0.0.1:18470/v1', 'ROBOFRONTIER_CLAUDE_GATEWAY_KEY', 'api.anthropic.com'))
+                         ('http://127.0.0.1:18470/v1', 'ROBOTEAM_CLAUDE_GATEWAY_KEY', 'api.anthropic.com'))
         with tempfile.TemporaryDirectory() as folder:
             started = launch_config(p, Path(folder))
             model = json.loads((Path(folder)/'models.json').read_text())['models'][0]
         for expected in ('model="claude-opus-5-5"', 'model_reasoning_effort="high"', 'model_context_window=300000',
                          'model_auto_compact_token_limit=267000',
                          'model_providers.claude_gateway.base_url="http://127.0.0.1:18470/v1"',
-                         'model_providers.claude_gateway.env_key="ROBOFRONTIER_CLAUDE_GATEWAY_KEY"',
+                         'model_providers.claude_gateway.env_key="ROBOTEAM_CLAUDE_GATEWAY_KEY"',
                          'model_providers.claude_gateway.wire_api="responses"',
                          'model_providers.claude_gateway.requires_openai_auth=false',
                          'model_providers.claude_gateway.supports_websockets=false'):
@@ -72,7 +72,7 @@ class LoopbackProfileTests(unittest.TestCase):
         self.assertEqual((model['slug'], model['context_window'], model['support_verbosity']),
                          ('claude-opus-5-5', 300000, False))
         # Model shells inherit neither the local key nor an upstream credential.
-        self.assertIn('shell_environment_policy.exclude=["ROBOFRONTIER_CLAUDE_GATEWAY_KEY", "ANTHROPIC_API_KEY", '
+        self.assertIn('shell_environment_policy.exclude=["ROBOTEAM_CLAUDE_GATEWAY_KEY", "ANTHROPIC_API_KEY", '
                       '"ANTHROPIC_AUTH_TOKEN"]', started['args'])
         self.assertNotIn('Authorization', json.dumps(started))
 
@@ -92,7 +92,7 @@ class LoopbackProfileTests(unittest.TestCase):
                     profile('p', catalog(folder, **fields))
 
     def test_other_profiles_keep_https_and_their_catalog_defaults(self):
-        from robofrontier.configuration import model_catalog
+        from roboteam.configuration import model_catalog
         for name, entry in model_catalog('codex')['profiles'].items():
             if name == 'opus_claude_api':
                 continue
@@ -148,16 +148,16 @@ class LoopbackProfileTests(unittest.TestCase):
             self.assertEqual(outage.model_hosts(run, 'codex'), ('api.anthropic.com',))
 
     def test_container_and_slurm_entries_refuse_a_host_loopback_profile(self):
-        from robofrontier.batch import container, slurm_job
+        from roboteam.batch import container, slurm_job
         chosen = {'profiles': {'opus_claude_api': {'transport': 'loopback_gateway', 'env_key': 'K'}}}
-        with mock.patch('robofrontier.cli._catalog', return_value=chosen):
+        with mock.patch('roboteam.cli._catalog', return_value=chosen):
             with self.assertRaisesRegex(ValueError, 'not in a container'):
                 container._credential_environment({'policy': {'profile': 'opus_claude_api'}}, {'K': 'v'})
         self.assertIn("'loopback_gateway'", Path(slurm_job.__file__).read_text())
 
 
 NODE_DRIVER = r'''
-const fs=require('fs'),{CodexRpc}=require(process.argv[1]+'/robofrontier/engines/codex/codex_rpc');
+const fs=require('fs'),{CodexRpc}=require(process.argv[1]+'/roboteam/engines/codex/codex_rpc');
 const out=process.argv[2],launch=JSON.parse(fs.readFileSync(out+'/launch.json'));
 (async()=>{
 const waiters=new Map(),usage=[],events=[];let release,entered,calls=0;
@@ -227,7 +227,7 @@ class NativeCliThroughGatewayTests(unittest.TestCase):
                       tool_use('toolu_stub_%da' % number, 'probe', {}, raw=''),
                       tool_use('toolu_stub_%db' % number, 'probe', {})]
         elif words.rstrip().endswith('SHELL now'):
-            command = ('echo "KEY_VISIBLE=${ROBOFRONTIER_CLAUDE_GATEWAY_KEY:+yes}"; curl -s -o /dev/null -w "HTTP=%%{http_code}" '
+            command = ('echo "KEY_VISIBLE=${ROBOTEAM_CLAUDE_GATEWAY_KEY:+yes}"; curl -s -o /dev/null -w "HTTP=%%{http_code}" '
                        '--max-time 3 http://127.0.0.1:%d/healthz; echo " CURL_EXIT=$?"' % self.gateway_port)
             blocks = [thinking(signature), tool_use('toolu_stub_%d' % number, 'exec_command', {'cmd': command},
                                                     raw=json.dumps({'cmd': command}, indent=1))]
@@ -287,8 +287,8 @@ class NativeCliThroughGatewayTests(unittest.TestCase):
         return out, log, local_key, image, env
 
     def test_the_live_preflight_driver_passes_against_the_fake_upstream(self):
-        """The same Node driver `robofrontier preflight` runs: image, tool, manual compaction, fork."""
-        from robofrontier.runtime import preflight_probe
+        """The same Node driver `roboteam preflight` runs: image, tool, manual compaction, fork."""
+        from roboteam.runtime import preflight_probe
 
         def script(body, headers):
             last = body['messages'][-1]['content']
@@ -307,7 +307,7 @@ class NativeCliThroughGatewayTests(unittest.TestCase):
         out, log, _, _, env = self.start(script)
         self.probe = preflight_probe.write(out/'colors.png', *preflight_probe.choose())
         (out/'probe.json').write_text(json.dumps(self.probe))
-        result = subprocess.run(['node', str(ROOT/'robofrontier/engines/codex/codex_preflight.js'), str(out)],
+        result = subprocess.run(['node', str(ROOT/'roboteam/engines/codex/codex_preflight.js'), str(out)],
                                 capture_output=True, text=True, timeout=240, env=env)
         report = json.loads((out/'report.json').read_text())
         self.assertEqual((result.returncode, report.get('error')), (0, None), result.stderr[-2000:])
@@ -334,10 +334,10 @@ class NativeCliThroughGatewayTests(unittest.TestCase):
         native = json.loads((out/'native.json').read_text())
         bodies = [request['body'] for request in self.stub.requests]
         records = [json.loads(line) for line in log.read_text().splitlines()]
-        if os.environ.get('ROBOFRONTIER_CAPTURE_DIR'):
+        if os.environ.get('ROBOTEAM_CAPTURE_DIR'):
             # Optional: the exact upstream request bodies, one conversation per file, for an
             # external prefix checker. Synthetic content only.
-            capture = Path(os.environ['ROBOFRONTIER_CAPTURE_DIR'])
+            capture = Path(os.environ['ROBOTEAM_CAPTURE_DIR'])
             capture.mkdir(parents=True, exist_ok=True)
             for name, chosen in (('before-compaction', range(0, 8)), ('parent-after-compaction', (8, 9, 11)),
                                  ('forked-child', (8, 9, 10))):

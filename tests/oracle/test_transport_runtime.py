@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock
 
-from robofrontier.oracle.transport_runtime import TransportRuntime, PreparationComplete
+from roboteam.oracle.transport_runtime import TransportRuntime, PreparationComplete
 
 
 class Arm:
@@ -36,9 +36,9 @@ class TransportRuntimeTests(unittest.TestCase):
         import threading
         from pathlib import Path
         from tempfile import TemporaryDirectory
-        from robofrontier.oracle.recovery import EngineeringRecovery
-        from robofrontier.oracle.budget import ExplicitPauseBudget
-        from robofrontier.runtime.setup import write_json
+        from roboteam.oracle.recovery import EngineeringRecovery
+        from roboteam.oracle.budget import ExplicitPauseBudget
+        from roboteam.runtime.setup import write_json
         with TemporaryDirectory() as tmp:
             paused=threading.Event();state={};errors=[]
             def worker():

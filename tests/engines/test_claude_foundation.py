@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from robofrontier.batch.claude_prepare import doctor, plan, profile
-from robofrontier.engines.claude.robot_mcp import RobotBridge, handle
+from roboteam.batch.claude_prepare import doctor, plan, profile
+from roboteam.engines.claude.robot_mcp import RobotBridge, handle
 
 
 class ClaudeFoundationTests(unittest.TestCase):
@@ -15,14 +15,14 @@ class ClaudeFoundationTests(unittest.TestCase):
             root=Path(tmp)
             (root/'.env').write_text('FAKE_KEY=file-secret\nFAKE_BASE=https://file.example/api\n')
             catalog=root/'catalog.json'
-            catalog.write_text(json.dumps({'schema':'robofrontier.claude-models.v1','profiles':{
+            catalog.write_text(json.dumps({'schema':'roboteam.claude-models.v1','profiles':{
                 'fake':{'provider':'fake','model':'model','env_key':'FAKE_KEY',
                         'base_url_env':'FAKE_BASE','effort':'high'}}}))
-            from robofrontier.tasks.families import RELEASE
+            from roboteam.tasks.families import RELEASE
             release=root/RELEASE; release.parent.mkdir(parents=True)
             release.write_text(json.dumps({'families':{}}))
             with patch.dict('os.environ',{'FAKE_KEY':'environment-secret'},clear=True), \
-                 patch('robofrontier.batch.claude_prepare.shutil.which',return_value=None):
+                 patch('roboteam.batch.claude_prepare.shutil.which',return_value=None):
                 result=doctor(['fake'],root=root,catalog=catalog)
                 self.assertTrue(result['profiles']['fake']['credential_set'])
                 self.assertTrue(result['profiles']['fake']['base_url_configured'])
@@ -159,8 +159,8 @@ class ClaudeFoundationTests(unittest.TestCase):
     def test_every_policy_runtime_op_is_exposed_and_admin_ops_are_not(self):
         # Codex forwards any op to the runtime; Claude's bridge must allow the same policy set.
         import re
-        from robofrontier.engines.claude.robot_mcp import POLICY_OPS
-        source = (Path(__file__).parents[2] / 'robofrontier/runtime/service.py').read_text()
+        from roboteam.engines.claude.robot_mcp import POLICY_OPS
+        source = (Path(__file__).parents[2] / 'roboteam/runtime/service.py').read_text()
         ops = set(re.findall(r"op == '([a-z_]+)'", source))
         ops |= {o for group in re.findall(r"op in \(([^)]*)\)", source) for o in re.findall(r"'([a-z_]+)'", group)}
         admin = {'bind', 'start', 'resume', 'state', 'shutdown'}

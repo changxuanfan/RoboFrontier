@@ -24,8 +24,8 @@ git checkout archive/pre-cleanup-20261110 -- docs/archive        # all of them, 
 | 2026-11-03 | Landlock Bash isolation for CPU hosts | `docs/archive/history/codex-landlock-cpu-research-20261103.md` |
 | 2026-11-06 | Frozen policy Python environment (PRs #14–#17); simulation speed work; Relay handover rules (#19) | [Policy environment](running/policy-environment.md) |
 | 2026-11-09 | realtime-v2 physics (#20); second code review; benchmark rules: 24 h of active time scored at the cutoff, continuations are the same trial, Relay handovers airborne only (#21) | `outputs/review/` on the author's machine |
-| 2026-11-10 | Outage probe over TLS, task recovery, Mac defaults (#23–#28); cleanup plan D1–D40 and stage 0 (#29) | [Cleanup record](cleanup-20261110.md) |
-| 2026-11-10, 11-11 | The cleanup: release physics in the scenes and real Franka limits, one release, one evaluator, both engines alike, stop table and usage-limit pauses, Oracle and configs tidied, model-visible text rewritten | [Cleanup record](cleanup-20261110.md), [Physics](physics.md) |
+| 2026-11-10 | Outage probe over TLS, task recovery, Mac defaults (#23–#28); cleanup plan D1–D40 and stage 0 (#29) | — |
+| 2026-11-10, 11-11 | The cleanup: release physics in the scenes and real Franka limits, one release, one evaluator, both engines alike, stop table and usage-limit pauses, Oracle and configs tidied, model-visible text rewritten | —, [Physics](physics.md) |
 
 ## Tags
 

@@ -1,6 +1,6 @@
 """Shape a current configuration like one frozen before schema version 5.
 
-The options are listed here rather than taken from robofrontier/configuration.py, so a test
+The options are listed here rather than taken from roboteam/configuration.py, so a test
 using this checks the validator against what older files actually hold.
 """
 LATER_OPTIONS = {'policy': ('tool_mode',), 'runtime': ('codex_tool_backend',),

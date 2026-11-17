@@ -23,18 +23,18 @@ from unittest.mock import patch
 
 from engines.test_claude_adaptive_integration import StubModel
 from runtime.test_run_segments_integration import wait_until
-from robofrontier.runtime.layout import path as run_path
-from robofrontier.runtime.segments import try_continue
-from robofrontier.runtime.store import RuntimeStore
-from robofrontier.tasks.scene import camera_names
-from robofrontier.batch.claude_prepare import prepare_batch
+from roboteam.runtime.layout import path as run_path
+from roboteam.runtime.segments import try_continue
+from roboteam.runtime.store import RuntimeStore
+from roboteam.tasks.scene import camera_names
+from roboteam.batch.claude_prepare import prepare_batch
 
 ROOT = Path(__file__).resolve().parents[2]
 CASE = 'mosaic-a04-6x12-d1'
 RESUME = 'The host stopped unexpectedly'
-CHILD = ('import json,os,sys;from robofrontier.engines.claude.run import run_task;'
+CHILD = ('import json,os,sys;from roboteam.engines.claude.run import run_task;'
          "env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'FAKE_KEY':'synthetic',"
-         # The rendering backend, as robofrontier run passes it (EGL on a Linux GPU host).
+         # The rendering backend, as roboteam run passes it (EGL on a Linux GPU host).
          "**{k:os.environ[k] for k in ('MUJOCO_GL','PYOPENGL_PLATFORM') if k in os.environ}};"
          'print(json.dumps(run_task(sys.argv[1],env,wall_limit_s=600,startup_timeout_s=90,poll_s=.1)))')
 
@@ -60,7 +60,7 @@ class ClaudeSegmentResumeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp).resolve() / 'batch'
             # A local fake model with a fake key: nothing to expose (claude_prepare.exposed_api_keys).
-            with patch('robofrontier.batch.claude_prepare.exposed_api_keys', return_value=[]):
+            with patch('roboteam.batch.claude_prepare.exposed_api_keys', return_value=[]):
                 prepare_batch(base, ['opus'], cases=[CASE], topology='single-agent')
             run = base / 'opus' / CASE
             task = json.loads((run / 'private/inputs/task.json').read_text())

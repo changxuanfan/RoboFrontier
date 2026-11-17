@@ -12,9 +12,9 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier.oracle import workflow as workflow
+from roboteam.oracle import workflow as workflow
 from older_configuration import without_later_options
-from robofrontier.configuration import load_configuration, validate_configuration
+from roboteam.configuration import load_configuration, validate_configuration
 
 
 CASES = ('transport-a04-d1', 'mosaic-a04-6x12-d1', 'relay-a08-d1', 'dial-best5-n04-d1')
@@ -67,7 +67,7 @@ class OracleWorkflowTests(unittest.TestCase):
                 _, manifest, config = workflow._load(root)
                 command, env = workflow._command(root, manifest, config)
                 self.assertIn(str(root/'private/executor/scripts'/workflow.ENTRIES[manifest['family']]), command)
-                self.assertEqual(env['ROBOFRONTIER_ORACLE_FROZEN_ROOT'], str(root/'private/executor'))
+                self.assertEqual(env['ROBOTEAM_ORACLE_FROZEN_ROOT'], str(root/'private/executor'))
                 self.assertEqual(env['PYTHONPATH'], str(root/'private/executor'))
                 self.assertEqual(command[command.index('--harness')+1], str(root/'private/executor/inputs/harness.json'))
                 catalog = json.loads((root/'private/executor/inputs/catalog.json').read_text())
@@ -76,7 +76,7 @@ class OracleWorkflowTests(unittest.TestCase):
                 self.assertEqual(catalog['cases'][0]['id'], case)
                 self.assertFalse((root/'trial').exists())
                 self.assertEqual(manifest['execution_protocol'], 'private/execution-protocol.json')
-                self.assertEqual(env['ROBOFRONTIER_ORACLE_PROTOCOL'], str(root/'private/execution-protocol.json'))
+                self.assertEqual(env['ROBOTEAM_ORACLE_PROTOCOL'], str(root/'private/execution-protocol.json'))
                 protocol = json.loads((root/'private/execution-protocol.json').read_text())
                 self.assertEqual(protocol['mode'], 'task-reference')
                 self.assertEqual(protocol['source_task_sha256'], manifest['source_sha256']['task.json'])
@@ -125,9 +125,9 @@ class OracleWorkflowTests(unittest.TestCase):
             workflow.prepare(root,config)
         _,manifest,frozen_config=workflow._load(root)
         self.assertNotIn('execution_protocol',manifest)
-        with patch.dict(os.environ,{'ROBOFRONTIER_ORACLE_PROTOCOL':'/unrelated/protocol.json'}):
+        with patch.dict(os.environ,{'ROBOTEAM_ORACLE_PROTOCOL':'/unrelated/protocol.json'}):
             _,env=workflow._command(root,manifest,frozen_config)
-        self.assertNotIn('ROBOFRONTIER_ORACLE_PROTOCOL',env)
+        self.assertNotIn('ROBOTEAM_ORACLE_PROTOCOL',env)
         self.assertEqual(frozen_config,config)
 
     def test_strict_process_preparation_is_explicit_and_hash_bound(self):
@@ -139,7 +139,7 @@ class OracleWorkflowTests(unittest.TestCase):
         self.assertIn('private/execution-protocol.json',manifest['input_sha256'])
 
     def test_configuration_and_executor_mutation_rejected_before_any_process(self):
-        for index, name in enumerate(('private/executor/robofrontier/oracle/trial.py', 'effective-config.json', 'private/execution-protocol.json')):
+        for index, name in enumerate(('private/executor/roboteam/oracle/trial.py', 'effective-config.json', 'private/execution-protocol.json')):
             root = self.root/str(index)
             with patch.object(workflow, '_committed_source', return_value='test-source'):
                 workflow.prepare(root, self.config())

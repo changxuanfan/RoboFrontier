@@ -6,14 +6,14 @@ import threading
 import time
 import unittest
 import numpy as np
-from robofrontier.oracle.recovery import LiveRepair
-from robofrontier.oracle.dial import BestManipulator
-from robofrontier.oracle.trial import Trial
+from roboteam.oracle.recovery import LiveRepair
+from roboteam.oracle.dial import BestManipulator
+from roboteam.oracle.trial import Trial
 
 
 class LiveRepairTests(unittest.TestCase):
     def test_red_turn_stops_and_requalifies_idle_blue_approach_phase(self):
-        from robofrontier.oracle.trial import Trial
+        from roboteam.oracle.trial import Trial
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(__file__).resolve().parents[2]
             scene=root/'benchmark/dial/dial-best5-n06-d3'
@@ -43,8 +43,8 @@ class LiveRepairTests(unittest.TestCase):
             finally:t.close(dict(passed=False,scope='Engineering blue-pressure fault injection'))
 
     def test_production_close_drains_recovery_and_preserves_assistance(self):
-        from robofrontier.oracle.run_blind_dial_oracle import close_trial
-        from robofrontier.oracle.recovery import OracleRecovery, RecoverablePlanError
+        from roboteam.oracle.run_blind_dial_oracle import close_trial
+        from roboteam.oracle.recovery import OracleRecovery, RecoverablePlanError
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
             scene=Path(__file__).resolve().parents[2]/'benchmark/dial/dial-best5-n04-d1'
@@ -67,8 +67,8 @@ class LiveRepairTests(unittest.TestCase):
 
 
     def test_production_close_retains_uncertain_call_after_stop_feedback(self):
-        from robofrontier.oracle.run_blind_dial_oracle import close_trial
-        from robofrontier.oracle.recovery import OracleRecovery
+        from roboteam.oracle.run_blind_dial_oracle import close_trial
+        from roboteam.oracle.recovery import OracleRecovery
         with tempfile.TemporaryDirectory() as tmp:
             scene=Path(__file__).resolve().parents[2]/'benchmark/dial/dial-best5-n04-d1'
             t=Trial(scene,Path(tmp)/'world',frames=False)
@@ -106,7 +106,7 @@ class LiveRepairTests(unittest.TestCase):
 
     def test_task_reference_can_continue_only_after_original_stop_feedback(self):
         from unittest.mock import patch
-        from robofrontier.oracle.protocol import unresolved_robots
+        from roboteam.oracle.protocol import unresolved_robots
         with tempfile.TemporaryDirectory() as tmp:
             scene=Path(__file__).resolve().parents[2]/'benchmark/dial/dial-best5-n04-d1'
             t=Trial(scene,Path(tmp)/'world',frames=False)

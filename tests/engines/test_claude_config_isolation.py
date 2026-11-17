@@ -1,6 +1,6 @@
 import unittest
 from pathlib import Path
-from robofrontier.engines.claude.runner import build_env
+from roboteam.engines.claude.runner import build_env
 
 class ClaudeConfigIsolationTests(unittest.TestCase):
     def test_parallel_jobs_use_distinct_task_configuration_directories(self):

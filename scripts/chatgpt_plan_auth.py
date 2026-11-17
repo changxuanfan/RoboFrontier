@@ -154,7 +154,7 @@ def login(path, port):
         if previous.get('id_token'):
             query['id_token_hint'] = previous['id_token']
     else:
-        query['agent_name_hint'] = 'RoboFrontier Claude GPT Ablation'
+        query['agent_name_hint'] = 'RoboTeam Claude GPT Ablation'
     # Never print an id_token_hint while reauthorizing a saved account.
     if previous:
         raise ValueError('Use a new protected account file for interactive account selection')

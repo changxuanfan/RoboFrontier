@@ -5,7 +5,7 @@ import subprocess
 import sys
 import unittest
 
-from robofrontier.engines.claude.runner import TOKEN_FD_VARIABLE, start_cli
+from roboteam.engines.claude.runner import TOKEN_FD_VARIABLE, start_cli
 
 
 class TokenPipeTests(unittest.TestCase):
@@ -25,10 +25,10 @@ class TokenPipeTests(unittest.TestCase):
     @unittest.skipUnless(sys.platform.startswith('linux'), '/proc environments are Linux')
     def test_a_token_in_an_ancestors_starting_environment_is_refused(self):
         # The child starts with the name in its environment; loading it later (.env) would not show.
-        probe = ('import os;os.environ["ROBOFRONTIER_PROBE_LATER"]="x";'
-                 'from robofrontier.engines.claude.runner import environment_holders as h;'
-                 'print(bool(h("ROBOFRONTIER_PROBE_EARLY")), bool(h("ROBOFRONTIER_PROBE_LATER")))')
-        out = subprocess.run([sys.executable, '-c', probe], env={**os.environ, 'ROBOFRONTIER_PROBE_EARLY': '1'},
+        probe = ('import os;os.environ["ROBOTEAM_PROBE_LATER"]="x";'
+                 'from roboteam.engines.claude.runner import environment_holders as h;'
+                 'print(bool(h("ROBOTEAM_PROBE_EARLY")), bool(h("ROBOTEAM_PROBE_LATER")))')
+        out = subprocess.run([sys.executable, '-c', probe], env={**os.environ, 'ROBOTEAM_PROBE_EARLY': '1'},
                              capture_output=True, text=True, check=True).stdout
         self.assertEqual(out.split(), ['True', 'False'])
 

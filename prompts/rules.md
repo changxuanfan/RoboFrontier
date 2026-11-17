@@ -47,7 +47,7 @@ work note, and add lessons through `skills` as the Skill describes.
 <!-- /tools -->
 
 Operate robots only through the robot tool your host binds (CLI: `robot`;
-Desktop: `robofrontier_robot`). Robot responses carry queued mail and events;
+Desktop: `roboteam_robot`). Robot responses carry queued mail and events;
 after other work, call it with `op:"inbox"`.
 
 ## Startup and authority

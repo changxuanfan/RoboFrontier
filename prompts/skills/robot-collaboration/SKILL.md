@@ -1,6 +1,6 @@
 ---
 name: robot-collaboration
-description: Execute a RoboFrontier run as Controller, Worker or adaptive delegate with the bound robot tool, work note and messages; family Skills cover task-specific manipulation.
+description: Execute a RoboTeam run as Controller, Worker or adaptive delegate with the bound robot tool, work note and messages; family Skills cover task-specific manipulation.
 ---
 
 # Robot collaboration

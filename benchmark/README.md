@@ -1,6 +1,6 @@
 # Benchmark
 
-The released RoboFrontier benchmark: four task families with nine cases each. Every policy run
+The released RoboTeam benchmark: four task families with nine cases each. Every policy run
 selects its case from [`release.json`](release.json); the [task guides](../docs/tasks/README.md)
 describe the tasks and their scoring, and [physics](../docs/physics.md) the physics every scene
 carries.
@@ -46,12 +46,12 @@ Each step rewrites the hashes in `release.json` and its `release_id`. Nothing at
 rebuilds or patches these files. `frozen` is empty until the release is frozen, after the physics
 validation and the platform checks; after that nothing here changes.
 
-`assets/` is not in Git: `robofrontier bootstrap` restores it from the archive pinned in
+`assets/` is not in Git: `roboteam bootstrap` restores it from the archive pinned in
 [`../configs/policy-assets.json`](../configs/policy-assets.json) and checks every file's SHA-256.
 The Oracle case folders hard-link the released cases' asset files.
 
 Frozen runs, Oracle recordings and review packages name files by the paths they were made with;
-`robofrontier.tasks.families.current_path` translates them through `legacy-paths.json`. The nine
-Relay Oracle rows name the checkout they were recorded in; `robofrontier.tasks.families.oracle_recording`
+`roboteam.tasks.families.current_path` translates them through `legacy-paths.json`. The nine
+Relay Oracle rows name the checkout they were recorded in; `roboteam.tasks.families.oracle_recording`
 finds them under `runs/oracle/`. Scene revisions outside the release are kept in archive tags
 ([history](../docs/history.md)).

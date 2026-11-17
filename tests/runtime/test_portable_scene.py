@@ -5,7 +5,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from robofrontier.runtime.pipeline import portable_xml
+from roboteam.runtime.pipeline import portable_xml
 
 
 class PortableSceneTests(unittest.TestCase):

@@ -2,7 +2,7 @@
 import unittest
 import numpy as np
 from physics.test_motion_check import robot_fixture
-from robofrontier.tasks.config import load_harness
+from roboteam.tasks.config import load_harness
 
 class JointCoordinationTests(unittest.TestCase):
     def test_unequal_joint_travels_share_progress_and_respect_acceleration(self):

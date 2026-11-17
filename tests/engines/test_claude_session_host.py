@@ -6,7 +6,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from robofrontier.engines.claude.session_host import ClaudeSessionHost, role_mcp_config
+from roboteam.engines.claude.session_host import ClaudeSessionHost, role_mcp_config
 
 PROFILE = {'model': 'fake-model', 'effort': 'high', 'env_key': 'FAKE_KEY'}
 
@@ -19,7 +19,7 @@ def make_run(tmp):
     connection = run / 'private/state/connections/Controller.json'
     connection.parent.mkdir(parents=True)
     connection.write_text(json.dumps({'schema_version': 3, 'run_id': 'run', 'actor': 'Controller', 'token': 'fake'}))
-    from robofrontier.runtime.bootstrap import CAPACITY_RESUME
+    from roboteam.runtime.bootstrap import CAPACITY_RESUME
     notice = run / 'private/inputs/bootstrap/capacity-resume.md'
     notice.parent.mkdir(parents=True, exist_ok=True); notice.write_text(CAPACITY_RESUME)
     return run
@@ -114,7 +114,7 @@ class SessionHostTests(unittest.TestCase):
             run = make_run(tmp)
             def runner(*args, **kwargs): return result(kwargs['session_id'])
             host = ClaudeSessionHost(run, 'Controller', PROFILE, {}, runner=runner)
-            with patch('robofrontier.engines.claude.session_host.write_json', side_effect=OSError('write failed')):
+            with patch('roboteam.engines.claude.session_host.write_json', side_effect=OSError('write failed')):
                 host.send('start'); self.assertEqual(host.wait(3)['status'], 'unknown')
             with self.assertRaises(ValueError): host.send('must not retry')
 
@@ -150,7 +150,7 @@ class SessionHostTests(unittest.TestCase):
                 with self.assertRaises(ValueError): host.send('retry')
 
     def test_two_sessions_share_reserved_task_budget(self):
-        from robofrontier.engines.claude.budget import BudgetLedger
+        from roboteam.engines.claude.budget import BudgetLedger
         with tempfile.TemporaryDirectory() as tmp:
             run = make_run(tmp); role_path = run/'public/inputs/roles.json'
             roles = json.loads(role_path.read_text()); roles['roles']['A'] = {'kind':'worker'}
@@ -174,7 +174,7 @@ class SessionHostTests(unittest.TestCase):
                 release.set(); ledger.close()
 
     def test_nonzero_exit_keeps_shared_budget_uncertain(self):
-        from robofrontier.engines.claude.budget import BudgetLedger
+        from roboteam.engines.claude.budget import BudgetLedger
         with tempfile.TemporaryDirectory() as tmp:
             run = make_run(tmp)
             ledger = BudgetLedger.create(run/'private/state/budget.sqlite', 1)
@@ -198,8 +198,8 @@ class SessionHostTests(unittest.TestCase):
                 ledger.close()
 
     def test_prelaunch_cancellation_releases_only_its_shared_reservation(self):
-        from robofrontier.engines.claude.budget import BudgetLedger
-        from robofrontier.engines.claude.runner import PreLaunchCancelled
+        from roboteam.engines.claude.budget import BudgetLedger
+        from roboteam.engines.claude.runner import PreLaunchCancelled
         with tempfile.TemporaryDirectory() as tmp:
             run=make_run(tmp); ledger=BudgetLedger.create(run/'private/state/budget.sqlite',1)
             entered=threading.Event(); release=threading.Event()

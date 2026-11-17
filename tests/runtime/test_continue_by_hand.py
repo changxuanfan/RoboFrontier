@@ -1,4 +1,4 @@
-"""`robofrontier continue`: an operator continues stopped runs of a batch as the same trials."""
+"""`roboteam continue`: an operator continues stopped runs of a batch as the same trials."""
 import hashlib
 import json
 from pathlib import Path
@@ -9,10 +9,10 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier import cli
-from robofrontier.configuration import load_configuration
-from robofrontier.runtime import segments
-from robofrontier.runtime.store import RuntimeStore
+from roboteam import cli
+from roboteam.configuration import load_configuration
+from roboteam.runtime import segments
+from roboteam.runtime.store import RuntimeStore
 from engines.test_engine_parity import prepared
 
 

@@ -12,7 +12,7 @@ an account with the required Copilot access. Follow GitHub's current
 Those instructions document CLI authentication; the direct model transport here
 is an independently tested integration, not a promise of a stable public API.
 
-Keep the PAT outside the checkout, in a private file or `ROBOFRONTIER_GITHUB_PAT`.
+Keep the PAT outside the checkout, in a private file or `ROBOTEAM_GITHUB_PAT`.
 Do not put it in model profiles, TOML, shell arguments, committed files or logs.
 On macOS/Linux, restrict the file with `chmod 600 /private/github_token.txt`.
 On Windows, restrict its ACL to your account. The examples use placeholder paths.
@@ -79,21 +79,21 @@ responses, headers or credentials. Without this option no request log is stored.
 
 Codex can send Responses directly to GitHub, so it does not require the connector
 process. The checked-in `sol61_github_pat` profile uses `gpt-6.1-sol` with `high`
-effort and host-only `ROBOFRONTIER_GITHUB_PAT`. Its non-secret integration headers
+effort and host-only `ROBOTEAM_GITHUB_PAT`. Its non-secret integration headers
 are frozen with the provider profile; the credential remains an environment lookup.
 It disables OpenAI subscription authentication and provider WebSockets.
 `astra_github_pat` is the same provider for `gpt-6-astra` (listed by `--list-models` with
 `/responses` on 2026-11-13); it keeps the 300,000-token context capacity of the `astra`
 subscription profile, so the two are compared at the same context.
 
-In RoboFrontier, put the variable in the Git-ignored `.env`, or load the private
+In RoboTeam, put the variable in the Git-ignored `.env`, or load the private
 file into the environment in the shell that runs the commands:
 
 ```sh
-export ROBOFRONTIER_GITHUB_PAT="$(cat /private/github_token.txt)"
-.venv/bin/robofrontier preflight --engine codex --profile sol61_github_pat --tool-mode robot_only --confirm-spend
-.venv/bin/robofrontier prepare --engine codex --profile sol61_github_pat --tool-mode robot_only --level 1 --parallel 12 --output runs/policy/codex-l1-pat
-.venv/bin/robofrontier run runs/policy/codex-l1-pat --durable
+export ROBOTEAM_GITHUB_PAT="$(cat /private/github_token.txt)"
+.venv/bin/roboteam preflight --engine codex --profile sol61_github_pat --tool-mode robot_only --confirm-spend
+.venv/bin/roboteam prepare --engine codex --profile sol61_github_pat --tool-mode robot_only --level 1 --parallel 12 --output runs/policy/codex-l1-pat
+.venv/bin/roboteam run runs/policy/codex-l1-pat --durable
 ```
 
 Use `runtime.codex_home_scope = "task"` and a fresh `runtime.codex_home` directory
@@ -109,7 +109,7 @@ fork history. A passed receipt qualifies only its exact profile, catalog, CLI an
 tool mode; it is not a context-capacity stress test. Robot only still exposes the
 robot tool alone. Do not edit a running checkout or frozen run to change providers.
 
-For Codex outside RoboFrontier, point a normal custom Responses provider at the
+For Codex outside RoboTeam, point a normal custom Responses provider at the
 connector. The token stays in the environment:
 
 ```toml
@@ -119,7 +119,7 @@ model_provider = "github_pat_gateway"
 [model_providers.github_pat_gateway]
 name = "GitHub PAT gateway"
 base_url = "http://127.0.0.1:18450/v1"
-env_key = "ROBOFRONTIER_GITHUB_PAT"
+env_key = "ROBOTEAM_GITHUB_PAT"
 wire_api = "responses"
 requires_openai_auth = false
 supports_websockets = false
@@ -200,7 +200,7 @@ disable auxiliary requests or change the main Argon model. Without that flag,
 every model name and reasoning parameter is passed through unchanged. No safety
 filter or tool-permission switch is changed.
 
-This is a standalone CLI example. The unmerged RoboFrontier Antigravity engine
+This is a standalone CLI example. The unmerged RoboTeam Antigravity engine
 has its own frozen launch/environment rules and needs explicit gateway support
 and a fresh preflight before using this route; adding these shell variables to an
 already prepared native-Gemini experiment does not migrate it.
@@ -219,7 +219,7 @@ auxiliary requests, history and compaction behavior. The translator supports the
 documented GenAI subset, rejecting opaque Google thought signatures rather than
 silently dropping their reasoning state. Native Claude Code uses Anthropic Messages, which
 this connector does not implement; it is not connected by selecting a model
-name. Shared RoboFrontier robot tools do not imply a shared native harness.
+name. Shared RoboTeam robot tools do not imply a shared native harness.
 
 The regression suite covers parallel image-bearing tool results split across
 native history entries, fragmented streamed function calls, refusal text,

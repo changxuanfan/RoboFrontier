@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from robofrontier.tasks.dial import alphabet
-from robofrontier.tasks.families import dial_code, prepare, read, ROOT, RELEASE
+from roboteam.tasks.dial import alphabet
+from roboteam.tasks.families import dial_code, prepare, read, ROOT, RELEASE
 
 
 class DialCodeTests(unittest.TestCase):

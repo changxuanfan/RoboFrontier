@@ -5,7 +5,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from robofrontier.runtime.cli import execute
+from roboteam.runtime.cli import execute
 
 
 class FakeStore:
@@ -32,7 +32,7 @@ class ParallelStartTests(unittest.TestCase):
                 return {'started': True}
             results = []
             def run(store): results.append(execute(store, 'request-start', {}, 'owner', 0))
-            with patch('robofrontier.runtime.pipeline_client.client_call', client):
+            with patch('roboteam.runtime.pipeline_client.client_call', client):
                 threads = [threading.Thread(target=run, args=(store,)) for store in stores]
                 for thread in threads: thread.start()
                 for thread in threads: thread.join(10)

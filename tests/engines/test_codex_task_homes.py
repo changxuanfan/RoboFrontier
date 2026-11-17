@@ -1,5 +1,5 @@
 import hashlib
-from robofrontier.runtime import preflight_probe
+from roboteam.runtime import preflight_probe
 import json
 import os
 from pathlib import Path
@@ -9,15 +9,15 @@ import unittest
 from unittest.mock import patch
 from contextlib import contextmanager
 
-from robofrontier.batch import codex_batch as benchmark
-from robofrontier.engines.codex import launch
-from robofrontier.runtime.setup import write_json
+from roboteam.batch import codex_batch as benchmark
+from roboteam.engines.codex import launch
+from roboteam.runtime.setup import write_json
 
 
 class CodexTaskHomesTests(unittest.TestCase):
     def test_job_scope_uses_one_engine_distinct_channels_and_never_redispatches_a_failed_host(self):
-        from robofrontier.engines.codex.job_engine import fingerprint as gateway_fingerprint
-        from robofrontier.engines.codex.tool_backend import fingerprint as backend_fingerprint
+        from roboteam.engines.codex.job_engine import fingerprint as gateway_fingerprint
+        from roboteam.engines.codex.tool_backend import fingerprint as backend_fingerprint
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
             folder, private = root/'batch', root/'engine'
@@ -57,16 +57,16 @@ class CodexTaskHomesTests(unittest.TestCase):
                     patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'), \
                     patch.object(benchmark.subprocess, 'Popen', side_effect=host), \
                     patch.object(benchmark, 'try_continue') as redispatch, \
-                    patch('robofrontier.engines.codex.job_engine.engine', side_effect=engine), \
+                    patch('roboteam.engines.codex.job_engine.engine', side_effect=engine), \
                     patch.dict(os.environ, {'SLURM_JOB_ID': 'fixture-only', 'CODEX_HOME': str(home),
-                                            'ROBOFRONTIER_JOB_PRIVATE_ROOT': str(private)}):
+                                            'ROBOTEAM_JOB_PRIVATE_ROOT': str(private)}):
                 benchmark.run_batch(folder, 3)
                 initialize.assert_not_called()
                 native_start.assert_not_called()
                 redispatch.assert_not_called()
             self.assertEqual(len(launched), 3)
-            self.assertEqual(len({env['ROBOFRONTIER_CODEX_TASK'] for env in launched}), 3)
-            self.assertEqual({env['ROBOFRONTIER_CODEX_GATEWAY'] for env in launched}, {str(private/'s')})
+            self.assertEqual(len({env['ROBOTEAM_CODEX_TASK'] for env in launched}), 3)
+            self.assertEqual({env['ROBOTEAM_CODEX_GATEWAY'] for env in launched}, {str(private/'s')})
             self.assertEqual(json.loads((folder/'batch.json').read_text())['status'], 'needs_review')
 
     def test_all_task_homes_are_initialized_serially_before_concurrent_hosts(self):
@@ -117,7 +117,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                     self.assertNotIn(b'never-persist-this', path.read_bytes())
 
     def test_a_stop_after_a_continuation_was_prepared_needs_review(self):
-        from robofrontier.runtime import layout as run_layout
+        from roboteam.runtime import layout as run_layout
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             batch = root/'batch'

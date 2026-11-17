@@ -2,7 +2,7 @@ from types import SimpleNamespace
 import unittest
 import numpy as np
 
-from robofrontier.oracle.transport_inventory import unreachable_required_inventory
+from roboteam.oracle.transport_inventory import unreachable_required_inventory
 
 
 class InventoryTests(unittest.TestCase):

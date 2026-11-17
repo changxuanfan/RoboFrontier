@@ -3,11 +3,11 @@ import os
 import unittest
 from pathlib import Path
 
-from robofrontier.analysis.rescore import rescore
-from robofrontier.io import ROOT
+from roboteam.analysis.rescore import rescore
+from roboteam.io import ROOT
 
 # Run data never lives in the repository; this check runs where the finished runs are.
-RUNS = Path(os.environ.get('ROBOFRONTIER_RESCORE_RUNS', ROOT/'runs/compare/opus-mosaic-l3-20261110/opus_subscription'))
+RUNS = Path(os.environ.get('ROBOTEAM_RESCORE_RUNS', ROOT/'runs/compare/opus-mosaic-l3-20261110/opus_subscription'))
 
 
 @unittest.skipUnless(RUNS.is_dir(), 'Finished runs to rescore are not on this host')

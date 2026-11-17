@@ -14,7 +14,7 @@ same host, or through an SSH tunnel for a remote host. Ctrl-C stops the viewer, 
 The page refreshes every three seconds from `batch.json`, `engineering-status.json` when present
 and each run's saved `private/outputs/runtime.json`. Saved state can lag execution; the page shows
 each snapshot's age and reports missing counts as missing, never as zero or as START. It does
-not prove that a process is alive: use `robofrontier status` to supervise.
+not prove that a process is alive: use `roboteam status` to supervise.
 
 Each task row shows the profile, family, level, arm count, saved lifecycle, recorded completion
 and the latest saved image (JPEG or PNG). An existing `private/outputs/global-realtime.mp4` is

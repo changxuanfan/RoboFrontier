@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {JobGateway}=require('../../robofrontier/engines/codex/job_gateway');
-const {GatewayRpc}=require('../../robofrontier/engines/codex/gateway_rpc');
+const {JobGateway}=require('../../roboteam/engines/codex/job_gateway');
+const {GatewayRpc}=require('../../roboteam/engines/codex/gateway_rpc');
 
 function fixture(count=2){
   const tasks=Array.from({length:count},(_,i)=>({id:'task-'+i,run:'/runs/'+i,cwd:'/runs/'+i+'/workspace',
@@ -27,7 +27,7 @@ function fixture(count=2){
 function grant(f,task,nonce='recovery-fixture'){
   const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-recover-'));fs.chmodSync(folder,0o700);
   f.gateway.recoveryDirectory=folder;
-  const value={schema:'robofrontier.task-recovery-grant.v1',taskId:task.id,run:task.run,
+  const value={schema:'roboteam.task-recovery-grant.v1',taskId:task.id,run:task.run,
     threads:[...task.threads].sort(),nonce,expiresAt:Date.now()/1000+120};
   const file=path.join(folder,task.id+'.json');fs.writeFileSync(file,JSON.stringify(value),{mode:0o600});
   return {folder,file,value,nonce};

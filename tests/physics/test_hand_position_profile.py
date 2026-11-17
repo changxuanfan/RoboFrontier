@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 import numpy as np
-from robofrontier.tasks.config import load_harness
+from roboteam.tasks.config import load_harness
 from single_arm_scene import make_world
 from motion import filled
 

@@ -20,13 +20,13 @@ derives a grasp or route from simulator truth is Oracle evidence and stays out o
 Follow the [unified CLI](unified-cli.md):
 
 ```sh
-.venv/bin/robofrontier bootstrap
-.venv/bin/robofrontier doctor --render native
-.venv/bin/robofrontier plan --render native --level 1 --min-arms --parallel 4
-.venv/bin/robofrontier prepare --render native --level 1 --min-arms --parallel 4 --output runs/policy/NEW
-.venv/bin/robofrontier preflight --confirm-spend      # paid; Claude Code also needs --max-budget-usd
-.venv/bin/robofrontier run runs/policy/NEW
-.venv/bin/robofrontier status runs/policy/NEW
+.venv/bin/roboteam bootstrap
+.venv/bin/roboteam doctor --render native
+.venv/bin/roboteam plan --render native --level 1 --min-arms --parallel 4
+.venv/bin/roboteam prepare --render native --level 1 --min-arms --parallel 4 --output runs/policy/NEW
+.venv/bin/roboteam preflight --confirm-spend      # paid; Claude Code also needs --max-budget-usd
+.venv/bin/roboteam run runs/policy/NEW
+.venv/bin/roboteam status runs/policy/NEW
 ```
 
 1. Inspect the plan and get spend authorization before `preflight` and `run`.
@@ -36,7 +36,7 @@ Follow the [unified CLI](unified-cli.md):
    or shared-filesystem boundary; a live process or lock alone does not show healthy progress.
 4. `stop` requests a stop; read the seal and `needs_review` fields afterwards.
 5. A run that stopped unexpectedly continues by itself once; continue others with
-   `robofrontier continue` only when asked ([continuation](running/continuation.md)).
+   `roboteam continue` only when asked ([continuation](running/continuation.md)).
 
 The task limit is 24 h of active time from START, scored at the cutoff. Do not shorten it for a
 test in the public task; use `batch.task_wall_limit_s` in a new batch or an engineering stop. A
@@ -73,8 +73,8 @@ stop is not a success and not a physical checkpoint.
 For a run outside a managed batch, the runtime CLI seals a world and exports committed events:
 
 ```sh
-.venv/bin/python -m robofrontier.runtime.cli --run-dir runs/EXISTING seal --data '{"timeout_s":30}'
-.venv/bin/python -m robofrontier.runtime.cli --run-dir runs/EXISTING export --data '{"path":"/ABSOLUTE/OUTPUT.jsonl"}'
+.venv/bin/python -m roboteam.runtime.cli --run-dir runs/EXISTING seal --data '{"timeout_s":30}'
+.venv/bin/python -m roboteam.runtime.cli --run-dir runs/EXISTING export --data '{"path":"/ABSOLUTE/OUTPUT.jsonl"}'
 ```
 
 Sealing blocks new actions, waits for running ones, requests fresh final images and closure from

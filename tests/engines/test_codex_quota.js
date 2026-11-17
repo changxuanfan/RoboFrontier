@@ -2,8 +2,8 @@
 // continued once with the frozen quota notice (runtime/quota.py), as on Claude.
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {PolicyHost}=require('../../robofrontier/engines/codex/codex_policy_host');
-const {usageLimitFailure,capacityFailure}=require('../../robofrontier/engines/codex/codex_rpc');
+const {PolicyHost}=require('../../roboteam/engines/codex/codex_policy_host');
+const {usageLimitFailure,capacityFailure}=require('../../roboteam/engines/codex/codex_rpc');
 const ROOT=path.resolve(__dirname,'../..');
 
 test('a usage limit is not a capacity failure',()=>{

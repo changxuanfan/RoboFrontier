@@ -80,7 +80,7 @@ class NativeControls:
                 or claim.get('source_session')!=parent or claim.get('parent_session')!=parent
                 or claim_path.stem!=claim.get('actor') or claim.get('tool_permissions')!='gated'):
             raise ProtocolError('Native fork claim does not authorize this session')
-        from robofrontier.engines.claude.provenance import history,transcript_rows,copied_history_length,first_input
+        from roboteam.engines.claude.provenance import history,transcript_rows,copied_history_length,first_input
         deadline=time.monotonic()+3
         while True:
           try:
@@ -698,8 +698,8 @@ class Handler(BaseHTTPRequestHandler):
         done = threading.Event()
         write_lock = threading.Lock()
         record = {'at': time.time(), 'request_id': secrets.token_hex(16), 'auth': getattr(self.server, 'auth_mode', 'chatgpt_plan'), 'model': MODEL,
-                  'native_session':self.headers.get('X-RoboFrontier-Session'),
-                  'fork_source':self.headers.get('X-RoboFrontier-Fork-Source')}
+                  'native_session':self.headers.get('X-RoboTeam-Session'),
+                  'fork_source':self.headers.get('X-RoboTeam-Fork-Source')}
 
         def send(event, data):
             with write_lock:
@@ -734,8 +734,8 @@ class Handler(BaseHTTPRequestHandler):
                     {'x-should-retry': 'false'})
             payload = json.loads(body)
             request = to_responses(payload, replay=self.server.replay,
-                session_id=self.headers.get('X-RoboFrontier-Session'),
-                fork_source=self.headers.get('X-RoboFrontier-Fork-Source'))
+                session_id=self.headers.get('X-RoboTeam-Session'),
+                fork_source=self.headers.get('X-RoboTeam-Fork-Source'))
             record.update(requested_model=payload.get('model'), tools=len(payload.get('tools', [])), input_items=len(request['input']))
             record.update(request_fingerprints(request))
             record.update(replay_policy='exact-output-v2',native_session=request['input'].session_id,

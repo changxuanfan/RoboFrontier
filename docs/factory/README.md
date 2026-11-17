@@ -1,6 +1,6 @@
 # Robo World rendering (Factory)
 
-Robo World is the rendered factory hall that holds all 36 workstations. The `robofrontier
+Robo World is the rendered factory hall that holds all 36 workstations. The `roboteam
 factory` commands replay saved robot and object poses in it with Blender Cycles: no actions, IK
 or physics are run, and a render does not certify that a task succeeded. They make no model
 calls.
@@ -14,7 +14,7 @@ calls.
 ## The data folder
 
 The commands read one recording bundle from the configured data folder, `factory.data_root` in
-`robofrontier.toml` (default `runs/factory-data/r14`, relative to the checkout, independent of
+`roboteam.toml` (default `runs/factory-data/r14`, relative to the checkout, independent of
 `paths.runs_root`). With `factory.source = "release"` it holds the pinned R14 bundle locked in
 [`configs/factory-assets.json`](../../configs/factory-assets.json) (`factory.asset_lock`): the
 36 stations' recordings with their frozen scenes, assets, motion, appearance events and reviewed
@@ -44,7 +44,7 @@ Mosaic `a06` and `a08` Level 3 desks replay their Level 2 recordings (`recorded_
   before each frame is rendered, so neighboring desks are not synchronized.
 - Stations are placed by rigid translation and rotation about the vertical axis; robots and
   payloads keep their scale.
-- Edits (`robofrontier.station-edit.v2`) select source frames by their 60 Hz indices and bind the
+- Edits (`roboteam.station-edit.v2`) select source frames by their 60 Hz indices and bind the
   source stream and event hashes; the original streams are never rewritten. Cutting frames is
   presentation only, not a contact or task measurement.
 
@@ -65,25 +65,25 @@ openings, payloads and trajectories are never simplified.
 
 ## Lower-level commands
 
-`robofrontier factory` is the supported entry. The modules below work on inputs that already
+`roboteam factory` is the supported entry. The modules below work on inputs that already
 exist; `video` and `poses` need `--scene` and an explicit resolved `--release`, such as the
 `release.json` that `factory prepare` writes into its batch folder.
 
 ```sh
-.venv/bin/python -m robofrontier.factory.commands build --output runs/factory/my-hall
-.venv/bin/python -m robofrontier.factory.commands video \
+.venv/bin/python -m roboteam.factory.commands build --output runs/factory/my-hall
+.venv/bin/python -m roboteam.factory.commands video \
   --scene runs/factory/my-hall/scene.xml --release BATCH/release.json \
   --camera orbit --duration 8 --device OPTIX --output runs/factory/my-orbit
 ```
 
 | Command | Use |
 | --- | --- |
-| `robofrontier.factory.commands build` | Build the Robo World scene into a new `--output` folder from the data folder's release, or `--release` |
-| `robofrontier.factory.commands video` | Pose export and Cycles render in one step; `--camera tour`, `orbit` (`--orbit-degrees`, default 60), `desk-front --station CASE_ID` or a preset; `--families`, `--levels` select desks |
-| `robofrontier.factory.commands poses` | Pose export only, with the same selection |
-| `robofrontier.factory.commands view` | Local browser viewer of a scene (`--scene`), MuJoCo rendering with playback |
-| `robofrontier.factory.blender.export` | Export a scene to Blender assets (`--scene`, `--output`) |
-| `robofrontier/factory/blender/render.py` | Render an exported asset in Blender (`--asset`, `--animation`, `--desk-cameras`, `--device`, `--samples`, `--profile`, `--lighting-config`, `--camera-config`, `--frame-indices`, `--no-encode`, `--keep-frames`, `--metalrt`) |
+| `roboteam.factory.commands build` | Build the Robo World scene into a new `--output` folder from the data folder's release, or `--release` |
+| `roboteam.factory.commands video` | Pose export and Cycles render in one step; `--camera tour`, `orbit` (`--orbit-degrees`, default 60), `desk-front --station CASE_ID` or a preset; `--families`, `--levels` select desks |
+| `roboteam.factory.commands poses` | Pose export only, with the same selection |
+| `roboteam.factory.commands view` | Local browser viewer of a scene (`--scene`), MuJoCo rendering with playback |
+| `roboteam.factory.blender.export` | Export a scene to Blender assets (`--scene`, `--output`) |
+| `roboteam/factory/blender/render.py` | Render an exported asset in Blender (`--asset`, `--animation`, `--desk-cameras`, `--device`, `--samples`, `--profile`, `--lighting-config`, `--camera-config`, `--frame-indices`, `--no-encode`, `--keep-frames`, `--metalrt`) |
 
 `video` defaults to 1280 × 720, `--device METAL`, `--profile fast`, adaptive sampling
 (`--noise-threshold 0.1`, `--min-samples 4`) and denoising; pass `--device OPTIX`, `CUDA` or
@@ -91,7 +91,7 @@ exist; `video` and `poses` need `--scene` and an explicit resolved `--release`, 
 with Blender:
 
 ```sh
-blender --background --python-exit-code 1 --python robofrontier/factory/blender/render.py -- \
+blender --background --python-exit-code 1 --python roboteam/factory/blender/render.py -- \
   --asset ASSET_DIR --animation POSES_DIR/animation.json \
   --output RENDER_DIR --engine cycles --device OPTIX --profile fast --samples 24
 ```

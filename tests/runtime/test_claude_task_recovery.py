@@ -10,14 +10,14 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier.runtime import layout as run_layout
-from robofrontier.engines.claude import recover_task as recovery
-from robofrontier.engines.common import recovery as common_recovery
-from robofrontier.runtime.delegation import Delegations
-from robofrontier.runtime.setup import write_json
-from robofrontier.runtime.store import RuntimeStore
-from robofrontier.tasks.config import ROOT
-from robofrontier.tasks.families import prepare
+from roboteam.runtime import layout as run_layout
+from roboteam.engines.claude import recover_task as recovery
+from roboteam.engines.common import recovery as common_recovery
+from roboteam.runtime.delegation import Delegations
+from roboteam.runtime.setup import write_json
+from roboteam.runtime.store import RuntimeStore
+from roboteam.tasks.config import ROOT
+from roboteam.tasks.families import prepare
 from engines.test_engine_parity import HARNESS
 
 
@@ -29,7 +29,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         harness.write_text(json.dumps(dict(HARNESS, engine='claude', topology='adaptive', startup_protocol='direct_controller_v2')))
         self.batch = self.root/'batch'
         self.run = prepare('transport-a04-d1', self.batch/'opus_subscription'/'transport-a04-d1', harness).resolve()
-        write_json(self.batch/'batch.json', {'schema': 'robofrontier.claude-batch.v2', 'jobs': [
+        write_json(self.batch/'batch.json', {'schema': 'roboteam.claude-batch.v2', 'jobs': [
             {'profile': 'opus_subscription', 'case_id': 'transport-a04-d1', 'run_directory': str(self.run)}]})
         write_json(run_layout.batch_path(self.batch, 'engineering_status'),
                    {'status': 'running', 'jobs': [{'case_id': 'transport-a04-d1', 'status': 'needs_review', 'reason': 'dispatch_paused'}]})
@@ -52,7 +52,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         pose = np.array([.25], dtype=np.float32)
         reader = SimpleNamespace(meta={'case_id': 'fixture', 'source_scene_sha256': 'fixture'},
                                  selected_frames=lambda indices: iter([(0, 1., pose)]))
-        motion = patch('robofrontier.runtime.segments._last_frame', return_value=(reader, 0, 1., pose))
+        motion = patch('roboteam.runtime.segments._last_frame', return_value=(reader, 0, 1., pose))
         motion.start(); self.addCleanup(motion.stop)
         self.processes = patch.object(recovery, 'live_sessions', return_value=[]); self.processes.start(); self.addCleanup(self.processes.stop)
         # The paused world still holds its lock.
@@ -165,7 +165,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         self.assertIn('RUNTIME_UPGRADE_AUTHORIZED', kinds)
         self.assertEqual([a['phase'] for a in result['earlier_attempts']], ['closed'])
         # The grant is consumed by the segment it authorized.
-        from robofrontier.runtime import upgrade as runtime_upgrade
+        from roboteam.runtime import upgrade as runtime_upgrade
         with self.assertRaises(ValueError): runtime_upgrade.validate_authorization(run, store, result['authorization'])
 
     def test_a_world_that_closed_by_itself_continues_and_fails_its_unfinished_action(self):
@@ -228,7 +228,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
 class DurableRecoveryTests(ClaudeRecoveryTests):
     def test_macos_execute_submits_an_interactive_launchd_job_after_inspection(self):
         jobs = []
-        with patch('sys.platform', 'darwin'), patch('robofrontier.batch.mac.bootstrap',
+        with patch('sys.platform', 'darwin'), patch('roboteam.batch.mac.bootstrap',
                                                      side_effect=lambda plist, folder, meta: jobs.append((plist, folder)) or {'label': plist['Label']}), \
                 patch('builtins.print'):
             recovery.main(['--run-dir', str(self.run), '--source-root', str(ROOT), '--scratch', str(self.scratch), '--execute'])
@@ -242,7 +242,7 @@ class DurableRecoveryTests(ClaudeRecoveryTests):
 
     def test_an_ineligible_run_is_refused_before_any_job(self):
         self.store.begin_call('uncertain-original', 'Controller', 'move', {'robot': 'B'})
-        with patch('sys.platform', 'darwin'), patch('robofrontier.batch.mac.bootstrap') as bootstrap, patch('builtins.print'):
+        with patch('sys.platform', 'darwin'), patch('roboteam.batch.mac.bootstrap') as bootstrap, patch('builtins.print'):
             with self.assertRaises(SystemExit):
                 recovery.main(['--run-dir', str(self.run), '--source-root', str(ROOT), '--scratch', str(self.scratch), '--execute'])
         bootstrap.assert_not_called()

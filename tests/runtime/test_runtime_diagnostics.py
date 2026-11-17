@@ -7,8 +7,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from robofrontier.runtime import diagnostics as diagnostics
-from robofrontier.configuration import load_configuration
+from roboteam.runtime import diagnostics as diagnostics
+from roboteam.configuration import load_configuration
 
 
 class RuntimeDiagnosticTests(unittest.TestCase):
@@ -73,7 +73,7 @@ class RuntimeDiagnosticTests(unittest.TestCase):
             self.assertEqual(check.call_args.kwargs['env']['CUDA_VISIBLE_DEVICES'], '')
 
     def test_failed_local_probe_prevents_a_paid_preflight(self):
-        from robofrontier.cli import preflight
+        from roboteam.cli import preflight
         with patch.object(diagnostics, 'inspect_runtime', return_value={'passed': False,
                 'checks': {'native_cli': {'passed': False, 'error': 'namespace denied'}}}), \
                 patch('subprocess.run') as launch:
@@ -82,16 +82,16 @@ class RuntimeDiagnosticTests(unittest.TestCase):
         launch.assert_not_called()
 
     def test_failed_local_probe_prevents_task_launch(self):
-        from robofrontier.cli import run
-        with patch('robofrontier.cli._frozen_configuration', return_value=self.config), \
+        from roboteam.cli import run
+        with patch('roboteam.cli._frozen_configuration', return_value=self.config), \
                 patch.object(diagnostics, 'require_runtime', side_effect=ValueError('no sandbox')), \
-                patch('robofrontier.batch.codex_batch.run_batch') as launch:
+                patch('roboteam.batch.codex_batch.run_batch') as launch:
             with self.assertRaisesRegex(ValueError, 'no sandbox'):
                 run(Path('runs/test'))
         launch.assert_not_called()
 
     def test_doctor_cli_reports_offline_failure_with_nonzero_exit(self):
-        from robofrontier.cli import main
+        from roboteam.cli import main
         output = io.StringIO()
         with patch.object(diagnostics, 'inspect_runtime', return_value={'passed': False, 'model_calls': 0}), \
                 contextlib.redirect_stdout(output):

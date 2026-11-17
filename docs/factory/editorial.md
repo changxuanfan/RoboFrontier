@@ -8,7 +8,7 @@ It targets the pinned 36-station R14 Factory bundle. The font and its SIL Open
 Font License are already in the repository; rendering does not download a font.
 
 The published full tour (1080p, 30 fps, 210.5 seconds) is the GitHub release
-[`factory-tour-media-20261102`](https://github.com/changxuanfan/RoboFrontier/releases/tag/factory-tour-media-20261102),
+[`factory-tour-media-20261102`](https://github.com/changxuanfan/RoboTeam/releases/tag/factory-tour-media-20261102),
 with its checksums. It shows Oracle reference recordings, not model results.
 
 Read the [Factory installation guide](replay.md) first. Offline video uses
@@ -20,7 +20,7 @@ policy image size, model credentials and benchmark task timing.
 Create a new editable copy from the configured Factory data:
 
 ```sh
-.venv/bin/robofrontier factory project --output runs/factory/tour-project
+.venv/bin/roboteam factory project --output runs/factory/tour-project
 ```
 
 The command installs the pinned data if needed, verifies the complete bundle,
@@ -52,7 +52,7 @@ Edit `titles.srt` and `subtitles.srt` in a text or subtitle editor. For example:
 ```srt
 1
 00:00:00,000 --> 00:00:10,000
-RoboFrontier
+RoboTeam
 Can Multimodal Agents Work Together
 on Long Physical Tasks?
 ```
@@ -123,11 +123,11 @@ motion, colors, scoring, or physical contact parameters.
 Use the shipped project directly, or point `--project` at your working copy:
 
 ```sh
-.venv/bin/robofrontier factory prepare --mode promo \
+.venv/bin/roboteam factory prepare --mode promo \
   --project assets/robo_factory/tour-project.json \
   --output runs/factory/full-tour
-.venv/bin/robofrontier factory run runs/factory/full-tour/plan.json --index 0
-.venv/bin/robofrontier factory status runs/factory/full-tour/plan.json
+.venv/bin/roboteam factory run runs/factory/full-tour/plan.json --index 0
+.venv/bin/roboteam factory status runs/factory/full-tour/plan.json
 ```
 
 Omitting `--project` generates the default English project in the new render
@@ -169,7 +169,7 @@ tour. Attempts without a completion seal remain available for diagnosis.
 ## The project-page film style (v2)
 
 [`assets/robo_factory/film-project.json`](../../assets/robo_factory/film-project.json) is the
-published film's project. Its schema `robofrontier.factory-editorial.v2` replaces `font` and
+published film's project. Its schema `roboteam.factory-editorial.v2` replaces `font` and
 `font_license` with `fonts` (`display`, `mono`) and `font_licenses`, and uses a palette style:
 sizes (`display_size`, `deck_size`, `label_size`, `caption_size`), margins, `panel_alpha`
 (percent opacity), `ink`, `dim`, `accent`, `panel` and one color per family. Cue meaning:
@@ -190,7 +190,7 @@ downscaling the raw movie first; the timeline and every check are unchanged.
 For a title, subtitle or style change, reuse the original uncaptioned movie:
 
 ```sh
-.venv/bin/robofrontier factory edit-video \
+.venv/bin/roboteam factory edit-video \
   --project runs/factory/tour-project/project.json \
   --input /path/to/attempt/render/factory.mp4 \
   --output runs/factory/revised-titles

@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 import numpy as np
 
-from robofrontier.oracle.relay_contact_escape import target_contact_allowed,plan_open_contact_withdrawal
+from roboteam.oracle.relay_contact_escape import target_contact_allowed,plan_open_contact_withdrawal
 
 
 class ContactEscapeTests(unittest.TestCase):

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from robofrontier.media import render_frontier_oracle
+from roboteam.media import render_frontier_oracle
 
 
 def policy_outputs(root):

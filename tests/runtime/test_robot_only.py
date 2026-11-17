@@ -7,12 +7,12 @@ import time
 import unittest
 
 from fake_pipeline import FakeWorld, fake_capture
-from robofrontier.runtime import bootstrap, public_files, run_skills, tool_mode
-from robofrontier.runtime.delegation import Delegations
-from robofrontier.runtime.robot_ops import check_request
-from robofrontier.runtime.service import RuntimeService
-from robofrontier.runtime.setup import prepare_run, verify_inputs
-from robofrontier.tasks.config import ROOT, load_harness, startup_protocol
+from roboteam.runtime import bootstrap, public_files, run_skills, tool_mode
+from roboteam.runtime.delegation import Delegations
+from roboteam.runtime.robot_ops import check_request
+from roboteam.runtime.service import RuntimeService
+from roboteam.runtime.setup import prepare_run, verify_inputs
+from roboteam.tasks.config import ROOT, load_harness, startup_protocol
 
 PNG = b'\x89PNG\r\n\x1a\n' + b'\0' * 32
 TEMPLATES = [ROOT/'prompts/rules.md', *sorted((ROOT/'prompts/skills/robot-collaboration').rglob('*.md'))]
@@ -58,10 +58,10 @@ class TemplateTests(unittest.TestCase):
 class PreparationTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.root = Path(self.tmp.name).resolve()
-        self.previous = os.environ.pop('ROBOFRONTIER_POLICY_ENV', None)
+        self.previous = os.environ.pop('ROBOTEAM_POLICY_ENV', None)
 
     def tearDown(self):
-        if self.previous is not None: os.environ['ROBOFRONTIER_POLICY_ENV'] = self.previous
+        if self.previous is not None: os.environ['ROBOTEAM_POLICY_ENV'] = self.previous
         self.tmp.cleanup()
 
     def test_a_full_run_is_prepared_as_before_the_mode_existed(self):
@@ -123,7 +123,7 @@ class ServiceTests(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.root = Path(self.tmp.name).resolve()
-        self.previous = os.environ.pop('ROBOFRONTIER_POLICY_ENV', None)
+        self.previous = os.environ.pop('ROBOTEAM_POLICY_ENV', None)
         self.run = prepare_run(self.root/'run', harness_path=harness(self.root, self.mode))
         self.service = RuntimeService(self.run, FakeWorld, fake_capture)
         self.n = 0
@@ -134,7 +134,7 @@ class ServiceTests(unittest.TestCase):
 
     def tearDown(self):
         if self.service.store: self.service.close()
-        if self.previous is not None: os.environ['ROBOFRONTIER_POLICY_ENV'] = self.previous
+        if self.previous is not None: os.environ['ROBOTEAM_POLICY_ENV'] = self.previous
         self.tmp.cleanup()
 
     def call(self, actor, op, data=None):

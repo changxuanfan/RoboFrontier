@@ -9,7 +9,7 @@ ASSETS = all((Path('benchmark')/family/case/'assets').is_dir() for family, case 
               ('relay', 'relay-a08-d1'), ('dial', 'dial-best5-n04-d1')))
 
 
-@unittest.skipUnless(ASSETS, 'Generated scene assets missing; run `python -m robofrontier.cli bootstrap`')
+@unittest.skipUnless(ASSETS, 'Generated scene assets missing; run `python -m roboteam.cli bootstrap`')
 class ReleasePhysicsValidationTests(unittest.TestCase):
     def test_scenes_rest_without_drift_and_weights_stay_hung(self):
         for case in ('transport-a04-d1', 'mosaic-a04-6x12-d1', 'relay-a08-d2'):

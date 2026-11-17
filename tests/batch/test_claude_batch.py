@@ -9,7 +9,7 @@ import threading
 import time
 import unittest
 
-from robofrontier.batch.claude_batch import run_batch, status_batch, stop_batch
+from roboteam.batch.claude_batch import run_batch, status_batch, stop_batch
 
 
 class BatchTests(unittest.TestCase):
@@ -24,12 +24,12 @@ class BatchTests(unittest.TestCase):
                 'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2']},
                 'A1': {'kind': 'worker', 'robot': 'A1'}, 'A2': {'kind': 'worker', 'robot': 'A2'}}}))
             profile = {'provider': 'anthropic', 'model': 'fake', 'effort': 'high', 'env_key': 'FAKE_KEY'}
-            (run/'private/inputs/claude.json').write_text(json.dumps({'schema':'robofrontier.claude-launch.v2',
+            (run/'private/inputs/claude.json').write_text(json.dumps({'schema':'roboteam.claude-launch.v2',
                 'profile':profile}))
             (run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude', 'topology':'single-agent',
                                                                        'model':'fake','effort':'high'}))
             self.jobs.append({'profile':'fake', 'case_id':case, 'run_directory':str(run), 'status':'draft'})
-        (self.root/'batch.json').write_text(json.dumps({'schema':'robofrontier.claude-batch.v2',
+        (self.root/'batch.json').write_text(json.dumps({'schema':'roboteam.claude-batch.v2',
             'status':'prepared_not_started', 'jobs':self.jobs}))
         self.env = {'FAKE_KEY':'secret'}
 
@@ -66,7 +66,7 @@ class BatchTests(unittest.TestCase):
         # A host stop at its own wall limit, on STOP or after the world ended is final, even when
         # its seal is missing; any other end (a dead world, a session error, a pause) asks.
         from unittest.mock import patch
-        from robofrontier.batch import claude_batch
+        from roboteam.batch import claude_batch
         asked = []
         def fake_continue(run, reason):
             asked.append(reason); return False, 'not eligible in this test'
@@ -143,7 +143,7 @@ class BatchTests(unittest.TestCase):
         ctx = multiprocessing.get_context('fork')
         entered = ctx.Event()
         def child():
-            import robofrontier.batch.claude_batch as batch_module
+            import roboteam.batch.claude_batch as batch_module
             original = batch_module.run_batch
             def runner(run, *args, **kwargs):
                 assert kwargs['startup_timeout_s'] == 321
@@ -238,7 +238,7 @@ class BatchTests(unittest.TestCase):
 
     def _assert_supervisor_loss(self, *, publish_starting):
         from unittest.mock import patch
-        from robofrontier.runtime.setup import write_json
+        from roboteam.runtime.setup import write_json
         ctx = multiprocessing.get_context('fork')
         entered = ctx.Event()
         publication = ctx.Event()
@@ -257,7 +257,7 @@ class BatchTests(unittest.TestCase):
             if starting:
                 publication.set()
         def supervise():
-            with patch('robofrontier.batch.claude_batch.write_json', publish):
+            with patch('roboteam.batch.claude_batch.write_json', publish):
                 self.run_case(runner, 1)
         process = ctx.Process(target=supervise)
         process.start()

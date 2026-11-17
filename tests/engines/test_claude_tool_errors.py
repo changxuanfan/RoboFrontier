@@ -4,8 +4,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from robofrontier.engines.claude.robot_mcp import RobotBridge
-from robofrontier.runtime.tool_errors import CallIdConflict
+from roboteam.engines.claude.robot_mcp import RobotBridge
+from roboteam.runtime.tool_errors import CallIdConflict
 
 
 class ClaudeToolErrorTests(unittest.TestCase):

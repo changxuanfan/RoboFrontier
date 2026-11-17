@@ -12,12 +12,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.engines.common.landlock import abi
-from robofrontier.engines.codex import tool_backend
-from robofrontier.engines.codex.launch import launch_config
-from robofrontier.configuration import load_configuration
-from robofrontier.runtime.access import record, mode
-from robofrontier.runtime.setup import write_json
+from roboteam.engines.common.landlock import abi
+from roboteam.engines.codex import tool_backend
+from roboteam.engines.codex.launch import launch_config
+from roboteam.configuration import load_configuration
+from roboteam.runtime.access import record, mode
+from roboteam.runtime.setup import write_json
 
 
 def fixture(base, name):
@@ -33,7 +33,7 @@ def fixture(base, name):
 
 class WorkerRequestTests(unittest.TestCase):
     def test_apparmor_restriction_is_checked_before_entering_a_namespace(self):
-        from robofrontier.engines.codex import tool_worker
+        from roboteam.engines.codex import tool_worker
         with patch.object(Path, 'exists', return_value=True), \
                 patch.object(Path, 'read_text', return_value='1\n'), \
                 patch.object(tool_worker.os, 'unshare', create=True) as unshare:
@@ -43,7 +43,7 @@ class WorkerRequestTests(unittest.TestCase):
 
     @unittest.skipUnless(hasattr(os, 'CLONE_NEWUSER'), 'Linux namespaces only')
     def test_unrestricted_apparmor_keeps_the_native_namespace_attempt(self):
-        from robofrontier.engines.codex import tool_worker
+        from roboteam.engines.codex import tool_worker
         for exists, value in ((False, ''), (True, '0\n')):
             with self.subTest(exists=exists), patch.object(Path, 'exists', return_value=exists), \
                     patch.object(Path, 'read_text', return_value=value), \
@@ -54,7 +54,7 @@ class WorkerRequestTests(unittest.TestCase):
 
     def test_any_command_the_broker_admits_reaches_the_worker_whole_however_it_is_escaped(self):
         import io
-        from robofrontier.engines.codex import tool_worker
+        from roboteam.engines.codex import tool_worker
         # JSON.stringify escapes these as the broker sends them: newline as two bytes, control as six.
         for command in ('a\n'*60000, '\x01'*131000, 'x'*131000):
             data = json.dumps({'tool': 'policy_exec', 'command': command}).encode()
@@ -67,7 +67,7 @@ class ConfigurationTests(unittest.TestCase):
     def test_shared_volume_clones_and_archives_are_denied_without_blocking_own_workspace(self):
         with tempfile.TemporaryDirectory() as temporary:
             base=Path(temporary).resolve();shared=base/'shared';run=base/'staged/run'
-            with patch.dict(os.environ, {'ROBOFRONTIER_SHARED_DENY_ROOTS':json.dumps([str(shared)])}):
+            with patch.dict(os.environ, {'ROBOTEAM_SHARED_DENY_ROOTS':json.dumps([str(shared)])}):
                 access=record(run,checkouts=[base/'staged'])
             self.assertEqual(mode(access['filesystem'],shared/'another-clone/answers.json'),'deny')
             self.assertEqual(mode(access['filesystem'],shared/'source.tar'),'deny')
@@ -122,10 +122,10 @@ class ConfigurationTests(unittest.TestCase):
             launch = launch_config(profile, out)
             self.assertIn('agents.enabled=false', launch['args'])
             self.assertIn('features.shell_tool=false', launch['args'])
-            self.assertEqual(launch['provider'], 'robofrontier_openai_http')
+            self.assertEqual(launch['provider'], 'roboteam_openai_http')
             self.assertEqual(launch['profile']['provider'], 'openai')
-            self.assertIn('model_providers.robofrontier_openai_http.requires_openai_auth=true', launch['args'])
-            self.assertIn('model_providers.robofrontier_openai_http.supports_websockets=false', launch['args'])
+            self.assertIn('model_providers.roboteam_openai_http.requires_openai_auth=true', launch['args'])
+            self.assertIn('model_providers.roboteam_openai_http.supports_websockets=false', launch['args'])
             self.assertNotIn('sandbox_mode="danger-full-access"', launch['args'])
             model = json.loads((out/'models.json').read_text())['models'][0]
             self.assertIsNone(model['apply_patch_tool_type'])
@@ -167,7 +167,7 @@ const broker=require(process.argv[1]),run=process.argv[2],python=process.argv[3]
         with tempfile.TemporaryDirectory() as temporary:
             run = fixture(Path(temporary).resolve(), 'regular-output')
             with (run/'private/secret').open('a') as output:
-                result = subprocess.run([sys.executable, '-I', '-m', 'robofrontier.engines.codex.tool_worker',
+                result = subprocess.run([sys.executable, '-I', '-m', 'roboteam.engines.codex.tool_worker',
                     '--run-dir', str(run)], input=json.dumps({'tool':'policy_exec','command':'printf BAD'}),
                     stdout=output, stderr=subprocess.PIPE, text=True, timeout=15)
             self.assertNotEqual(result.returncode, 0)
@@ -228,7 +228,7 @@ print('IPC_AND_FD_OK')
 '''.replace('FD_VALUE', str(secret.fileno()))
                 (run/'public/check.py').write_text(script)
                 command = shlex.join([sys.executable, str(run/'public/check.py')])
-                result = subprocess.run([sys.executable, '-I', '-m', 'robofrontier.engines.codex.tool_worker',
+                result = subprocess.run([sys.executable, '-I', '-m', 'roboteam.engines.codex.tool_worker',
                     '--run-dir', str(run)], input=json.dumps({'tool':'policy_exec','command':command}),
                     env={**os.environ, 'WORKER_FAKE_SECRET':'FAKE_CANARY'}, pass_fds=(secret.fileno(),),
                     text=True, capture_output=True, timeout=15)

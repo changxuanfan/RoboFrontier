@@ -1,7 +1,7 @@
 # Unified command-line configuration
 
-The `robofrontier` command plans, prepares, checks, runs and collects batches for both engines.
-Run it from this checkout's editable installation (`.venv/bin/robofrontier`). Global options go
+The `roboteam` command plans, prepares, checks, runs and collects batches for both engines.
+Run it from this checkout's editable installation (`.venv/bin/roboteam`). Global options go
 before the subcommand: `--config FILE` (a partial TOML) and `--result-file FILE` (write the
 command's result as JSON).
 
@@ -30,28 +30,28 @@ options `--engine {codex,claude,antigravity}`, `--profile`, `--effort`, `--topol
 
 ```sh
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap
-.venv/bin/robofrontier plan
+.venv/bin/roboteam bootstrap
+.venv/bin/roboteam plan
 ```
 
 `bootstrap` downloads the pinned policy asset archive if needed, checks its SHA-256 and restores
 every referenced file with hash checks, reusing files that are already correct. It does not
 download the Factory recording bundle. Install the CLI of the engine you will use at its pinned
-version (`robofrontier/runtime/versions.py`: Codex 0.165.0, Claude Code 2.1.316); `prepare` and
+version (`roboteam/runtime/versions.py`: Codex 0.165.0, Claude Code 2.1.316); `prepare` and
 `run` refuse others ([engine setup](engines/README.md#shared-setup)).
 
 ## Defaults and precedence
 
-`robofrontier.toml` holds the defaults. A partial user TOML (`--config`) overrides the settings
+`roboteam.toml` holds the defaults. A partial user TOML (`--config`) overrides the settings
 it names, and command-line options override both. Unknown fields, wrong types, non-finite
 intervals and invalid limits are errors. Credentials go in `.env` or the environment, never in
 TOML. The current `schema_version` is 10; a partial TOML may omit it. A prepared batch keeps its
 frozen configuration whatever version it has.
 
 ```sh
-.venv/bin/robofrontier config
-.venv/bin/robofrontier --config my-site.toml plan
-.venv/bin/robofrontier plan --level 1 --min-arms --parallel 4
+.venv/bin/roboteam config
+.venv/bin/roboteam --config my-site.toml plan
+.venv/bin/roboteam plan --level 1 --min-arms --parallel 4
 ```
 
 The default plan selects all 36 released cases with Codex `luna` at effort high, the adaptive
@@ -83,7 +83,7 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 | `container.workspace` / `image` / `memory_gib` / `cpus` | Docker volumes, image tag and limits (0 adds none) |
 | `container.seccomp_profile` | `default`, or `unconfined` for Codex's nested sandbox |
 | `factory.*` | Offline Cycles rendering ([Factory](factory/replay.md)) |
-| `paths.runs_root` | Where runs, receipts, exports and caches go; empty is `<repo>/runs`; `ROBOFRONTIER_RUNS_ROOT` overrides |
+| `paths.runs_root` | Where runs, receipts, exports and caches go; empty is `<repo>/runs`; `ROBOTEAM_RUNS_ROOT` overrides |
 | `oracle.*` | Native Oracle supervision ([Oracle](oracle/README.md)) |
 
 ## Startup in all four modes
@@ -113,10 +113,10 @@ Each profile names its credential variable ([authentication matrix](engines/READ
 `.env` is read as literal values; a variable already in the environment wins.
 
 ```sh
-.venv/bin/robofrontier preflight --confirm-spend                 # Codex, full
-.venv/bin/robofrontier preflight --confirm-spend --smoke-only    # Codex, does not qualify a run
-.venv/bin/robofrontier preflight --engine claude --max-budget-usd 1 --confirm-spend
-.venv/bin/robofrontier preflight --engine antigravity --profile flash_subscription --confirm-spend
+.venv/bin/roboteam preflight --confirm-spend                 # Codex, full
+.venv/bin/roboteam preflight --confirm-spend --smoke-only    # Codex, does not qualify a run
+.venv/bin/roboteam preflight --engine claude --max-budget-usd 1 --confirm-spend
+.venv/bin/roboteam preflight --engine antigravity --profile flash_subscription --confirm-spend
 ```
 
 Without `--confirm-spend` no model is called and the result is `not_run`. Receipts go under
@@ -128,10 +128,10 @@ match a passed receipt. Details: [Codex](engines/codex.md#preflight-and-receipts
 ## Run, monitor and stop
 
 ```sh
-.venv/bin/robofrontier run runs/policy/my-batch
-.venv/bin/robofrontier status runs/policy/my-batch
-.venv/bin/robofrontier stop runs/policy/my-batch
-.venv/bin/robofrontier continue runs/policy/my-batch [--cases CASE ...]
+.venv/bin/roboteam run runs/policy/my-batch
+.venv/bin/roboteam status runs/policy/my-batch
+.venv/bin/roboteam stop runs/policy/my-batch
+.venv/bin/roboteam continue runs/policy/my-batch [--cases CASE ...]
 ```
 
 `run` reads the frozen `effective-config.json`, checks its fingerprint against the batch metadata
@@ -158,10 +158,10 @@ With `evidence.auto_collect`, once every task host has exited the CLI collects t
 `<batch-name>-<hash>.zip` beside it. By hand:
 
 ```sh
-.venv/bin/robofrontier collect runs/policy/my-batch --output runs/exports/manual-collection
-.venv/bin/robofrontier archive runs/exports/manual-collection --output runs/exports/manual.zip
-.venv/bin/robofrontier extract runs/exports/manual.zip --output runs/restored/manual-archive
-.venv/bin/python -m robofrontier.batch.archive_policy_batch restore runs/restored/manual-archive \
+.venv/bin/roboteam collect runs/policy/my-batch --output runs/exports/manual-collection
+.venv/bin/roboteam archive runs/exports/manual-collection --output runs/exports/manual.zip
+.venv/bin/roboteam extract runs/exports/manual.zip --output runs/restored/manual-archive
+.venv/bin/python -m roboteam.batch.archive_policy_batch restore runs/restored/manual-archive \
   --output runs/restored/manual-evidence
 ```
 

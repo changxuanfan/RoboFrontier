@@ -15,7 +15,7 @@ LIMIT = {'type': 'assistant', 'isApiErrorMessage': True, 'error': 'rate_limit',
 class QuotaPauseTests(NetworkResendTests):
     def setUp(self):
         super().setUp()
-        patcher = patch.dict(os.environ, {'ROBOFRONTIER_NO_NOTIFY': '1'}); patcher.start(); self.addCleanup(patcher.stop)
+        patcher = patch.dict(os.environ, {'ROBOTEAM_NO_NOTIFY': '1'}); patcher.start(); self.addCleanup(patcher.stop)
         self.quota_notice = (self.run/'private/inputs/bootstrap/quota-resume.md').read_text()
 
     def test_a_usage_limit_is_not_a_capacity_error(self):

@@ -1,8 +1,8 @@
 // A role's calls run one at a time in arrival order; other roles are not held up (E1).
 const test = require('node:test');
 const assert = require('node:assert');
-const {PolicyHost, robotTool} = require('../../robofrontier/engines/codex/codex_policy_host.js');
-const shared = require('../../robofrontier/engines/common/robot_tool.json');
+const {PolicyHost, robotTool} = require('../../roboteam/engines/codex/codex_policy_host.js');
+const shared = require('../../roboteam/engines/common/robot_tool.json');
 
 test('calls of one role run in the order they arrived, one at a time', async () => {
   const host = Object.create(PolicyHost.prototype); const log = []; let running = 0, most = 0;

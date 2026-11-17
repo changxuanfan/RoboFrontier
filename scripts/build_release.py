@@ -243,7 +243,7 @@ def physics(args):
 def pin_asset_release():
     """Record which release the pinned asset archive serves. Only valid while the scene assets
     are unchanged: a step that changes an asset (letters) needs a new archive
-    (robofrontier.batch.handoff assets), published and pinned in configs/policy-assets.json;
+    (roboteam.batch.handoff assets), published and pinned in configs/policy-assets.json;
     restore_assets refuses an archive whose files differ from the release's hashes."""
     path = ROOT/'configs/policy-assets.json'
     config = json.loads(path.read_text()); config['release_sha256'] = file_sha256(BENCHMARK/'release.json')
@@ -258,8 +258,8 @@ def settle_case(folder):
     """Run the scene with its arms holding still until nothing else moves, and return the
     resting coordinates of every joint that is not a robot's, with the largest change."""
     import tempfile
-    from robofrontier.tasks.families import prepare
-    from robofrontier.runtime.pipeline import World
+    from roboteam.tasks.families import prepare
+    from roboteam.runtime.pipeline import World
     task_id = json.loads((folder/'task.json').read_text())['id']
     with tempfile.TemporaryDirectory(prefix='rf-settle-') as temporary:
         run = Path(temporary)/'run'; prepare(task_id, run)
@@ -337,7 +337,7 @@ def codes(args):
     codes are kept, so running this again changes nothing."""
     require_unfrozen()
     import secrets
-    from robofrontier.tasks.dial import alphabet
+    from roboteam.tasks.dial import alphabet
     path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
     private = release.setdefault('private', {'scope': 'Evaluator-only values. Never copied into a run\'s public files.'})
     stored = private.setdefault('dial_codes', {})
@@ -394,7 +394,7 @@ def public(args):
     other families' public tasks already carry their camera calibration."""
     require_unfrozen()
     import shutil, tempfile
-    from robofrontier.tasks.families import prepare
+    from roboteam.tasks.families import prepare
     path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
     for family_name, family in release['families'].items():
         for case in family['gpt']:
@@ -412,7 +412,7 @@ def public(args):
                 if target.exists(): shutil.rmtree(target)
                 shutil.copytree(staged, target)
             for name in RUN_ONLY: received.pop(name, None)
-            from robofrontier.tasks.public import clean
+            from roboteam.tasks.public import clean
             received = clean(received)
             if family_name == 'relay':
                 received = with_camera_mounts(received, camera_mounts(compile_scene(folder), received['cameras']))

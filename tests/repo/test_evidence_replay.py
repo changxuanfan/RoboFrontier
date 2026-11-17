@@ -19,7 +19,7 @@ class EvidenceReplayInputTests(unittest.TestCase):
                 path=source/run/'private/outputs/motion/stream.json'
                 path.parent.mkdir(parents=True);path.write_text('{}')
         (source/'batch/batch.json').write_text('{"status":"closed","jobs":[]}')
-        report={'schema':'robofrontier.policy-collection.v1','engine':'codex','complete':True,
+        report={'schema':'roboteam.policy-collection.v1','engine':'codex','complete':True,
                 'writers_stopped':True,'job_count':len(jobs),'jobs':jobs,
                 'files':{p.relative_to(source).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in source.rglob('*') if p.is_file()}}
         (source/'collection.json').write_text(json.dumps(report))

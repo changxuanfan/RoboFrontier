@@ -5,7 +5,7 @@ the assets first ([getting started](../getting-started.md)):
 
 ```sh
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap
+.venv/bin/roboteam bootstrap
 ```
 
 The CI `all-tests` job installs the same Oracle extra so the complete suite can import its reference controllers.
@@ -72,7 +72,7 @@ part. Criteria and the current status are in [physics](../physics.md#validation)
 | `all-tests` | `scripts.run_tests --workers 4` under `xvfb-run`, with the scene assets restored |
 | `analysis-and-scripts` | Analysis, script and record tests without scene assets, so nothing can load a scene |
 
-`all-tests` sets `ROBOFRONTIER_OUTAGE_PROBE=off` and `ROBOFRONTIER_NO_NOTIFY=1`; set them locally
+`all-tests` sets `ROBOTEAM_OUTAGE_PROBE=off` and `ROBOTEAM_NO_NOTIFY=1`; set them locally
 too to keep the network-outage probe and desktop notifications out of test runs.
 
 ## Skips and opt-in tests
@@ -85,11 +85,11 @@ These environment variables turn on longer tests that need a native CLI or local
 
 | Variable | Test |
 | --- | --- |
-| `ROBOFRONTIER_PHYSICS_SMOKE=1`, `ROBOFRONTIER_PHYSICS_VIDEO=1` | `engines.test_claude_physics_smoke`, with video |
-| `ROBOFRONTIER_PHYSICS_BATCH=1` | `engines.test_claude_parallel_physics_smoke` |
-| `ROBOFRONTIER_PHYSICS_STANDING=1`, `ROBOFRONTIER_PHYSICS_SIGNAL=1`, `ROBOFRONTIER_PHYSICS_FINISH=1`, `ROBOFRONTIER_MOSAIC_IMAGE=1` | Claude standing-team, signal, finish and Mosaic image integration tests |
-| `ROBOFRONTIER_NATIVE_TEST_RECEIPTS=1` | Keep the receipts of `engines.test_claude_standing_team_integration` |
-| `ROBOFRONTIER_PRESERVATION_CHECK=1` | `repo.test_oracle_preservation`, which hashes the protected Oracle files (several minutes) |
+| `ROBOTEAM_PHYSICS_SMOKE=1`, `ROBOTEAM_PHYSICS_VIDEO=1` | `engines.test_claude_physics_smoke`, with video |
+| `ROBOTEAM_PHYSICS_BATCH=1` | `engines.test_claude_parallel_physics_smoke` |
+| `ROBOTEAM_PHYSICS_STANDING=1`, `ROBOTEAM_PHYSICS_SIGNAL=1`, `ROBOTEAM_PHYSICS_FINISH=1`, `ROBOTEAM_MOSAIC_IMAGE=1` | Claude standing-team, signal, finish and Mosaic image integration tests |
+| `ROBOTEAM_NATIVE_TEST_RECEIPTS=1` | Keep the receipts of `engines.test_claude_standing_team_integration` |
+| `ROBOTEAM_PRESERVATION_CHECK=1` | `repo.test_oracle_preservation`, which hashes the protected Oracle files (several minutes) |
 
 ## Filesystems
 

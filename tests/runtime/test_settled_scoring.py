@@ -2,7 +2,7 @@
 import unittest
 from types import SimpleNamespace
 
-from robofrontier.runtime.service import SCORING_SETTLE_S, RuntimeService
+from roboteam.runtime.service import SCORING_SETTLE_S, RuntimeService
 
 
 class World:

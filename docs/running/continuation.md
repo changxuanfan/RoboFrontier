@@ -5,12 +5,12 @@ run directory, runtime database, workspace and model sessions. Only the physical
 world is new, rebuilt approximately from the last recorded motion frame. Both
 engines and all four agent systems (single-agent, hierarchical, decentralized,
 adaptive) continue the same way. The functions named `segments.*` below are in
-`robofrontier/runtime/segments.py`.
+`roboteam/runtime/segments.py`.
 
 - After an **unexpected** stop (a host, world or model session ended without a
   finish, cutoff or STOP) the batch continues the run by itself, **once** per run.
 - After that, and after **any** other stop but an integrity abort, an operator
-  continues it by hand with `robofrontier continue`, as often as needed.
+  continues it by hand with `roboteam continue`, as often as needed.
 - A continuation after the **finish** or the **cutoff** is marked `after_score`:
   the score stays the one recorded at that stop, and the continued segment has no
   time limit.
@@ -88,8 +88,8 @@ crashed host leaves no orphan holding the world lock.
 ## Continuing by hand
 
 ```sh
-.venv/bin/robofrontier continue BATCH                          # every run that may continue
-.venv/bin/robofrontier continue BATCH --cases dial-best5-n04-d1  # only these
+.venv/bin/roboteam continue BATCH                          # every run that may continue
+.venv/bin/roboteam continue BATCH --cases dial-best5-n04-d1  # only these
 ```
 
 The batch must not be running. Each run gets its next segment
@@ -143,14 +143,14 @@ with the same restore frame and end time, and uses no further continuation.
 
 - **A host or world exits while the batch process lives:** the batch runner
   checks after every run and, if the run may continue, prepares its next segment
-  and starts its host again (`robofrontier/batch/codex_batch.py` for Codex,
-  `robofrontier/batch/claude_batch.py` for Claude).
+  and starts its host again (`roboteam/batch/codex_batch.py` for Codex,
+  `roboteam/batch/claude_batch.py` for Claude).
 - **The batch process died too:** the world processes close by themselves.
   Then run the batch once more; started runs continue in their next segment (by
   the same stop table) and unstarted runs start:
 
   ```sh
-  .venv/bin/robofrontier run BATCH --continue
+  .venv/bin/roboteam run BATCH --continue
   ```
 
 - **Only the model process died while the world lives:** no segment; the world
@@ -158,14 +158,14 @@ with the same restore frame and end time, and uses no further continuation.
   a Claude role resumes its session once it has no action in flight. Both send
   the frozen `model-restart.md` notice, at most 3 times per run
   (`MAX_MODEL_RESTARTS`).
-- **Any other stop:** nothing continues by itself; `robofrontier continue`
+- **Any other stop:** nothing continues by itself; `roboteam continue`
   (above). A host that closed on review while its world stayed paused can also be
   recovered in place: [Claude](continuation.md#claude-task-recovery) or
   [Codex](continuation.md#codex-task-recovery) task recovery.
 
 ## Testing single-arm recovery: fault injection
 
-`python -m robofrontier.runtime.fault_injection RUN --robot ARM|'*' --action-index N`
+`python -m roboteam.runtime.fault_injection RUN --robot ARM|'*' --action-index N`
 freezes one fault before the run starts: the N-th independent action of that arm
 (or of any arm, with `*`) times out quickly and, once stopping, stays unsettled
 for a set time, so it becomes an uncertain action with local recovery, and
@@ -208,7 +208,7 @@ time already used. The frozen `run_protocol.clock` says how a run counts it.
 ### Active time (`clock: active_time_v1`)
 
 Every policy run counts active time. The world owner adds it up tick by tick
-(`BudgetGuard` in `robofrontier/runtime/clock.py`). An interval counts only while
+(`BudgetGuard` in `roboteam/runtime/clock.py`). An interval counts only while
 the lifecycle is `running`, physics is `running` and dispatch is not paused
 (`clock.counting`). It does not count:
 
@@ -241,7 +241,7 @@ instead of sealing the paused run. The Codex host has no limit of its own.
 
 Active time does not advance while a world is paused or its host is frozen, so it
 alone would never end a run held forever. Policy runs therefore also freeze
-`run_protocol.wall_backstop_s` (172,800 s, `WALL_BACKSTOP_S` in `robofrontier/tasks/families.py`;
+`run_protocol.wall_backstop_s` (172,800 s, `WALL_BACKSTOP_S` in `roboteam/tasks/families.py`;
 private, like the limit). The backstop counts wall time since START
 (`clock.backstop_elapsed`) **less every outage, egress and usage-limit pause**
 (`pause_wall_s` and the current `pause_since_wall` in the runtime database): such a
@@ -267,7 +267,7 @@ that did not close itself 150 s after the backstop) and the run's status is
 `compute` command lists such runs as `EXCLUDED`.
 
 A backstopped run never continues by itself. It continues by hand
-(`robofrontier continue`, or the stopped-runtime upgrade path with its
+(`roboteam continue`, or the stopped-runtime upgrade path with its
 `manual_authorization`). Its continuation moves the backstop's `budget-cutoff.json` and `evaluation.json` aside (with
 `-wall-backstop-N` in their names), records `WALL_BACKSTOP_WAIVED`, and the
 backstop then counts again from that moment.
@@ -276,7 +276,7 @@ backstop then counts again from that moment.
 
 A run without a Slurm egress pause (a Mac, a RunPod host, or a Slurm job with direct
 egress) has no route watcher to pause its world, so its world owner probes the model
-API hosts (`robofrontier/runtime/outage.py`): the host of the run's profile
+API hosts (`roboteam/runtime/outage.py`): the host of the run's profile
 `base_url` when it has one, else the engine's own, Claude `api.anthropic.com` and
 Codex `chatgpt.com` and `auth.openai.com`, all of which must answer. A Slurm job on
 the `mac-ssh` route keeps its egress pause (`slurm.egress_pause_s`, by default as
@@ -301,7 +301,7 @@ continues the same session and replays nothing; a second failure in the same
 pause, or a failure for another reason within it, holds the run for review.
 
 The probe pauses only a running trial (not before START or after the cutoff). It
-is off for runs with a Slurm egress pause and with `ROBOFRONTIER_OUTAGE_PROBE=off` (the test suite sets this). A pause has no
+is off for runs with a Slurm egress pause and with `ROBOTEAM_OUTAGE_PROBE=off` (the test suite sets this). A pause has no
 time limit of its own. A probe
 that never succeeds, because the world process has no direct route out, never
 pauses: after 12 failures it stops and records `OUTAGE_PROBE_UNAVAILABLE`.
@@ -314,7 +314,7 @@ A subscription's 5-hour or weekly limit lasts until its reset, so it is not retr
 like a short rate limit. When a model turn fails on it (`runtime/quota.py`: Claude
 Code's "You've hit your … limit · resets …" or "usage limit reached|<time>", Codex's
 `usageLimitExceeded` or "try again at/in …"), the host reads the reset time and asks
-the world to pause (the `quota-pause` operation of `robofrontier/runtime/cli.py`, `QUOTA_PAUSE_REQUESTED`). The world
+the world to pause (the `quota-pause` operation of `roboteam/runtime/cli.py`, `QUOTA_PAUSE_REQUESTED`). The world
 pauses exactly as in an outage (`QUOTA_PAUSED`): physics and dispatch held, original
 calls kept, the time counted neither as active time nor by the wall backstop. A second
 role's request joins the first (the later reset wins). The world resumes by itself a
@@ -326,7 +326,7 @@ a limit hit again pauses again. It is the same segment: no continuation is used.
 
 The operator is told at the pause and the resume: a line in
 `private/outputs/notifications.jsonl` and, on macOS, a desktop notification
-(`ROBOFRONTIER_NO_NOTIFY=1` turns that off).
+(`ROBOTEAM_NO_NOTIFY=1` turns that off).
 
 ### Capacity retries
 
@@ -350,7 +350,7 @@ as an unexpected stop and continues by itself once (see the stop table).
 
 ## Claude task recovery
 
-`python -m robofrontier.engines.claude.recover_task` continues one task of a Claude
+`python -m roboteam.engines.claude.recover_task` continues one task of a Claude
 engineering batch whose host closed while its world was paused. It is the Claude
 counterpart of [Codex task recovery](#codex-task-recovery). Its default mode
 only reports eligibility.
@@ -367,7 +367,7 @@ Run from any checkout, against the original one. `SOURCE` is the checkout the
 batch runs from, and `PYTHON` is its interpreter.
 
 ```sh
-python -m robofrontier.engines.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" --python "$PYTHON"
+python -m roboteam.engines.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" --python "$PYTHON"
 ```
 
 The task may recover only if every one of these holds:
@@ -388,7 +388,7 @@ The task may recover only if every one of these holds:
 table denies, for example `$RUN/private/engine/recovery-scratch`.
 
 ```sh
-python -m robofrontier.engines.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" \
+python -m roboteam.engines.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" \
   --python "$PYTHON" --scratch "$SCRATCH" --execute
 ```
 
@@ -399,7 +399,7 @@ agent session that started it. `--foreground` runs it in the current process ins
 as on Linux. In order, it:
 
 1. **Seals a live world.** A world that is still alive is sealed through its own
-   shutdown (`seal_run` in `robofrontier/runtime/seal.py`): a final observation, then exit. It is never
+   shutdown (`seal_run` in `roboteam/runtime/seal.py`): a final observation, then exit. It is never
    killed, and no motion is replayed.
 2. **Validates the restore.** It rebuilds the world from the last recorded pose on
    a private copy and checks the pose, zero velocity, simulation time and grasp
@@ -413,7 +413,7 @@ as on Linux. In order, it:
    (`segments.prepare_retry` with the manual sealed-host exception) and checks
    that the call and action ledger is unchanged.
 6. **Runs the frozen runner.** It starts the original runner
-   (`robofrontier.engines.claude.run.run_task`) from `SOURCE`, with that checkout's
+   (`roboteam.engines.claude.run.run_task`) from `SOURCE`, with that checkout's
    `.env` and the batch's frozen configuration. That runner restarts the world from
    the restore pose and resumes the Controller and every active delegate in their
    own sessions, each with its frozen resume message.
@@ -440,20 +440,20 @@ given as `--python`, because the upgrade grants the policy read access to that
 environment.
 
 ```sh
-"$NEW/.venv/bin/python" -m robofrontier.engines.claude.recover_task --run-dir "$RUN" \
+"$NEW/.venv/bin/python" -m roboteam.engines.claude.recover_task --run-dir "$RUN" \
   --upgrade-from "$OLD" --source-root "$NEW" --python "$NEW/.venv/bin/python" \
   --scratch "$SCRATCH" --reason "Why the runtime changes" --execute
 ```
 
 The steps are the same, with one addition. After validation and the backup, the
 upgrade freezes the new runtime into the run and writes a one-segment
-authorization under `private/inputs/runtime-upgrades/<segment>/`. Only robofrontier
+authorization under `private/inputs/runtime-upgrades/<segment>/`. Only roboteam
 source files may change, never prompts, task inputs or documentation. Preparing
 the segment consumes the authorization. The task inputs and the call/action ledger
 are unchanged.
 
 Keep the new checkout where the run's frozen access table denies it (for example
-under `~/.robofrontier/`). That table reads `/` by default and denies only the
+under `~/.roboteam/`). That table reads `/` by default and denies only the
 checkouts that existed when the batch was prepared.
 
 ### Validation
@@ -473,7 +473,7 @@ scene. These tests make no model calls.
 
 ## Codex task recovery
 
-`python -m robofrontier.engines.codex.recover_task` is an explicit, single-task entrypoint.
+`python -m roboteam.engines.codex.recover_task` is an explicit, single-task entrypoint.
 Its default mode only reports eligibility. It does not restart the allocation,
 the shared native app-server, another task, or the batch supervisor. The same
 native process remains the sole subscription refresh owner.
@@ -493,7 +493,7 @@ renderer and filesystem layout available. `SOURCE` is the original immutable
 runtime, not the synchronized development checkout. `PYTHON` is its interpreter.
 
 ```sh
-python -m robofrontier.engines.codex.recover_task \
+python -m roboteam.engines.codex.recover_task \
   --run-dir "$RUN" \
   --engine-manifest "$ENGINE/control/manifest.json" \
   --source-root "$SOURCE" \
@@ -515,7 +515,7 @@ table. Supply the actual allocation expiry as Unix seconds. Execution refuses
 an allocation too short for the remaining budget plus closure time.
 
 ```sh
-python -m robofrontier.engines.codex.recover_task \
+python -m roboteam.engines.codex.recover_task \
   --run-dir "$RUN" \
   --engine-manifest "$ENGINE/control/manifest.json" \
   --source-root "$SOURCE" \

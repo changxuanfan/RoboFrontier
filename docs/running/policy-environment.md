@@ -1,22 +1,22 @@
 # Policy Python environment
 
 Policy scripts run in one frozen Python environment, never the host's Python. Every run uses
-one. `robofrontier prepare` freezes the build of the current locks and refuses when it is
+one. `roboteam prepare` freezes the build of the current locks and refuses when it is
 missing or has not passed its check. There is no way to prepare a run on the host's Python
-(`ROBOFRONTIER_POLICY_ENV=off` is refused).
+(`ROBOTEAM_POLICY_ENV=off` is refused).
 
 Which build `prepare` uses:
 
 | Setting | Build |
 | --- | --- |
-| `ROBOFRONTIER_POLICY_ENV=/abs/path/policy-env-<id>` | That build |
-| `ROBOFRONTIER_POLICY_ENV_BASE=/abs/base` | `<base>/policy-env-<id>` for the current locks |
-| Neither, on macOS | `/Users/Shared/robofrontier/policy-env-<id>` |
+| `ROBOTEAM_POLICY_ENV=/abs/path/policy-env-<id>` | That build |
+| `ROBOTEAM_POLICY_ENV_BASE=/abs/base` | `<base>/policy-env-<id>` for the current locks |
+| Neither, on macOS | `/Users/Shared/roboteam/policy-env-<id>` |
 | Neither, on Linux | None: `prepare` refuses |
 
-`robofrontier plan` shows the choice as `policy_environment`. A prepared run keeps what it froze.
+`roboteam plan` shows the choice as `policy_environment`. A prepared run keeps what it froze.
 On Slurm the job prepares its own batch on the compute node and reads only
-`ROBOFRONTIER_POLICY_ENV`; see [Slurm](slurm.md#5-policy-environment).
+`ROBOTEAM_POLICY_ENV`; see [Slurm](slurm.md#5-policy-environment).
 
 ## Build
 
@@ -24,7 +24,7 @@ Once per host, into a folder outside the home folder, the repository and `/tmp`.
 network and `uvx`; the result is read-only and runs need no network:
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier
+.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam
 ```
 
 It prints the build's `root`. The folder name carries a hash of the locks, the Python version
@@ -36,7 +36,7 @@ Run the check where batches will run (on a compute node for Slurm), with `--scra
 filesystem the batch will use:
 
 ```sh
-.venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id> --scratch <batch location>
+.venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id> --scratch <batch location>
 ```
 
 It drives each real CLI with a local stub model in a throwaway run, with the access table and
@@ -82,7 +82,7 @@ refuses an environment whose files changed.
 | Closed on macOS | The rest of the run, other runs, every checkout, `/Users`, `/Volumes`, `/var/tmp`, `/var/folders`, `/opt`, `/usr/local`, `/Library/Keychains` |
 | Closed on Linux | The rest of the run, other runs, every checkout, `/home`, `/root`, `/mnt`, `/media`, `/raid`, `/var/tmp`, `/dev/shm`, `/opt`, `/usr/local`, `/workspace` |
 
-The home folder, the engines' credential homes and every path in `ROBOFRONTIER_SHARED_DENY_ROOTS`
+The home folder, the engines' credential homes and every path in `ROBOTEAM_SHARED_DENY_ROOTS`
 (a JSON list of absolute paths, for shared storage) are closed too. A run's own `public/` and
 `workspace/` and the environment stay open beneath a closed folder. Codex renders the table as
 a permission profile; Claude Code as file-tool rules plus its Bash isolation.
@@ -121,5 +121,5 @@ a permission profile; Claude Code as file-tool rules plus its Bash isolation.
 
 ## Newer versions
 
-Update `PYTHON` in `robofrontier/runtime/policy_env.py` and `UV` in
+Update `PYTHON` in `roboteam/runtime/policy_env.py` and `UV` in
 `scripts/build_policy_env.py`, relock as the build script's docstring shows, rebuild and check.

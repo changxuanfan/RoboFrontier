@@ -5,15 +5,15 @@ from unittest.mock import patch
 
 import numpy as np
 
-from robofrontier.tasks.families import ROOT,RELEASE,read
-from robofrontier.factory.playback import StationTrack,FactoryTimeline,current_scene
-from robofrontier.factory.cameras import shots,camera_at
-from robofrontier.factory.bundle import resolved_release,read as read_bundle
+from roboteam.tasks.families import ROOT,RELEASE,read
+from roboteam.factory.playback import StationTrack,FactoryTimeline,current_scene
+from roboteam.factory.cameras import shots,camera_at
+from roboteam.factory.bundle import resolved_release,read as read_bundle
 
 
 def portable_data(test):
     folder=ROOT/'runs/factory-data/r14'
-    if not (folder/'bundle.json').is_file():test.skipTest('Install factory data with robofrontier factory setup')
+    if not (folder/'bundle.json').is_file():test.skipTest('Install factory data with roboteam factory setup')
     release=resolved_release(folder)
     scene=folder/read_bundle(folder/'bundle.json')['scene']
     return release,scene
@@ -84,7 +84,7 @@ class FactoryTimelineTests(unittest.TestCase):
 class ReleasedRecordingTests(unittest.TestCase):
     def test_a_recording_missing_from_this_host_is_named(self):
         import tempfile
-        from robofrontier.media.motion_recording import digest
+        from roboteam.media.motion_recording import digest
         old='/Users/fanchangxuan/Repos/roomscript2/runs/oracle/relay-absent/relay-a08-d1/attempt-001/motion'
         with tempfile.TemporaryDirectory() as tmp:
             edit=Path(tmp)/'edit.json';edit.write_text('{}')

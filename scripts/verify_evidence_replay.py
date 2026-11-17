@@ -16,10 +16,11 @@ import mujoco
 import numpy as np
 from PIL import Image
 
-from robofrontier.media.motion_recording import MotionReader
-from robofrontier.physics.workstation import Workstation
-from robofrontier.batch.collect import digest
-from robofrontier.batch.archive_policy_batch import safe, verify_collection
+from roboteam.media.motion_recording import MotionReader
+from roboteam.physics.workstation import Workstation
+from roboteam.batch.collect import digest
+from roboteam.batch.archive_policy_batch import safe, verify_collection
+from roboteam.io import schema_of
 
 
 def simple_frames(recording, indices):
@@ -49,7 +50,7 @@ def simple_frames(recording, indices):
 
 def factory_frames(recording, indices, factory):
     """Diagnostic pixels/FK only; production factory video remains Cycles."""
-    from robofrontier.factory.workstations import FactoryPlayback
+    from roboteam.factory.workstations import FactoryPlayback
     reader = MotionReader(recording)
     source = Workstation(Path(recording)/'source')
     play = FactoryPlayback(factory)
@@ -87,7 +88,7 @@ def verify_evidence(original, restored, output, factory=None):
     markers = sorted(original.glob('batch/**/private/outputs/motion/stream.json'))
     if not markers:
         raise ValueError('No Motion recordings found; no replay validation was performed')
-    if report_source['schema'] == 'robofrontier.policy-collection.v1':
+    if schema_of(report_source) == 'roboteam.policy-collection.v1':
         runs = [safe(original,job['run']) for job in report_source['jobs']]
     else:
         batch = json.loads((original/'batch/batch.json').read_text())

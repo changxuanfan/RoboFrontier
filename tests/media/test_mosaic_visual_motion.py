@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from robofrontier.media.mosaic_visual_motion import VisibleMotionDetector, visible_frame_selection
+from roboteam.media.mosaic_visual_motion import VisibleMotionDetector, visible_frame_selection
 
 
 class VisibleMotionTests(unittest.TestCase):

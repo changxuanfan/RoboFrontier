@@ -15,8 +15,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.engines.common.landlock import abi
-from robofrontier.engines.codex import tool_worker
+from roboteam.engines.common.landlock import abi
+from roboteam.engines.codex import tool_worker
 
 
 def fixture(base):
@@ -39,9 +39,9 @@ def fixture(base):
 
 def worker(run, request, version, *, output=None):
     code = ('import sys;sys.path.insert(0,'+repr(str(Path(tool_worker.__file__).resolve().parents[3]))+');'
-            'from robofrontier.engines.common import landlock as ll;'
+            'from roboteam.engines.common import landlock as ll;'
             'assert ll.abi()>='+str(version)+';ll.abi=lambda:'+str(version)+';'
-            'from robofrontier.engines.codex.tool_worker import main;main()')
+            'from roboteam.engines.codex.tool_worker import main;main()')
     return subprocess.run([sys.executable, '-I', '-c', code, '--run-dir', str(run)],
                           input=json.dumps(request), text=True,
                           **({'capture_output': True} if output is None else {'stdout': output, 'stderr': subprocess.PIPE}),
@@ -58,7 +58,7 @@ class FailClosedTests(unittest.TestCase):
 @unittest.skipUnless(sys.platform.startswith('linux') and abi() >= 1, 'Linux Landlock required')
 class LegacyKernelBoundaryTests(unittest.TestCase):
     def test_abi1_and_abi2_preserve_boundaries_and_workspace_operations(self):
-        from robofrontier.engines.common.landlock import abi
+        from roboteam.engines.common.landlock import abi
         for version in (1, 2):
             if abi() < version:
                 with self.subTest(abi=version): self.skipTest('this kernel has Landlock ABI %d' % abi())

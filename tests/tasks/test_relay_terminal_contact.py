@@ -4,7 +4,7 @@ from unittest.mock import Mock,patch
 import numpy as np
 import json
 from tests.tasks.test_relay_descent_recovery import recorded_world
-from robofrontier.oracle import relay_oracle as ref
+from roboteam.oracle import relay_oracle as ref
 
 
 class RelayTerminalContactTests(unittest.TestCase):
@@ -37,8 +37,8 @@ class RelayTerminalContactTests(unittest.TestCase):
         t.execute.assert_not_called()
 
     def test_all_nine_public_tasks_declare_the_same_user_contact_contract(self):
-        from robofrontier.tasks.families import case_specs as cases, oracle_directory as directory
-        from robofrontier.tasks.public import public_task, validate as validate_task
+        from roboteam.tasks.families import case_specs as cases, oracle_directory as directory
+        from roboteam.tasks.public import public_task, validate as validate_task
         relay=[c for c in cases() if c['family']=='relay'];self.assertEqual(len(relay),9)
         for case in relay:
             task=json.loads((directory(case)/'task.json').read_text());validate_task(task)

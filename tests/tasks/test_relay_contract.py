@@ -8,7 +8,7 @@ import tempfile
 import numpy as np
 import mujoco
 
-from robofrontier.tasks.relay import final_task, is_current
+from roboteam.tasks.relay import final_task, is_current
 from tests.tasks import test_relay_goal_support as support_fixture
 
 

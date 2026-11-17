@@ -10,16 +10,16 @@ site TOML: copy it to an untracked file (here `site.toml`) and edit it.
 - Python 3.12, [uv](https://docs.astral.sh/uv/) (its `uvx` builds the policy environment),
   Node.js and `ffmpeg`.
 - The engine CLI at its pinned version, first on `PATH`: Claude Code 2.1.316 (`claude`) or
-  Codex 0.165.0 (`codex`). `robofrontier/runtime/versions.py` holds the pins, with MuJoCo,
+  Codex 0.165.0 (`codex`). `roboteam/runtime/versions.py` holds the pins, with MuJoCo,
   NumPy and Pillow; `prepare` and `run` refuse any other version.
 
 ## 2. Install
 
 ```sh
-git clone https://github.com/changxuanfan/RoboFrontier.git
-cd RoboFrontier
+git clone https://github.com/changxuanfan/RoboTeam.git
+cd RoboTeam
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap      # downloads and verifies the pinned task assets
+.venv/bin/roboteam bootstrap      # downloads and verifies the pinned task assets
 ```
 
 ## 3. Credentials
@@ -35,7 +35,7 @@ Fill in only the variable your profile reads (`configs/models.json`, `env_key`):
 | Claude `haiku_subscription_token`, `opus_subscription` | `CLAUDE_CODE_OAUTH_TOKEN` in `.env` (from `claude setup-token`) |
 | Claude `haiku`, `opus` | `ANTHROPIC_API_KEY` in `.env` |
 | Codex `luna` | `OPENAI_API_KEY` in `.env` |
-| Codex `luna_subscription`, `sol61_subscription` | No variable: log in once with `CODEX_HOME=~/.robofrontier/codex-home codex login` |
+| Codex `luna_subscription`, `sol61_subscription` | No variable: log in once with `CODEX_HOME=~/.roboteam/codex-home codex login` |
 
 Keep credentials in `.env`, not exported in the shell. `prepare`, `run` and `continue` load
 `.env` themselves; the launchd job file stores no credential, and the Claude token reaches the
@@ -43,12 +43,12 @@ CLI on a pipe.
 
 ## 4. Policy environment
 
-Build once per Mac, then check it. The default base is `/Users/Shared/robofrontier`, so no
+Build once per Mac, then check it. The default base is `/Users/Shared/roboteam`, so no
 variable is needed:
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/robofrontier   # prints its root
-.venv/bin/python -m scripts.check_policy_env /Users/Shared/robofrontier/policy-env-<id>
+.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam   # prints its root
+.venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id>
 ```
 
 The check drives each real CLI against a local stub (no model calls) and records a receipt
@@ -58,10 +58,10 @@ a CLI version. Details: [policy environment](policy-environment.md).
 ## 5. Local check and preflight
 
 ```sh
-.venv/bin/robofrontier --config site.toml doctor          # CLI, sandbox, renderer; exits 2 on failure
-.venv/bin/robofrontier --config site.toml plan            # tasks, model, policy_environment; no model calls
-.venv/bin/robofrontier --config site.toml preflight --confirm-spend --max-budget-usd 1   # Claude
-.venv/bin/robofrontier --config site.toml preflight --confirm-spend                      # Codex
+.venv/bin/roboteam --config site.toml doctor          # CLI, sandbox, renderer; exits 2 on failure
+.venv/bin/roboteam --config site.toml plan            # tasks, model, policy_environment; no model calls
+.venv/bin/roboteam --config site.toml preflight --confirm-spend --max-budget-usd 1   # Claude
+.venv/bin/roboteam --config site.toml preflight --confirm-spend                      # Codex
 ```
 
 `preflight` makes a few paid calls. For Claude it runs the basic and the blocked-parent
@@ -78,17 +78,17 @@ while they run, a detached worktree of `main` outside the repository for example
 root pointing where the receipts and results belong:
 
 ```sh
-git worktree add --detach ~/Repos/RoboFrontier-run main
-cd ~/Repos/RoboFrontier-run && uv sync --locked --extra oracle && install -m 600 ../RoboFrontier/.env .env
-export ROBOFRONTIER_RUNS_ROOT=~/Repos/RoboFrontier/runs
+git worktree add --detach ~/Repos/RoboTeam-run main
+cd ~/Repos/RoboTeam-run && uv sync --locked --extra oracle && install -m 600 ../RoboTeam/.env .env
+export ROBOTEAM_RUNS_ROOT=~/Repos/RoboTeam/runs
 ```
 
 ```sh
-.venv/bin/robofrontier --config site.toml prepare --output runs/policy/my-batch
-.venv/bin/robofrontier run runs/policy/my-batch          # submits the launchd job and returns
-.venv/bin/robofrontier status runs/policy/my-batch       # includes the job's state under "durable"
-.venv/bin/robofrontier stop runs/policy/my-batch         # an orderly stop
-.venv/bin/robofrontier continue runs/policy/my-batch     # continue stopped runs by hand
+.venv/bin/roboteam --config site.toml prepare --output runs/policy/my-batch
+.venv/bin/roboteam run runs/policy/my-batch          # submits the launchd job and returns
+.venv/bin/roboteam status runs/policy/my-batch       # includes the job's state under "durable"
+.venv/bin/roboteam stop runs/policy/my-batch         # an orderly stop
+.venv/bin/roboteam continue runs/policy/my-batch     # continue stopped runs by hand
 ```
 
 `run` and `continue` read the batch's frozen configuration, not `--config`. `run --foreground`
@@ -111,7 +111,7 @@ A network outage and a used-up usage limit pause the run in place and resume it 
 
 Each run's results, videos and evidence stay in its folder under the batch. When the batch ends,
 `run` collects it into `<runs root>/exports/<batch>-<hash>/` and archives a verified ZIP beside
-it. The runs root is `paths.runs_root` or `ROBOFRONTIER_RUNS_ROOT` (default `<repo>/runs`).
+it. The runs root is `paths.runs_root` or `ROBOTEAM_RUNS_ROOT` (default `<repo>/runs`).
 See [evidence storage](evidence-storage.md).
 
 ## Limits

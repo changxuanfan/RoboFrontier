@@ -7,11 +7,11 @@ import unittest
 from unittest.mock import patch
 
 from fake_pipeline import fake_capture
-from robofrontier.runtime import segments as run_segments
-from robofrontier.tasks import families as task_families
-from robofrontier.runtime.clock import BudgetGuard, protocol
-from robofrontier.runtime.setup import prepare_run
-from robofrontier.runtime.service import RuntimeService
+from roboteam.runtime import segments as run_segments
+from roboteam.tasks import families as task_families
+from roboteam.runtime.clock import BudgetGuard, protocol
+from roboteam.runtime.setup import prepare_run
+from roboteam.runtime.service import RuntimeService
 from engines.test_claude_supervisor import Dispatcher, Policy
 from runtime.test_policy_probe import BudgetWorld
 
@@ -120,7 +120,7 @@ class ActiveTimeTests(Fixture):
         guard = self.guard(persist_s=60.); self.s.policy_budget = guard
         self.ticks(guard, [0, .5]); self.assertIsNone(self.s.store.get('active_s'))
         path = self.s.store.path; self.s.close()
-        from robofrontier.runtime.store import RuntimeStore
+        from roboteam.runtime.store import RuntimeStore
         store = RuntimeStore(path)
         try: self.assertEqual(store.get('active_s'), .5)
         finally: store.close()
@@ -133,7 +133,7 @@ class ActiveTimeTests(Fixture):
 
 class SupervisorActiveTimeTests(unittest.TestCase):
     def supervisor(self, policy, sleep, **kwargs):
-        from robofrontier.engines.claude.supervisor import CentralizedSupervisor
+        from roboteam.engines.claude.supervisor import CentralizedSupervisor
         self.now = 0
         def tick(seconds): self.now += seconds; sleep()
         policy.now = lambda: self.now
@@ -171,11 +171,11 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         task_families.validate_policy_task(old)
         with self.assertRaises(ValueError):
             task_families.validate_policy_task(dict(new, run_protocol=dict(new['run_protocol'], clock='START_wall_time')))
-        from robofrontier.tasks.public import public_task
+        from roboteam.tasks.public import public_task
         self.assertNotIn('run_protocol', public_task(new))
 
     def store(self, run):
-        from robofrontier.runtime.store import RuntimeStore
+        from roboteam.runtime.store import RuntimeStore
         store = RuntimeStore(run/'private/state/runtime.sqlite'); self.addCleanup(store.close)
         store.put('lifecycle', 'running'); return store
 

@@ -6,21 +6,21 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import unittest
-from robofrontier.oracle.source_snapshot import freeze_executor,replace_option
+from roboteam.oracle.source_snapshot import freeze_executor,replace_option
 
 
 class OracleSourceSnapshotTests(unittest.TestCase):
     def test_copied_package_and_lazy_script_helper_ignore_later_edits(self):
         with TemporaryDirectory() as directory:
-            root=Path(directory)/'repo';(root/'robofrontier').mkdir(parents=True);(root/'scripts').mkdir();(root/'configs').mkdir()
-            (root/'robofrontier/__init__.py').write_text('')
-            (root/'robofrontier/sample.py').write_text('VALUE="recorded"\n')
+            root=Path(directory)/'repo';(root/'roboteam').mkdir(parents=True);(root/'scripts').mkdir();(root/'configs').mkdir()
+            (root/'roboteam/__init__.py').write_text('')
+            (root/'roboteam/sample.py').write_text('VALUE="recorded"\n')
             (root/'scripts/helper.py').write_text('VALUE="helper-recorded"\n')
-            (root/'scripts/check.py').write_text('from robofrontier.sample import VALUE\nfrom scripts.helper import VALUE as other\nprint(VALUE+":"+other)\n')
+            (root/'scripts/check.py').write_text('from roboteam.sample import VALUE\nfrom scripts.helper import VALUE as other\nprint(VALUE+":"+other)\n')
             (root/'configs/harness.json').write_text('{"profile":"before"}')
             catalog=root/'configs/catalog.json';catalog.write_text('{"cases":[]}')
             frozen=freeze_executor(root,Path(directory)/'snapshot',root/'configs/harness.json',catalog)
-            (root/'robofrontier/sample.py').write_text('VALUE="changed"\n')
+            (root/'roboteam/sample.py').write_text('VALUE="changed"\n')
             (root/'scripts/helper.py').write_text('VALUE="helper-changed"\n')
             (root/'configs/harness.json').write_text('{"profile":"after"}')
             env=os.environ.copy();env['PYTHONPATH']=str(frozen)

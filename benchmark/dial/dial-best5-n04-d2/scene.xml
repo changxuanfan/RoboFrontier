@@ -1,4 +1,4 @@
-<mujoco model="RoboFrontier | dial-n04-d2">
+<mujoco model="RoboTeam | dial-n04-d2">
   <compiler angle="radian" meshdir="assets/robot" autolimits="true" />
   <option integrator="implicitfast" timestep="0.002" gravity="0.0 0.0 -9.81" solver="Newton" iterations="100" noslip_iterations="10" cone="elliptic" impratio="1" noslip_tolerance="1e-9" />
   <default>

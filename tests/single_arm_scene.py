@@ -15,9 +15,9 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from robofrontier.runtime.pipeline import World
-from robofrontier.physics.robot_control import PandaArm
-from robofrontier.io import ROOT, vector
+from roboteam.runtime.pipeline import World
+from roboteam.physics.robot_control import PandaArm
+from roboteam.io import ROOT, vector
 
 TABLE_HEIGHT_M = .4
 CUBE_HALF_M = .02
@@ -37,7 +37,7 @@ def _camera(world, name, position, target, fovy):
 def scene_xml(cubes, noslip_iterations=10):
     """MJCF for robot B at y=0 and one cube per position, before its keyframe."""
     root = ET.parse(ROOT/'vendor/panda/panda.xml').getroot()
-    root.set('model', 'RoboFrontier single-arm test scene')
+    root.set('model', 'RoboTeam single-arm test scene')
     root.find('compiler').set('meshdir', 'model-assets')
     root.remove(root.find('keyframe'))
     root.find('option').attrib.update(timestep='.002', gravity='0 0 -9.81', integrator='implicitfast',

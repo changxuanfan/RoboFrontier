@@ -17,7 +17,7 @@
     "directory": "benchmark/transport/transport-a12-d3"
   },
   "scene_asset": "benchmark/transport/transport-a12-d3",
-  "scene_sha256": "fc4811eedb12622e92b34492f92d1c73ec71eb81d13ec88d8da728ce55fdd214",
+  "scene_sha256": "b0e30af668d76c733e894a1a236f68b3debd8997a8c750f4b304a027a6328d58",
   "arms": {
     "A": {
       "base_position_m": [

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from robofrontier.io import ROOT
+from roboteam.io import ROOT
 
 
 class ServeTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class ServeTests(unittest.TestCase):
             connection.write_text(json.dumps({'schema_version': 3, 'run_id': 'r', 'actor': 'A', 'url': None, 'token': 't'}))
             requests = [{'call_id': 'one', 'op': 'pending', 'data': {}}, {'call_id': 'two', 'op': 'move', 'data': {}}, 'not json']
             stdin = ''.join((json.dumps(r) if isinstance(r, dict) else r)+'\n' for r in requests)
-            out = subprocess.run([sys.executable, '-m', 'robofrontier.runtime.pipeline_client', '--serve', '--connection', str(connection)],
+            out = subprocess.run([sys.executable, '-m', 'roboteam.runtime.pipeline_client', '--serve', '--connection', str(connection)],
                                  input=stdin, capture_output=True, text=True, cwd=ROOT, timeout=60)
             replies = [json.loads(line) for line in out.stdout.splitlines()]
             self.assertEqual([r['status'] for r in replies], [0, 1, 1])

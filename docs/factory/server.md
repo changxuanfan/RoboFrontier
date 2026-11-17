@@ -11,8 +11,8 @@ Clone onto a large filesystem the compute nodes can read, and install the locked
 on the server itself (never copy `.venv` from another machine):
 
 ```sh
-git clone https://github.com/changxuanfan/RoboFrontier.git
-cd RoboFrontier
+git clone https://github.com/changxuanfan/RoboTeam.git
+cd RoboTeam
 uv sync --locked
 ```
 
@@ -31,7 +31,7 @@ used here `module load slurm` may be needed before `srun` or `sbatch`:
 ```sh
 module load slurm
 srun --partition debug --cpus-per-task 8 --mem 16G --time 01:00:00 \
-  .venv/bin/robofrontier factory setup
+  .venv/bin/roboteam factory setup
 ```
 
 Setup installs into `factory.data_root` (default `runs/factory-data/r14` in the checkout); for
@@ -48,7 +48,7 @@ Inside a GPU allocation:
 ```sh
 srun --partition YOUR_GPU_PARTITION --gres gpu:1 --cpus-per-task 4 \
   --mem 16G --time 00:20:00 \
-  .venv/bin/robofrontier factory doctor --device OPTIX
+  .venv/bin/roboteam factory doctor --device OPTIX
 ```
 
 A login node without a GPU cannot check a compute node's GPU. `--device CPU` checks the CPU path.
@@ -60,11 +60,11 @@ Eight one-second previews (the smallest Level 1 desk of each family, front and s
 size and sampling:
 
 ```sh
-.venv/bin/robofrontier --config site.toml factory prepare \
+.venv/bin/roboteam --config site.toml factory prepare \
   --output runs/factory/smoke \
   --cases transport-a04-d1 mosaic-a04-6x12-d1 relay-a08-d1 dial-best5-n04-d1 \
   --duration-s 1 --width 640 --height 360 --samples 8 --device OPTIX
-.venv/bin/robofrontier factory submit runs/factory/smoke/plan.json
+.venv/bin/roboteam factory submit runs/factory/smoke/plan.json
 ```
 
 `site.toml` holds the `[slurm]` section (partition, account, qos, `gpus`, `cpus_per_task`,
@@ -82,18 +82,18 @@ Without `--duration-s` the full reviewed clips render; without filters, 36 desks
 72 items:
 
 ```sh
-.venv/bin/robofrontier --config site.toml factory prepare \
+.venv/bin/roboteam --config site.toml factory prepare \
   --output runs/factory/full --device OPTIX
-.venv/bin/robofrontier factory submit runs/factory/full/plan.json --queue
+.venv/bin/roboteam factory submit runs/factory/full/plan.json --queue
 ```
 
 Narrow with `--families`, `--level`, `--views` or `--cases`. Each item checks only its own
 recording, scene, assets and camera. The tour is one 210.5 s job:
 
 ```sh
-.venv/bin/robofrontier --config site.toml factory prepare \
+.venv/bin/roboteam --config site.toml factory prepare \
   --output runs/factory/promo --mode promo --device OPTIX
-.venv/bin/robofrontier factory submit runs/factory/promo/plan.json --queue
+.venv/bin/roboteam factory submit runs/factory/promo/plan.json --queue
 ```
 
 It keeps its camera plan, `reset-events.json` and per-frame source mapping, and freezes an
@@ -104,8 +104,8 @@ editable project ([editorial](editorial.md)).
 Prepare with `--device OPTIX`, `CUDA`, `METAL` (macOS) or `CPU`, then run each index:
 
 ```sh
-.venv/bin/robofrontier factory run runs/factory/local/plan.json --index 0
-.venv/bin/robofrontier factory status runs/factory/local/plan.json
+.venv/bin/roboteam factory run runs/factory/local/plan.json --index 0
+.venv/bin/roboteam factory status runs/factory/local/plan.json
 ```
 
 A plan binds input locations and hashes on its machine; after moving data or changing sources,
@@ -130,9 +130,9 @@ Wait until every writer has stopped, then import the run's `private/outputs/moti
 evidence archive into ordinary files first):
 
 ```sh
-.venv/bin/robofrontier factory import-motion /path/to/run/private/outputs/motion \
+.venv/bin/roboteam factory import-motion /path/to/run/private/outputs/motion \
   --output runs/factory-data/my-recording
-.venv/bin/robofrontier factory prepare --source imported \
+.venv/bin/roboteam factory prepare --source imported \
   --data-root runs/factory-data/my-recording \
   --output runs/factory/my-recording --device OPTIX
 ```
@@ -141,7 +141,7 @@ Options and checks are in [replay](replay.md#import-a-closed-benchmark-recording
 
 ## Packaging a bundle
 
-`robofrontier.factory.bundle.export` writes a portable bundle folder from a scene, a resolved
+`roboteam.factory.bundle.export` writes a portable bundle folder from a scene, a resolved
 release, cameras, an exported asset and a source root; `bundle.pack` verifies every file and
 writes a tar.gz, with identical files hard-linked; `bundle.split_archive` splits it into parts
 and writes the part list that `configs/factory-assets.json` pins. Publish a changed bundle under

@@ -1,4 +1,4 @@
-"""Cut the RoboFrontier film and its short teaser from the raw Robo World render, with motion
+"""Cut the RoboTeam film and its short teaser from the raw Robo World render, with motion
 graphics drawn in the project page's style: white signage plates like the labels on the
 Robo World floor, the four family colors, Space Grotesk and JetBrains Mono.
 
@@ -259,7 +259,7 @@ class Opening:
             layer = Image.new('RGBA', (900, 520), (0, 0, 0, 0)); g = ImageDraw.Draw(layer)
             mark(g, 2, 8, 15, 4)
             tracked(g, (52, 8), 'MULTI-ROBOT BENCHMARK · MULTIMODAL AGENTS', font('mono', 22), DIM + (255,), 2.2)
-            g.text((0, 62), 'RoboFrontier', font=font('display', 112), fill=INK + (255,))
+            g.text((0, 62), 'RoboTeam', font=font('display', 112), fill=INK + (255,))
             place(img, layer, x, 300 + 30 * (1 - k), k)
         k = ease_out((t - .55) / .6)
         if k > 0:
@@ -339,11 +339,11 @@ def end_card(frame, k):
     """A white veil and the closing card; k eases 0 -> 1."""
     veil = Image.new('RGBA', (W, H), WHITE + (int(200 * k),)); frame.paste(veil, (0, 0), veil)
     layer = Image.new('RGBA', (1200, 420), (0, 0, 0, 0)); g = ImageDraw.Draw(layer)
-    f = font('display', 128); tw = f.getlength('RoboFrontier')
+    f = font('display', 128); tw = f.getlength('RoboTeam')
     mark(g, (1200 - tw) / 2 - 78, 52, 24, 6)
-    g.text(((1200 - tw) / 2, 18), 'RoboFrontier', font=f, fill=INK + (255,))
+    g.text(((1200 - tw) / 2, 18), 'RoboTeam', font=f, fill=INK + (255,))
     for y, text, size, fill, tr in ((190, '36 TASKS · 4 FAMILIES · UP TO 16 ARMS', 26, INK2, 2.6),
-                                    (250, 'changxuanfan.github.io/RoboFrontier', 28, COLORS['transport'], .4),
+                                    (250, 'changxuanfan.github.io/RoboTeam', 28, COLORS['transport'], .4),
                                     (320, 'ORACLE REFERENCE RUNS IN ROBO WORLD · NOT MODEL RESULTS', 18, DIM, 1.8)):
         fm = font('mono', size); tracked(g, ((1200 - tracked_width(text, fm, tr)) / 2, y), text, fm, fill + (255,), tr)
     place(frame, layer, (W - 1200) / 2, (H - 420) / 2 + 26 * (1 - k), ease_out(k))

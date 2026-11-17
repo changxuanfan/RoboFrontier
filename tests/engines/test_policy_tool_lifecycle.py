@@ -19,7 +19,7 @@ class LifetimeTests(unittest.TestCase):
                 str(marker)]
             owner_code = '''import os,subprocess,sys,time
 r,w=os.pipe()
-p=subprocess.Popen([sys.executable,'-m','robofrontier.engines.common.tool_guardian',str(r),sys.argv[1]],
+p=subprocess.Popen([sys.executable,'-m','roboteam.engines.common.tool_guardian',str(r),sys.argv[1]],
                    pass_fds=(r,),start_new_session=True)
 os.close(r)
 time.sleep(30)

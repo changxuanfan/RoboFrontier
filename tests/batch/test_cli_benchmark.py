@@ -7,13 +7,13 @@ import unittest
 from unittest.mock import patch
 from types import SimpleNamespace
 
-from robofrontier.batch.prepare import load_env, select_cases
-from robofrontier.batch import codex_batch as benchmark
-from robofrontier.batch.codex_batch import prepare_batch
-from robofrontier.engines.codex.launch import profile, launch_config
-from robofrontier.runtime.cli import fork_provenance
-from robofrontier.tasks.families import prepare
-from robofrontier.runtime.service import RuntimeService
+from roboteam.batch.prepare import load_env, select_cases
+from roboteam.batch import codex_batch as benchmark
+from roboteam.batch.codex_batch import prepare_batch
+from roboteam.engines.codex.launch import profile, launch_config
+from roboteam.runtime.cli import fork_provenance
+from roboteam.tasks.families import prepare
+from roboteam.runtime.service import RuntimeService
 from runtime.test_policy_probe import BudgetWorld
 from fake_pipeline import fake_capture
 
@@ -123,8 +123,8 @@ class CliBenchmarkTests(unittest.TestCase):
                 self.assertFalse(any('suite-code' in str(p) for p in (run/'public').rglob('*')))
 
     def test_a_stop_request_reaches_the_batch_and_every_run(self):
-        # What SIGINT/SIGTERM and `robofrontier stop` do for a Codex batch.
-        from robofrontier.runtime import layout as run_layout
+        # What SIGINT/SIGTERM and `roboteam stop` do for a Codex batch.
+        from roboteam.runtime import layout as run_layout
         with tempfile.TemporaryDirectory() as temporary:
             folder = Path(temporary)/'batch'; runs = [folder/'runs'/name for name in ('a', 'b')]
             for run in runs: run.mkdir(parents=True)
@@ -134,8 +134,8 @@ class CliBenchmarkTests(unittest.TestCase):
             self.assertTrue(all(run_layout.path(run, 'stop', 'codex').exists() for run in runs))
 
     def test_status_reports_a_working_run_as_running(self):
-        from robofrontier.cli import _with_live_runs
-        from robofrontier.runtime import layout as run_layout
+        from roboteam.cli import _with_live_runs
+        from roboteam.runtime import layout as run_layout
         with tempfile.TemporaryDirectory() as temporary:
             folder = Path(temporary); runs = [folder/name for name in ('claude', 'codex', 'queued')]
             for run in runs: run.mkdir()

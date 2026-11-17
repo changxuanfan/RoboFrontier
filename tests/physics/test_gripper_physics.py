@@ -5,9 +5,9 @@ import unittest
 
 import numpy as np
 
-from robofrontier.tasks.config import load_harness
+from roboteam.tasks.config import load_harness
 from single_arm_scene import make_world
-from robofrontier.physics.robot_control import matrix_quat,rotation_vector
+from roboteam.physics.robot_control import matrix_quat,rotation_vector
 from motion import filled
 
 

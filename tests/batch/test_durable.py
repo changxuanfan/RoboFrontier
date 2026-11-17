@@ -6,8 +6,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from robofrontier.batch import mac as durable
-from robofrontier.runtime import layout as run_layout
+from roboteam.batch import mac as durable
+from roboteam.runtime import layout as run_layout
 
 
 class DurableTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class DurableTests(unittest.TestCase):
             batch = Path(tmp)
             (batch/'batch.json').write_text(json.dumps({'status': 'prepared_not_started', 'jobs': [], **run_layout.batch_record()}))
             plist = durable.service(batch, python='/py', environment={'PATH': '/bin'})
-            self.assertEqual(plist['ProgramArguments'], [durable.CAFFEINATE, '-ims', '/py', '-m', 'robofrontier.cli', 'run', str(batch),
+            self.assertEqual(plist['ProgramArguments'], [durable.CAFFEINATE, '-ims', '/py', '-m', 'roboteam.cli', 'run', str(batch),
                                                          '--foreground'])
             self.assertTrue(plist['StandardOutPath'].startswith(str(batch/'control/durable')))
             self.assertFalse(plist['KeepAlive'])
@@ -57,10 +57,10 @@ class RunDefaultTests(unittest.TestCase):
     """A fresh macOS batch runs under launchd with Interactive priority unless --foreground is given."""
 
     def dispatch(self, argv, platform):
-        from robofrontier import cli
-        with patch('sys.platform', platform), patch('robofrontier.batch.mac.submit', return_value={'label': 'x'}) as submit, \
-                patch('robofrontier.cli.run', return_value={'status': 'ok'}) as run, \
-                patch('robofrontier.batch.prepare.load_env'), patch('builtins.print'):
+        from roboteam import cli
+        with patch('sys.platform', platform), patch('roboteam.batch.mac.submit', return_value={'label': 'x'}) as submit, \
+                patch('roboteam.cli.run', return_value={'status': 'ok'}) as run, \
+                patch('roboteam.batch.prepare.load_env'), patch('builtins.print'):
             cli.main(argv)
         return submit, run
 

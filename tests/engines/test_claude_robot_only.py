@@ -21,9 +21,9 @@ from unittest import mock
 import uuid
 
 from engines.test_claude_policy_sandbox_integration import cli_version, stub_model
-from robofrontier.engines.claude import runner
-from robofrontier.engines.claude.robot_mcp import RobotBridge
-from robofrontier.engines.claude.runner import ROBOT_TOOL, build_command
+from roboteam.engines.claude import runner
+from roboteam.engines.claude.robot_mcp import RobotBridge
+from roboteam.engines.claude.runner import ROBOT_TOOL, build_command
 
 PNG = b'\x89PNG\r\n\x1a\n' + b'\0' * 32
 # A stand-in robot MCP server: one tool named robot that answers with its own arguments.
@@ -97,7 +97,7 @@ class CommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp)/'run'; (run/'private/inputs').mkdir(parents=True)
             (run/'private/inputs/policy-access.json').write_text(json.dumps(
-                {'schema': 'robofrontier.policy-access.v1', 'filesystem': {str(run/'workspace'): 'write'}, 'network': False}))
+                {'schema': 'roboteam.policy-access.v1', 'filesystem': {str(run/'workspace'): 'write'}, 'network': False}))
             (run/'private/inputs/harness.json').write_text(json.dumps({'topology': 'adaptive'}))
             self.assertFalse(runner.robot_only(run))
             self.assertIsNotNone(runner.turn_settings(run))

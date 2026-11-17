@@ -10,9 +10,9 @@ import threading
 import unittest
 
 from engines.test_claude_adaptive_integration import StubModel
-from robofrontier.engines.claude.run import run_task
-from robofrontier.batch.claude_prepare import prepare_batch
-from robofrontier.batch.report import export
+from roboteam.engines.claude.run import run_task
+from roboteam.batch.claude_prepare import prepare_batch
+from roboteam.batch.report import export
 
 
 class FinishModel(StubModel):
@@ -25,7 +25,7 @@ class FinishModel(StubModel):
         return super().choose_tool(names,text,blocks,has_result)
 
 
-@unittest.skipUnless(os.environ.get('ROBOFRONTIER_PHYSICS_FINISH')=='1' and shutil.which('claude'),
+@unittest.skipUnless(os.environ.get('ROBOTEAM_PHYSICS_FINISH')=='1' and shutil.which('claude'),
                      'Opt-in physics finish smoke requires Claude CLI and scene assets')
 class FinishPhysicsSmokeTests(unittest.TestCase):
     def test_early_finish_produces_failed_evaluation_and_report(self):

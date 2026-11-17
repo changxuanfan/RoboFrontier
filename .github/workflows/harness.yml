@@ -31,7 +31,7 @@ jobs:
           python -m pip install uv==0.9.28
           uv sync --locked
       - name: Restore pinned policy assets
-        run: .venv/bin/python -m robofrontier.cli bootstrap
+        run: .venv/bin/python -m roboteam.cli bootstrap
       - name: Protocol contract (physics blocked)
         run: .venv/bin/python -m scripts.check_harness --protocol-only --report harness-protocol.json
       - name: Engine parity, run layout, segments and evidence storage
@@ -70,11 +70,11 @@ jobs:
           python -m pip install uv==0.9.28
           uv sync --locked --extra oracle
       - name: Restore pinned policy assets
-        run: .venv/bin/python -m robofrontier.cli bootstrap
+        run: .venv/bin/python -m roboteam.cli bootstrap
       - name: Every test
         env:
-          ROBOFRONTIER_OUTAGE_PROBE: 'off'
-          ROBOFRONTIER_NO_NOTIFY: '1'
+          ROBOTEAM_OUTAGE_PROBE: 'off'
+          ROBOTEAM_NO_NOTIFY: '1'
         run: xvfb-run -a -s "-screen 0 1920x1080x24" .venv/bin/python -m scripts.run_tests --workers 4 --report all-tests.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()

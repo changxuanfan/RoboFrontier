@@ -1,5 +1,5 @@
 {
-  "schema": "robofrontier.suite.v2",
+  "schema": "roboteam.suite.v2",
   "feedback": {
     "version": "best5-v1",
     "mode": "best_so_far",

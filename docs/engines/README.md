@@ -13,12 +13,12 @@ specific to each CLI.
 | [Claude Code](claude-code.md) | `claude -p` sessions over MCP, authentication modes, Bash isolation, prechecks, cost ledger |
 | [Antigravity](antigravity.md) | Persistent `agy` sessions, native static checkpoint configuration, brokered tools, native forks and current validation limits |
 | [Providers](#providers) | Profiles, the authentication matrix, third-party endpoints |
-| [Unified CLI](../unified-cli.md) | Configuration and the `robofrontier` commands |
+| [Unified CLI](../unified-cli.md) | Configuration and the `roboteam` commands |
 | [Runtime protocol](../protocol.md) | Observation images, START, terminal scoring, robot tool errors |
 
 A run gets 24 h of active time from START and is scored at the cutoff; accepting `finish`
 starts evaluation, it does not establish success. After an unexpected stop a run continues by
-itself once; `robofrontier continue` continues it by hand
+itself once; `roboteam continue` continues it by hand
 ([continuation](../running/continuation.md)).
 
 ## Outer manager and evaluated policy
@@ -34,13 +34,13 @@ either invalidates the run.
 ## Shared setup
 
 Install Python 3.12, uv, Node.js and the CLI of the engine you will use, at the version pinned in
-`robofrontier/runtime/versions.py` (Codex 0.165.0, Claude Code 2.1.316, Antigravity 1.5.5).
+`roboteam/runtime/versions.py` (Codex 0.165.0, Claude Code 2.1.316, Antigravity 1.5.5).
 `prepare` and `run` refuse any other version.
 
 ```sh
 uv sync --locked --extra oracle
-.venv/bin/robofrontier bootstrap
-.venv/bin/python -m robofrontier.batch.handoff init-env
+.venv/bin/roboteam bootstrap
+.venv/bin/python -m roboteam.batch.handoff init-env
 ```
 
 New runs use the frozen [policy Python environment](../running/policy-environment.md) by default.
@@ -63,7 +63,7 @@ verification; never substitute an approximate asset or edit an expected hash. On
 network access, copy the archive over and run:
 
 ```sh
-.venv/bin/python -m robofrontier.batch.handoff setup-assets --archive /path/to/archive.tar.gz
+.venv/bin/python -m roboteam.batch.handoff setup-assets --archive /path/to/archive.tar.gz
 ```
 
 The Factory recording package is separate and not needed for policy runs.
@@ -72,27 +72,27 @@ The Factory recording package is separate and not needed for policy runs.
 
 Antigravity uses the shared Python policy hosts, batch supervisor and robot MCP
 implementation with Claude Code. Its persistent CLI transport and native fork
-verification are in `robofrontier/engines/antigravity/`. See the
+verification are in `roboteam/engines/antigravity/`. See the
 [Antigravity guide](antigravity.md) for isolation and preflight details.
 
 | Component | Codex | Claude Code |
 | --- | --- | --- |
 | Profiles | `codex` section of `configs/models.json` | `claude` section of `configs/models.json` |
-| Preparation | `robofrontier/batch/codex_batch.py` | `robofrontier/batch/claude_prepare.py` |
-| Batch supervision | `robofrontier/batch/codex_batch.py` | `robofrontier/batch/claude_batch.py`, `engines/claude/supervisor.py` |
+| Preparation | `roboteam/batch/codex_batch.py` | `roboteam/batch/claude_prepare.py` |
+| Batch supervision | `roboteam/batch/codex_batch.py` | `roboteam/batch/claude_batch.py`, `engines/claude/supervisor.py` |
 | One policy turn | app-server `turn/start` (`codex_policy_host.js`, `codex_rpc.js`) | `claude -p` (`engines/claude/runner.py`, `session_host.py`) |
 | Robot tool | app-server dynamic `robot` tool | role-bound MCP server `engines/claude/robot_mcp.py` |
 | Per-task host | `engines/codex/codex_policy_host.js` | `policy_host.py`, `adaptive_policy_host.py`, `standing_team.py` |
 | Scheduling | `engines/codex/meta_dispatcher.js` | `dispatch.py`, `adaptive_dispatch.py`, `standing_team.py` |
 | Delegate fork | `thread/fork` with lineage hashes | `--resume --fork-session` checked by `provenance.py`, `fork_setup.py`, `adaptive_setup.py` |
 | Shell isolation | Codex sandbox, or `landlock-v1` broker | Claude Code sandbox, or `landlock-v1` shell prefix |
-| Paid compatibility check | `robofrontier preflight` (one receipt) | `robofrontier preflight` (two receipts) |
+| Paid compatibility check | `roboteam preflight` (one receipt) | `roboteam preflight` (two receipts) |
 | Capacity recovery | `codex_policy_host.js` | `engines/claude/recovery.py` |
 | Host events | `private/outputs/codex-host.jsonl` | `private/outputs/claude-host.jsonl` |
 
-All three engines share the robot tool description `robofrontier/engines/common/robot_tool.json`,
-the runtime under `robofrontier/runtime/`, the access table `robofrontier/runtime/access.py`,
-metrics `robofrontier/batch/metrics.py` and reports `robofrontier/batch/report.py`.
+All three engines share the robot tool description `roboteam/engines/common/robot_tool.json`,
+the runtime under `roboteam/runtime/`, the access table `roboteam/runtime/access.py`,
+metrics `roboteam/batch/metrics.py` and reports `roboteam/batch/report.py`.
 
 ## New requests, queries and delegation
 
@@ -120,7 +120,7 @@ hook holds every tool call until activation
 
 ## Capacity recovery
 
-The same rule on both hosts (`MAX_CAPACITY_RETRIES` in `robofrontier/runtime/bootstrap.py`):
+The same rule on both hosts (`MAX_CAPACITY_RETRIES` in `roboteam/runtime/bootstrap.py`):
 after a turn fails with a structured capacity error, the host resumes the same session with the
 frozen `capacity-resume.md` at most three consecutive times, 10, 20 and 40 s apart plus a 0-5 s
 jitter fixed by the session ID; a completed turn resets the count. Claude counts only a
@@ -143,7 +143,7 @@ both give existing turns up to 30 s to write their final reply and accounting.
 After every writer has stopped, in the environment that ran the batch:
 
 ```sh
-.venv/bin/python -m robofrontier.batch.report RUN_DIR
+.venv/bin/python -m roboteam.batch.report RUN_DIR
 ```
 
 This writes `RUN_DIR/private/outputs/report.json` with the shared `host_metrics`. For Codex,
@@ -181,7 +181,7 @@ not a provider invoice.
 | Delegate fork | snapshot thread, then `thread/fork`; message sent after activation | first turn is the fork; tools held by a hook until activation |
 | Compaction | at `auto_compact_token_limit` (267,000) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` set to that limit plus Claude Code's 33,000-token buffer |
 | Compatibility receipts | one, per profile | two (basic and blocked-parent), per profile |
-| Dollar allowance | none | optional, unset by `robofrontier run` |
+| Dollar allowance | none | optional, unset by `roboteam run` |
 | Task limit | `batch.task_wall_limit_s` | the same, at most 86,400 s |
 
 Both freeze `context_window` 300,000 and `auto_compact_token_limit` 267,000 from
@@ -200,7 +200,7 @@ The opt-in physical Claude group runs real MuJoCo worlds and the real Claude CLI
 synthetic model service, with no paid provider; it needs the assets and a graphics backend:
 
 ```sh
-PYTHONPATH=tests ROBOFRONTIER_PHYSICS_SMOKE=1 ROBOFRONTIER_PHYSICS_BATCH=1 ROBOFRONTIER_PHYSICS_FINISH=1 \
+PYTHONPATH=tests ROBOTEAM_PHYSICS_SMOKE=1 ROBOTEAM_PHYSICS_BATCH=1 ROBOTEAM_PHYSICS_FINISH=1 \
   .venv/bin/python -m unittest engines.test_claude_physics_smoke engines.test_claude_parallel_physics_smoke \
   engines.test_claude_finish_physics_smoke
 ```
@@ -227,13 +227,13 @@ selects `haiku_subscription_token`.
 | --- | --- | --- | --- |
 | Codex | OpenAI API key | `luna` | `OPENAI_API_KEY` |
 | Codex | OpenLux API key | `openlux-luna`, `openlux-terra` | `OPENLUX_API_KEY` |
-| Codex | GitHub Copilot PAT, experimental | `sol61_github_pat`, `astra_github_pat` | `ROBOFRONTIER_GITHUB_PAT` ([setup](github-pat.md)) |
-| Codex | Anthropic API key behind a loopback adapter, experimental | `opus_claude_api` | `ROBOFRONTIER_CLAUDE_GATEWAY_KEY`, a local key; the Anthropic key stays with the adapter ([setup](codex-claude-api.md)) |
+| Codex | GitHub Copilot PAT, experimental | `sol61_github_pat`, `astra_github_pat` | `ROBOTEAM_GITHUB_PAT` ([setup](github-pat.md)) |
+| Codex | Anthropic API key behind a loopback adapter, experimental | `opus_claude_api` | `ROBOTEAM_CLAUDE_GATEWAY_KEY`, a local key; the Anthropic key stays with the adapter ([setup](codex-claude-api.md)) |
 | Codex | ChatGPT login | `luna_subscription`, `sol61_subscription`, `terra61_subscription`, `astra` | Login in the Codex home ([Codex authentication](codex.md#authentication)) |
 | Codex | Third-party Responses API | `deepseek`, `qwen`, `glm`, `kimi` | `DEEPSEEK_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_BASE_URL`; `ZAI_API_KEY`; `KIMI_API_KEY` |
 | Claude | Subscription token (`claude setup-token`) | `haiku_subscription_token`, `opus_subscription` | `CLAUDE_CODE_OAUTH_TOKEN` |
-| Claude | Saved login, default directory | `haiku_subscription` | `ROBOFRONTIER_CLAUDE_HOME` = `$HOME/.claude`, `CLAUDE_CONFIG_DIR` unset |
-| Claude | Saved login, explicit directory | `haiku_subscription_directory` | `ROBOFRONTIER_CLAUDE_HOME` = the `CLAUDE_CONFIG_DIR` used at login |
+| Claude | Saved login, default directory | `haiku_subscription` | `ROBOTEAM_CLAUDE_HOME` = `$HOME/.claude`, `CLAUDE_CONFIG_DIR` unset |
+| Claude | Saved login, explicit directory | `haiku_subscription_directory` | `ROBOTEAM_CLAUDE_HOME` = the `CLAUDE_CONFIG_DIR` used at login |
 | Antigravity | Saved Google login | `flash_subscription` | Native `agy` account ([Antigravity authentication](antigravity.md#authentication)) |
 | Antigravity | Gemini API key | `flash_api` | `GEMINI_API_KEY` |
 | Antigravity | Gemini-compatible service | `flash_service` | `ANTIGRAVITY_SERVICE_API_KEY`, `ANTIGRAVITY_SERVICE_BASE_URL` |
@@ -274,8 +274,8 @@ pay-as-you-go keys.
 ### Local checks and preflight
 
 ```sh
-.venv/bin/robofrontier doctor --engine codex --profile kimi --render native
-.venv/bin/robofrontier plan --engine codex --profile kimi --level 1 --min-arms --parallel 4
+.venv/bin/roboteam doctor --engine codex --profile kimi --render native
+.venv/bin/roboteam plan --engine codex --profile kimi --level 1 --min-arms --parallel 4
 ```
 
 `doctor` checks the installed CLI, its sandbox or tool backend and a real render; it calls no

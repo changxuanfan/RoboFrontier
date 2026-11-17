@@ -13,9 +13,9 @@ import time
 import unittest
 from unittest.mock import patch
 
-from robofrontier.batch import slurm_proxy as proxy
-from robofrontier.configuration import load_configuration
-from robofrontier.runtime.access import record, mode
+from roboteam.batch import slurm_proxy as proxy
+from roboteam.configuration import load_configuration
+from roboteam.runtime.access import record, mode
 
 
 class DestinationTests(unittest.TestCase):
@@ -88,7 +88,7 @@ class EnvironmentTests(unittest.TestCase):
         def quota(path,value):
             if path.name=='EGRESS_PAUSED':raise OSError(errno.EDQUOT,'fixture quota')
             return write(path,value)
-        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}),patch.object(proxy,'atomic',quota):
+        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOTEAM_JOB_PRIVATE_ROOT':str(private)}),patch.object(proxy,'atomic',quota):
             with self.assertRaises(proxy.EgressError):
                 with proxy.environment(self.config,on_failure=self.failure.set):
                     write(self.path,{**self.value,'state':'paused'})
@@ -100,9 +100,9 @@ class EnvironmentTests(unittest.TestCase):
         self.config['slurm']['egress_pause_s']=2
         self.value.update(state='ready',grace_s=2)
         proxy.atomic(self.path,self.value)
-        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}):
+        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOTEAM_JOB_PRIVATE_ROOT':str(private)}):
             with proxy.environment(self.config,on_failure=self.failure.set):
-                marker=Path(os.environ['ROBOFRONTIER_EGRESS_PAUSE_FILE'])
+                marker=Path(os.environ['ROBOTEAM_EGRESS_PAUSE_FILE'])
                 proxy.atomic(self.path,{**self.value,'state':'paused'})
                 until=time.monotonic()+2
                 while not marker.exists() and time.monotonic()<until:time.sleep(.01)
@@ -121,9 +121,9 @@ class EnvironmentTests(unittest.TestCase):
             until=time.monotonic()+2
             while not condition() and time.monotonic()<until:time.sleep(.01)
             self.assertTrue(condition())
-        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}):
+        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOTEAM_JOB_PRIVATE_ROOT':str(private)}):
             with proxy.environment(self.config,on_failure=self.failure.set):
-                marker=Path(os.environ['ROBOFRONTIER_EGRESS_PAUSE_FILE']);seen=[]
+                marker=Path(os.environ['ROBOTEAM_EGRESS_PAUSE_FILE']);seen=[]
                 for _ in range(2):
                     proxy.atomic(self.path,{**self.value,'state':'paused','heartbeat':time.time()})
                     wait(marker.exists);seen.append(proxy.read_record(marker))
@@ -134,13 +134,13 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual([first['pause_id'],second['pause_id']],[1,2])
         self.assertEqual(first['watcher'],second['watcher']);self.assertEqual(len(first['watcher']),32)
         self.assertNotEqual(first['claim'],second['claim'])
-        self.assertEqual(first['schema'],'robofrontier.egress-pause.v1')
+        self.assertEqual(first['schema'],'roboteam.egress-pause.v1')
 
     def test_replaced_instance_fences_even_during_short_outage_grace(self):
         private=self.root/'engine';private.mkdir(mode=0o700)
         self.config['slurm']['egress_pause_s']=2;self.value.update(state='ready',grace_s=2)
         proxy.atomic(self.path,self.value)
-        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}):
+        with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOTEAM_JOB_PRIVATE_ROOT':str(private)}):
             with self.assertRaises(proxy.EgressError):
                 with proxy.environment(self.config,on_failure=self.failure.set):
                     proxy.atomic(self.path,{**self.value,'instance':'f'*32,'state':'paused'})
@@ -183,7 +183,7 @@ class EnvironmentTests(unittest.TestCase):
 
     def test_lost_or_replaced_route_is_latched_without_replay(self):
         private=self.root/'engine';private.mkdir(mode=0o700)
-        with patch.dict(os.environ, {'SLURM_JOB_ID':'123','ROBOFRONTIER_JOB_PRIVATE_ROOT':str(private)}):
+        with patch.dict(os.environ, {'SLURM_JOB_ID':'123','ROBOTEAM_JOB_PRIVATE_ROOT':str(private)}):
             with self.assertRaisesRegex(proxy.EgressError, 'must not be automatically replayed'):
                 with proxy.environment(self.config, on_failure=self.failure.set):
                     proxy.atomic(self.path, {**self.value, 'instance':'c'*32})

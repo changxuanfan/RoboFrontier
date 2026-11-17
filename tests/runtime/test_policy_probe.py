@@ -6,9 +6,9 @@ import time
 import unittest
 
 from fake_pipeline import FakeWorld,fake_capture
-from robofrontier.runtime.clock import BudgetGuard,protocol,validate_protocol
-from robofrontier.runtime.setup import prepare_run
-from robofrontier.runtime.service import RuntimeService
+from roboteam.runtime.clock import BudgetGuard,protocol,validate_protocol
+from roboteam.runtime.setup import prepare_run
+from roboteam.runtime.service import RuntimeService
 
 
 class BudgetWorld(FakeWorld):

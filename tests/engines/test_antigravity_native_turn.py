@@ -5,7 +5,7 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-from robofrontier.engines.antigravity.native_turn import completed
+from roboteam.engines.antigravity.native_turn import completed
 
 FINAL = b'\x08\x0f\x20\x03\xa2\x01\x07\x0a\x05READY'
 

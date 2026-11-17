@@ -8,16 +8,16 @@ lessons.
 
 | Path | Responsibility |
 | --- | --- |
-| `robofrontier.toml` | Defaults for new runs, validated and frozen at preparation |
+| `roboteam.toml` | Defaults for new runs, validated and frozen at preparation |
 | `benchmark/` | The released cases; `benchmark/release.json` selects every run's inputs |
 | `prompts/` | Shared rules, role prompts, Skills and the two outer manager prompts |
 | `configs/` | Model profiles, harnesses, asset and environment locks, example site TOMLs |
-| `robofrontier/` | Run setup, scheduling, native engine hosts, robot tools, MuJoCo world, IK and scoring |
+| `roboteam/` | Run setup, scheduling, native engine hosts, robot tools, MuJoCo world, IK and scoring |
 | `scripts/` | Engineering commands: policy environment, release, validation, analysis, media |
 | `tests/` | Synthetic contracts, kinematics, physics and native CLI checks |
 | `runs/` | Run evidence and engineering outputs, not in Git (`paths.runs_root`) |
 
-The command line is `robofrontier` ([command-line guide](unified-cli.md)); the full folder map is
+The command line is `roboteam` ([command-line guide](unified-cli.md)); the full folder map is
 in [repository layout](repository-layout.md). Oracle runs use the released scenes' Oracle copies
 ([Oracle](oracle/README.md)); Factory playback uses each recording's own frozen scene
 ([Factory](factory/replay.md)).
@@ -95,7 +95,7 @@ private/engine/                    CLI and MCP configuration, per-turn evidence,
 
 A batch folder holds `batch.json`, `effective-config.json`, `profiles/`, `control/` (STOP,
 status snapshot, locks, `durable/`), `logs/` and one `<profile>/<case>/` run per selected case
-(`batch-v2`). The layouts are defined in `robofrontier/runtime/layout.py`; a run records its
+(`batch-v2`). The layouts are defined in `roboteam/runtime/layout.py`; a run records its
 layout in its manifest, and frozen runs keep theirs.
 
 `public` and `private` define the evidence contract; the operating-system boundary is the

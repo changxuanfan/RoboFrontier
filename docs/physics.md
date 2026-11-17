@@ -22,20 +22,20 @@ how the simulation differs from the real robot, and the current validation statu
 | Dial module disk and stem | condim 6, rolling 0.03 m | A disk leans on its rim and needs it to stop |
 | Hand actuator range | ±280 N | The tendon passes half to each finger: 140 N per finger |
 
-What a scene file cannot hold is in `robofrontier/physics/profile.py`: Mosaic objects may always
+What a scene file cannot hold is in `roboteam/physics/profile.py`: Mosaic objects may always
 sleep (its large scenes would otherwise run below real time); in the other families objects sleep
 only after every arm has been idle for 2 s, and any action wakes them; Relay settles 30 s before
 anything may sleep, so its hanging weights come to rest. Every scene starts at rest under this
 physics (`build_release.py settle`). Each run writes `private/outputs/effective-physics.json`,
 the options and contact parameters it actually ran with and their hash. A full contact or
-constraint buffer or a bad inertia fails the step (`robofrontier/physics/health.py`).
+constraint buffer or a bad inertia fails the step (`roboteam/physics/health.py`).
 
 The Oracle keeps the physics its recordings were made with, in its own copy of each case under
 `benchmark/oracle/` ([Oracle](oracle/README.md)).
 
 ## Robot limits
 
-`robofrontier/physics/franka_limits.py` holds the limits, from the Panda datasheet (2018-05)
+`roboteam/physics/franka_limits.py` holds the limits, from the Panda datasheet (2018-05)
 and libfranka 0.9.2 `include/franka/rate_limiting.h` (its base values, without the safety
 margin). An action that omits any of its rates is refused; there are no defaults. Every value
 must be above 0.001 and at most its limit.
@@ -122,10 +122,11 @@ beyond it still fails.
 ## Freezing the release
 
 `benchmark/release.json` names every case file by hash and carries `release_id`, a hash of the
-whole release. The release is frozen: `frozen` records release `627dd831f1a06c00`, 2026-11-17, and
+whole release. The release is frozen: `frozen` records release `d4f88cd9a4aeb441`, 2026-11-17, and
 the validation run it passed. Every step of `scripts/build_release.py` that writes the release
 refuses from then on, so physics, scenes and task files no longer change.
 
-Release `627dd831f1a06c00` replaces `020a26c59223ce50`, frozen on 2026-11-11. The only difference
-is that the nine Relay public tasks now list their camera mounts ([Relay](tasks/relay.md)). No
-scene, physics value or other task file changed, so the validation run of 2026-11-11 still stands.
+Release `d4f88cd9a4aeb441` replaces `020a26c59223ce50`, frozen on 2026-11-11. Two things differ:
+the nine Relay public tasks now list their camera mounts ([Relay](tasks/relay.md)), and the case
+files carry the name RoboTeam. No physics value changed, so the validation run of 2026-11-11
+still stands.

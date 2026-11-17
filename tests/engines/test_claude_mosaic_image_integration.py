@@ -11,10 +11,10 @@ import tempfile
 import threading
 import unittest
 
-from robofrontier.engines.claude.runner import run_turn
-from robofrontier.runtime.setup import verify_inputs
-from robofrontier.tasks.config import ROOT
-from robofrontier.batch.claude_prepare import prepare_batch
+from roboteam.engines.claude.runner import run_turn
+from roboteam.runtime.setup import verify_inputs
+from roboteam.tasks.config import ROOT
+from roboteam.batch.claude_prepare import prepare_batch
 from engines.test_claude_adaptive_integration import StubModel
 
 
@@ -37,7 +37,7 @@ def images(value):
         for item in value: yield from images(item)
 
 
-@unittest.skipUnless(os.environ.get('ROBOFRONTIER_MOSAIC_IMAGE')=='1' and shutil.which('claude'),
+@unittest.skipUnless(os.environ.get('ROBOTEAM_MOSAIC_IMAGE')=='1' and shutil.which('claude'),
                      'Opt-in Mosaic image check requires Claude CLI and R14 assets')
 class MosaicReferenceIntegrationTests(unittest.TestCase):
     def test_real_cli_sends_r14_target_to_synthetic_endpoint(self):
@@ -52,7 +52,7 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
                 run=batch/'opus'/case
                 mcp=run/'private/mosaic-check-mcp.json'
                 mcp.write_text(json.dumps({'mcpServers':{'robot':{'command':sys.executable,
-                    'args':['-m','robofrontier.engines.claude.robot_mcp','--run-dir',str(run),
+                    'args':['-m','roboteam.engines.claude.robot_mcp','--run-dir',str(run),
                             '--connection',str(run/'private/state/connections/Controller.json')],
                     'env':{'PYTHONPATH':str(ROOT)}}}}))
                 profile={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
@@ -93,7 +93,7 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
                 ReferenceModel.image_names=names
                 mcp=run/'private/reference-check-mcp.json'
                 mcp.write_text(json.dumps({'mcpServers':{'robot':{'command':sys.executable,
-                    'args':['-m','robofrontier.engines.claude.robot_mcp','--run-dir',str(run),
+                    'args':['-m','roboteam.engines.claude.robot_mcp','--run-dir',str(run),
                             '--connection',str(run/'private/state/connections/Controller.json')],
                     'env':{'PYTHONPATH':str(ROOT)}}}}))
                 profile={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',

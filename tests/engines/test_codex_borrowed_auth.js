@@ -1,12 +1,12 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
-const {borrowedAuth}=require('../../robofrontier/engines/codex/borrowed_auth');
+const {borrowedAuth}=require('../../roboteam/engines/codex/borrowed_auth');
 function fixture(t){
   const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-access-'));t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
   const file=path.join(folder,'current.json');
   function write(generation=1,account='fixture-account',expiry=Date.now()/1000+3600){
     const claims={exp:expiry,generation,'https://api.openai.com/auth':{chatgpt_account_id:account,chatgpt_plan_type:'pro'}};
-    fs.writeFileSync(file,JSON.stringify({schema:'robofrontier.codex-auth.v1',generation,owner:{subject:'fixture-user',account_id:account},
+    fs.writeFileSync(file,JSON.stringify({schema:'roboteam.codex-auth.v1',generation,owner:{subject:'fixture-user',account_id:account},
       auth:{auth_mode:'chatgpt',tokens:{account_id:account,access_token:'fixture.'+Buffer.from(JSON.stringify(claims)).toString('base64url')+'.fixture',refresh_token:'REFRESH_SECRET_NEVER_FORWARDED'}}}),{mode:0o600});
   }
   write();return {file,write,reader:borrowedAuth(file)};

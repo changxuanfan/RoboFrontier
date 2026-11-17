@@ -1,5 +1,5 @@
 {
-  "schema": "robofrontier.socket-exit-fixture.v1",
+  "schema": "roboteam.socket-exit-fixture.v1",
   "case_id": "transport-a08-d3",
   "scene": "benchmark/oracle/transport-a08-d3",
   "source_scene_sha256": "de593ea458c9bd29464eec8e8c5cf4a61bdbe28df72aee3eb2d811cb8ed7393c",

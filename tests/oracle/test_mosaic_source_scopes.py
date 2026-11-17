@@ -1,6 +1,6 @@
 import unittest
-from robofrontier.oracle.mosaic_run import source_scopes
-from robofrontier.oracle.mosaic_run import dependencies
+from roboteam.oracle.mosaic_run import source_scopes
+from roboteam.oracle.mosaic_run import dependencies
 
 
 class SourceScopesTests(unittest.TestCase):

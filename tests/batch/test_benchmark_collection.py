@@ -10,8 +10,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from robofrontier.batch.collect import collect_batch, digest
-from robofrontier.batch.archive_policy_batch import create, verify
+from roboteam.batch.collect import collect_batch, digest
+from roboteam.batch.archive_policy_batch import create, verify
 
 
 def write(path, value):
@@ -21,7 +21,7 @@ def write(path, value):
 
 class BenchmarkCollectionTests(unittest.TestCase):
     def test_task_home_takes_precedence_over_legacy_batch_home(self):
-        from robofrontier.batch.metrics import native_codex_sessions
+        from roboteam.batch.metrics import native_codex_sessions
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);batch,run,sessions=self.make_batch(root)
             task_sessions=root/'isolated/sessions/2026'
@@ -51,7 +51,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
         write(run/'private/outputs/evaluation.json', {'task_success':False})
         write(run/'private/inputs/harness.json', {'engine':engine,'model':'example','topology':'adaptive'})
         job = {'profile':'model','case_id':'demo','status':status,'run_directory':str(run)}
-        write(batch/'batch.json', {'schema':'robofrontier.claude-draft.v1' if engine=='claude' else 'robofrontier.cli-benchmark.v1',
+        write(batch/'batch.json', {'schema':'roboteam.claude-draft.v1' if engine=='claude' else 'roboteam.cli-benchmark.v1',
                                  'status':'prepared_not_qualified' if engine=='claude' else status, 'jobs':[job]})
         if engine=='claude':
             write(batch/'engineering-status.json', {'status':status,'jobs':[job]})
@@ -113,7 +113,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
             create(root/'export', root/'archive')
             verify(root/'archive', root/'restored')
             # Archived provenance remains readable on a machine with no account.
-            from robofrontier.engines.claude.native_home import history_directory, config_directory
+            from roboteam.engines.claude.native_home import history_directory, config_directory
             home.rename(root/'retained-native-home')
             restored = root/'restored/batch/model/demo'
             copied = history_directory(restored)
@@ -157,7 +157,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
             self.assertEqual([x['thread_id'] for x in row['snapshot_sessions']],['anchor'])
             create(root/'export',root/'archive');verify(root/'archive',root/'restored')
             home.rename(root/'retained-native-home')
-            from robofrontier.engines.claude.native_home import history_directory
+            from roboteam.engines.claude.native_home import history_directory
             copied=history_directory(root/'restored/batch/model/demo')/'projects/project'
             self.assertEqual((copied/'anchor.jsonl').read_bytes(),
                              (root/'retained-native-home/projects/project/anchor.jsonl').read_bytes())
@@ -271,7 +271,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
             with self.assertRaises(ValueError):collect_batch(batch,root/'export')
 
     def test_links_in_a_policy_workspace_are_recorded_not_followed(self):
-        from robofrontier.runtime import layout as run_layout
+        from roboteam.runtime import layout as run_layout
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);batch,run,_=self.make_batch(root)
             write(run/'private/inputs/manifest.json',run_layout.manifest_record('codex'))
@@ -303,7 +303,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
                 profile=f'model{i:02d}';dest=batch/profile/'demo'
                 shutil.copytree(run,dest)
                 jobs.append({'profile':profile,'case_id':'demo','status':'closed','run_directory':str(dest)})
-            write(batch/'batch.json',{'schema':'robofrontier.cli-benchmark.v1','status':'closed','jobs':jobs})
+            write(batch/'batch.json',{'schema':'roboteam.cli-benchmark.v1','status':'closed','jobs':jobs})
             report=collect_batch(batch,root/'export')
             self.assertTrue(report['complete']);self.assertEqual(report['job_count'],36)
             paths=[r['session'] for j in report['jobs'] for r in j['roles']]
@@ -311,7 +311,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
             create(root/'export',root/'archive');verify(root/'archive',root/'restored')
 
     def test_source_mutation_does_not_publish_partial_collection(self):
-        from robofrontier.batch.collect import copy_stable
+        from roboteam.batch.collect import copy_stable
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);batch,run,sessions=self.make_batch(root)
             def changing(source,target):
@@ -319,12 +319,12 @@ class BenchmarkCollectionTests(unittest.TestCase):
                 if source.name=='child.jsonl':
                     (sessions/'parent.jsonl').write_text('changed after copy')
                 return checksum
-            with patch('robofrontier.batch.collect.copy_stable',side_effect=changing):
+            with patch('roboteam.batch.collect.copy_stable',side_effect=changing):
                 with self.assertRaises(ValueError):collect_batch(batch,root/'export')
             self.assertFalse((root/'export').exists())
 
     def test_late_claude_auxiliary_transcript_is_not_silently_missed(self):
-        from robofrontier.batch.collect import copy_stable
+        from roboteam.batch.collect import copy_stable
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);batch,run,sessions=self.make_batch(root,'claude')
             def changing(source,target):
@@ -332,7 +332,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
                 if source.name=='child.jsonl':
                     write(sessions/'parent/subagents/late.jsonl',{'late':'native event'})
                 return checksum
-            with patch('robofrontier.batch.collect.copy_stable',side_effect=changing):
+            with patch('roboteam.batch.collect.copy_stable',side_effect=changing):
                 with self.assertRaisesRegex(ValueError,'auxiliary session inventory changed'):
                     collect_batch(batch,root/'export')
             self.assertFalse((root/'export').exists())
@@ -350,7 +350,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
 
 class FinderMetadataTests(unittest.TestCase):
     def test_finder_metadata_is_not_evidence(self):
-        from robofrontier.batch.collect import _files
+        from roboteam.batch.collect import _files
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);(root/'run').mkdir();(root/'run/events.jsonl').write_text('{}\n')
             (root/'.DS_Store').write_bytes(b'finder');(root/'run/.DS_Store').write_bytes(b'finder')

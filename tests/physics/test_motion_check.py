@@ -9,10 +9,10 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from robofrontier.physics.motion_check import RobotGeometry, prepare_check, robot_state
-from robofrontier.runtime.pipeline import Arm, World
-from robofrontier.tasks.config import ROOT, load_harness
-from robofrontier.physics.observation_image import observation_profile
+from roboteam.physics.motion_check import RobotGeometry, prepare_check, robot_state
+from roboteam.runtime.pipeline import Arm, World
+from roboteam.tasks.config import ROOT, load_harness
+from roboteam.physics.observation_image import observation_profile
 from motion import filled, MOVE
 
 

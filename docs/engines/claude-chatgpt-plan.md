@@ -1,6 +1,6 @@
 # Experimental Claude Code / GPT ablation
 
-This adapter is RoboFrontier code, not an official OpenAI or Anthropic connector.
+This adapter is RoboTeam code, not an official OpenAI or Anthropic connector.
 Anthropic does not support routing Claude Code to non-Claude models. A passing
 preflight qualifies only the measured combination; it does not establish parity
 with native Codex or native Claude.
@@ -101,7 +101,7 @@ model context, outputs or fork ancestry. Leave room for other consumers of the s
 API project; this process cannot reserve quota against external clients.
 
 `sol61_chatgpt_plan` is a Claude engine profile. Its local key is supplied as
-`ROBOFRONTIER_CHATGPT_GATEWAY_KEY`, with the actual OAuth credential retained only
+`ROBOTEAM_CHATGPT_GATEWAY_KEY`, with the actual OAuth credential retained only
 by the adapter. Full tools, model effort and adaptive topology are frozen through
 the ordinary benchmark configuration. The context budget is 300,000 with a
 267,000-token compaction threshold. The host also declares
@@ -190,7 +190,7 @@ fingerprint, so preflight receipts from the older lossy adapter do not qualify
 this revision. Updating code does not start or continue stopped experiments.
 
 The host passes the actual native `--session-id`/`--resume` identity and fork source
-through loopback-only `X-RoboFrontier-Session` and `X-RoboFrontier-Fork-Source`
+through loopback-only `X-RoboTeam-Session` and `X-RoboTeam-Fork-Source`
 headers. These headers never go upstream. The replay database resolves history
 only inside that session and its recorded ancestors; identical plaintext such as
 `READY` in an unrelated session cannot select another session's original output.
