@@ -156,14 +156,8 @@
     "top",
     "payload_close",
     "payload_01_close",
-    "payload_01_weight_close",
-    "payload_01_hinge_close",
     "payload_02_close",
-    "payload_02_weight_close",
-    "payload_02_hinge_close",
-    "payload_03_close",
-    "payload_03_weight_close",
-    "payload_03_hinge_close"
+    "payload_03_close"
   ],
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",
   "initial_supplies": [
@@ -966,15 +960,15 @@
       "id": "J_front",
       "frame": "world",
       "position_m": [
-        -7.281920409653169e-10,
-        3.26000000398997,
+        0.15,
+        3.26,
         1.65
       ],
       "quaternion_wxyz": [
-        1.145789020451898e-09,
-        4.5309932281838874e-10,
-        0.3677382204923021,
-        0.9299293527946922
+        0.08623669783493414,
+        0.03453617648376254,
+        0.3701681425710908,
+        0.9243084066943659
       ],
       "vertical_fov_deg": 50.0,
       "fixed_world": true
@@ -1069,14 +1063,14 @@
       "frame": "world",
       "position_m": [
         0.0,
-        -3.349904976960276,
-        5.442171956735818
+        -3.453426,
+        4.992484
       ],
       "quaternion_wxyz": [
-        0.9068822799045593,
-        0.4213840651888828,
-        0.0,
-        0.0
+        0.9068823553874413,
+        0.4213839027382591,
+        -0.0,
+        -0.0
       ],
       "vertical_fov_deg": 43.0,
       "fixed_world": true
@@ -1102,15 +1096,15 @@
       "id": "global_side",
       "frame": "world",
       "position_m": [
-        -4.553083301228442,
-        -2.5107093865915204,
-        4.238927754234191
+        -5.627159,
+        1.729128,
+        2.954758
       ],
       "quaternion_wxyz": [
-        0.7797521554885996,
-        0.45203329499948874,
-        -0.21725843346798085,
-        -0.37476826080903225
+        0.6116091690245556,
+        0.3548721239617062,
+        -0.3548721239617062,
+        -0.6116091690245556
       ],
       "vertical_fov_deg": 48.0,
       "fixed_world": true
@@ -1167,40 +1161,6 @@
       "fixed_world": true
     },
     {
-      "id": "payload_01_weight_close",
-      "frame": "world",
-      "position_m": [
-        -2.635991433299023,
-        1.5437994691833734,
-        1.12
-      ],
-      "quaternion_wxyz": [
-        0.8587675348009131,
-        0.5085835816547725,
-        0.03166326861543764,
-        0.05346493302860124
-      ],
-      "vertical_fov_deg": 38.0,
-      "fixed_world": true
-    },
-    {
-      "id": "payload_01_hinge_close",
-      "frame": "world",
-      "position_m": [
-        -2.0587214972614185,
-        1.5616652224137046,
-        1.0765
-      ],
-      "quaternion_wxyz": [
-        0.8896801327379246,
-        0.4554709681672833,
-        0.01452153147226661,
-        0.02836518450295413
-      ],
-      "vertical_fov_deg": 42.0,
-      "fixed_world": true
-    },
-    {
       "id": "payload_02_close",
       "frame": "world",
       "position_m": [
@@ -1218,40 +1178,6 @@
       "fixed_world": true
     },
     {
-      "id": "payload_02_weight_close",
-      "frame": "world",
-      "position_m": [
-        -0.8498177366565974,
-        2.8578019928541236,
-        1.12
-      ],
-      "quaternion_wxyz": [
-        0.8332580328640895,
-        0.49347621751312876,
-        -0.12704741184748758,
-        -0.21452558952082604
-      ],
-      "vertical_fov_deg": 38.0,
-      "fixed_world": true
-    },
-    {
-      "id": "payload_02_hinge_close",
-      "frame": "world",
-      "position_m": [
-        -0.37229532179055147,
-        2.5329449358400478,
-        1.0765
-      ],
-      "quaternion_wxyz": [
-        0.854901411718734,
-        0.43766603226803835,
-        -0.12693747247481693,
-        -0.24794938701632885
-      ],
-      "vertical_fov_deg": 42.0,
-      "fixed_world": true
-    },
-    {
       "id": "payload_03_close",
       "frame": "world",
       "position_m": [
@@ -1266,40 +1192,6 @@
         -0.4738154278954996
       ],
       "vertical_fov_deg": 48.0,
-      "fixed_world": true
-    },
-    {
-      "id": "payload_03_weight_close",
-      "frame": "world",
-      "position_m": [
-        1.3486594839705999,
-        2.6299245116250765,
-        1.12
-      ],
-      "quaternion_wxyz": [
-        0.7261834290204342,
-        0.4300639629503189,
-        -0.27332180644741205,
-        -0.46151685268028314
-      ],
-      "vertical_fov_deg": 38.0,
-      "fixed_world": true
-    },
-    {
-      "id": "payload_03_hinge_close",
-      "frame": "world",
-      "position_m": [
-        1.5440370455761863,
-        2.0864289986607076,
-        1.0765000000000002
-      ],
-      "quaternion_wxyz": [
-        0.7364389840721315,
-        0.37701929573184206,
-        -0.25597095219068916,
-        -0.4999929449694911
-      ],
-      "vertical_fov_deg": 42.0,
       "fixed_world": true
     }
   ],

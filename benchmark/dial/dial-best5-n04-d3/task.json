@@ -19,7 +19,7 @@
     "directory": "benchmark/dial/dial-best5-n04-d3"
   },
   "scene_asset": "benchmark/dial/dial-best5-n04-d3",
-  "scene_sha256": "c6d9a550ecee875df768af3d5ab46091f8693f4c2241f7bb251c7c71a14cd605",
+  "scene_sha256": "fd3543c8978a8e04061eb48e0fd0b1d66a9503bca91430928b19383f18706022",
   "arms": {
     "A": {
       "base_position_m": [
@@ -417,23 +417,15 @@
     "global_rear",
     "global_side",
     "top",
-    "D01_front",
     "D01_side",
     "D01_high",
-    "D02_front",
     "D02_side",
     "D02_high",
-    "D03_front",
     "D03_side",
     "D03_high",
-    "D04_front",
     "D04_side",
     "D04_high",
-    "board",
-    "D01_face",
-    "D02_face",
-    "D03_face",
-    "D04_face"
+    "board"
   ],
   "view_camera": "global",
   "recording_camera": "global",

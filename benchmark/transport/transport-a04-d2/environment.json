@@ -769,7 +769,7 @@
   ],
   "transport_variant": {
     "id": "r14-half-opening",
-    "source_scene_sha256": "1ec51472dad599f78d499e177de3cdfc4941a877eabcccb76ddd179170091a94",
+    "source_scene_sha256": "3c2afc8b38bfe739d94a143d5e78b725ab410c2008d45c51f06c3342197934fa",
     "linear_opening_scale": 0.5,
     "physical_geometry_changed": false,
     "source_task_pass_inherited": false

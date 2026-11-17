@@ -36,6 +36,29 @@ in `benchmark/<family>/<case>/`, and each family's cases are listed in
 - **Continuing.** A stopped run continues as the same trial, never a new attempt
   ([continuation](../running/continuation.md)).
 
+## Cameras
+
+Every camera is fixed in the world. A task has 14 to 53 of them, in four groups.
+
+| Group | Names | What it shows |
+| --- | --- | --- |
+| At the arms | `A_front`, `A_side`, … | Two per arm: the table in front of the arm, and the arm from its side |
+| Overviews | `global`, `global_side`, `global_rear`, `top` | The whole desk from the front, the side, the rear and above |
+| Transport close-ups | `board_A_close`, …; from Level 2 `plug_close`, `socket_close` | One per target board; one example each of an item's blades and a board's slots |
+| Mosaic close-ups | `assembly_01`, … | The build area, in two to four parts |
+| Relay close-ups | `payload_close`, `payload_01_close`, … | The start area, and each timber where it starts |
+| Dial close-ups | `D01_high`, `D01_side`, …; `board` | Two per dial, from above and from the side; the BEST display |
+
+| Task type | Small | Medium | Large |
+| --- | --- | --- | --- |
+| Transport (Level 1 / Levels 2 and 3) | 16 / 18 | 28 / 30 | 40 / 42 |
+| Mosaic | 14 | 19 | 24 |
+| Relay | 23 | 32 | 41 |
+| Dial (Level 1 / Levels 2 and 3) | 21 / 29 | 29 / 41 | 37 / 53 |
+
+A camera does not follow anything: once a timber is carried away, its close-up shows an empty
+table. No camera has more than 40% of its image covered by a robot at the start of a task.
+
 ## Metrics
 
 Agents may retry, so a task that ends correctly can still contain many failures. Beside the

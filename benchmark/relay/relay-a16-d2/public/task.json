@@ -196,13 +196,9 @@
     "top",
     "payload_close",
     "payload_01_close",
-    "payload_01_weight_close",
     "payload_02_close",
-    "payload_02_weight_close",
     "payload_03_close",
-    "payload_03_weight_close",
-    "payload_04_close",
-    "payload_04_weight_close"
+    "payload_04_close"
   ],
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",
   "initial_supplies": [
@@ -1258,14 +1254,14 @@
       "frame": "world",
       "position_m": [
         0.0,
-        -3.950482748734138,
-        4.891318247389522
+        -4.089944,
+        4.367221
       ],
       "quaternion_wxyz": [
-        0.9068822799045593,
-        0.4213840651888827,
-        0.0,
-        0.0
+        0.9068823553874413,
+        0.4213839027382591,
+        -0.0,
+        -0.0
       ],
       "vertical_fov_deg": 43.0,
       "fixed_world": true
@@ -1291,15 +1287,15 @@
       "id": "global_side",
       "frame": "world",
       "position_m": [
-        -4.662926972209768,
-        -2.533800157857982,
-        4.319479779620497
+        -5.135896,
+        0.565624,
+        3.362082
       ],
       "quaternion_wxyz": [
-        0.7797521554885997,
-        0.45203329499948874,
-        -0.21725843346798085,
-        -0.3747682608090322
+        0.6222584089282578,
+        0.3358488834551532,
+        -0.3358488834551532,
+        -0.6222584089282578
       ],
       "vertical_fov_deg": 48.0,
       "fixed_world": true
@@ -1356,23 +1352,6 @@
       "fixed_world": true
     },
     {
-      "id": "payload_01_weight_close",
-      "frame": "world",
-      "position_m": [
-        -1.8626246184534536,
-        -0.737210679227419,
-        1.12
-      ],
-      "quaternion_wxyz": [
-        0.7729376045051829,
-        0.4577529533484735,
-        0.223879556478389,
-        0.37803126515353136
-      ],
-      "vertical_fov_deg": 38.0,
-      "fixed_world": true
-    },
-    {
       "id": "payload_02_close",
       "frame": "world",
       "position_m": [
@@ -1387,23 +1366,6 @@
         -0.061835746749632985
       ],
       "vertical_fov_deg": 48.0,
-      "fixed_world": true
-    },
-    {
-      "id": "payload_02_weight_close",
-      "frame": "world",
-      "position_m": [
-        -1.5177939611517866,
-        1.2744748976812783,
-        1.12
-      ],
-      "quaternion_wxyz": [
-        0.8583992336185435,
-        0.5083654644963254,
-        -0.03499109337595872,
-        -0.059084123204862136
-      ],
-      "vertical_fov_deg": 38.0,
       "fixed_world": true
     },
     {
@@ -1424,54 +1386,20 @@
       "fixed_world": true
     },
     {
-      "id": "payload_03_weight_close",
-      "frame": "world",
-      "position_m": [
-        -0.34348095665382217,
-        1.9519235655487923,
-        1.12
-      ],
-      "quaternion_wxyz": [
-        0.7864234652328259,
-        0.46573961687803056,
-        -0.20675210126747265,
-        -0.34911074349407295
-      ],
-      "vertical_fov_deg": 38.0,
-      "fixed_world": true
-    },
-    {
       "id": "payload_04_close",
       "frame": "world",
       "position_m": [
-        0.12775714519851067,
-        1.3447966804876965,
-        1.8225000000000002
+        0.127757,
+        1.344797,
+        2.2225
       ],
       "quaternion_wxyz": [
-        0.517709495870945,
-        0.2776292523086157,
-        -0.3824539575340563,
-        -0.7131814961944465
+        0.5381985062634761,
+        0.2354640297466419,
+        -0.324368508090658,
+        -0.7414068582838146
       ],
       "vertical_fov_deg": 48.0,
-      "fixed_world": true
-    },
-    {
-      "id": "payload_04_weight_close",
-      "frame": "world",
-      "position_m": [
-        1.5186749156838428,
-        1.273425016952788,
-        1.12
-      ],
-      "quaternion_wxyz": [
-        0.506507327276779,
-        0.29996628913146983,
-        -0.41192238042245943,
-        -0.695550505216353
-      ],
-      "vertical_fov_deg": 38.0,
       "fixed_world": true
     }
   ],
