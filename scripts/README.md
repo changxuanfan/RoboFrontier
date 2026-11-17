@@ -3,8 +3,9 @@
 Experiments run through the `robofrontier` command ([getting started](../docs/getting-started.md),
 [command-line guide](../docs/unified-cli.md)). The scripts here are the engineering commands
 around it. Run each from the repository root as `.venv/bin/python -m scripts.NAME`; `--help`
-lists its options. The two gateways below call a model provider only when listing models
-or forwarding an authenticated client request; the other scripts do not.
+lists its options. The gateways below access model providers when listing models or
+forwarding authenticated requests; the ChatGPT sign-in helper accesses the authorization
+service only when explicitly invoked. The other scripts do not call a model provider.
 
 ## GitHub PAT model transport
 
@@ -29,6 +30,20 @@ Install the optional [adapter dependency](../requirements-codex-claude.txt) into
 environment and run the gateway as `python scripts/codex_claude_gateway.py`, not with
 `-m scripts.NAME`. The monitor needs no extra package. See
 [credentials, limits and the live-run commands](../docs/engines/codex-claude-api.md).
+
+## Experimental Claude Code / GPT transport
+
+| Script | Purpose |
+| --- | --- |
+| `chatgpt_plan_auth.py` | Explicit ChatGPT plan sign-in and protected OAuth credential management |
+| `claude_chatgpt_gateway.py` | Authenticated loopback Messages-to-Responses adapter; Claude Code owns tools, sessions and forks |
+| `chatgpt_plan_websocket.py` | Gateway support module for connection-local Responses history and shared API admission |
+
+Install the optional [adapter dependencies](../requirements-chatgpt-plan.txt).
+Run the standalone entry points as `python scripts/chatgpt_plan_auth.py` and
+`python scripts/claude_chatgpt_gateway.py`, rather than with `-m scripts.NAME`.
+The WebSocket module is imported by the gateway, not a separate command.
+See [authentication, API-key handoff and validation](../docs/engines/claude-chatgpt-plan.md).
 
 ## Policy environment
 

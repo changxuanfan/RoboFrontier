@@ -62,7 +62,9 @@ def profile(name, catalog=CATALOG):
         base = os.environ.get(selected['base_url_env'])
     if base:
         url = urlsplit(base)
-        if url.scheme != 'https' or not url.hostname or url.username or url.password or url.query or url.fragment:
+        local_plan_gateway = (selected['provider'] == 'openai_chatgpt_plan' and url.scheme == 'http'
+                              and url.hostname in ('127.0.0.1', '::1'))
+        if (url.scheme != 'https' and not local_plan_gateway) or not url.hostname or url.username or url.password or url.query or url.fragment:
             raise ValueError('Base URL must be HTTPS without credentials, query or fragment')
     if auth_mode in ('oauth_token', 'native_login') and not _oauth_endpoint_allowed(base):
         raise ValueError('OAuth token may only be sent to the Anthropic endpoint')

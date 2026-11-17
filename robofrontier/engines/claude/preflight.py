@@ -108,13 +108,16 @@ def request_count(server, *, observe_only=False):
 
 
 def judge(name, record, requests_before, requests_after, expected_session=None, expected_answer='green red',
-          observes_before=0, observes_after=0):
+          observes_before=0, observes_after=0, expected_context=None):
     summary = record['summary']
     text = preflight_probe.normalize(summary.get('result_text'))
     checks = {'process_exited': record['process'] == 'exited' and record['exit_code'] == 0,
               'turn_ended': summary['turn_status'] == 'ended',
               'same_session': summary['session_id'] == expected_session,
               'valid_events': summary.get('malformed_lines') == 0}
+    model_usage=(summary.get('model_usage') or {}).get(summary.get('reported_model'),{})
+    if expected_context is not None:
+        checks['native_context_window']=model_usage.get('contextWindow')==expected_context
     if name == 'text':
         checks['reply_ready'] = text == 'ready'
         checks['no_new_robot_call'] = requests_after == requests_before
@@ -130,7 +133,8 @@ def judge(name, record, requests_before, requests_after, expected_session=None, 
     return {'name': name, 'passed': all(checks.values()), 'checks': checks,
             'turn_status': summary['turn_status'], 'reported_model': summary['reported_model'],
             'tool_calls': summary['tool_calls'], 'session_id': summary['session_id'],
-            'cost_usd': summary.get('total_cost_usd'), 'usage': summary.get('usage')}
+            'cost_usd': summary.get('total_cost_usd'), 'usage': summary.get('usage'),
+            'native_context_window':model_usage.get('contextWindow')}
 
 
 def run_precheck(name, output, budget, base_env, binary='claude', check_fork=False, *, catalog=None):
@@ -160,7 +164,8 @@ def run_precheck(name, output, budget, base_env, binary='claude', check_fork=Fal
                               resume=None if first else session, events_name=f'{check}.jsonl')
             result = judge(check, record, before, request_count(server), expected_session=session,
                            expected_answer=server.challenge, observes_before=observes_before,
-                           observes_after=request_count(server, observe_only=True))
+                           observes_after=request_count(server, observe_only=True),
+                           expected_context=prof.get('context_capacity') if prof.get('provider')=='openai_chatgpt_plan' else None)
             receipt['checks'].append(result)
             cost = result['cost_usd']
             if isinstance(cost, bool) or not isinstance(cost, (int, float)) or not math.isfinite(cost) or cost <= 0:
@@ -193,6 +198,8 @@ def run_precheck(name, output, budget, base_env, binary='claude', check_fork=Fal
                           'no_tool_calls':summary.get('tool_calls')==0 and request_count(server)==before,
                           'colors_recalled':preflight_probe.normalize(summary.get('result_text'))==server.challenge,
                           'valid_events':summary.get('malformed_lines')==0}
+                if prof.get('provider')=='openai_chatgpt_plan' and prof.get('context_capacity'):
+                    checks['native_context_window']=(summary.get('model_usage') or {}).get(prof['model'],{}).get('contextWindow')==prof['context_capacity']
                 try:
                     proof=fork_provenance(session,child,history_directory(run, prof))
                     checks['native_history_prefix']=proof.get('source_thread_id')==session
