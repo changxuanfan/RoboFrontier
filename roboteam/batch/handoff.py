@@ -19,6 +19,7 @@ from roboteam.batch.prepare import load_env
 from roboteam.engines.codex.launch import profile
 from roboteam.batch.tasks import check_case_assets
 from ..io import file_sha256 as digest
+from roboteam.io import schema_of
 
 
 def pinned_asset_release(root, config):
@@ -104,7 +105,7 @@ def restore_assets(archive_path, root=ROOT):
                 # The pinned archive predates benchmark/: its case folders restore
                 # under their current names, and every byte is still checked.
                 current = lambda name: current_path(name, root)
-        if manifest.get('schema')!='roboteam.policy-assets.v1' or manifest['release_sha256']!=release:
+        if schema_of(manifest)!='roboteam.policy-assets.v1' or manifest['release_sha256']!=release:
             raise ValueError('Asset archive belongs to a different task release')
         member = {current(name): name for name in names}
         names = list(member)
