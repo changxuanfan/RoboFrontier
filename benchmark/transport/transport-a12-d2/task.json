@@ -1882,7 +1882,6 @@
   ],
   "grid": null,
   "route": null,
-  "pairs": null,
   "dials": null,
   "gripper_profile": "standard-panda",
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",
@@ -1905,8 +1904,7 @@
     ]
   },
   "completion": {
-    "stable_duration_sim_s": 1.0,
-    "scope": "Mechanism-specific commissioning required; no inherited v1 evaluator assumed"
+    "stable_duration_sim_s": 1.0
   },
   "execution_readiness": "environment_preview_only",
   "oracle_verified": false,

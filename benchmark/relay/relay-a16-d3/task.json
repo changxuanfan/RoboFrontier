@@ -866,7 +866,6 @@
       "label": "GOAL"
     }
   ],
-  "pairs": null,
   "dials": null,
   "gripper_profile": "standard-panda",
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",

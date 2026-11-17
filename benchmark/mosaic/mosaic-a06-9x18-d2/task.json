@@ -5188,7 +5188,6 @@
     "printed_line_width_m": 0.003
   },
   "route": null,
-  "pairs": null,
   "dials": null,
   "gripper_profile": "standard-panda",
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",
@@ -5210,7 +5209,6 @@
   },
   "completion": {
     "stable_duration_sim_s": 1.0,
-    "scope": "Mechanism-specific commissioning required; no inherited v1 evaluator assumed",
     "xy_center_tolerance_m_inclusive": 0.006,
     "position_rule_revision": "mosaic-center-6mm-v1"
   },
