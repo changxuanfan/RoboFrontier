@@ -21,6 +21,7 @@ benchmark/
   release.json              every case: scene, task and public files by hash; release_id; frozen;
                             the Oracle rows; private: each Dial case's code
   legacy-paths.json         the current path of every file that records name by an earlier path
+  pruned-paths.json         records not in the tree, and the tags that keep them
   <family>/
     catalog.json            the family's case catalog
     <case>/
@@ -52,4 +53,5 @@ The Oracle case folders hard-link the released cases' asset files.
 Frozen runs, Oracle recordings and review packages name files by the paths they were made with;
 `roboteam.tasks.families.current_path` translates them through `legacy-paths.json`. The nine
 Relay Oracle rows name the checkout they were recorded in; `roboteam.tasks.families.oracle_recording`
-finds them under `runs/oracle/`.
+finds them under `runs/oracle/`. Scene revisions outside the release are kept in archive tags
+([history](../docs/history.md)).
