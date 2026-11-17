@@ -1,19 +1,9 @@
-"""Table-only geometry edits on an independent FK rendering model.
+"""Narrow a table's central opening on a display model.
 
-This helper is never called by a physical executor or used as a new task pass.
-It preserves the joint/geometry registry so recorded poses and colors still map.
+Never applied to a model that runs physics. The joints and geometry names stay as they are.
 """
 import re
 import numpy as np
-
-
-def display_opening_scale(task):
-    """How a video shows a table's central opening: as the run's own table, except a
-    Transport recording made on R13 tables, whose full opening videos show halved as the
-    released R14 tables have it physically."""
-    task=task or {}
-    revision=task.get('scene_revision') or (task.get('scale') or {}).get('scene_revision')
-    return .5 if task.get('family')=='transport' and revision is not None and revision<14 else 1.
 
 
 def scale_rectangular_opening_for_render(model,scale=.5):

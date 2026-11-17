@@ -9,7 +9,7 @@ explainer: the README benchmark figure: per family, its largest team at Levels 1
          each level changes. IMAGES holds initial-state renders named <case>-top.jpg and
          <case>-global.jpg (the retired task atlas made them).
 stills:  README images: montage posters with a play badge and a 400-px thumbnail of every
-         task. The README banner and teaser come from scripts/site_film.py.
+         task.
 
 Sources is a JSON file: {"set": "oracle", "tasks": {"<case>": {"front": path, "side": path}}}.
 Run from the repository root:

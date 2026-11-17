@@ -12,7 +12,6 @@ LEGACY_RULE_REVISION = 'relay-final-goal-50mm-v1'
 RULE_REVISION = 'relay-timber-goal-70pct-v1'
 BOUNDARY_TOLERANCE_M = .050
 LOW_RELEASE_GAP_M = .030
-CATALOG_RELATIVE = 'benchmark/relay/catalog.json'
 
 
 def is_current(task):

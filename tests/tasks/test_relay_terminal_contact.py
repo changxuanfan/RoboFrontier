@@ -2,14 +2,14 @@
 import json
 import unittest
 
-from roboteam.tasks.families import ROOT, case_specs as cases
+from roboteam.tasks.families import ROOT, RELEASE, read
 from roboteam.tasks.public import public_task, validate as validate_task
 from roboteam.tasks.relay import is_current
 
 
 class RelayTerminalContactTests(unittest.TestCase):
     def test_all_nine_public_tasks_declare_the_same_user_contact_contract(self):
-        relay = [c for c in cases() if c['family'] == 'relay']; self.assertEqual(len(relay), 9)
+        relay = read(ROOT/RELEASE)['families']['relay']['gpt']; self.assertEqual(len(relay), 9)
         for case in relay:
             task = json.loads((ROOT/case['directory']/'task.json').read_text()); validate_task(task)
             self.assertTrue(is_current(task))

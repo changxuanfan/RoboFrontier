@@ -18,7 +18,7 @@ site TOML: copy it to an untracked file (here `site.toml`) and edit it.
 ```sh
 git clone https://github.com/changxuanfan/RoboTeam.git
 cd RoboTeam
-uv sync --locked --extra oracle
+uv sync --locked
 .venv/bin/roboteam bootstrap      # downloads and verifies the pinned task assets
 ```
 
@@ -79,7 +79,7 @@ root pointing where the receipts and results belong:
 
 ```sh
 git worktree add --detach ~/Repos/RoboTeam-run main
-cd ~/Repos/RoboTeam-run && uv sync --locked --extra oracle && install -m 600 ../RoboTeam/.env .env
+cd ~/Repos/RoboTeam-run && uv sync --locked && install -m 600 ../RoboTeam/.env .env
 export ROBOTEAM_RUNS_ROOT=~/Repos/RoboTeam/runs
 ```
 

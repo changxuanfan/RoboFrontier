@@ -37,8 +37,8 @@ Videos live in one public media repository per set, served by its own GitHub Pag
 URL, size, duration and SHA-256. Every set uses the task ids as file names.
 
 How each Oracle recording was made (which were operator-assisted, which scene revision) is
-stated wherever Oracle videos appear; the facts are in the
-[Oracle guide](../docs/oracle/README.md#published-reference-videos).
+stated wherever Oracle videos appear; the facts are in
+[`data/oracle-videos.json`](data/oracle-videos.json).
 
 ## Results data
 
@@ -72,7 +72,7 @@ set and task.
   videos, JPEG posters), `montage`, `stills` and `explainer`. Each output is checked for
   duration and frame count.
 - `scripts/site_data.py`: `tasks` (writes `data/tasks.json` from the release and the public
-  tasks, including how each Oracle recording was made), `media` (writes `data/media.json` from
+  tasks, with how each Oracle recording was made from `data/oracle-videos.json`), `media` (writes `data/media.json` from
   the encode manifests) and `readme-gallery`.
 
 ## Files
@@ -84,6 +84,7 @@ site/
   assets/img/          favicon, social image
   assets/atlas/        task start images
   data/tasks.json      36 public task facts
+  data/oracle-videos.json  how each Oracle video was made: kind, scene revision, playback speed
   data/media.json      every video URL by set, task and view
   DESIGN.md            this file
 ```

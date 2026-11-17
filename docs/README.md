@@ -12,8 +12,5 @@ The [command-line guide](unified-cli.md) lists every setting and command, and th
 | Engines | [Overview](engines/README.md), [Codex](engines/codex.md), [Claude Code](engines/claude-code.md), [providers](engines/README.md#providers) |
 | Running | [Mac](running/mac.md), [RunPod and plain Linux](running/runpod.md), [Slurm](running/slurm.md), [Docker](running/docker.md), [policy Python environment](running/policy-environment.md), [robot-only runs](running/robot-only.md), [stopped runs and continuing them](running/continuation.md), [evidence storage](running/evidence-storage.md), [saved-run viewer](running/local-viewer.md), [Codex access-only attachments](running/codex-access-attachments.md), [manager runbook](meta-runbook.md) |
 | Configuration | [Configuration files](../configs/README.md), [engineering scripts](../scripts/README.md) |
-| Oracle | [Privileged Oracle execution](oracle/README.md), [recovery](oracle/recovery.md) |
-| Factory | [Design and rendering](factory/README.md), [replay](factory/replay.md), [Linux and Slurm](factory/server.md), [editing](factory/editorial.md) |
 | Development | [Testing](development/testing.md), [harness check coverage](harness-verification.md) |
 | Project page | [Design and sources](../site/DESIGN.md) |
-| History | [Timeline and archive tags](history.md) |

@@ -28,7 +28,7 @@ untracked file (here `site.toml`) and edit it.
 cd /workspace
 git clone https://github.com/changxuanfan/RoboTeam.git
 cd RoboTeam
-uv sync --locked --extra oracle
+uv sync --locked
 .venv/bin/roboteam bootstrap
 ```
 

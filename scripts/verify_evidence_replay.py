@@ -1,9 +1,8 @@
 """Compare restored evidence, all motion states/events and sampled renders.
 
 No inference, commands, IK or physics stepping. Requires MuJoCo, Pillow and
-NumPy; optional factory previews additionally require ffmpeg/ffprobe and the
-matching factory assets. Three distributed samples do not constitute a full
-video or a successful benchmark result.
+NumPy. Three distributed samples do not constitute a full video or a successful
+benchmark result.
 """
 import argparse
 import hashlib
@@ -48,37 +47,7 @@ def simple_frames(recording, indices):
     return images
 
 
-def factory_frames(recording, indices, factory):
-    """Diagnostic pixels/FK only; production factory video remains Cycles."""
-    from roboteam.factory.workstations import FactoryPlayback
-    reader = MotionReader(recording)
-    source = Workstation(Path(recording)/'source')
-    play = FactoryPlayback(factory)
-    case = reader.meta['case_id']
-    play.configure_workstation(case, source, table_opening_scale=1)
-    initial = reader.meta['initial_rgba']
-    source.model.geom_rgba[:] = initial
-    ids = {g['id']:g['source_index'] for g in source.manifest['geometries']}
-    play.appearance(case, {name:initial[index] for name,index in ids.items()})
-    events = iter(reader.events()); event = next(events,None)
-    camera = mujoco.MjvCamera()
-    place = next(p for p in play.manifest['placements'] if p['case_id']==case)
-    camera.lookat[:] = np.asarray(place['translation_m'])+[0,0,.8]
-    camera.distance=8;camera.azimuth=90;camera.elevation=-60
-    images=[]; maximum=0.
-    with mujoco.Renderer(play.model,width=480,height=300,max_geom=max(10000,play.model.ngeom+1000)) as renderer:
-        for _,stamp,state in reader.selected_frames(indices):
-            while event is not None and event['sim_time_s']<=stamp+1e-9:
-                if event['event']=='rgba':play.appearance(case,event['geoms'])
-                event=next(events,None)
-            checked=play.apply_arrays(case,source,state,stamp,verify=True)
-            maximum=max(maximum,checked['position_error_m'])
-            renderer.update_scene(play.data,camera=camera)
-            images.append(renderer.render().copy())
-    return images,dict(states_checked=len(images),maximum_geometry_position_error_m=maximum)
-
-
-def verify_evidence(original, restored, output, factory=None):
+def verify_evidence(original, restored, output):
     original, restored, output = Path(original).resolve(), Path(restored).resolve(), Path(output).resolve()
     if not original.is_dir() or not restored.is_dir() or original == restored:
         raise ValueError('Choose two existing, distinct collection directories')
@@ -133,16 +102,6 @@ def verify_evidence(original, restored, output, factory=None):
         row = {'case_id':x.meta['case_id'],'recording':left.relative_to(original).as_posix(),
                'frames_verified':count,'state_time_sha256':h.hexdigest(),
                'appearance_events_exact':True,'simple_scene_pixels_exact':True,'sample_indices':indices}
-        if factory is not None:
-            a_factory,ra=factory_frames(left,indices,Path(factory))
-            b_factory,rb=factory_frames(right,indices,Path(factory))
-            if len(a_factory)!=len(indices) or len(b_factory)!=len(indices) or any(not np.array_equal(p,q) for p,q in zip(a_factory,b_factory)):
-                raise ValueError('Factory sample pixels differ')
-            for i,pixels in enumerate(b_factory):
-                Image.fromarray(pixels).save(output/(label+f'-factory-{i}.jpg'),quality=85)
-            row['factory'] = dict(passed=True,sampled_pixels_exact=True,
-                maximum_geometry_position_error_m=max(ra['maximum_geometry_position_error_m'],rb['maximum_geometry_position_error_m']),
-                states_checked=rb['states_checked'],scope='Diagnostic MuJoCo sampled pixels/FK; no production video or physics execution')
         report['cases'].append(row)
         print(json.dumps(row),flush=True)
     report['total_frames_verified'] = sum(c['frames_verified'] for c in report['cases'])
@@ -155,9 +114,8 @@ def main():
     parser.add_argument('original',type=Path)
     parser.add_argument('restored',type=Path)
     parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--factory',type=Path)
     args=parser.parse_args()
-    print(json.dumps(verify_evidence(args.original,args.restored,args.output,args.factory),indent=2))
+    print(json.dumps(verify_evidence(args.original,args.restored,args.output),indent=2))
 
 
 if __name__=='__main__':main()

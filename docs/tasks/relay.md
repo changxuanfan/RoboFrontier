@@ -71,5 +71,4 @@ A continued run keeps each timber's handovers, drops and holders from the moment
 ## Presentation
 
 Videos play Relay at 20× and 30 fps (`speedup` in `benchmark/release.json`), each table looping
-on its own clock; neighboring tables in one frame are not synchronized. See
-[Factory replay](../factory/replay.md).
+on its own clock; neighboring tables in one frame are not synchronized.

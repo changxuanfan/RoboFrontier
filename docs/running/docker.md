@@ -14,7 +14,7 @@ prepares.
 - Docker Desktop on macOS, or a Docker engine on Linux. On macOS the container is Linux in
   Docker's VM: CPU rendering only, no Metal.
 - For NVIDIA rendering: Linux, an NVIDIA GPU, host drivers and the NVIDIA container runtime.
-- A host checkout installed with `uv sync --locked --extra oracle`, with no uncommitted tracked
+- A host checkout installed with `uv sync --locked`, with no uncommitted tracked
   changes (the build uses `git archive HEAD`).
 
 ## 2. Build
@@ -25,7 +25,7 @@ prepares.
 
 The image ([`docker/Dockerfile`](../../docker/Dockerfile)) is `python:3.12-slim-bookworm` with
 Node.js 22, Codex 0.165.0, Claude Code 2.1.316, OSMesa, EGL and `ffmpeg`; it runs
-`uv sync --locked --extra oracle` and `roboteam bootstrap`, so the pinned assets are inside.
+`uv sync --locked` and `roboteam bootstrap`, so the pinned assets are inside.
 It is tagged `roboteam:<commit[:12]>` (or `container.image`) and labelled with the commit;
 an existing image from another commit is refused. `.env`, logins and run data never enter it.
 It has no `bwrap` or `socat`, so Claude Code's Bash uses Landlock + seccomp (`landlock-v1`).
@@ -128,4 +128,3 @@ never does.
 - Without user namespaces in the container, `/dev/shm` stays closed to policies, so Python's
   process pools fail there ([policy environment](policy-environment.md)).
 - **Slurm jobs do not use Docker**; they stage onto node-local scratch ([Slurm](slurm.md)).
-- The image has no Blender: Factory rendering runs natively ([Factory replay](../factory/replay.md)).

@@ -36,7 +36,7 @@ Install Python 3.12, uv, Node.js and the CLI of the engine you will use, at the 
 `prepare` and `run` refuse any other version.
 
 ```sh
-uv sync --locked --extra oracle
+uv sync --locked
 .venv/bin/roboteam bootstrap
 .venv/bin/python -m roboteam.batch.handoff init-env
 ```
@@ -63,8 +63,6 @@ network access, copy the archive over and run:
 ```sh
 .venv/bin/python -m roboteam.batch.handoff setup-assets --archive /path/to/archive.tar.gz
 ```
-
-The Factory recording package is separate and not needed for policy runs.
 
 ## Codex and Claude Code component map
 

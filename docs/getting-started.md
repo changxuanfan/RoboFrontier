@@ -28,7 +28,7 @@ pinned ones.
 ```sh
 git clone https://github.com/changxuanfan/RoboTeam.git
 cd RoboTeam
-uv sync --locked --extra oracle
+uv sync --locked
 ```
 
 Install the engine CLI at its pinned version, for example globally:
@@ -253,4 +253,3 @@ a batch ([viewer](running/local-viewer.md)).
 - Engines: [Codex](engines/codex.md), [Claude Code](engines/claude-code.md).
 - What a run is: [architecture](architecture.md), [runtime protocol](protocol.md),
   [physics and robot limits](physics.md), [the tasks](tasks/README.md).
-- Reference runs and video: [Oracle](oracle/README.md), [Factory](factory/README.md).

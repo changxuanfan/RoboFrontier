@@ -19,7 +19,6 @@ command's result as JSON).
 | `status BATCH`, `stop BATCH` | Read the status snapshot; request a stop |
 | `collect`, `archive`, `extract` | Evidence collection and ZIP files ([below](#evidence-and-zip-output)) |
 | `container` | The same commands in Docker volumes ([Docker](running/docker.md)) |
-| `factory`, `oracle` | [Factory rendering](factory/replay.md), [Oracle](oracle/README.md) |
 
 `config`, `plan`, `prepare`, `doctor`, `preflight` and `slurm-submit` accept the selection
 options `--engine {codex,claude}`, `--profile`, `--effort`, `--topology`,
@@ -29,14 +28,13 @@ options `--engine {codex,claude}`, `--profile`, `--effort`, `--topology`,
 ## Installation
 
 ```sh
-uv sync --locked --extra oracle
+uv sync --locked
 .venv/bin/roboteam bootstrap
 .venv/bin/roboteam plan
 ```
 
 `bootstrap` downloads the pinned policy asset archive if needed, checks its SHA-256 and restores
-every referenced file with hash checks, reusing files that are already correct. It does not
-download the Factory recording bundle. Install the CLI of the engine you will use at its pinned
+every referenced file with hash checks, reusing files that are already correct. Install the CLI of the engine you will use at its pinned
 version (`roboteam/runtime/versions.py`: Codex 0.165.0, Claude Code 2.1.316); `prepare` and
 `run` refuse others ([engine setup](engines/README.md#shared-setup)).
 
@@ -45,7 +43,7 @@ version (`roboteam/runtime/versions.py`: Codex 0.165.0, Claude Code 2.1.316); `p
 `roboteam.toml` holds the defaults. A partial user TOML (`--config`) overrides the settings
 it names, and command-line options override both. Unknown fields, wrong types, non-finite
 intervals and invalid limits are errors. Credentials go in `.env` or the environment, never in
-TOML. The current `schema_version` is 10; a partial TOML may omit it. A prepared batch keeps its
+TOML. The current `schema_version` is 11; a partial TOML may omit it. A prepared batch keeps its
 frozen configuration whatever version it has.
 
 ```sh
@@ -82,9 +80,7 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 | `slurm.*` | Allocation, authentication and egress settings ([Slurm](running/slurm.md)) |
 | `container.workspace` / `image` / `memory_gib` / `cpus` | Docker volumes, image tag and limits (0 adds none) |
 | `container.seccomp_profile` | `default`, or `unconfined` for Codex's nested sandbox |
-| `factory.*` | Offline Cycles rendering ([Factory](factory/replay.md)) |
 | `paths.runs_root` | Where runs, receipts, exports and caches go; empty is `<repo>/runs`; `ROBOTEAM_RUNS_ROOT` overrides |
-| `oracle.*` | Native Oracle supervision ([Oracle](oracle/README.md)) |
 
 ## Startup in all four modes
 

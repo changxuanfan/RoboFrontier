@@ -80,6 +80,3 @@ time and input tokens.
 - **Paired tests.** Every condition runs the same tasks, so two conditions are compared task
   by task with an exact McNemar test, Holm's correction and bootstrap intervals
   (`roboteam/analysis/paired.py`, `scripts/paired_tests.py`).
-
-The Oracle (the reference condition with ground-truth positions) uses its own copy of each case in
-`benchmark/oracle/<case>/`; see the [Oracle](../oracle/README.md).

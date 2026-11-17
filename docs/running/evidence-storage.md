@@ -110,9 +110,8 @@ another machine. Restoring does not restart a world or repeat physical actions.
 - Observations are JPEG 1280 x 800, quality 90 (`render.observation_profile`). The archiver never
   re-encodes them.
 - Session transcripts keep their full history; the archiver does not drop repeated messages.
-- Replay uses the recording's own `motion/source/`. Factory replay needs a matching Factory scene
-  and assets ([Factory replay](../factory/replay.md)); observation resolution does not cap later
-  video, which defaults to 1920 x 1080.
+- A recording carries its own scene in `motion/source/`, so it can be replayed without the
+  checkout it was made in.
 
 To compare an original collection with its restored copy:
 
@@ -122,8 +121,7 @@ To compare an original collection with its restored copy:
 ```
 
 It compares every file hash, all motion states, timestamps and appearance events, then rendered
-first/middle/last samples; `--factory /path/to/scene.xml` adds Factory geometry and image
-checks. Read `report.json` for the coverage; samples are not a full video or a task result.
+first/middle/last samples. Read `report.json` for the coverage; samples are not a full video or a task result.
 
 ## Space and privacy
 
@@ -151,7 +149,7 @@ removing any source.
 Other values the harness accepts: `events-1s` and `events-60s` (snapshots every 1 or 60 s; with
 `events-60s` a scene that records motion leaves poses out of all but the last snapshot, and
 `roboteam.analysis.motion_query.object_poses` reads them from the recording), and `full`
-(a complete snapshot every 0.1 s, which Oracle tooling reads).
+(a complete snapshot every 0.1 s).
 
 ## Session transcripts
 
@@ -173,12 +171,3 @@ Every compressed copy must decompress to the original SHA-256 and be recorded in
 while it still equals the run's verified copy. A run that could still be continued is refused
 unless `--final` says it will not be. Readers accept both forms, and an interrupted archive
 resumes on the next call.
-
-## Videos of policy runs
-
-`roboteam/media/render.py` renders each run's simple-background video at 1280 x 720 and its
-family speedup (Mosaic 30x). It keeps only meaningful motion (`roboteam/media/motion_cut.py`:
-directed arm, finger or object motion), then drops rendered frames in which no view visibly
-changes, until no still stretch is longer than two frames. The resulting `motion-cut.json` maps
-to the recording's own states; pass it to `roboteam factory import-motion --timeline` so the
-1920 x 1080 Factory video shows the same states. The recording is never changed.

@@ -42,4 +42,4 @@ A placement that is later disturbed stops counting. `roboteam/tasks/evaluate.py`
 ## Presentation
 
 Videos play Mosaic at 30× and 30 fps (`speedup` in `benchmark/release.json`), each station
-looping on its own clock. See [Factory replay](../factory/replay.md).
+looping on its own clock.

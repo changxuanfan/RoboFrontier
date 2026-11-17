@@ -83,12 +83,6 @@ def expected_protocol(case, protocol, release_sha256):
     return expected
 
 
-def case_specs(root=ROOT):
-    """Each released case's catalog row: id, family, level, arm count and scene revision."""
-    release = read(Path(root)/RELEASE)
-    return [row for family in release['families'].values() for row in read(Path(root)/family['catalog']['path'])['cases']]
-
-
 def dial_code(case_id, root=ROOT):
     """The Dial case's fixed secret code, from the private part of the release."""
     codes = read(Path(root)/RELEASE).get('private', {}).get('dial_codes', {})

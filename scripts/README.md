@@ -72,13 +72,11 @@ These read finished runs; none starts a model or physics.
 | `verify_evidence_replay.py` | Compare restored evidence with the original: all motion states and events, and sampled renders |
 | `view_policy_batch.py` | Loopback, read-only batch viewer using existing JSON and images only ([viewer](../docs/running/local-viewer.md)) |
 
-## Factory and project page
+## Project page
 
 | Script | Purpose |
 | --- | --- |
-| `replay_motion_in_factory.py` | Replay recorded source states, with optional cuts, in a Factory; never steps task physics |
 | `site_media.py` | Encode task videos for the project page and README with posters and a verified manifest: `encode`, `montage`, `stills`, `explainer` |
-| `site_film.py` | Cut the film and its short teaser from the raw Robo World render, and derive the page hero loop and banner: `short`, `film`, `web`, `banner` |
 | `site_data.py` | Generate the project page's `site/data/` indexes and the README task gallery: `tasks`, `media`, `readme-gallery` |
 
 ## Package commands
@@ -91,10 +89,8 @@ Some lower-level commands live in the package and run as `.venv/bin/python -m MO
 | `roboteam.batch.tasks` | `list`, `check`, `prepare`, `prepare-batch`: audit released tasks and their inputs, or prepare runs directly |
 | `roboteam.batch.archive_policy_batch` | `create`, `verify`, `restore`: the lower-level evidence archive; `restore` rebuilds an extracted archive in its original layout |
 | `roboteam.engines.codex.check_codex_cli` | Exercise the installed Codex CLI's tools, images and forks against a local stub |
-| `roboteam.factory.commands` | `build`, `view`, `poses`, `video`: build, view and render the Oracle workstations in one Factory |
 
-`roboteam/factory/blender/export.py` and `render.py` run inside Blender to export and render
-Cycles scenes. `roboteam/engines/codex/meta_dispatcher.js` executes frozen Meta operations; it
+`roboteam/engines/codex/meta_dispatcher.js` executes frozen Meta operations; it
 is not a task-solving agent.
 
 Do not modify frozen inputs or delete evidence to make a preparation or archive check pass.

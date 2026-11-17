@@ -4,11 +4,9 @@ All tests run offline: none calls a model provider. Install the locked environme
 the assets first ([getting started](../getting-started.md)):
 
 ```sh
-uv sync --locked --extra oracle
+uv sync --locked
 .venv/bin/roboteam bootstrap
 ```
-
-The CI `all-tests` job installs the same Oracle extra so the complete suite can import its reference controllers.
 
 Node.js is needed for the Node host tests. Tests that drive an installed engine CLI run it against
 a local stub model and skip when the CLI is absent.
@@ -76,8 +74,7 @@ too to keep the network-outage probe and desktop notifications out of test runs.
 ## Skips and opt-in tests
 
 A test skips, rather than fails, when what it needs is absent: an engine CLI, Linux or a Landlock
-ABI, the restored scene assets, or ignored local data (finished runs, Oracle source edits under
-`outputs/oracle/`). Read the skipped count in the report; a skipped test is not a pass.
+ABI, the restored scene assets, or ignored local data (finished runs). Read the skipped count in the report; a skipped test is not a pass.
 
 These environment variables turn on longer tests that need a native CLI or local data:
 
@@ -87,7 +84,6 @@ These environment variables turn on longer tests that need a native CLI or local
 | `ROBOTEAM_PHYSICS_BATCH=1` | `engines.test_claude_parallel_physics_smoke` |
 | `ROBOTEAM_PHYSICS_STANDING=1`, `ROBOTEAM_PHYSICS_SIGNAL=1`, `ROBOTEAM_PHYSICS_FINISH=1`, `ROBOTEAM_MOSAIC_IMAGE=1` | Claude standing-team, signal, finish and Mosaic image integration tests |
 | `ROBOTEAM_NATIVE_TEST_RECEIPTS=1` | Keep the receipts of `engines.test_claude_standing_team_integration` |
-| `ROBOTEAM_PRESERVATION_CHECK=1` | `repo.test_oracle_preservation`, which hashes the protected Oracle files (several minutes) |
 
 ## Filesystems
 

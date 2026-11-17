@@ -1,1 +1,1 @@
-"""Motion recordings, their edits and simple-background videos."""
+"""Motion recordings and the live video of a run."""

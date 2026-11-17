@@ -7,15 +7,6 @@ from roboteam.physics.workstation import Workstation
 from roboteam.tasks.families import ROOT,resolve_case
 
 class MotionRecordingTests(unittest.TestCase):
-    def test_video_cadence_does_not_accumulate_sample_phase_error(self):
-        from scripts.replay_motion_in_factory import video_sample
-        times=[0.]+[np.ceil(i/60/.0005-1e-9)*.0005 for i in range(1,121)]
-        deadline=0.;selected=[]
-        for stamp in times:
-            due,deadline=video_sample(stamp,deadline)
-            if due:selected.append(stamp)
-        self.assertEqual(len(selected),61)
-        self.assertLess(max(np.diff(selected)),.034)
     def setUp(self):
         self.source=ROOT/resolve_case('transport-a04-d1')[2]['directory']
         self.w=Workstation(self.source)
@@ -38,13 +29,6 @@ class MotionRecordingTests(unittest.TestCase):
                 self.assertEqual(t,frames[i][0]);np.testing.assert_array_equal(q,frames[i][1])
             for invalid in [[-1],[len(frames)],[2,1],[0,0],[]]:
                 with self.assertRaises(ValueError):list(reader.selected_frames(invalid))
-            from roboteam.media.motion_timeline import write_timeline,MotionTimeline
-            timeline=Path(td)/'edit.json'
-            write_timeline(timeline,path,times,[0,len(frames)-1],[True,True],{})
-            edit=MotionTimeline(timeline,reader)
-            self.assertEqual(edit.select()[0],0);self.assertEqual(edit.select()[-1],len(frames)-1)
-            timeline.with_suffix('.npz').write_bytes(b'corrupt')
-            with self.assertRaisesRegex(ValueError,'checksum'):MotionTimeline(timeline,reader)
             self.assertTrue(any(e['event']=='rgba' for e in reader.events()))
             portable=Workstation(path/'source');self.assertEqual(portable.manifest['scene_sha256'],self.w.manifest['scene_sha256'])
             # Frozen files are clones of the shared cache, never hard links to it.

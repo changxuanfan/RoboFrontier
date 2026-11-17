@@ -33,7 +33,7 @@ runs, Codex subscription): copy it to an untracked file (here `site.toml`) and e
 ```sh
 git clone https://github.com/changxuanfan/RoboTeam.git
 cd RoboTeam
-uv sync --locked --extra oracle
+uv sync --locked
 .venv/bin/roboteam bootstrap
 ```
 

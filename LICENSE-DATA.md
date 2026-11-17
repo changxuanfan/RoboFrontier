@@ -10,12 +10,10 @@ The source code is licensed separately under the MIT License ([`LICENSE`](LICENS
 
 ## What this covers
 
-- Task, scene and environment data: the released tasks in `benchmark/`, including the Oracle's
-  source scenes in `benchmark/oracle/`.
+- Task, scene and environment data: the released tasks in `benchmark/`.
 - Rendered media: the README and project-page images in `docs/media/` and `site/`,
-  benchmark previews, the Factory meshes, textures and tour material in
-  `assets/robo_factory/`, and the videos published from this project (Oracle
-  recordings and the Factory tour).
+  benchmark previews, the factory hall textures in `assets/robo_factory/`, and the videos
+  published from this project (Oracle recordings and the Factory tour).
 
 Code, including scripts, tests, the project page code in `site/` and the HTML
 tools in `assets/`, is under the MIT License.

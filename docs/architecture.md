@@ -18,9 +18,7 @@ lessons.
 | `runs/` | Run evidence and engineering outputs, not in Git (`paths.runs_root`) |
 
 The command line is `roboteam` ([command-line guide](unified-cli.md)); the full folder map is
-in [repository layout](repository-layout.md). Oracle runs use the released scenes' Oracle copies
-([Oracle](oracle/README.md)); Factory playback uses each recording's own frozen scene
-([Factory](factory/replay.md)).
+in [repository layout](repository-layout.md).
 
 ## Engines and topologies
 
@@ -53,8 +51,7 @@ observing count as task time. `ready` is an optional capability query, not a STA
 The task limit is `batch.task_wall_limit_s`, 86,400 s of active running time from START, counted
 in the run store; host stops, pauses and network outages do not count
 ([time](running/continuation.md#time)). The run is scored at that cutoff. `batch.startup_timeout_s`
-bounds preparation separately. An operator's stop is not the task limit. Oracle elapsed limits
-include planning and review pauses and are not a policy clock.
+bounds preparation separately. An operator's stop is not the task limit.
 
 `batch.startup_interval_s` (0.3 s) spaces the launches of run hosts, never robot actions or model
 turns. Codex API homes are created serially before parallel launch, one per run. Credentials are

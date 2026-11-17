@@ -1,13 +1,31 @@
 """User-authorized low release inside Goal; final stable support remains required."""
+import json
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+
+import mujoco
 import numpy as np
-from tests.tasks.test_relay_descent_recovery import recorded_world
+
+from roboteam.physics.robot_control import PandaArm
+from roboteam.tasks.evaluate import Monitor
+from roboteam.tasks.families import ROOT
+
+
+def relay_world():
+    """The released relay-a08-d1 scene at its initial state, with its evaluator."""
+    scene=ROOT/'benchmark/relay/relay-a08-d1'
+    t=SimpleNamespace(model=mujoco.MjModel.from_xml_path(str(scene/'scene.xml')),task=json.loads((scene/'task.json').read_text()))
+    t.data=mujoco.MjData(t.model)
+    mujoco.mj_resetDataKeyframe(t.model,t.data,t.model.key('initial').id);mujoco.mj_forward(t.model,t.data)
+    t.arms={a:PandaArm(t.model,t.data,a) for a in t.task['arms']}
+    t.monitor=Monitor(t)
+    return t
 
 
 class NearGoalReleaseTests(unittest.TestCase):
     def setUp(self):
-        self.t=recorded_world();self.relay=self.t.monitor.relay
+        self.t=relay_world();self.relay=self.t.monitor.relay
         self.ident='payload_02';self.relay.states={self.ident:self.relay.states[self.ident]}
         self.state=self.relay.states[self.ident]
         self.state.update(airborne=True,custody={'G','H'},transitions=[dict(senders=['E','F'],receivers=['G','H'])])

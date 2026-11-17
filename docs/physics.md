@@ -30,9 +30,6 @@ physics (`build_release.py settle`). Each run writes `private/outputs/effective-
 the options and contact parameters it actually ran with and their hash. A full contact or
 constraint buffer or a bad inertia fails the step (`roboteam/physics/health.py`).
 
-The Oracle keeps the physics its recordings were made with, in its own copy of each case under
-`benchmark/oracle/` ([Oracle](oracle/README.md)).
-
 ## Robot limits
 
 `roboteam/physics/franka_limits.py` holds the limits, from the Panda datasheet (2018-05)

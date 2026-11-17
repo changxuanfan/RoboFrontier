@@ -47,7 +47,4 @@ implements these checks.
 ## Presentation
 
 Robo World and simple-background videos play Transport at 20× and 30 fps (`speedup` in
-`benchmark/release.json`). Each station keeps its own clock and loops independently; motion edits
-are read from the recording's own states and events
-(`roboteam/media/edit_transport.py`, `roboteam/media/transport_motion_signals.py`).
-See [Factory replay](../factory/replay.md).
+`benchmark/release.json`). Each station keeps its own clock and loops independently.

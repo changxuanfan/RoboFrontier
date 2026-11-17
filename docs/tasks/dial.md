@@ -44,4 +44,4 @@ process events. `roboteam/tasks/dial.py` holds the feedback state machine;
 ## Presentation
 
 Videos play Dial at 10× and 30 fps (`speedup` in `benchmark/release.json`), each station looping
-on its own clock. See [Factory replay](../factory/replay.md).
+on its own clock.
