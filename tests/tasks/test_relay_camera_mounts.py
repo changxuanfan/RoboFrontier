@@ -48,8 +48,17 @@ class RelayCameraMountTests(unittest.TestCase):
                 folder = ROOT/case['directory']
                 public = read(folder/'public/task.json')
                 model = self.assert_mounts_match_scene(public, folder)
-                # The file holds exactly what the release builder derives from the scene.
-                self.assertEqual(public['static_camera_mounts'], build_release.camera_mounts(model, public['cameras']))
+                # The file holds what the release builder derives from the scene. Floats may
+                # differ in their last digit between platforms, so they are compared closely.
+                built = build_release.camera_mounts(model, public['cameras'])
+                self.assertEqual(len(public['static_camera_mounts']), len(built))
+                for kept, made in zip(public['static_camera_mounts'], built):
+                    self.assertEqual(kept.keys(), made.keys())
+                    for key, value in kept.items():
+                        if isinstance(value, list) and value and isinstance(value[0], float):
+                            for x, y in zip(value, made[key]): self.assertAlmostEqual(x, y, places=12)
+                        elif isinstance(value, float): self.assertAlmostEqual(value, made[key], places=12)
+                        else: self.assertEqual(value, made[key])
 
     def test_a_prepared_relay_run_receives_the_mounts_of_its_own_frozen_scene(self):
         with tempfile.TemporaryDirectory() as tmp:
