@@ -7,7 +7,7 @@ with native Codex or native Claude.
 
 The native Claude Code CLI owns tool execution, persistent sessions, compaction,
 and verified adaptive forks. A loopback adapter translates Anthropic Messages to
-the public OpenAI Responses API. It does not run the Codex or Copilot agent loop.
+the public OpenAI Responses API. It does not run the Codex agent loop.
 Every upstream inference request selects `gpt-6.1-sol` with high reasoning effort
 and `store: false`, using Responses WebSocket events. Unsupported content is rejected explicitly.
 Completed tool calls are released only after `response.completed`; failed,

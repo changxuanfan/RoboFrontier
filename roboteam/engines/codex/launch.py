@@ -34,7 +34,7 @@ def profile(name, config=None):
             # the literal loopback address: the key it sends is that adapter's local key.
             if (url.scheme != 'http' or url.hostname != '127.0.0.1' or not url.port or url.username or url.password
                     or url.query or url.fragment or not p.get('env_key') or 'base_url_env' in p
-                    or not p.get('transport_revision') or p.get('http_headers')):
+                    or not p.get('transport_revision')):
                 raise ValueError('A loopback gateway profile needs http://127.0.0.1:PORT, a local key variable '
                                  'and a transport revision')
         elif 'transport' in p:
@@ -184,12 +184,6 @@ def launch_config(p, folder, run_dir=None):
             prefix+'env_key':p['env_key'], prefix+'wire_api':'responses',
             prefix+'requires_openai_auth':False, prefix+'supports_websockets':False,
             prefix+'request_max_retries':3, prefix+'stream_max_retries':3})
-        for name, value in p.get('http_headers', {}).items():
-            if not re.fullmatch(r'[A-Za-z0-9_-]+', name) or not isinstance(value, str):
-                raise ValueError('Provider HTTP headers require simple names and string values')
-            if name.lower() in ('authorization', 'proxy-authorization', 'cookie') or '\r' in value or '\n' in value:
-                raise ValueError('Keep credentials out of frozen HTTP headers; use env_key')
-            values[prefix+'http_headers.'+name] = value
     if loopback_gateway(p):
         # Model shells never inherit the adapter's local key or an upstream credential. Their
         # network is off as well, so the loopback port is out of reach either way.

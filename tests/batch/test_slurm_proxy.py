@@ -43,7 +43,7 @@ class EngineProbeTests(unittest.IsolatedAsyncioTestCase):
         for engine, route in proxy.ENGINE_ROUTES.items():
             for host in proxy.probe_hosts(engine):
                 self.assertTrue(proxy.target_allowed(host, 443, route['domains']), host)
-        with self.assertRaises(proxy.EgressError): proxy.probe_hosts('gemini')
+        with self.assertRaises(proxy.EgressError): proxy.probe_hosts('other')
         with self.assertRaises(proxy.EgressError): proxy.MacRelay(None, grace_s=60)
         with self.assertRaises(proxy.EgressError): proxy.MacRelay(None, grace_s=60, probe_hosts=('example.com',))
 
@@ -71,7 +71,7 @@ class EngineProbeTests(unittest.IsolatedAsyncioTestCase):
         started = []
         async def connect(args): started.append(args.engine)  # never reaches SSH in this test
         with patch.object(proxy, 'connect', connect):
-            for extra in (['--pause-grace-s', '120'], ['--pause-grace-s', '120', '--engine', 'gemini']):
+            for extra in (['--pause-grace-s', '120'], ['--pause-grace-s', '120', '--engine', 'other']):
                 with patch('sys.stderr'), self.assertRaises(SystemExit):
                     proxy.main([*base, *extra])
             self.assertEqual(started, [])

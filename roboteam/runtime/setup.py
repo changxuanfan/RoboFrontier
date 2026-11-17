@@ -20,7 +20,6 @@ ENGINE_SCRIPTS = {
               'roboteam/engines/codex/codex_preflight.js', 'roboteam/engines/codex/tool_broker.js',
               'roboteam/engines/codex/gateway_rpc.js', 'roboteam/engines/codex/job_gateway.js', 'roboteam/engines/codex/borrowed_auth.js'),
     'claude': (),
-    'antigravity': (),
 }
 
 
@@ -156,10 +155,6 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     from .access import record as access_record
     write_json(directory/'private/inputs/policy-access.json',
                access_record(directory, no_environment=mode == tool_mode.ROBOT_ONLY))
-    if cfg.get('engine') == 'antigravity' and mode != tool_mode.ROBOT_ONLY:
-        # The brokered file tools of a full run; a robot_only run has none.
-        from roboteam.engines.antigravity.settings import prepare_tools
-        prepare_tools(directory)
     paths = list((ROOT/'roboteam').rglob('*.py'))
     paths += [path for path in (ROOT/'prompts').rglob('*.md') if 'archive' not in path.relative_to(ROOT/'prompts').parts]
     # Freeze only the policy-host scripts of this run's engine, so editing the other

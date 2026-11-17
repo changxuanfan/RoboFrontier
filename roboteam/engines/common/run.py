@@ -114,16 +114,10 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
         _positive(val, name, limit)
     run = Path(run_dir).resolve()
     engine = json.loads((run/'private/inputs/manifest.json').read_text()).get('engine')
-    if engine not in ('claude', 'antigravity'): raise ValueError('Expected a native CLI engine')
-    launch = json.loads((run / ('private/inputs/' + engine + '.json')).read_text())
+    if engine != 'claude': raise ValueError('Expected a Claude run')
+    launch = json.loads((run / 'private/inputs/claude.json').read_text())
     manifest = json.loads((run / 'private/inputs/manifest.json').read_text())
     from roboteam.batch.claude_prepare import LAUNCH_SCHEMA
-    if engine == 'antigravity':
-        LAUNCH_SCHEMA = 'roboteam.antigravity-launch.v1'
-        from roboteam.engines.antigravity.orchestration import factories
-        policy_factory, adaptive_policy_factory, standing_policy_factory = factories()
-        from roboteam.engines.antigravity.session_host import AntigravitySessionHost
-    native_host = AntigravitySessionHost if engine == 'antigravity' else ClaudeSessionHost
     verifier = _verifier or verify_inputs
     supervisor_type = _supervisor or CentralizedSupervisor
     if launch.get('schema') != LAUNCH_SCHEMA:
@@ -139,7 +133,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
         raise ValueError('Expected a supported Claude run')
     if profile.get('auth_mode') != 'native_login' and not base_env.get(profile['env_key']):
         raise ValueError('Missing credential variable: ' + profile['env_key'])
-    if engine == 'claude' and profile.get('auth_mode') == 'native_login':
+    if profile.get('auth_mode') == 'native_login':
         build_env(profile, base_env, config_directory(run, profile))
     if run_layout.path(run, 'stop', 'claude').exists(): raise ValueError('Run was stopped before launch')
     _check_shared_budget(run, topology, turn_budget_usd, total_budget_usd)
@@ -149,7 +143,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
     state_store = RuntimeStore(run / 'private/state/runtime.sqlite')
     try: resuming = state_store.get('lifecycle') == 'resuming'
     finally: state_store.close()
-    host_factory = partial(native_host, max_budget_usd=turn_budget_usd, total_budget_usd=total_budget_usd)
+    host_factory = partial(ClaudeSessionHost, max_budget_usd=turn_budget_usd, total_budget_usd=total_budget_usd)
     policy = None
     ledger = None
     fresh_ledger = False
@@ -173,7 +167,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
             # continued segment keeps the costs already spent.
             fresh_ledger = not (resuming and run_layout.path(run, 'budget_ledger', 'claude').exists())
             ledger = _ledger(run, total_budget_usd, resuming)
-            host_factory = partial(native_host, max_budget_usd=turn_budget_usd, budget_ledger=ledger)
+            host_factory = partial(ClaudeSessionHost, max_budget_usd=turn_budget_usd, budget_ledger=ledger)
             policy = policy_factory(run, profile, base_env, host_factory=host_factory,
                                     **({'resume': True} if resuming else {}))
         if not resuming:

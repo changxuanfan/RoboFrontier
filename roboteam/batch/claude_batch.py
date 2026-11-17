@@ -41,7 +41,7 @@ def _stop_all(folder, jobs):
 def _jobs(folder):
     folder = Path(folder).resolve()
     batch = json.loads((folder / 'batch.json').read_text())
-    if schema_of(batch) not in (BATCH_SCHEMA, 'roboteam.antigravity-batch.v1') or batch.get('status') != 'prepared_not_started':
+    if schema_of(batch) != BATCH_SCHEMA or batch.get('status') != 'prepared_not_started':
         raise ValueError('Expected a prepared Claude batch')
     jobs = batch.get('jobs')
     if not isinstance(jobs, list) or not jobs: raise ValueError('Batch has no jobs')
@@ -99,30 +99,20 @@ def _preflight(jobs, env, verifier, continuing=False, budgets=(None, None)):
             raise ValueError('A run is stopped or already claimed')
         changed = verifier(run)
         if changed: raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
-        engine = 'antigravity' if (run/'private/inputs/antigravity.json').is_file() else 'claude'
-        launch = json.loads((run / ('private/inputs/' + engine + '.json')).read_text())
+        launch = json.loads((run / 'private/inputs/claude.json').read_text())
         config = json.loads((run / 'private/inputs/harness.json').read_text())
         profile = launch['profile']
-        expected_schema = LAUNCH_SCHEMA if engine == 'claude' else 'roboteam.antigravity-launch.v1'
-        if (launch.get('schema') != expected_schema or config.get('engine') != engine
+        if (launch.get('schema') != LAUNCH_SCHEMA or config.get('engine') != 'claude'
                 or config.get('topology') not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized') or config.get('model') != profile.get('model')
                 or config.get('effort') != profile.get('effort')):
-            label = 'Claude' if engine == 'claude' else 'Antigravity'
-            raise ValueError('Run does not match its ' + label + ' launch profile')
+            raise ValueError('Run does not match its Claude launch profile')
         _check_shared_budget(run, config['topology'], *budgets)
         if profile.get('auth_mode') != 'native_login' and not env.get(profile.get('env_key')):
             raise ValueError('Missing provider credential variable')
-        if engine == 'claude' and profile.get('provider') != 'anthropic' and not profile.get('base_url'):
+        if profile.get('provider') != 'anthropic' and not profile.get('base_url'):
             raise ValueError('Third-party provider base URL is missing')
         # Validate authentication for every job before claiming or launching any.
         # The returned environment is deliberately discarded and never logged.
-        if engine == 'antigravity':
-            from roboteam.engines.antigravity.auth import environment_home
-            from roboteam.engines.antigravity.profile import validate
-            home = environment_home(run, validate(profile), env.get('HOME') or Path.home())
-            if Path(launch['native_home']) != home/'.gemini/antigravity-cli':
-                raise ValueError('Antigravity native home differs from its prepared launch profile')
-            continue
         home = config_directory(run, profile)
         if profile.get('auth_mode') == 'native_login' and home.is_relative_to(run.parents[1]):
             raise ValueError('Keep the native authentication home outside the evidence batch')

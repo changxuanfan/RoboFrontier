@@ -7,18 +7,6 @@ lists its options. The gateways below access model providers when listing models
 forwarding authenticated requests; the ChatGPT sign-in helper accesses the authorization
 service only when explicitly invoked. The other scripts do not call a model provider.
 
-## GitHub PAT model transport
-
-| Script | Purpose |
-| --- | --- |
-| `github_pat_gateway.py` | Loopback PAT transport for model catalogs, Chat Completions and Responses; no agent runtime |
-
-`python scripts/github_pat_gateway.py --token-file /private/github_token.txt`
-starts a standard-library-only loopback connector usable without installing
-RoboTeam, Copilot CLI or GHC API. It forwards Chat Completions and Responses,
-including streamed tool calls. `--list-models` queries the current account's model
-catalog. See [setup, Codex and Antigravity examples](../docs/engines/github-pat.md).
-
 ## Experimental Codex / Claude transport
 
 | Script | Purpose |
@@ -51,7 +39,6 @@ See [authentication, API-key handoff and validation](../docs/engines/claude-chat
 | --- | --- |
 | `build_policy_env.py` | Build the read-only Python environment and offline wheel store for policy scripts, once per host (`--base FOLDER`) |
 | `check_policy_env.py` | Check a built environment and each engine's sandbox with a local stub model before a batch uses them (`ENVIRONMENT --scratch FOLDER [--engine]`) |
-| `install_antigravity.py` | Download and verify the pinned Antigravity CLI for the current platform (`--output PATH`) |
 
 See [policy environment](../docs/running/policy-environment.md).
 

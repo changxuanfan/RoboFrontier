@@ -20,7 +20,6 @@ WORKDIR /opt/RoboTeam
 COPY . .
 ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 RUN uv sync --locked --extra oracle \
-    && .venv/bin/python -m scripts.install_antigravity --output /usr/local/bin/agy \
     && .venv/bin/python -m roboteam.cli bootstrap \
     && rm -rf /root/.cache/uv /root/.cache/pip runs/asset-cache \
     && mkdir -p .roboteam runs /var/tmp/roboteam /opt/roboteam-policy

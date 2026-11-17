@@ -199,7 +199,7 @@ class StandingTeamPolicyHost:
                 # Refused before any launch: the wake was not sent, and the task cap is spent.
                 self.admin('dispatch-result', {'wake_id': claimed['wake_id'], 'outcome': 'cancelled',
                                                'result': {'error': 'budget_exhausted'}})
-                self.admin('pause', {'reason': ('Claude' if self.engine == 'claude' else 'Antigravity') + ' task budget exhausted'})
+                self.admin('pause', {'reason': 'Claude task budget exhausted'})
                 return {'dispatched': sent, 'paused': True}
             except Exception:
                 self.admin('dispatch-result', {'wake_id': claimed['wake_id'], 'outcome': 'uncertain',

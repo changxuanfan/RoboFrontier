@@ -68,9 +68,6 @@ def native_matches(engine, run, home, tid):
     """Where one native session is looked up and its transcripts there, plain or archived.
 
     A run-v6 Codex run carries its own copies; earlier Codex runs use the shared home."""
-    if engine == 'antigravity':
-        folder = run/'private/engine/transcripts'
-        return folder, [p for p in (folder/(tid+'.jsonl'),) if p.is_file()]
     if engine == 'claude':
         root = history_directory(run)
         return root, [p for p in session_glob(root/'projects', tid+'.jsonl') if p.parent.parent == root/'projects']
@@ -138,7 +135,7 @@ def _files(root, tolerated=(), skipped=None):
                     raise ValueError('Symlink inside evidence; resolve explicitly before collecting: ' + str(parent/name))
                 linked.add(name)
         # run-v3 keeps the native configuration in private/claude-config, run-v6 in private/engine/config.
-        dirs[:] = sorted(d for d in dirs if d not in linked and d != 'claude-config' and not (d in ('config', 'home') and parent.name == 'engine'))
+        dirs[:] = sorted(d for d in dirs if d not in linked and d != 'claude-config' and not (d == 'config' and parent.name == 'engine'))
         # Finder writes .DS_Store into any folder it shows, even during collection;
         # it is desktop metadata, not run evidence.
         for name in sorted(f for f in files if f != '.DS_Store' and f not in linked):
@@ -226,10 +223,10 @@ def collect_batch(batch_path, output, *, codex_home=None):
     batch = load(batch_path/'batch.json')
     # Claude batches prepared before 2026-11-11 are 'roboteam.claude-draft.v1'.
     claude = ('roboteam.claude-batch.v2', 'roboteam.claude-draft.v1')
-    engine = 'antigravity' if schema_of(batch) == 'roboteam.antigravity-batch.v1' else 'claude' if schema_of(batch) in claude else 'codex'
-    if schema_of(batch) not in (None, 'roboteam.cli-benchmark.v1', *claude, 'roboteam.antigravity-batch.v1'):
+    engine = 'claude' if schema_of(batch) in claude else 'codex'
+    if schema_of(batch) not in (None, 'roboteam.cli-benchmark.v1', *claude):
         raise ValueError('Unsupported batch schema')
-    state_path = run_layout.batch_path(batch_path, 'engineering_status') if engine in ('claude', 'antigravity') else batch_path/'batch.json'
+    state_path = run_layout.batch_path(batch_path, 'engineering_status') if engine == 'claude' else batch_path/'batch.json'
     state = load(state_path)
     if state.get('status') not in TERMINAL:
         raise ValueError('Collect only a stopped batch; inspect runner status first')
@@ -365,38 +362,37 @@ def collect_batch(batch_path, output, *, codex_home=None):
                     issues.append('no recorded policy role sessions')
                 # Snapshot anchors are not policy actors, but are required to
                 # reconstruct and audit the native lineage of their delegates.
-                if engine in ('codex', 'claude', 'antigravity'):
-                    for delegation_id, delegation in meta.get('delegations', {}).items():
-                        tid = delegation.get('snapshot_thread_id')
-                        if tid is None:
-                            continue  # historical runs did not create anchors
-                        if not isinstance(tid, str) or not ID.fullmatch(tid):
-                            issues.append(str(delegation_id)+': invalid snapshot session id')
-                            continue
-                        native_root, matches = native_matches(engine, run, home, tid)
-                        native_queries.append((run, home, tid, matches))
-                        if len(matches) != 1:
-                            issues.append(str(delegation_id)+': expected one snapshot session, found '+str(len(matches)))
-                            continue
-                        base = Path('sessions')/job['profile'] if job.get('profile') else Path('sessions')
-                        rel = base/job['case_id']/session_name(tid, matches[0])
-                        checksum = copy_stable(matches[0], temporary/rel)
-                        hashes[rel.as_posix()] = checksum
-                        native_sources[matches[0]] = checksum
-                        snapshot_sessions.append({'delegation_id':delegation_id,'thread_id':tid,
-                                                  'session':rel.as_posix(),'sha256':checksum})
-                        if engine == 'claude':
-                            native_rel = Path('batch')/run.relative_to(batch_path)/native_config/matches[0].relative_to(native_root)
-                            hashes[native_rel.as_posix()] = copy_stable(matches[0], temporary/native_rel)
-                            snapshot_sessions[-1]['native_session'] = native_rel.as_posix()
-                            sidecars = session_stem(matches[0])
-                            native_directories[sidecars] = sorted(_files(sidecars))
-                            for extra in native_directories[sidecars]:
-                                extra_rel = rel.parent/tid/extra.relative_to(sidecars)
-                                hashes[extra_rel.as_posix()] = copy_stable(extra, temporary/extra_rel)
-                                native_sources[extra] = hashes[extra_rel.as_posix()]
-                                original_rel = Path('batch')/run.relative_to(batch_path)/native_config/extra.relative_to(native_root)
-                                hashes[original_rel.as_posix()] = copy_stable(extra, temporary/original_rel)
+                for delegation_id, delegation in meta.get('delegations', {}).items():
+                    tid = delegation.get('snapshot_thread_id')
+                    if tid is None:
+                        continue  # historical runs did not create anchors
+                    if not isinstance(tid, str) or not ID.fullmatch(tid):
+                        issues.append(str(delegation_id)+': invalid snapshot session id')
+                        continue
+                    native_root, matches = native_matches(engine, run, home, tid)
+                    native_queries.append((run, home, tid, matches))
+                    if len(matches) != 1:
+                        issues.append(str(delegation_id)+': expected one snapshot session, found '+str(len(matches)))
+                        continue
+                    base = Path('sessions')/job['profile'] if job.get('profile') else Path('sessions')
+                    rel = base/job['case_id']/session_name(tid, matches[0])
+                    checksum = copy_stable(matches[0], temporary/rel)
+                    hashes[rel.as_posix()] = checksum
+                    native_sources[matches[0]] = checksum
+                    snapshot_sessions.append({'delegation_id':delegation_id,'thread_id':tid,
+                                              'session':rel.as_posix(),'sha256':checksum})
+                    if engine == 'claude':
+                        native_rel = Path('batch')/run.relative_to(batch_path)/native_config/matches[0].relative_to(native_root)
+                        hashes[native_rel.as_posix()] = copy_stable(matches[0], temporary/native_rel)
+                        snapshot_sessions[-1]['native_session'] = native_rel.as_posix()
+                        sidecars = session_stem(matches[0])
+                        native_directories[sidecars] = sorted(_files(sidecars))
+                        for extra in native_directories[sidecars]:
+                            extra_rel = rel.parent/tid/extra.relative_to(sidecars)
+                            hashes[extra_rel.as_posix()] = copy_stable(extra, temporary/extra_rel)
+                            native_sources[extra] = hashes[extra_rel.as_posix()]
+                            original_rel = Path('batch')/run.relative_to(batch_path)/native_config/extra.relative_to(native_root)
+                            hashes[original_rel.as_posix()] = copy_stable(extra, temporary/original_rel)
                 if engine == 'claude':
                     launch_file = run/'private/inputs/claude.json'
                     launch = load(launch_file) if launch_file.is_file() else {}

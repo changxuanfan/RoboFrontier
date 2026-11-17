@@ -21,17 +21,9 @@ TOOL = json.loads((Path(__file__).resolve().parents[1]/'common/robot_tool.json')
 from roboteam.runtime.robot_ops import POLICY_OPS, check_request
 
 
-class DelegationBindingError(ValueError):
-    """A trusted host binding refusal with a safe policy-facing recovery hint."""
-    def __init__(self, code, note):
-        super().__init__(note)
-        self.code, self.note = code, note
-
-
 class RobotBridge:
-    def __init__(self, run, connection, invoke=client_call, *, bind_delegation=None, bind_all_delegations=False):
+    def __init__(self, run, connection, invoke=client_call, *, bind_delegation=None):
         self.bind_delegation = bind_delegation
-        self.bind_all_delegations = bind_all_delegations
         self.run = Path(run).resolve()
         self.connection = Path(connection).resolve()
         expected_dir = (self.run / 'private/state/connections').resolve()
@@ -47,7 +39,7 @@ class RobotBridge:
         self.requests = {}
         self.request_lock = threading.Lock()
 
-    def call(self, args, request_id=None, *, bind_delegation=None):
+    def call(self, args, request_id=None):
         if not isinstance(args, dict) or set(args) - {'op', 'data', 'call_id', 'views'}:
             raise ValueError('Invalid robot arguments')
         op, data = args.get('op'), args.get('data')
@@ -78,22 +70,18 @@ class RobotBridge:
             host_event(self.run, 'robot_tool_completed', actor=self.actor, op=op, call_id=call_id,
                        duration_s=time.monotonic()-began)
             return result
-        if op == 'delegate' and (not args.get('call_id') or self.bind_all_delegations):
+        if op == 'delegate' and not args.get('call_id'):
             try:
-                binder = bind_delegation or self.bind_delegation
-                if binder is None:
+                if self.bind_delegation is None:
                     raise ValueError('Native delegation binding required')
-                binder(self.run, self.actor, args, call_id)
-            except ValueError as exc:
-                code = exc.code if isinstance(exc, DelegationBindingError) else 'DELEGATE_IDENTITY_UNVERIFIED'
-                note = exc.note if isinstance(exc, DelegationBindingError) else (
-                    'No delegation was submitted: native tool identity could not be verified.')
+                self.bind_delegation(self.run, self.actor, args, call_id)
+            except ValueError:
                 host_event(self.run, 'robot_tool_failed', actor=self.actor, op=op, call_id=call_id,
-                           duration_s=time.monotonic()-began, error_code=code)
+                           duration_s=time.monotonic()-began, error_code='DELEGATE_IDENTITY_UNVERIFIED')
                 return {'isError': True, 'content': [{'type': 'text', 'text': json.dumps({
-                    'call_id': call_id, 'error_code': code,
+                    'call_id': call_id, 'error_code': 'DELEGATE_IDENTITY_UNVERIFIED',
                     'request_status': 'rejected', 'execution_status': 'not_submitted',
-                    'note': note})}]}
+                    'note': 'No delegation was submitted: native tool identity could not be verified.'})}]}
         if op in ('move', 'gripper', 'action_batch') and 'cameras' not in data:
             data = {**data, 'cameras': views}
         try:
