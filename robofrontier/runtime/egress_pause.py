@@ -73,6 +73,12 @@ class WorldPause:
             self.store.event(self.prefix+'_PAUSE_CLOSED','Meta',{'paused_s':elapsed,'automatic_replays':0})
             self.claim=None
 
+    def claim_name(self,kind,count):
+        # The counters live in this owner process and restart at 1 each segment; the segment keeps
+        # a claim unique across the trial, so a later pause is never mistaken for the same one
+        # (runtime_cli network-recovery keys its once-per-pause claims by this name).
+        return '%s-s%d-%d'%(kind,int(self.store.get('segment',0) or 0),count)
+
     def begin(self,claim,details):
         self.claim=claim;self.started=time.monotonic();self.before=self.ownership()
         self.wall_started=time.time()
@@ -138,7 +144,7 @@ class WorldPause:
             request=self.store.get('quota_pause')
             if not request or self.store.get('lifecycle')!='running' or self.store.get('physics_state')!='running':return None
             self.quotas+=1;self.quota={**request,'paused_at':time.time(),'prefix':self.prefix};self.prefix='QUOTA'
-            self.begin('quota-%d'%self.quotas,{'resets_at':request.get('resets_at'),'resume_at':resume_at(self.quota),
+            self.begin(self.claim_name('quota',self.quotas),{'resets_at':request.get('resets_at'),'resume_at':resume_at(self.quota),
                                                'actor':request.get('actor')})
             notify(self.service.directory,'Usage limit reached; the run is paused until %s'%_local(resume_at(self.quota)))
             return True
@@ -166,7 +172,7 @@ class WorldPause:
             budget=getattr(self.service,'policy_budget',None);retracted=0.
             if budget is not None and state['streak_started'] is not None:
                 retracted=budget.retract(self.service,max(0.,self.outage.clock()-state['streak_started']))
-            self.begin('outage-%d'%self.outages,{'hosts':list(self.outage.hosts),'failed_probes':state['failures'],
+            self.begin(self.claim_name('outage',self.outages),{'hosts':list(self.outage.hosts),'failed_probes':state['failures'],
                                                  'retracted_active_s':retracted})
             return True
         if state['down']:return True

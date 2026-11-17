@@ -209,7 +209,7 @@ def validate_configuration(config):
         if not all(type(value) is str and value for value in values) or len(set(values)) != len(values):
             raise ValueError('selection.' + field + ' must contain distinct nonempty strings')
     choice('render', 'device', ('nvidia', 'cpu', 'native'))
-    choice('render', 'observation_profile', ('jpeg_896x560_q85', 'png_1280x800'))
+    choice('render', 'observation_profile', ('jpeg_896x560_q85', 'png_1280x800', 'jpeg_128x80_q95'))
     choice('runtime', 'codex_home_scope', ('task', 'shared', 'job') if version >= 6 else ('task', 'shared'))
     if version >= 5:
         choice('runtime', 'codex_tool_backend', ('native', 'landlock-v1'))

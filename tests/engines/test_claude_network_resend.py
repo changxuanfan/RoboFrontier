@@ -72,7 +72,7 @@ class NetworkResendTests(active.Fixture):
         # While the world is paused nothing is resent: the claim needs the resume record.
         self.assertFalse(self.recover()); self.assertEqual(len(self.calls), 1)
         self.probe(True)
-        self.assertEqual(self.s.store.get('egress_recovery')['claim'], 'outage-1')
+        self.assertEqual(self.s.store.get('egress_recovery')['claim'], 'outage-s0-1')
         self.assertTrue(self.recover())
         self.assertEqual(self.host.wait(3)['status'], 'idle')
         self.assertEqual(self.prompts[1], self.notice)

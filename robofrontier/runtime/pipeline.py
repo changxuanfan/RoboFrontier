@@ -30,7 +30,7 @@ from ..media.live_video import Video
 from ..tasks.config import load_task, action_limits, panda_control_profile
 from ..physics.robot_control import PandaArm
 from ..tasks.scene import camera_names
-from ..physics.observation_image import observation_profile
+from ..physics.observation_image import observation_profile, reduced_size, render_size, save_observation
 from .tool_errors import CallIdConflict, conflict_error
 from .service import RuntimeService
 from ..physics.motion_check import CONTROL_DT, TRACKING_LIMIT, RobotGeometry, prepare_check, state_id
@@ -311,8 +311,10 @@ class Service(RuntimeService):
         data,model=world.data,world.model
         state={'qpos':data.qpos.copy(),'geom_rgba':model.geom_rgba.copy()}
         if model.nmocap:state.update(mocap_pos=data.mocap_pos.copy(),mocap_quat=data.mocap_quat.copy())
-        request={'state':state,'images':images,'width':self.observation_image['width'],'height':self.observation_image['height'],
+        width,height=render_size(self.observation_image)
+        request={'state':state,'images':images,'width':width,'height':height,
                  'format':self.observation_image['format'],'save_options':Service.image_save_options(self.observation_image)}
+        if reduced_size(self.observation_image):request['output_size']=reduced_size(self.observation_image)
         if not self.render_worker.submit(request):self.render_here(request)
         return {'sim_time_s':world.time,'captured_at':time.time(),'images':paths,
                 'robot':{a:r.observe() for a,r in world.arms.items()}}
@@ -342,7 +344,7 @@ class Service(RuntimeService):
             return result
         self.obs+=1;paths={}
         mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN,self.context)
-        width, height = self.observation_image['width'], self.observation_image['height']
+        width, height = render_size(self.observation_image)
         viewport=mujoco.MjrRect(0,0,width,height)
         for name in cameras:
             cam=mujoco.MjvCamera();cam.type=mujoco.mjtCamera.mjCAMERA_FIXED;cam.fixedcamid=self.world.model.camera(name).id
@@ -350,7 +352,7 @@ class Service(RuntimeService):
             mujoco.mjr_render(viewport,self.scene,self.context)
             rgb=np.empty((height,width,3),dtype=np.uint8);mujoco.mjr_readPixels(rgb,None,viewport,self.context)
             path=self.directory/'public/observations'/f"obs-{uuid.uuid4().hex[:8]}-{self.obs:05d}-{name}{self.observation_image['extension']}"
-            Image.fromarray(rgb[::-1]).save(path, format=self.observation_image['format'], **Service.image_save_options(self.observation_image));paths[name]=str(path)
+            save_observation(Image,rgb,path,self.observation_image['format'],Service.image_save_options(self.observation_image),reduced_size(self.observation_image));paths[name]=str(path)
         if not getattr(self,'offscreen_context',None):
             mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_WINDOW,self.context)
         result={'sim_time_s':self.world.time,'captured_at':time.time(),'images':paths,

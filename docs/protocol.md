@@ -35,7 +35,9 @@ equal rules do not make model context or tool behavior equal.
 ## Observation images
 
 `render.observation_profile = "jpeg_896x560_q85"` (the default) makes every observation camera
-produce an 896 × 560 JPEG at quality 85; `png_1280x800` is the other choice. The run's harness
+produce an 896 × 560 JPEG at quality 85; `png_1280x800` is the other sharp choice.
+`jpeg_128x80_q95` is the default camera at one seventh of its resolution: each image is rendered
+at 896 × 560 and every 7 × 7 block of pixels is averaged into one before encoding at quality 95. The run's harness
 freezes it as `observation_image_profile`, and the public task states the format and resolution.
 When a published camera calibration names an image size, the run gets a copy at the observation
 resolution and the published file stays as it is. Video recording has its own resolution.

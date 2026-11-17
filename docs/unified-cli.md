@@ -72,7 +72,7 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 | `selection.level` | 0 for every level, else 1, 2 or 3 |
 | `selection.min_arms` | The smallest arm count in each selected family |
 | `render.device` | `nvidia` (Linux EGL), `cpu` (Linux OSMesa) or `native` (macOS) |
-| `render.observation_profile` | `jpeg_896x560_q85` (default) or `png_1280x800` |
+| `render.observation_profile` | `jpeg_896x560_q85` (default), `png_1280x800`, or `jpeg_128x80_q95` (the default camera at one seventh of its resolution) |
 | `render.record_realtime_video` | Live MP4 recording, off by default |
 | `runtime.codex_home_scope` | `task` (one home per run), `shared` (ChatGPT login) or `job` (Slurm subscription) |
 | `runtime.codex_home` | Home root; empty picks one automatically; must be outside the batch |

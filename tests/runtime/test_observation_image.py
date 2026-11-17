@@ -7,7 +7,12 @@ from types import SimpleNamespace
 import mujoco
 from PIL import Image
 
-from robofrontier.physics.observation_image import DEFAULT_PROFILE, LEGACY_PROFILE, observation_profile
+import io
+
+import numpy as np
+
+from robofrontier.physics.observation_image import (DEFAULT_PROFILE, LEGACY_PROFILE, LOW_RESOLUTION_PROFILE,
+                                                    observation_profile, save_observation)
 from robofrontier.runtime.pipeline import Service
 from robofrontier.runtime.setup import prepare_run, verify_inputs, write_json
 from robofrontier.tasks.config import load_harness
@@ -49,6 +54,113 @@ class ObservationImageTests(unittest.TestCase):
                 self.assertEqual(path.suffix,suffix)
                 with Image.open(path) as image:
                     image.load();self.assertEqual(image.size,size);self.assertEqual(image.format,fmt)
+
+    # What every capture wrote before a reduced profile existed: the rendered pixels, encoded.
+    @staticmethod
+    def as_rendered(rgb, profile, size=None):
+        image=Image.fromarray(rgb[::-1])
+        if size:image=image.resize(size,Image.BOX)
+        data=io.BytesIO();image.save(data,format=profile['format'],**Service.image_save_options(profile))
+        return data.getvalue()
+
+    def scene(self):
+        # Thin stripes and a small sphere: detail a lower resolution removes.
+        return mujoco.MjModel.from_xml_string("<mujoco><visual><global offwidth='1280' offheight='800'/></visual>"
+            "<asset><texture name='t' type='2d' builtin='checker' rgb1='1 1 1' rgb2='0 0 0' width='64' height='64'/>"
+            "<material name='m' texture='t' texrepeat='40 40'/></asset><worldbody><light pos='0 0 3'/>"
+            "<camera name='top' pos='0 0 2'/><geom type='plane' size='1 1 .1' material='m'/>"
+            "<geom type='sphere' size='.05' pos='.2 .1 .05' rgba='1 0 0 1'/></worldbody></mujoco>")
+
+    def rendered(self,model,data,renderer,width,height):
+        viewport=mujoco.MjrRect(0,0,width,height)
+        cam=mujoco.MjvCamera();cam.type=mujoco.mjtCamera.mjCAMERA_FIXED;cam.fixedcamid=model.camera('top').id
+        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN,renderer._mjr_context)
+        mujoco.mjv_updateScene(model,data,mujoco.MjvOption(),None,cam,mujoco.mjtCatBit.mjCAT_ALL,renderer._scene)
+        mujoco.mjr_render(viewport,renderer._scene,renderer._mjr_context)
+        rgb=np.empty((height,width,3),dtype=np.uint8)
+        mujoco.mjr_readPixels(rgb,None,viewport,renderer._mjr_context);return rgb
+
+    def test_profiles_that_do_not_reduce_encode_the_rendered_pixels_unchanged(self):
+        from robofrontier.physics.observation_image import reduced_size, render_size
+        rgb=np.random.default_rng(7).integers(0,256,(560,896,3),dtype=np.uint8)
+        with tempfile.TemporaryDirectory() as tmp:
+            for name,size in ((DEFAULT_PROFILE,(896,560)),(LEGACY_PROFILE,(1280,800))):
+                profile=observation_profile({'observation_image_profile':name});path=Path(tmp)/('x'+profile['extension'])
+                self.assertIsNone(reduced_size(profile));self.assertEqual(render_size(profile),size)
+                save_observation(Image,rgb,path,profile['format'],Service.image_save_options(profile))
+                self.assertEqual(path.read_bytes(),self.as_rendered(rgb,profile))
+
+    def test_capture_reduces_only_under_the_low_resolution_profile_on_both_render_routes(self):
+        from robofrontier.physics.observation_image import render_size
+        from robofrontier.physics.render_worker import render_images
+        model=self.scene();data=mujoco.MjData(model);mujoco.mj_forward(model,data)
+        sharp_profile=observation_profile({'observation_image_profile':DEFAULT_PROFILE})
+        low_profile=observation_profile({'observation_image_profile':LOW_RESOLUTION_PROFILE})
+        # Drawn exactly as the default camera, then one pixel for every 7 x 7.
+        self.assertEqual(render_size(low_profile),(896,560));self.assertEqual((low_profile['width'],low_profile['height']),(128,80))
+        self.assertEqual((low_profile['format'],low_profile['quality'],low_profile['extension']),('JPEG',95,'.jpg'))
+        with tempfile.TemporaryDirectory() as tmp, mujoco.Renderer(model,width=1280,height=800) as renderer:
+            root=Path(tmp);(root/'public/observations').mkdir(parents=True)
+            rgb=self.rendered(model,data,renderer,896,560)
+            sharp,low=self.as_rendered(rgb,sharp_profile),self.as_rendered(rgb,low_profile,(128,80))
+            world=SimpleNamespace(model=model,data=data,time=0,arms={})
+            class Queue:  # A render worker that keeps the request instead of drawing it.
+                def submit(self,request):self.request=request;return True
+            for profile,expected in ((sharp_profile,sharp),(low_profile,low)):
+                # The world's own capture.
+                service=SimpleNamespace(obs=0,directory=root,world=world,context=renderer._mjr_context,
+                    scene=renderer._scene,options=mujoco.MjvOption(),offscreen_context=True,
+                    perf={'capture_wall_s':0.,'captures':0},observation_image=profile)
+                first=Path(Service.capture(service,['top'])['images']['top']).read_bytes()
+                again=Path(Service.capture(service,['top'])['images']['top']).read_bytes()
+                self.assertEqual(first,expected);self.assertEqual(again,expected)
+                # The render worker's capture, from the request the world queues.
+                service.render_worker=Queue();service.capture_in_worker=lambda cameras,s=service:Service.capture_in_worker(s,cameras)
+                path=Path(Service.capture(service,['top'])['images']['top']);request=service.render_worker.request
+                self.assertEqual((request['width'],request['height']),(896,560))
+                self.assertEqual(request.get('output_size'),[128,80] if profile is low_profile else None)
+                mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN,renderer._mjr_context)
+                render_images(mujoco,Image,model,data,renderer._scene,mujoco.MjvOption(),renderer._mjr_context,request)
+                self.assertEqual(path.read_bytes(),expected)
+            with Image.open(io.BytesIO(low)) as image:
+                self.assertEqual((image.size,image.format),((128,80),'JPEG'))
+                # Each pixel is the mean of its 7 x 7 block of the rendered frame.
+                mean=rgb[::-1].reshape(80,7,128,7,3).mean(axis=(1,3))
+                self.assertLess(np.abs(np.asarray(image.convert('RGB'),dtype=float)-mean).mean(),6)
+
+    def test_low_resolution_run_states_its_size_and_keeps_every_other_public_input(self):
+        from robofrontier.configuration import load_configuration
+        self.assertEqual(load_configuration()['render']['observation_profile'],DEFAULT_PROFILE)
+        self.assertEqual(load_configuration(overrides={'render':{'observation_profile':LOW_RESOLUTION_PROFILE}})
+                         ['render']['observation_profile'],LOW_RESOLUTION_PROFILE)
+        from robofrontier.tasks.families import prepare
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);cfg=load_harness()
+            for name in (DEFAULT_PROFILE,LOW_RESOLUTION_PROFILE):
+                cfg['observation_image_profile']=name;write_json(root/(name+'.json'),cfg)
+            # (The rules name the run's own folder, which differs between any two runs.)
+            files=lambda run:{str(p.relative_to(run/'public')):p.read_bytes().replace(str(run).encode(),b'<run>')
+                              for p in sorted((run/'public').rglob('*')) if p.is_file()}
+            for case in ('mosaic-a04-6x12-d3','dial-best5-n04-d3'):
+                sharp=prepare(case,root/case/'sharp',root/(DEFAULT_PROFILE+'.json'))
+                low=prepare(case,root/case/'low',root/(LOW_RESOLUTION_PROFILE+'.json'))
+                self.assertEqual(json.loads((sharp/'private/inputs/harness.json').read_text())['observation_image_profile'],DEFAULT_PROFILE)
+                self.assertEqual(json.loads((low/'private/inputs/harness.json').read_text())['observation_image_profile'],LOW_RESOLUTION_PROFILE)
+                before,after=files(sharp),files(low)
+                # The task states the size its images have; a calibration that names a size follows it.
+                task_sharp,task_low=json.loads(before.pop('inputs/task.json')),json.loads(after.pop('inputs/task.json'))
+                self.assertEqual(task_low['observation_image'],{'width':128,'height':80,'format':'JPEG','quality':95})
+                self.assertEqual({k:v for k,v in task_low.items() if k!='observation_image'},
+                                 {k:v for k,v in task_sharp.items() if k!='observation_image'})
+                if task_low.get('camera_calibration'):
+                    name='inputs/'+task_low['camera_calibration']
+                    cal_sharp,cal_low=json.loads(before.pop(name)),json.loads(after.pop(name))
+                    self.assertEqual((cal_sharp['image_size_pixel'],cal_low['image_size_pixel']),([896,560],[128,80]))
+                    self.assertEqual({k:v for k,v in cal_low.items() if k!='image_size_pixel'},
+                                     {k:v for k,v in cal_sharp.items() if k!='image_size_pixel'})
+                # Rules, roles, reference pictures and every other public file are those of a default run.
+                self.assertEqual(after,before);self.assertEqual(verify_inputs(low),[])
+            self.assertIn('camera_calibration',task_low)
 
     def test_dial_calibration_copy_keeps_frozen_original(self):
         from robofrontier.tasks.families import prepare
