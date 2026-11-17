@@ -26,7 +26,8 @@ in `benchmark/<family>/<case>/`, and each family's cases are listed in
   speed, acceleration or force within the limits of a real Franka Panda ([physics](../physics.md)).
   Only robot actuators and real contacts change the world: no resets, welds or state writes.
 - **Time.** 24 hours of active time from START; outages, usage-limit pauses and host sleep do
-  not count. The policy is not told the limit ([time](../running/continuation.md#time)).
+  not count: when the infrastructure pauses a run, the world, the clock and the agents stop
+  together. The policy is not told the limit ([time](../running/continuation.md#time)).
 - **Scoring.** The world is scored when the team calls `finish` or at the 24 h cutoff, after
   every arm is stopped and the world has run 1.5 s with the arms still. The score is the
   terminal outcome (`terminal_outcome_v2`); collisions, drops and other process events are
@@ -35,5 +36,27 @@ in `benchmark/<family>/<case>/`, and each family's cases are listed in
 - **Continuing.** A stopped run continues as the same trial, never a new attempt
   ([continuation](../running/continuation.md)).
 
-The Oracle (privileged reference runs) uses its own copy of each case in
+## Metrics
+
+Agents may retry, so a task that ends correctly can still contain many failures. Beside the
+outcome, a run is described by how often its steps and grasps failed and by what it cost in
+time and input tokens.
+
+- **Completion.** A task is completed when its final state is correct. Counting the tasks
+  completed within 3, 6, 12 and 24 hours shows how fast a condition works.
+- **Atomic failure rate.** An atomic step is the smallest unit of progress: in Mosaic one cube
+  placed on its cell, in Transport one item delivered to its target or handed to another arm,
+  in Relay one arm taking hold of a timber in a handover, in Dial one knob turned to a new
+  position. A step fails if any attempt at it goes wrong, even if it is completed later. The
+  rate of a run is the share of its steps that fail at least once. Failures are read from the
+  records of the robot tool and the simulator, never from the agents' reports
+  (`robofrontier/analysis/atomic.py`, `scripts/run_analysis.py`).
+- **Grasp failure rate.** A grasp fails when the gripper closes on a width that does not match
+  the object: the grasp command states the expected width, and the gripper stops outside it.
+  The rate of a condition is the share of all its grasps that fail.
+- **Paired tests.** Every condition runs the same tasks, so two conditions are compared task
+  by task with an exact McNemar test, Holm's correction and bootstrap intervals
+  (`robofrontier/analysis/paired.py`, `scripts/paired_tests.py`).
+
+The Oracle (the reference condition with ground-truth positions) uses its own copy of each case in
 `benchmark/oracle/<case>/`; see the [Oracle](../oracle/README.md).
