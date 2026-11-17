@@ -16,4 +16,3 @@ The [command-line guide](unified-cli.md) lists every setting and command, and th
 | Factory | [Design and rendering](factory/README.md), [replay](factory/replay.md), [Linux and Slurm](factory/server.md), [editing](factory/editorial.md) |
 | Development | [Testing](development/testing.md), [harness check coverage](harness-verification.md) |
 | Project page | [Design and sources](../site/DESIGN.md) |
-| History | [Timeline and archive tags](history.md) |

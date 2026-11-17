@@ -78,8 +78,7 @@ def check():
     if not snapshot.exists():return check_historical()
     inventory=read(snapshot)['files'];failed=[];cache={};moved=0;kept_in_git=[]
     def in_git(name,expected):
-        """A pinned file removed from the tree is still preserved if a commit holds its bytes
-        (earlier scene revisions are in the tag archive/pre-cleanup-20261110)."""
+        """A pinned file removed from the tree is still preserved if a commit holds its bytes."""
         parts=Path(name).parts
         names=[name]
         if len(parts)>=3:  # the same file of the same case under any earlier folder

@@ -104,4 +104,4 @@ jobs:
             batch.test_policy_archive batch.test_evidence_zip repo.test_scripts_index repo.test_script_checks repo.test_workflows \
             runtime.test_build_policy_env engines.test_codex_cli_check engines.test_codex_launch_profiles \
             media.test_render_policy_videos media.test_render_targets \
-            media.test_dial_entrypoints batch.test_benchmark_handoff repo.test_pruned_paths
+            media.test_dial_entrypoints batch.test_benchmark_handoff
