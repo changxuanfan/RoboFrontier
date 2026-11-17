@@ -1,6 +1,6 @@
 # Slurm, Codex subscription, one job of 36 runs. Planning example only: reading it logs in to
 # nothing and submits nothing. Copy it to an untracked site TOML and review the resources.
-schema_version = 9
+schema_version = 11
 
 [policy]
 engine = "codex"

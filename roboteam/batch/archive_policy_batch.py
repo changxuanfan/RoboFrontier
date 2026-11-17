@@ -12,7 +12,6 @@ import tempfile
 import zlib
 from roboteam.runtime import layout as run_layout
 from ..io import file_sha256 as checksum
-from roboteam.io import schema_of
 
 IMAGE = re.compile(rb'(data:image/[^;,\s"\\]+;base64,)([A-Za-z0-9+/=]+)')
 REF = re.compile(rb'(data:image/[^;,\s"\\]+;base64,)@RF_IMAGE_([a-f0-9]{64})@')
@@ -131,28 +130,24 @@ def transform_session(source, root, objects):
 
 def verify_collection(source, allow_incomplete=False):
     report = json.loads((source/'collection.json').read_text())
-    generic = schema_of(report) == 'roboteam.policy-collection.v1'
-    if not generic and schema_of(report) != 'roboteam.luna-collection.v1':
+    if report.get('schema') != 'roboteam.policy-collection.v1':
         raise ValueError('Unknown collection schema')
-    if not report.get('complete') and not (generic and allow_incomplete):
-        raise ValueError('A complete collection is required; stopped generic evidence can use --allow-incomplete')
+    if not report.get('complete') and not allow_incomplete:
+        raise ValueError('A complete collection is required; stopped evidence can use --allow-incomplete')
     batch = json.loads((source/'batch'/'batch.json').read_text())
-    if generic:
-        state = json.loads(run_layout.batch_path(source/'batch', 'engineering_status').read_text()) if report.get('engine') == 'claude' else batch
-        terminal = ('closed', 'needs_review', 'stopped', 'stopped_before_start')
-        if report.get('writers_stopped') is not True or state.get('status') not in terminal or any(j.get('status') not in terminal for j in state.get('jobs', [])):
-            raise ValueError('Evidence writers must be stopped before archival')
-        expected = report.get('files')
-        if not isinstance(expected, dict) or not expected:
-            raise ValueError('Collection file inventory is missing')
-        actual = {p.relative_to(source).as_posix() for p in source.rglob('*') if p.is_file()} - {'collection.json'}
-        if actual != set(expected):
-            raise ValueError('Collection inventory changed')
-        for name, checksum_expected in expected.items():
-            if checksum(safe(source, name)) != checksum_expected:
-                raise ValueError('Collection file changed: '+name)
-    elif batch.get('status') != 'closed' or any(j.get('status') != 'closed' for j in batch.get('jobs', [])):
-        raise ValueError('Only closed legacy Luna batches are supported')
+    state = json.loads(run_layout.batch_path(source/'batch', 'engineering_status').read_text()) if report.get('engine') == 'claude' else batch
+    terminal = ('closed', 'needs_review', 'stopped', 'stopped_before_start')
+    if report.get('writers_stopped') is not True or state.get('status') not in terminal or any(j.get('status') not in terminal for j in state.get('jobs', [])):
+        raise ValueError('Evidence writers must be stopped before archival')
+    expected = report.get('files')
+    if not isinstance(expected, dict) or not expected:
+        raise ValueError('Collection file inventory is missing')
+    actual = {p.relative_to(source).as_posix() for p in source.rglob('*') if p.is_file()} - {'collection.json'}
+    if actual != set(expected):
+        raise ValueError('Collection inventory changed')
+    for name, checksum_expected in expected.items():
+        if checksum(safe(source, name)) != checksum_expected:
+            raise ValueError('Collection file changed: '+name)
     for job in report['jobs']:
         for role in job['roles']:
             p = safe(source, role['session'])
@@ -173,7 +168,6 @@ def create(source, output, allow_incomplete=False):
     for job in report['jobs']:
         for role in job['roles']:
             expected[role['session']] = role['sha256']
-    generic = schema_of(report) == 'roboteam.policy-collection.v1'
     output.parent.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(prefix='.rf-archive-', dir=output.parent)); objects = {}; records = []; dirs = []
     try:
@@ -186,7 +180,7 @@ def create(source, output, allow_incomplete=False):
                 p = parent/name; before = p.lstat(); rel = p.relative_to(source).as_posix()
                 if not stat.S_ISREG(before.st_mode): raise ValueError('Non-regular file: ' + str(p))
                 original = checksum(p); session = rel.endswith('.jsonl')
-                if (generic and rel not in expected) or (rel in expected and original != expected[rel]):
+                if rel not in expected or original != expected[rel]:
                     raise ValueError('Collection file changed after validation: '+rel)
                 transformed = transform_session(p, tmp, objects) if session else p
                 if transformed is None:
@@ -202,7 +196,7 @@ def create(source, output, allow_incomplete=False):
                                 'sha256': original, 'size': before.st_size, 'mode': stat.S_IMODE(before.st_mode), 'mtime_ns': before.st_mtime_ns})
         recorded = {item['path']:item['sha256'] for item in records}
         current = {p.relative_to(source).as_posix() for p in source.rglob('*') if p.is_file()}
-        if set(recorded) != current or generic and set(recorded) != set(expected):
+        if set(recorded) != current or set(recorded) != set(expected):
             raise ValueError('Collection inventory changed during archival')
         for rel, original in recorded.items():
             p = safe(source, rel)
@@ -224,7 +218,7 @@ def create(source, output, allow_incomplete=False):
 
 def _verify(root, output):
     root = root.resolve(); manifest = json.loads((root/'manifest.json').read_text())
-    if schema_of(manifest) != 'roboteam.policy-archive.v1': raise ValueError('Unknown archive schema')
+    if manifest.get('schema') != 'roboteam.policy-archive.v1': raise ValueError('Unknown archive schema')
     if output:
         output = output.resolve()
     seen = set()

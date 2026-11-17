@@ -183,7 +183,7 @@ class AdaptiveIntegrationTests(unittest.TestCase):
                 claims=list((run/'private/claude-forks').glob('*.json')) if (run/'private/claude-forks').exists() else []
                 self.assertEqual(batch['status'],'finished',{'batch':batch,'setup':host.dispatcher.setup_result,
                     'claims':[json.loads(p.read_text()) for p in claims], 'errors':errors,
-                    'transcripts':[(p.name,[(r.get('type'),r.get('message',{}).get('content')) for r in map(json.loads,p.read_text().splitlines()) if r.get('type')=='assistant']) for p in (run/'private/claude-config/projects').glob('*/*.jsonl')]})
+                    'transcripts':[(p.name,[(r.get('type'),r.get('message',{}).get('content')) for r in map(json.loads,p.read_text().splitlines()) if r.get('type')=='assistant']) for p in (run/'private/engine/config/projects').glob('*/*.jsonl')]})
                 self.assertEqual(service.store.get('robot_owners')['A'],'Controller')
                 self.assertEqual(len(host.setup.hosts),1)
                 # No tool-free setup turn: every model request offered the role's tools.

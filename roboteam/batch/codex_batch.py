@@ -56,7 +56,7 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
             if set(harness_overrides)-allowed:raise ValueError('Unsupported harness overrides')
             harness.update(harness_overrides)
         if not harness_overrides and p.get('benchmark_topology') in ('hierarchical', 'decentralized'):
-            harness.update(topology=p['benchmark_topology'], startup_protocol='direct_team_v3')
+            harness.update(topology=p['benchmark_topology'], startup_protocol='direct_team')
         harness_path=config_dir/'harness.json';write_json(harness_path,harness)
         for case in selected:
             run=output/name/case
@@ -146,7 +146,7 @@ def request_stop(folder):
     """Ask every run of a batch, and the batch, to stop; hosts stop and seal on their own."""
     folder=Path(folder)
     for stop in [run_layout.batch_path(folder,'stop'),
-                 *(run_layout.path(job['run_directory'],'stop','codex') for job in read(folder/'batch.json')['jobs'])]:
+                 *(run_layout.path(job['run_directory'],'stop') for job in read(folder/'batch.json')['jobs'])]:
         stop.parent.mkdir(parents=True,exist_ok=True);stop.touch()
 
 
@@ -177,7 +177,7 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
             raise ValueError('Model compatibility preflight missing/failed or provider configuration changed')
         from roboteam.runtime.preflight_probe import VERSION as PROBE_VERSION
         if checked.get('probe_version')!=PROBE_VERSION:
-            raise ValueError('Model preflight predates the current image check; rerun preflight')
+            raise ValueError('Model preflight used a different image check; rerun preflight')
         catalog_sha=__import__('hashlib').sha256((run/'private/inputs/models.json').read_bytes()).hexdigest()
         version=subprocess.check_output(['codex','--version'],text=True).strip()
         if checked.get('catalog_sha256')!=catalog_sha or checked.get('codex_version')!=version:
@@ -211,7 +211,7 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
             raise ValueError('No Codex login in '+str(home)+'; run once: CODEX_HOME='+shlex.quote(str(home))+' codex login')
         env['CODEX_HOME']=str(home)
         environments[str(run)]=env
-        write_json(run_layout.path(run,'codex_home_marker','codex'),{'schema':'roboteam.codex-home.v1','codex_home':str(home),'scope':scope})
+        write_json(run_layout.path(run,'codex_home_marker'),{'schema':'roboteam.codex-home.v1','codex_home':str(home),'scope':scope})
         # Validate configuration without inference before starting any task.
         if scope!='job':
             subprocess.run(['codex','app-server',*launch['args'],'--print-startup-config'],
@@ -221,7 +221,7 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
     for job in ([] if scope=='job' else jobs):
         run=Path(job['run_directory']);env=environments[str(run)]
         if env['CODEX_HOME'] not in initialized:
-            initialize_codex_home(read(run/'private/inputs/codex.json'),run_layout.path(run,'owner_log','codex').parent,env=env)
+            initialize_codex_home(read(run/'private/inputs/codex.json'),run_layout.path(run,'owner_log').parent,env=env)
             initialized.add(env['CODEX_HOME'])
     if scope=='job':
         from ..engines.codex.job_engine import engine, task_id
@@ -258,16 +258,16 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
         return result
     def launch(job):
         run=Path(job['run_directory'])
-        stop,batch_stop=run_layout.path(run,'stop','codex'),run_layout.batch_path(folder,'stop')
+        stop,batch_stop=run_layout.path(run,'stop'),run_layout.batch_path(folder,'stop')
         if stop.exists():return None
-        log_path=run_layout.path(run,'supervisor_log','codex');log_path.parent.mkdir(parents=True,exist_ok=True)
+        log_path=run_layout.path(run,'supervisor_log');log_path.parent.mkdir(parents=True,exist_ok=True)
         with log_path.open('a') as log:
             proc=schedule.launch(lambda:subprocess.Popen(
                 ['node',str(ROOT/'roboteam/engines/codex/codex_policy_host.js'),str(run),str(ROOT),sys.executable],
                 cwd=ROOT,stdout=log,stderr=log,env=environments[str(run)]),
                 stopped=lambda:stop.exists() or batch_stop.exists())
             if proc is None:return None
-            write_json(run_layout.path(run,'host_process','codex'),dict(pid=proc.pid,started_at=time.time()))
+            write_json(run_layout.path(run,'host_process'),dict(pid=proc.pid,started_at=time.time()))
             return proc.wait()
     with ThreadPoolExecutor(max_workers=parallel) as pool:
         futures={pool.submit(task,job):job for job in jobs}

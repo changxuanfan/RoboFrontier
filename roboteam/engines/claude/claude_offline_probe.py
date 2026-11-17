@@ -38,7 +38,7 @@ class World(http.server.BaseHTTPRequestHandler):
 
 def main():
     with tempfile.TemporaryDirectory() as tmp:
-        t=pathlib.Path(tmp);run=t/'run';conn=run/'private/state/connections/Controller.json';conn.parent.mkdir(parents=True)
+        t=pathlib.Path(tmp);run=t/'run';conn=run/'private/state/connections/Controller.json';conn.parent.mkdir(parents=True);(run/'workspace').mkdir()
         image = run/'public/observations/top.png'; image.parent.mkdir(parents=True); __import__('PIL.Image', fromlist=['new']).new('RGB', (4, 4), 'red').save(image)
         World.image = image
         world=http.server.ThreadingHTTPServer(('127.0.0.1',0),World);threading.Thread(target=world.serve_forever,daemon=True).start()

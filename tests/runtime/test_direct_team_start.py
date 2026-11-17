@@ -14,7 +14,7 @@ from roboteam.tasks.config import load_harness
 class DirectTeamStartTests(unittest.TestCase):
     def make_service(self, directory, topology):
         config = load_harness()
-        config.update(topology=topology, startup_protocol='direct_team_v3')
+        config.update(topology=topology, startup_protocol='direct_team')
         harness = directory/'harness.json'
         harness.write_text(json.dumps(config))
         run = prepare_run(directory/'run', harness_path=harness)
@@ -97,7 +97,7 @@ class DirectTeamStartTests(unittest.TestCase):
     def test_direct_team_protocol_is_rejected_for_controller_only_topology(self):
         with tempfile.TemporaryDirectory() as temporary:
             config = load_harness()
-            config.update(topology='adaptive', startup_protocol='direct_team_v3')
+            config.update(topology='adaptive', startup_protocol='direct_team')
             path = Path(temporary)/'harness.json'
             path.write_text(json.dumps(config))
             with self.assertRaisesRegex(ValueError, 'standing Workers'):

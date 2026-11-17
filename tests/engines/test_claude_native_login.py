@@ -34,7 +34,7 @@ class NativeLoginTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); home = root/'native'; project = home/'projects/task'
             project.mkdir(parents=True)
-            run = root/'run'; inputs = run/'private/inputs'; inputs.mkdir(parents=True)
+            run = root/'run'; inputs = run/'private/inputs'; inputs.mkdir(parents=True); (run/'workspace').mkdir(parents=True, exist_ok=True)
             (inputs/'claude.json').write_text(json.dumps({'profile':self.profile(home)}))
             parent, child = str(uuid.uuid4()), str(uuid.uuid4())
             row = {'uuid':str(uuid.uuid4()), 'sessionId':parent,
@@ -61,7 +61,7 @@ class NativeLoginTests(unittest.TestCase):
     def test_native_history_location_comes_from_frozen_launch(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); home = root / 'native'; home.mkdir()
-            run = root / 'run'; inputs = run / 'private/inputs'; inputs.mkdir(parents=True)
+            run = root / 'run'; inputs = run / 'private/inputs'; inputs.mkdir(parents=True); (run/'workspace').mkdir(parents=True, exist_ok=True)
             (inputs / 'claude.json').write_text(json.dumps({'profile': self.profile(home)}))
             self.assertEqual(config_directory(run), home.resolve())
 
@@ -103,7 +103,7 @@ class NativeLoginTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); home = root / 'native'; home.mkdir()
             auth = home / '.credentials.json'; auth.write_text('native-owned sentinel')
-            run = root / 'run'
+            run = root / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             binary = fake_claude(root, '''
 assert 'ANTHROPIC_API_KEY' not in os.environ
 assert 'CLAUDE_CODE_OAUTH_TOKEN' not in os.environ
@@ -115,5 +115,5 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
                 session_id='assigned-session', binary=str(binary), enable_robot=False, timeout=5)
             self.assertEqual(record['summary']['result_text'], 'READY')
             self.assertEqual(auth.read_text(), 'native-owned sentinel')
-            self.assertFalse((run / 'private/claude-config').exists())
+            self.assertFalse((run / 'private/engine/config').exists())
             self.assertFalse(any(run.rglob('.credentials.json')))

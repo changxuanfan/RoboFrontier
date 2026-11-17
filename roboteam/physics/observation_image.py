@@ -1,24 +1,20 @@
-"""Frozen per-run policy observation formats; absent fields mean legacy PNG."""
+"""Frozen per-run policy observation formats."""
 from copy import deepcopy
 
 DEFAULT_PROFILE = 'jpeg_1280x800_q90'
-COMPACT_PROFILE = 'jpeg_896x560_q85'
-LEGACY_PROFILE = 'png_1280x800'
 # The low-resolution condition: the default camera at one tenth of its resolution on each side.
 # Rendered as the default, then every 10 x 10 block of pixels averaged into one, encoded at
 # quality 95. Deterministic, no noise.
 LOW_RESOLUTION_PROFILE = 'jpeg_128x80_q95'
 PROFILES = {
     DEFAULT_PROFILE: {'width': 1280, 'height': 800, 'format': 'JPEG', 'quality': 90, 'extension': '.jpg'},
-    COMPACT_PROFILE: {'width': 896, 'height': 560, 'format': 'JPEG', 'quality': 85, 'extension': '.jpg'},
-    LEGACY_PROFILE: {'width': 1280, 'height': 800, 'format': 'PNG', 'extension': '.png'},
     LOW_RESOLUTION_PROFILE: {'width': 128, 'height': 80, 'format': 'JPEG', 'quality': 95, 'extension': '.jpg',
                              'render_size': [1280, 800]},
 }
 
 
 def observation_profile(config):
-    name = config.get('observation_image_profile', LEGACY_PROFILE)
+    name = config.get('observation_image_profile')
     if not isinstance(name, str) or name not in PROFILES:
         raise ValueError('Unknown observation image profile: ' + str(name))
     return deepcopy(PROFILES[name])

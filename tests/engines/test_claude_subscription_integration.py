@@ -60,7 +60,7 @@ class SubscriptionTests(unittest.TestCase):
         OAuthModel.requests.clear()
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                run=Path(tmp)/'run'; (run/'.claude').mkdir(parents=True)
+                run=Path(tmp)/'run'; (run/'.claude').mkdir(parents=True); (run/'workspace').mkdir(parents=True, exist_ok=True)
                 marker=run/'hook-ran'
                 settings={'hooks':{'SessionStart':[{'hooks':[{'type':'command','command':'touch '+str(marker)}]}]}}
                 (run/'.claude/settings.json').write_text(json.dumps(settings))

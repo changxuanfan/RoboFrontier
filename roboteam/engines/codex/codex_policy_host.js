@@ -110,8 +110,6 @@ class PolicyHost {
     this.launch=read(path.join(this.run,'private/inputs/codex.json'));
     const runProtocol=read(path.join(this.run,'private/inputs/task.json')).run_protocol;
     this.wallLimit=runProtocol.total_wall_limit_s;
-    // Network continuations apply to runs that count active time only (runtime/clock.py), as on Claude.
-    this.activeTime=(runProtocol.clock||'START_wall_time')!=='START_wall_time';
     this.actors=new Map(); this.turns=new Map(); this.failures=new Map(); this.retries=new Set();
     this.stopped=false;
     this.turnStarted=new Map();
@@ -120,7 +118,7 @@ class PolicyHost {
   }
   // Host file locations come from roboteam/runtime/layout.py, the one source for both engines.
   hostPath(key) {
-    if (!this.layout) this.layout=JSON.parse(execFileSync(this.python,['-m','roboteam.runtime.layout',this.run,'--engine','codex'],
+    if (!this.layout) this.layout=JSON.parse(execFileSync(this.python,['-m','roboteam.runtime.layout',this.run],
       {cwd:this.cwd??path.resolve(__dirname,'../../..'),encoding:'utf8'})).paths;
     if (!(key in this.layout)) throw new Error('Unknown run layout key: '+key);
     return path.join(this.run,this.layout[key]);
@@ -316,7 +314,7 @@ class PolicyHost {
       if(state.thread.status.type==='systemError'&&t?.status==='failed'&&!capacityFailure(t.error)){
         const key=id+':'+t.id,failedAt=this.failedAt.get(key)??this.networkFailures.get(key);
         const notice=frozenText(this.run,'network-resume.md'),recovery=snapshot.egress_recovery;
-        if(this.retries.has(key)||failedAt===undefined||!notice||!this.activeTime||!recovery)continue;
+        if(this.retries.has(key)||failedAt===undefined||!notice||!recovery)continue;
         if(failedAt<recovery.paused_at-NETWORK_WINDOW_S||failedAt>recovery.resumed_at+NETWORK_WINDOW_S)continue;
         const kind=networkFailure(t.error)?'network':(t.error?'other':'unclassified');
         if(kind==='other'){
@@ -390,9 +388,9 @@ class PolicyHost {
     } catch(error) {this.event({event:'finish_drain_error',message:error.message});return false;}
   }
   async startInitialRoles(roles, startupProtocol) {
-    if (!['direct_controller_v2','direct_team_v3'].includes(startupProtocol)) throw new Error('Unknown startup protocol');
+    if (!['direct_controller','direct_team'].includes(startupProtocol)) throw new Error('Unknown startup protocol');
     const policy=Object.entries(roles).filter(([,info])=>info.kind!=='manager');
-    if (!policy.length || (startupProtocol==='direct_controller_v2' &&
+    if (!policy.length || (startupProtocol==='direct_controller' &&
         (policy.length!==1 || policy[0][0]!=='Controller'))) throw new Error('Unexpected initial policy roles');
     const bound=[];
     for (const [actor] of policy) {
@@ -549,12 +547,9 @@ class PolicyHost {
       // Codex has stopped writing: copy this run's threads into the run, verified. The home
       // keeps the originals so a continued segment can resume them (roboteam.batch.session_archive).
       try {
-        // Runs prepared before run-v6 have no engine_transcripts and keep theirs in the home.
-        if ('engine_transcripts' in this.layout) {
-          const kept=JSON.parse(execFileSync(this.python,['-m','roboteam.batch.session_archive','keep',this.run],
-            {cwd:this.cwd??path.resolve(__dirname,'../../..'),encoding:'utf8',env:process.env}));
-          this.event({event:'transcripts_kept',threads:kept.threads,complete:kept.complete});
-        }
+        const kept=JSON.parse(execFileSync(this.python,['-m','roboteam.batch.session_archive','keep',this.run],
+          {cwd:this.cwd??path.resolve(__dirname,'../../..'),encoding:'utf8',env:process.env}));
+        this.event({event:'transcripts_kept',threads:kept.threads,complete:kept.complete});
       } catch(error) {this.event({event:'transcripts_error',message:error.message});}
       if (sealError) throw new Error('Run seal incomplete; manual review required: '+sealError.message
         +(failure?' (after host error: '+failure.message+')':''));

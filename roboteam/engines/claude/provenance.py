@@ -141,7 +141,7 @@ def copied_history_length(source, copied):
         raise ValueError('Invalid preserved compaction segment')
     # The preserved rows are the ones just before the boundary. The metadata lists them in
     # the order the copy carries them, which can differ from file order: a split assistant
-    # message's tool calls come before their results (observed 2026-11-10).
+    # message's tool calls come before their results.
     before = source[boundary-len(ids):boundary] if boundary >= len(ids) else []
     if sorted(row['uuid'] for row in before) != sorted(ids):
         raise ValueError('Preserved segment is not contiguous before compaction')

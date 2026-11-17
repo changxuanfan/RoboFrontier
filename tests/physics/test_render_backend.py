@@ -10,7 +10,7 @@ class RenderBackendTests(unittest.TestCase):
         report=validate_backend('nvidia',b'NVIDIA Corporation',b'NVIDIA H800',b'4.6')
         self.assertEqual(report['gl_vendor'],'NVIDIA Corporation')
 
-    def test_cpu_and_native_are_distinct_without_changing_legacy_contexts(self):
+    def test_cpu_and_native_are_distinct_without_changing_other_contexts(self):
         self.assertEqual(validate_backend('cpu','Mesa','llvmpipe (LLVM)','4.5')['requested_device'],'cpu')
         with self.assertRaisesRegex(RuntimeError,'CPU rendering was requested'):
             validate_backend('cpu','Apple','Apple M5','4.1')

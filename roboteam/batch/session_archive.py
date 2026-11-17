@@ -56,7 +56,7 @@ def _meta(run):
 
 def _codex_home(run, home=None):
     if home is not None: return Path(home).expanduser().resolve()
-    marker = run_layout.path(run, 'codex_home_marker', 'codex')
+    marker = run_layout.path(run, 'codex_home_marker')
     if not marker.is_file(): raise ValueError('Run has no Codex home marker: '+str(marker))
     return Path(json.loads(marker.read_text())['codex_home']).expanduser().resolve()
 
@@ -76,8 +76,7 @@ def _copy_verified(source, target):
 def keep_codex(run, home=None):
     """Copy this run's Codex threads from the shared home into the run, verified; delete nothing."""
     run = Path(run).resolve()
-    try: folder = run_layout.path(run, 'engine_transcripts', 'codex')
-    except KeyError: return None  # legacy runs keep their transcripts in the home
+    folder = run_layout.path(run, 'engine_transcripts')
     home = _codex_home(run, home)
     _, threads = _meta(run)
     folder.mkdir(parents=True, exist_ok=True)
@@ -134,13 +133,12 @@ def continuable(run, meta):
     """Whether this run may still be continued as a new segment, and so must keep its sessions.
 
     Only what no continuation can change ends it: a normal end or integrity abort, a run
-    that never started, a layout without segments, or no recorded motion to restore. A
-    source checkout that moved on, the automatic continuation already used, a stop
-    request or a seal do not: an operator-authorized runtime upgrade can still continue
-    such a run (runtime_upgrade), and it resumes its Codex threads from the home."""
+    that never started or no recorded motion to restore. The automatic continuation
+    already used, a stop request or a seal do not: an operator can still continue such a
+    run (`roboteam continue`), and it resumes its Codex threads from the home."""
     from ..runtime import segments as run_segments
     if meta.get('lifecycle') == 'ended' or meta.get('integrity_valid') is False: return False
-    if not run_segments.supported(run) or meta.get('start_at') is None: return False
+    if meta.get('start_at') is None: return False
     kinds = ('INTEGRITY_ABORT',) + run_segments.NORMAL_END_EVENTS
     database = run/'private/state/runtime.sqlite'
     with sqlite3.connect(database.resolve().as_uri()+'?mode=ro', uri=True) as db:
@@ -169,17 +167,16 @@ def archive_run(run, home=None, min_idle_s=60, final=False):
     if not final and continuable(run, meta):
         raise ValueError('This run can still be continued; archive it after its last segment or pass --final')
     engine = json.loads((run/'private/inputs/manifest.json').read_text()).get('engine', 'codex')
-    host = run_layout.path(run, 'host_process', engine)
+    host = run_layout.path(run, 'host_process')
     if host.is_file() and _host_alive(json.loads(host.read_text()).get('pid')):
         raise ValueError('A process with the recorded host PID is still live')
     if engine == 'codex':
         kept = keep_codex(run, home)
-        if kept is not None and not kept['complete']:
+        if not kept['complete']:
             raise ValueError('Some Codex threads have no single source; see '+kept['index'])
-        folder = run_layout.path(run, 'engine_transcripts', 'codex') if kept is not None else None
-        paths = sorted(folder.glob('*.jsonl')) if folder else []
+        paths = sorted(run_layout.path(run, 'engine_transcripts').glob('*.jsonl'))
     else:
-        paths = sorted((run_layout.path(run, 'engine_config', 'claude')/'projects').rglob('*.jsonl'))
+        paths = sorted((run_layout.path(run, 'engine_config')/'projects').rglob('*.jsonl'))
     now = time.time()
     busy = [str(p) for p in paths if now-p.stat().st_mtime < min_idle_s]
     if busy: raise ValueError('Sessions modified in the last %ds; not archiving: %s' % (min_idle_s, busy[:3]))
@@ -191,8 +188,8 @@ def archive_run(run, home=None, min_idle_s=60, final=False):
         manifest['files'].append({**compress_verified(path), 'archived_at': time.time()})
         write_json(manifest_path, manifest)  # recorded before the original goes
         path.unlink()
-    if engine == 'codex' and folder is not None:
-        index = json.loads((folder/'index.json').read_text())
+    if engine == 'codex':
+        index = json.loads((run_layout.path(run, 'engine_transcripts')/'index.json').read_text())
         for row in index['threads']:
             source = Path(row.get('source', ''))
             if not row.get('verified') or not source.is_file(): continue

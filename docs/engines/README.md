@@ -79,7 +79,7 @@ network access, copy the archive over and run:
 | Shell isolation | Codex sandbox, or `landlock-v1` broker | Claude Code sandbox, or `landlock-v1` shell prefix |
 | Paid compatibility check | `roboteam preflight` (one receipt) | `roboteam preflight` (two receipts) |
 | Capacity recovery | `codex_policy_host.js` | `engines/claude/recovery.py` |
-| Host events | `private/outputs/codex-host.jsonl` | `private/outputs/claude-host.jsonl` |
+| Host events | `private/logs/host.jsonl` | `private/logs/host.jsonl` |
 
 Both engines share the robot tool description `roboteam/engines/common/robot_tool.json`,
 the runtime under `roboteam/runtime/`, the access table `roboteam/runtime/access.py`,
@@ -139,7 +139,7 @@ After every writer has stopped, in the environment that ran the batch:
 
 This writes `RUN_DIR/private/outputs/report.json` with the shared `host_metrics`. For Codex,
 `--codex-home PATH` names the session home; otherwise the report uses the collected session
-mapping, then the run's `codex-home.json`, then the environment default.
+mapping, then the run's `private/engine/codex-home.json`, then the environment default.
 
 | Field | Meaning |
 | --- | --- |

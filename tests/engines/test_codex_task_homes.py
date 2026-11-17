@@ -107,7 +107,7 @@ class CodexTaskHomesTests(unittest.TestCase):
             self.assertEqual(len(set(initialized)), 3)
             self.assertEqual(set(initialized), set(launched))
             for job in jobs:
-                marker = json.loads((Path(job['run_directory'])/'codex-home.json').read_text())
+                marker = json.loads((Path(job['run_directory'])/'private/engine/codex-home.json').read_text())
                 home = Path(marker['codex_home'])
                 self.assertTrue(home.is_dir())
                 self.assertFalse(home.is_relative_to(batch))
@@ -139,7 +139,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                 launched.append(1)
                 return SimpleNamespace(pid=99999, wait=lambda: 1)  # The world died.
             def prepared(run_dir, reason):
-                run_layout.path(run_dir, 'stop', 'codex').touch()  # The operator stops right after.
+                run_layout.path(run_dir, 'stop').touch()  # The operator stops right after.
                 return True, 'continuation prepared'
             with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'runs_root', return_value=root/'runs'), patch.object(benchmark, 'verify_inputs', return_value=[]), \
                     patch.object(benchmark, 'initialize_codex_home'), \

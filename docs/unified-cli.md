@@ -43,8 +43,7 @@ version (`roboteam/runtime/versions.py`: Codex 0.165.0, Claude Code 2.1.316); `p
 `roboteam.toml` holds the defaults. A partial user TOML (`--config`) overrides the settings
 it names, and command-line options override both. Unknown fields, wrong types, non-finite
 intervals and invalid limits are errors. Credentials go in `.env` or the environment, never in
-TOML. The current `schema_version` is 11; a partial TOML may omit it. A prepared batch keeps its
-frozen configuration whatever version it has.
+TOML. The `schema_version` is 11, the only one read; a partial TOML may omit it.
 
 ```sh
 .venv/bin/roboteam config
@@ -70,7 +69,7 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 | `selection.level` | 0 for every level, else 1, 2 or 3 |
 | `selection.min_arms` | The smallest arm count in each selected family |
 | `render.device` | `nvidia` (Linux EGL), `cpu` (Linux OSMesa) or `native` (macOS) |
-| `render.observation_profile` | `jpeg_1280x800_q90` (default), `jpeg_896x560_q85`, `png_1280x800`, or `jpeg_128x80_q95` (the low-resolution condition) |
+| `render.observation_profile` | `jpeg_1280x800_q90` (default) or `jpeg_128x80_q95` (the low-resolution condition) |
 | `render.record_realtime_video` | Live MP4 recording, off by default |
 | `runtime.codex_home_scope` | `task` (one home per run), `shared` (ChatGPT login) or `job` (Slurm subscription) |
 | `runtime.codex_home` | Home root; empty picks one automatically; must be outside the batch |
@@ -86,10 +85,10 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 
 | Agent system | START |
 | --- | --- |
-| `adaptive` | `direct_controller_v2` |
-| `single-agent` | `direct_controller_v2` |
-| `hierarchical` | `direct_team_v3` |
-| `decentralized` | `direct_team_v3` |
+| `adaptive` | `direct_controller` |
+| `single-agent` | `direct_controller` |
+| `hierarchical` | `direct_team` |
+| `decentralized` | `direct_team` |
 
 The owner prepares the world and the host binds every initial session; then the runtime persists
 one START and the host tells each initial role that the run has started. Reading, observing and

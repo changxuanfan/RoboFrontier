@@ -170,7 +170,7 @@ class StandingNativeIntegrationTests(unittest.TestCase):
                         self.assertTrue(service.world.executed)
                         self.assertEqual(service.world.executed[0][0], 'A')
                         for actor, host in policy.hosts.items():
-                            files = list((run_layout.path(policy.run, 'engine_config', 'claude')/'projects').glob('*/'+host.session_id+'.jsonl'))
+                            files = list((run_layout.path(policy.run, 'engine_config')/'projects').glob('*/'+host.session_id+'.jsonl'))
                             self.assertEqual(len(files), 1, actor)
                             self.assertEqual(agents[actor]['thread_id'], host.session_id)
                         messages = [json.loads(row['recipients']) for row in service.store.db.execute('SELECT recipients FROM messages')]

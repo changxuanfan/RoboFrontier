@@ -1,10 +1,9 @@
-"""The 24 h limit counts active running time for new runs; frozen runs keep START wall time."""
+"""The 24 h limit counts active running time."""
 import json
 from pathlib import Path
 import tempfile
 import time
 import unittest
-from unittest.mock import patch
 
 from fake_pipeline import fake_capture
 from roboteam.runtime import segments as run_segments
@@ -20,15 +19,6 @@ ACTIVE = 'active_time_v1'
 
 class StepWorld(BudgetWorld):
     def step(self): self.time += .02
-
-
-def old_protocol_prepare(*args, **kwargs):
-    """Prepare a run exactly as before the active-time clock: its protocol has no clock."""
-    original = task_families.protocol_for
-    def without_clock(*a, **k):
-        value = original(*a, **k); value.pop('clock'); return value
-    with patch.object(task_families, 'protocol_for', without_clock):
-        return task_families.prepare(*args, **kwargs)
 
 
 class Fixture(unittest.TestCase):
@@ -47,31 +37,9 @@ class Fixture(unittest.TestCase):
         for mono in monos: guard.tick(self.s, self.start if wall is None else wall, mono)
 
 
-class WallClockGoldenTests(Fixture):
-    def test_frozen_run_keeps_the_start_wall_time_deadline_and_records(self):
-        self.s.store.put('downtime_s', 100.)
-        guard = BudgetGuard(protocol(600))
-        guard.tick(self.s, self.start + 50, 1000)
-        self.assertEqual(guard.deadline, 1000 + 600 + 100 - 50)
-        guard.tick(self.s, self.start + 50, 1649.9); self.assertIsNone(guard.cutoff)
-        # A 30 s stall still counts on the wall clock.
-        guard.tick(self.s, self.start + 50, 1650); self.assertEqual(guard.cutoff, 1650)
-        cutoff = json.loads((self.run/'private/outputs/budget-cutoff.json').read_text())
-        self.assertEqual(list(cutoff), ['protocol', 'cutoff_unix_s', 'sim_time_s', 'evaluation'])
-        self.assertEqual(cutoff['protocol']['clock'], 'START_wall_time')
-        self.assertEqual(self.events('POLICY_WALL_LIMIT'), [{'wall_limit_s': 600, 'sim_time_s': 0.}])
-        report = json.loads((self.run/'private/outputs/evaluation.json').read_text())
-        self.assertNotIn('budget_active_s', report); self.assertIsNone(self.s.store.get('active_s'))
-
-    def test_a_restarted_owner_after_sleep_counts_the_sleep_on_the_wall_clock(self):
-        guard = BudgetGuard(protocol(600))
-        guard.tick(self.s, self.start + 10_000, 500)
-        self.assertTrue(guard.completed)
-
-
 class ActiveTimeTests(Fixture):
     def guard(self, limit=600, **kwargs):
-        return BudgetGuard(protocol(limit, ACTIVE), **kwargs)
+        return BudgetGuard(protocol(limit), **kwargs)
 
     def test_a_stall_without_ticks_adds_nothing(self):
         guard = self.guard()
@@ -152,10 +120,8 @@ class SupervisorActiveTimeTests(unittest.TestCase):
         p = self.running(active_s=0.)
         def tick():
             if self.now >= 20: p.store.data['active_s'] = 4 + 60
-        result = self.supervisor(p, tick, time_rule=ACTIVE).run()
+        result = self.supervisor(p, tick).run()
         self.assertEqual((result['reason'], self.now), ('wall_limit', 20))
-        self.assertEqual(self.supervisor(self.running(), lambda: None).run()['reason'], 'wall_limit')
-        self.assertEqual(self.now, 4)
 
 
 class ProtocolAndEligibilityTests(unittest.TestCase):
@@ -163,14 +129,13 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name).resolve()
 
-    def test_new_runs_freeze_the_active_clock_and_old_ones_still_validate(self):
+    def test_runs_freeze_the_active_clock(self):
         new = task_families.policy_task('transport-a04-d1')
         self.assertEqual(new['run_protocol']['clock'], ACTIVE)
         task_families.validate_policy_task(new)
-        old = dict(new, run_protocol={k: v for k, v in new['run_protocol'].items() if k != 'clock'})
-        task_families.validate_policy_task(old)
-        with self.assertRaises(ValueError):
-            task_families.validate_policy_task(dict(new, run_protocol=dict(new['run_protocol'], clock='START_wall_time')))
+        for changed in ({k: v for k, v in new['run_protocol'].items() if k != 'clock'}, dict(new['run_protocol'], clock='START_wall_time')):
+            with self.assertRaises(ValueError):
+                task_families.validate_policy_task(dict(new, run_protocol=changed))
         from roboteam.tasks.public import public_task
         self.assertNotIn('run_protocol', public_task(new))
 
@@ -186,14 +151,6 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         self.assertEqual(run_segments.retry_eligibility(run, store)[1], 'no recorded motion frame')
         self.assertEqual(run_segments.remaining_s(run, store), 86400 - 600)
         store.put('active_s', 86400 - run_segments.MIN_REMAINING_S / 2)
-        self.assertIn('of the limit left', run_segments.retry_eligibility(run, store)[1])
-
-    def test_frozen_run_continuation_keeps_the_wall_formula(self):
-        run = old_protocol_prepare('transport-a04-d1', self.root/'old'); store = self.store(run)
-        self.assertNotIn('clock', json.loads((run/'private/inputs/task.json').read_text())['run_protocol'])
-        store.put('start_at', 1000.); store.put('downtime_s', 25.); store.put('active_s', 5.)
-        self.assertEqual(run_segments.used_s(run, store, ended_at=1600.), 575.)
-        store.put('start_at', time.time() - 86400 + run_segments.MIN_REMAINING_S / 2)
         self.assertIn('of the limit left', run_segments.retry_eligibility(run, store)[1])
 
 

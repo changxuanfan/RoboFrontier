@@ -221,7 +221,7 @@ is an Adaptive fork.
 | `decentralized` | One Worker per arm | Workers move their own arms, message each other and may propose team finish |
 
 The runtime enforces the routes and robot authority. The lead's role kind is `team-controller`.
-The host binds every initial session, then the owner persists one START (`direct_team_v3`) and
+The host binds every initial session, then the owner persists one START (`direct_team`) and
 each role receives its started prompt. A Worker's ended turn is an idle session; messages, review
 deadlines and saved work wake it again.
 

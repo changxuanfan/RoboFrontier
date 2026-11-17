@@ -11,8 +11,8 @@ from engines.test_claude_runner import fake_claude, PROFILE, SECRET
 
 class NativeCostStateTests(unittest.TestCase):
     def invoke(self, root, *, fork=False, reported=.405, unknown=False, missing=False):
-        run=root/'run'; source=str(uuid.uuid4()); child=str(uuid.uuid4())
-        native=run/'private/claude-config/projects/project'/f'{source}.jsonl'
+        run=root/'run'; (run/'workspace').mkdir(parents=True, exist_ok=True); source=str(uuid.uuid4()); child=str(uuid.uuid4())
+        native=run/'private/engine/config/projects/project'/f'{source}.jsonl'
         native.parent.mkdir(parents=True)
         if not missing:
             native.write_text(json.dumps({'type':'cost-state','sessionId':source,
@@ -44,7 +44,7 @@ print(json.dumps({{'type':'result','subtype':'success','is_error':False,
                 self.assertAlmostEqual(summary['total_cost_usd'],.005)
                 self.assertEqual(summary['native_session_total_cost_usd'],.405)
                 self.assertEqual(summary['cost_scope'],'invocation')
-                raw=json.loads((root/'run/private/evidence/events.jsonl').read_text())
+                raw=json.loads((root/'run/private/engine/turns/events.jsonl').read_text())
                 self.assertEqual(raw['total_cost_usd'],.405)
 
     def test_missing_bookkeeping_keeps_the_entire_counter_as_an_upper_bound(self):

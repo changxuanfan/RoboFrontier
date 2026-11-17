@@ -6,12 +6,12 @@ import secrets
 import shutil
 
 from .store import RuntimeStore, packed
-from ..physics.observation_image import DEFAULT_PROFILE, observation_profile
+from ..physics.observation_image import observation_profile
 from ..physics.observation_look import DEFAULT_LOOK, look_of
 from ..tasks.provenance import environment_logic_manifest
 from . import layout as run_layout, tool_mode
 from .bootstrap import SKILLS_HEADER, write_bootstraps
-from ..tasks.config import ROOT, load_task, load_harness, public_task,physical_control_fingerprint
+from ..tasks.config import CONTROLLER, ROOT, load_task, load_harness, public_task,physical_control_fingerprint
 from ..io import write_json
 
 
@@ -29,10 +29,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     if directory.exists():
         raise ValueError('Choose a new run directory; existing runs are never overwritten')
     task, cfg = load_task(task_path), load_harness(harness_path)
-    # New runs use one public name; already frozen runs keep their original ID.
-    cfg['coordinator'] = 'Controller'
-    # Freeze new-run defaults; absent fields in already prepared runs remain legacy.
-    cfg.setdefault('observation_image_profile', DEFAULT_PROFILE)
+    # Freeze the defaults the harness leaves out.
     cfg.setdefault('observation_look', DEFAULT_LOOK)
     look_of(cfg)
     # Letter labels sit beside each robot, as in this run's videos.
@@ -100,12 +97,12 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     write_json(directory/'private/inputs/harness.json', cfg)
     roles = {cfg['manager']: {'kind':'manager'}}
     if cfg['topology'] == 'hierarchical':
-        roles[cfg['coordinator']] = {'kind':'team-controller'}
+        roles[CONTROLLER] = {'kind':'team-controller'}
     if cfg['topology'] in ('single-agent','adaptive'):
-        roles['Controller'] = {'kind':'controller', 'robots':list(task['arms'])}
+        roles[CONTROLLER] = {'kind':'controller', 'robots':list(task['arms'])}
     else:
         roles.update({a: {'kind':'worker', 'robot':a} for a in task['arms']})
-    write_json(directory/'public/inputs/roles.json', {'topology':cfg['topology'], 'manager':cfg['manager'], 'coordinator':cfg['coordinator'] if cfg['topology']=='hierarchical' else None, 'roles':roles})
+    write_json(directory/'public/inputs/roles.json', {'topology':cfg['topology'], 'manager':cfg['manager'], 'roles':roles})
     templates = ROOT/'prompts'
     # Passages that depend on the role's tools are marked in the templates (tool_mode.render).
     mode = tool_mode.of(cfg)
@@ -118,7 +115,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         if rendered != text: template.write_text(rendered)
     # The run's shared lessons file, inside the policy's only writable folder. Its
     # rules live in the frozen Skill, which no role can edit.
-    (directory/run_layout.LAYOUTS[run_layout.CURRENT]['skills_file']).write_text(SKILLS_HEADER)
+    (directory/run_layout.PATHS['skills_file']).write_text(SKILLS_HEADER)
     # Meta is engineering, outside the policy team: its role file and runbook stay private.
     (directory/'private/inputs/meta').mkdir()
     runbook=(ROOT/'docs/meta-runbook.md').read_text()
@@ -134,8 +131,8 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         values = {'RUN_DIR':str(directory),'REPO_ROOT':str(ROOT),'PYTHON':str(python), 'ACTOR':actor,
                   'CONNECTION':str(directory/'private/state/connections'/f'{actor}.json'),
                   'TOPOLOGY':cfg['topology'],
-                  'FINISH_AUTHORITY':cfg['coordinator'] if cfg['topology']=='hierarchical' else 'any peer Worker' if cfg['topology']=='decentralized' else 'Controller',
-                  'COMMUNICATION_ROUTE':('Coordinate joint commitments and shared resources through '+cfg['coordinator']+'. Worker-to-Worker business messages are unavailable.' if cfg['topology']=='hierarchical' else 'Negotiate affected commitments and shared resources directly with relevant Workers.')}
+                  'FINISH_AUTHORITY':'any peer Worker' if cfg['topology']=='decentralized' else CONTROLLER,
+                  'COMMUNICATION_ROUTE':('Coordinate joint commitments and shared resources through '+CONTROLLER+'. Worker-to-Worker business messages are unavailable.' if cfg['topology']=='hierarchical' else 'Negotiate affected commitments and shared resources directly with relevant Workers.')}
         text = (templates/'roles'/f'{filename}.md').read_text()
         for key,value in values.items():
             text = text.replace('{{'+key+'}}',value)
@@ -148,7 +145,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     store = RuntimeStore(directory/'private/state/runtime.sqlite')
     store.initialize(directory.name, cfg, task['arms'])
     store.close()
-    # The Python its scripts use, named by the trusted launcher; earlier-style runs have none.
+    # The Python the policy's scripts use, named by the trusted launcher.
     from . import policy_env
     if policy_env.selected() is not None and mode != tool_mode.ROBOT_ONLY:
         policy_env.prepare_run(directory, policy_env.selected())
@@ -195,7 +192,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         inputs[str(p.relative_to(directory))]=hashlib.sha256(p.read_bytes()).hexdigest()
     logic=environment_logic_manifest(source_hashes,task) if task.get('kind')=='frontier_suite' else None
     write_json(directory/'private/inputs/manifest.json', {'schema_version':3,'run_id':directory.name,
-        **run_layout.manifest_record(cfg.get('engine','codex')),
+        **run_layout.manifest_record(),
         'task_sha256':hashlib.sha256(packed(task).encode()).hexdigest(),
         'harness_sha256':hashlib.sha256(packed(cfg).encode()).hexdigest(),
         'source_sha256':source_hashes,'input_sha256':inputs,

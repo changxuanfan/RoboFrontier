@@ -44,13 +44,12 @@ RELAY_RECOVERY_RULE = ('A timber may be dropped, pushed or dragged. If an arm th
     'dropped lift it again, and hand it over again in the air.')
 
 
-# New policy runs count their wall limit as active running time (policy_probe.BudgetGuard):
-# only time the world is running unpaused counts; host stalls, pauses and network outages
-# do not. Runs frozen without this field keep the START wall-clock rule.
-ACTIVE_TIME_CLOCK = 'active_time_v1'
-# Active time no longer ends a hung run, so those runs also stop once this much wall time has
-# passed since START (policy_probe.BudgetGuard). A run stopped this way needs review and is not
-# counted. Runs frozen without this field have no backstop.
+# A policy run counts its wall limit as active running time (clock.BudgetGuard): only time
+# the world is running unpaused counts; host stalls, pauses and network outages do not.
+from roboteam.runtime.clock import ACTIVE_CLOCK as ACTIVE_TIME_CLOCK
+# Active time does not end a hung run, so a run also stops once this much wall time has
+# passed since START (clock.BudgetGuard). A run stopped this way needs review and is not
+# counted.
 WALL_BACKSTOP_S = 172800
 
 
@@ -68,19 +67,6 @@ def protocol_for(case, release_sha256, wall_limit_s=86400):
     if case['id'].startswith('relay-'):
         protocol['relay_completion_rule'] = RELAY_HANDOVER_RULE
     return protocol
-
-
-def expected_protocol(case, protocol, release_sha256):
-    """The protocol a task should carry; runs frozen before the handover rule, the
-    active-time clock or the wall backstop keep their own terms."""
-    expected = protocol_for(case, release_sha256, protocol['total_wall_limit_s'])
-    if 'relay_completion_rule' not in protocol:
-        expected.pop('relay_completion_rule', None)
-    if 'clock' not in protocol:
-        expected.pop('clock', None)
-    if 'wall_backstop_s' not in protocol:
-        expected.pop('wall_backstop_s', None)
-    return expected
 
 
 def dial_code(case_id, root=ROOT):
@@ -108,7 +94,7 @@ def validate_policy_task(task, root=ROOT):
             or not isinstance(protocol.get('total_wall_limit_s'), (int, float))):
         raise ValueError('Invalid released policy protocol')
     _, _, case = resolve_case(task['id'], root=root)
-    if (protocol != expected_protocol(case, protocol, sha(Path(root)/RELEASE))
+    if (protocol != protocol_for(case, sha(Path(root)/RELEASE), protocol['total_wall_limit_s'])
             or protocol.get('case_id') != task['id']
             or protocol.get('source_task_sha256') != case['source_files']['task.json']
             or protocol.get('source_scene_sha256') != task['scene_sha256']
@@ -182,7 +168,7 @@ def validate_frozen_policy(task, directory):
     if len(cases) != 1:
         raise ValueError('Policy case is not in the frozen release')
     case = cases[0]
-    if protocol != expected_protocol(case, protocol, sha(release)):
+    if protocol != protocol_for(case, sha(release), protocol['total_wall_limit_s']):
         raise ValueError('Frozen policy protocol differs')
     source = directory/Path(task['scene_asset']).parent
     for name, expected in case['source_files'].items():

@@ -103,7 +103,7 @@ def _skip_reason(d, turns, have_turns):
             return 'no dial turns for this run', True
         if isinstance(turns, dict) and turns.get('unknown'):
             return 'dial turns unknown: ' + turns['unknown'], False
-    return 'family %s has no version 2 rule' % d['sel'].get('family'), False
+    return 'family %s has no atomic-step rule' % d['sel'].get('family'), False
 
 
 def main(argv=None):

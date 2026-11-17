@@ -33,7 +33,7 @@ test('network recovery accepts only structured transport failures without HTTP s
 const outage=()=>({claim:'one',paused_at:Date.now()/1000-60,resumed_at:Date.now()/1000});
 function networkHost(folder,state,record,{failedAt=Date.now()/1000,inFlight=false}={}){
   return {run:folder,stopped:false,actors:new Map([['thread','Controller']]),retries:new Set(),
-    networkFailures:new Map(),failedAt:new Map([['thread:failed',failedAt]]),activeTime:true,
+    networkFailures:new Map(),failedAt:new Map([['thread:failed',failedAt]]),
     robotWorkInFlight:async()=>inFlight,
     admin:async(op)=>{record.push(op);return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:outage()}:{allowed:true};},
     observe:async()=>structuredClone(state),send:async()=>{record.push('send');},event:()=>{}};
@@ -64,7 +64,7 @@ test('network continuation is one fresh notice after a durable claim, never an o
   const sent=[],operations=[];
   const host={run:folder,stopped:false,actors:new Map([['thread','Controller']]),retries:new Set(),
     networkFailures:new Map([['thread:failed',Date.now()/1000]]),
-    failedAt:new Map(),activeTime:true,robotWorkInFlight:async()=>false,
+    failedAt:new Map(),robotWorkInFlight:async()=>false,
     admin:async(op)=>{operations.push(op);return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:outage()}:{allowed:true};},
     observe:async()=>structuredClone(failedNetworkState),
     send:async(id,notice)=>{sent.push({id,notice});},event:()=>{}};
@@ -77,7 +77,7 @@ test('unknown network continuation acknowledgement holds review and is never rep
   fs.mkdirSync(path.join(folder,'private/inputs/bootstrap'),{recursive:true});fs.writeFileSync(path.join(folder,'private/inputs/bootstrap/network-resume.md'),'notice');
   let sends=0,reviews=0;
   const host={run:folder,stopped:false,actors:new Map([['thread','Controller']]),retries:new Set(),networkFailures:new Map([['thread:failed',Date.now()/1000]]),
-    failedAt:new Map(),activeTime:true,robotWorkInFlight:async()=>false,
+    failedAt:new Map(),robotWorkInFlight:async()=>false,
     admin:async(op)=>{if(op==='network-recovery-uncertain')reviews++;return op==='snapshot'?{lifecycle:'running',paused:false,egress_recovery:outage()}:{allowed:true};},
     observe:async()=>structuredClone(failedNetworkState),
     send:async()=>{sends++;throw new Error('unknown acknowledgement');},event:()=>{}};

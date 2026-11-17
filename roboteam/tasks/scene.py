@@ -24,7 +24,7 @@ def validate_scene_asset(task):
     if task['arms']!={s['id']:{'base_position_m':s['base_position_m'],'yaw_rad':s['yaw_rad']} for s in env['stations']}:
         raise ValueError('Robot bases differ from generated scene')
     for name,base in task['arms'].items():
-        if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*',name) or name in ('Meta','Coordinator','Controller','research'):
+        if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*',name) or name in ('Meta','Controller','research'):
             raise ValueError('Invalid robot ID')
         check_position(base['base_position_m'])
         if not math.isfinite(base['yaw_rad']):raise ValueError('Invalid base yaw')

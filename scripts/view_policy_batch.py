@@ -1,6 +1,6 @@
 """Loopback, read-only batch viewer using existing JSON and images only.
 
-Supports unified Codex/Claude jobs and legacy case lists. Never opens SQLite,
+Shows Codex and Claude batches. Never opens SQLite,
 creates runtime files, calls a model, renders a view or sends robot requests.
 """
 import argparse
@@ -32,12 +32,12 @@ def document(path):
 
 def batch_rows(base):
     batch=document(base/'batch.json')
-    if 'jobs' not in batch and 'cases' not in batch:
+    if 'jobs' not in batch:
         raise ValueError('No supported batch metadata')
     state=document(run_layout.batch_path(base,'engineering_status')) or batch
     rows=[]
-    for index,job in enumerate(batch.get('jobs',batch.get('cases',[]))):
-        raw=Path(job.get('run_directory',job.get('run_dir','')))
+    for index,job in enumerate(batch['jobs']):
+        raw=Path(job.get('run_directory',''))
         run=(raw if raw.is_absolute() else base/raw).resolve()
         if run==base or not run.is_relative_to(base):
             raise ValueError('Run directory must stay inside the selected batch')

@@ -26,7 +26,7 @@ class Parent:
 class ForkSetupTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(); self.run=Path(self.tmp.name)/'run'
-        self.run.mkdir(); self.store=RuntimeStore(self.run/'private/state/runtime.sqlite')
+        self.run.mkdir(); (self.run/'workspace').mkdir(); self.store=RuntimeStore(self.run/'private/state/runtime.sqlite')
         cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
         cfg.update(engine='claude',topology='adaptive',model='fake',effort='high')
         self.store.initialize('run',cfg,['A','B']); self.store.update_agent('Controller',thread_id=PARENT,ready=True)
@@ -34,7 +34,7 @@ class ForkSetupTests(unittest.TestCase):
         self.d=Delegations(self.store)
         batch=self.d.create('Controller','batch',getattr(self,'test_scopes',[{'robots':['A'],'goal':'g','done_when':'d'}]))
         self.actor=batch['children'][0]['actor']; self.d.claim('batch','owner')
-        self.parent=Parent(self.run); self.folder=self.run/'private/claude-config/projects/-run'
+        self.parent=Parent(self.run); self.folder=self.run/'private/engine/config/projects/-run'
         self.folder.mkdir(parents=True)
         self.row={'type':'assistant','uuid':'m1','sessionId':PARENT,'message':{'role':'assistant','content':[
             {'type':'tool_use','id':'toolu_delegate','name':'mcp__robot__robot','input':{'op':'delegate','call_id':'batch'}}]}}
@@ -99,7 +99,7 @@ class ForkSetupTests(unittest.TestCase):
         self.assertFalse(Path(self.gate()['open']).exists())
         with self.assertRaises(FileExistsError): self.create()
         self.assertEqual(len(self.calls),1)
-        events=[json.loads(line) for line in run_layout.path(self.run,'host_log','claude').read_text().splitlines()]
+        events=[json.loads(line) for line in run_layout.path(self.run,'host_log').read_text().splitlines()]
         created=[e for e in events if e['event']=='fork_created']
         self.assertEqual(created[0]['session_id'],output['child_session'])
 

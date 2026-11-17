@@ -60,7 +60,7 @@ class PersistentSessionTests(unittest.TestCase):
                 root = Path(tmp).resolve(); run = root / 'repo/runs/b/p/case'
                 (run / 'private/inputs').mkdir(parents=True); (run / 'workspace').mkdir()
                 # A run with the frozen policy contract; earlier runs keep one process per turn.
-                (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
+                (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
                 (run / 'private/inputs/policy-access.json').write_text(json.dumps(policy_access.record(
                     run, repo=root/'repo', home=root/'home', tmp_dirs=(), checkouts=[root/'repo'])))
                 profile = {'provider': 'anthropic', 'model': 'claude-opus-5-5', 'env_key': 'ANTHROPIC_API_KEY', 'effort': 'high',
@@ -109,7 +109,7 @@ class PersistentSessionTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp).resolve(); run = root / 'repo/runs/b/p/case'
                 (run / 'private/inputs').mkdir(parents=True); (run / 'workspace').mkdir()
-                (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
+                (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
                 (run / 'private/inputs/policy-access.json').write_text(json.dumps(policy_access.record(
                     run, repo=root/'repo', home=root/'home', tmp_dirs=(), checkouts=[root/'repo'])))
                 profile = {'provider': 'anthropic', 'model': 'claude-opus-5-5', 'env_key': 'ANTHROPIC_API_KEY', 'effort': 'high',

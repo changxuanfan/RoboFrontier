@@ -222,9 +222,7 @@ class EnvironmentTests(unittest.TestCase):
         os.link(self.path, self.directory/'another-link')
         with self.assertRaises(proxy.EgressError):proxy.read_record(self.path)
 
-    def test_old_configuration_shape_and_explicit_subscription_requirement(self):
-        old = load_configuration(overrides={'schema_version':6})
-        self.assertNotIn('egress_mode', old['slurm'])
+    def test_explicit_subscription_requirement(self):
         with self.assertRaisesRegex(ValueError, 'requires subscription'):
             load_configuration(overrides={'slurm': {'egress_mode':'mac-ssh','egress_root':str(self.root)}})
 

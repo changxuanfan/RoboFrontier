@@ -1,7 +1,7 @@
 """Pin the policy-turn permissions to the real Claude CLI, using a local stub model only.
 
 The stub replays a fixed list of tool calls; nothing is sent to a provider. It
-checks that a run-v4 policy writes only workspace/, its working directory (never the run
+checks that a policy writes only workspace/, its working directory (never the run
 root, public/, private/ or .agents/), and cannot read answers or credentials, including the
 private/ folder of a run prepared beside it after the CLI started. Network access is
 configured but not exercised here. Skipped when no `claude` binary is installed.
@@ -94,7 +94,7 @@ class PolicySandboxTests(unittest.TestCase):
             for path, text in files.items():
                 path.parent.mkdir(parents=True, exist_ok=True); path.write_text(text)
             for name in ('workspace', 'public/results', 'public/observations'): (run / name).mkdir(parents=True, exist_ok=True)
-            (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
+            (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
             (run / 'probe.sh').write_text('\n'.join([
                 'cd ' + str(run),
                 'cat %s %s %s %s %s' % (repo / 'configs/task.json', other / 'private/inputs/task.json',

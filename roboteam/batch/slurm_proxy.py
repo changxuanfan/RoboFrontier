@@ -99,8 +99,7 @@ def pause_marker(identity, instance, watcher, pause_id, claim):
     pause_id rises by one with each pause the same watcher publishes. A world
     that slept through a short resume still holds the earlier claim; it reads
     a higher pause_id from the same watcher as the same continuing outage, not
-    as a changed owner. The fields are additive, so the schema stays v1 and
-    worlds frozen before them read the marker exactly as before.
+    as a changed owner.
     """
     return {'schema': 'roboteam.egress-pause.v1', 'job_id': identity, 'instance': instance,
             'claim': claim, 'watcher': watcher, 'pause_id': pause_id, 'at': time.time()}

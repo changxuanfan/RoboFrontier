@@ -28,9 +28,9 @@ class NearGoalReleaseTests(unittest.TestCase):
         self.t=relay_world();self.relay=self.t.monitor.relay
         self.ident='payload_02';self.relay.states={self.ident:self.relay.states[self.ident]}
         self.state=self.relay.states[self.ident]
-        self.state.update(airborne=True,custody={'G','H'},transitions=[dict(senders=['E','F'],receivers=['G','H'])])
+        self.state.update(airborne=True,custody={'G','H'},transitions=[dict(senders=['E','F'],receivers=['G','H'],airborne=True)])
         self.t.task['completion'].update(support_via_goal_payload=True,required_airborne_handover=True,
-            allow_goal_partial_support=True,allow_near_goal_release=True,max_timber_release_gap_m=.02)
+            allow_goal_partial_support=True,allow_near_goal_release=True)
         self.support={'G','H'};self.inside=True;self.contact=False;self.grounded=False;self.gap=.015
         def bottom(geoms):return .8+self.gap
         def grounds(goal_only=True,*args):return {self.ident} if self.grounded or (not goal_only and self.contact) else set()
@@ -76,7 +76,7 @@ class NearGoalReleaseTests(unittest.TestCase):
         self.sample(1.5);self.sample(3.)
         self.assertFalse(self.t.monitor.result_cache['task_success'])
 
-    def test_legacy_contract_keeps_its_original_partial_contact_semantics(self):
+    def test_a_contract_without_partial_support_counts_goal_contact_as_a_drop(self):
         self.t.task['completion']['allow_goal_partial_support']=False
         self.t.task['completion']['allow_near_goal_release']=False
         self.contact=True;self.gap=.3;self.sample(1.)

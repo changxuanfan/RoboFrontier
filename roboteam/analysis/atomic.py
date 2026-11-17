@@ -1,14 +1,13 @@
-"""Atomic steps, version 2.
+"""Atomic steps.
 
 - Transport: one step per handoff (a release followed, within `HANDOFF_RADIUS_M`, by a grasp
   from a different arm) plus one per goal's first delivery; in-place regrasps are not steps.
-- Mosaic: unchanged from version 1 (`metrics.goals_atomic`), one step per cube first placed
-  correctly.
+- Mosaic: one step per cube first placed correctly (`metrics.goals_atomic`).
 - Relay: one step per arm that newly grips a timber in a qualified handover.
 - Dial: one step per dial that settles, for at least `DIAL_DWELL_S`, at a 60-degree mark
   (within the evaluator's 4-degree band) different from its last settled mark.
 
-Failure events, their exclusions and leftover failed attempts follow version 1; each failure
+Failure events, their exclusions and leftover failed attempts follow `metrics.py`; each failure
 event marks at most one step.
 """
 
@@ -145,8 +144,8 @@ def run_dial_turns(run, dwell_s=DIAL_DWELL_S, motion='always'):
 
 
 def turn_list(turns):
-    """Turns from a run_dial_turns result (or an older plain list); None when unknown."""
-    return turns.get('turns') if isinstance(turns, dict) else turns
+    """Turns from a run_dial_turns result; None when unknown."""
+    return None if turns is None else turns.get('turns')
 
 
 def result(steps, extra, obj_extra):
@@ -374,7 +373,7 @@ def dial_atomic(d, clk, turns):
 
 
 def compute(d, v1_atomic=None, turns=None):
-    """Version 2 atomic counts for an extracted record, or None without evaluator or clock data.
+    """Atomic counts for an extracted record, or None without evaluator or clock data.
 
     Mosaic reuses `v1_atomic` (or recomputes it); Dial needs `turns` from `run_dial_turns`."""
     S = d.get('suite')

@@ -23,9 +23,9 @@ def stream(*documents):
 
 
 class MessagesBridgeTests(unittest.TestCase):
-    def dynamic_fork_fixture(self,root,legacy=False):
+    def dynamic_fork_fixture(self,root):
         parent,child=str(uuid.uuid4()),str(uuid.uuid4())
-        project=root/('run/private/claude-config/projects/project' if legacy else 'run/private/engine/config/projects/project');project.mkdir(parents=True)
+        project=root/'run/private/engine/config/projects/project';project.mkdir(parents=True)
         control={'type':'text','text':'No response requested.'}
         def row(kind,content,model=None,previous=None):
             result={'type':kind,'uuid':str(uuid.uuid4()),'parentUuid':previous,'sessionId':parent,
@@ -83,12 +83,6 @@ class MessagesBridgeTests(unittest.TestCase):
                     claim_path.write_text(json.dumps(claim))
                 with self.assertRaises(gateway.ProtocolError):
                     gateway.to_responses(payload,replay=replay,session_id=child,fork_source=parent)
-
-    def test_dynamic_fork_accepts_the_native_preflight_config_layout(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            replay,parent,child,payload,claim,child_path,index=self.dynamic_fork_fixture(Path(temporary),legacy=True)
-            request=gateway.to_responses(payload,replay=replay,session_id=child,fork_source=parent)
-            self.assertEqual(request['input'].native_controls,['resume_no_response'])
 
     def test_dynamic_fork_waits_for_native_transcript_flush_before_accepting(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -431,9 +425,9 @@ class ExactReplayTests(unittest.TestCase):
             with self.subTest(key=key), self.assertRaisesRegex(gateway.ProtocolError, 'history changed'):
                 gateway.to_responses(self.following(content), replay=self.store)
 
-    def test_no_legacy_fallback_or_silent_reconstruction(self):
+    def test_no_fallback_or_silent_reconstruction(self):
         empty = gateway.ReplayStore(Path(self.temporary.name)/'empty.sqlite')
-        with self.assertRaisesRegex(gateway.ProtocolError, 'legacy history'):
+        with self.assertRaisesRegex(gateway.ProtocolError, 'cannot be reconstructed'):
             gateway.to_responses(self.following(), replay=empty)
         with self.assertRaisesRegex(gateway.ProtocolError, 'requires original output replay'):
             gateway.to_responses(self.following())
@@ -585,7 +579,7 @@ class ExactReplayTests(unittest.TestCase):
             client.request('POST', '/v1/messages', json.dumps(self.following()), {'x-api-key': 'fixture-key'})
             reply = client.getresponse()
             self.assertEqual(reply.status, 400)
-            self.assertIn('legacy history', reply.read().decode())
+            self.assertIn('cannot be reconstructed', reply.read().decode())
         finally:
             client.close()
 

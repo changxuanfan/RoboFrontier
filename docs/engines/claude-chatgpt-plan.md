@@ -64,10 +64,9 @@ only the local gateway key. API access and limits need a live preflight.
 For a stopped subscription experiment, preserve its original frozen profile and
 session provenance. Run the gateway with `--replay-file` pointing at its existing
 protected replay database, and record the operator-authorized billing handoff
-separately before continuing the same run directories. The historical profile name
-`sol61_chatgpt_plan` does not override the gateway's explicit authentication mode;
-health and every transport record report the actual mode. Never edit original
-frozen inputs merely to rename this historical profile. Validate old encrypted
+separately before continuing the same run directories. The profile name does not
+override the gateway's explicit authentication mode; health and every transport record
+report the actual mode. Validate the encrypted
 history under the new credential before resuming physical work. A rejected history
 is a stop, never permission to discard original reasoning or start a fresh task.
 
@@ -168,7 +167,7 @@ compaction rebuild context from verified local history. A response ID is never
 reused on another connection. Native session files and the private replay database
 remain necessary for durable resume; WebSocket state alone is not durable storage.
 
-The legacy comparison ID remains local diagnostic metadata; it is not substituted
+The comparison ID remains local diagnostic metadata; it is not substituted
 for conversation state and cache controls are not forced on an unsupported route.
 No change of credentials, model or billing route is allowed. Metadata includes
 transport mode, connection generation, reset reason, sent/full input-item counts,
@@ -196,8 +195,6 @@ only inside that session and its recorded ancestors; identical plaintext such as
 `READY` in an unrelated session cannot select another session's original output.
 Both one-shot and persistent launches set these headers. A fork's ancestry cannot
 be rebound, and the native transcript/fork provenance checks remain unchanged.
-The schema upgrade preserves unscoped v1 rows for audit but does not use them to
-qualify or reconstruct a scoped v2 session.
 At a blocked parent-tool fork, Claude Code can append its own `No response
 requested.` assistant control message. This is not a provider output. The adapter
 accepts that exact native control with recorded fork ancestry and, when a native

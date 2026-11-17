@@ -62,7 +62,7 @@ class StandingPhysicsSmokeTests(unittest.TestCase):
                                        startup_interval_s=0)
                     self.assertFalse(result['scored'])
                     self.assertIn(result['status'], ('closed','needs_review'))
-                    detail = json.loads((run/'private/outputs/claude-engineering-status.json').read_text())
+                    detail = json.loads((run/'private/state/control/engineering-status.json').read_text())
                     self.assertEqual(detail['reason'], 'wall_limit', detail)
                     self.assertTrue(detail['seal']['sealed'], detail)
                     self.assertEqual(detail['seal']['unresolved_action_ids'], [])

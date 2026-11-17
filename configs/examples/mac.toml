@@ -1,7 +1,7 @@
 # A Mac: Claude Code with a subscription token, the four level-1 cases with the fewest arms.
 # Runs go under launchd with Interactive priority and caffeinate; closing the lid still sleeps
 # the Mac. Copy to an untracked site TOML.
-schema_version = 9
+schema_version = 11
 
 [policy]
 engine = "claude"

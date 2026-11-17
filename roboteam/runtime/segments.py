@@ -43,14 +43,6 @@ INTERRUPTED = ('Interrupted by an unexpected host exit; the world was restored f
 HOLD_MAX_AGE_S = 5.
 
 
-def supported(run):
-    try:
-        run_path(run, 'segment_outputs')
-        return True
-    except KeyError:
-        return False
-
-
 def output_dir(run, segment):
     """Process outputs of one segment; segment 0 keeps the original locations."""
     return Path(run) / 'private/outputs' if segment == 0 else run_path(run, 'segment_outputs') / str(segment)
@@ -63,7 +55,7 @@ def input_dir(run, segment):
 def motion_dirs(run):
     """Every segment's motion recording, in order; their timelines are continuous."""
     folders = [Path(run) / 'private/outputs/motion']
-    if supported(run) and run_path(run, 'segment_outputs').is_dir():
+    if run_path(run, 'segment_outputs').is_dir():
         numbers = sorted(int(p.name) for p in run_path(run, 'segment_outputs').iterdir() if p.name.isdigit())
         folders += [output_dir(run, k) / 'motion' for k in numbers]
     return [f for f in folders if (f / 'stream.json').is_file()]
@@ -71,7 +63,7 @@ def motion_dirs(run):
 
 def current_restore(run):
     """The restore record of the segment now being started, or None for segment 0."""
-    if not supported(run) or not run_path(run, 'segment_inputs').is_dir(): return None
+    if not run_path(run, 'segment_inputs').is_dir(): return None
     numbers = sorted(int(p.name) for p in run_path(run, 'segment_inputs').iterdir() if p.name.isdigit())
     if not numbers: return None
     folder = input_dir(run, numbers[-1])
@@ -103,36 +95,22 @@ def restore_world(run, task, model, data):
     return note
 
 
-def deadline(store, wall_limit_s):
-    """Wall-clock end of a START_wall_time trial: downtime between segments is not counted.
-
-    An active_time_v1 trial has no wall-clock end; see used_s and remaining_s."""
-    return store.get('start_at') + wall_limit_s + store.get('downtime_s', 0.)
-
-
-def used_s(run, store, ended_at=None):
-    """Seconds of the trial's limit used so far, by the clock its frozen protocol names.
-
-    START_wall_time: wall time from START to `ended_at` (default: the last activity), less
-    downtime. active_time_v1: the active running time the world saved (policy_probe.BudgetGuard)."""
-    from .clock import WALL_CLOCK, run_clock
-    task = json.loads((Path(run) / 'private/inputs/task.json').read_text())
-    if run_clock(task['run_protocol']) != WALL_CLOCK: return float(store.get('active_s', 0.) or 0.)
-    ended_at = last_activity(run, store) if ended_at is None else ended_at
-    return ended_at - store.get('start_at') - store.get('downtime_s', 0.)
+def used_s(store):
+    """Seconds of the trial's limit used so far: the active running time the world saved
+    (clock.BudgetGuard)."""
+    return float(store.get('active_s', 0.) or 0.)
 
 
-def remaining_s(run, store, ended_at=None):
+def remaining_s(run, store):
     """Seconds of the trial's limit left (see used_s)."""
     task = json.loads((Path(run) / 'private/inputs/task.json').read_text())
-    return task['run_protocol']['total_wall_limit_s'] - used_s(run, store, ended_at)
+    return task['run_protocol']['total_wall_limit_s'] - used_s(store)
 
 
 # Written after the segment had already ended; they do not show it was alive.
 POSTMORTEM_EVENTS = ('RUN_INTERRUPTED', 'RUN_SEALED', 'RUN_SEAL_INCOMPLETE', 'DISPATCH_PAUSED',
                      'EXECUTION_RECOVERY_REQUIRED', 'INTERRUPTION_EVALUATION_UNAVAILABLE', 'HOST_LOST',
-                     'ACTIONS_INTERRUPTED_BY_SEGMENT', 'DELEGATION_FAILED', 'SEGMENT_PREPARED', 'MANUAL_TASK_RECOVERY',
-                     'RUNTIME_UPGRADE_AUTHORIZED')
+                     'ACTIONS_INTERRUPTED_BY_SEGMENT', 'DELEGATION_FAILED', 'SEGMENT_PREPARED', 'MANUAL_TASK_RECOVERY')
 
 
 def last_activity(run, store):
@@ -141,7 +119,7 @@ def last_activity(run, store):
     times = [store.db.execute('SELECT max(created) FROM events WHERE kind NOT IN (%s)' % marks,
                               POSTMORTEM_EVENTS).fetchone()[0] or 0.]
     try:
-        host_log = run_path(run, 'host_log', store.get('config', {}).get('engine', 'codex'))
+        host_log = run_path(run, 'host_log')
         with host_log.open('rb') as log:
             log.seek(0, 2); size = log.tell(); log.seek(max(0, size - 65536))
             for line in reversed(log.read().decode(errors='replace').splitlines()):
@@ -209,7 +187,7 @@ BACKSTOP_REFUSAL = ('stopped by the 48 h wall-time backstop; it continues only b
 
 
 def wall_backstopped(run):
-    """True when the run's last stop was the wall backstop (policy_probe.BudgetGuard): its
+    """True when the run's last stop was the wall backstop (clock.BudgetGuard): its
     budget-cutoff.json says so. Such a run needs review and its result is not counted."""
     try: return json.loads((Path(run) / 'private/outputs/budget-cutoff.json').read_text()).get('wall_backstop') is True
     except (OSError, ValueError, AttributeError): return False
@@ -236,34 +214,25 @@ def stop_reason(run, store):
 
 
 def continuations(store):
-    """Every continuation of this run so far; runs from before the record count as automatic."""
-    recorded = store.get('continuations')
-    if recorded is not None: return recorded
-    return [{'segment': k, 'manual': False} for k in range(1, store.get('segment', 0) + 1)]
+    """Every continuation of this run so far."""
+    return store.get('continuations') or []
 
 
 def automatic_continues(store):
     return sum(1 for c in continuations(store) if not c.get('manual'))
 
 
-def retry_eligibility(run, store, *, manual=False, source_root=None, manual_authorization=None):
+def retry_eligibility(run, store, *, manual=False, source_root=None):
     """(True, None) when this run may continue in a new segment, else (False, reason).
 
     Automatic (the batch, after a host exits): only an unexpected stop, at most
     AUTOMATIC_CONTINUES times per run, with time left, never after a continuation past the
-    score. Manual (`roboteam continue`, or a recovery with a runtime-upgrade
-    authorization): any stop but an integrity abort, any number of times, also after the
+    score. Manual (`roboteam continue`, or a task recovery): any stop but an integrity abort, any number of times, also after the
     finish, the cutoff or the wall backstop. Either way the world must be gone, the frozen
     inputs unchanged and a motion frame recorded. source_root verifies the original
     immutable runtime rather than a development checkout."""
     run = Path(run)
-    if not supported(run): return False, 'run layout has no segments'
     journal = store.get('segment_journal')
-    if manual_authorization is not None:
-        from .upgrade import validate_authorization
-        try: validate_authorization(run, store, manual_authorization, source_root=source_root)
-        except (ValueError, OSError, KeyError, TypeError) as error: return False, str(error)
-        manual = True
     lifecycle = store.get('lifecycle')
     if lifecycle not in ('running', 'interrupted', 'recovery_required', 'ended'):
         return False, 'run never started or is already prepared to continue (' + str(lifecycle) + ')'
@@ -285,8 +254,7 @@ def retry_eligibility(run, store, *, manual=False, source_root=None, manual_auth
     changed = [c for c in verify_inputs(run, source_root=source_root) if not (partial and c.startswith(partial))]
     if changed: return False, 'frozen inputs changed: ' + ', '.join(changed[:3])
     if not owner_released(run): return False, 'a process still owns the physical world'
-    ended_at = journal['ended_at'] if journal else None
-    if not manual and remaining_s(run, store, ended_at) < MIN_REMAINING_S:
+    if not manual and remaining_s(run, store) < MIN_REMAINING_S:
         return False, 'less than %d s of the limit left' % MIN_REMAINING_S
     if _last_frame(run, store.get('segment', 0)) is None: return False, 'no recorded motion frame'
     return True, None
@@ -315,7 +283,7 @@ def _write_atomic(path, data):
     temporary.write_bytes(data); temporary.replace(path)
 
 
-def prepare_retry(run, store, reason, *, manual=False, source_root=None, manual_authorization=None):
+def prepare_retry(run, store, reason, *, manual=False, source_root=None):
     """Turn a stopped run into one that continues in the next segment.
 
     `reason` names what ended the previous segment (for example the host exit code);
@@ -326,10 +294,8 @@ def prepare_retry(run, store, reason, *, manual=False, source_root=None, manual_
     the same restore frame and end time, and uses no further continuation.
     """
     run = Path(run)
-    ok, why = retry_eligibility(run, store, manual=manual, source_root=source_root,
-                                manual_authorization=manual_authorization)
+    ok, why = retry_eligibility(run, store, manual=manual, source_root=source_root)
     if not ok: raise ValueError('Run cannot continue: ' + why)
-    manual = manual or manual_authorization is not None
     previous = store.get('segment', 0)
     journal = store.get('segment_journal')
     if not journal or journal.get('segment') != previous + 1:
@@ -381,7 +347,7 @@ def prepare_retry(run, store, reason, *, manual=False, source_root=None, manual_
     after_score = None
     if STOP_REASONS[stop]['scored'] or store.get('after_score'): after_score = _keep_score(run, store, stop, previous)
     # Last, so a preparation that stopped part way still sees the backstop stop it continues.
-    if store.get('wall_backstop'): _waive_backstop(run, store, manual_authorization or 'manual continue')
+    if store.get('wall_backstop'): _waive_backstop(run, store, 'manual continue')
     if stop == 'operator_stop': run_path(run, 'stop').unlink(missing_ok=True)
     with store.transaction():
         store.put('continuations', continuations(store) + [

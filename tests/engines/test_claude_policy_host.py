@@ -27,7 +27,7 @@ class PolicyHostTests(unittest.TestCase):
         frozen=self.run/'private/inputs/bootstrap/Controller.md'; frozen.parent.mkdir(parents=True)
         frozen.write_text('frozen start')
         cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
-        cfg.update(startup_protocol='direct_controller_v2', engine='claude', topology='single-agent', model='fake', effort='high')
+        cfg.update(startup_protocol='direct_controller', engine='claude', topology='single-agent', model='fake', effort='high')
         store=RuntimeStore(self.run/'private/state/runtime.sqlite'); store.initialize('run', cfg, ['A']); store.close()
         self.profile={'model':'fake', 'effort':'high', 'env_key':'FAKE'}
         self.calls=[]

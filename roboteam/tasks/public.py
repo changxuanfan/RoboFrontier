@@ -70,8 +70,7 @@ MECHANISM_INTERNAL = ('revision', 'apparatus_revision', 'version', 'feedback_rul
                       'beam_bodies', 'weight_body_free', 'joint', 'cable_model', 'cable_count', 'cable_to_cable_collision',
                       'collision')
 COMPLETION_INTERNAL = ('rule_revision', 'relay_completion_rule')
-# The rules and objectives as the release states them (rewritten 2026-11-11; the earlier
-# wording is in git history).
+# The rules and objectives as the policy reads them.
 OBJECTIVES = {
     'transport': 'Deliver every requested item to its place on its destination board, seated, released and still. '
                  'How the robots share the work is your choice.',

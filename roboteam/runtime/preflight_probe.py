@@ -9,8 +9,8 @@ size of a real observation.
 import hashlib
 import secrets
 
-VERSION = 'two-halves-896x560-v1'
-SIZE = (896, 560)
+VERSION = 'two-halves-1280x800-v1'
+SIZE = (1280, 800)
 COLORS = {'red': (220, 35, 35), 'green': (37, 201, 113), 'blue': (35, 60, 220), 'yellow': (230, 210, 30)}
 PROMPT = ('The image has two halves, each one solid color: red, green, blue or yellow. '
           'Name the color of the left half and of the right half.')

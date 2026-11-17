@@ -82,7 +82,7 @@ second batch can borrow an existing job's access without refreshing it:
 ## 4. Site TOML
 
 ```toml
-schema_version = 9
+schema_version = 11
 
 [policy]
 engine = "codex"

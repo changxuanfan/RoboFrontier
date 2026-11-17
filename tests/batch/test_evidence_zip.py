@@ -27,10 +27,12 @@ class EvidenceZipTests(unittest.TestCase):
             motion = b'unchanged-compressed-motion\x00'*1000
             (source/'batch/motion.npz').write_bytes(motion)
             (source/'batch/batch.json').write_text('{"status":"closed","jobs":[]}')
+            files = {p.relative_to(source).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                     for p in source.rglob('*') if p.is_file()}
             (source/'collection.json').write_text(json.dumps({
-                'schema': 'roboteam.luna-collection.v1', 'complete': True, 'job_count': 1,
-                'jobs': [{'roles': [{'session': 'sessions/role.jsonl',
-                                    'sha256': hashlib.sha256(raw).hexdigest()}]}]}))
+                'schema': 'roboteam.policy-collection.v1', 'engine': 'codex', 'complete': True,
+                'writers_stopped': True, 'job_count': 1, 'files': files,
+                'jobs': [{'roles': [{'session': 'sessions/role.jsonl', 'sha256': files['sessions/role.jsonl']}]}]}))
             from roboteam.cli import main
             result = root/'result.json'
             output = root/'result.zip'

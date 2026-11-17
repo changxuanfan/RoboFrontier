@@ -19,8 +19,5 @@ class RunsRootTests(unittest.TestCase):
             os.environ['ROBOTEAM_RUNS_ROOT'] = '/srv/runs'
             self.assertEqual(runs_root(config), Path('/srv/runs'))
 
-    def test_older_configurations_have_no_paths_section(self):
-        self.assertNotIn('paths', load_configuration(overrides={'schema_version': 8}))
-
 
 if __name__ == '__main__': unittest.main()

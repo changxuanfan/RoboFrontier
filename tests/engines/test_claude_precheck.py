@@ -21,7 +21,7 @@ session = argv[argv.index("--resume") + 1] if "--resume" in argv else argv[argv.
 print(json.dumps({"type": "system", "subtype": "init", "session_id": session, "model": "claude-haiku-5-5"}))
 answer, tool = "READY", False
 if prompt.startswith("Call the robot tool"):
-    conn = json.load(open("private/state/connections/Controller.json"))
+    conn = json.load(open("../private/state/connections/Controller.json"))
     body = json.dumps({"op": "observe", "data": {}}).encode()
     urllib.request.urlopen(urllib.request.Request(conn["url"] + "/op", data=body, method="POST"), timeout=10).read()
     tool = True

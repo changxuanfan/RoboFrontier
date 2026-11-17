@@ -7,6 +7,7 @@ import tomllib
 from .io import ROOT
 
 DEFAULT = ROOT / 'roboteam.toml'
+SCHEMA_VERSION = 11
 TOPOLOGIES = ('adaptive', 'single-agent', 'hierarchical', 'decentralized')
 SCHEMA = {
     'schema_version': int,
@@ -58,7 +59,6 @@ def load_configuration(path=None, overrides=None, *, host=None):
     """Layer a partial user TOML and explicit options over checked-in defaults.
 
     Secrets and arbitrary environment expansion are deliberately not supported.
-    Old prepared runs keep their frozen configuration and are never re-resolved.
     """
     with DEFAULT.open('rb') as stream:
         result = tomllib.load(stream)
@@ -66,13 +66,6 @@ def load_configuration(path=None, overrides=None, *, host=None):
     if path is not None and Path(path).resolve() != DEFAULT.resolve():
         with Path(path).open('rb') as stream:
             updates = tomllib.load(stream)
-    version = (overrides or {}).get('schema_version', updates.get('schema_version', result['schema_version']))
-    shape = _configuration_shape(version)
-    # Select versioned defaults before merging. Only default fields are pruned;
-    # explicitly supplied options from a different schema are still errors.
-    # A section an older version had and nothing reads now has no defaults and loads empty.
-    result = {key: ({field: result[key][field] for field in kind}
-                    if isinstance(kind, dict) else result.get(key, {})) for key,kind in shape.items()}
     _merge(result, updates)
     if overrides:
         _merge(result, deepcopy(overrides))
@@ -90,11 +83,11 @@ def load_configuration(path=None, overrides=None, *, host=None):
         elif host == 'container': device = 'nvidia' if detected_render_device() == 'nvidia' else 'cpu'
         else: device = detected_render_device()
         result['render']['device'] = device
-    runtime = result.get('runtime', {})
-    if runtime.get('codex_tool_backend') == 'auto':
+    runtime = result['runtime']
+    if runtime['codex_tool_backend'] == 'auto':
         linux = host in ('slurm', 'container') or (host is None and sys.platform.startswith('linux'))
         # A robot_only role has no file or shell tool to confine, so no tool worker is used.
-        linux = linux and result['policy'].get('tool_mode', 'full') != 'robot_only'
+        linux = linux and result['policy']['tool_mode'] != 'robot_only'
         # Codex's own sandbox on macOS; on Linux the tool worker under Landlock and seccomp,
         # the backend scripts/check_policy_env.py checks there.
         runtime['codex_tool_backend'] = 'landlock-v1' if linux and result['policy']['engine'] == 'codex' else 'native'
@@ -113,35 +106,6 @@ def detected_render_device(system=None):
     if Path('/dev/nvidia0').exists() or shutil.which('nvidia-smi'):
         return 'nvidia'
     return 'cpu'
-
-
-def _configuration_shape(version):
-    if type(version) is not int or version not in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11):
-        raise ValueError('Unsupported configuration schema_version')
-    # Older frozen configurations remain exact: an already-hashed experiment
-    # configuration never gains a later option.
-    shape = {k: dict(v) if isinstance(v, dict) else v for k, v in SCHEMA.items()
-             if version >= 9 or k != 'paths'}
-    # Configurations frozen before version 11 hold a [factory] section (from version 2) and an
-    # [oracle] section (from version 3). Nothing reads them; they are accepted as they are so
-    # that those files still validate.
-    if 2 <= version <= 10:
-        shape['factory'] = dict
-    if 3 <= version <= 10:
-        shape['oracle'] = dict
-    if version < 5:
-        shape['runtime'].pop('codex_tool_backend')
-    if version < 6:
-        for field in ('auth_mode', 'credential_store'):
-            shape['slurm'].pop(field)
-    if version < 7:
-        for field in ('egress_mode', 'egress_root', 'egress_wait_s'):
-            shape['slurm'].pop(field)
-    if version < 8:
-        shape['slurm'].pop('egress_pause_s')
-    if version < 10:
-        shape['policy'].pop('tool_mode')
-    return shape
 
 
 def runs_root(config=None):
@@ -163,9 +127,9 @@ MAX_EGRESS_PAUSE_S = 172800
 
 
 def validate_configuration(config):
-    version = config.get('schema_version')
-    shape = _configuration_shape(version)
-    _validate_shape(config, shape)
+    if config.get('schema_version') != SCHEMA_VERSION or type(config['schema_version']) is not int:
+        raise ValueError('Unsupported configuration schema_version: this code reads version %d' % SCHEMA_VERSION)
+    _validate_shape(config, SCHEMA)
     def choice(section, field, allowed):
         if config[section][field] not in allowed:
             raise ValueError(f'Invalid {section}.{field}: choose from {", ".join(map(str, allowed))}')
@@ -173,11 +137,9 @@ def validate_configuration(config):
     choice('policy', 'engine', ('codex', 'claude'))
     choice('policy', 'topology', TOPOLOGIES)
     choice('policy', 'effort', ('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
-    robot_only = False
-    if version >= 10:
-        from .runtime.tool_mode import MODES, ROBOT_ONLY
-        choice('policy', 'tool_mode', MODES)
-        robot_only = config['policy']['tool_mode'] == ROBOT_ONLY
+    from .runtime.tool_mode import MODES, ROBOT_ONLY
+    choice('policy', 'tool_mode', MODES)
+    robot_only = config['policy']['tool_mode'] == ROBOT_ONLY
     from re import fullmatch
     if not fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', config['policy']['profile']):
         raise ValueError('Invalid policy.profile identifier')
@@ -199,17 +161,16 @@ def validate_configuration(config):
         if not all(type(value) is str and value for value in values) or len(set(values)) != len(values):
             raise ValueError('selection.' + field + ' must contain distinct nonempty strings')
     choice('render', 'device', ('nvidia', 'cpu', 'native'))
-    choice('render', 'observation_profile', ('jpeg_1280x800_q90', 'jpeg_896x560_q85', 'png_1280x800', 'jpeg_128x80_q95'))
-    choice('runtime', 'codex_home_scope', ('task', 'shared', 'job') if version >= 6 else ('task', 'shared'))
-    if version >= 5:
-        choice('runtime', 'codex_tool_backend', ('native', 'landlock-v1'))
-        if config['policy']['engine'] != 'codex' and config['runtime']['codex_tool_backend'] != 'native':
-            raise ValueError('codex_tool_backend applies only to the Codex engine')
-        if robot_only and config['runtime']['codex_tool_backend'] != 'native':
-            # landlock-v1 confines policy_exec and policy_image, which a robot_only role does not
-            # have; the Slurm subscription route requires that backend and is not supported yet.
-            raise ValueError('policy.tool_mode = "robot_only" uses codex_tool_backend = "native": '
-                             'there are no file or shell tools to confine')
+    choice('render', 'observation_profile', ('jpeg_1280x800_q90', 'jpeg_128x80_q95'))
+    choice('runtime', 'codex_home_scope', ('task', 'shared', 'job'))
+    choice('runtime', 'codex_tool_backend', ('native', 'landlock-v1'))
+    if config['policy']['engine'] != 'codex' and config['runtime']['codex_tool_backend'] != 'native':
+        raise ValueError('codex_tool_backend applies only to the Codex engine')
+    if robot_only and config['runtime']['codex_tool_backend'] != 'native':
+        # landlock-v1 confines policy_exec and policy_image, which a robot_only role does not
+        # have; the Slurm subscription route requires that backend and is not supported yet.
+        raise ValueError('policy.tool_mode = "robot_only" uses codex_tool_backend = "native": '
+                         'there are no file or shell tools to confine')
     choice('container', 'seccomp_profile', ('default', 'unconfined'))
     choice('evidence', 'archive_format', ('zip',))
     if config['evidence']['auto_archive'] and not config['evidence']['auto_collect']:
@@ -217,37 +178,34 @@ def validate_configuration(config):
     if config['evidence']['delete_sources']:
         raise ValueError('Automatic source deletion is not supported; verify restored evidence before explicit cleanup')
     slurm = config['slurm']
-    if version >= 6:
-        choice('slurm', 'auth_mode', ('api', 'subscription'))
-        subscription = slurm['auth_mode'] == 'subscription'
-        if subscription:
-            if (config['policy']['engine'] != 'codex'
-                    or config['runtime']['codex_home_scope'] != 'job'
-                    or config['runtime']['codex_home']
-                    or config['runtime']['codex_tool_backend'] != 'landlock-v1'):
-                raise ValueError('Slurm subscription requires Codex job scope, an automatic home and landlock-v1')
-            path = Path(slurm['credential_store'])
-            if not path.is_absolute() or '..' in path.parts:
-                raise ValueError('slurm.credential_store must be an absolute private directory')
-        elif slurm['credential_store'] or config['runtime']['codex_home_scope'] == 'job':
-            raise ValueError('Job scope and credential_store require slurm.auth_mode=subscription')
-    if version >= 7:
-        choice('slurm', 'egress_mode', ('direct', 'mac-ssh'))
-        if version >= 8:
-            # A route outage holds the world like any other outage, up to the wall backstop (E8);
-            # only the mac-ssh route has a pause of its own, direct egress uses the outage probe.
-            if not 0 <= slurm['egress_pause_s'] <= MAX_EGRESS_PAUSE_S:
-                raise ValueError('slurm.egress_pause_s must be between 0 and %d' % MAX_EGRESS_PAUSE_S)
-        if not 1 <= slurm['egress_wait_s'] <= 3600:
-            raise ValueError('slurm.egress_wait_s must be between 1 and 3600')
-        if slurm['egress_mode'] == 'mac-ssh':
-            path = Path(slurm['egress_root'])
-            # Claude reads its token from .env inside the job (slurm_job.execute) and needs only the route.
-            routed = slurm['auth_mode'] == 'subscription' or config['policy']['engine'] == 'claude'
-            if not routed or not path.is_absolute() or '..' in path.parts:
-                raise ValueError('Mac egress requires subscription mode or Claude, and an absolute private egress_root')
-        elif slurm['egress_root']:
-            raise ValueError('egress_root requires slurm.egress_mode=mac-ssh')
+    choice('slurm', 'auth_mode', ('api', 'subscription'))
+    subscription = slurm['auth_mode'] == 'subscription'
+    if subscription:
+        if (config['policy']['engine'] != 'codex'
+                or config['runtime']['codex_home_scope'] != 'job'
+                or config['runtime']['codex_home']
+                or config['runtime']['codex_tool_backend'] != 'landlock-v1'):
+            raise ValueError('Slurm subscription requires Codex job scope, an automatic home and landlock-v1')
+        path = Path(slurm['credential_store'])
+        if not path.is_absolute() or '..' in path.parts:
+            raise ValueError('slurm.credential_store must be an absolute private directory')
+    elif slurm['credential_store'] or config['runtime']['codex_home_scope'] == 'job':
+        raise ValueError('Job scope and credential_store require slurm.auth_mode=subscription')
+    choice('slurm', 'egress_mode', ('direct', 'mac-ssh'))
+    # A route outage holds the world like any other outage, up to the wall backstop (E8);
+    # only the mac-ssh route has a pause of its own, direct egress uses the outage probe.
+    if not 0 <= slurm['egress_pause_s'] <= MAX_EGRESS_PAUSE_S:
+        raise ValueError('slurm.egress_pause_s must be between 0 and %d' % MAX_EGRESS_PAUSE_S)
+    if not 1 <= slurm['egress_wait_s'] <= 3600:
+        raise ValueError('slurm.egress_wait_s must be between 1 and 3600')
+    if slurm['egress_mode'] == 'mac-ssh':
+        path = Path(slurm['egress_root'])
+        # Claude reads its token from .env inside the job (slurm_job.execute) and needs only the route.
+        routed = slurm['auth_mode'] == 'subscription' or config['policy']['engine'] == 'claude'
+        if not routed or not path.is_absolute() or '..' in path.parts:
+            raise ValueError('Mac egress requires subscription mode or Claude, and an absolute private egress_root')
+    elif slurm['egress_root']:
+        raise ValueError('egress_root requires slurm.egress_mode=mac-ssh')
     for field in ('gpus', 'cpus_per_task', 'memory_gib', 'time_limit_s', 'stop_warning_s'):
         if slurm[field] < (0 if field == 'gpus' else 1):
             raise ValueError('Invalid slurm.' + field)

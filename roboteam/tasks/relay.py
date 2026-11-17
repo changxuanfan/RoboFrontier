@@ -1,21 +1,16 @@
-"""Current Relay task contract, independent of historical scene revisions.
+"""The Relay task contract: its instructions and Goal acceptance, defined once.
 
-The geometry stays in the existing frozen workstation folders. This module
-defines current instructions and Goal acceptance once; old recorded tasks do
-not acquire these semantics merely because they are read by newer code.
+The geometry stays in the released workstation folders.
 """
 from copy import deepcopy
-from pathlib import Path
-import json
 
-LEGACY_RULE_REVISION = 'relay-final-goal-50mm-v1'
 RULE_REVISION = 'relay-timber-goal-70pct-v1'
 BOUNDARY_TOLERANCE_M = .050
 LOW_RELEASE_GAP_M = .030
 
 
 def is_current(task):
-    return task.get('completion', {}).get('rule_revision') in (RULE_REVISION, LEGACY_RULE_REVISION)
+    return task.get('completion', {}).get('rule_revision') == RULE_REVISION
 
 
 def final_task(task):

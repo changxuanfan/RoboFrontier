@@ -104,7 +104,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_live_world_lock_blocks_stage_out_before_copying(self):
         self.stage()
-        lock_path = self.local/'source/runs/policy/batch/luna/case/private/state/world.lock'
+        lock_path = self.local/'source/runs/policy/batch/luna/case/private/state/control/world.lock'
         lock_path.parent.mkdir(parents=True)
         with lock_path.open('a+') as owner:
             fcntl.flock(owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -141,8 +141,8 @@ class SlurmJobTests(unittest.TestCase):
             '.roboteam/codex/task/sessions/session.jsonl': b'exact native session\n',
             '.roboteam/codex/task/auth.json': b'PRIVATE AUTH',
             '.roboteam/codex/task/state.sqlite': b'private CLI runtime state',
-            'runs/policy/batch/haiku/case/private/claude-config/.credentials.json': b'PRIVATE CLAUDE AUTH',
-            'runs/policy/batch/haiku/case/private/claude-config/projects/project/session.jsonl': b'Claude session',
+            'runs/policy/batch/haiku/case/private/engine/config/.credentials.json': b'PRIVATE CLAUDE AUTH',
+            'runs/policy/batch/haiku/case/private/engine/config/projects/project/session.jsonl': b'Claude session',
         }
         for relative, content in files.items():
             path = source/relative
@@ -156,7 +156,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertFalse(any(p.name == 'auth.json' for p in output.rglob('*')))
         self.assertFalse(any(p.name == 'state.sqlite' for p in output.rglob('*')))
         self.assertFalse(any(p.name == '.credentials.json' for p in output.rglob('*')))
-        self.assertTrue(any(p.name == 'session.jsonl' and 'claude-config' in str(p) for p in output.rglob('*')))
+        self.assertTrue(any(p.name == 'session.jsonl' and 'engine/config' in str(p) for p in output.rglob('*')))
         for name, expected in report['sha256'].items():
             self.assertEqual(slurm.checksum(output/name), expected)
         self.assertTrue((source/'.roboteam/codex/task/auth.json').exists())
@@ -273,7 +273,7 @@ class SlurmJobTests(unittest.TestCase):
         with patch('sqlite3.connect', side_effect=AssertionError('must not open SQLite')):
             slurm.request_stop(self.local)
             status = slurm.snapshot(self.local, self.submission)
-        self.assertTrue((run/'STOP').exists())
+        self.assertTrue((run/'private/state/control/STOP').exists())
         self.assertEqual(status['status'], 'running')
 
     def test_queue_options_keep_task_and_allocation_clocks_distinct(self):
@@ -329,7 +329,7 @@ class SlurmJobTests(unittest.TestCase):
                       return_value={'basic_receipt': str(receipts['basic']), 'blocked_receipt': str(receipts['blocked'])})
         ready.start(); self.addCleanup(ready.stop)
         self.config = load_configuration(host='slurm', overrides={
-            'schema_version': 8, 'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
+            'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay), 'egress_pause_s': 120}})
         # The token must be in the checkout's .env (ignored by Git), never only in the shell.
         with self.assertRaisesRegex(ValueError, 'keep CLAUDE_CODE_OAUTH_TOKEN in'):
@@ -351,11 +351,11 @@ class SlurmJobTests(unittest.TestCase):
                 slurm.submit(self.config, self.root/'second', root=self.repo)
         # Only Claude carries a token this way; Codex keeps the job-scoped subscription store.
         with self.assertRaisesRegex(ValueError, 'Mac egress requires'):
-            load_configuration(host='slurm', overrides={'schema_version': 8, 'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay)}})
+            load_configuration(host='slurm', overrides={'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay)}})
 
     def test_claude_route_admits_egress_and_restores_the_environment(self):
         config = load_configuration(host='slurm', overrides={
-            'schema_version': 8, 'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
+            'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(self.root/'egress')}})
         self.local.mkdir()
         seen = {}

@@ -1,5 +1,4 @@
 """Bounded capacity recovery; never resubmits robot requests or recreates forks."""
-import json
 import time
 
 from roboteam.runtime import layout as run_layout
@@ -75,7 +74,7 @@ def recover(host, store, now=None, *, history_available=None):
         notice = host.run/'private/inputs/bootstrap/capacity-resume.md'
         if (host.state != 'error' or not host.retryable_capacity or not notice.is_file()
                 or host.capacity_retry_count >= host.max_capacity_retries
-                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop', getattr(host, 'engine', 'claude')).exists()
+                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop').exists()
                 or store.get('lifecycle') != 'running' or store.get('dispatch_paused', False)):
             return False
         try:
@@ -121,7 +120,7 @@ def recover_model_loss(host, store):
     notice = host.run/'private/inputs/bootstrap/model-restart.md'
     with host.lock:
         if (host.state != 'error' or not getattr(host, 'cli_lost', False) or not notice.is_file()
-                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop', getattr(host, 'engine', 'claude')).exists()
+                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop').exists()
                 or store.get('lifecycle') != 'running' or store.get('dispatch_paused', False)):
             return False
         if host.budget_status not in ('tracking', 'not_set'): return False
@@ -190,7 +189,7 @@ def recover_quota(host, store, now=None):
     with host.lock:
         limit = ((host.last_result or {}).get('summary') or {}).get('usage_limit')
         if (host.state != 'error' or not limit or not notice.is_file() or getattr(host, 'quota_handled', None) == host.turn_id
-                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop', getattr(host, 'engine', 'claude')).exists()
+                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop').exists()
                 or store.get('lifecycle') != 'running'):
             return False
         ids = {'actor': host.actor, 'thread_id': host.session_id}
@@ -230,18 +229,10 @@ def recover_quota(host, store, now=None):
         return True
 
 
-def _active_time(run):
-    from roboteam.runtime.clock import WALL_CLOCK, run_clock
-    task = run/'private/inputs/task.json'
-    try: return run_clock(json.loads(task.read_text()).get('run_protocol') or {}) != WALL_CLOCK
-    except (OSError, ValueError, AttributeError): return False
-
-
-def recover_network(host, store, now=None, *, active_time=None):
+def recover_network(host, store, now=None):
     """Resend once a turn that failed on the network during an outage or egress pause.
 
-    Runs whose protocol counts active time only (clock active_time_v1), as the Codex host does
-    (codex_policy_host.js retryCapacity): after the world resumes it records `egress_recovery`;
+    As the Codex host does (codex_policy_host.js retryCapacity): after the world resumes it records `egress_recovery`;
     a failed turn of this role seen within that pause (NETWORK_WINDOW_S either side) that is a
     network failure, or whose record does not say what failed, is continued once per role and
     pause in the same session with the frozen network notice, once the role has no robot work
@@ -256,8 +247,8 @@ def recover_network(host, store, now=None, *, active_time=None):
         failed_at = getattr(host, 'failed_at', None)
         if (host.state != 'error' or failed_at is None or getattr(host, 'cli_lost', False)
                 or getattr(host, 'network_handled', None) == host.turn_id
-                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop', getattr(host, 'engine', 'claude')).exists()
-                or not notice.is_file() or not (active_time or _active_time)(host.run)
+                or host.cancel_event.is_set() or run_layout.path(host.run, 'stop').exists()
+                or not notice.is_file()
                 or store.get('lifecycle') != 'running' or store.get('dispatch_paused', False)
                 or host.budget_status not in ('tracking', 'not_set')):
             return False

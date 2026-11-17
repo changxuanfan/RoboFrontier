@@ -20,7 +20,6 @@ import stat
 import subprocess
 import tempfile
 from ..io import file_sha256 as digest
-from roboteam.io import schema_of
 
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z')
 TERMINAL = {'closed', 'needs_review', 'stopped', 'stopped_before_start'}
@@ -67,7 +66,7 @@ def _alive(pid):
 def native_matches(engine, run, home, tid):
     """Where one native session is looked up and its transcripts there, plain or archived.
 
-    A run-v6 Codex run carries its own copies; earlier Codex runs use the shared home."""
+    A sealed Codex run carries its own copies; one that never sealed still has them in its home."""
     if engine == 'claude':
         root = history_directory(run)
         return root, [p for p in session_glob(root/'projects', tid+'.jsonl') if p.parent.parent == root/'projects']
@@ -81,7 +80,7 @@ def session_name(tid, transcript):
 
 
 def host_is_live(pid, run):
-    """A historical live PID is insufficient: it may belong to an unrelated job."""
+    """A live recorded PID is insufficient: it may belong to an unrelated job."""
     if not _alive(pid):
         return False
     if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 1:
@@ -134,8 +133,8 @@ def _files(root, tolerated=(), skipped=None):
                 if not tolerate(parent/name, 'symlink'):
                     raise ValueError('Symlink inside evidence; resolve explicitly before collecting: ' + str(parent/name))
                 linked.add(name)
-        # run-v3 keeps the native configuration in private/claude-config, run-v6 in private/engine/config.
-        dirs[:] = sorted(d for d in dirs if d not in linked and d != 'claude-config' and not (d == 'config' and parent.name == 'engine'))
+        # The native configuration (private/engine/config) is collected separately.
+        dirs[:] = sorted(d for d in dirs if d not in linked and not (d == 'config' and parent.name == 'engine'))
         # Finder writes .DS_Store into any folder it shows, even during collection;
         # it is desktop metadata, not run evidence.
         for name in sorted(f for f in files if f != '.DS_Store' and f not in linked):
@@ -144,15 +143,6 @@ def _files(root, tolerated=(), skipped=None):
                 if tolerate(path, 'nonregular'): continue
                 raise ValueError('Nonregular evidence file: ' + str(path))
             yield path
-
-
-def policy_workspace(run, engine):
-    """The run's policy-writable folder, or None when it is the run itself (run-v3)."""
-    try:
-        folder = run_layout.path(run, 'policy_cwd', engine)
-    except (KeyError, ValueError):
-        return None
-    return None if Path(os.path.normpath(folder)) == Path(os.path.normpath(run)) else folder
 
 
 def motion_inventory(run):
@@ -164,10 +154,8 @@ def motion_inventory(run):
         if not isinstance(task, dict): raise ValueError('Task must be an object')
     except ValueError:
         return ['task metadata unreadable; motion inventory requires review']
-    folders = [run/'private/outputs/motion']
-    if run_segments.supported(run):
-        # A continued run records one motion stream per segment (docs/running/continuation.md).
-        folders += [run_segments.output_dir(run, k)/'motion' for k in range(1, load_segment(run)+1)]
+    # A continued run records one motion stream per segment (docs/running/continuation.md).
+    folders = [run_segments.output_dir(run, k)/'motion' for k in range(load_segment(run)+1)]
     issues = []
     for k, path in enumerate(folders):
         found = _motion_folder_inventory(path, task)
@@ -194,7 +182,7 @@ def _motion_folder_inventory(path, task):
         return p
     try:
         stream = load(path/'stream.json')
-        if schema_of(stream) != 'roboteam.motion.v1' or stream.get('status') not in ('complete','interrupted'):
+        if stream.get('schema') != 'roboteam.motion.v1' or stream.get('status') not in ('complete','interrupted'):
             raise ValueError('Motion index is not finalized')
         chunks = stream['chunks']
         if not chunks or stream['frames'] != sum(c['frames'] for c in chunks):
@@ -215,17 +203,16 @@ def _motion_folder_inventory(path, task):
         return ['motion inventory: '+str(error)]
 
 
-def collect_batch(batch_path, output, *, codex_home=None):
+def collect_batch(batch_path, output):
     batch_path = Path(batch_path).resolve()
     output = Path(output).resolve()
     if output.exists() or output.is_relative_to(batch_path) or batch_path.is_relative_to(output):
         raise ValueError('Collection output must be new and outside the source batch')
     batch = load(batch_path/'batch.json')
-    # Claude batches prepared before 2026-11-11 are 'roboteam.claude-draft.v1'.
-    claude = ('roboteam.claude-batch.v2', 'roboteam.claude-draft.v1')
-    engine = 'claude' if schema_of(batch) in claude else 'codex'
-    if schema_of(batch) not in (None, 'roboteam.cli-benchmark.v1', *claude):
+    engines = {'roboteam.claude-batch.v2': 'claude', 'roboteam.cli-benchmark.v1': 'codex'}
+    if batch.get('schema') not in engines:
         raise ValueError('Unsupported batch schema')
+    engine = engines[batch['schema']]
     state_path = run_layout.batch_path(batch_path, 'engineering_status') if engine == 'claude' else batch_path/'batch.json'
     state = load(state_path)
     if state.get('status') not in TERMINAL:
@@ -234,7 +221,7 @@ def collect_batch(batch_path, output, *, codex_home=None):
     if not isinstance(jobs, list) or not jobs:
         raise ValueError('Batch has no jobs')
     marker = run_layout.batch_path(batch_path, 'codex_home_marker')
-    batch_home = Path(codex_home).resolve() if codex_home else Path(load(marker)['codex_home']).resolve() if marker.exists() else Path(os.environ.get('CODEX_HOME', Path.home()/'.codex')).resolve()
+    batch_home = Path(load(marker)['codex_home']).resolve() if marker.exists() else Path(os.environ.get('CODEX_HOME', Path.home()/'.codex')).resolve()
     state_jobs = {(j.get('profile'), j.get('case_id')): j for j in state.get('jobs', [])}
     seen = set()
     runs = []
@@ -265,12 +252,12 @@ def collect_batch(batch_path, output, *, codex_home=None):
                 lock_if_present(stack, run_layout.batch_path(batch_path, key))
             for job, run, status in runs:
                 for key in ('world_lock', 'engineering_lock'):
-                    lock_if_present(stack, run_layout.path(run, key, engine))
-                host = run_layout.path(run, 'host_process', engine)
+                    lock_if_present(stack, run_layout.path(run, key))
+                host = run_layout.path(run, 'host_process')
                 if host.is_file() and host_is_live(load(host).get('pid'), run):
                     raise ValueError('Recorded host PID is still live; collect in the runner environment: ' + str(host))
-            workspaces = {run: policy_workspace(run, engine) for job, run, status in runs}
-            tolerated = tuple(folder for folder in workspaces.values() if folder is not None)
+            workspaces = {run: run_layout.path(run, 'policy_cwd') for job, run, status in runs}
+            tolerated = tuple(workspaces.values())
             skipped = []
             initial_files = list(_files(batch_path, tolerated, skipped))
             hashes, native_sources, native_directories, native_queries = {}, {}, {}, []
@@ -279,12 +266,12 @@ def collect_batch(batch_path, output, *, codex_home=None):
                 hashes[rel.as_posix()] = copy_stable(path, temporary/rel)
             rows = []
             for job, run, status in runs:
-                run_marker=run_layout.path(run,'codex_home_marker',engine)
-                native_config=run_layout.path(run,'engine_config',engine).relative_to(run)
-                home=Path(load(run_marker)['codex_home']).resolve() if not codex_home and run_marker.is_file() else batch_home
+                run_marker=run_layout.path(run,'codex_home_marker')
+                native_config=run_layout.path(run,'engine_config').relative_to(run)
+                home=Path(load(run_marker)['codex_home']).resolve() if run_marker.is_file() else batch_home
                 issues, roles, snapshot_sessions = [], [], []
                 for path, kind, link in skipped:
-                    if workspaces[run] is not None and path.is_relative_to(workspaces[run]):
+                    if path.is_relative_to(workspaces[run]):
                         issues.append('workspace %s not collected: %s%s' % (kind, path.relative_to(run).as_posix(),
                                                                            '' if link is None else ' -> '+link))
                 db = temporary/'batch'/run.relative_to(batch_path)/'private/state/runtime.sqlite'
@@ -365,7 +352,7 @@ def collect_batch(batch_path, output, *, codex_home=None):
                 for delegation_id, delegation in meta.get('delegations', {}).items():
                     tid = delegation.get('snapshot_thread_id')
                     if tid is None:
-                        continue  # historical runs did not create anchors
+                        continue  # no snapshot was taken for this delegation
                     if not isinstance(tid, str) or not ID.fullmatch(tid):
                         issues.append(str(delegation_id)+': invalid snapshot session id')
                         continue
@@ -397,7 +384,7 @@ def collect_batch(batch_path, output, *, codex_home=None):
                     launch_file = run/'private/inputs/claude.json'
                     launch = load(launch_file) if launch_file.is_file() else {}
                     if launch.get('profile', {}).get('auth_mode') == 'native_login':
-                        relative = Path('batch')/run.relative_to(batch_path)/run_layout.path(run, 'collected_sessions', engine).relative_to(run)
+                        relative = Path('batch')/run.relative_to(batch_path)/run_layout.path(run, 'collected_sessions').relative_to(run)
                         marker = temporary/relative
                         if not marker.exists():
                             write_json(marker, {'schema':'roboteam.claude-collected-sessions.v1',
@@ -466,9 +453,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('batch', type=Path)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--codex-home', type=Path, help='Explicit home for legacy Codex batches without a marker')
     args = parser.parse_args()
-    report = collect_batch(args.batch, args.output, codex_home=args.codex_home)
+    report = collect_batch(args.batch, args.output)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report['complete'] else 1
 

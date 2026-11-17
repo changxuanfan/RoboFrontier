@@ -95,7 +95,7 @@ class EngineTests(unittest.TestCase):
         home=self.root/'home'; sessions=home/'.codex/sessions'; sessions.mkdir(parents=True)
         (sessions/('log-'+PARENT+'.jsonl')).write_text(json.dumps({
             'type':'turn_context','payload':{'model':'test-model','effort':'high','turn_id':'codex'}})+'\n')
-        run=self.root/'run'; evidence=run/'private/evidence'; evidence.mkdir(parents=True)
+        run=self.root/'run'; evidence=run/'private/engine/turns'; evidence.mkdir(parents=True)
         (evidence/'controller-summary.json').write_text(json.dumps({
             'actor':'Controller','session_id':PARENT,'turn_id':'claude','status':'idle',
             'record':{'summary':{'reported_model':'test-model'}}}))
@@ -162,8 +162,8 @@ class ClaudeProvenanceTests(unittest.TestCase):
     def test_runtime_dispatch_reads_the_runs_claude_config_and_keeps_codex_path(self):
         run = Path(self.tmp.name) / 'run'
         self.fork()
-        (run / 'private').mkdir(parents=True)
-        (run / 'private/claude-config').symlink_to(self.config)
+        (run / 'private/engine').mkdir(parents=True)
+        (run / 'private/engine/config').symlink_to(self.config)
         store = RuntimeStore(run / 'private/state/runtime.sqlite')
         try:
             store.initialize('fake', load_harness(harness_file(self.tmp.name, 'claude')), ['A'])

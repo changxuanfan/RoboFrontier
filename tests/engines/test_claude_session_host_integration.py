@@ -19,7 +19,7 @@ from roboteam.engines.claude import claude_offline_probe as probe
 class ClaudeSessionHostIntegrationTests(unittest.TestCase):
     def test_native_cli_turn_and_resume_with_role_bound_image_tool(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / 'run'
+            run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             roles = run / 'public/inputs/roles.json'; roles.parent.mkdir(parents=True)
             roles.write_text(json.dumps({'roles': {'Controller': {'kind': 'controller'}}}))
             image = run / 'public/observations/top.png'; image.parent.mkdir(parents=True)
@@ -42,7 +42,7 @@ class ClaudeSessionHostIntegrationTests(unittest.TestCase):
                 self.assertGreaterEqual(len(probe.REQUESTS), 2)
                 self.assertIn('"type": "image"', json.dumps(probe.REQUESTS[-1]))
                 cfg = json.loads((Path(__file__).resolve().parents[2] / 'configs/harnesses/policy.json').read_text())
-                cfg.update(engine='claude', topology='single-agent', startup_protocol='direct_controller_v2')
+                cfg.update(engine='claude', topology='single-agent', startup_protocol='direct_controller')
                 store = RuntimeStore(run / 'private/state/runtime.sqlite')
                 try:
                     store.initialize('run', cfg, ['A'])

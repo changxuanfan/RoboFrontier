@@ -19,19 +19,17 @@ from roboteam.batch.prepare import load_env
 from roboteam.engines.codex.launch import profile
 from roboteam.batch.tasks import check_case_assets
 from ..io import file_sha256 as digest
-from roboteam.io import schema_of
 
 
 def pinned_asset_release(root, config):
     """The task release the pinned asset archive was built for, once this release is reviewed.
 
-    A reviewed task-only revision (contract text, scoring rules, historical-edit
-    metadata) keeps every scene asset, so it reuses the archive; restore_assets still
+    A reviewed task-only revision (contract text, scoring rules) keeps every scene asset, so it reuses the archive; restore_assets still
     checks each scene and Panda file against this release's own hashes, so a changed
     asset can never be restored from it."""
     current = digest(root/RELEASE)
     if current != config['release_sha256']:
-        raise ValueError('Task release does not match pinned R14 asset package')
+        raise ValueError('Task release does not match the pinned asset package')
     return config.get('archive_release_sha256', current)
 
 
@@ -100,7 +98,7 @@ def restore_assets(archive_path, root=ROOT):
         release = digest(root/RELEASE)
         if manifest.get('release_sha256') != release and (root/'configs/policy-assets.json').is_file():
             release = pinned_asset_release(root, read(root/'configs/policy-assets.json'))
-        if schema_of(manifest)!='roboteam.policy-assets.v1' or manifest['release_sha256']!=release:
+        if manifest.get('schema')!='roboteam.policy-assets.v1' or manifest['release_sha256']!=release:
             raise ValueError('Asset archive belongs to a different task release')
         expected=scene_assets(root)
         for name,checksum in expected.items():

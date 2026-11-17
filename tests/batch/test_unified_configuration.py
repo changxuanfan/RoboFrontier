@@ -72,19 +72,16 @@ class UnifiedConfigurationTests(unittest.TestCase):
         with patch('shutil.which', return_value='/usr/bin/nvidia-smi'):
             self.assertEqual(detected_render_device('Linux'), 'nvidia')
 
-    def test_old_operator_toml_uses_its_own_defaults_shape(self):
-        for version in (1,2,3):
-            with self.subTest(version=version),tempfile.TemporaryDirectory() as temporary:
-                path=Path(temporary)/'old.toml'
+    def test_only_the_current_schema_version_is_read(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path=Path(temporary)/'site.toml'
+            path.write_text('[batch]\nparallel=2\n')
+            self.assertEqual(load_configuration(path)['batch']['parallel'],2)
+            for version in (1,10,12):
                 path.write_text(f'schema_version={version}\n[batch]\nparallel=2\n')
-                config=load_configuration(path)
-                self.assertEqual(config['schema_version'],version)
-                self.assertEqual(config['batch']['parallel'],2)
-                self.assertEqual('factory' in config,version>=2)
-                self.assertEqual('oracle' in config,version>=3)
-                if version==3:self.assertEqual(config['oracle'],{})
-                with self.assertRaises(ValueError):
-                    load_configuration(path,{'oracle':{'evaluation_mode':'task-reference'}})
+                with self.assertRaisesRegex(ValueError,'schema_version'):load_configuration(path)
+            with self.assertRaises(ValueError):
+                load_configuration(overrides={'oracle':{'evaluation_mode':'task-reference'}})
 
     def test_invalid_options_fail_before_installation_or_launch(self):
         cases = [{'batch': {'paralell': 3}}, {'batch': {'parallel': True}},
@@ -132,7 +129,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
             self.assertEqual(verify_inputs(run), [])
             harness = json.loads((run/'private/inputs/harness.json').read_text())
             self.assertEqual(harness['startup_timeout_s'], 600)
-            self.assertEqual(harness['startup_protocol'], 'direct_controller_v2')
+            self.assertEqual(harness['startup_protocol'], 'direct_controller')
             document['execution']['startup_interval_s'] = 0
             (batch/'batch.json').write_text(json.dumps(document))
             with self.assertRaisesRegex(ValueError, 'frozen configuration'):
@@ -148,7 +145,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
                 job = json.loads((batch/'batch.json').read_text())['jobs'][0]
                 run = Path(job['run_directory'])
                 harness = json.loads((run/'private/inputs/harness.json').read_text())
-                self.assertEqual(harness['startup_protocol'], 'direct_team_v3')
+                self.assertEqual(harness['startup_protocol'], 'direct_team')
                 roles = json.loads((run/'public/inputs/roles.json').read_text())['roles']
                 self.assertEqual(set(roles), {'Meta', 'Controller', 'A', 'B', 'C', 'D'} if topology == 'hierarchical' else {'Meta', 'A', 'B', 'C', 'D'})
                 self.assertEqual(verify_inputs(run), [])
@@ -168,7 +165,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
                 self.assertEqual(data['model_calls'], 0)
                 run = Path(data['jobs'][0]['run_directory'])
                 harness = json.loads((run/'private/inputs/harness.json').read_text())
-                self.assertEqual(harness['startup_protocol'], 'direct_team_v3')
+                self.assertEqual(harness['startup_protocol'], 'direct_team')
                 roles = json.loads((run/'public/inputs/roles.json').read_text())['roles']
                 self.assertEqual(set(roles), {'Meta','A','B','C','D'} |
                     ({'Controller'} if topology == 'hierarchical' else set()))

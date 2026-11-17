@@ -48,7 +48,7 @@ def role_mcp_config(run_dir, actor, python=sys.executable, *, _validated_delegat
     info = json.loads(connection.read_text())
     if info.get('actor') != actor or info.get('run_id') != run.name or info.get('schema_version') != 3:
         raise ValueError('Role connection does not match this run')
-    target = run_layout.path(run, 'engine_mcp', 'claude') / (actor + '.json')
+    target = run_layout.path(run, 'engine_mcp') / (actor + '.json')
     # A model never chooses the actor or a connection path. The server binds it.
     project = Path(__file__).resolve().parents[3]
     write_json(target, {'mcpServers': {'robot': {

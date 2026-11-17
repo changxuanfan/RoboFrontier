@@ -15,7 +15,6 @@ from roboteam.runtime.setup import verify_inputs, write_json
 from roboteam.batch.launch_schedule import LaunchSchedule
 from roboteam.runtime.segments import try_continue
 from roboteam.batch.claude_prepare import BATCH_SCHEMA, LAUNCH_SCHEMA
-from roboteam.io import schema_of
 
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z')
 
@@ -25,7 +24,7 @@ def _b(folder, key):
 
 
 def _r(run, key):
-    return run_layout.path(run, key, 'claude')
+    return run_layout.path(run, key)
 
 
 def _touch(path):
@@ -41,7 +40,7 @@ def _stop_all(folder, jobs):
 def _jobs(folder):
     folder = Path(folder).resolve()
     batch = json.loads((folder / 'batch.json').read_text())
-    if schema_of(batch) != BATCH_SCHEMA or batch.get('status') != 'prepared_not_started':
+    if batch.get('schema') != BATCH_SCHEMA or batch.get('status') != 'prepared_not_started':
         raise ValueError('Expected a prepared Claude batch')
     jobs = batch.get('jobs')
     if not isinstance(jobs, list) or not jobs: raise ValueError('Batch has no jobs')

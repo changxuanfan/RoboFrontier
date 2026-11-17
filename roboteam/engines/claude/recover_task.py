@@ -96,14 +96,9 @@ def fail_unstarted_reviews(store):
     return failed
 
 
-def inspect(run, source, *, processes=None, own=False, upgrade_from=None):
-    """Read-only eligibility. `own`: the caller holds this run's recovery lock.
-
-    `upgrade_from`: the checkout the run is frozen on, when `source` is a newer runtime it is
-    to be upgraded to (runtime_upgrade). Only that explicit operator path continues a run that
-    has already continued or was recovered before."""
+def inspect(run, source, *, processes=None, own=False):
+    """Read-only eligibility. `own`: the caller holds this run's recovery lock."""
     run, source = Path(run).resolve(), Path(source).resolve()
-    frozen = Path(upgrade_from).resolve() if upgrade_from is not None else source
     folder, index = _batch(run)
     previous = run/'private/state/control/recovery.json'
     if previous.exists():
@@ -112,17 +107,17 @@ def inspect(run, source, *, processes=None, own=False, upgrade_from=None):
         # one that prepared the segment, or is still running, never is.
         if not own and not _lock_free(previous.parent/'recovery.lock'):
             raise RecoveryBlocked('A recovery of this run is in progress')
-        if record.get('prepared') and (upgrade_from is None or record.get('phase') not in ('closed', 'needs_review')):
+        if record.get('prepared'):
             raise RecoveryBlocked('This run was already recovered once; never repeat it automatically')
-    if run_layout.batch_path(folder, 'stop').exists() or run_layout.path(run, 'stop', 'claude').exists():
+    if run_layout.batch_path(folder, 'stop').exists() or run_layout.path(run, 'stop').exists():
         raise RecoveryBlocked('Stop requested')
     job = json.loads(run_layout.batch_path(folder, 'engineering_status').read_text())['jobs'][index]
     if job.get('status') != 'needs_review' or job.get('reason') not in RECOVERABLE_REASONS:
         raise RecoveryBlocked('The batch has not handed this task back after a recoverable host end')
-    status = json.loads(run_layout.path(run, 'engineering_status', 'claude').read_text())
+    status = json.loads(run_layout.path(run, 'engineering_status').read_text())
     if status.get('status') != 'needs_review' or status.get('reason') not in RECOVERABLE_REASONS:
         raise RecoveryBlocked('The run did not end with a recoverable host end')
-    if not _lock_free(run_layout.path(run, 'engineering_lock', 'claude')):
+    if not _lock_free(run_layout.path(run, 'engineering_lock')):
         raise RecoveryBlocked('The original Claude runner still holds this run')
     with readonly(run) as store:
         if store.get('integrity_valid') is not True: raise RecoveryBlocked('Run integrity is not valid')
@@ -155,10 +150,10 @@ def inspect(run, source, *, processes=None, own=False, upgrade_from=None):
         holds = store.get('arm_holds') or {}
         if any(not 0 <= sim_s-hold.get('sim_s', -1e9) <= run_segments.HOLD_MAX_AGE_S for hold in holds.values()):
             raise RecoveryBlocked('A recorded grasp is too old to restore safely')
-        changed = verify_inputs(run, source_root=frozen)
+        changed = verify_inputs(run, source_root=source)
         if changed: raise RecoveryBlocked('Frozen inputs changed: '+', '.join(changed[:3]))
         return {'run': str(run), 'batch': str(folder), 'job_reason': job['reason'], 'world_live': live,
-                'frozen_source': str(frozen), 'source': str(source),
+                'source': str(source),
                 'segment': store.get('segment', 0)+1, 'frame': frame, 'sim_s': sim_s,
                 'pose_sha256': hashlib.sha256(pose.tobytes()).hexdigest(), 'held_arms': sorted(holds),
                 'ledger_sha256': _ledger(store.db, unsettled), 'role_threads': threads, 'failed_setups': reviews,
@@ -185,14 +180,8 @@ print(json.dumps(result, default=str))
 """
 
 
-def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Popen, upgrade_from=None, reason=None):
+def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Popen):
     run, source, python = Path(run).resolve(), Path(source).resolve(), Path(python).absolute()
-    if upgrade_from is not None:
-        if not isinstance(reason, str) or not reason.strip(): raise RecoveryBlocked('A runtime upgrade needs a stated reason')
-        # The upgrade grants policy read access to this interpreter's environment, which must be
-        # the one the continued runner uses.
-        if Path(sys.prefix).absolute() != python.parent.parent:
-            raise RecoveryBlocked('Run the upgrade with the interpreter given as --python')
     from roboteam.runtime.access import mode
     scratch = Path(scratch).resolve(); info = scratch.stat()
     access = json.loads((run/'private/inputs/policy-access.json').read_text())
@@ -202,7 +191,7 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
     control = run/'private/state/control'; control.mkdir(parents=True, exist_ok=True)
     with (control/'recovery.lock').open('a+') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        plan = inspect(run, source, own=True, upgrade_from=upgrade_from)  # this process now holds the recovery lock
+        plan = inspect(run, source, own=True)  # this process now holds the recovery lock
         status_path = control/'recovery.json'
         earlier = [json.loads(status_path.read_text())] if status_path.exists() else []
         earlier = (earlier[0].pop('earlier_attempts', []) + earlier) if earlier else []
@@ -218,7 +207,7 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
                 store = RuntimeStore(run/'private/state/runtime.sqlite')
                 try: record['seal'] = seal(store, 0)
                 finally: store.close()
-                again = inspect(run, source, own=True, upgrade_from=upgrade_from)
+                again = inspect(run, source, own=True)
                 if again['ledger_sha256'] != plan['ledger_sha256'] or again['interrupted'] != plan['interrupted']:
                     raise RecoveryBlocked('Call ledger changed while sealing the closed world')
             if plan['world_live']:
@@ -228,12 +217,12 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
                 try: record['seal'] = seal(store, 60)
                 finally: store.close()
                 if not run_segments.owner_released(run): raise RecoveryBlocked('The world did not release its lock')
-                sealed = inspect(run, source, own=True, upgrade_from=upgrade_from)
+                sealed = inspect(run, source, own=True)
                 if sealed['ledger_sha256'] != plan['ledger_sha256']: raise RecoveryBlocked('Call ledger changed while sealing')
                 plan = {**sealed, 'world_live': True}
                 record.update(plan, phase='validating', earlier_attempts=earlier); write_json(status_path, record)
             record['physical_check'] = validate_physical_restore(run, source, python, scratch, plan)
-            again = inspect(run, source, own=True, upgrade_from=upgrade_from)
+            again = inspect(run, source, own=True)
             if {k: v for k, v in again.items() if k != 'world_live'} != {k: v for k, v in plan.items() if k != 'world_live'}:
                 raise RecoveryBlocked('Task changed during validation')
             backup = scratch/('runtime-before-segment-%d-%d.sqlite' % (plan['segment'], time.time_ns()//1000000))
@@ -243,20 +232,11 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
             store = RuntimeStore(run/'private/state/runtime.sqlite')
             try:
                 record['prepared'] = True; write_json(status_path, record)
-                authorization = None
-                if upgrade_from is not None:
-                    from roboteam.runtime import upgrade as runtime_upgrade
-                    authorization = runtime_upgrade.upgrade(run, store, previous_source=Path(upgrade_from).resolve(),
-                                                            reason=reason, expected_segment=plan['segment']-1,
-                                                            expected_ledger=runtime_upgrade.ledger(store), source=source)
-                    record['authorization'] = authorization; write_json(status_path, record)
-                store.event('MANUAL_TASK_RECOVERY', 'Meta', {'reason': reason or REASON, 'engine': 'claude',
-                                                            'authorization': authorization,
+                store.event('MANUAL_TASK_RECOVERY', 'Meta', {'reason': REASON, 'engine': 'claude',
                                                             'plan': {k: plan[k] for k in ('segment', 'frame', 'sim_s', 'pose_sha256',
                                                                                           'failed_setups', 'remaining_s', 'role_threads')}})
                 record['failed_setups'] = fail_unstarted_reviews(store)
-                run_segments.prepare_retry(run, store, reason or REASON, manual=True, source_root=source,
-                                           manual_authorization=authorization)
+                run_segments.prepare_retry(run, store, REASON, manual=True, source_root=source)
                 if _ledger(store.db, plan['interrupted']) != plan['ledger_sha256']:
                     raise RecoveryBlocked('Original call ledger changed during preparation')
                 record['robot_owners'] = store.get('robot_owners')
@@ -264,7 +244,7 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
             record['phase'] = 'host_started'; write_json(status_path, record)
             log_path = run/'private/logs/recovery-runner.log'
             with log_path.open('a') as log:
-                # The frozen runner and physics from the run's checkout (the upgraded one after an upgrade).
+                # The frozen runner and physics from the run's checkout.
                 host = launcher([str(python), '-I', '-c', RUNNER, str(source), plan['batch'], str(run)],
                                 cwd=source, stdout=log, stderr=log, stdin=subprocess.DEVNULL)
                 record['host_pid'] = host.pid; write_json(status_path, record)
@@ -272,7 +252,7 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
             with readonly(run) as final:
                 resumed = any(s.get('index') == plan['segment'] for s in (final.get('segments') or []))
                 lifecycle = final.get('lifecycle')
-            result = json.loads(run_layout.path(run, 'engineering_status', 'claude').read_text())
+            result = json.loads(run_layout.path(run, 'engineering_status').read_text())
             complete = code == 0 and resumed and result.get('status') == 'finished' and run_segments.owner_released(run)
             record.update(phase='closed' if complete else 'needs_review', host_exit_code=code, segment_started=resumed,
                           lifecycle=lifecycle, result_status=result.get('status'), result_reason=result.get('reason'),
@@ -293,7 +273,6 @@ def submit_durable(args):
     # Absolute paths: the job starts in this checkout, not in the caller's directory.
     argv = ['--run-dir', run, '--source-root', Path(args.source_root).resolve(), '--python', Path(args.python).absolute(),
             '--scratch', Path(args.scratch).resolve(), '--execute']
-    if args.upgrade_from is not None: argv += ['--upgrade-from', Path(args.upgrade_from).resolve(), '--reason', args.reason]
     tag = hashlib.sha256(str(run).encode()).hexdigest()[:16]
     stamp = time.strftime('%Y%m%dT%H%M%S')
     folder = run/'private/state/control'/('recovery-durable-'+stamp)
@@ -310,23 +289,19 @@ def main(argv=None):
     parser.add_argument('--python', type=Path, default=Path(sys.executable))
     parser.add_argument('--scratch', type=Path)
     parser.add_argument('--execute', action='store_true')
-    parser.add_argument('--upgrade-from', type=Path, help='The checkout the run is frozen on, to upgrade it to --source-root')
-    parser.add_argument('--reason', help='Why the runtime is upgraded (required with --upgrade-from)')
     parser.add_argument('--foreground', action='store_true',
                         help='On macOS, run --execute in this process instead of a launchd job (the default)')
     args = parser.parse_args(argv)
     try:
         if args.execute and sys.platform == 'darwin' and not args.foreground:
             if not args.scratch: parser.error('--execute requires --scratch')
-            inspect(args.run_dir, args.source_root, upgrade_from=args.upgrade_from)  # refuse before submitting
-            if args.upgrade_from is not None and not (args.reason or '').strip(): parser.error('--upgrade-from requires --reason')
+            inspect(args.run_dir, args.source_root)  # refuse before submitting
             print(json.dumps({'eligible': True, 'submitted': submit_durable(args)}, default=str))
             return
         if args.execute:
             if not args.scratch: parser.error('--execute requires --scratch')
-            result = execute(args.run_dir, args.source_root, args.python, args.scratch,
-                             upgrade_from=args.upgrade_from, reason=args.reason)
-        else: result = inspect(args.run_dir, args.source_root, upgrade_from=args.upgrade_from)
+            result = execute(args.run_dir, args.source_root, args.python, args.scratch)
+        else: result = inspect(args.run_dir, args.source_root)
         print(json.dumps({'eligible': True, **result}, default=str))
         if args.execute and result['phase'] != 'closed': raise SystemExit(1)
     except (RecoveryBlocked, OSError, ValueError) as error:

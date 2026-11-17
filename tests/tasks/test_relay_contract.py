@@ -1,4 +1,4 @@
-"""Current Goal acceptance and metadata agree without erasing legacy rules."""
+"""Goal acceptance and the task metadata agree."""
 from copy import deepcopy
 import unittest
 from unittest.mock import patch
@@ -25,7 +25,7 @@ class RelayContractTests(unittest.TestCase):
         mon.released = lambda geoms:True
         mon.violation = lambda *args, **kwargs:mon.violations.append(args)
         for state in relay.states.values():
-            state.update(airborne=True, landed=True, transitions=[dict(senders=['A','B'], receivers=['C','D'])])
+            state.update(airborne=True, landed=True, transitions=[dict(senders=['A','B'], receivers=['C','D'], airborne=True)])
         data.time=10
         return model,data,relay
 
@@ -43,15 +43,15 @@ class RelayContractTests(unittest.TestCase):
         self.assertTrue(relay.mon.result_cache['task_success'])
         self.assertEqual(relay.mon.result_cache['completed_payloads'],2)
 
-    def test_terminal_scoring_keeps_legacy_process_result_separate(self):
+    def test_terminal_scoring_keeps_the_process_result_separate(self):
         _,_,relay=self.world()
         relay.mon.task['run_protocol']={'evaluation_semantics':'terminal_outcome_v2'}
-        relay.states['p1'].update(landed=False, transitions=[], dropped=True)
+        relay.states['p1'].update(landed=False, dropped=True)
         relay.mon.violations=[{'kind':'inter_robot_contact','key':'A / B'}]
         relay.sample();result=relay.mon.result_cache
         self.assertTrue(result['terminal_goal_met'])
         self.assertTrue(result['task_success'])
-        self.assertFalse(result['legacy_process_goals_met'])
+        self.assertFalse(result['process_goals_met'])
         self.assertFalse(result['strict_task_success'])
         self.assertEqual(result['terminal_completed_payloads'],2)
 

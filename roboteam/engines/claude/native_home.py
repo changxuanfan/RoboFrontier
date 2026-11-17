@@ -11,7 +11,7 @@ def config_directory(run, profile=None):
         launch = run / 'private/inputs/claude.json'
         profile = json.loads(launch.read_text()).get('profile', {}) if launch.is_file() else {}
     if profile.get('auth_mode') != 'native_login':
-        return run_layout.path(run, 'engine_config', 'claude')
+        return run_layout.path(run, 'engine_config')
     if profile.get('provider') != 'anthropic' or profile.get('env_key'):
         raise ValueError('Native login requires Anthropic and no credential environment variable')
     value = profile.get('native_config_dir')
@@ -26,11 +26,11 @@ def config_directory(run, profile=None):
 def history_directory(run, profile=None):
     """Stopped exports use their collected sessions, never the original account."""
     run = Path(run)
-    marker = run_layout.path(run, 'collected_sessions', 'claude')
+    marker = run_layout.path(run, 'collected_sessions')
     if marker.is_file():
         saved = json.loads(marker.read_text())
         if (saved.get('schema') != 'roboteam.claude-collected-sessions.v1'
                 or saved.get('writers_stopped') is not True):
             raise ValueError('Invalid collected native session marker')
-        return run_layout.path(run, 'engine_config', 'claude')
+        return run_layout.path(run, 'engine_config')
     return config_directory(run, profile)

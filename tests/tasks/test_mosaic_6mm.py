@@ -14,7 +14,7 @@ class MosaicSixMmTests(unittest.TestCase):
                             bodies=[0], m=None, d=SimpleNamespace(xmat=np.eye(3).ravel()[None,:]))
         return bool(mosaic_candidates(mon,np.array([[offset[0],offset[1],.83]]),[stable])[0,0])
 
-    def test_versioned_threshold_and_legacy_default(self):
+    def test_the_task_threshold_and_the_default(self):
         rule={'xy_center_tolerance_m_inclusive':.006}
         self.assertFalse(self.candidate((.005077,0)))
         self.assertTrue(self.candidate((.005077,0),rule))

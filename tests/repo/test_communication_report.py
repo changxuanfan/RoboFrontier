@@ -21,13 +21,14 @@ def empty_run(run):
 
 
 class CommunicationReportTest(unittest.TestCase):
-    def test_legacy_claude_run_reads_its_own_host_log(self):
+    def test_a_claude_run_reads_its_host_log(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp)
             empty_run(run).close()
             (run / 'private/inputs').mkdir(parents=True)
             (run / 'private/inputs/manifest.json').write_text(json.dumps({'engine': 'claude'}))
-            (run / 'private/outputs/claude-host.jsonl').write_text(json.dumps(
+            (run / 'private/logs').mkdir()
+            (run / 'private/logs/host.jsonl').write_text(json.dumps(
                 {'event': 'robot_tool_completed', 'op': 'wait_events', 'actor': 'A', 'duration_s': 2.5})+'\n')
             result = report_run(run)
             self.assertTrue(result['host_log_found'])
@@ -46,8 +47,7 @@ class CommunicationReportTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             batch, output = Path(tmp)/'batch', Path(tmp)/'report.json'
             (batch/'control').mkdir(parents=True)
-            (batch/'batch.json').write_text(json.dumps({'status': 'prepared_not_started', 'jobs': [],
-                'layout': 'batch-v2', 'layout_paths': {'engineering_status': 'control/engineering-status.json'}}))
+            (batch/'batch.json').write_text(json.dumps({'status': 'prepared_not_started', 'jobs': [], 'layout': 'batch-v2'}))
             (batch/'control/engineering-status.json').write_text(json.dumps({'status': 'running'}))
             with mock.patch('sys.argv', ['communication_report', str(batch), '--output', str(output)]):
                 main()
@@ -56,7 +56,7 @@ class CommunicationReportTest(unittest.TestCase):
     def test_role_attribution_and_overlaps(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp)
-            out = run / 'private/outputs'
+            out = run / 'private/logs'; out.mkdir(parents=True)
             conn = empty_run(run)
             events = [
                 (1, 1, 'MESSAGE_PERSISTED', 'A', {}),
@@ -68,7 +68,7 @@ class CommunicationReportTest(unittest.TestCase):
             conn.executemany('insert into events values (?,?,?,?,?)', [(s,t,k,a,json.dumps(v)) for s,t,k,a,v in events])
             conn.commit()
             conn.close()
-            (out/'codex-host.jsonl').write_text(json.dumps({'event':'thread/tokenUsage/updated','thread_id':'thread-A','at':4,
+            (out/'host.jsonl').write_text(json.dumps({'event':'thread/tokenUsage/updated','thread_id':'thread-A','at':4,
                 'token_usage':{'total':{'inputTokens':100},'last':{'inputTokens':20}}})+'\n')
             result = report_run(run)
             self.assertEqual(result['roles']['A']['messages_sent'], 1)

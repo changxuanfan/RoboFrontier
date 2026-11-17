@@ -26,7 +26,7 @@ class SetupTests(unittest.TestCase):
         finally:store.close()
         self.assertIsNone(json.loads((run/'private/state/connections/A.json').read_text())['url'])
         self.assertTrue((run/'public/inputs/skill/references/tools.md').exists())
-        # run-v6: one shared lessons file in the only writable folder, frozen first
+        # One shared lessons file in the only writable folder, frozen first
         # messages and access table, and Meta's files kept private.
         self.assertEqual(json.loads((run/'private/inputs/manifest.json').read_text())['layout'],'run-v6')
         self.assertTrue((run/'workspace/skills.md').read_text().startswith('# Run skills'))
@@ -82,10 +82,10 @@ class SetupTests(unittest.TestCase):
         finally:store.close()
         self.assertEqual(verify_inputs(fresh),[])
 
-    def test_legacy_layout_is_not_migrated_or_modified(self):
+    def test_a_folder_not_prepared_by_this_code_is_refused_and_left_alone(self):
         from roboteam.runtime.service import RuntimeService
         from fake_pipeline import FakeWorld,fake_capture
-        run=self.root/'legacy';(run/'private').mkdir(parents=True)
+        run=self.root/'foreign';(run/'private').mkdir(parents=True)
         old=run/'private/manifest.json';old.write_text('{"schema_version":2}')
         before=old.read_bytes()
         with self.assertRaises(ValueError):RuntimeService(run,FakeWorld,fake_capture)
@@ -107,16 +107,13 @@ class SetupTests(unittest.TestCase):
             self.assertEqual((run/'public/inputs/skill/SKILL.md').read_bytes(),skill)
             self.assertEqual(verify_inputs(run),[])
 
-    def test_hierarchical_controller_name_and_legacy_config(self):
-        for name in ('Controller', 'Coordinator'):
-            with self.subTest(name=name):
-                cfg=load_harness();cfg['topology']='hierarchical';cfg['coordinator']=name
-                config=self.root/(name+'.json');config.write_text(json.dumps(cfg))
-                run=prepare_run(self.root/('run-'+name),harness_path=config)
-                roles=json.loads((run/'public/inputs/roles.json').read_text())
-                self.assertEqual(roles['coordinator'],'Controller')
-                self.assertEqual(roles['roles']['Controller']['kind'],'team-controller')
-                self.assertTrue((run/'public/inputs/roles/Controller.md').exists())
-                self.assertEqual(verify_inputs(run),[])
+    def test_hierarchical_lead_is_the_controller(self):
+        cfg=load_harness();cfg['topology']='hierarchical';cfg['startup_protocol']=startup_protocol('hierarchical')
+        config=self.root/'hierarchical.json';config.write_text(json.dumps(cfg))
+        run=prepare_run(self.root/'run-hierarchical',harness_path=config)
+        roles=json.loads((run/'public/inputs/roles.json').read_text())
+        self.assertEqual(roles['roles']['Controller']['kind'],'team-controller')
+        self.assertTrue((run/'public/inputs/roles/Controller.md').exists())
+        self.assertEqual(verify_inputs(run),[])
 
 if __name__=='__main__':unittest.main()

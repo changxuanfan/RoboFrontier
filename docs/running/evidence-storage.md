@@ -35,7 +35,7 @@ it exits 1 after publishing a collection that needs review.
   home; snapshot sessions are listed in `jobs[].snapshot_sessions`. A missing required session
   makes the collection incomplete.
 - Claude collections include each run's `private/engine/config/projects/**/*.jsonl`, auxiliary
-  transcripts, referenced tool results and `private/evidence/*.jsonl`, plus a `sessions/` index.
+  transcripts, referenced tool results and `private/engine/turns/*.jsonl`, plus a `sessions/` index.
   No other Claude configuration (credentials included) is copied.
 - Unresolved physical requests, missing motion, corrupt chunks or changed source assets become
   explicit issues in `jobs[].issues`.

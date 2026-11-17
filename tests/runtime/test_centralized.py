@@ -49,7 +49,7 @@ class CentralizedTests(unittest.TestCase):
         self.assertEqual(self.service.world.executed, [])
 
     def test_direct_controller_starts_only_after_binding_without_ready_turn(self):
-        cfg=dict(self.service.config, startup_protocol='direct_controller_v2')
+        cfg=dict(self.service.config, startup_protocol='direct_controller')
         path=Path(self.tmp.name)/'direct-config.json';path.write_text(json.dumps(cfg))
         run=prepare_run(Path(self.tmp.name)/'direct-run',harness_path=path)
         service=RuntimeService(run,FakeWorld,fake_capture)

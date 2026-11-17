@@ -62,11 +62,9 @@ class NativeControls:
         config=parent_path.parents[2]
         if parent_path.parents[1].name!='projects':
             raise ProtocolError('Native fork discovery requires the registered run layout')
-        if config.name=='config' and config.parent.name=='engine' and config.parent.parent.name=='private':
-            run=config.parent.parent.parent
-        elif config.name=='claude-config' and config.parent.name=='private':
-            run=config.parent.parent
-        else:raise ProtocolError('Native fork discovery requires the registered run layout')
+        if config.name!='config' or config.parent.name!='engine' or config.parent.parent.name!='private':
+            raise ProtocolError('Native fork discovery requires the registered run layout')
+        run=config.parent.parent.parent
         claim_dir=run/'private/claude-forks'
         matches=[]
         for claim_path in claim_dir.glob('*.json'):
@@ -246,14 +244,10 @@ class ReplayStore:
             db.execute('PRAGMA journal_mode=WAL')
             db.execute('CREATE TABLE IF NOT EXISTS responses ('
                        'response_id TEXT PRIMARY KEY, input_digest TEXT NOT NULL, '
-                       'projection TEXT NOT NULL, output TEXT NOT NULL, anchor TEXT NOT NULL)')
+                       'projection TEXT NOT NULL, output TEXT NOT NULL, anchor TEXT NOT NULL, '
+                       "origin_session TEXT, defaults TEXT NOT NULL DEFAULT '[]')")
             db.execute('CREATE INDEX IF NOT EXISTS responses_input ON responses(input_digest)')
             db.execute('CREATE INDEX IF NOT EXISTS responses_anchor ON responses(anchor)')
-            columns={row[1] for row in db.execute('PRAGMA table_info(responses)')}
-            if 'origin_session' not in columns:
-                db.execute('ALTER TABLE responses ADD COLUMN origin_session TEXT')
-            if 'defaults' not in columns:
-                db.execute("ALTER TABLE responses ADD COLUMN defaults TEXT NOT NULL DEFAULT '[]'")
             db.execute('CREATE TABLE IF NOT EXISTS sessions (session_id TEXT PRIMARY KEY,parent_id TEXT)')
 
     def lineage(self, session, parent=None):
@@ -339,7 +333,7 @@ class ReplayStore:
                     history.native_controls.append('resume_no_response')
                     return offset+1
             error=ProtocolError('Original Responses output is unavailable or assistant history changed; '
-                                'legacy history cannot be reconstructed losslessly')
+                                'the history cannot be reconstructed losslessly')
             error.replay_context={'native_session':history.session_id,'fork_source':history.fork_source,
                 'offset':offset,'block_types':[b.get('type') for b in blocks],
                 'block_hashes':[hashlib.sha256(canonical(b)).hexdigest() for b in blocks],

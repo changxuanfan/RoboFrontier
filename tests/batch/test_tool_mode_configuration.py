@@ -1,17 +1,12 @@
-"""policy.tool_mode in the public configuration (schema version 10)."""
+"""policy.tool_mode in the public configuration."""
 import unittest
 
 from roboteam.configuration import load_configuration, validate_configuration
 
 
 class ToolModeConfigurationTests(unittest.TestCase):
-    def test_the_default_is_a_full_run_and_older_files_have_no_such_option(self):
+    def test_the_default_is_a_full_run(self):
         self.assertEqual(load_configuration()['policy']['tool_mode'], 'full')
-        self.assertEqual(load_configuration()['schema_version'], 11)
-        old = load_configuration(overrides={'schema_version': 9})
-        self.assertNotIn('tool_mode', old['policy'])
-        with self.assertRaises(ValueError):
-            load_configuration(overrides={'schema_version': 9, 'policy': {'tool_mode': 'robot_only'}})
 
     def test_only_the_two_modes_are_accepted(self):
         for mode in ('full', 'robot_only'):

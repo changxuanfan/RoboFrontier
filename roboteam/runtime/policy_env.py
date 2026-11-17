@@ -117,7 +117,7 @@ def require_checked(root, manifest, wanted=None):
     if not isinstance(receipt, dict) or not receipt.get('passed') or receipt.get('tree_sha256') != manifest['tree_sha256']:
         raise ValueError(rerun)
     if receipt.get('schema') != RECEIPT_SCHEMA or not isinstance(receipt.get('checked'), list):
-        raise ValueError('This build\'s check predates recording which engines, sandboxes and CLI versions it '
+        raise ValueError('This build\'s check does not record which engines, sandboxes and CLI versions it '
                          'ran; rerun scripts/check_policy_env.py: ' + str(root))
     if wanted is not None and wanted not in receipt['checked']:
         raise ValueError('scripts/check_policy_env.py has not checked %s on this build (it checked %s); rerun it '
@@ -164,7 +164,7 @@ BASE_VAR = 'ROBOTEAM_POLICY_ENV_BASE'
 
 
 def selected():
-    """The environment named by the trusted launcher, or None for an earlier-style run."""
+    """The environment named by the trusted launcher, or None when none is named."""
     value = os.environ.get(ENV_VAR)
     if not value or value.strip().lower() in OFF:
         return None
@@ -203,7 +203,7 @@ def apply_default():
     table (E12); there is no run on the host's Python."""
     value = os.environ.get(ENV_VAR)
     if value and value.strip().lower() in OFF:
-        raise ValueError(ENV_VAR + '=' + value + ' is no longer supported: every run uses a policy environment')
+        raise ValueError(ENV_VAR + '=' + value + ' is not supported: every run uses a policy environment')
     if value: return selected()
     root = default_root()
     if root is None:

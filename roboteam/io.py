@@ -30,15 +30,6 @@ def write_json(path, value):
         if Path(temporary).exists():Path(temporary).unlink()
 
 
-def schema_of(document, key='schema'):
-    """A record's schema name. Records written before the project was renamed carry the earlier
-    prefix; they are the same records, so they are read under the current name."""
-    name = document.get(key)
-    if isinstance(name, str) and name.startswith('robofrontier.'):
-        return 'roboteam.' + name[len('robofrontier.'):]
-    return name
-
-
 def vector(values):
     """An MJCF vector attribute from numbers."""
     return " ".join(str(float(x)) for x in values)

@@ -540,7 +540,7 @@ def excluded(d):
     """Why a run's result is not counted, or None.
 
     wall_backstop: the 48 h wall backstop stopped it before its 24 h active-time cutoff
-    (policy_probe.BudgetGuard); it needs review, whatever its outcome."""
+    (clock.BudgetGuard); it needs review, whatever its outcome."""
     if (d.get('cutoff') or {}).get('wall_backstop') or (d.get('evaluation.json') or {}).get('wall_backstop') is True:
         return 'wall_backstop'
     return None

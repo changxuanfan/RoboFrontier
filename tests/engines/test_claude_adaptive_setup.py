@@ -28,7 +28,7 @@ class AdaptiveSetupTests(unittest.TestCase):
         host=ClaudeSessionHost.fork_delegate(*args,runner=self.runner,_verifier=lambda _:[],**kwargs)
         self.hosts.append(host)
         return host
-    def coordinator(self, child_budget_usd=.2, **kwargs):
+    def setup_host(self, child_budget_usd=.2, **kwargs):
         return AdaptiveForkSetup(self.store,self.parent,self.ledger,'owner',child_budget_usd=child_budget_usd,
                                  child_factory=self.child,**kwargs)
 
@@ -40,7 +40,7 @@ class AdaptiveSetupTests(unittest.TestCase):
             self.assertFalse(Path(kwargs['gate']['open']).exists())
             return original(*args,**kwargs)
         self.runner=forked
-        host=self.coordinator(); result=host.establish('batch')
+        host=self.setup_host(); result=host.establish('batch')
         self.assertEqual(result['status'],'active')
         self.assertEqual(result['actors'],[self.actor])
         child=self.d.batch('batch')['children'][0]
@@ -63,7 +63,7 @@ class AdaptiveSetupTests(unittest.TestCase):
     def test_frozen_delegate_message_is_the_first_input(self):
         frozen=self.run/'private/inputs/bootstrap/delegate.md'; frozen.parent.mkdir(parents=True)
         frozen.write_text('Role {{ACTOR}} with scope {{SCOPE}}\n')
-        self.assertEqual(self.coordinator().establish('batch')['status'],'active')
+        self.assertEqual(self.setup_host().establish('batch')['status'],'active')
         child=self.d.batch('batch')['children'][0]
         self.assertEqual(json.loads((self.folder/(child['thread_id']+'.jsonl')).read_text().splitlines()[-1])
                          ['message']['content'], child_prompt(self.actor,child,self.run))
@@ -79,7 +79,7 @@ class AdaptiveSetupTests(unittest.TestCase):
             record['summary']['total_cost_usd'] = None
             return record
         self.runner = no_cost
-        host = self.coordinator(child_budget_usd=None)
+        host = self.setup_host(child_budget_usd=None)
         self.assertEqual(host.establish('batch')['status'], 'active')
         self.assertEqual(host.hosts[self.actor].wait(3)['status'], 'idle')
         self.assertIsNone(self.calls[0]['max_budget_usd'])
@@ -92,7 +92,7 @@ class AdaptiveSetupTests(unittest.TestCase):
     def test_failed_fork_keeps_reserved_robot_known_child_id_and_a_closed_gate(self):
         def lost(*args,**kwargs): raise OSError('lost acknowledgement')
         self.runner=lost
-        result=self.coordinator().establish('batch')
+        result=self.setup_host().establish('batch')
         self.assertEqual(result['status'],'needs_review')
         self.assertTrue(self.store.get('dispatch_paused'))
         batch=self.d.batch('batch')
@@ -111,7 +111,7 @@ class AdaptiveSetupTests(unittest.TestCase):
             entered.set(); self.assertTrue(kwargs['cancel_event'].wait(3))
             return {'process':'cancelled','exit_code':-9,'summary':{'turn_status':'unknown'}}
         self.runner=waiting
-        setup=self.coordinator()
+        setup=self.setup_host()
         worker=threading.Thread(target=lambda:results.append(setup.establish('batch')))
         worker.start(); self.assertTrue(entered.wait(3)); setup.request_stop(); worker.join(3)
         self.assertFalse(worker.is_alive()); self.assertEqual(results[0]['status'],'needs_review')
@@ -124,7 +124,7 @@ class AdaptiveBatchTests(unittest.TestCase):
     runner = fixtures.ForkSetupTests.runner
     gate = fixtures.ForkSetupTests.gate
     child = AdaptiveSetupTests.child
-    coordinator = AdaptiveSetupTests.coordinator
+    setup_host = AdaptiveSetupTests.setup_host
     tearDown = AdaptiveSetupTests.tearDown
     def setUp(self):
         self.test_scopes=[{'robots':['A'],'goal':'first','done_when':'done'},
@@ -132,7 +132,7 @@ class AdaptiveBatchTests(unittest.TestCase):
         AdaptiveSetupTests.setUp(self)
 
     def test_every_child_forks_from_the_parent_at_the_same_call(self):
-        self.assertEqual(self.coordinator().establish('batch')['status'],'active')
+        self.assertEqual(self.setup_host().establish('batch')['status'],'active')
         batch=self.d.batch('batch')
         self.assertTrue(all(child['verified'] for child in batch['children']))
         self.assertEqual({c['fork_from'] for c in self.calls},{fixtures.PARENT})
@@ -149,7 +149,7 @@ class AdaptiveBatchTests(unittest.TestCase):
                     out.write(json.dumps({**self.row,'uuid':'later'})+'\n')
             return result
         self.runner=mutate
-        result=self.coordinator().establish('batch')
+        result=self.setup_host().establish('batch')
         self.assertEqual(result['status'],'needs_review')
         self.assertTrue(self.store.get('dispatch_paused'))
         for child in self.d.batch('batch')['children']:

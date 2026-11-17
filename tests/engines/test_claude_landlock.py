@@ -176,7 +176,7 @@ class ConfineTests(unittest.TestCase):
             self.assertIn([str(run/'private/engine/config/shell-snapshots'), 'read'], rules['rules'])
             self.assertEqual(rules['unconfined'], [])
             # Claude Code starts each robot MCP through the prefix too; its exact string runs unconfined.
-            servers = run_layout.path(run, 'engine_mcp', 'claude'); servers.mkdir(parents=True, exist_ok=True)
+            servers = run_layout.path(run, 'engine_mcp'); servers.mkdir(parents=True, exist_ok=True)
             for actor in ('A', 'Controller'):
                 (servers/(actor+'.json')).write_text(json.dumps({'mcpServers': {'robot': {
                     'command': '/v/bin/python', 'args': ['-m', 'roboteam.engines.claude.robot_mcp', '--connection',

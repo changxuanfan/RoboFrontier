@@ -30,7 +30,7 @@ class CapacityRecoveryTests(unittest.TestCase):
         cfg = json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
         cfg.update(engine='claude'); self.store.initialize('run', cfg, ['A'])
         self.store.update_agent('Controller', ready=True, thread_id=self.host.session_id); self.store.start()
-        native = self.run/'private/claude-config/projects/local'/(self.host.session_id+'.jsonl')
+        native = self.run/'private/engine/config/projects/local'/(self.host.session_id+'.jsonl')
         native.parent.mkdir(parents=True)
         native.write_text(json.dumps({'uuid':'u1','sessionId':self.host.session_id,
                                       'message':{'role':'user','content':'task'}})+'\n')
@@ -62,9 +62,9 @@ class CapacityRecoveryTests(unittest.TestCase):
         self.fail_turn()
         with patch.object(self.store, 'actions', return_value={'x': {'status':'uncertain'}}):
             self.assertFalse(self.host.recover_capacity(self.store, now=100))
-        (self.run/'STOP').touch()
+        (self.run/'private/state/control').mkdir(parents=True, exist_ok=True); (self.run/'private/state/control/STOP').touch()
         self.assertFalse(self.host.recover_capacity(self.store, now=100))
-        (self.run/'STOP').unlink(); self.store.put('dispatch_paused', True)
+        (self.run/'private/state/control/STOP').unlink(); self.store.put('dispatch_paused', True)
         self.assertFalse(self.host.recover_capacity(self.store, now=100))
         self.assertEqual(len(self.calls), 1)
 

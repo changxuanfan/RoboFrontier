@@ -81,6 +81,7 @@ def setup_run(output, base_env):
     run = output / 'run'
     conn = run / 'private/state/connections/Controller.json'
     conn.parent.mkdir(parents=True)
+    (run / 'workspace').mkdir()  # The policy's working directory (runtime/layout.py).
     image = run / 'public/observations/top.png'
     image.parent.mkdir(parents=True)
     probe = preflight_probe.write(image, *preflight_probe.choose())

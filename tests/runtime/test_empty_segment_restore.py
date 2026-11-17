@@ -15,7 +15,7 @@ class EmptySegmentRestoreTests(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.run=Path(self.tmp.name)
         (self.run/'private/inputs').mkdir(parents=True)
-        self.manifest={**layout.manifest_record('codex'),'input_sha256':{}}
+        self.manifest={**layout.manifest_record(),'input_sha256':{}}
         self.save_manifest()
         self.pose=np.arange(9,dtype=float)
         class Reader:

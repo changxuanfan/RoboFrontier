@@ -14,7 +14,6 @@ import mujoco
 from ..runtime.setup import write_json
 from ..tasks.scene import clone_or_copy
 from ..io import file_sha256 as digest
-from roboteam.io import schema_of
 
 
 def freeze_source(source,destination,cache=None):
@@ -104,7 +103,7 @@ class MotionWriter:
 class MotionReader:
     def __init__(self,path):
         self.path=Path(path);self.meta=json.loads((self.path/'stream.json').read_text())
-        if schema_of(self.meta)!='roboteam.motion.v1':raise ValueError('Unsupported recording')
+        if self.meta.get('schema')!='roboteam.motion.v1':raise ValueError('Unsupported recording')
         source=json.loads((self.path/'source/workstation.json').read_text())
         if self.meta['source_scene_sha256']!=source['scene_sha256'] or self.meta['case_id']!=source['case']['id'] or digest(self.path/'source/scene.xml')!=source['scene_sha256']:
             raise ValueError('Recording source identity/checksum mismatch')

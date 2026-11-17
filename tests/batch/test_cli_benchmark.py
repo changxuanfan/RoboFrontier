@@ -57,7 +57,7 @@ class CliBenchmarkTests(unittest.TestCase):
             prepared=prepare_batch(root/'batch',['luna'],cases=['transport-a04-d1'],config=config)
             run=Path(json.loads(prepared.read_text())['jobs'][0]['run_directory'])
             harness=json.loads((run/'private/inputs/harness.json').read_text())
-            self.assertEqual((harness['topology'],harness['startup_protocol']),('decentralized','direct_team_v3'))
+            self.assertEqual((harness['topology'],harness['startup_protocol']),('decentralized','direct_team'))
 
     def test_level_and_minimum_arms_select_four_tasks_without_launch(self):
         expected=['transport-a04-d2','mosaic-a04-6x12-d2','relay-a08-d2','dial-best5-n04-d2']
@@ -131,7 +131,7 @@ class CliBenchmarkTests(unittest.TestCase):
             (folder/'batch.json').write_text(json.dumps({'jobs': [{'run_directory': str(run)} for run in runs]}))
             benchmark.request_stop(folder)
             self.assertTrue(run_layout.batch_path(folder, 'stop').exists())
-            self.assertTrue(all(run_layout.path(run, 'stop', 'codex').exists() for run in runs))
+            self.assertTrue(all(run_layout.path(run, 'stop').exists() for run in runs))
 
     def test_status_reports_a_working_run_as_running(self):
         from roboteam.cli import _with_live_runs
@@ -140,9 +140,9 @@ class CliBenchmarkTests(unittest.TestCase):
             folder = Path(temporary); runs = [folder/name for name in ('claude', 'codex', 'queued')]
             for run in runs: run.mkdir()
             (folder/'batch.json').write_text(json.dumps({'jobs': [{'run_directory': str(run)} for run in runs]}))
-            own = run_layout.path(runs[0], 'engineering_status', 'claude'); own.parent.mkdir(parents=True)
+            own = run_layout.path(runs[0], 'engineering_status'); own.parent.mkdir(parents=True)
             own.write_text(json.dumps({'status': 'running'}))
-            host = run_layout.path(runs[1], 'host_process', 'codex'); host.parent.mkdir(parents=True, exist_ok=True)
+            host = run_layout.path(runs[1], 'host_process'); host.parent.mkdir(parents=True, exist_ok=True)
             host.write_text('{}')
             state = {'status': 'running', 'jobs': [{'status': 'starting'}, {'status': 'prepared'}, {'status': 'starting'}]}
             self.assertEqual([j['status'] for j in _with_live_runs(folder, state)['jobs']], ['running', 'running', 'starting'])
@@ -189,22 +189,6 @@ class CliBenchmarkTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'rerun preflight'):
                     benchmark.run_batch(folder,1)
                 start.assert_not_called()
-
-    def test_released_policy_service_enforces_24h_without_host(self):
-        # A run frozen before the active-time clock counts 24 h of wall time from START.
-        from runtime.test_active_time import old_protocol_prepare
-        with tempfile.TemporaryDirectory() as tmp:
-            run=old_protocol_prepare('transport-a04-d1',Path(tmp)/'run')
-            s=RuntimeService(run,BudgetWorld,fake_capture)
-            try:
-                s.store.update_agent('Controller',ready=True,thread_id='engineering-only')
-                s.store.start();s.store.put('start_at',time.time()-86401)
-                s.pump()
-                self.assertEqual(s.store.get('termination_reason'),'wall_limit')
-                self.assertEqual(s.store.get('lifecycle'),'ended')
-                self.assertTrue(s.shutdown)
-                self.assertEqual(json.loads((run/'private/outputs/budget-cutoff.json').read_text())['protocol']['wall_limit_s'],86400)
-            finally:s.close()
 
     def test_released_policy_service_enforces_24h_of_active_time_without_host(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -438,7 +438,7 @@ class PipelineTests(unittest.TestCase):
         evaluation=json.loads((self.path/'private/outputs/evaluation.json').read_text())
         self.assertIn('fake',evaluation['scope'])
 
-    def test_coordinator_gets_mail_at_tool_return_inside_active_turn(self):
+    def test_controller_gets_mail_at_tool_return_inside_active_turn(self):
         self.start()
         self.call('A','send',{'to':['Controller'],'text':'new opportunity'})
         result=self.call('Controller','team')['result']
@@ -562,7 +562,7 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(store.call('async-crash')['status'],'uncertain')
         finally:store.close()
 
-    def test_peer_wait_is_addressed_and_has_no_coordinator(self):
+    def test_peer_wait_is_addressed_and_has_no_controller(self):
         from roboteam.tasks.config import load_harness, startup_protocol
         cfg=load_harness();cfg['topology']='decentralized';cfg['startup_protocol']=startup_protocol('decentralized')
         config=self.path.parent/'peer.json';config.write_text(json.dumps(cfg))

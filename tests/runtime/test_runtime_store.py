@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 import tempfile
 import threading
@@ -41,16 +40,7 @@ class StoreTests(unittest.TestCase):
         self.s.send('Controller',['A'],'0','key-0')
         self.assertEqual(self.s.pending('A')['messages'],40)
         with self.assertRaises(ValueError):self.s.send('Controller',['A'],'different','key-0')
-    def test_a_run_recorded_with_the_old_lead_kind_keeps_its_authority(self):
-        # Runs prepared before the rename stored the hierarchical lead as 'coordinator'.
-        self.assertEqual(self.s.agent('Controller')['kind'],'team-controller')
-        value=json.loads(self.s.db.execute("SELECT value FROM agents WHERE id='Controller'").fetchone()[0])
-        value['kind']='coordinator'
-        self.s.db.execute("UPDATE agents SET value=? WHERE id='Controller'",(packed(value),));self.s.db.commit()
-        self.assertEqual(self.s.agent('Controller')['kind'],'team-controller')
-        self.assertEqual(self.s.agents()['Controller']['kind'],'team-controller')
-        self.s.send('Controller',['A'],'go','old-kind')
-        self.assertEqual(self.s.pending('A')['messages'],1)
+
     def test_bounded_batches_and_receipt_survive_reopen(self):
         for i in range(40):self.s.send('Controller',['A'],str(i),str(i))
         batch=self.s.delivery('A');self.assertEqual(len(batch['messages']),32)
@@ -69,7 +59,7 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(self.s.history('A'),[])
         self.assertEqual(self.s.pending('A')['messages'],0)
         self.assertIsNone(self.s.delivery('A')['delivery_id'])
-    def test_peers_can_route_directly_without_a_hidden_coordinator(self):
+    def test_peers_can_route_directly_without_a_hidden_controller(self):
         self.s.close();self.s=RuntimeStore(Path(self.tmp.name)/'peer.sqlite')
         config=load_harness();config['topology']='decentralized';config['startup_protocol']=startup_protocol('decentralized');self.s.initialize('decentralized',config,['A','B'])
         self.assertNotIn('Controller',self.s.agents())

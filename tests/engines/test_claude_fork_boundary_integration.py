@@ -76,7 +76,7 @@ def wait_for(predicate, timeout=30):
 class ForkBoundaryTests(unittest.TestCase):
     def test_delegate_forks_at_the_pending_call_and_its_tools_wait_for_the_gate(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / 'run'
+            run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             roles = run/'public/inputs/roles.json'; roles.parent.mkdir(parents=True)
             roles.write_text(json.dumps({'roles': {'Controller': {'kind':'controller'}}}))
             image = run/'public/observations/top.png'; image.parent.mkdir(parents=True)
@@ -104,7 +104,7 @@ class ForkBoundaryTests(unittest.TestCase):
                 profile = {'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
                            'base_url':f'http://127.0.0.1:{model.server_port}'}
                 env = {'PATH':os.environ.get('PATH',''),'FAKE_KEY':'fake'}
-                config = run/'private/claude-config'
+                config = run/'private/engine/config'
                 host = ClaudeSessionHost(run, 'Controller', profile, env, turn_timeout=90)
                 host.send('Call robot observe tool.')
                 self.assertTrue(entered.wait(30), 'Parent did not reach the blocked MCP call')

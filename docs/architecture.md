@@ -43,7 +43,7 @@ Standing teams bind one native session per initial role. Both engines run all fo
 
 ## START and time
 
-Single and Adaptive runs use `direct_controller_v2`, standing teams `direct_team_v3`: the host
+Single and Adaptive runs use `direct_controller`, standing teams `direct_team`: the host
 binds every initial role to its own native session, persists one START, then sends each role its
 start message ([protocol](protocol.md#start-system-prompt-start-message-start)). Reading and
 observing count as task time. `ready` is an optional capability query, not a START gate.
@@ -57,7 +57,7 @@ bounds preparation separately. An operator's stop is not the task limit.
 turns. Codex API homes are created serially before parallel launch, one per run. Credentials are
 never copied from a desktop login or another user.
 
-## Run directory (`run-v6`)
+## Run directory
 
 ```text
 public/inputs/task.json            frozen public task
@@ -91,9 +91,8 @@ private/engine/                    CLI and MCP configuration, per-turn evidence,
 ```
 
 A batch folder holds `batch.json`, `effective-config.json`, `profiles/`, `control/` (STOP,
-status snapshot, locks, `durable/`), `logs/` and one `<profile>/<case>/` run per selected case
-(`batch-v2`). The layouts are defined in `roboteam/runtime/layout.py`; a run records its
-layout in its manifest, and frozen runs keep theirs.
+status snapshot, locks, `durable/`), `logs/` and one `<profile>/<case>/` run per selected case.
+The layouts are defined in `roboteam/runtime/layout.py`.
 
 `public` and `private` define the evidence contract; the operating-system boundary is the
 access table ([policy environment](running/policy-environment.md#what-a-policy-can-reach)):

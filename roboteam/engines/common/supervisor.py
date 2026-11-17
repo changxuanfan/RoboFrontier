@@ -9,7 +9,7 @@ import time
 from roboteam.runtime.bootstrap import STARTUP_TIMEOUT_S
 
 
-# active_time_v1: the host ends a run on its own only this far past the world's limit, and
+# The world counts active running time and ends the run itself: the host ends a run on its own only this far past the world's limit, and
 # waits this long after the world's cutoff for it to brake and close.
 ACTIVE_BACKSTOP_S = 60.
 ACTIVE_CLOSE_WAIT_S = 120.
@@ -18,7 +18,7 @@ ACTIVE_CLOSE_WAIT_S = 120.
 class CentralizedSupervisor:
     def __init__(self, policy, owner_alive, *, stop_requested=lambda: False,
                  startup_timeout_s=STARTUP_TIMEOUT_S, wall_limit_s=86400, poll_s=1,
-                 seal_timeout_s=30, finish_turn_grace_s=30, time_rule='START_wall_time',
+                 seal_timeout_s=30, finish_turn_grace_s=30,
                  wall_backstop_s=None, clock=time.monotonic, wall_clock=time.time, sleep=time.sleep):
         for name, value, maximum in (('startup_timeout_s', startup_timeout_s, 86400),
                                      ('wall_limit_s', wall_limit_s, 86400),
@@ -30,8 +30,6 @@ class CentralizedSupervisor:
         if (isinstance(finish_turn_grace_s, bool) or not isinstance(finish_turn_grace_s, (int, float))
                 or not math.isfinite(finish_turn_grace_s) or not 0 <= finish_turn_grace_s <= 120):
             raise ValueError('Invalid finished-turn grace period')
-        if time_rule not in ('START_wall_time', 'active_time_v1'):
-            raise ValueError('Unknown run clock')
         if wall_backstop_s is not None and (isinstance(wall_backstop_s, bool) or not isinstance(wall_backstop_s, (int, float))
                                             or not math.isfinite(wall_backstop_s) or wall_backstop_s <= 0):
             raise ValueError('Invalid wall backstop')
@@ -46,11 +44,8 @@ class CentralizedSupervisor:
         self.clock = clock
         self.wall_clock = wall_clock
         self.sleep = sleep
-        # active_time_v1 (the run's frozen protocol clock): the world counts only active running
-        # time and ends the run itself; this host never ends it on wall time.
-        self.active_time = time_rule == 'active_time_v1'
-        # The run's frozen wall backstop (policy_probe.BudgetGuard); only active-time runs have one.
-        self.wall_backstop_s = wall_backstop_s if self.active_time else None
+        # The run's frozen wall backstop (clock.BudgetGuard).
+        self.wall_backstop_s = wall_backstop_s
         self.cutoff_seen = None
         self.used = False
 
@@ -80,16 +75,13 @@ class CentralizedSupervisor:
         return (backstop_elapsed(self.policy.store, self.wall_clock())
                 >= self.wall_backstop_s + ACTIVE_CLOSE_WAIT_S + self.seal_timeout_s)
 
-    def _limit_reached(self, now, started_at):
+    def _limit_reached(self):
         if self._after_score(): return False
-        if not self.active_time: return now - started_at >= self.wall_limit_s
         # The world's own guard fires at the limit; this is only a backstop if it did not.
         return float(self.policy.store.get('active_s', 0.) or 0.) >= self.wall_limit_s + ACTIVE_BACKSTOP_S
 
-    def _await_world_close(self, began):
+    def _await_world_close(self):
         """After the world's wall limit fired, wait for it to brake and end the run."""
-        if not self.active_time:
-            return self.clock()-began < self.startup_timeout_s+self.wall_limit_s+self.seal_timeout_s
         if self.cutoff_seen is None: self.cutoff_seen = self.clock()
         return self.clock()-self.cutoff_seen < ACTIVE_CLOSE_WAIT_S+self.seal_timeout_s
 
@@ -102,13 +94,6 @@ class CentralizedSupervisor:
         hosts.extend(getattr(setup, 'hosts', {}).values())
         return [host.observe()['status'] for host in hosts]
 
-    def _projected_start(self):
-        """The persisted START on the monotonic clock; downtime between segments is not counted."""
-        started_wall = self.policy.store.get('start_at')
-        if not isinstance(started_wall, (int, float)) or isinstance(started_wall, bool) or not math.isfinite(started_wall):
-            raise ValueError('Running policy is missing a valid START time')
-        return self.clock() - max(0., self.wall_clock() - started_wall - self.policy.store.get('downtime_s', 0.))
-
     def run(self):
         if self.used:
             raise ValueError('Supervisor cannot restart a world')
@@ -118,7 +103,7 @@ class CentralizedSupervisor:
         error_message = None
         sealed = None
         seal_error_type = None
-        started_at = None
+        started = False
         session_evidence = None
         finish_turns_drained = None
         began = self.clock()
@@ -132,7 +117,7 @@ class CentralizedSupervisor:
                 if getattr(self.policy, 'resuming', False): self.policy.resume_segment()
                 else: self.policy.bind_and_bootstrap()
                 if self.policy.store.get('lifecycle') == 'running':
-                    started_at = self._projected_start()
+                    started = True
                 while True:
                     if self.stop_requested():
                         reason = 'stop_requested'; break
@@ -148,13 +133,12 @@ class CentralizedSupervisor:
                         # it resumes by itself and the paused time does not count.
                         self.sleep(self.poll_s); continue
                     if self.policy.store.get('dispatch_paused', False):
-                        if self._wall_limit_reached() and self._await_world_close(began):
+                        if self._wall_limit_reached() and self._await_world_close():
                             self.sleep(self.poll_s); continue
                         reason = 'dispatch_paused'; break
                     observation = self.policy.host.observe()
                     state = observation['status']
-                    now = self.clock()
-                    if started_at is not None and self._limit_reached(now, started_at):
+                    if started and self._limit_reached():
                         reason = 'wall_limit'; break
                     recovering = (state == 'error' and hasattr(self.policy.host, 'recover_capacity')
                                   and self.policy.host.recover_capacity(self.policy.store))
@@ -163,11 +147,11 @@ class CentralizedSupervisor:
                                             ('budget_status', 'last_result_subtype', 'last_turn_reported_cost_usd')}
                         reason = 'session_' + state; break
                     now = self.clock()
-                    if started_at is None:
+                    if not started:
                         if now - began >= self.startup_timeout_s:
                             reason = 'startup_timeout'; break
                     else:
-                        if self._limit_reached(now, started_at):
+                        if self._limit_reached():
                             reason = 'wall_limit'; break
                         result = self.policy.cycle()
                         if result.get('paused') and not self._wall_limit_reached():
@@ -214,7 +198,7 @@ class CentralizedSupervisor:
             except Exception as error:
                 seal_error_type = type(error).__name__
         return {'reason': reason, 'error_type': error_type, 'error': error_message, 'seal': sealed,
-                'seal_error_type': seal_error_type, 'started': started_at is not None,
+                'seal_error_type': seal_error_type, 'started': started,
                 'session_evidence': session_evidence,
                 'finish_turns_drained': finish_turns_drained, 'ended_by': ended_by,
                 # Stopped by wall time, not the active-time limit: needs review, never counted.

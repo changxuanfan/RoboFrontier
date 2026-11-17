@@ -39,11 +39,11 @@ REST_DRIFT_MM = .2         # after the first 5 s
 PLACE_SETTLE_S, STILL_MM_S = 1., 1.
 STEP_BUDGET_MS = 20.
 
-# Accepted by the owner on 2026-11-11, keeping the 2 ms step: during fast motion a held object lags
+# Accepted limits of the 2 ms step: during fast motion a held object lags
 # the hand and creeps a little (NoSlip at 2 ms), and a fast-turned Dial lags behind the wrist. A
 # policy chooses its own speeds and sees the result, so it can turn slowly or correct; making the
 # simulation easier for it is not the benchmark's job. A failing check counts as accepted only
-# inside the envelope measured then, so a new regression still fails.
+# inside the envelope below, so a regression still fails.
 ACCEPTED_ENVELOPE = {
     'carry': dict(slip_mm=3., peak_rot_deg=7., residual_rot_deg=2.),
     'dial': dict(follow_error_deg=7.),

@@ -98,7 +98,7 @@ def _private_globs(run, table):
 
 def policy_settings(run_dir):
     """Settings for a policy turn rendered from the run's frozen access table, or None
-    for runs prepared before the table existed.
+    when the run has none (a run folder not made by runtime.setup).
 
     Permission rules cover the file tools; the sandbox covers Bash. Both are needed
     because neither applies to the other. Harness processes (the robot MCP, the CLI's
@@ -149,7 +149,7 @@ def turn_settings(run_dir):
 def confine(run_dir, settings, config_dir):
     """A policy turn's settings and extra environment for its frozen Bash isolation.
 
-    'claude-sandbox' (the default, and every earlier run) keeps Claude Code's sandbox.
+    'claude-sandbox' (the default) keeps Claude Code's sandbox.
     'landlock-v1' turns it off and confines each Bash command instead through
     CLAUDE_CODE_SHELL_PREFIX (roboteam/engines/common/landlock.py), with rules
     rendered now from the same access table; the permission rules are unchanged.
@@ -168,12 +168,12 @@ def confine(run_dir, settings, config_dir):
         raise ValueError('Unknown Bash isolation: ' + str(mode))
     from roboteam.engines.common import landlock as landlock_shell
     table = json.loads((run/'private/inputs/policy-access.json').read_text())['filesystem']
-    folder = run_layout.path(run, 'engine_mcp', 'claude').parent/'bash-isolation'
+    folder = run_layout.path(run, 'engine_mcp').parent/'bash-isolation'
     folder.mkdir(parents=True, exist_ok=True)
     rules = folder/'rules.json'
     # The exact strings Claude Code passes to the prefix to start this run's robot MCP servers.
     servers = [json.loads(p.read_text())['mcpServers']['robot']
-               for p in sorted(run_layout.path(run, 'engine_mcp', 'claude').glob('*.json'))]
+               for p in sorted(run_layout.path(run, 'engine_mcp').glob('*.json'))]
     unconfined = [shlex.join([s['command'], *s['args']]) for s in servers]
     # Claude Code sources a snapshot of its shell from its configuration directory first.
     landlock_shell.write_rules(rules, landlock_shell.allowlist(
@@ -190,7 +190,7 @@ def policy_system_prompt(run_dir):
 
 
 def policy_cwd(run_dir):
-    return run_layout.path(run_dir, 'policy_cwd', 'claude')
+    return run_layout.path(run_dir, 'policy_cwd')
 
 
 def _oauth_endpoint_allowed(base):
@@ -249,7 +249,7 @@ def settings_argument(settings, folder=None):
 
 def settings_folder(run_dir):
     """Where runners keep the settings files of a run's policy turns (private to the harness)."""
-    return run_layout.path(Path(run_dir).resolve(), 'engine_mcp', 'claude').parent/'policy-settings'
+    return run_layout.path(Path(run_dir).resolve(), 'engine_mcp').parent/'policy-settings'
 
 
 def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget_usd=None, binary='claude', resume=None,
@@ -553,7 +553,7 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
     outcomes through the runtime before treating a task as finished.
     """
     run_dir = Path(run_dir).resolve()
-    evidence = run_layout.path(run_dir, 'engine_turns', 'claude')
+    evidence = run_layout.path(run_dir, 'engine_turns')
     evidence.mkdir(parents=True, exist_ok=True)
     config_dir = config_directory(run_dir, profile)
     if profile.get('auth_mode') != 'native_login':
@@ -757,7 +757,7 @@ class PersistentSession:
         one_shot.pop('enable_robot', None)
         if one_shot: raise TypeError('Unexpected turn options: ' + ', '.join(sorted(one_shot)))
         run_dir = Path(run_dir).resolve()
-        evidence = run_layout.path(run_dir, 'engine_turns', 'claude'); evidence.mkdir(parents=True, exist_ok=True)
+        evidence = run_layout.path(run_dir, 'engine_turns'); evidence.mkdir(parents=True, exist_ok=True)
         if cancel_event is not None and cancel_event.is_set():
             raise PreLaunchCancelled('Claude turn cancelled before launch')
         with self.lock:

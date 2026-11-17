@@ -32,7 +32,6 @@ def report_run(run):
         elif kind == 'ACTION_FINISHED':
             if isinstance(value.get('started_at'), (int, float)) and isinstance(value.get('finished_at'), (int, float)):
                 actions.append((value['started_at'], value['finished_at'], value.get('arm')))
-    # The run's own manifest names its engine (legacy run-v3 host logs are engine-specific).
     host = run_layout.path(run, 'host_log')
     found = host.exists()
     latest_usage, updates = {}, defaultdict(list)

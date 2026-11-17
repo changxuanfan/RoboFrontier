@@ -19,7 +19,6 @@ import json
 import re
 
 import numpy as np
-from roboteam.io import schema_of
 
 # An item lower than its starting height by more than this has left the table (extract.suite).
 LOST_DROP_M = 0.2
@@ -40,7 +39,7 @@ class Recording:
         self.run = run
         self.prefix = prefix
         self.meta = json.loads(run.read(prefix + 'stream.json'))
-        if schema_of(self.meta) != 'roboteam.motion.v1':
+        if self.meta.get('schema') != 'roboteam.motion.v1':
             raise ValueError('Unsupported motion recording ' + prefix)
         self.nq = int(self.meta['nq'])
         listed = [dict(c) for c in self.meta.get('chunks') or []]

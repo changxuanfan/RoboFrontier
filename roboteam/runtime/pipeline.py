@@ -30,7 +30,7 @@ from ..media.live_video import Video
 from ..tasks.config import load_task, action_limits, panda_control_profile
 from ..physics.robot_control import PandaArm
 from ..tasks.scene import camera_names
-from ..physics.observation_image import observation_profile, reduced_size, render_size, save_observation
+from ..physics.observation_image import DEFAULT_PROFILE, observation_profile, reduced_size, render_size, save_observation
 from ..physics.observation_look import look_of
 from .tool_errors import CallIdConflict, conflict_error
 from .service import RuntimeService
@@ -85,7 +85,8 @@ class World:
                 arm.gripper=control;arm.grip_goal=control;self.data.ctrl[arm.grip]=control
         mujoco.mj_forward(self.model,self.data)
         hand_cfg=self.directory/'private/inputs/harness.json'
-        frozen_cfg=json.loads(hand_cfg.read_text()) if hand_cfg.exists() else {}
+        # A bare scene without a frozen harness (tools and tests build these) uses the default image profile.
+        frozen_cfg=json.loads(hand_cfg.read_text()) if hand_cfg.exists() else {'observation_image_profile':DEFAULT_PROFILE}
         from ..physics.profile import attach
         self.physics_profile=attach(self)
         self.observation_image=observation_profile(frozen_cfg)
@@ -214,15 +215,13 @@ class World:
         if self.task.get('kind')=='frontier_suite':
             from ..tasks.evaluate import Monitor
             secret=json.loads((self.directory/'private/inputs/suite-code.json').read_text())['code_symbols'] if self.task['family']=='dial' else None
-            # Runs frozen before process_log existed keep the original 0.1 s full snapshots.
-            harness=self.directory/'private/inputs/harness.json'
-            frozen=json.loads(harness.read_text()) if harness.exists() else {}
+            frozen=json.loads((self.directory/'private/inputs/harness.json').read_text())
             self.suite_sampler=Monitor(self,secret=secret,log_path=self.directory/'private/outputs/suite-process.jsonl',
                                        log_format=frozen.get('process_log','full'),append=self.segment>0)
             source=self.directory/Path(self.task['scene_asset']).parent
             if (source/'workstation.json').exists():
                 from ..media.motion_recording import MotionWriter
-                # Runs frozen before motion_hz existed keep the original 60 Hz.
+                # A harness without motion_hz records at 60 Hz.
                 hz=frozen.get('motion_hz',60)
                 from .segments import output_dir
                 folder=output_dir(self.directory,self.segment);folder.mkdir(parents=True,exist_ok=True)

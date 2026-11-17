@@ -93,8 +93,14 @@ class SupervisorTests(unittest.TestCase):
 
     def supervisor(self, policy, sleep, **kwargs):
         self.now = 0
-        def tick(seconds): self.now += seconds; sleep()
+        def tick(seconds):
+            # The world counts active time while it runs; the host only reads it.
+            if policy.store.data.get('lifecycle') == 'running' and not policy.store.data.get('dispatch_paused'):
+                policy.store.data['active_s'] = policy.store.data.get('active_s', 0) + seconds
+            self.now += seconds; sleep()
         policy.now = lambda: self.now
+        backstop = patch('roboteam.engines.common.supervisor.ACTIVE_BACKSTOP_S', 0.)
+        backstop.start(); self.addCleanup(backstop.stop)
         return CentralizedSupervisor(policy, lambda: True, clock=lambda: self.now, wall_clock=lambda: self.now, sleep=tick,
                                      poll_s=1, startup_timeout_s=3, wall_limit_s=4, **kwargs)
 
@@ -145,49 +151,6 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(result['reason'], 'startup_timeout')
         self.assertFalse(result['started']); self.assertEqual(p.cycles, 0)
         self.assertTrue(p.host.stopped)
-
-    def test_direct_start_counts_time_spent_sending_first_turn(self):
-        p = Policy()
-        supervisor = self.supervisor(p, lambda: None)
-        def bind():
-            p.binds += 1
-            p.dispatcher = Dispatcher()
-            p.store.data['lifecycle'] = 'running'
-            p.store.data['start_at'] = self.now
-            self.now += 3
-            p.host.state = 'active'
-        p.bind_and_bootstrap = bind
-        result = supervisor.run()
-        self.assertEqual(result['reason'], 'wall_limit')
-        self.assertEqual(self.now, 4)
-        self.assertEqual(p.cycles, 1)
-
-    def test_direct_start_uses_persisted_time_not_host_creation_or_bootstrap(self):
-        p = Policy()
-        supervisor = self.supervisor(p, lambda: None)
-        def bind():
-            p.binds += 1; p.dispatcher = Dispatcher()
-            self.now = 100
-            p.store.data.update(lifecycle='running', start_at=100)
-            self.now = 103
-            p.host.state = 'active'
-        p.bind_and_bootstrap = bind
-        result = supervisor.run()
-        self.assertEqual(result['reason'], 'wall_limit')
-        self.assertEqual(self.now, 104)
-        self.assertEqual(p.cycles, 1)
-
-    def test_missing_persisted_start_fails_closed(self):
-        p = Policy()
-        supervisor = self.supervisor(p, lambda: None)
-        def bind():
-            p.dispatcher = Dispatcher(); p.store.data['lifecycle'] = 'running'
-            p.host.state = 'active'
-        p.bind_and_bootstrap = bind
-        result = supervisor.run()
-        self.assertEqual(result['reason'], 'supervisor_error')
-        self.assertEqual(result['error_type'], 'ValueError')
-        self.assertEqual(p.cycles, 0)
 
     def test_capacity_backoff_never_extends_original_deadline(self):
         p=Policy(); retries=[]

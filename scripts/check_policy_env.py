@@ -235,7 +235,7 @@ def throwaway_run(scratch, name, environment):
     (run/'public/inputs/task.json').write_text('PUBLIC')
     (run/'private/inputs/secret.txt').write_text('PRIVATE')
     (run/'root.txt').write_text('ROOT')
-    (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record(name)))
+    (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
     policy_env.prepare_run(run, environment)
     access = policy_access.record(run, environment=environment, unchecked=True)
     (run/'private/inputs/policy-access.json').write_text(json.dumps(access))

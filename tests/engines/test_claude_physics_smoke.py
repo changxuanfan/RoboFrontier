@@ -91,7 +91,7 @@ class PhysicsSmokeTests(unittest.TestCase):
                             'camera image was not returned to the model endpoint')
         finally:
             server.shutdown(); server.server_close()
-            if (result is not None and result.get('owner_alive')) or (result is None and (directory/'batch/opus'/case/'private/outputs/owner.log').exists()):
+            if (result is not None and result.get('owner_alive')) or (result is None and (directory/'batch/opus'/case/'private/logs/owner.log').exists()):
                 print('Possible live owner retained for review:', directory)
             else:
                 shutil.rmtree(directory)

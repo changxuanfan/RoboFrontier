@@ -5,7 +5,6 @@ whose protocol counts active time (clock active_time_v1) do this."""
 import json
 import time
 import unittest
-from unittest.mock import patch
 
 from roboteam.engines.claude import recovery
 from roboteam.engines.claude.runner import summarize
@@ -35,7 +34,7 @@ class NetworkResendTests(active.Fixture):
         self.answers = []
         self.monitor = OutageMonitor(('api.example',), lambda hosts: self.answers.pop(0))
         self.s.egress_pause = WorldPause(self.s, self.monitor)
-        self.s.policy_budget = BudgetGuard(protocol(600, active.ACTIVE))
+        self.s.policy_budget = BudgetGuard(protocol(600))
         self.s.store.put('physics_state', 'running')
         self.turns = []; self.calls = []; self.prompts = []
         def runner(*args, **kw):
@@ -58,9 +57,8 @@ class NetworkResendTests(active.Fixture):
         else: self.host.state = 'idle'; self.host.send('continue')
         self.assertEqual(self.host.wait(3)['status'], 'error')
 
-    def recover(self, clock=active.ACTIVE):
-        with patch.object(recovery, '_active_time', return_value=clock == active.ACTIVE):
-            return self.host.recover_capacity(self.s.store)
+    def recover(self):
+        return self.host.recover_capacity(self.s.store)
 
     def outage(self):
         self.probe(True, False, False, False)
@@ -126,18 +124,6 @@ class NetworkResendTests(active.Fixture):
         self.s.store.finish_call('old', {'call_id': 'old'})
         self.assertTrue(self.recover()); self.host.wait(3); self.assertEqual(len(self.calls), 2)
 
-    def test_runs_frozen_without_the_active_clock_are_unchanged(self):
-        # A run frozen before the active-time clock has none in its protocol: the
-        # real check reads START wall time.
-        path = self.run/'private/inputs/task.json'
-        task = json.loads(path.read_text()); task['run_protocol'].pop('clock', None); path.write_text(json.dumps(task))
-        self.outage(); self.fail(NETWORK); self.probe(True)
-        self.assertFalse(recovery._active_time(self.run))
-        self.assertFalse(self.host.recover_capacity(self.s.store))
-        self.assertFalse(self.recover(clock='START_wall_time'))
-        self.assertEqual(len(self.calls), 1)
-        self.assertEqual(self.events('NETWORK_CONTINUATION_CLAIMED'), [])
-        self.assertIsNone(self.s.store.get('egress_review_hold'))
 
 
 class ClassificationTests(unittest.TestCase):

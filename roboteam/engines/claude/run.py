@@ -1,7 +1,7 @@
 """Claude entry point for the shared native CLI run supervisor."""
 from roboteam.engines.common.run import *
 from roboteam.engines.common.run import (_ledger, _positive, _concurrent_roles, _check_shared_budget,
-    _evaluation_present, _run_protocol, _time_rule, run_task as _run_task)
+    _evaluation_present, _run_protocol, run_task as _run_task)
 
 
 def run_task(*args, **kwargs):

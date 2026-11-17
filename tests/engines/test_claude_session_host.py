@@ -12,7 +12,7 @@ PROFILE = {'model': 'fake-model', 'effort': 'high', 'env_key': 'FAKE_KEY'}
 
 
 def make_run(tmp):
-    run = Path(tmp) / 'run'
+    run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
     roles = run / 'public/inputs/roles.json'
     roles.parent.mkdir(parents=True)
     roles.write_text(json.dumps({'roles': {'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller'}}}))
@@ -84,7 +84,7 @@ class SessionHostTests(unittest.TestCase):
             self.assertIsNone(calls[0]['timeout'])
             self.assertEqual(calls[1]['resume'], first['threadId'])
             self.assertNotEqual(calls[0]['events_name'], calls[1]['events_name'])
-            self.assertEqual(len(list((run/'private/evidence').glob('*-summary.json'))), 2)
+            self.assertEqual(len(list((run/'private/engine/turns').glob('*-summary.json'))), 2)
 
     def test_mismatch_failure_or_missing_evidence_never_allows_resume(self):
         scenarios = [lambda sid: result('different'), lambda sid: result(sid, 'failed', 1),

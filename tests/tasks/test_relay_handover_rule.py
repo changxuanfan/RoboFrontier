@@ -1,4 +1,4 @@
-"""New Relay runs require a qualified airborne handover; frozen runs keep their terms."""
+"""Relay requires a qualified airborne handover of every timber."""
 import json
 from pathlib import Path
 import tempfile
@@ -8,24 +8,22 @@ import numpy as np
 
 from roboteam.runtime import segments as run_segments
 from roboteam.tasks.relay import final_task
-from roboteam.tasks.families import (RELAY_HANDOVER_RULE, expected_protocol, policy_task,
-                                        protocol_for, resolve_case, sha, RELEASE, ROOT)
+from roboteam.tasks.families import RELAY_HANDOVER_RULE, policy_task
 from tests.tasks.test_relay_goal_support import GoalSupportTests
 
 HANDOVER = dict(sim_time_s=5.0, senders=['A', 'B'], receivers=['B', 'C'], retained=['B'], released=['A'], joined=['C'],
-                protocol='qualified-members-v2')
+                protocol='qualified-members-v3', airborne=True)
 RELEASE_ONLY = dict(sim_time_s=6.0, senders=['A', 'B', 'C'], receivers=['A', 'B'], retained=['A', 'B'], released=['C'], joined=[],
-                    protocol='qualified-members-v2')
+                    protocol='qualified-members-v3', airborne=True)
 
 
-def score(handovers, rule=RELAY_HANDOVER_RULE):
+def score(handovers):
     """Two timbers fully inside GOAL and released, with the given handovers on each."""
     _, _, relay = GoalSupportTests().world()
     mon = relay.mon
     mon.task.update(family='relay', level=1)
     mon.task = final_task(mon.task)
     mon.task['run_protocol'] = {'evaluation_semantics': 'terminal_outcome_v2'}
-    if rule: mon.task['run_protocol']['relay_completion_rule'] = rule
     mon.violations = []
     mon.bilateral = lambda *args, **kwargs: set()
     mon.bottom = lambda geoms: .8
@@ -58,11 +56,6 @@ class HandoverScoringTests(unittest.TestCase):
         result = score({'p1': [HANDOVER], 'p2': [HANDOVER]})
         self.assertTrue(result['task_success'])
         self.assertTrue(result['payloads']['p2']['airborne_handover_met'])
-
-    def test_a_frozen_run_without_the_rule_keeps_its_terminal_result(self):
-        result = score({}, rule=None)
-        self.assertTrue(result['task_success'])
-        self.assertNotIn('airborne_handover_met', result['payloads']['p1'])
 
 
 class Scenario:
@@ -209,14 +202,6 @@ class ProtocolTests(unittest.TestCase):
     def test_only_relay_tasks_carry_the_rule(self):
         self.assertEqual(policy_task('relay-a08-d1')['run_protocol']['relay_completion_rule'], RELAY_HANDOVER_RULE)
         self.assertNotIn('relay_completion_rule', policy_task('transport-a04-d1')['run_protocol'])
-
-    def test_a_frozen_relay_protocol_without_the_rule_stays_valid(self):
-        _, _, case = resolve_case('relay-a08-d1')
-        release = sha(Path(ROOT)/RELEASE)
-        old = protocol_for(case, release); old.pop('relay_completion_rule')
-        self.assertEqual(expected_protocol(case, old, release), old)
-        new = protocol_for(case, release)
-        self.assertEqual(expected_protocol(case, new, release), new)
 
 
 class RestartTests(unittest.TestCase):

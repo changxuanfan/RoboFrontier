@@ -63,10 +63,10 @@ def inspect(run, manifest, source):
         seal = json.loads((run_segments.output_dir(run, store.get('segment', 0))/'seal.json').read_text())
         if not seal.get('sealed') or not seal.get('fresh_observation') or seal.get('unresolved_action_ids') or seal.get('capture_error') or seal.get('shutdown_error'):
             raise RecoveryBlocked('The original world did not seal cleanly')
-        events = [json.loads(line) for line in run_path(run, 'host_log', 'codex').read_text().splitlines() if line.strip()]
+        events = [json.loads(line) for line in run_path(run, 'host_log').read_text().splitlines() if line.strip()]
         if not any(e.get('event') == 'model_host_exited' and e.get('signal') == 'gateway-lost' for e in events):
             raise RecoveryBlocked('No recorded task-channel loss; this manual exception is not applicable')
-        host = json.loads(run_path(run, 'host_process', 'codex').read_text())
+        host = json.loads(run_path(run, 'host_process').read_text())
         try: os.kill(int(host['pid']), 0)
         except ProcessLookupError: pass
         else: raise RecoveryBlocked('Original host PID is still alive or has been reused')
@@ -77,7 +77,7 @@ def inspect(run, manifest, source):
         if any(not 0 <= sim_s-hold.get('sim_s', -1e9) <= run_segments.HOLD_MAX_AGE_S for hold in holds.values()):
             raise RecoveryBlocked('A recorded grasp is too old to restore safely')
         config = json.loads((run/'private/inputs/task.json').read_text())
-        used = run_segments.used_s(run, store)
+        used = run_segments.used_s(store)
         threads = sorted({json.loads(value)['thread_id'] for (value,) in store.db.execute('SELECT value FROM agents')
                           if json.loads(value).get('thread_id')})
         record = {'run': str(run), 'task_id': identity, 'segment': store.get('segment', 0)+1,
@@ -144,10 +144,10 @@ def execute(run, manifest, source, python, scratch, *, allocation_end):
             env = dict(os.environ, ROBOTEAM_CODEX_GATEWAY=manifest['endpoint'],
                        ROBOTEAM_CODEX_TASK=plan['task_id'], ROBOTEAM_CODEX_RECOVERY_NONCE=nonce)
             # The original immutable host, physics and file worker stay in use.
-            with run_path(run, 'supervisor_log', 'codex').open('a') as log:
+            with run_path(run, 'supervisor_log').open('a') as log:
                 host = subprocess.Popen(['node', str(Path(source)/'roboteam/engines/codex/codex_policy_host.js'),
                                          str(run), str(source), str(python)], cwd=source, env=env, stdout=log, stderr=log)
-                write_json(run_path(run, 'host_process', 'codex'), {'pid': host.pid, 'started_at': time.time()})
+                write_json(run_path(run, 'host_process'), {'pid': host.pid, 'started_at': time.time()})
                 record.update(phase='host_started', host_pid=host.pid); write_json(status_path, record)
                 result = host.wait()
             with readonly(run) as final:

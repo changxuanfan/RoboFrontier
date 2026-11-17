@@ -28,7 +28,7 @@ def client_call(connection_path, op, data, call_id=None, timeout=DEFAULT_HTTP_TI
     connection_path=Path(connection_path).resolve()
     cfg=json.loads(connection_path.read_text())
     if cfg.get('schema_version')!=3:
-        raise ValueError('Legacy run: use its frozen client; v3 will not mutate old runs')
+        raise ValueError('Unsupported connection file: prepare the run with this code')
     state_dir=connection_path.parent.parent/'client-state'/cfg['actor']
     state_dir.mkdir(parents=True,exist_ok=True)
     lock=(state_dir/'client.lock').open('a+')

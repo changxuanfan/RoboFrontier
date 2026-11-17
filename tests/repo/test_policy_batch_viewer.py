@@ -33,20 +33,20 @@ def serving(batch):
 
 
 class BatchViewerTests(unittest.TestCase):
-    def fixture(self,base,*,legacy=False,engine='codex'):
+    def fixture(self,base,*,engine='codex'):
         run=base/'profile/task'
         (run/'private/state').mkdir(parents=True)
         job=dict(case_id='transport-a04-d1',family='transport',level=1,arms=4,
                  profile='test-profile',status='prepared')
-        job['run_dir' if legacy else 'run_directory']=str(run)
-        write(base/'batch.json',dict(status='running',**{'cases' if legacy else 'jobs':[job]}))
+        job['run_directory']=str(run)
+        write(base/'batch.json',dict(status='running',jobs=[job]))
         write(base/'effective-config.json',{'policy':{'engine':engine}})
         return run
 
     def test_http_api_is_readonly_even_with_no_database_and_with_invalid_database(self):
-        for legacy in (False,True):
-            with self.subTest(legacy=legacy),tempfile.TemporaryDirectory() as temporary:
-                base=Path(temporary).resolve();run=self.fixture(base,legacy=legacy)
+        for _ in (0,):
+            with tempfile.TemporaryDirectory() as temporary:
+                base=Path(temporary).resolve();run=self.fixture(base)
                 def inventory():return {str(p.relative_to(base)):p.read_bytes() for p in base.rglob('*') if p.is_file()}
                 for existing in (False,True):
                     if existing:(run/'private/state/runtime.sqlite').write_bytes(b'Unopenable database sentinel')
@@ -65,7 +65,7 @@ class BatchViewerTests(unittest.TestCase):
     def test_claude_supervisor_updates_and_terminal_snapshot_are_distinct(self):
         with tempfile.TemporaryDirectory() as temporary:
             base=Path(temporary).resolve();run=self.fixture(base,engine='claude')
-            write(base/'engineering-status.json',{'status':'running','jobs':[{
+            write(base/'control/engineering-status.json',{'status':'running','jobs':[{
                 'profile':'test-profile','case_id':'transport-a04-d1','status':'running'}]})
             with serving(base) as url:
                 with urlopen(url+'/api',timeout=3) as response:first=json.load(response)

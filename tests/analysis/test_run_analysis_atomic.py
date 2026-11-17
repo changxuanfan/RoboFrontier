@@ -1,4 +1,4 @@
-"""Atomic-step rules (version 2) on small synthetic runs; no recorded run data."""
+"""Atomic-step rules on small synthetic runs; no recorded run data."""
 
 import json
 from pathlib import Path

@@ -11,7 +11,7 @@ import io
 
 import numpy as np
 
-from roboteam.physics.observation_image import (DEFAULT_PROFILE, LEGACY_PROFILE, LOW_RESOLUTION_PROFILE,
+from roboteam.physics.observation_image import (DEFAULT_PROFILE, LOW_RESOLUTION_PROFILE,
                                                     observation_profile, save_observation)
 from roboteam.runtime.pipeline import Service
 from roboteam.runtime.setup import prepare_run, verify_inputs, write_json
@@ -19,8 +19,8 @@ from roboteam.tasks.config import load_harness
 
 
 class ObservationImageTests(unittest.TestCase):
-    def test_frozen_default_legacy_fallback_and_invalid_profile(self):
-        self.assertEqual((observation_profile({})['format'], observation_profile({})['width']), ('PNG', 1280))
+    def test_frozen_default_and_invalid_profile(self):
+        with self.assertRaises(ValueError): observation_profile({})
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             new = prepare_run(root/'new')
@@ -29,17 +29,11 @@ class ObservationImageTests(unittest.TestCase):
             self.assertEqual(cfg['observation_image_profile'], DEFAULT_PROFILE)
             self.assertEqual(public['observation_image'], {'width':1280, 'height':800, 'format':'JPEG', 'quality':90})
             self.assertEqual(verify_inputs(new), [])
-            cfg = load_harness(); cfg['observation_image_profile'] = LEGACY_PROFILE
-            write_json(root/'old-config.json', cfg)
-            legacy = prepare_run(root/'legacy-profile', harness_path=root/'old-config.json')
-            public = json.loads((legacy/'public/inputs/task.json').read_text())
-            self.assertEqual(public['observation_image'], {'width':1280, 'height':800, 'format':'PNG'})
-            self.assertEqual(verify_inputs(legacy), [])
-            cfg['observation_image_profile']='not-a-profile';write_json(root/'invalid.json', cfg)
+            cfg = load_harness(); cfg['observation_image_profile']='not-a-profile';write_json(root/'invalid.json', cfg)
             with self.assertRaises(ValueError):prepare_run(root/'invalid', harness_path=root/'invalid.json')
             self.assertFalse((root/'invalid').exists())
 
-    def test_capture_saves_valid_images_for_both_frozen_profiles(self):
+    def test_capture_saves_a_valid_image(self):
         model=mujoco.MjModel.from_xml_string("<mujoco><visual><global offwidth='1280' offheight='800'/></visual><worldbody><camera name='top' pos='0 0 2'/><geom type='sphere' size='.1'/></worldbody></mujoco>")
         data=mujoco.MjData(model);mujoco.mj_forward(model,data)
         with tempfile.TemporaryDirectory() as tmp, mujoco.Renderer(model,width=1280,height=800) as renderer:
@@ -50,14 +44,14 @@ class ObservationImageTests(unittest.TestCase):
                 perf={'capture_wall_s':0.,'captures':0})
             service.capture_request=lambda cameras:Service.capture_request(service,cameras)
             service.render_here=lambda request:Service.render_here(service,request)
-            for name,size,fmt,suffix in ((DEFAULT_PROFILE,(1280,800),'JPEG','.jpg'),('jpeg_896x560_q85',(896,560),'JPEG','.jpg'),(LEGACY_PROFILE,(1280,800),'PNG','.png')):
+            for name,size,fmt,suffix in ((DEFAULT_PROFILE,(1280,800),'JPEG','.jpg'),):
                 service.observation_image=observation_profile({'observation_image_profile':name})
                 result=Service.capture(service,['top']);path=Path(result['images']['top'])
                 self.assertEqual(path.suffix,suffix)
                 with Image.open(path) as image:
                     image.load();self.assertEqual(image.size,size);self.assertEqual(image.format,fmt)
 
-    # What every capture wrote before a reduced profile existed: the rendered pixels, encoded.
+    # The rendered pixels, encoded.
     @staticmethod
     def as_rendered(rgb, profile, size=None):
         image=Image.fromarray(rgb[::-1])
@@ -82,11 +76,11 @@ class ObservationImageTests(unittest.TestCase):
         rgb=np.empty((height,width,3),dtype=np.uint8)
         mujoco.mjr_readPixels(rgb,None,viewport,renderer._mjr_context);return rgb
 
-    def test_profiles_that_do_not_reduce_encode_the_rendered_pixels_unchanged(self):
+    def test_the_default_profile_encodes_the_rendered_pixels_unchanged(self):
         from roboteam.physics.observation_image import reduced_size, render_size
-        rgb=np.random.default_rng(7).integers(0,256,(560,896,3),dtype=np.uint8)
+        rgb=np.random.default_rng(7).integers(0,256,(800,1280,3),dtype=np.uint8)
         with tempfile.TemporaryDirectory() as tmp:
-            for name,size in ((DEFAULT_PROFILE,(1280,800)),('jpeg_896x560_q85',(896,560)),(LEGACY_PROFILE,(1280,800))):
+            for name,size in ((DEFAULT_PROFILE,(1280,800)),):
                 profile=observation_profile({'observation_image_profile':name});path=Path(tmp)/('x'+profile['extension'])
                 self.assertIsNone(reduced_size(profile));self.assertEqual(render_size(profile),size)
                 save_observation(Image,rgb,path,profile['format'],Service.image_save_options(profile))

@@ -14,11 +14,11 @@ from roboteam.batch.claude_batch import run_batch, status_batch, stop_batch
 
 class BatchTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory(); self.root = Path(self.tmp.name) / 'batch'; self.root.mkdir()
+        self.tmp = tempfile.TemporaryDirectory(); self.root = Path(self.tmp.name) / 'batch'; (self.root/'control').mkdir(parents=True)
         self.jobs = []
         for i in range(4):
             case = f'case{i}'; run = self.root / 'fake' / case
-            (run/'private/inputs').mkdir(parents=True); (run/'private/state').mkdir(parents=True)
+            (run/'private/inputs').mkdir(parents=True); (run/'private/state/control').mkdir(parents=True)
             (run/'public/inputs').mkdir(parents=True)
             (run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
                 'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2']},
@@ -43,7 +43,7 @@ class BatchTests(unittest.TestCase):
         for job, topology in zip(self.jobs, ('hierarchical', 'decentralized', 'hierarchical', 'decentralized')):
             path = Path(job['run_directory'])/'private/inputs/harness.json'
             data = json.loads(path.read_text())
-            data.update(topology=topology, startup_protocol='direct_team_v3')
+            data.update(topology=topology, startup_protocol='direct_team')
             path.write_text(json.dumps(data))
         seen = []
         def runner(run, *args, **kwargs):
@@ -55,7 +55,7 @@ class BatchTests(unittest.TestCase):
 
     def test_a_task_cap_concurrent_roles_could_exhaust_fails_preflight_before_any_claim(self):
         path = Path(self.jobs[2]['run_directory'])/'private/inputs/harness.json'
-        data = json.loads(path.read_text()); data.update(topology='decentralized', startup_protocol='direct_team_v3')
+        data = json.loads(path.read_text()); data.update(topology='decentralized', startup_protocol='direct_team')
         path.write_text(json.dumps(data))
         with self.assertRaisesRegex(ValueError, 'concurrent roles'):
             run_batch(self.root, self.env, parallel=2, turn_budget_usd=.6, total_budget_usd=1, wall_limit_s=5,
@@ -105,7 +105,7 @@ class BatchTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'startup timeout'):
                     run_batch(self.root,self.env,parallel=1,turn_budget_usd=.2,total_budget_usd=1,
                               wall_limit_s=5,startup_timeout_s=invalid,verifier=lambda _: [])
-                self.assertFalse((self.root/'engineering-claim.json').exists())
+                self.assertFalse((self.root/'control/engineering-claim.json').exists())
         seen=[]
         def runner(*args,**kwargs):
             seen.append(kwargs['startup_timeout_s'])
@@ -137,7 +137,7 @@ class BatchTests(unittest.TestCase):
         finish.set(); thread.join(3); self.assertFalse(thread.is_alive())
         self.assertEqual(outcome[0]['status'], 'stopped')
         self.assertEqual([j['status'] for j in outcome[0]['jobs']], ['closed'] + ['stopped_before_start']*3)
-        self.assertTrue(all((Path(j['run_directory'])/'STOP').exists() for j in self.jobs))
+        self.assertTrue(all((Path(j['run_directory'])/'private/state/control/STOP').exists() for j in self.jobs))
 
     def test_cli_sigterm_requests_stop_and_waits_for_active_job(self):
         ctx = multiprocessing.get_context('fork')
@@ -149,7 +149,7 @@ class BatchTests(unittest.TestCase):
                 assert kwargs['startup_timeout_s'] == 321
                 entered.set()
                 deadline=time.monotonic()+10
-                while not (Path(run)/'STOP').exists() and time.monotonic()<deadline:
+                while not (Path(run)/'private/state/control/STOP').exists() and time.monotonic()<deadline:
                     time.sleep(.02)
                 return {'status':'finished','reason':'stop_requested'}
             def launch(*args, **kwargs):
@@ -187,11 +187,11 @@ class BatchTests(unittest.TestCase):
         data = json.loads(harness.read_text()); data['topology'] = 'unsupported'; harness.write_text(json.dumps(data))
         with self.assertRaisesRegex(ValueError, 'Claude launch profile'):
             self.run_case(lambda *a, **k: self.fail('model call'))
-        self.assertFalse((self.root/'engineering-claim.json').exists())
+        self.assertFalse((self.root/'control/engineering-claim.json').exists())
         batch = json.loads((self.root/'batch.json').read_text()); batch['jobs'][0]['run_directory'] = '/tmp/outside'
         (self.root/'batch.json').write_text(json.dumps(batch))
         with self.assertRaisesRegex(ValueError, 'run directory'): stop_batch(self.root)
-        self.assertFalse((self.root/'STOP').exists())
+        self.assertFalse((self.root/'control/STOP').exists())
 
     def test_missing_third_party_credential_or_endpoint_blocks_entire_batch(self):
         launch = Path(self.jobs[-1]['run_directory'])/'private/inputs/claude.json'
@@ -206,8 +206,8 @@ class BatchTests(unittest.TestCase):
                 else: self.env['THIRD_PARTY_KEY'] = key
                 with self.assertRaisesRegex(ValueError, error):
                     self.run_case(lambda *a, **k: self.fail('No task should start'))
-                self.assertFalse((self.root/'engineering-claim.json').exists())
-                self.assertTrue(all(not (Path(j['run_directory'])/'private/state/claude-engineering-claim.json').exists()
+                self.assertFalse((self.root/'control/engineering-claim.json').exists())
+                self.assertTrue(all(not (Path(j['run_directory'])/'private/state/control/engineering-claim.json').exists()
                                     for j in self.jobs))
 
     def test_adaptive_draft_is_admitted_to_unqualified_claude_batch(self):
@@ -225,8 +225,8 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(len(calls), len(self.jobs))
 
     def test_stale_running_status_is_not_claimed_to_be_live(self):
-        (self.root/'engineering-status.json').write_text(json.dumps({'status': 'running'}))
-        (self.root/'engineering-supervisor.lock').touch()
+        (self.root/'control/engineering-status.json').write_text(json.dumps({'status': 'running'}))
+        (self.root/'control/engineering-supervisor.lock').touch()
         self.assertEqual(status_batch(self.root)['status'], 'supervisor_lost_needs_review')
         self.assertFalse(status_batch(self.root)['supervisor_live'])
 
@@ -243,7 +243,7 @@ class BatchTests(unittest.TestCase):
         entered = ctx.Event()
         publication = ctx.Event()
         def runner(run, *args, **kwargs):
-            (Path(run)/'private/state/claude-engineering-claim.json').write_text('{}')
+            (Path(run)/'private/state/control/engineering-claim.json').write_text('{}')
             entered.set()
             time.sleep(30)
             return {'status':'finished', 'reason':'world_ended'}
@@ -271,7 +271,7 @@ class BatchTests(unittest.TestCase):
             status = status_batch(self.root)
             self.assertEqual(status['status'], 'supervisor_lost_needs_review')
             self.assertFalse(status['supervisor_live'])
-            self.assertTrue((self.root/'engineering-claim.json').exists())
+            self.assertTrue((self.root/'control/engineering-claim.json').exists())
             self.assertEqual(status['jobs'][0]['status'], 'starting' if publish_starting else 'queued')
             self.assertTrue(status['runs'][0]['claim_record_present'])
             self.assertTrue(all(not run['claim_record_present'] for run in status['runs'][1:]))
@@ -289,7 +289,7 @@ class BatchTests(unittest.TestCase):
             process.close()
 
     def test_claim_without_status_needs_review_and_cannot_restart(self):
-        (self.root/'engineering-claim.json').write_text('{}')
+        (self.root/'control/engineering-claim.json').write_text('{}')
         self.assertEqual(status_batch(self.root)['status'], 'claim_without_status_needs_review')
         with self.assertRaisesRegex(ValueError, 'never restart'):
             self.run_case(lambda *a, **k: self.fail('unexpected launch'))
@@ -301,7 +301,7 @@ class BatchTests(unittest.TestCase):
         self.assertTrue(status_batch(self.root)['stop_requested'])
         with self.assertRaisesRegex(ValueError, 'stopped before launch'):
             self.run_case(lambda *a, **k: self.fail('unexpected launch'))
-        self.assertFalse((self.root/'engineering-claim.json').exists())
+        self.assertFalse((self.root/'control/engineering-claim.json').exists())
 
     def test_review_takes_precedence_over_stop(self):
         entered = threading.Event(); finish = threading.Event(); outcome = []
@@ -324,7 +324,7 @@ class BatchTests(unittest.TestCase):
         self.env['CLAUDE_CODE_OAUTH_TOKEN'] = 'synthetic'
         with self.assertRaisesRegex(ValueError, 'Anthropic endpoint'):
             self.run_case(lambda *a, **k: self.fail('unexpected launch'))
-        self.assertFalse((self.root/'engineering-claim.json').exists())
+        self.assertFalse((self.root/'control/engineering-claim.json').exists())
 
 
 if __name__ == '__main__': unittest.main()

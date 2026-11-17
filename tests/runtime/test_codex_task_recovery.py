@@ -33,8 +33,8 @@ class RecoveryTests(unittest.TestCase):
         self.store.finish_call('already-executed', {'execution_status': 'completed'})
         self.store.event('RUN_SEALED', 'Meta', {'owner_was_live': True, 'report_ref': str(self.run/'private/outputs/seal.json')})
         write_json(self.run/'private/outputs/seal.json', {'sealed': True, 'fresh_observation': True, 'unresolved_action_ids': []})
-        write_json(run_path(self.run, 'host_process', 'codex'), {'pid': 99999999})
-        run_path(self.run, 'host_log', 'codex').write_text(json.dumps({'at': time.time()-5, 'event': 'model_host_exited', 'signal': 'gateway-lost'})+'\n')
+        write_json(run_path(self.run, 'host_process'), {'pid': 99999999})
+        run_path(self.run, 'host_log').write_text(json.dumps({'at': time.time()-5, 'event': 'model_host_exited', 'signal': 'gateway-lost'})+'\n')
         self.identity = task_id(self.run)
         self.manifest = {'endpoint': '/not-used', 'recovery_directory': str(self.root/'grants'),
                          'tasks': [{'id': self.identity, 'run': str(self.run)}]}

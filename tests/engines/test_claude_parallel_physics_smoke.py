@@ -86,7 +86,7 @@ class ParallelPhysicsSmokeTests(unittest.TestCase):
             budget_review = False
             for job in jobs:
                 run = Path(job['run_directory'])
-                detail = json.loads((run/'private/outputs/claude-engineering-status.json').read_text())
+                detail = json.loads((run/'private/state/control/engineering-status.json').read_text())
                 self.assertEqual(detail['status'], 'needs_review' if detail['budget_review_required'] else 'finished', detail)
                 budget_review |= detail['budget_review_required']
                 self.assertTrue(detail['seal']['sealed'], detail)

@@ -35,7 +35,7 @@ const standing={Meta:{kind:'manager'},Controller:{kind:'team-controller'},A:{kin
 
 test('direct team binds every role, starts once, then supplies explicit START prompts',async()=>{
   const {host,operations}=fixture();
-  await PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team_v3');
+  await PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team');
   const start=operations.findIndex(o=>o.type==='request-start');
   assert.equal(operations.filter(o=>o.type==='request-start').length,1);
   assert.equal(operations.slice(0,start).filter(o=>o.type==='bind').length,3);
@@ -47,26 +47,26 @@ test('direct team binds every role, starts once, then supplies explicit START pr
 });
 test('Controller-only direct startup still binds and starts before its first model input',async()=>{
   const {host,operations}=fixture();
-  await PolicyHost.prototype.startInitialRoles.call(host,{Meta:{kind:'manager'},Controller:{kind:'controller'}},'direct_controller_v2');
+  await PolicyHost.prototype.startInitialRoles.call(host,{Meta:{kind:'manager'},Controller:{kind:'controller'}},'direct_controller');
   assert.ok(operations.findIndex(o=>o.type==='bind')<operations.findIndex(o=>o.type==='request-start'));
   assert.ok(operations.findIndex(o=>o.type==='request-start')<operations.findIndex(o=>o.type==='send'));
 });
 test('failed binding starts no task and sends no misleading started prompt',async()=>{
   const {host,operations}=fixture();
   host.bindInitialRole=async()=>({bound:false});
-  await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team_v3'),/binding/);
+  await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team'),/binding/);
   assert.equal(operations.filter(o=>['request-start','send'].includes(o.type)).length,0);
 });
 test('a rejected START cannot result in any initial model turn',async()=>{
   const {host,operations}=fixture();
   host.admin=async()=>({error:'not ready',started:false});
-  await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team_v3'),/START/);
+  await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team'),/START/);
   assert.equal(operations.filter(o=>o.type==='send').length,0);
 });
 test('a run without its frozen system message creates no session',async()=>{
   const {host,operations}=fixture();
   fs.rmSync(path.join(host.run,'private/inputs/bootstrap/system.md'));
-  await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team_v3'),/Missing frozen bootstrap message/);
+  await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team'),/Missing frozen bootstrap message/);
   assert.equal(operations.length,0);
 });
 test('an unknown protocol fails before any native session creation',async()=>{
@@ -82,6 +82,6 @@ test('STOP during binding prevents START and all initial model turns',async()=>{
     host.stopRequested=()=>true;
     return result;
   };
-  await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team_v3'),/Stop requested/);
+  await assert.rejects(PolicyHost.prototype.startInitialRoles.call(host,standing,'direct_team'),/Stop requested/);
   assert.equal(operations.filter(o=>['request-start','send'].includes(o.type)).length,0);
 });

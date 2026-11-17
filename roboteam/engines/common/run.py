@@ -26,7 +26,7 @@ from roboteam.engines.claude.native_home import config_directory
 from roboteam.engines.claude.supervisor import CentralizedSupervisor
 from roboteam.engines.claude.standing_team import StandingTeamPolicyHost
 from roboteam.runtime.bootstrap import STARTUP_TIMEOUT_S
-from roboteam.runtime.clock import run_clock, wall_backstop_s
+from roboteam.runtime.clock import wall_backstop_s
 from roboteam.runtime.seal import seal_run
 from roboteam.runtime.setup import verify_inputs, write_json
 from roboteam.tasks.config import ROOT
@@ -37,7 +37,7 @@ def _ledger(run, total_budget_usd, resuming):
 
     Turns cut off by the unexpected exit have ended with an unknown cost; without a task
     cap they are settled as unreported, under a cap they become uncertain and block."""
-    path = run_layout.path(run, 'budget_ledger', 'claude')
+    path = run_layout.path(run, 'budget_ledger')
     if resuming and path.exists():
         ledger = BudgetLedger(path); ledger.settle_interrupted()
         return ledger
@@ -92,11 +92,6 @@ def _run_protocol(run):
     return (json.loads(task.read_text()).get('run_protocol') or {}) if task.is_file() else {}
 
 
-def _time_rule(run):
-    """The clock the run's frozen protocol counts its limit by (policy_probe.run_clock)."""
-    return run_clock(_run_protocol(run))
-
-
 def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400, startup_timeout_s=STARTUP_TIMEOUT_S,
                     poll_s=0.5, owner_factory=subprocess.Popen, policy_factory=CentralizedPolicyHost,
                     adaptive_policy_factory=AdaptivePolicyHost, standing_policy_factory=StandingTeamPolicyHost,
@@ -135,7 +130,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
         raise ValueError('Missing credential variable: ' + profile['env_key'])
     if profile.get('auth_mode') == 'native_login':
         build_env(profile, base_env, config_directory(run, profile))
-    if run_layout.path(run, 'stop', 'claude').exists(): raise ValueError('Run was stopped before launch')
+    if run_layout.path(run, 'stop').exists(): raise ValueError('Run was stopped before launch')
     _check_shared_budget(run, topology, turn_budget_usd, total_budget_usd)
     # A run continued after an unexpected exit (docs/running/continuation.md) starts again only
     # from a prepared segment; its claim stays and its sessions are resumed.
@@ -151,21 +146,21 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
     owner = None
     result = None
     claimed = False
-    claim = run_layout.path(run, 'engineering_claim', 'claude')
-    status = run_layout.path(run, 'engineering_status', 'claude')
-    lock_path = run_layout.path(run, 'engineering_lock', 'claude')
+    claim = run_layout.path(run, 'engineering_claim')
+    status = run_layout.path(run, 'engineering_status')
+    lock_path = run_layout.path(run, 'engineering_lock')
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     lock = lock_path.open('a+')
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         # Recheck under the lock; a claim survives crashes and bars all retries.
         if claim.exists() and not resuming: raise ValueError('Run already claimed; never restart the world')
-        if run_layout.path(run, 'stop', 'claude').exists(): raise ValueError('Run was stopped before launch')
+        if run_layout.path(run, 'stop').exists(): raise ValueError('Run was stopped before launch')
         if verifier(run): raise ValueError('Frozen inputs changed before launch')
         if topology == 'single-agent':
             # The run's persistent ledger, as for every topology, so a model restart or a
             # continued segment keeps the costs already spent.
-            fresh_ledger = not (resuming and run_layout.path(run, 'budget_ledger', 'claude').exists())
+            fresh_ledger = not (resuming and run_layout.path(run, 'budget_ledger').exists())
             ledger = _ledger(run, total_budget_usd, resuming)
             host_factory = partial(ClaudeSessionHost, max_budget_usd=turn_budget_usd, budget_ledger=ledger)
             policy = policy_factory(run, profile, base_env, host_factory=host_factory,
@@ -192,7 +187,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
         # The owner's environment is the same for both engines and carries no credentials.
         from ..common import owner as physics_owner
         owner_env = physics_owner.environment(base_env)
-        owner_log = run_layout.path(run, 'owner_log', 'claude')
+        owner_log = run_layout.path(run, 'owner_log')
         owner_log.parent.mkdir(parents=True, exist_ok=True)
         with owner_log.open('a') as log:
             owner = owner_factory(physics_owner.command(run),
@@ -203,7 +198,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
         connection = run / 'private/state/connections/Meta.json'
         while True:
             if owner.poll() is not None: raise RuntimeError('Physical owner exited before publishing its connection')
-            if run_layout.path(run, 'stop', 'claude').exists(): raise RuntimeError('Stop requested during owner startup')
+            if run_layout.path(run, 'stop').exists(): raise RuntimeError('Stop requested during owner startup')
             if clock() >= deadline: raise TimeoutError('Physical owner startup timed out')
             info = json.loads(connection.read_text())
             if info.get('url') and policy.store.get('execution_owner_attached'):
@@ -214,9 +209,9 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
             sleep(poll_s)
         write_json(status, {'status': 'running', 'owner_pid': owner.pid, 'scored': False})
         supervisor = supervisor_type(policy, lambda: owner.poll() is None,
-                                            stop_requested=lambda: run_layout.path(run, 'stop', 'claude').exists(),
+                                            stop_requested=lambda: run_layout.path(run, 'stop').exists(),
                                             startup_timeout_s=startup_timeout_s, wall_limit_s=wall_limit_s,
-                                            time_rule=_time_rule(run), wall_backstop_s=wall_backstop_s(_run_protocol(run)),
+                                            wall_backstop_s=wall_backstop_s(_run_protocol(run)),
                                             poll_s=poll_s, clock=clock, sleep=sleep)
         result = supervisor.run()
     except Exception as error:

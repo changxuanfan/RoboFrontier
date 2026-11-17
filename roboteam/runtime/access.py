@@ -74,7 +74,7 @@ def table(run, repo=ROOT, home=None, tmp_dirs=None, checkouts=None):
     access[str(run)] = 'read'
     access[str(run/'private')] = 'deny'
     # Prepared runs use the current layout, whose working folder is workspace/.
-    access[str(run/run_layout.LAYOUTS[run_layout.CURRENT]['policy_cwd'])] = 'write'
+    access[str(run/run_layout.PATHS['policy_cwd'])] = 'write'
     return access
 
 
@@ -110,7 +110,7 @@ def closed_table(run, environment, *, home=None, system=None, **kwargs):
     access[str(run)] = 'deny'
     access[str(run/'public')] = 'read'
     access[str(run/'private')] = 'deny'
-    access[str(run/run_layout.LAYOUTS[run_layout.CURRENT]['policy_cwd'])] = 'write'
+    access[str(run/run_layout.PATHS['policy_cwd'])] = 'write'
     return access
 
 

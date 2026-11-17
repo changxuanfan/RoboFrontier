@@ -20,7 +20,7 @@ def write(path, value):
 
 
 class BenchmarkCollectionTests(unittest.TestCase):
-    def test_task_home_takes_precedence_over_legacy_batch_home(self):
+    def test_task_home_takes_precedence_over_the_batch_home(self):
         from roboteam.batch.metrics import native_codex_sessions
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);batch,run,sessions=self.make_batch(root)
@@ -29,7 +29,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
             for path in sessions.glob('*.jsonl'):
                 (task_sessions/path.name).write_bytes(path.read_bytes())
                 path.write_text('{"wrong_home":true}\n')
-            write(run/'codex-home.json', {'codex_home':str(root/'isolated')})
+            write(run/'private/engine/codex-home.json', {'codex_home':str(root/'isolated')})
             self.assertEqual(native_codex_sessions(run,'parent'),[(task_sessions/'parent.jsonl').resolve()])
             report=collect_batch(batch,root/'export')
             self.assertTrue(report['complete'])
@@ -51,24 +51,23 @@ class BenchmarkCollectionTests(unittest.TestCase):
         write(run/'private/outputs/evaluation.json', {'task_success':False})
         write(run/'private/inputs/harness.json', {'engine':engine,'model':'example','topology':'adaptive'})
         job = {'profile':'model','case_id':'demo','status':status,'run_directory':str(run)}
-        write(batch/'batch.json', {'schema':'roboteam.claude-draft.v1' if engine=='claude' else 'roboteam.cli-benchmark.v1',
+        write(batch/'batch.json', {'schema':'roboteam.claude-batch.v2' if engine=='claude' else 'roboteam.cli-benchmark.v1',
                                  'status':'prepared_not_qualified' if engine=='claude' else status, 'jobs':[job]})
         if engine=='claude':
-            write(batch/'engineering-status.json', {'status':status,'jobs':[job]})
-            home=run/'private/claude-config'
+            write(batch/'control/engineering-status.json', {'status':status,'jobs':[job]})
+            home=run/'private/engine/config'
             sessions=home/'projects/project'; sessions.mkdir(parents=True)
             write(home/'.credentials.json', {'secret':'MUST_NOT_COLLECT'})
         else:
             home=root/'home'
             sessions=home/'sessions/2026'; sessions.mkdir(parents=True)
-            write(batch/'codex-home.json', {'codex_home':str(home)})
+            write(batch/'control/codex-home.json', {'codex_home':str(home)})
         for tid in ('parent','child'):
             write(sessions/(tid+'.jsonl'), {'sessionId':tid,'text':'\u539f\u59cb\u8bb0\u5f55'})
         return batch,run,sessions
 
     def test_all_role_kinds_and_failed_task_roundtrip(self):
-        # 'coordinator' is how runs before the rename recorded 'team-controller'.
-        for kind in ('controller','worker','team-controller','coordinator'):
+        for kind in ('controller','worker','team-controller'):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as tmp:
                 root=Path(tmp);batch,run,sessions=self.make_batch(root,kind=kind)
                 report=collect_batch(batch,root/'export')
@@ -84,21 +83,21 @@ class BenchmarkCollectionTests(unittest.TestCase):
             root=Path(tmp);batch,run,sessions=self.make_batch(root,'claude')
             write(sessions/'child/subagents/agent-one.jsonl', {'message':'auxiliary'})
             image=base64.b64encode(b'\xff\xd8\xffjpeg').decode()
-            write(run/'private/evidence/turn.jsonl', {'content':[{'type':'image','mimeType':'image/jpeg','data':image}]})
+            write(run/'private/engine/turns/turn.jsonl', {'content':[{'type':'image','mimeType':'image/jpeg','data':image}]})
             report=collect_batch(batch,root/'export')
             self.assertTrue(report['complete'])
             self.assertFalse(list((root/'export').rglob('.credentials.json')))
-            self.assertTrue((root/'export/batch/model/demo/private/claude-config/projects/project/child.jsonl').is_file())
+            self.assertTrue((root/'export/batch/model/demo/private/engine/config/projects/project/child.jsonl').is_file())
             self.assertTrue(list((root/'export/sessions').rglob('agent-one.jsonl')))
             create(root/'export',root/'archive');verify(root/'archive',root/'restored')
-            original=run/'private/evidence/turn.jsonl'
-            self.assertEqual(original.read_bytes(),(root/'restored/batch/model/demo/private/evidence/turn.jsonl').read_bytes())
+            original=run/'private/engine/turns/turn.jsonl'
+            self.assertEqual(original.read_bytes(),(root/'restored/batch/model/demo/private/engine/turns/turn.jsonl').read_bytes())
 
     def test_managed_claude_home_collects_only_bound_native_sessions(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); batch, run, sessions = self.make_batch(root, 'claude')
             home = root / 'shared-native-home'
-            (run / 'private/claude-config').rename(home)
+            (run / 'private/engine/config').rename(home)
             write(home / 'projects/another-project/unrelated.jsonl', {'private': 'UNRELATED_SESSION'})
             write(run / 'private/inputs/claude.json', {'profile': {
                 'auth_mode': 'native_login', 'provider': 'anthropic', 'env_key': None,
@@ -126,7 +125,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); batch, run, _ = self.make_batch(root, 'claude')
             home = batch/'native-auth'
-            (run/'private/claude-config').rename(home)
+            (run/'private/engine/config').rename(home)
             write(run/'private/inputs/claude.json', {'profile': {
                 'auth_mode':'native_login', 'provider':'anthropic', 'env_key':None,
                 'native_config_dir':str(home)}})
@@ -138,7 +137,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);batch,run,_=self.make_batch(root,'claude')
             home=root/'shared-native-home'
-            (run/'private/claude-config').rename(home)
+            (run/'private/engine/config').rename(home)
             write(run/'private/inputs/claude.json',{'profile':{
                 'auth_mode':'native_login','provider':'anthropic','env_key':None,
                 'native_config_dir':str(home)}})
@@ -193,9 +192,10 @@ class BenchmarkCollectionTests(unittest.TestCase):
             self.assertIn('batch-1: expected one snapshot session, found 0',report['jobs'][0]['issues'])
 
     def test_live_writers_and_pids_rejected_before_export(self):
-        for name in ('supervisor.lock','model/demo/private/state/world.lock','model/demo/private/state/claude-engineering.lock'):
+        for name in ('control/supervisor.lock','model/demo/private/state/control/world.lock','model/demo/private/state/control/engineering.lock'):
             with self.subTest(lock=name), tempfile.TemporaryDirectory() as tmp:
                 root=Path(tmp);batch,run,_=self.make_batch(root)
+                (batch/name).parent.mkdir(parents=True,exist_ok=True)
                 with (batch/name).open('w') as lock:
                     fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
                     with self.assertRaises(ValueError):collect_batch(batch,root/'export')
@@ -204,13 +204,13 @@ class BenchmarkCollectionTests(unittest.TestCase):
             root=Path(tmp);batch,run,_=self.make_batch(root)
             unrelated=subprocess.Popen([sys.executable,'-c','import time; time.sleep(20)'])
             try:
-                write(run/'private/state/host-process.json',{'pid':unrelated.pid})
+                write(run/'private/state/control/host-process.json',{'pid':unrelated.pid})
                 self.assertTrue(collect_batch(batch,root/'reused-pid')['complete'])
             finally:
                 unrelated.terminate();unrelated.wait(timeout=5)
             process=subprocess.Popen([sys.executable,'-c','import time; time.sleep(20)','codex_policy_host.js',str(run)])
             try:
-                write(run/'private/state/host-process.json',{'pid':process.pid})
+                write(run/'private/state/control/host-process.json',{'pid':process.pid})
                 with self.assertRaises(ValueError):collect_batch(batch,root/'export')
             finally:
                 process.terminate();process.wait(timeout=5)
@@ -271,10 +271,8 @@ class BenchmarkCollectionTests(unittest.TestCase):
             with self.assertRaises(ValueError):collect_batch(batch,root/'export')
 
     def test_links_in_a_policy_workspace_are_recorded_not_followed(self):
-        from roboteam.runtime import layout as run_layout
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);batch,run,_=self.make_batch(root)
-            write(run/'private/inputs/manifest.json',run_layout.manifest_record('codex'))
             venv=run/'workspace/.tmp/venv/bin';venv.mkdir(parents=True)
             (venv/'python').symlink_to(sys.executable)
             (run/'workspace/secret').symlink_to(root/'home',target_is_directory=True)

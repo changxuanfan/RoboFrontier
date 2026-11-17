@@ -31,7 +31,7 @@ class AdaptiveHostTests(unittest.TestCase):
         frozen=self.run/'private/inputs/bootstrap/Controller.md'; frozen.parent.mkdir()
         frozen.write_text('frozen adaptive start')
         cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
-        cfg.update(startup_protocol='direct_controller_v2', engine='claude',topology='adaptive',model='fake',effort='high')
+        cfg.update(startup_protocol='direct_controller', engine='claude',topology='adaptive',model='fake',effort='high')
         store=RuntimeStore(self.run/'private/state/runtime.sqlite'); store.initialize('run',cfg,['A']); store.close()
         self.ledger=BudgetLedger.create(self.run/'private/state/budget.sqlite',1); self.calls=[]
         def client(conn,op,data,call_id,**kwargs):

@@ -23,11 +23,11 @@ def idle(path):
 
 
 def finished_run(root, lifecycle='ended', engine='codex'):
-    """A run-v6 run with a bound Controller and a snapshot anchor whose sessions sit in a Codex home."""
+    """A run with a bound Controller and a snapshot anchor whose sessions sit in a Codex home."""
     root = Path(root).resolve()
     run = root/'run'; (run/'private/state').mkdir(parents=True); (run/'private/outputs').mkdir()
     (run/'private/inputs').mkdir()
-    (run/'private/inputs/manifest.json').write_text(json.dumps({'engine': engine, **run_layout.manifest_record(engine)}))
+    (run/'private/inputs/manifest.json').write_text(json.dumps({'engine': engine, **run_layout.manifest_record()}))
     store = RuntimeStore(run/'private/state/runtime.sqlite')
     cfg = load_harness(); cfg['topology'] = 'single-agent'; cfg['engine'] = engine
     store.initialize('run', cfg, ['A'])
@@ -42,7 +42,7 @@ def finished_run(root, lifecycle='ended', engine='codex'):
             {'type': 'turn_context', 'payload': {'turn_id': 't1', 'model': 'm', 'effort': 'high'}},
             {'type': 'response_item', 'payload': {'type': 'function_call', 'name': 'spawn_agent'}}]))
         idle(session); sessions.append(session)
-    marker = run_layout.path(run, 'codex_home_marker', engine); marker.parent.mkdir(parents=True, exist_ok=True)
+    marker = run_layout.path(run, 'codex_home_marker'); marker.parent.mkdir(parents=True, exist_ok=True)
     marker.write_text(json.dumps({'codex_home': str(home)}))
     return run, home, sessions
 
@@ -161,7 +161,7 @@ class SessionArchiveTests(unittest.TestCase):
     def test_claude_run_archives_transcripts_in_its_own_config_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
             run, home, sessions = finished_run(Path(tmp), engine='claude')
-            projects = run_layout.path(run, 'engine_config', 'claude')/'projects/p'
+            projects = run_layout.path(run, 'engine_config')/'projects/p'
             transcript = projects/(THREAD+'.jsonl'); sidecar = projects/THREAD/'subagents/agent-1.jsonl'
             sidecar.parent.mkdir(parents=True); transcript.write_text('{"type": "user"}\n'); sidecar.write_text('{}\n')
             idle(transcript); idle(sidecar)

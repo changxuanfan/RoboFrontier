@@ -86,7 +86,7 @@ class PrecheckIntegrationTests(unittest.TestCase):
                 # The native fork carries the parent's complete cost history.
                 # Summed new work must equal that final cumulative counter,
                 # rather than charging inherited usage once per invocation.
-                events=Path(tmp)/'out/run/private/evidence/fork.jsonl'
+                events=Path(tmp)/'out/run/private/engine/turns/fork.jsonl'
                 native=[json.loads(line) for line in events.read_text().splitlines()]
                 total=next(row['total_cost_usd'] for row in reversed(native) if row.get('type')=='result')
                 self.assertAlmostEqual(result['total_cost_usd'],total,places=10)

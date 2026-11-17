@@ -26,14 +26,14 @@ class ClaudeRecoveryTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(); self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).resolve()
         harness = self.root/'harness.json'
-        harness.write_text(json.dumps(dict(HARNESS, engine='claude', topology='adaptive', startup_protocol='direct_controller_v2')))
+        harness.write_text(json.dumps(dict(HARNESS, engine='claude', topology='adaptive', startup_protocol='direct_controller')))
         self.batch = self.root/'batch'
         self.run = prepare('transport-a04-d1', self.batch/'opus_subscription'/'transport-a04-d1', harness).resolve()
         write_json(self.batch/'batch.json', {'schema': 'roboteam.claude-batch.v2', 'jobs': [
             {'profile': 'opus_subscription', 'case_id': 'transport-a04-d1', 'run_directory': str(self.run)}]})
         write_json(run_layout.batch_path(self.batch, 'engineering_status'),
                    {'status': 'running', 'jobs': [{'case_id': 'transport-a04-d1', 'status': 'needs_review', 'reason': 'dispatch_paused'}]})
-        write_json(run_layout.path(self.run, 'engineering_status', 'claude'), {'status': 'needs_review', 'reason': 'dispatch_paused'})
+        write_json(run_layout.path(self.run, 'engineering_status'), {'status': 'needs_review', 'reason': 'dispatch_paused'})
         self.store = RuntimeStore(self.run/'private/state/runtime.sqlite'); self.addCleanup(self.store.close)
         for key, value in {'lifecycle': 'running', 'physics_state': 'running', 'integrity_valid': True,
                            'start_at': time.time()-30, 'execution_owner_attached': True}.items(): self.store.put(key, value)
@@ -103,7 +103,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
             pid = 99999998
             def wait(self):
                 store.put('segments', [{'index': 0}, {'index': 1}]); store.put('lifecycle', 'ended')
-                write_json(run_layout.path(run, 'engineering_status', 'claude'), {'status': 'finished', 'reason': 'world_ended'})
+                write_json(run_layout.path(run, 'engineering_status'), {'status': 'finished', 'reason': 'world_ended'})
                 return 0
         launched = []
         def launcher(arguments, **options):
@@ -129,45 +129,6 @@ class ClaudeRecoveryTests(unittest.TestCase):
         self.assertTrue(Path(result['backup']).is_file())
         with self.assertRaisesRegex(recovery.RecoveryBlocked, 'already recovered'): recovery.inspect(self.run, ROOT)
 
-    def test_only_an_explicit_runtime_upgrade_continues_a_recovered_run_again(self):
-        store, run = self.store, self.run
-        def host(segment):
-            class Host:
-                pid = 99999996
-                def wait(self):
-                    store.put('segments', [{'index': i} for i in range(segment+1)]); store.put('lifecycle', 'ended')
-                    write_json(run_layout.path(run, 'engineering_status', 'claude'), {'status': 'finished', 'reason': 'world_ended'})
-                    return 0
-            return lambda *a, **k: Host()
-        with patch.object(recovery, 'validate_physical_restore', return_value={'verified': True, 'physics_steps': 0}):
-            recovery.execute(self.run, ROOT, Path(os.sys.executable), self.scratch, seal=self.seal, launcher=host(1))
-            # Segment 1 stops again on review, sealed by its runner.
-            # The resumed world clears its pending segment, as request-resume does.
-            for key, value in {'lifecycle': 'interrupted', 'physics_state': 'stopped', 'dispatch_paused': True,
-                               'pending_segment': None}.items():
-                store.put(key, value)
-            write_json(run_layout.path(run, 'engineering_status', 'claude'), {'status': 'needs_review', 'reason': 'session_error'})
-            sealed = recovery.run_segments.output_dir(run, 1); sealed.mkdir(parents=True, exist_ok=True)
-            write_json(sealed/'seal.json', {'sealed': True, 'fresh_observation': True, 'unresolved_action_ids': []})
-            store.event('RUN_SEALED', 'Meta', {'owner_was_live': True, 'report_ref': str(sealed/'seal.json')})
-            self.assertTrue(json.loads((run/'private/state/control/recovery.json').read_text())['prepared'])
-            with self.assertRaisesRegex(recovery.RecoveryBlocked, 'already recovered'): recovery.inspect(run, ROOT)
-            with self.assertRaisesRegex(recovery.RecoveryBlocked, 'stated reason'):
-                recovery.execute(run, ROOT, Path(os.sys.executable), self.scratch, launcher=host(2), upgrade_from=ROOT)
-            before = recovery._ledger(store.db)
-            result = recovery.execute(run, ROOT, Path(os.sys.executable), self.scratch, launcher=host(2),
-                                      upgrade_from=ROOT, reason='fixture upgrade')
-        self.assertEqual(result['phase'], 'closed')
-        self.assertEqual(result['authorization'], 'private/inputs/runtime-upgrades/2/authorization.json')
-        self.assertEqual(store.get('segment'), 2)
-        self.assertEqual(recovery._ledger(store.db), before)
-        kinds = [k for (k,) in store.db.execute('SELECT kind FROM events ORDER BY seq')]
-        self.assertIn('RUNTIME_UPGRADE_AUTHORIZED', kinds)
-        self.assertEqual([a['phase'] for a in result['earlier_attempts']], ['closed'])
-        # The grant is consumed by the segment it authorized.
-        from roboteam.runtime import upgrade as runtime_upgrade
-        with self.assertRaises(ValueError): runtime_upgrade.validate_authorization(run, store, result['authorization'])
-
     def test_a_world_that_closed_by_itself_continues_and_fails_its_unfinished_action(self):
         # Observed 2026-11-10: an operator pause found an arm still stopping; the seal timed out,
         # the host left and the world closed itself, leaving the action uncertain.
@@ -185,7 +146,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
             pid = 99999995
             def wait(self):
                 store.put('segments', [{'index': 0}, {'index': 1}]); store.put('lifecycle', 'ended')
-                write_json(run_layout.path(run, 'engineering_status', 'claude'), {'status': 'finished', 'reason': 'world_ended'})
+                write_json(run_layout.path(run, 'engineering_status'), {'status': 'finished', 'reason': 'world_ended'})
                 return 0
         with patch.object(recovery, 'validate_physical_restore', return_value={'verified': True, 'physics_steps': 0}):
             result = recovery.execute(self.run, ROOT, Path(os.sys.executable), self.scratch, launcher=lambda *a, **k: Host())
@@ -216,7 +177,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
             pid = 99999997
             def wait(self):
                 store.put('segments', [{'index': 0}, {'index': 1}]); store.put('lifecycle', 'ended')
-                write_json(run_layout.path(run, 'engineering_status', 'claude'), {'status': 'finished', 'reason': 'world_ended'})
+                write_json(run_layout.path(run, 'engineering_status'), {'status': 'finished', 'reason': 'world_ended'})
                 return 0
         with patch.object(recovery, 'validate_physical_restore', return_value={'verified': True, 'physics_steps': 0}):
             result = recovery.execute(self.run, ROOT, Path(os.sys.executable), self.scratch, seal=None, launcher=lambda *a, **k: Host())

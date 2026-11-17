@@ -115,10 +115,10 @@ QUOTA_RESUME = ('Your previous model turn failed because the account\'s usage li
 SKILLS_HEADER = ('# Run skills\nShared by all roles in this run. Rules and format: the "Run skills" section '
                  'of your Skill.\n')
 STARTUP = {
-    'direct_controller_v2': ('The experiment has started and the task clock is running. Read, observe, then decide '
+    'direct_controller': ('The experiment has started and the task clock is running. Read, observe, then decide '
                              'and act; ready is optional and you continue without waiting for another START.'),
     # Standing teams: every initial role is bound before the single START.
-    'direct_team_v3': ('The experiment has started for the whole team and the task clock is running. Read, observe, '
+    'direct_team': ('The experiment has started for the whole team and the task clock is running. Read, observe, '
                        'then decide and act within your role; ready is optional and you continue without waiting '
                        'for another START.'),
 }
@@ -151,7 +151,7 @@ def bootstrap_text(run, actor):
         if relative != 'rules.md':
             parts.append('--- ' + str(public / relative) + ' ---\n' + path.read_text().rstrip('\n'))
     # Written only while a new run is prepared, before its manifest records the layout.
-    lessons = run / run_layout.LAYOUTS[run_layout.CURRENT]['skills_file']
+    lessons = run / run_layout.PATHS['skills_file']
     lessons_line = ('Before acting, read the headings of ' + str(lessons) + ', the run\'s shared lessons; '
                     'teammates may add entries during the run.\n\n' if lessons.is_file() else '')
     mode = tool_mode.of(harness)
@@ -229,7 +229,7 @@ def fill_resume(run, actor, record):
 
 
 def delegate_prompt(run, actor, child):
-    """The frozen delegate message filled for this assignment, or None for an earlier run."""
+    """The frozen delegate message filled for this assignment, or None when the run has none."""
     path = Path(run) / 'private/inputs/bootstrap/delegate.md'
     if not path.is_file(): return None
     scope = {'robots': child.get('robots'), 'goal': child.get('goal'), 'done_when': child.get('done_when'),

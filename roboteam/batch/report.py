@@ -29,7 +29,7 @@ def model_evidence(directory, actor, thread, config, codex_home=None):
         # CLI reports are useful observations but do not establish the effective
         # provider model or rule out remapping and auxiliary requests.
         turns=[]
-        evidence=run_layout.path(directory,'engine_turns','claude')
+        evidence=run_layout.path(directory,'engine_turns')
         for path in evidence.glob('*-summary.json'):
             try:
                 data=json.loads(path.read_text())
@@ -40,7 +40,7 @@ def model_evidence(directory, actor, thread, config, codex_home=None):
                               'status':data.get('status')})
             except (OSError, ValueError, AttributeError, TypeError):
                 continue
-        config_dir=run_layout.path(directory,'engine_config','claude')/'projects'
+        config_dir=run_layout.path(directory,'engine_config')/'projects'
         transcripts=[p for p in session_glob(config_dir,thread+'.jsonl') if p.parent.parent==config_dir] if thread else []
         return {'thread_id':thread, 'turns':turns, 'verified':False,
                 'native_subagent_calls':native_subagent_calls(transcripts),
@@ -62,7 +62,7 @@ def export(directory, codex_home=None):
     directory=Path(directory).resolve();output=directory/'private/outputs'
     manifest=directory/'private/inputs/manifest.json'
     if not manifest.is_file() or json.loads(manifest.read_text()).get('schema_version')!=3 or not (directory/'private/state/runtime.sqlite').is_file():
-        raise ValueError('Existing v3 run required; historical layouts are not migrated')
+        raise ValueError('A run prepared with this code is required')
     store=RuntimeStore(directory/'private/state/runtime.sqlite')
     try:
         lifecycle=store.get('lifecycle')

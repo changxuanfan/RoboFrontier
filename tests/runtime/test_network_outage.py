@@ -32,13 +32,12 @@ class OutageMonitorTests(unittest.TestCase):
         monitor.probe = lambda hosts: 1/0; monitor.step()
         self.assertEqual(monitor.failures, 2)
 
-    def test_only_local_active_time_policy_runs_probe_their_engine_hosts(self):
+    def test_local_policy_runs_probe_their_engine_hosts(self):
         task = {'execution_readiness': 'prepared_policy_trial', 'run_protocol': {'clock': ACTIVE}}
         with patch.dict(os.environ, {network_outage.SWITCH: 'on'}):
             os.environ.pop('SLURM_JOB_ID', None); os.environ.pop('ROBOTEAM_EGRESS_PAUSE_FILE', None)
             self.assertEqual(monitor_for(task, {'engine': 'claude'}).hosts, ('api.anthropic.com',))
             self.assertEqual(monitor_for(task, {'engine': 'codex'}).hosts, ('chatgpt.com', 'auth.openai.com'))
-            self.assertIsNone(monitor_for({**task, 'run_protocol': {}}, {'engine': 'codex'}))
             # A Slurm job with direct egress probes too; one with an egress pause does not.
             with patch.dict(os.environ, {'SLURM_JOB_ID': '1'}): self.assertIsNotNone(monitor_for(task, {'engine': 'codex'}))
             with patch.dict(os.environ, {'ROBOTEAM_EGRESS_PAUSE_FILE': '/x'}): self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
@@ -109,7 +108,7 @@ class OutagePauseTests(active.Fixture):
         self.answers = []
         self.monitor = OutageMonitor(('api.example',), lambda hosts: self.answers.pop(0))
         self.s.egress_pause = WorldPause(self.s, self.monitor)
-        self.s.policy_budget = BudgetGuard(protocol(600, ACTIVE))
+        self.s.policy_budget = BudgetGuard(protocol(600))
         self.s.store.put('physics_state', 'running')
 
     def probe(self, *answers):
@@ -169,7 +168,7 @@ class SupervisorOutageTests(unittest.TestCase):
         def tick():
             if self.now == 10: p.store.data.update(dispatch_paused=False, physics_state='running')
             if self.now == 12: p.store.data['lifecycle'] = 'ended'; p.host.state = 'idle'
-        result = self.supervisor(p, tick, time_rule=ACTIVE).run()
+        result = self.supervisor(p, tick).run()
         self.assertEqual(result['reason'], 'world_ended'); self.assertGreater(p.cycles, 0)
 
 

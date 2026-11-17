@@ -16,8 +16,8 @@ Engine-specific behavior is in the [engine guides](engines/README.md); time and 
   Skill, its tool, motion-check, communication and adaptive references as the topology needs, and
   the family materials, each under its absolute path. The files stay readable on disk. The message
   is at most 400,000 bytes. Only the last line differs between engines (how to view images).
-- **START.** Single and Adaptive runs use `direct_controller_v2`; Controller + Worker and
-  Worker-Worker runs use `direct_team_v3`. The host prepares the world, binds every initial role
+- **START.** Single and Adaptive runs use `direct_controller`; Controller + Worker and
+  Worker-Worker runs use `direct_team`. The host prepares the world, binds every initial role
   to its own native session, persists one START and then sends each role its start message.
   Reading, observing and planning count as task time. A failed or uncertain first delivery is an
   engineering failure for review, never retried in the same world or reported as a task result.
@@ -35,8 +35,7 @@ equal rules do not make model context or tool behavior equal.
 ## Observation images
 
 `render.observation_profile = "jpeg_1280x800_q90"` (the default) makes every observation camera
-produce a 1280 × 800 JPEG at quality 90; `jpeg_896x560_q85` and `png_1280x800` are the other sharp
-choices. `jpeg_128x80_q95` is the low-resolution condition: each image is rendered
+produce a 1280 × 800 JPEG at quality 90. `jpeg_128x80_q95` is the low-resolution condition: each image is rendered
 at 1280 × 800 and every 10 × 10 block of pixels is averaged into one before encoding at quality 95. The run's harness
 freezes it as `observation_image_profile`, and the public task states the format and resolution.
 When a published camera calibration names an image size, the run gets a copy at the observation
@@ -118,7 +117,7 @@ decide completion:
 
 Dropped flags and recorded violations do not veto completion. Reports keep
 `strict_task_success`, process compliance and violations; Relay reports also keep
-`legacy_process_goals_met`, `legacy_completed_payloads`, drops and handover records. A violation
+`process_goals_met`, `process_completed_payloads`, drops and handover records. A violation
 entry is deduplicated by kind and key, not a count of separate collisions. Failed and unresolved
 actions are reported apart from process violations. An interrupted or unresolved run is never
 promoted to success, and an accepted `finish` is not a success verdict.

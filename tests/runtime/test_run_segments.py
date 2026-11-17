@@ -1,4 +1,4 @@
-"""When a run may continue in a new segment, and how downtime enters the deadline."""
+"""When a run may continue in a new segment."""
 import fcntl
 import json
 from pathlib import Path
@@ -11,7 +11,7 @@ import numpy as np
 
 from roboteam.runtime import segments as run_segments
 from roboteam.runtime.layout import path as run_path
-from roboteam.runtime.segments import MIN_REMAINING_S, deadline, process_summary, retry_eligibility
+from roboteam.runtime.segments import MIN_REMAINING_S, process_summary, retry_eligibility
 from roboteam.runtime.store import RuntimeStore
 from engines.test_engine_parity import prepared
 
@@ -29,7 +29,8 @@ class EligibilityTests(unittest.TestCase):
 
     def test_each_normal_or_unsafe_end_blocks_an_automatic_retry(self):
         self.assertEqual(self.reason(), 'no recorded motion frame')
-        self.store.put('segment', 1); self.assertIn('already continued automatically once', self.reason())
+        self.store.put('segment', 1); self.store.put('continuations', [{'segment': 1, 'manual': False}])
+        self.assertIn('already continued automatically once', self.reason())
         self.assertEqual(self.manual(), 'no recorded motion frame')
         self.store.put('segment', 0)
         for lifecycle in ('prepared', 'resuming', 'paused'):
@@ -146,16 +147,6 @@ class EligibilityTests(unittest.TestCase):
         (out / 'suite-process.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows))
         self.assertEqual(run_segments.dial_record(self.run, 25.)['support_ready'], [True, True])
         self.assertEqual(run_segments.dial_record(self.run)['support_ready'], [False, True])
-
-    def test_deadline_excludes_downtime(self):
-        self.store.put('start_at', 1000.); self.store.put('downtime_s', 25.)
-        self.assertEqual(deadline(self.store, 600), 1625.)
-
-    def test_runs_without_segment_folders_never_continue(self):
-        manifest = self.run / 'private/inputs/manifest.json'; value = json.loads(manifest.read_text())
-        for key in ('segment_inputs', 'segment_outputs'): value['layout_paths'].pop(key)
-        manifest.write_text(json.dumps(value))
-        self.assertEqual(self.reason(), 'run layout has no segments')
 
 
 

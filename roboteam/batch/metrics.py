@@ -46,7 +46,7 @@ def session_glob(folder, pattern):
 
 
 def codex_run_transcripts(run, thread):
-    """The run's own copies of a Codex thread (run-v6 private/engine/transcripts/)."""
+    """The run's own copies of a Codex thread (private/engine/transcripts/)."""
     try: folder = run_layout.path(run, 'engine_transcripts')
     except KeyError: return []
     return session_glob(folder, '*'+thread+'*.jsonl') if thread and folder.is_dir() else []
@@ -59,13 +59,7 @@ def run_skills(run_dir):
     a regular file inside the run; anything else is reported as an issue and not read."""
     run_dir = Path(run_dir)
     unread = 'skills file is a link or not a regular file; not read'
-    try:
-        lessons = run_layout.path(run_dir, 'skills_file')
-    except KeyError:
-        return []
-    except run_layout.LayoutError:
-        # A link that leaves the run.
-        return [{'path': _recorded_skills_path(run_dir), 'issue': unread, 'entries': []}]
+    lessons = run_layout.path(run_dir, 'skills_file')
     if not os.path.lexists(lessons):
         return []
     data = _read_regular(run_dir, lessons)
@@ -85,14 +79,6 @@ def run_skills(run_dir):
                         'tags': [t.strip() for t in match.group(4).split(',') if t.strip()], 'revisions': []}
                        if match else {'type': None, 'title': line[3:].strip(), 'role': None, 'tags': [], 'revisions': []})
     return [{'path': str(lessons.relative_to(run_dir)), 'bytes': len(data), 'entries': entries}]
-
-
-def _recorded_skills_path(run_dir):
-    try:
-        manifest = json.loads((Path(run_dir)/'private/inputs/manifest.json').read_text())
-        return manifest['layout_paths']['skills_file']
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
 
 
 def _read_regular(run_dir, path):
@@ -139,7 +125,7 @@ def host_event(run, event, **fields):
     # Telemetry is derived evidence. Its failure must not hide a robot result
     # or turn a settled action into an apparently unsubmitted request.
     try:
-        path = run_layout.path(run, 'host_log', 'claude')
+        path = run_layout.path(run, 'host_log')
         path.parent.mkdir(parents=True, exist_ok=True)
         raw = (json.dumps({'schema': 'roboteam.host-event.v1', 'at': time.time(),
                            'event': event, **fields}, ensure_ascii=False, allow_nan=False)+'\n').encode()
@@ -212,7 +198,7 @@ def _claude_usage_after_results(run, reported_until, actors):
     A background task can wake an idle CLI after the host stopped reading its results.
     Fork copies keep their message ids and timestamps but take the child's session id, so
     a copy is reported only if every session holding it with a known result ended later."""
-    try: folder = run_layout.path(run, 'engine_config', 'claude')/'projects'
+    try: folder = run_layout.path(run, 'engine_config')/'projects'
     except KeyError: folder = None
     entries = {}
     for path in session_glob(folder, '*.jsonl') if folder is not None and folder.is_dir() else []:
@@ -288,7 +274,7 @@ def claude_transcript_cost(run, pricing=None):
     or a stop has none. Each assistant message's usage is priced once (transcripts repeat
     it per content block), main sessions and their sub-agent transcripts alike."""
     pricing = claude_pricing() if pricing is None else pricing
-    try: folder = run_layout.path(run, 'engine_config', 'claude')/'projects'
+    try: folder = run_layout.path(run, 'engine_config')/'projects'
     except KeyError: return None
     if not folder.is_dir(): return None
     messages = {}
@@ -356,9 +342,8 @@ def simulation_speed(run, sim_s, active_s=None, stalls=None):
 
 def export_metrics(run, engine):
     """Count actual host events, including setup; deduplicate terminal event identities."""
-    events = _records(run_layout.path(run, 'host_log', engine))
+    events = _records(run_layout.path(run, 'host_log'))
     rows, seen = [], set()
-    legacy = False
     after_results = None
     if engine == 'claude':
         session_totals, reported_until, actors = {}, {}, {}
@@ -382,18 +367,6 @@ def export_metrics(run, engine):
         if rows:
             late, after_results = _claude_usage_after_results(run, reported_until, actors)
             rows += late
-        if not rows:
-            legacy = True
-            # Older runs remain readable. Setup usage may be absent, so this
-            # fallback is explicitly partial rather than a full-run total.
-            for p in sorted(run_layout.path(run, 'engine_turns', engine).glob('*-summary.json')):
-                data = json.loads(p.read_text()); record = data.get('record') or {}
-                summary = record.get('summary') or {}
-                rows.append({'actor': data.get('actor'), 'session_id': data.get('session_id'),
-                             'phase': 'policy', 'usage': usage(engine, summary.get('usage'), summary.get('model_usage')),
-                             'usage_source': 'model_usage' if summary.get('model_usage') else 'usage',
-                             'reported_cost_usd': number(summary.get('total_cost_usd')),
-                             'duration_s': None, 'ended_at': None})
     else:
         previous = {}
         for e in events:
@@ -415,11 +388,7 @@ def export_metrics(run, engine):
     costs = [r['reported_cost_usd'] for r in rows if r['reported_cost_usd'] is not None]
     tools = [e for e in events if e.get('event') in ('robot_tool_completed', 'robot_tool_failed')]
     tool_seconds = [number(e.get('duration_s')) for e in tools]
-    # A Claude delegate's fork is its first turn; runs prepared before that had separate
-    # tool-free snapshot and fork turns.
-    setup_seconds = ([r['duration_s'] for r in rows if r['phase'] in ('snapshot_setup', 'fork_setup')]
-                     if engine == 'claude' else [])
-    setup_seconds += [number(e.get('duration_s')) for e in events if e.get('event') in ('snapshot_created', 'fork_created')]
+    setup_seconds = [number(e.get('duration_s')) for e in events if e.get('event') in ('snapshot_created', 'fork_created')]
     intervals = [(r['ended_at']-r['duration_s'], r['ended_at']) for r in rows
                  if r['ended_at'] is not None and r['duration_s'] is not None]
     model_seconds = [r['duration_s'] for r in rows if r['phase'] != AFTER_LAST_RESULT]
@@ -437,13 +406,13 @@ def export_metrics(run, engine):
     started = {e.get('events_name') for e in events if e.get('event') == 'cli_turn_started'}
     unfinished = len(started-seen) if engine == 'claude' else None
     # A compaction's tokens appear only in a result's modelUsage, never in the transcript.
-    complete = not legacy and not malformed and not unfinished and not (after_results or {}).get('compactions')
+    complete = not malformed and not unfinished and not (after_results or {}).get('compactions')
     reported = sum(costs) if costs else None
     estimate = claude_transcript_cost(run) if engine == 'claude' else None
     cost_complete = bool(rows) and len(costs) == len(rows) and complete
     return {'schema': 'roboteam.run-metrics.v1', 'engine': engine, 'usage': totals,
             'known_usage_subtotals': known_usage,
-            'by_actor': by_actor, 'evidence_scope': 'legacy_policy_only' if legacy else 'host_observed',
+            'by_actor': by_actor, 'evidence_scope': 'host_observed',
             'cache_hit_rate': totals['cached_input_tokens']/totals['input_tokens']
                 if totals['input_tokens'] and totals['cached_input_tokens'] is not None else None,
             'reported_cost_usd': reported,
@@ -467,7 +436,7 @@ def export_metrics(run, engine):
             'malformed_event_count': malformed,
             'interpretation': 'Reported usage/cost, not a provider bill. Missing values are null. '
                               'CLI wall time includes tool waits; overlapping durations are not additive wall-time shares. '
-                              'Legacy summaries may omit setup; host-observed Codex counters are not native-transcript totals.'}
+                              'Host-observed Codex counters are not native-transcript totals.'}
 
 
 def native_codex_sessions(run, thread, codex_home=None):
@@ -499,7 +468,7 @@ def native_codex_sessions(run, thread, codex_home=None):
                 return sorted(set(matches))
             if parent == run: marker = run_layout.path(run, 'codex_home_marker')
             elif (parent/'batch.json').is_file(): marker = run_layout.batch_path(parent, 'codex_home_marker')
-            else: marker = parent/'codex-home.json'
+            else: continue
             if home is None and marker.is_file():
                 home = Path(json.loads(marker.read_text())['codex_home']).expanduser().resolve()
         if home is None: home = Path(os.environ.get('CODEX_HOME', Path.home()/'.codex')).expanduser().resolve()

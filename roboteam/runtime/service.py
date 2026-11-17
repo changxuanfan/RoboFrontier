@@ -44,8 +44,8 @@ class RuntimeService:
         if not (self.directory/'private/inputs/manifest.json').is_file():
             raise ValueError('Prepare a new run first with roboteam prepare')
         manifest = json.loads((self.directory/'private/inputs/manifest.json').read_text())
-        if manifest.get('schema_version') != 3:
-            raise ValueError('Historical run: use its frozen tools; no automatic migration')
+        if manifest.get('schema_version') != 3 or manifest.get('layout') != run_layout.CURRENT:
+            raise ValueError('Unsupported run manifest: prepare the run with this code')
         lock = run_layout.path(self.directory, 'world_lock')
         lock.parent.mkdir(parents=True, exist_ok=True)
         self.world_lock = lock.open('a+')
@@ -64,9 +64,8 @@ class RuntimeService:
         self.task = json.loads((self.directory/'private/inputs/task.json').read_text())
         self.policy_budget = None
         if self.task.get('execution_readiness') == 'prepared_policy_trial':
-            from .clock import BudgetGuard, protocol, run_clock, wall_backstop_s
-            self.policy_budget = BudgetGuard(protocol(self.task['run_protocol']['total_wall_limit_s'],
-                                                      run_clock(self.task['run_protocol'])),
+            from .clock import BudgetGuard, protocol, wall_backstop_s
+            self.policy_budget = BudgetGuard(protocol(self.task['run_protocol']['total_wall_limit_s']),
                                              wall_backstop_s=wall_backstop_s(self.task['run_protocol']))
         self.roles = tuple(self.store.agents())
         self.policy_roles = tuple(a for a in self.roles if self.store.agent(a)['kind'] != 'manager')
@@ -265,7 +264,7 @@ class RuntimeService:
         return {'schema_version': 3, 'lifecycle': self.store.get('lifecycle'), 'started': self.started,
                 'segment': self.store.get('segment', 0), 'segments': self.store.get('segments') or [],
                 'downtime_s': self.store.get('downtime_s', 0.),
-                # Active running time, kept only by runs whose protocol counts it (policy_probe.BudgetGuard).
+                # Active running time, saved by clock.BudgetGuard.
                 **({'active_s': self.store.get('active_s')} if self.store.get('active_s') is not None else {}),
                 'ended': self.ended, 'sim_time_s': float(self.world.time) if self.world else None, 'agents': agents,
                 'unread': {a: self.store.pending(a)['messages'] for a in self.policy_roles},
@@ -375,10 +374,10 @@ class RuntimeService:
                     raise ValueError('Prepared inputs changed: '+str(changed))
                 policy = [v for v in self.store.agents().values() if v['kind'] != 'manager']
                 protocol = self.config['startup_protocol']
-                if protocol == 'direct_controller_v2':
+                if protocol == 'direct_controller':
                     if len(policy) != 1 or policy[0]['kind'] != 'controller' or not policy[0]['thread_id']:
                         raise ValueError('Direct START requires one bound Controller')
-                elif protocol == 'direct_team_v3':
+                elif protocol == 'direct_team':
                     threads = [v['thread_id'] for v in policy]
                     if not threads or not all(threads) or len(set(threads)) != len(threads):
                         raise ValueError('Direct team START requires every initial role bound to a distinct session')
@@ -688,7 +687,7 @@ class RuntimeService:
             budget=self.policy_budget
             if budget is not None and budget.backstop_pending(self):
                 # The wall backstop ends a run even while a pause or review hold holds its world
-                # (policy_probe.BudgetGuard): the pause closes and the world stops as at a cutoff.
+                # (clock.BudgetGuard): the pause closes and the world stops as at a cutoff.
                 self.egress_pause.close()
                 budget.tick(self)
                 if self.ended:self.shutdown=True

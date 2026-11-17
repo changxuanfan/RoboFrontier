@@ -60,7 +60,7 @@ class StandingTeamPolicyHost:
         try:
             cfg = self.store.get('config')
             if (cfg.get('engine') != self.engine or cfg.get('topology') not in ('hierarchical', 'decentralized')
-                    or cfg.get('startup_protocol') != 'direct_team_v3'):
+                    or cfg.get('startup_protocol') != 'direct_team'):
                 raise ValueError('Expected a direct-team Native standing-team engineering run')
             if cfg.get('model') != profile.get('model') or cfg.get('effort') != profile.get('effort'):
                 raise ValueError('Profile differs from frozen runtime configuration')

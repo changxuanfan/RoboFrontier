@@ -61,7 +61,7 @@ class Fixture(unittest.TestCase):
             record = policy_access.record(self.run_dir, environment=self.root, repo=self.repo, home=self.home,
                                           checkouts=[self.repo])
         (self.run_dir/'private/inputs/policy-access.json').write_text(json.dumps(record))
-        (self.run_dir/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('codex')))
+        (self.run_dir/'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
         return record
 
 
@@ -117,10 +117,10 @@ class AccessTableTests(Fixture):
         receipt = policy_env.receipt_path(self.root)
         current = json.loads(receipt.read_text())
         receipt.write_text(json.dumps({key: current[key] for key in ('passed', 'tree_sha256')}))
-        with self.assertRaisesRegex(ValueError, 'predates.*rerun scripts/check_policy_env.py'):
+        with self.assertRaisesRegex(ValueError, 'does not record.*rerun scripts/check_policy_env.py'):
             self.freeze()
         with patch.dict(os.environ, {policy_env.ENV_VAR: str(self.root)}), \
-                self.assertRaisesRegex(ValueError, 'predates.*rerun scripts/check_policy_env.py'):
+                self.assertRaisesRegex(ValueError, 'does not record.*rerun scripts/check_policy_env.py'):
             policy_env.require_combination('codex', 'landlock-v1')
 
     def test_only_the_engine_sandbox_and_cli_the_check_ran_are_admitted(self):
@@ -229,7 +229,7 @@ class DefaultTests(Fixture):
         self.assertEqual(self.default(system='linux'), root.resolve())
         for value in ('off', 'OFF', 'none'):
             with patch.object(policy_env.os, 'environ', {policy_env.ENV_VAR: value}):
-                with self.assertRaisesRegex(ValueError, 'no longer supported'):
+                with self.assertRaisesRegex(ValueError, 'not supported'):
                     policy_env.apply_default()
 
     def test_apply_default_names_it_for_preparation_only_when_unset(self):

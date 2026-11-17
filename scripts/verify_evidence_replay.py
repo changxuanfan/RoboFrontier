@@ -19,7 +19,6 @@ from roboteam.media.motion_recording import MotionReader
 from roboteam.physics.workstation import Workstation
 from roboteam.batch.collect import digest
 from roboteam.batch.archive_policy_batch import safe, verify_collection
-from roboteam.io import schema_of
 
 
 def simple_frames(recording, indices):
@@ -57,11 +56,7 @@ def verify_evidence(original, restored, output):
     markers = sorted(original.glob('batch/**/private/outputs/motion/stream.json'))
     if not markers:
         raise ValueError('No Motion recordings found; no replay validation was performed')
-    if schema_of(report_source) == 'roboteam.policy-collection.v1':
-        runs = [safe(original,job['run']) for job in report_source['jobs']]
-    else:
-        batch = json.loads((original/'batch/batch.json').read_text())
-        runs = [safe(original,'batch/'+job['profile']+'/'+job['case_id']) for job in batch['jobs']]
+    runs = [safe(original,job['run']) for job in report_source['jobs']]
     expected = {run/'private/outputs/motion/stream.json' for run in runs}
     if not expected or len(expected) != report_source['job_count'] or set(markers) != expected:
         raise ValueError('Motion coverage differs from collection jobs; missing recordings cannot pass replay validation')

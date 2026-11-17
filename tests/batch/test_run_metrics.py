@@ -11,13 +11,13 @@ from roboteam.batch.metrics import export_metrics, native_codex_sessions, native
 class RunMetricTests(unittest.TestCase):
     def test_claude_cache_writes_setup_and_duplicate_terminal_events(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp); output = run/'private/outputs'; output.mkdir(parents=True)
+            run = Path(tmp); output = run/'private/logs'; output.mkdir(parents=True)
             first = {'event':'cli_turn_completed', 'actor':'Controller', 'session_id':'s', 'at':10,
                      'events_name':'turn1', 'phase':'policy', 'duration_s':4, 'reported_cost_usd':.1,
                      'usage':{'input_tokens':10,'cache_read_input_tokens':20,'cache_creation_input_tokens':30,'output_tokens':4}}
             setup = {**first, 'actor':'Delegate_a', 'events_name':'fork1', 'phase':'fork_setup', 'at':11,
                      'reported_cost_usd':.2}
-            (output/'claude-host.jsonl').write_text('\n'.join(map(json.dumps,[first, first, setup]))+'\n')
+            (output/'host.jsonl').write_text('\n'.join(map(json.dumps,[first, first, setup]))+'\n')
             result = export_metrics(run, 'claude')
             self.assertEqual(result['usage']['input_tokens'],120)
             self.assertEqual(result['usage']['cached_input_tokens'],40)
@@ -27,29 +27,29 @@ class RunMetricTests(unittest.TestCase):
             self.assertEqual(result['model_process_wall_seconds_union'],5)
             self.assertEqual(result['model_process_seconds_sum'],8)
             self.assertEqual(result['by_actor']['Delegate_a']['input_tokens'],60)
-            self.assertEqual(result['fork_setup_seconds_sum'],4)
+            self.assertIsNone(result['fork_setup_seconds_sum'])
 
     def test_claude_delegate_fork_is_a_policy_turn_timed_by_its_fork_event(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp); output = run/'private/outputs'; output.mkdir(parents=True)
+            run = Path(tmp); output = run/'private/logs'; output.mkdir(parents=True)
             turn = {'event':'cli_turn_completed', 'actor':'Delegate_a', 'session_id':'c', 'at':10,
                     'events_name':'turn1', 'phase':'policy', 'duration_s':4, 'reported_cost_usd':.1,
                     'usage':{'input_tokens':10,'output_tokens':4}}
             fork = {'event':'fork_created', 'actor':'Delegate_a', 'session_id':'c', 'parent':'p', 'duration_s':.5}
-            (output/'claude-host.jsonl').write_text('\n'.join(map(json.dumps,[fork, turn]))+'\n')
+            (output/'host.jsonl').write_text('\n'.join(map(json.dumps,[fork, turn]))+'\n')
             result = export_metrics(run, 'claude')
             self.assertEqual(result['phase_counts'], {'policy':1})
             self.assertEqual(result['fork_setup_seconds_sum'], .5)
 
     def test_codex_uses_first_last_then_cumulative_deltas_not_inherited_totals(self):
         with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp)/'private/outputs'; output.mkdir(parents=True)
+            output = Path(tmp)/'private/logs'; output.mkdir(parents=True)
             def event(total, cached, out):
                 return {'event':'thread/tokenUsage/updated','thread_id':'child','actor':'Delegate_a',
                         'token_usage':{'total':{'inputTokens':total,'cachedInputTokens':cached,'outputTokens':out},
                                        'last':{'inputTokens':100,'cachedInputTokens':40,'outputTokens':5}}}
             first=event(1000,500,40); later=event(1250,650,50)
-            (output/'codex-host.jsonl').write_text('\n'.join(map(json.dumps,[first,first,later]))+'\n')
+            (output/'host.jsonl').write_text('\n'.join(map(json.dumps,[first,first,later]))+'\n')
             result=export_metrics(tmp,'codex')
             self.assertEqual(result['usage']['input_tokens'],350)
             self.assertEqual(result['usage']['cached_input_tokens'],190)
@@ -57,25 +57,17 @@ class RunMetricTests(unittest.TestCase):
             self.assertAlmostEqual(result['cache_hit_rate'],190/350)
             self.assertIsNone(result['reported_cost_usd'])
 
-    def test_missing_cache_fields_are_unknown_and_legacy_reports_are_partial(self):
+    def test_missing_cache_fields_are_unknown(self):
         self.assertIsNone(usage('claude', {'input_tokens':10})['input_tokens'])
-        with tempfile.TemporaryDirectory() as tmp:
-            evidence=Path(tmp)/'private/evidence'; evidence.mkdir(parents=True)
-            (evidence/'old-summary.json').write_text(json.dumps({'actor':'Controller','record':{
-                'summary':{'usage':{'input_tokens':10,'output_tokens':4},'total_cost_usd':.1}}}))
-            result=export_metrics(tmp,'claude')
-            self.assertFalse(result['cost_complete']); self.assertFalse(result['usage_complete'])
-            self.assertEqual(result['evidence_scope'],'legacy_policy_only')
-            self.assertEqual(result['reported_cost_usd'],.1)
 
     def test_claude_model_usage_is_aggregate_and_unfinished_turn_is_not_complete(self):
         with tempfile.TemporaryDirectory() as tmp:
-            output=Path(tmp)/'private/outputs';output.mkdir(parents=True)
+            output=Path(tmp)/'private/logs';output.mkdir(parents=True)
             values={'inputTokens':10,'cacheReadInputTokens':20,'cacheCreationInputTokens':30,'outputTokens':4}
             done={'event':'cli_turn_completed','events_name':'turn1','usage':{'input_tokens':1},
                   'model_usage':{'model1':values,'model2':values},'reported_cost_usd':.1}
             started={'event':'cli_turn_started','events_name':'turn2'}
-            (output/'claude-host.jsonl').write_text('\n'.join(map(json.dumps,[done,started]))+'\n')
+            (output/'host.jsonl').write_text('\n'.join(map(json.dumps,[done,started]))+'\n')
             result=export_metrics(tmp,'claude')
             self.assertEqual(result['usage']['input_tokens'],120)
             self.assertEqual(result['usage']['output_tokens'],8)
@@ -85,7 +77,7 @@ class RunMetricTests(unittest.TestCase):
             self.assertFalse(result['usage_complete']);self.assertFalse(result['cost_complete'])
 
     def _claude_turns(self, tmp, *turns):
-        output=Path(tmp)/'private/outputs';output.mkdir(parents=True)
+        output=Path(tmp)/'private/logs';output.mkdir(parents=True)
         rows=[]
         for index,(session,actor,cumulative) in enumerate(turns):
             row={'event':'cli_turn_completed','events_name':f'turn{index}','session_id':session,'actor':actor,
@@ -96,7 +88,7 @@ class RunMetricTests(unittest.TestCase):
                                          'cacheCreationInputTokens':write,'outputTokens':out}}
             else: row['usage']=None
             rows.append(row)
-        (output/'claude-host.jsonl').write_text('\n'.join(map(json.dumps,rows))+'\n')
+        (output/'host.jsonl').write_text('\n'.join(map(json.dumps,rows))+'\n')
         return export_metrics(tmp,'claude')
 
     def test_claude_model_usage_counts_each_session_once_across_persistent_turns(self):
@@ -131,7 +123,7 @@ class RunMetricTests(unittest.TestCase):
         from datetime import datetime, timezone
         from roboteam.runtime import layout as run_layout
         def stamp(at): return datetime.fromtimestamp(at,timezone.utc).isoformat().replace('+00:00','Z')
-        root=run_layout.path(tmp,'engine_config','claude')/'projects/p'
+        root=run_layout.path(tmp,'engine_config')/'projects/p'
         for name,(session,records) in files.items():
             path=root/name;path.parent.mkdir(parents=True,exist_ok=True)
             lines=[]
@@ -146,7 +138,7 @@ class RunMetricTests(unittest.TestCase):
             path.write_text('\n'.join(map(json.dumps,lines))+'\n')
 
     def _claude_results(self, tmp, *results):
-        output=Path(tmp)/'private/outputs';output.mkdir(parents=True)
+        output=Path(tmp)/'private/logs';output.mkdir(parents=True)
         rows=[]
         for index,(session,actor,at,cumulative) in enumerate(results):
             read,write,fresh,out=cumulative
@@ -155,7 +147,7 @@ class RunMetricTests(unittest.TestCase):
                  'model_usage':{'m':{'inputTokens':fresh,'cacheReadInputTokens':read,'cacheCreationInputTokens':write,'outputTokens':out}}}
             if at is not None: row['at']=at
             rows.append(row)
-        (output/'claude-host.jsonl').write_text('\n'.join(map(json.dumps,rows))+'\n')
+        (output/'host.jsonl').write_text('\n'.join(map(json.dumps,rows))+'\n')
 
     def test_claude_requests_after_the_last_result_count_from_transcripts(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -208,7 +200,8 @@ class RunMetricTests(unittest.TestCase):
     def test_collected_session_mapping_wins_over_stale_batch_marker(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); run=root/'batch/profile/case'; run.mkdir(parents=True)
-            (root/'batch/codex-home.json').write_text('{"codex_home":"/missing/original-server"}')
+            (root/'batch/control').mkdir(); (root/'batch/batch.json').write_text('{"jobs":[]}')
+            (root/'batch/control/codex-home.json').write_text('{"codex_home":"/missing/original-server"}')
             session=root/'sessions/Controller.jsonl';session.parent.mkdir();session.write_text('{}\n')
             (root/'collection.json').write_text(json.dumps({'jobs':[{'run':'batch/profile/case','roles':[
                 {'thread_id':'native','session':'sessions/Controller.jsonl'}]}]}))
@@ -219,7 +212,8 @@ class RunMetricTests(unittest.TestCase):
             root=Path(tmp); run=root/'batch/case';run.mkdir(parents=True)
             home=root/'other';(home/'sessions').mkdir(parents=True)
             (home/'sessions/native.jsonl').write_text('{}')
-            (root/'batch/codex-home.json').write_text('{"codex_home":"/missing/original-server"}')
+            (root/'batch/control').mkdir(); (root/'batch/batch.json').write_text('{"jobs":[]}')
+            (root/'batch/control/codex-home.json').write_text('{"codex_home":"/missing/original-server"}')
             with patch.dict('os.environ', {'CODEX_HOME':str(home)}):
                 self.assertEqual(native_codex_sessions(run,'native'),[])
                 self.assertEqual(native_codex_sessions(run,'native',home),[(home/'sessions/native.jsonl').resolve()])
@@ -231,8 +225,7 @@ class RunEvidenceTests(unittest.TestCase):
         from roboteam.runtime.layout import manifest_record
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp); (run/'private/inputs').mkdir(parents=True)
-            self.assertEqual(run_skills(run), [])  # A legacy run has no lessons file.
-            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('codex')))
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
             self.assertEqual(run_skills(run), [])
             lessons = run/'workspace/skills.md'; lessons.parent.mkdir()
             lessons.write_text(SKILLS_HEADER)
@@ -252,7 +245,7 @@ class RunEvidenceTests(unittest.TestCase):
         from roboteam.runtime.layout import manifest_record
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp)/'run'; (run/'private/inputs/meta').mkdir(parents=True); (run/'workspace').mkdir()
-            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('codex')))
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
             (run/'private/inputs/meta/x.md').write_text('## private heading\n')
             outside = Path(tmp)/'outside.md'; outside.write_text('## outside heading\n')
             lessons = run/'workspace/skills.md'
@@ -300,8 +293,8 @@ class TranscriptCostTests(unittest.TestCase):
     def run_with(self, root, messages):
         from roboteam.runtime import layout as run_layout
         run = Path(root)/'run'; (run/'private/inputs').mkdir(parents=True)
-        (run/'private/inputs/manifest.json').write_text(json.dumps({'engine': 'claude', **run_layout.manifest_record('claude')}))
-        projects = run_layout.path(run, 'engine_config', 'claude')/'projects/p'; (projects/'s/subagents').mkdir(parents=True)
+        (run/'private/inputs/manifest.json').write_text(json.dumps({'engine': 'claude', **run_layout.manifest_record()}))
+        projects = run_layout.path(run, 'engine_config')/'projects/p'; (projects/'s/subagents').mkdir(parents=True)
         lines = [json.dumps({'message': m}) for m in messages]
         (projects/'s.jsonl').write_text('\n'.join(lines[:-1])+'\n')
         (projects/'s/subagents/agent-1.jsonl').write_text(lines[-1]+'\n')

@@ -50,7 +50,7 @@ class ReadinessTests(unittest.TestCase):
         result=check_receipts('test',self.root/'missing',self.root/'also-missing',selected=self.profile,version=self.version)
         self.assertFalse(result['precheck_evidence_matches'])
 
-    def test_legacy_receipts_without_view_evidence_do_not_match(self):
+    def test_receipts_without_view_evidence_do_not_match(self):
         del self.basic['checks'][1]['checks']['image_view_requested']
         self.assertFalse(self.check()['precheck_evidence_matches'])
         self.basic['checks'][1]['checks']['image_view_requested']=True

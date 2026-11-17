@@ -1,6 +1,6 @@
 """Which tools a policy role has in a run.
 
-'full' is every earlier run: the engine's own file and shell tools beside the bound robot
+'full' (the default): the engine's own file and shell tools beside the bound robot
 tool. 'robot_only' leaves the robot tool alone: no shell, no code execution, no file
 tools. What a role used files for stays available through the robot tool instead
 (public_files.py, run_skills.py). The mode is frozen in the run's harness.json; a harness

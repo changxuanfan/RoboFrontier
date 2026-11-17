@@ -70,7 +70,7 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
                               for name in required)
             except (OSError,ValueError,KeyError):supported=False
             if not supported:
-                raise ValueError('Short-outage pause requires a newly frozen supported runtime; historical task left untouched')
+                raise ValueError('Short-outage pause requires the run to be frozen on this runtime; task left untouched')
         current = json.loads(Path(job.get('launch_file', run/'private/inputs/codex.json')).read_text())
         if (current.get('tool_backend') != 'landlock-v1' or current['profile']['provider'] != 'openai'
                 or current['profile'].get('runner_backend') != BACKEND):

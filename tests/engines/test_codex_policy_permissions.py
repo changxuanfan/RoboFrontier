@@ -101,8 +101,8 @@ class AppServerPermissionTests(unittest.TestCase):
             for path, text in files.items():
                 path.parent.mkdir(parents=True, exist_ok=True); path.write_text(text)
             for name in ('workspace', 'public/results'): (run / name).mkdir(parents=True, exist_ok=True)
-            # A run-v6 run: the policy works in workspace/, the only place it can write.
-            (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record('codex')))
+            # The policy works in workspace/, the only place it can write.
+            (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
             (run / 'private/inputs/policy-access.json').write_text(json.dumps(
                 policy_access.record(run, repo=repo, home=home, tmp_dirs=(), checkouts=[repo])))
             # No AGENTS.md is injected; personal and live repo skills are not listed, bundled ones are.

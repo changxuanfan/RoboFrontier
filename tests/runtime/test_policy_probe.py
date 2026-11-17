@@ -41,7 +41,7 @@ class PolicyProbeTests(unittest.TestCase):
             run,s=self.fixture(root)
             try:
                 job=s.accept('A','move',{'target_m':[.4,0,.5]},'existing');s.pump()
-                guard=BudgetGuard(protocol(10));start=s.store.get('start_at')
+                guard=BudgetGuard(protocol(10),stall_s=1e9);start=s.store.get('start_at')
                 guard.tick(s,start,100);guard.tick(s,start+10,110)
                 self.assertEqual(s.world.stops,[('A','existing')]);self.assertEqual(s.world.arms['A'].grasp_force,50.)
                 new=s.accept('B','move',{'target_m':[.4,0,.5]},'late');s.pump()
@@ -52,36 +52,6 @@ class PolicyProbeTests(unittest.TestCase):
                 self.assertEqual(job['result']['execution']['status'],'failed');self.assertEqual(s.store.get('lifecycle'),'ended')
             finally:s.close()
 
-    def test_start_time_controls_12h_budget_after_delayed_guard_initialization(self):
-        with tempfile.TemporaryDirectory() as root:
-            run,s=self.fixture(root)
-            try:
-                start=s.store.get('start_at')
-                guard=BudgetGuard(protocol(12*3600))
-                guard.tick(s,start+600,1000)
-                self.assertIsNone(guard.cutoff)
-                guard.tick(s,start+12*3600-1,1000+12*3600-601)
-                self.assertIsNone(guard.cutoff)
-                guard.tick(s,start+12*3600,1000+12*3600-600)
-                self.assertTrue(guard.completed)
-                self.assertEqual(s.store.get('termination_reason'),'wall_limit')
-                report=json.loads((run/'private/outputs/evaluation.json').read_text())
-                self.assertEqual(report['budget_wall_limit_s'],12*3600)
-            finally:s.close()
-
-    def test_new_guard_does_not_reset_persisted_start_time(self):
-        with tempfile.TemporaryDirectory() as root:
-            run,s=self.fixture(root)
-            try:
-                start=s.store.get('start_at')
-                first=BudgetGuard(protocol(600));first.tick(s,start+100,100)
-                replacement=BudgetGuard(protocol(600));replacement.tick(s,start+599,300)
-                self.assertIsNone(replacement.cutoff)
-                replacement.tick(s,start+600,301)
-                self.assertTrue(replacement.completed)
-                self.assertEqual(s.store.get('start_at'),start)
-            finally:s.close()
-
     def test_budget_is_inert_before_start_and_after_early_finish(self):
         with tempfile.TemporaryDirectory() as root:
             run,s=self.fixture(root)
@@ -89,7 +59,7 @@ class PolicyProbeTests(unittest.TestCase):
                 start=s.store.get('start_at');guard=BudgetGuard(protocol(600))
                 s.store.put('lifecycle','prepared')
                 guard.tick(s,start+86400,86400)
-                self.assertIsNone(guard.deadline)
+                self.assertIsNone(guard.cutoff)
                 s.store.put('lifecycle','ended')
                 guard.tick(s,start+86401,86401)
                 self.assertIsNone(guard.cutoff)

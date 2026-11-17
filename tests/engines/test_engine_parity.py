@@ -10,8 +10,8 @@ from roboteam.tasks.config import ROOT
 from roboteam.tasks.families import prepare
 
 HARNESS = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
-STARTUP = {'single-agent': 'direct_controller_v2', 'adaptive': 'direct_controller_v2',
-           'hierarchical': 'direct_team_v3', 'decentralized': 'direct_team_v3'}
+STARTUP = {'single-agent': 'direct_controller', 'adaptive': 'direct_controller',
+           'hierarchical': 'direct_team', 'decentralized': 'direct_team'}
 
 
 def snapshot(run):

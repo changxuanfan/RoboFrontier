@@ -26,7 +26,7 @@ class Owner:
 class RunTaskTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.run = Path(self.tmp.name) / 'run'
-        for directory in ('private/inputs', 'private/outputs', 'private/state/connections', 'public/inputs'):
+        for directory in ('private/inputs', 'private/outputs', 'private/state/connections', 'private/state/control', 'public/inputs'):
             (self.run / directory).mkdir(parents=True)
         (self.run / 'public/inputs/roles.json').write_text(json.dumps({'roles': {
             'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2']}}}))
@@ -55,18 +55,18 @@ class RunTaskTests(unittest.TestCase):
         self.assertEqual(result['status'], 'needs_review')
         self.assertEqual(result['reason'], 'launch_error')
         self.assertNotIn('FAKE_KEY', observed[0])
-        status = (self.run / 'private/outputs/claude-engineering-status.json').read_text()
+        status = (self.run / 'private/state/control/engineering-status.json').read_text()
         with self.assertRaisesRegex(ValueError, 'never restart'):
             self.run_case(owner_factory=create)
-        self.assertEqual(status, (self.run / 'private/outputs/claude-engineering-status.json').read_text())
+        self.assertEqual(status, (self.run / 'private/state/control/engineering-status.json').read_text())
         self.assertEqual(len(observed), 1)
 
     def test_stop_and_an_unprepared_run_fail_before_owner_or_claim(self):
-        (self.run/'STOP').touch()
+        (self.run/'private/state/control/STOP').touch()
         with self.assertRaisesRegex(ValueError, 'stopped'):
             self.run_case(owner_factory=lambda *a, **k: self.fail('must not start'))
-        self.assertFalse((self.run/'private/state/claude-engineering-claim.json').exists())
-        (self.run/'STOP').unlink()
+        self.assertFalse((self.run/'private/state/control/engineering-claim.json').exists())
+        (self.run/'private/state/control/STOP').unlink()
         path = self.run/'private/inputs/claude.json'; data = json.loads(path.read_text()); data['schema'] = 'other'
         path.write_text(json.dumps(data))
         with self.assertRaisesRegex(ValueError, 'prepared for Claude'):
@@ -94,7 +94,7 @@ class RunTaskTests(unittest.TestCase):
                 import shutil
                 run = Path(tmp)/'run'; shutil.copytree(self.run, run)
                 (run/'private/inputs/harness.json').write_text(json.dumps({
-                    'engine':'claude','topology':topology,'startup_protocol':'direct_team_v3'}))
+                    'engine':'claude','topology':topology,'startup_protocol':'direct_team'}))
                 seen = []
                 def standing(run, profile, env, ledger, **kwargs):
                     seen.append((ledger.snapshot()['limit_usd'], kwargs))
@@ -103,7 +103,7 @@ class RunTaskTests(unittest.TestCase):
                     standing_policy_factory=standing, owner_factory=lambda *a, **k: Owner(1))
                 self.assertEqual(result['status'], 'needs_review')
                 self.assertEqual(seen, [('2', {'turn_budget_usd':.5})])
-                self.assertTrue((run/'private/state/claude-budget.sqlite').is_file())
+                self.assertTrue((run/'private/state/budget.sqlite').is_file())
 
     def test_adaptive_launch_creates_shared_run_budget_before_world(self):
         (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'adaptive'}))
@@ -116,7 +116,7 @@ class RunTaskTests(unittest.TestCase):
         self.assertEqual(result['status'], 'needs_review')
         self.assertEqual(seen[0][0], '2')
         self.assertEqual(seen[0][1], {'turn_budget_usd': .5})
-        self.assertTrue((self.run/'private/state/claude-budget.sqlite').exists())
+        self.assertTrue((self.run/'private/state/budget.sqlite').exists())
 
     def test_default_adaptive_launch_has_an_uncapped_shared_ledger(self):
         (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'adaptive'}))
@@ -219,9 +219,9 @@ class RunTaskTests(unittest.TestCase):
 
 
     def test_a_task_cap_that_concurrent_roles_could_exhaust_is_refused_before_any_claim(self):
-        claim = self.run/'private/state/claude-engineering-claim.json'
+        claim = self.run/'private/state/control/engineering-claim.json'
         (self.run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
-            'Meta': {'kind': 'manager'}, 'Coordinator': {'kind': 'team-controller'},
+            'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'team-controller'},
             'A1': {'kind': 'worker', 'robot': 'A1'}, 'A2': {'kind': 'worker', 'robot': 'A2'}}}))
         for topology, turn, total in (('hierarchical', None, 1), ('hierarchical', .5, 1), ('decentralized', .6, 1.7)):
             with self.subTest(topology=topology, turn=turn, total=total):
@@ -231,7 +231,7 @@ class RunTaskTests(unittest.TestCase):
                                     standing_policy_factory=lambda *a, **k: self.fail('must not start'),
                                     owner_factory=lambda *a, **k: self.fail('must not start'))
                 self.assertFalse(claim.exists())
-                self.assertFalse((self.run/'private/state/claude-budget.sqlite').exists())
+                self.assertFalse((self.run/'private/state/budget.sqlite').exists())
         # Adaptive: the Controller and one delegate per arm.
         (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine': 'claude', 'topology': 'adaptive'}))
         (self.run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
@@ -255,14 +255,14 @@ class RunTaskTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'transient'):
             run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
                             policy_factory=policy, owner_factory=lambda *a, **k: self.fail('must not start'))
-        self.assertFalse((self.run/'private/state/claude-engineering-claim.json').exists())
+        self.assertFalse((self.run/'private/state/control/engineering-claim.json').exists())
         self.assertFalse(list((self.run/'private/state').glob('claude-budget.sqlite*')))
         result = run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
                                  policy_factory=policy, owner_factory=lambda *a, **k: Owner(1))
         self.assertEqual(len(attempts), 2)
         self.assertEqual(result['reason'], 'launch_error')
         self.assertEqual(result['error_type'], 'RuntimeError')
-        self.assertTrue((self.run/'private/state/claude-budget.sqlite').is_file())
+        self.assertTrue((self.run/'private/state/budget.sqlite').is_file())
 
 
 if __name__ == '__main__': unittest.main()

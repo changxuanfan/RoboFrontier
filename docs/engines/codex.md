@@ -76,7 +76,7 @@ On Slurm, subscription runs use `codex_home_scope = "job"` with `slurm.auth_mode
 Every home must lie outside the batch; the access table denies it to the policy. Preparation adds
 command-line overrides that disable every MCP server found in the native and project
 configuration, and the host and preflight check that none is enabled before inference; the user's
-files are not rewritten. A home's location is recorded in each run's `codex-home.json`.
+files are not rewritten. A home's location is recorded in each run's `private/engine/codex-home.json`.
 
 `roboteam doctor` checks the installed CLI version, the sandbox or tool backend and a real
 render. It does not check credentials or call a model.
@@ -172,7 +172,7 @@ under the default runs root) and register it once; the entry sets
 ## Standing teams
 
 `hierarchical` and `decentralized` start one thread per initial role, with the same roles,
-routes, single START (`direct_team_v3`) and mailbox as
+routes, single START (`direct_team`) and mailbox as
 [Claude Code standing teams](claude-code.md#standing-teams). Delegates and standing Workers add
 model requests inside each run; `batch.parallel` counts runs.
 
@@ -203,7 +203,7 @@ The settings do not enlarge the provider's real context.
 
 ## Evidence and reports
 
-`private/outputs/codex-host.jsonl` holds host scheduling, tool and timing events; the native
+`private/logs/host.jsonl` holds host scheduling, tool and timing events; the native
 `<session-id>.jsonl` transcripts are under the home's `sessions/` directory, with verified copies
 in `private/engine/transcripts/` ([session transcripts](../running/evidence-storage.md#session-transcripts)).
 Observations are JPEG 1280 x 800 at quality 90 ([observation images](../protocol.md#observation-images));

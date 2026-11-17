@@ -312,11 +312,11 @@ def _with_live_runs(batch, state):
     for job, entry in zip(jobs, state.get('jobs', [])):
         run = Path(job['run_directory'])
         if entry.get('status') == 'starting':  # Claude: the run's own status file
-            own = run_layout.path(run, 'engineering_status', 'claude')
+            own = run_layout.path(run, 'engineering_status')
             try: working = json.loads(own.read_text()).get('status') == 'running'
             except (OSError, ValueError): working = False
         elif entry.get('status') == 'prepared':  # Codex: its host process was started
-            working = run_layout.path(run, 'host_process', 'codex').is_file()
+            working = run_layout.path(run, 'host_process').is_file()
         else:
             continue
         if working: entry['status'] = 'running'

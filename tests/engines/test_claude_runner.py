@@ -35,6 +35,12 @@ print(json.dumps({"type": "result", "subtype": "success", "is_error": False, "se
 ''' % SECRET
 
 
+def bare_run(folder):
+    """A run folder with only the policy's working directory."""
+    (Path(folder)/'workspace').mkdir(exist_ok=True)
+    return folder
+
+
 class ClaudeRunnerTests(unittest.TestCase):
     def test_large_prompt_reaches_cli_as_complete_stdin(self):
         prompt = '--model is public task text\n' + 'Public geometry and task context.\n' * 10000
@@ -45,7 +51,7 @@ prompt = sys.stdin.buffer.read()
 print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
                   'result':hashlib.sha256(prompt).hexdigest()}))
 ''')
-            record = run_turn(PROFILE, 'm', 'high', None, prompt, tmp,
+            record = run_turn(PROFILE, 'm', 'high', None, prompt, bare_run(tmp),
                               {'PATH':'/usr/bin:/bin','KIMI_API_KEY':SECRET},
                               binary=str(binary), timeout=5, enable_robot=False)
             self.assertEqual(record['process'], 'exited')
@@ -61,7 +67,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
                     timer.start()
                 try:
                     record = run_turn(PROFILE, 'm', 'high', None, 'public context\n' * 25000,
-                                      tmp, {'PATH':'/usr/bin:/bin','KIMI_API_KEY':SECRET},
+                                      bare_run(tmp), {'PATH':'/usr/bin:/bin','KIMI_API_KEY':SECRET},
                                       binary=str(binary), timeout=5 if cancellation else .1,
                                       cancel_event=cancel if cancellation else None, enable_robot=False)
                 finally:
@@ -80,7 +86,7 @@ prompt = sys.stdin.buffer.read()
 print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
                   'result':hashlib.sha256(prompt).hexdigest()}))
 ''')
-            record = run_turn(PROFILE, 'm', 'high', None, prompt, tmp,
+            record = run_turn(PROFILE, 'm', 'high', None, prompt, bare_run(tmp),
                               {'PATH':'/usr/bin:/bin','KIMI_API_KEY':SECRET},
                               binary=str(binary), timeout=2, cancel_event=threading.Event(),
                               enable_robot=False)
@@ -220,7 +226,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
 
     def test_run_records_events_env_and_tool_use_with_fake_cli(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / 'run'; run.mkdir()
+            run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             conn_cfg = run / 'mcp.json'; conn_cfg.write_text('{}')
             binary = fake_claude(tmp, SUCCESS_BODY)
             base = {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET, 'OPENAI_API_KEY': 'other'}
@@ -238,7 +244,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
 
     def test_cancellation_interrupts_cli_and_keeps_outcome_unknown(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / 'run'; run.mkdir()
+            run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             config = run / 'mcp.json'; config.write_text('{}')
             binary = fake_claude(tmp, 'time.sleep(30)\n')
             cancel = threading.Event()
@@ -255,7 +261,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
 
     def test_unlimited_turn_can_finish_and_can_be_cancelled(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / 'run'; run.mkdir()
+            run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             base = {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET}
             binary = fake_claude(tmp, 'time.sleep(.15)\nprint(json.dumps({"type":"result", "subtype":"success", "is_error":False}))\n')
             record = run_turn(PROFILE, 'm', 'high', None, 'go', run, base,
@@ -280,7 +286,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             # Not set at the launch check, set at the first poll.
             with patch('roboteam.engines.claude.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')), \
                     patch.object(cancel, 'is_set', side_effect=[False] + [True] * 100):
-                record = run_turn(PROFILE, 'm', 'high', None, 'go', tmp, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                record = run_turn(PROFILE, 'm', 'high', None, 'go', bare_run(tmp), {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
                                   binary=str(binary), timeout=5, cancel_event=cancel, enable_robot=False)
             self.assertEqual(record['process'], 'cancelled')
             self.assertEqual(record['summary']['turn_status'], 'unknown')
@@ -297,7 +303,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
 
     def test_cancellation_before_launch_never_starts_cli(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / 'run'; run.mkdir()
+            run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             config = run / 'mcp.json'; config.write_text('{}')
             cancel = threading.Event(); cancel.set()
             with patch('roboteam.engines.claude.runner.subprocess.Popen') as spawn:
@@ -309,7 +315,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
 
     def test_event_and_stderr_redact_credential_before_truncation(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / 'run'; run.mkdir()
+            run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             secret = 'fake-"unicode-\u5bc6\u94a5'
             binary = fake_claude(tmp, '''
 secret = os.environ['ANTHROPIC_API_KEY']
@@ -328,7 +334,7 @@ sys.stderr.write(secret + 'x' * 990)
 
     def test_failed_turn_and_deadline_are_not_success(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = Path(tmp) / 'run'; run.mkdir()
+            run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             conn_cfg = run / 'mcp.json'; conn_cfg.write_text('{}')
             base = {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET}
             failing = fake_claude(tmp, 'print(json.dumps({"type": "result", "subtype": "error_during_execution", "is_error": True}))\nsys.exit(1)\n')
@@ -440,7 +446,7 @@ class PolicySettingsTests(unittest.TestCase):
         from roboteam.runtime.layout import manifest_record
         with tempfile.TemporaryDirectory() as tmp:
             repo, home, run = self.layout(tmp)
-            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
             # Thousands of earlier runs beside this one: one argv string would pass Linux's 128 KiB.
             for index in range(5000):
                 (run.parent/('earlier-run-with-a-long-descriptive-name-%05d' % index)).touch()
@@ -473,7 +479,7 @@ print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 're
         from roboteam.runtime.layout import manifest_record
         with tempfile.TemporaryDirectory() as tmp:
             repo, home, run = self.layout(tmp)
-            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record('claude')))
+            (run/'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
             self.write_access(run, {'filesystem': policy_access.table(run, repo=repo, home=home, tmp_dirs=(),
                                                                       checkouts=[repo])})
             binary = fake_claude(tmp, 'sys.exit(3)\n')

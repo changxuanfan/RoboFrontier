@@ -15,7 +15,7 @@ from roboteam.runtime.setup import write_json
 class JobManifestTests(unittest.TestCase):
     def test_pause_admission_refuses_historical_runtimes_without_physics_freeze(self):
         with patch.dict(os.environ,{'ROBOTEAM_EGRESS_PAUSE_FILE':str(self.root/'engine/EGRESS_PAUSED')}):
-            with self.assertRaisesRegex(ValueError,'newly frozen supported runtime'):
+            with self.assertRaisesRegex(ValueError,'frozen on this runtime'):
                 self.build()
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix='rfe-', dir='/tmp')

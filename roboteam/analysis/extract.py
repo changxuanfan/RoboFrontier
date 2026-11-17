@@ -84,7 +84,7 @@ def trial_cutoff(run, db=_OPEN):
     budget-cutoff.json (cutoff wall time, sim time and the evaluation at that moment); without
     it, the first POLICY_WALL_LIMIT event of the runtime database (no evaluation).
 
-    A run the 48 h wall backstop stopped (policy_probe.BudgetGuard) has `wall_backstop` true: it
+    A run the 48 h wall backstop stopped (clock.BudgetGuard) has `wall_backstop` true: it
     needs review and is not counted (metrics.excluded). An operator-authorized continuation
     after it (WALL_BACKSTOP_WAIVED) is scored normally again."""
     n = run.find(*CUTOFF_FILES)
@@ -472,9 +472,6 @@ def host(run, cutoff_unix=None):
     n = run.find(
         'private/logs/host.jsonl',
         'logs/host.jsonl',
-        'private/outputs/codex-host.jsonl',
-        'outputs/codex-host.jsonl',
-        'codex-host.jsonl',
         'host.jsonl',
     )
     if not n:

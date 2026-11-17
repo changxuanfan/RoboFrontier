@@ -29,7 +29,7 @@ def tcp_probe(hosts, timeout=TIMEOUT_S):
     """True when every host accepts a TCP connection on port 443.
 
     Not used by default: a local VPN tunnel accepts every TCP connection itself, so this
-    stays true while the route to the API is gone (observed 2026-11-10)."""
+    stays true while the route to the API is gone."""
     for host in hosts:
         try:
             socket.create_connection((host, 443), timeout=timeout).close()
@@ -142,12 +142,10 @@ def model_hosts(run, engine):
 def monitor_for(task, config, probe=None, run=None):
     """The outage monitor a world should run, or None.
 
-    Only active-time runs without a Slurm egress pause (which pauses the world itself), with
+    Only runs without a Slurm egress pause (which pauses the world itself), with
     known model hosts, and not switched off with ROBOTEAM_OUTAGE_PROBE=off (the test suite
     does that). A Slurm node without a direct route never reaches the hosts, so its probe never
     pauses (UNARMED_GIVE_UP)."""
-    from .clock import WALL_CLOCK, run_clock
-    if run_clock(task.get('run_protocol') or {}) == WALL_CLOCK: return None
     if task.get('execution_readiness') != 'prepared_policy_trial': return None
     if os.environ.get('ROBOTEAM_EGRESS_PAUSE_FILE'): return None
     if os.environ.get(SWITCH, '').strip().lower() in ('off', '0', 'false', 'no'): return None

@@ -65,7 +65,7 @@ def controller_stub(requests, steps):
 
 
 def host_events(run):
-    path = run_path(run, 'host_log', 'codex')
+    path = run_path(run, 'host_log')
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()] if path.exists() else []
 
 

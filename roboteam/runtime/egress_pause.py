@@ -100,7 +100,7 @@ class WorldPause:
             self.store.put('pause_since_wall',None)
 
     def sync(self):
-        # A run stopped by the wall backstop is ending; no new pause holds its world (policy_probe).
+        # A run stopped by the wall backstop is ending; no new pause holds its world (clock.BudgetGuard).
         if self.claim is None and self.store.get('wall_backstop'):return False
         held=self.sync_quota()
         if held is not None:return held
@@ -198,7 +198,6 @@ class WorldPause:
             self.store.put('egress_recovery',{'instance':self.instance,'claim':self.claim,
                                             'paused_at':self.wall_started,'resumed_at':time.time()})
         budget=self.service.policy_budget
-        if budget is not None and budget.deadline is not None:budget.deadline+=elapsed
         if budget is not None and budget.cutoff is not None:budget.cutoff+=elapsed
         if budget is not None:budget.interrupt()
         for waiter in self.service.waiters.values():waiter['deadline']+=elapsed

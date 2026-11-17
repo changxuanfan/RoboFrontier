@@ -65,14 +65,13 @@ def _stopped_files(root, relative, issues, *, prune_config=True):
             path = parent/name
             if path.is_symlink():
                 issues.append({'path': relative(path), 'issue': 'symlink', 'link': _link_text(path)})
-            elif prune_config and (name == 'claude-config' and parent.name == 'private' or
-                                   name == 'config' and parent.name == 'engine' and parent.parent.name == 'private'):
+            elif prune_config and name == 'config' and parent.name == 'engine' and parent.parent.name == 'private':
                 # A Claude home can contain credentials beside its projects.
                 projects = path/'projects'
                 if projects.is_dir() or projects.is_symlink():
                     yield from (file for file in _stopped_files(projects, relative, issues, prune_config=False)
                                 if file.name.endswith('.jsonl'))
-            elif not (prune_config and (name == 'claude-config' or name == 'config' and parent.name == 'engine')):
+            elif not (prune_config and name == 'config' and parent.name == 'engine'):
                 kept.append(name)
         dirs[:] = kept
         for name in sorted(files):
@@ -496,12 +495,11 @@ def snapshot(local, submission):
 
 
 def _writer_locks(local):
-    """Every lock path a batch or run layout defines, for each layout version.
+    """Every lock path the batch and run layouts define.
 
     Only these fixed paths: a file a policy names world.lock in its workspace is not a lock."""
     batch = (Path(local)/'source/runs/policy/batch').resolve()
-    locks = {batch/layout[key] for layout in run_layout.BATCH_LAYOUTS.values()
-             for key in ('supervisor_lock', 'engineering_lock')}
+    locks = {run_layout.batch_path(batch, key) for key in ('supervisor_lock', 'engineering_lock')}
     runs = set()
     try:
         jobs = json.loads((batch/'batch.json').read_text())['jobs'] if (batch/'batch.json').is_file() else []
@@ -516,7 +514,7 @@ def _writer_locks(local):
     for run in runs:
         if not run.is_relative_to(batch) or run == batch:
             continue
-        locks |= {run/layout[key] for layout in run_layout.LAYOUTS.values() for key in ('world_lock', 'engineering_lock')}
+        locks |= {run_layout.path(run, key) for key in ('world_lock', 'engineering_lock')}
     return sorted(locks)
 
 

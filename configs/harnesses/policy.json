@@ -1,9 +1,8 @@
 {
   "schema_version": 1,
   "topology": "adaptive",
-  "startup_protocol": "direct_controller_v2",
+  "startup_protocol": "direct_controller",
   "manager": "Meta",
-  "coordinator": "Controller",
   "model": "gpt-6-astra",
   "effort": "high",
   "poll_interval_s": 2.0,

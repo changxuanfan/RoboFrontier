@@ -8,6 +8,7 @@ import threading
 import time
 import uuid
 from .tool_errors import CallIdConflict
+from ..tasks.config import CONTROLLER
 
 from .sqlite_busy import BUSY_TIMEOUT_SECONDS, begin_immediate
 
@@ -22,16 +23,6 @@ SESSION_SOURCES = {
     'codex': ('codex.wait_threads', 'codex.app-server'),
     'claude': ('claude.host',),
 }
-
-# Runs prepared before the rename record the hierarchical lead as 'coordinator'.
-LEGACY_KINDS = {'coordinator': 'team-controller'}
-
-
-def current_kind(value):
-    """A role record with its kind under the current name."""
-    value['kind'] = LEGACY_KINDS.get(value.get('kind'), value.get('kind'))
-    return value
-
 
 class RuntimeStore:
     def __init__(self, path):
@@ -119,8 +110,8 @@ class RuntimeStore:
             self.put('integrity_valid', True)
             roles = [(config['manager'], 'manager')]
             if config['topology'] == 'hierarchical':
-                roles.append((config['coordinator'], 'team-controller'))
-            roles += [('Controller', 'controller')] if config['topology'] in ('single-agent','adaptive') else [(w, 'worker') for w in workers]
+                roles.append((CONTROLLER, 'team-controller'))
+            roles += [(CONTROLLER, 'controller')] if config['topology'] in ('single-agent','adaptive') else [(w, 'worker') for w in workers]
             for actor, kind in roles:
                 self.db.execute('INSERT INTO agents VALUES (?,?)', (actor, packed({
                     'kind': kind, 'thread_id': None, 'requested_model': config['model'] if kind!='manager' else None, 'requested_effort': config['effort'] if kind!='manager' else None,
@@ -131,14 +122,14 @@ class RuntimeStore:
 
     def agents(self):
         with self.lock:
-            return {r['id']: current_kind(json.loads(r['value'])) for r in self.db.execute('SELECT * FROM agents ORDER BY id')}
+            return {r['id']: json.loads(r['value']) for r in self.db.execute('SELECT * FROM agents ORDER BY id')}
 
     def agent(self, actor):
         with self.lock:
             row = self.db.execute('SELECT value FROM agents WHERE id=?', (actor,)).fetchone()
             if row is None:
                 raise ValueError('Unknown role: ' + actor)
-            return current_kind(json.loads(row[0]))
+            return json.loads(row[0])
 
     def update_agent(self, actor, **changes):
         with self.transaction():
@@ -153,12 +144,12 @@ class RuntimeStore:
                 raise ValueError('Run is not prepared')
             policy = {a: v for a, v in self.agents().items() if v['kind'] != 'manager'}
             protocol = self.get('config')['startup_protocol']
-            if protocol not in ('direct_controller_v2', 'direct_team_v3'):
+            if protocol not in ('direct_controller', 'direct_team'):
                 raise ValueError('Unknown startup protocol')
             threads = [v['thread_id'] for v in policy.values()]
             if not threads or not all(threads) or len(set(threads)) != len(threads):
                 raise ValueError('Direct START requires every initial role bound to a distinct session')
-            if protocol == 'direct_controller_v2' and set(policy) != {'Controller'}:
+            if protocol == 'direct_controller' and set(policy) != {'Controller'}:
                 raise ValueError('Direct Controller START requires one Controller')
             self.put('lifecycle', 'running')
             self.put('physics_state', 'running')
@@ -189,7 +180,7 @@ class RuntimeStore:
                                       work_revision=old['work_revision'] + 1)
             self.event('WORK_SAVED', actor, {'state': state, 'note': note, 'next_check': value['next_check']}, now)
             if state == 'available' and old['work_state'] != 'available' and old['kind'] == 'worker' and self.get('lifecycle') == 'running' and cfg['topology'] == 'hierarchical':
-                self.signal(cfg['coordinator'], {'event': 'worker_self_reported_available', 'worker': actor,
+                self.signal(CONTROLLER, {'event': 'worker_self_reported_available', 'worker': actor,
                                                 'work_revision':value['work_revision'], 'verified_task_completion': False})
             return value
 
@@ -235,7 +226,7 @@ class RuntimeStore:
                     raise ValueError('Invalid business recipient')
             if cfg['topology'] == 'hierarchical' and not (
                 sender['kind'] == 'team-controller' and all(self.agent(t)['kind'] == 'worker' for t in to)
-                or sender['kind'] == 'worker' and to == [cfg['coordinator']]
+                or sender['kind'] == 'worker' and to == [CONTROLLER]
             ):
                 raise ValueError('Tree topology requires Controller <-> Worker')
             if cfg['topology']=='adaptive' and not (

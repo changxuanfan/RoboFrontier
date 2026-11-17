@@ -384,9 +384,7 @@ def with_camera_mounts(public, mounts):
 def public(args):
     """Write each case's public task exactly as a run receives it, and its materials.
 
-    A run used to build its public task from the reviewed projection with corrections
-    applied at run time (tasks.families.freeze_public). This writes the result once:
-    public/task.json (without the run's own protocol and image profile) and every family
+    This writes the result once: public/task.json (without the run's own protocol and image profile) and every family
     material a run receives, except the family skill, which runs copy from prompts/skills.
     The release then names these files, and a run only copies them.
 

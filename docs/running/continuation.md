@@ -272,8 +272,7 @@ that did not close itself 150 s after the backstop) and the run's status is
 `compute` command lists such runs as `EXCLUDED`.
 
 A backstopped run never continues by itself. It continues by hand
-(`roboteam continue`, or the stopped-runtime upgrade path with its
-`manual_authorization`). Its continuation moves the backstop's `budget-cutoff.json` and `evaluation.json` aside (with
+(`roboteam continue`). Its continuation moves the backstop's `budget-cutoff.json` and `evaluation.json` aside (with
 `-wall-backstop-N` in their names), records `WALL_BACKSTOP_WAIVED`, and the
 backstop then counts again from that moment.
 
@@ -434,32 +433,6 @@ run again; the record keeps it under `earlier_attempts`. The seal's own
 `observe` and `shutdown` calls are not task calls and are left out of the ledger
 comparison. The batch waits for a recovery in progress before it closes and
 collects.
-
-### Continue again with a runtime upgrade
-
-A run that has already continued, or was recovered before, continues only through
-the explicit stopped-runtime upgrade (`runtime_upgrade`). `--upgrade-from` names
-the checkout the run is frozen on; `--source-root` is the newer checkout it moves
-to; `--reason` is required. Run the command with the newer checkout's interpreter,
-given as `--python`, because the upgrade grants the policy read access to that
-environment.
-
-```sh
-"$NEW/.venv/bin/python" -m roboteam.engines.claude.recover_task --run-dir "$RUN" \
-  --upgrade-from "$OLD" --source-root "$NEW" --python "$NEW/.venv/bin/python" \
-  --scratch "$SCRATCH" --reason "Why the runtime changes" --execute
-```
-
-The steps are the same, with one addition. After validation and the backup, the
-upgrade freezes the new runtime into the run and writes a one-segment
-authorization under `private/inputs/runtime-upgrades/<segment>/`. Only roboteam
-source files may change, never prompts, task inputs or documentation. Preparing
-the segment consumes the authorization. The task inputs and the call/action ledger
-are unchanged.
-
-Keep the new checkout where the run's frozen access table denies it (for example
-under `~/.roboteam/`). That table reads `/` by default and denies only the
-checkouts that existed when the batch was prepared.
 
 ### Validation
 

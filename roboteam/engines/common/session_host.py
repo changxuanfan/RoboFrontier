@@ -40,8 +40,6 @@ class SessionHost:
         self.reported_spend = Decimal('0')
         self.unreported_cost_count = 0
         self.budget_status = 'tracking' if total_budget is not None or budget_ledger is not None else 'not_set'
-        # Runs with the frozen policy contract keep one CLI process per session, as the
-        # Codex app-server does; earlier runs start one process per turn.
         if runner is None:
             raise ValueError('A native engine runner is required')
         self.runner = runner
@@ -205,7 +203,7 @@ class SessionHost:
                           'source': 'cli_reported_estimate_not_provider_bill'}
             self.last_result = record
             try:
-                self.write_summary(run_layout.path(self.run, 'engine_turns', self.engine) / f'{self.actor}-{turn_id}-summary.json',
+                self.write_summary(run_layout.path(self.run, 'engine_turns') / f'{self.actor}-{turn_id}-summary.json',
                            {'actor': self.actor, 'session_id': self.session_id, 'turn_id': turn_id,
                             'status': state, 'record': record, 'cost_accounting': accounting})
             except Exception:

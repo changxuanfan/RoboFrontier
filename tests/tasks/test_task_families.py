@@ -132,11 +132,11 @@ class FamilyReleaseTests(unittest.TestCase):
                 self.assertEqual((header['schema'], header['snapshot_interval_s']), ('roboteam.suite-process.v2', 10.0))
             finally:
                 world.close()
-            # A harness frozen before motion_hz existed keeps the original 60 Hz.
-            legacy_cfg = {k: v for k, v in read(ROOT/'configs/harnesses/policy.json').items() if k not in ('motion_hz', 'process_log')}
-            legacy_path = Path(tmp)/'legacy.json'; legacy_path.write_text(json.dumps(legacy_cfg))
-            legacy = prepare('mosaic-a04-6x12-d1', Path(tmp)/'legacy', harness=legacy_path)
-            world = World(legacy, read(legacy/'private/inputs/task.json'))
+            # A harness without motion_hz and process_log records at 60 Hz with full logs.
+            plain_cfg = {k: v for k, v in read(ROOT/'configs/harnesses/policy.json').items() if k not in ('motion_hz', 'process_log')}
+            plain_path = Path(tmp)/'plain.json'; plain_path.write_text(json.dumps(plain_cfg))
+            plain = prepare('mosaic-a04-6x12-d1', Path(tmp)/'plain', harness=plain_path)
+            world = World(plain, read(plain/'private/inputs/task.json'))
             try:
                 world.start_trial()
                 self.assertEqual(world.motion_recorder.meta['sample_hz'], 60)

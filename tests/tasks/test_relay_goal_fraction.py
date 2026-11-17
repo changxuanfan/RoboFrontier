@@ -5,8 +5,10 @@ import numpy as np
 import mujoco
 
 from roboteam.tasks.relay_goal_fraction import clipped_fraction, timber_fraction
-from roboteam.tasks.relay import final_task, LEGACY_RULE_REVISION
+from roboteam.tasks.relay import final_task
 from tests.tasks.test_relay_goal_support import GoalSupportTests
+
+HANDOVER = dict(senders=['A', 'B'], receivers=['B', 'C'], airborne=True)
 
 
 class GoalFractionTests(unittest.TestCase):
@@ -18,7 +20,7 @@ class GoalFractionTests(unittest.TestCase):
         mon.violations = []; mon.bilateral = lambda *args, **kwargs: set()
         mon.bottom = lambda geoms: .8; mon.velocity = lambda body: np.zeros(6)
         mon.violation = lambda *args, **kwargs: None; mon.released = lambda geoms: True
-        for state in relay.states.values(): state.update(airborne=True, landed=False, transitions=[])
+        for state in relay.states.values(): state.update(airborne=True, landed=False, transitions=[HANDOVER])
         for fraction in (np.float64(.5), np.float64(.7), np.float64(.9)):
             with patch('roboteam.tasks.relay_goal_fraction.timber_fraction', return_value=fraction):
                 relay.sample()
@@ -56,25 +58,12 @@ class GoalFractionTests(unittest.TestCase):
         mon.violation = lambda *args, **kwargs: None
         mon.released = lambda geoms: True
         for state in relay.states.values():
-            state.update(airborne=True, landed=False, transitions=[])
+            state.update(airborne=True, landed=False, transitions=[HANDOVER])
         d.joint('p1_free').qpos[2] = 1.2
         mujoco.mj_forward(m, d); relay.sample()
         self.assertTrue(mon.result_cache['task_success'])
         self.assertFalse(mon.result_cache['payloads']['p1']['goal_table_support'])
         mon.released = lambda geoms: False
-        relay.sample(); self.assertFalse(mon.result_cache['task_success'])
-
-    def test_legacy_contract_keeps_original_full_containment_rule(self):
-        m, d, relay = GoalSupportTests().world(); mon = relay.mon
-        mon.task.update(family='relay', level=1)
-        mon.task = final_task(mon.task)
-        mon.task['completion']['rule_revision'] = LEGACY_RULE_REVISION
-        mon.task['run_protocol'] = {'evaluation_semantics':'terminal_outcome_v2'}
-        mon.violations = []; mon.bilateral = lambda *args, **kwargs: set()
-        mon.bottom = lambda geoms: .8; mon.velocity = lambda body: np.zeros(6)
-        mon.violation = lambda *args, **kwargs: None; mon.released = lambda geoms: True
-        for state in relay.states.values(): state.update(airborne=True, landed=False, transitions=[])
-        d.joint('p1_free').qpos[2] = 1.2; mujoco.mj_forward(m, d)
         relay.sample(); self.assertFalse(mon.result_cache['task_success'])
 
     def test_threshold_treats_each_timber_individually(self):
@@ -85,7 +74,7 @@ class GoalFractionTests(unittest.TestCase):
         mon.violations = []; mon.bilateral = lambda *args, **kwargs: set()
         mon.bottom = lambda geoms: .8; mon.velocity = lambda body: np.zeros(6)
         mon.violation = lambda *args, **kwargs: None; mon.released = lambda geoms: True
-        for state in relay.states.values(): state.update(airborne=True, landed=False, transitions=[])
+        for state in relay.states.values(): state.update(airborne=True, landed=False, transitions=[HANDOVER])
         d.joint('p1_free').qpos[1] = .359; mujoco.mj_forward(m, d); relay.sample()
         self.assertTrue(mon.result_cache['task_success'])
         d.joint('p1_free').qpos[1] = .361; mujoco.mj_forward(m, d); relay.sample()

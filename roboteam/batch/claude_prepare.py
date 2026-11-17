@@ -147,7 +147,7 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
             puzzles[case] = target
     for name, p in profiles.items():
         cfg = read(ROOT / 'configs/harnesses/policy.json')
-        if topology in ('hierarchical', 'decentralized'): cfg['startup_protocol'] = 'direct_team_v3'
+        if topology in ('hierarchical', 'decentralized'): cfg['startup_protocol'] = 'direct_team'
         cfg.update(engine='claude', topology=topology, model=p['model'], effort=p['effort'], record_realtime_video=record_video)
         if observation_image_profile is not None:cfg['observation_image_profile']=observation_image_profile
         if startup_timeout_s is not None:cfg['startup_timeout_s']=startup_timeout_s

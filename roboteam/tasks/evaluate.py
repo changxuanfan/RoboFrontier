@@ -436,9 +436,8 @@ class Relay:
         """A recorded custody change that counts as a qualified airborne handover.
 
         A new arm must have joined, and the change must have happened off the table.
-        Rows written before the airborne flag existed ('qualified-members-v2') read as airborne.
         """
-        return bool(item.get('airborne',True) and set(item['receivers'])-set(item['senders']))
+        return bool(item['airborne'] and set(item['receivers'])-set(item['senders']))
     def __init__(self,monitor):
         self.mon=monitor;self.table=monitor.task['table_height_m'];self.route=monitor.task['route'];self.states={}
         for item in monitor.task['mechanism']['payload_assemblies']:
@@ -514,10 +513,7 @@ class Relay:
         inside_flags={name:self.inside(state) for name,state in self.states.items()}
         stacking=bool(mon.task['completion'].get('support_via_goal_payload'))
         global_ground=self.supported_payloads(False,False) if stacking else set()
-        from .relay import is_current, RULE_REVISION
-        current_contract=is_current(mon.task)
-        fraction_contract=mon.task.get('completion', {}).get('rule_revision') == RULE_REVISION
-        goal_ground=self.supported_payloads(True,not current_contract,{name for name,inside in inside_flags.items() if inside}) if stacking else set()
+        goal_ground=self.supported_payloads(True,False,{name for name,inside in inside_flags.items() if inside}) if stacking else set()
         for ident,state in self.states.items():
             a=state['assembly'];support=mon.bilateral(state['rod_geoms'],positive_force=True);all_g=state['all_geoms'];external=self.environment_contact(all_g) or ident in global_ground;on_table=ident in goal_ground if stacking else external;inside=inside_flags[ident]
             clear=mon.bottom(all_g)>self.table+.002 and ident not in global_ground
@@ -540,9 +536,7 @@ class Relay:
                     elif original_support:
                         # Permission comes from the measured prior two-hand
                         # low pose, never from a commanded target or RPC flag.
-                        geoms=all_g if current_contract else state['rod_geoms']
-                        limit=completion['max_release_gap_m'] if current_contract else completion['max_timber_release_gap_m']
-                        state['goal_release_ready']=mon.bottom(geoms)<=self.table+limit
+                        state['goal_release_ready']=mon.bottom(all_g)<=self.table+completion['max_release_gap_m']
                         state['goal_release_active']=False
                     elif state['goal_release_ready']:
                         state['goal_release_active']=True;state['goal_release_ready']=False
@@ -597,42 +591,34 @@ class Relay:
                         # Receiver evidence from before the drop does not carry over the drop.
                         state.update(dropped=False,gap_since=None,qualified=set(),candidate=set(),candidate_since={},overlap_since=None)
                         if state['valid_from'] is None:state['valid_from']=t
-            moving_names=list(dict.fromkeys(a.get('beam_bodies',[ident])+[name for name in (a.get('weight_body'),) if name]))
-            velocities=[mon.velocity(mon.m.body(name).id) for name in moving_names]
-            stable=current_contract or all(np.linalg.norm(v[3:])<.01 and np.linalg.norm(v[:3])<.1 for v in velocities)
             counted=[tr for tr in state['transitions'] if self.is_handover(tr) and state['valid_from'] is not None and tr.get('sim_time_s',0.)>=state['valid_from']-1e-9]
             handover_ok=not mon.task['completion'].get('required_airborne_handover',False) or bool(counted)
-            done=state['landed'] and inside and on_table and mon.released(all_g) and stable and not state['dropped'] and handover_ok
+            done=state['landed'] and inside and on_table and mon.released(all_g) and not state['dropped'] and handover_ok
             state['goal_since']=(t if state['goal_since'] is None else state['goal_since']) if done else None
             qualified=state['goal_since'] is not None and t-state['goal_since']>=mon.task['completion']['stable_duration_sim_s']
-            if fraction_contract:
-                from .relay_goal_fraction import timber_fraction
-                # Visual mesh duplicates collision segments for curved timbers.
-                # Only physical timber geoms contribute, never the pendant.
-                segments=[g for g in state['rod_geoms']
-                          if (mon.m.geom(g).name or '').endswith('_beam')
-                          or '_beam_part' in (mon.m.geom(g).name or '')
-                          or '_beam_segment' in (mon.m.geom(g).name or '')]
-                fraction=float(timber_fraction(mon.m,mon.d,segments,self.route[-1],
-                                               mon.task['completion']['timber_goal_tolerance_m']))
-                terminal=bool(fraction >= mon.task['completion']['timber_inside_fraction_min'] and mon.released(all_g))
-            else:
-                terminal=inside and on_table and mon.released(all_g)
+            from .relay_goal_fraction import timber_fraction
+            # Visual mesh duplicates collision segments for curved timbers.
+            # Only physical timber geoms contribute, never the pendant.
+            segments=[g for g in state['rod_geoms']
+                      if (mon.m.geom(g).name or '').endswith('_beam')
+                      or '_beam_part' in (mon.m.geom(g).name or '')
+                      or '_beam_segment' in (mon.m.geom(g).name or '')]
+            fraction=float(timber_fraction(mon.m,mon.d,segments,self.route[-1],
+                                           mon.task['completion']['timber_goal_tolerance_m']))
+            terminal=bool(fraction >= mon.task['completion']['timber_inside_fraction_min'] and mon.released(all_g))
             handover_met=bool(counted)
-            handover_required=mon.task.get('run_protocol',{}).get('relay_completion_rule') is not None
-            terminal=bool(terminal and (handover_met or not handover_required))
+            terminal=bool(terminal and handover_met)
             terminal_completed+=int(terminal)
             completed+=int(qualified);reports[ident]=dict(completed=qualified,terminal_goal_met=terminal,airborne=state['airborne'],drops=state['drops'],dropped=state['dropped'],custody=sorted(state['custody']),support=sorted(support),goal_table_support=on_table,handovers=state['transitions'],handovers_valid_from_s=state['valid_from'])
-            if handover_required:reports[ident].update(airborne_handover_met=handover_met,handover_protocol=self.HANDOVER_PROTOCOL)
-            if fraction_contract:
-                reports[ident].update(timber_inside_fraction=fraction,
-                    timber_inside_fraction_min=mon.task['completion']['timber_inside_fraction_min'])
+            reports[ident].update(airborne_handover_met=handover_met,handover_protocol=self.HANDOVER_PROTOCOL)
+            reports[ident].update(timber_inside_fraction=fraction,
+                timber_inside_fraction_min=mon.task['completion']['timber_inside_fraction_min'])
         complete=completed==len(self.states)
         mon.result_cache=dict(all_goals_met=complete,task_success=complete and not mon.violations,completed_payloads=completed,total_payloads=len(self.states),payloads=reports,drops=sum(s['drops'] for s in self.states.values()))
         if mon.task.get('run_protocol', {}).get('evaluation_semantics') == 'terminal_outcome_v2':
             terminal_complete=terminal_completed==len(self.states)
             mon.result_cache.update(all_goals_met=terminal_complete,task_success=terminal_complete,
                 terminal_goal_met=terminal_complete,terminal_completed_payloads=terminal_completed,
-                completed_payloads=terminal_completed,legacy_completed_payloads=completed,
-                legacy_process_goals_met=complete,strict_task_success=complete and not mon.violations,
+                completed_payloads=terminal_completed,process_completed_payloads=completed,
+                process_goals_met=complete,strict_task_success=complete and not mon.violations,
                 scoring_version='terminal_outcome_v2')
