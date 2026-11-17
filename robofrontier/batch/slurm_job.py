@@ -202,6 +202,8 @@ def submit(config, output, *, queue=False, root=ROOT):
         raise ValueError('Slurm requires automatic collection and ZIP archiving')
     policy = config['policy']
     selected = _catalog(config)['profiles'][policy['profile']]
+    if selected.get('transport') == 'loopback_gateway':
+        raise ValueError('A loopback gateway profile runs on the gateway\'s own host, not in a Slurm allocation')
     if subscription:
         if selected.get('provider') != 'openai' or selected.get('env_key'):
             raise ValueError('Subscription Slurm requires an exact native ChatGPT profile without API keys')

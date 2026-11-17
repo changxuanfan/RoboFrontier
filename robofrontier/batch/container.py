@@ -182,6 +182,9 @@ def _frozen_settings(arguments, config, image, volumes):
 def _credential_environment(config, base):
     from ..cli import _catalog
     selected = _catalog(config)['profiles'][config['policy']['profile']]
+    if selected.get('transport') == 'loopback_gateway':
+        # The container has its own loopback interface: the host's adapter is not there.
+        raise ValueError('A loopback gateway profile runs on the gateway\'s own host, not in a container')
     result = {}
     for field in ('env_key', 'base_url_env'):
         name = selected.get(field)

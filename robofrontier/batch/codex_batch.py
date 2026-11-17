@@ -14,7 +14,8 @@ from robofrontier.runtime import layout as run_layout
 from robofrontier.batch.launch_schedule import LaunchSchedule
 
 from robofrontier.batch.prepare import load_env, select_cases
-from robofrontier.engines.codex.launch import codex_home, initialize_codex_home, launch_config, profile
+from robofrontier.engines.codex.launch import (codex_home, gateway_environment, initialize_codex_home,
+                                               launch_config, profile, require_gateway)
 from robofrontier.tasks.families import ROOT, read, prepare
 from robofrontier.runtime.setup import write_json, verify_inputs
 from robofrontier.configuration import runs_root
@@ -188,7 +189,8 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
             if (launch['profile'].get('runner_backend') != BACKEND
                     or checked.get('job_gateway_sha256') != gateway_fingerprint()):
                 raise ValueError('Shared job gateway changed or was not qualified; rerun job preflight')
-        env=dict(os.environ)
+        env=gateway_environment(launch['profile'], dict(os.environ))
+        require_gateway(launch['profile'])
         if selected(launch['profile']) == 'landlock-v1' and launch['profile']['provider'] == 'openai':
             for key in ('OPENAI_API_KEY', 'CODEX_API_KEY'):
                 env.pop(key, None)
@@ -345,7 +347,8 @@ def main():
                 write_json(target/'launch.json', launch)
             command=['node',str(ROOT/'robofrontier/engines/codex/codex_preflight.js'),str(target)]
             if args.smoke_only:command.append('--smoke-only')
-            environment={**os.environ, 'ROBOFRONTIER_PYTHON': sys.executable}
+            environment=gateway_environment(selected, {**os.environ, 'ROBOFRONTIER_PYTHON': sys.executable})
+            require_gateway(selected)
             if selected_backend(selected) == 'landlock-v1' and selected['provider'] == 'openai':
                 for key in ('OPENAI_API_KEY', 'CODEX_API_KEY'):
                     environment.pop(key, None)

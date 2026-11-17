@@ -3,8 +3,8 @@
 Experiments run through the `robofrontier` command ([getting started](../docs/getting-started.md),
 [command-line guide](../docs/unified-cli.md)). The scripts here are the engineering commands
 around it. Run each from the repository root as `.venv/bin/python -m scripts.NAME`; `--help`
-lists its options. The GitHub PAT gateway below calls a model provider only when
-listing models or forwarding an authenticated client request; the other scripts do not.
+lists its options. The two gateways below call a model provider only when listing models
+or forwarding an authenticated client request; the other scripts do not.
 
 ## GitHub PAT model transport
 
@@ -17,6 +17,18 @@ starts a standard-library-only loopback connector usable without installing
 RoboFrontier, Copilot CLI or GHC API. It forwards Chat Completions and Responses,
 including streamed tool calls. `--list-models` queries the current account's model
 catalog. See [setup, Codex and Antigravity examples](../docs/engines/github-pat.md).
+
+## Experimental Codex / Claude transport
+
+| Script | Purpose |
+| --- | --- |
+| `codex_claude_gateway.py` | Authenticated loopback Responses-to-Messages adapter for `claude-opus-5-5`; Codex owns tools, sessions, compaction and forks |
+| `codex_claude_monitor.py` | Live cache-hit rate, token totals and estimated cost per run from the gateway's metadata log; read-only, standard library |
+
+Install the optional [adapter dependency](../requirements-codex-claude.txt) into a separate
+environment and run the gateway as `python scripts/codex_claude_gateway.py`, not with
+`-m scripts.NAME`. The monitor needs no extra package. See
+[credentials, limits and the live-run commands](../docs/engines/codex-claude-api.md).
 
 ## Policy environment
 
