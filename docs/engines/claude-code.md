@@ -40,10 +40,10 @@ credentials in `.env` ([credentials file](README.md#credentials-file)). An API-k
 only its own key and endpoint to the CLI; setting sources and unrelated MCP servers are turned off
 on the command line in every mode.
 
-### Subscription token (default)
+### Subscription token
 
-`haiku_subscription_token` (Haiku 5.5) is the default; `opus_subscription` uses the same mode
-with Opus. Generate a one-year token locally with the official command and store it in `.env` as
+`opus_subscription` (Opus 5.5) and `haiku_subscription_token` (Haiku 5.5) use a subscription
+token. Generate a one-year token locally with the official command and store it in `.env` as
 `CLAUDE_CODE_OAUTH_TOKEN`:
 
 ```sh
@@ -116,7 +116,7 @@ model configuration; `roboteam run` picks the latest of each and refuses on any 
 (`engines/claude/claude_readiness.py`). One command makes both, with real spend:
 
 ```sh
-.venv/bin/roboteam preflight --engine claude --profile haiku_subscription_token \
+.venv/bin/roboteam preflight --engine claude --profile opus_subscription \
   --max-budget-usd 1 --confirm-spend
 ```
 
@@ -139,9 +139,9 @@ fingerprint, cost and per-check results, never credentials. Each check can also 
 (`--output DIR` chooses the receipt folder), and two receipts can be compared without model calls:
 
 ```sh
-.venv/bin/python -m roboteam.engines.claude.preflight --profile haiku --max-budget-usd 0.5 --check-fork --confirm-spend
-.venv/bin/python -m roboteam.engines.claude.claude_blocked_precheck --profile haiku --max-budget-usd 1 --confirm-spend
-.venv/bin/python -m roboteam.engines.claude.claude_readiness --profile haiku \
+.venv/bin/python -m roboteam.engines.claude.preflight --profile opus --max-budget-usd 0.5 --check-fork --confirm-spend
+.venv/bin/python -m roboteam.engines.claude.claude_blocked_precheck --profile opus --max-budget-usd 1 --confirm-spend
+.venv/bin/python -m roboteam.engines.claude.claude_readiness --profile opus \
   --precheck PATH/receipt.json --blocked-precheck PATH/receipt.json
 .venv/bin/python -m roboteam.engines.claude.claude_offline_probe   # local stubs, no model
 ```

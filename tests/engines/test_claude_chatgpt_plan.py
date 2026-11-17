@@ -320,7 +320,7 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
             from chatgpt_websocket_fixture import ProviderSocket
             server.transport=gateway.WebSocketTransport(server.store,lambda token:ProviderSocket(Connection().reply))
             threading.Thread(target=server.serve_forever,daemon=True).start()
-            selected={**profile('sol61_chatgpt_plan'),'base_url':f'http://127.0.0.1:{server.server_port}',
+            selected={**profile('sol_chatgpt_plan'),'base_url':f'http://127.0.0.1:{server.server_port}',
                       'env_key':'LOCAL_GATEWAY_KEY'}
             try:
                 translate=gateway.to_responses

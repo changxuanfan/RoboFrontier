@@ -30,7 +30,7 @@ class AdaptiveHostTests(unittest.TestCase):
         launch.write_text(json.dumps({'profile':self.profile}))
         frozen=self.run/'private/inputs/bootstrap/Controller.md'; frozen.parent.mkdir()
         frozen.write_text('frozen adaptive start')
-        cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
+        cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harness.json').read_text())
         cfg.update(startup_protocol='direct_controller', engine='claude',topology='adaptive',model='fake',effort='high')
         store=RuntimeStore(self.run/'private/state/runtime.sqlite'); store.initialize('run',cfg,['A']); store.close()
         self.ledger=BudgetLedger.create(self.run/'private/state/budget.sqlite',1); self.calls=[]

@@ -10,7 +10,7 @@ Act as the outer manager for a RoboTeam batch run by Claude Code. First read
 docs/unified-cli.md and docs/engines/claude-code.md.
 
 Settings:
-- profile: haiku_subscription_token
+- profile: opus
 - effort: high
 - families: [transport, mosaic, relay, dial]
 - level: 1

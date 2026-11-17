@@ -32,10 +32,10 @@ Fill in only the variable your profile reads (`configs/models.json`, `env_key`):
 
 | Profile | Credential |
 | --- | --- |
-| Claude `haiku_subscription_token`, `opus_subscription` | `CLAUDE_CODE_OAUTH_TOKEN` in `.env` (from `claude setup-token`) |
-| Claude `haiku`, `opus` | `ANTHROPIC_API_KEY` in `.env` |
-| Codex `luna` | `OPENAI_API_KEY` in `.env` |
-| Codex `luna_subscription`, `sol61_subscription` | No variable: log in once with `CODEX_HOME=~/.roboteam/codex-home codex login` |
+| Claude `opus` (default), `haiku` | `ANTHROPIC_API_KEY` in `.env` |
+| Claude `opus_subscription`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` in `.env` (from `claude setup-token`) |
+| Codex `sol` (default), `luna` | `OPENAI_API_KEY` in `.env` |
+| Codex `sol_subscription`, `luna_subscription` | No variable: log in once with `CODEX_HOME=~/.roboteam/codex-home codex login` |
 
 Keep credentials in `.env`, not exported in the shell. `prepare`, `run` and `continue` load
 `.env` themselves; the launchd job file stores no credential, and the Claude token reaches the

@@ -10,7 +10,7 @@ Act as the outer manager for a RoboTeam batch run by Codex. First read
 docs/unified-cli.md and docs/engines/codex.md.
 
 Settings:
-- profile: luna
+- profile: sol
 - effort: high
 - families: [transport, mosaic, relay, dial]
 - level: 1

@@ -19,7 +19,7 @@ OTHER = '33333333-3333-4333-8333-333333333333'
 
 
 def harness_file(root, engine):
-    config = json.loads((ROOT / 'configs/harnesses/policy.json').read_text())
+    config = json.loads((ROOT / 'configs/harness.json').read_text())
     if engine:
         config['engine'] = engine
     path = Path(root) / (str(engine) + '-harness.json')

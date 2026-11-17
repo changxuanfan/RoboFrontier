@@ -72,7 +72,7 @@ class CliBenchmarkTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'conflicting'):select_cases(cases=[expected[0]],level=1)
 
     def test_context_and_native_vision_are_required(self):
-        for name in ('astra', 'luna', 'deepseek', 'kimi', 'glm'):
+        for name in ('astra_subscription', 'luna', 'deepseek', 'kimi', 'glm'):
             p=profile(name)
             self.assertEqual((p['context_window'],p['auto_compact_token_limit']),(300000,267000))
         with tempfile.TemporaryDirectory() as tmp:
@@ -95,15 +95,15 @@ class CliBenchmarkTests(unittest.TestCase):
             self.assertNotIn('experimental_bearer_token',json.dumps(launch))
 
     def test_failed_preflight_cannot_relabel_an_older_pass(self):
-        selected=profile('astra')
+        selected=profile('astra_subscription')
         with tempfile.TemporaryDirectory() as tmp:
-            target=Path(tmp)/'runs/engineering/model-compatibility/astra'
+            target=Path(tmp)/'runs/engineering/model-compatibility/astra_subscription'
             target.mkdir(parents=True)
             (target/'report.json').write_text(json.dumps({'passed':True,'profile_sha256':'old'}))
             with patch.object(benchmark,'ROOT',Path(tmp)),patch.object(benchmark,'runs_root',return_value=Path(tmp)/'runs'),\
                     patch.object(benchmark,'profile',return_value=selected),\
                     patch.object(benchmark,'launch_config',return_value={}),\
-                    patch('sys.argv',['benchmark','preflight','--models','astra']),\
+                    patch('sys.argv',['benchmark','preflight','--models','astra_subscription']),\
                     patch.dict(os.environ),\
                     patch.object(benchmark.subprocess,'run',return_value=SimpleNamespace(returncode=1)):
                 with self.assertRaises(SystemExit):benchmark.main()
@@ -111,7 +111,7 @@ class CliBenchmarkTests(unittest.TestCase):
 
     def test_models_share_fresh_private_dial_instance_but_not_runtime(self):
         with tempfile.TemporaryDirectory() as tmp:
-            file=prepare_batch(Path(tmp)/'batch',['astra','deepseek'],cases=['dial-best5-n04-d1'])
+            file=prepare_batch(Path(tmp)/'batch',['astra_subscription','deepseek'],cases=['dial-best5-n04-d1'])
             batch=json.loads(file.read_text());a,b=[Path(j['run_directory']) for j in batch['jobs']]
             self.assertNotEqual(a,b)
             self.assertEqual((a/'private/inputs/suite-code.json').read_bytes(),(b/'private/inputs/suite-code.json').read_bytes())
@@ -170,14 +170,14 @@ class CliBenchmarkTests(unittest.TestCase):
     def test_changed_cli_or_catalog_rejects_old_preflight_before_start(self):
         import hashlib
         with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp); folder=root/'batch'; run=folder/'astra'/'case'
+            root=Path(tmp); folder=root/'batch'; run=folder/'astra_subscription'/'case'
             (run/'private/inputs').mkdir(parents=True)
             launch={'profile':{'provider':'openai'}}
             (run/'private/inputs/codex.json').write_text(json.dumps(launch))
             (run/'private/inputs/models.json').write_text('{"models": []}')
             (folder/'batch.json').write_text(json.dumps({'status':'prepared_not_started','jobs':[
-                {'profile':'astra','run_directory':str(run),'status':'prepared'}]}))
-            receipt=root/'runs/engineering/model-compatibility/astra/report.json'
+                {'profile':'astra_subscription','run_directory':str(run),'status':'prepared'}]}))
+            receipt=root/'runs/engineering/model-compatibility/astra_subscription/report.json'
             receipt.parent.mkdir(parents=True)
             profile_hash=hashlib.sha256(json.dumps(launch['profile'],sort_keys=True).encode()).hexdigest()
             receipt.write_text(json.dumps({'passed':True,'profile_sha256':profile_hash,

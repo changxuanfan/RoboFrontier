@@ -3,7 +3,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from roboteam.runtime.setup import prepare_run,verify_inputs
+from roboteam.runtime.setup import verify_inputs
+from team_harness import prepare_run
 from roboteam.tasks.config import ROOT,load_task,load_harness, startup_protocol
 from roboteam.runtime.store import RuntimeStore
 

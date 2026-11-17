@@ -16,9 +16,10 @@ from roboteam.batch.launch_schedule import LaunchSchedule
 from roboteam.batch.prepare import load_env, select_cases
 from roboteam.engines.codex.launch import (codex_home, gateway_environment, initialize_codex_home,
                                                launch_config, profile, require_gateway)
+from roboteam.tasks.config import DEFAULT_HARNESS
 from roboteam.tasks.families import ROOT, read, prepare
 from roboteam.runtime.setup import write_json, verify_inputs
-from roboteam.configuration import runs_root
+from roboteam.configuration import DEFAULT_PROFILES, runs_root
 from roboteam.runtime.segments import try_continue, wall_backstopped
 
 
@@ -49,7 +50,7 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
             puzzles[case]=target
     for name,p in profiles.items():
         config_dir=output/'profiles'/name;config_dir.mkdir(parents=True)
-        harness=read(ROOT/'configs/harnesses/policy.json')
+        harness=read(DEFAULT_HARNESS)
         harness.update(engine='codex',model=p['model'],effort=p['effort'],record_realtime_video=False)
         if harness_overrides:
             allowed={'topology','startup_protocol','observation_image_profile','record_realtime_video','startup_timeout_s','render_device','tool_mode'}
@@ -297,7 +298,7 @@ def main():
     os.environ['CODEX_HOME']=str(codex_home())
     p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='command',required=True)
     sub.add_parser('models')
-    a=sub.add_parser('preflight');a.add_argument('--models',nargs='+',default=['astra']);a.add_argument('--model-config',type=Path)
+    a=sub.add_parser('preflight');a.add_argument('--models',nargs='+',default=[DEFAULT_PROFILES['codex']]);a.add_argument('--model-config',type=Path)
     a.add_argument('--smoke-only',action='store_true',help='Small image/tool round trip; does not qualify scored runs')
     for command in ('plan','prepare'):
         a=sub.add_parser(command)
@@ -305,7 +306,7 @@ def main():
             a.add_argument('--output',type=Path,required=True)
             a.add_argument('--wall-limit-s',type=float,default=86400,help='Per-task seconds after START, including initial model work')
         else:a.add_argument('--parallel',type=int,default=4)
-        a.add_argument('--models',nargs='+',default=['astra']);a.add_argument('--families',nargs='+')
+        a.add_argument('--models',nargs='+',default=[DEFAULT_PROFILES['codex']]);a.add_argument('--families',nargs='+')
         a.add_argument('--cases',nargs='+');a.add_argument('--model-config',type=Path)
         a.add_argument('--level',type=int,choices=(1,2,3))
         a.add_argument('--min-arms',action='store_true',help='Smallest released arm count within each selected family')

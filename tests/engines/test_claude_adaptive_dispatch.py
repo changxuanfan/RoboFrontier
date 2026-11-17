@@ -28,7 +28,7 @@ class AdaptiveDispatchTests(unittest.TestCase):
         # Run-shaped, as a returned delegation writes its report beside the run (public/results).
         state=Path(self.tmp.name)/'run/private/state'; state.mkdir(parents=True)
         self.store=RuntimeStore(state/'runtime.sqlite')
-        cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
+        cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harness.json').read_text())
         cfg.update(engine='claude',topology='adaptive')
         self.store.initialize('run',cfg,['A']); self.store.update_agent('Controller',thread_id='parent',ready=True)
         self.store.start(); self.d=Delegations(self.store)

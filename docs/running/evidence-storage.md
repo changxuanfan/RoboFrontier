@@ -133,7 +133,7 @@ removing any source.
 
 ## Storage settings of policy runs
 
-`configs/harnesses/policy.json` freezes these into each run's `harness.json`:
+`configs/harness.json` freezes these into each run's `harness.json`:
 
 - `motion_hz: 30`: 30 motion states per simulated second. Colour changes are written on the
   physics clock to `motion/events.jsonl`.

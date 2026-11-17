@@ -98,7 +98,7 @@ class ContainerRuntimeTests(unittest.TestCase):
 
     def test_credential_forwarding_is_scoped_to_selected_provider(self):
         credentials = runtime._credential_environment(self.config, {
-            'OPENAI_API_KEY': 'openai', 'OPENLUX_API_KEY': 'other', 'HOME': '/private'})
+            'OPENAI_API_KEY': 'openai', 'KIMI_API_KEY': 'other', 'HOME': '/private'})
         self.assertEqual(credentials, {'OPENAI_API_KEY': 'openai'})
 
     def test_nested_sandbox_permission_is_explicit_and_never_privileged(self):
@@ -229,10 +229,10 @@ class ContainerRuntimeTests(unittest.TestCase):
         settings = runtime._settings(['plan', '--engine', 'claude'], load_configuration())
         self.assertEqual(settings['policy']['profile'],
                          load_configuration(overrides={'policy': {'engine': 'claude'}})['policy']['profile'])
-        self.assertEqual(settings['policy']['profile'], 'haiku_subscription_token')
+        self.assertEqual(settings['policy']['profile'], 'opus')
         runtime._credential_environment(settings, {})
-        explicit = runtime._settings(['plan', '--engine', 'claude', '--profile', 'haiku_subscription_token'], load_configuration())
-        self.assertEqual(explicit['policy']['profile'], 'haiku_subscription_token')
+        explicit = runtime._settings(['plan', '--engine', 'claude', '--profile', 'opus_subscription'], load_configuration())
+        self.assertEqual(explicit['policy']['profile'], 'opus_subscription')
         self.assertEqual(runtime._settings(['plan', '--engine', 'codex'], load_configuration()), load_configuration())
 
     def test_invalid_container_options_fail_during_configuration_resolution(self):

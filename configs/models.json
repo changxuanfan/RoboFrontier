@@ -1,6 +1,6 @@
 {
   "schema": "roboteam.models.v2",
-  "scope": "Every model profile, one section per engine. A run freezes its own engine section as private/inputs/models.json.",
+  "scope": "Every selectable model profile, one section per engine; `sol` (Codex) and `opus` (Claude Code) are the defaults. A run freezes its own engine section as private/inputs/models.json.",
   "engines": {
     "codex": {
       "schema_version": 1,
@@ -8,6 +8,31 @@
       "context_window": 300000,
       "auto_compact_token_limit": 267000,
       "profiles": {
+        "sol": {
+          "model": "gpt-6.1-sol",
+          "provider": "openai_api",
+          "base_url": "https://api.openai.com/v1",
+          "env_key": "OPENAI_API_KEY",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000
+        },
+        "sol_subscription": {
+          "model": "gpt-6.1-sol",
+          "provider": "openai",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000
+        },
+        "luna": {
+          "model": "gpt-6-luna",
+          "provider": "openai_api",
+          "base_url": "https://api.openai.com/v1",
+          "env_key": "OPENAI_API_KEY",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000
+        },
         "luna_subscription": {
           "model": "gpt-6-luna",
           "provider": "openai",
@@ -15,8 +40,15 @@
           "vision": true,
           "context_capacity": 300000
         },
-        "sol61_subscription": {
-          "model": "gpt-6.1-sol",
+        "terra_subscription": {
+          "model": "gpt-6.1-terra",
+          "provider": "openai",
+          "effort": "high",
+          "vision": true,
+          "context_capacity": 300000
+        },
+        "astra_subscription": {
+          "model": "gpt-6-astra",
           "provider": "openai",
           "effort": "high",
           "vision": true,
@@ -36,51 +68,8 @@
           "compatibility": "Experimental native Codex harness with a loopback Responses-to-Messages adapter and an Anthropic API key held by that adapter only; requires the running adapter and a matching live preflight",
           "documentation": "docs/engines/codex-claude-api.md"
         },
-        "terra61_subscription": {
-          "model": "gpt-6.1-terra",
-          "provider": "openai",
-          "effort": "high",
-          "vision": true,
-          "context_capacity": 300000
-        },
-        "astra": {
-          "model": "gpt-6-astra",
-          "provider": "openai",
-          "effort": "high",
-          "vision": true,
-          "context_capacity": 300000
-        },
-        "luna": {
-          "model": "gpt-6-luna",
-          "provider": "openai_api",
-          "base_url": "https://api.openai.com/v1",
-          "env_key": "OPENAI_API_KEY",
-          "effort": "high",
-          "vision": true,
-          "context_capacity": 300000
-        },
-        "openlux-luna": {
-          "model": "gpt-6-luna",
-          "provider": "openlux",
-          "base_url": "https://api.openlux.ai/v1",
-          "env_key": "OPENLUX_API_KEY",
-          "effort": "high",
-          "vision": true,
-          "context_capacity": 300000,
-          "compatibility": "OpenLux account and group Responses, vision, tools and compaction require live preflight"
-        },
-        "openlux-terra": {
-          "model": "gpt-6.1-terra",
-          "provider": "openlux",
-          "base_url": "https://api.openlux.ai/v1",
-          "env_key": "OPENLUX_API_KEY",
-          "effort": "high",
-          "vision": true,
-          "context_capacity": 300000,
-          "compatibility": "OpenLux account and group Responses, vision, tools and compaction require live preflight"
-        },
         "deepseek": {
-          "model": "deepseek-flash",
+          "model": "deepseek-v4.1-flash",
           "provider": "deepseek",
           "effort": "high",
           "vision": true,
@@ -90,7 +79,7 @@
           "documentation": "https://api-docs.deepseek.com/quick_start/agent_integrations/codex/"
         },
         "qwen": {
-          "model": "qwen3.8-max-0902",
+          "model": "qwen3.8-flash",
           "provider": "qwen",
           "effort": "high",
           "vision": true,
@@ -125,22 +114,20 @@
     "claude": {
       "schema": "roboteam.claude-models.v1",
       "profiles": {
-        "sol61_chatgpt_plan": {
-          "provider": "openai_chatgpt_plan",
-          "transport_revision": "websocket-incremental-v4",
-          "model": "gpt-6.1-sol",
-          "env_key": "ROBOTEAM_CHATGPT_GATEWAY_KEY",
-          "base_url": "http://127.0.0.1:18461",
+        "opus": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "env_key": "ANTHROPIC_API_KEY",
+          "base_url": "https://api.anthropic.com",
+          "effort": "high"
+        },
+        "opus_subscription": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "env_key": "CLAUDE_CODE_OAUTH_TOKEN",
+          "base_url": "https://api.anthropic.com",
           "effort": "high",
-          "context_capacity": 300000,
-          "compatibility": "Experimental native Claude Code harness with a loopback Messages-to-Responses adapter and explicitly authorized ChatGPT plan use. API-equivalent dollar estimates are not subscription invoices.",
-          "managed_settings": {
-            "modelPricing": {
-              "overrides": {
-                "gpt-6.1-sol": {"input": 2.0, "output": 10.0, "cacheRead": 0.1, "cacheWrite": 2.5}
-              }
-            }
-          }
+          "auth_mode": "oauth_token"
         },
         "haiku": {
           "provider": "anthropic",
@@ -177,20 +164,27 @@
           "native_config_scope": "directory",
           "native_config_dir_env": "ROBOTEAM_CLAUDE_HOME"
         },
-        "opus": {
-          "provider": "anthropic",
-          "model": "claude-opus-5-5",
-          "env_key": "ANTHROPIC_API_KEY",
-          "base_url": "https://api.anthropic.com",
-          "effort": "high"
-        },
-        "opus_subscription": {
-          "provider": "anthropic",
-          "model": "claude-opus-5-5",
-          "env_key": "CLAUDE_CODE_OAUTH_TOKEN",
-          "base_url": "https://api.anthropic.com",
+        "sol_chatgpt_plan": {
+          "provider": "openai_chatgpt_plan",
+          "transport_revision": "websocket-incremental-v4",
+          "model": "gpt-6.1-sol",
+          "env_key": "ROBOTEAM_CHATGPT_GATEWAY_KEY",
+          "base_url": "http://127.0.0.1:18461",
           "effort": "high",
-          "auth_mode": "oauth_token"
+          "context_capacity": 300000,
+          "compatibility": "Experimental native Claude Code harness with a loopback Messages-to-Responses adapter and explicitly authorized ChatGPT plan use. API-equivalent dollar estimates are not subscription invoices.",
+          "managed_settings": {
+            "modelPricing": {
+              "overrides": {
+                "gpt-6.1-sol": {
+                  "input": 2.0,
+                  "output": 10.0,
+                  "cacheRead": 0.1,
+                  "cacheWrite": 2.5
+                }
+              }
+            }
+          }
         },
         "kimi": {
           "provider": "kimi",
@@ -208,7 +202,7 @@
         },
         "qwen": {
           "provider": "qwen",
-          "model": "qwen3.8-max-0902",
+          "model": "qwen3.8-flash",
           "env_key": "DASHSCOPE_API_KEY",
           "base_url_env": "DASHSCOPE_ANTHROPIC_BASE_URL",
           "effort": "high"
@@ -222,7 +216,7 @@
         },
         "deepseek": {
           "provider": "deepseek",
-          "model": "deepseek-flash",
+          "model": "deepseek-v4.1-flash",
           "env_key": "DEEPSEEK_API_KEY",
           "base_url": "https://api.deepseek.com/anthropic",
           "effort": "high"

@@ -176,14 +176,14 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Fill in only the variable your profile reads, for example `CLAUDE_CODE_OAUTH_TOKEN` (from
-`claude setup-token`) for the Claude subscription profiles, or `OPENAI_API_KEY` for Codex's
-`luna`. Keep credentials in `.env`, not exported in the shell: runs load it themselves and
+Fill in only the variable your profile reads: `OPENAI_API_KEY` for Codex's default `sol`
+(gpt-6.1-sol), `ANTHROPIC_API_KEY` for Claude Code's default `opus` (claude-opus-5-5), or
+`CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) for a Claude subscription profile. Keep credentials in `.env`, not exported in the shell: runs load it themselves and
 hand the Claude token to the CLI on a pipe, so no policy shell can read it.
 
 ### 4. Choose what to run
 
-Defaults are in [`roboteam.toml`](roboteam.toml): Codex with `luna`, the adaptive
+Defaults are in [`roboteam.toml`](roboteam.toml): Codex with `sol` (`--engine claude` selects `opus`), the adaptive
 protocol, all 36 tasks, and a renderer picked for the host. Change them with options or a
 small TOML of your own, passed before the command (`roboteam --config site.toml ...`);
 [`configs/examples/`](configs/examples) has one for the Mac, RunPod and Slurm.

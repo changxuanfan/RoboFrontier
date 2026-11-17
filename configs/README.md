@@ -9,9 +9,8 @@ changing a setting never changes a prepared batch. The released tasks are in
 
 | Path | What it is |
 | --- | --- |
-| `models.json` | Every model profile, one section per engine (`engines.codex`, `engines.claude`, which also holds Claude transcript prices). A run freezes its engine's section |
-| `harnesses/policy.json` | The policy runtime's settings (topology, startup protocol, timeouts, check intervals, motion and video rates, and optionally `observation_look`); no speeds or forces, which every action states |
-| `harness.json` | The harness a task without one uses (`roboteam/tasks/config.py`); tests rely on its `hierarchical` topology |
+| `models.json` | Every selectable model profile, one section per engine (`engines.codex`, `engines.claude`, which also holds Claude transcript prices). A run freezes its engine's section |
+| `harness.json` | The policy runtime's settings (topology, startup protocol, timeouts, check intervals, motion and video rates, and optionally `observation_look`); no speeds or forces, which every action states. A batch sets the engine, topology, model and effort over it |
 | `policy-env/` | The policy Python environment's inputs (`core.in`, `store.in`) and locks (`core.lock`, `all.lock`) |
 | `requirements/` | The optional dependencies of the two model adapters: `codex-claude.txt` (opus-5.5 in Codex) and `chatgpt-plan.txt` (gpt-6.1-sol in Claude Code) |
 | `policy-assets.json` | The pinned policy asset archive and its inventory, restored by `roboteam bootstrap` |

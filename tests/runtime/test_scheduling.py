@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from roboteam.runtime.store import RuntimeStore
-from roboteam.tasks.config import load_harness
+from team_harness import load_harness
 from roboteam.runtime.scheduling import Scheduler, FakeSessionAdapter, dispatch_once
 
 class SchedulingTests(unittest.TestCase):

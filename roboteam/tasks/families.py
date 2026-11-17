@@ -153,7 +153,7 @@ def prepare(case_id, directory, harness=None, private_puzzle_path=None, wall_lim
     with tempfile.TemporaryDirectory(prefix='roboteam-policy-') as temporary:
         path = Path(temporary)/'task.json'
         path.write_text(json.dumps(task, ensure_ascii=False)+'\n')
-        return prepare_run(directory, path, harness or ROOT/'configs/harnesses/policy.json', private_puzzle_path)
+        return prepare_run(directory, path, harness, private_puzzle_path)
 
 
 def validate_frozen_policy(task, directory):

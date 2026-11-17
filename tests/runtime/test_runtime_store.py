@@ -5,11 +5,12 @@ import unittest
 from roboteam.runtime.store import RuntimeStore
 from roboteam.runtime.store import packed
 from roboteam.tasks.config import load_harness, startup_protocol
+import team_harness
 
 class StoreTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.path=Path(self.tmp.name)/'runtime.sqlite'
-        self.s=RuntimeStore(self.path);self.s.initialize('fake-run',load_harness(),['A','B','C'])
+        self.s=RuntimeStore(self.path);self.s.initialize('fake-run',team_harness.load_harness(),['A','B','C'])
     def tearDown(self):self.s.close();self.tmp.cleanup()
     def _action(self,call_id,actor,status,**fields):
         value={'action_id':call_id,'arm':'A','type':'move','status':status,'parameters':{},**fields}

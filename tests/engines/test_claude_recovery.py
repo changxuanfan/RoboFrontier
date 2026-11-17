@@ -27,7 +27,7 @@ class CapacityRecoveryTests(unittest.TestCase):
         self.runner = runner
         self.host = ClaudeSessionHost(self.run, 'Controller', PROFILE, {}, runner=runner)
         self.store = RuntimeStore(self.run/'private/state/runtime.sqlite')
-        cfg = json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
+        cfg = json.loads((Path(__file__).resolve().parents[2]/'configs/harness.json').read_text())
         cfg.update(engine='claude'); self.store.initialize('run', cfg, ['A'])
         self.store.update_agent('Controller', ready=True, thread_id=self.host.session_id); self.store.start()
         native = self.run/'private/engine/config/projects/local'/(self.host.session_id+'.jsonl')
@@ -159,7 +159,7 @@ class ModelLossTests(unittest.TestCase):
                 'result_subtype': 'success', 'malformed_lines': 0, 'total_cost_usd': .01}}
         self.host = ClaudeSessionHost(self.run, 'Controller', PROFILE, {}, runner=runner)
         self.store = RuntimeStore(self.run/'private/state/runtime.sqlite')
-        cfg = json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
+        cfg = json.loads((Path(__file__).resolve().parents[2]/'configs/harness.json').read_text())
         cfg.update(engine='claude'); self.store.initialize('run', cfg, ['A'])
         self.store.update_agent('Controller', ready=True, thread_id=self.host.session_id); self.store.start()
 

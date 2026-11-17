@@ -51,13 +51,13 @@ TOML. The `schema_version` is 11, the only one read; a partial TOML may omit it.
 .venv/bin/roboteam plan --level 1 --min-arms --parallel 4
 ```
 
-The default plan selects all 36 released cases with Codex `luna` at effort high, the adaptive
+The default plan selects all 36 released cases with Codex `sol` (gpt-6.1-sol) at effort high, the adaptive
 topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time per run.
 
 | Setting | Meaning |
 | --- | --- |
 | `policy.engine` | `codex` or `claude` |
-| `policy.profile` | Entry in the engine's section of `configs/models.json`. Claude defaults to `haiku_subscription_token`. |
+| `policy.profile` | Entry in the engine's section of `configs/models.json`. Defaults: `sol` for Codex, `opus` for Claude. |
 | `policy.effort` | Requested reasoning effort; must match the preflight receipt |
 | `policy.topology` | `adaptive`, `single-agent`, `hierarchical` or `decentralized` |
 | `policy.tool_mode` | `full` (default) or `robot_only`: the robot tool alone ([robot-only runs](running/robot-only.md)) |

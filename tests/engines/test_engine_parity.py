@@ -9,7 +9,7 @@ from roboteam.runtime import access as policy_access, bootstrap as policy_bootst
 from roboteam.tasks.config import ROOT
 from roboteam.tasks.families import prepare
 
-HARNESS = json.loads((ROOT/'configs/harnesses/policy.json').read_text())
+HARNESS = json.loads((ROOT/'configs/harness.json').read_text())
 STARTUP = {'single-agent': 'direct_controller', 'adaptive': 'direct_controller',
            'hierarchical': 'direct_team', 'decentralized': 'direct_team'}
 

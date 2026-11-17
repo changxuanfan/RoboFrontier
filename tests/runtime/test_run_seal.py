@@ -9,7 +9,8 @@ import unittest
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld,fake_capture
-from roboteam.runtime.setup import prepare_run,write_json
+from roboteam.runtime.setup import write_json
+from team_harness import prepare_run
 from roboteam.runtime.cli import execute
 from roboteam.runtime.service import RuntimeService
 from roboteam.runtime.store import RuntimeStore

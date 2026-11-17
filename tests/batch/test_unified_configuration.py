@@ -25,22 +25,27 @@ def tearDownModule():
 
 
 class UnifiedConfigurationTests(unittest.TestCase):
-    def test_claude_engine_defaults_to_setup_token_without_replacing_explicit_profiles(self):
+    def test_each_engine_defaults_to_its_api_key_profile_without_replacing_explicit_profiles(self):
         from roboteam.batch.claude_prepare import profile
+        from roboteam.engines.codex.launch import profile as codex_profile
         config = load_configuration(overrides={'policy': {'engine': 'claude'}})
-        self.assertEqual(config['policy']['profile'], 'haiku_subscription_token')
-        self.assertEqual(plan(config)['model'], 'claude-haiku-5-5')
+        self.assertEqual(config['policy']['profile'], 'opus')
+        self.assertEqual(plan(config)['model'], 'claude-opus-5-5')
         selected = profile(config['policy']['profile'])
-        self.assertEqual((selected['auth_mode'], selected['env_key']),
-                         ('oauth_token', 'CLAUDE_CODE_OAUTH_TOKEN'))
-        for name in ('haiku', 'haiku_subscription', 'haiku_subscription_directory'):
+        self.assertEqual((selected.get('auth_mode', 'api_key'), selected['env_key']), ('api_key', 'ANTHROPIC_API_KEY'))
+        self.assertEqual(load_configuration()['policy']['profile'], 'sol')
+        self.assertEqual(load_configuration(overrides={'policy': {'engine': 'codex'}})['policy']['profile'], 'sol')
+        selected = codex_profile('sol')
+        self.assertEqual((selected['model'], selected['provider'], selected['env_key']),
+                         ('gpt-6.1-sol', 'openai_api', 'OPENAI_API_KEY'))
+        for name in ('haiku', 'opus_subscription', 'haiku_subscription', 'haiku_subscription_directory'):
             with self.subTest(profile=name):
                 explicit = load_configuration(overrides={'policy': {'engine': 'claude', 'profile': name}})
                 self.assertEqual(explicit['policy']['profile'], name)
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary)/'claude.toml'
             path.write_text('[policy]\nengine="claude"\n')
-            self.assertEqual(load_configuration(path)['policy']['profile'], 'haiku_subscription_token')
+            self.assertEqual(load_configuration(path)['policy']['profile'], 'opus')
             path.write_text('[policy]\nengine="claude"\nprofile="haiku"\n')
             self.assertEqual(load_configuration(path)['policy']['profile'], 'haiku')
 
@@ -48,7 +53,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
         result = plan(load_configuration())
         self.assertEqual((result['task_count'], result['parallel']), (36, 36))
         self.assertEqual((result['model'], result['effort'], result['topology']),
-                         ('gpt-6-luna', 'high', 'adaptive'))
+                         ('gpt-6.1-sol', 'high', 'adaptive'))
         self.assertEqual((result['startup_interval_s'], result['task_wall_limit_s']), (.3, 86400))
         self.assertEqual(result['model_calls'], 0)
         self.assertFalse(result['simulator_started'])

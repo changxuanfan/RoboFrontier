@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 from roboteam.runtime.pipeline_client import client_call
 from roboteam.runtime.store import RuntimeStore
-from roboteam.tasks.config import load_harness
+from team_harness import load_harness
 from roboteam.runtime.tool_errors import CallIdConflict, conflict_error
 
 

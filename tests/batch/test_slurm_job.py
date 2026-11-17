@@ -27,7 +27,7 @@ class SlurmJobTests(unittest.TestCase):
         subprocess.run(['git', 'add', '.'], cwd=self.repo, check=True)
         subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
                         'commit', '-qm', 'fixture'], cwd=self.repo, check=True)
-        receipt = self.repo/'runs/engineering/model-compatibility/luna/report.json'
+        receipt = self.repo/'runs/engineering/model-compatibility/sol/report.json'
         receipt.parent.mkdir(parents=True)
         receipt.write_text(json.dumps({'passed': True}))
         self.asset = self.root/'assets.tar.gz'
@@ -90,7 +90,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertEqual(cache.read_bytes(), self.asset.read_bytes())
         self.assertFalse((source/'.env').exists())
         self.assertFalse((source/'.codex').exists())
-        self.assertTrue((source/'runs/engineering/model-compatibility/luna/report.json').is_file())
+        self.assertTrue((source/'runs/engineering/model-compatibility/sol/report.json').is_file())
         with patch.object(slurm.platform, 'system', return_value='Linux'), \
                 patch.dict(os.environ, {'SLURM_JOB_ID': '123'}):
             with self.assertRaisesRegex(ValueError, 'never restart'):

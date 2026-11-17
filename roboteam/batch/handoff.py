@@ -191,9 +191,10 @@ def doctor(names, root=ROOT):
             tools[tool]=dict(available=result.returncode==0,version=(result.stdout or result.stderr).splitlines()[0])
         else:tools[tool]=dict(available=False)
     profiles={}
-    for name in names:
-        from ..configuration import model_catalog
-        raw=model_catalog('codex',root/'configs/models.json')['profiles'][name]
+    from ..configuration import model_catalog
+    catalog=model_catalog('codex',root/'configs/models.json')['profiles']
+    for name in names or catalog:
+        raw=catalog[name]
         key=raw.get('env_key')
         entry=dict(model=raw['model'],credential_env=key,credential_set=bool(os.environ.get(key)) if key else None)
         try:profile(name);entry['configuration_valid']=True
@@ -209,7 +210,7 @@ def doctor(names, root=ROOT):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
-    p=sub.add_parser('doctor');p.add_argument('--models',nargs='+',default=['kimi','qwen','glm','deepseek'])
+    p=sub.add_parser('doctor');p.add_argument('--models',nargs='+',help='Codex profiles to report; every profile of configs/models.json when omitted')
     p=sub.add_parser('assets');p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p=sub.add_parser('restore');p.add_argument('archive',type=Path)
     p=sub.add_parser('setup-assets');p.add_argument('--archive',type=Path,help='Use the pinned release archive from a local path instead of downloading')

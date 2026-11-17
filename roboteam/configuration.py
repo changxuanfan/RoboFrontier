@@ -8,6 +8,8 @@ from .io import ROOT
 
 DEFAULT = ROOT / 'roboteam.toml'
 SCHEMA_VERSION = 11
+# The model profile of each engine when none is named (configs/models.json); both use an API key.
+DEFAULT_PROFILES = {'codex': 'sol', 'claude': 'opus'}
 TOPOLOGIES = ('adaptive', 'single-agent', 'hierarchical', 'decentralized')
 SCHEMA = {
     'schema_version': int,
@@ -69,12 +71,10 @@ def load_configuration(path=None, overrides=None, *, host=None):
     _merge(result, updates)
     if overrides:
         _merge(result, deepcopy(overrides))
-    # Engine-only Claude selections use subscription authentication for scripts.
-    # Explicit API/saved-login profiles and frozen configurations remain exact.
-    if (result['policy']['engine'] == 'claude'
-            and 'profile' not in updates.get('policy', {})
+    # An engine chosen without a profile gets that engine's default profile.
+    if ('profile' not in updates.get('policy', {})
             and 'profile' not in (overrides or {}).get('policy', {})):
-        result['policy']['profile'] = 'haiku_subscription_token'
+        result['policy']['profile'] = DEFAULT_PROFILES[result['policy']['engine']]
     # `auto` values are settled here, before anything is frozen: for this host, for the Slurm
     # nodes a submission will run on (host='slurm', from the job's GPU request), or for the
     # Linux container a Docker command starts (host='container', with this host's GPU if any).

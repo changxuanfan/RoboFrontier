@@ -86,7 +86,7 @@ class LoopbackProfileTests(unittest.TestCase):
                            {'env_key': None}, {'transport_revision': None},
                            {'transport': 'other_gateway'},
                            # Without the explicit mark, every provider still needs HTTPS.
-                           {'transport': None}, {'transport': None, 'provider': 'openlux'},
+                           {'transport': None}, {'transport': None, 'provider': 'kimi'},
                            {'provider': 'openai'}):
                 with self.subTest(fields=fields), self.assertRaises(ValueError):
                     profile('p', catalog(folder, **fields))
@@ -100,7 +100,7 @@ class LoopbackProfileTests(unittest.TestCase):
                 self.assertNotIn('transport', entry)
                 self.assertFalse(str(entry.get('base_url', 'https://')).startswith('http://'))
         with tempfile.TemporaryDirectory() as folder:
-            launch_config(profile('openlux-luna'), Path(folder))
+            launch_config(profile('kimi'), Path(folder))
             model = json.loads((Path(folder)/'models.json').read_text())['models'][0]
             self.assertNotIn('shell_environment_policy', json.dumps(launch_config(profile('luna'), Path(folder))['args']))
         self.assertTrue(model['support_verbosity'])
@@ -109,7 +109,7 @@ class LoopbackProfileTests(unittest.TestCase):
         base = {'ANTHROPIC_API_KEY': 'upstream', 'ANTHROPIC_AUTH_TOKEN': 'upstream', 'LOCAL_GATEWAY_KEY': 'local'}
         self.assertEqual(launch.gateway_environment({'transport': 'loopback_gateway'}, dict(base)),
                          {'LOCAL_GATEWAY_KEY': 'local'})
-        self.assertEqual(launch.gateway_environment({'provider': 'openlux'}, dict(base)), base)
+        self.assertEqual(launch.gateway_environment({'provider': 'kimi'}, dict(base)), base)
 
     def test_a_run_starts_only_with_its_own_adapter_listening(self):
         health = {'ready': True, 'model': 'claude-opus-5-5', 'transport_revision': 'messages-adapter-v1'}
@@ -131,7 +131,7 @@ class LoopbackProfileTests(unittest.TestCase):
             p = {'transport': 'loopback_gateway', 'model': 'claude-opus-5-5', 'transport_revision': 'messages-adapter-v1',
                  'base_url': 'http://127.0.0.1:%d/v1' % server.server_port}
             launch.require_gateway(p)
-            launch.require_gateway({'provider': 'openlux', 'base_url': 'https://unused.invalid'})
+            launch.require_gateway({'provider': 'kimi', 'base_url': 'https://unused.invalid'})
             for changed in ({'transport_revision': 'messages-adapter-v0'}, {'model': 'claude-opus-5'}):
                 with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, 'not this profile'):
                     launch.require_gateway({**p, **changed})

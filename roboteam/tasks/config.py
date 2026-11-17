@@ -6,6 +6,7 @@ import hashlib
 from ..io import ROOT
 
 DEFAULT_CASE = 'transport-a04-d1'  # The smallest released case; tests and bare prepare_run use it.
+# The policy runtime's settings; a batch sets the engine, topology, model and effort over them.
 DEFAULT_HARNESS = ROOT / 'configs/harness.json'
 # The lead role: the one agent of a single-agent or adaptive run, and the lead of a hierarchical team.
 CONTROLLER = 'Controller'

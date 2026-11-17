@@ -71,13 +71,12 @@ process environment wins.
 
 | Variable | Used by |
 | --- | --- |
-| `OPENAI_API_KEY` | Codex `luna` (the default profile) |
-| `OPENLUX_API_KEY` | Codex `openlux-luna`, `openlux-terra` |
-| `ANTHROPIC_API_KEY` | Claude Code `haiku`, `opus` |
-| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code `haiku_subscription_token` (the default Claude profile) and `opus_subscription`; create it with `claude setup-token` |
+| `OPENAI_API_KEY` | Codex `sol` (the default profile) and `luna` |
+| `ANTHROPIC_API_KEY` | Claude Code `opus` (the default Claude profile) and `haiku` |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code `opus_subscription` and `haiku_subscription_token`; create it with `claude setup-token` |
 | `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, `KIMI_API_KEY`, `KIMI_CODE_API_KEY`, `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_ANTHROPIC_BASE_URL` | Third-party profiles of either engine |
 
-Codex subscription profiles (`luna_subscription` and others) use a login in
+Codex subscription profiles (`sol_subscription` and others) use a login in
 `~/.roboteam/codex-home` instead: `CODEX_HOME=~/.roboteam/codex-home codex login`. Never
 put credentials in a TOML file, a command argument or a commit. The Claude subscription token
 reaches the CLI on a pipe, never in an environment variable. Profiles and their authentication
@@ -85,7 +84,7 @@ are listed in the [provider guide](engines/README.md#providers).
 
 ## 5. A site TOML
 
-`roboteam.toml` holds the defaults: Codex, profile `luna`, effort `high`, topology
+`roboteam.toml` holds the defaults: Codex, profile `sol` (gpt-6.1-sol), effort `high`, topology
 `adaptive`, all 36 released cases, 36 parallel runs, NVIDIA rendering. Override what differs in
 a partial, untracked TOML, starting from the example for your platform:
 

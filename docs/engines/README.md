@@ -210,21 +210,20 @@ preflight receipt does. Each batch has one profile.
 
 ### Authentication matrix
 
-Defaults: the repository default is Codex `luna` (`gpt-6-luna`, effort `high`) with
+Defaults: the repository default is Codex `sol` (`gpt-6.1-sol`, effort `high`) with
 `OPENAI_API_KEY`. `--engine claude` with no profile in the user TOML or on the command line
-selects `haiku_subscription_token`.
+selects `opus` (`claude-opus-5-5`) with `ANTHROPIC_API_KEY`.
 
 | Engine | Authentication | Profiles | Credential or setting |
 | --- | --- | --- | --- |
-| Codex | OpenAI API key | `luna` | `OPENAI_API_KEY` |
-| Codex | OpenLux API key | `openlux-luna`, `openlux-terra` | `OPENLUX_API_KEY` |
+| Codex | OpenAI API key | `sol` (default), `luna` | `OPENAI_API_KEY` |
 | Codex | Anthropic API key behind a loopback adapter, experimental | `opus_claude_api` | `ROBOTEAM_CLAUDE_GATEWAY_KEY`, a local key; the Anthropic key stays with the adapter ([setup](codex-claude-api.md)) |
-| Codex | ChatGPT login | `luna_subscription`, `sol61_subscription`, `terra61_subscription`, `astra` | Login in the Codex home ([Codex authentication](codex.md#authentication)) |
+| Codex | ChatGPT login | `sol_subscription`, `luna_subscription`, `terra_subscription`, `astra_subscription` | Login in the Codex home ([Codex authentication](codex.md#authentication)) |
 | Codex | Third-party Responses API | `deepseek`, `qwen`, `glm`, `kimi` | `DEEPSEEK_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_BASE_URL`; `ZAI_API_KEY`; `KIMI_API_KEY` |
-| Claude | Subscription token (`claude setup-token`) | `haiku_subscription_token`, `opus_subscription` | `CLAUDE_CODE_OAUTH_TOKEN` |
+| Claude | Anthropic API key | `opus` (default), `haiku` | `ANTHROPIC_API_KEY` |
+| Claude | Subscription token (`claude setup-token`) | `opus_subscription`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` |
 | Claude | Saved login, default directory | `haiku_subscription` | `ROBOTEAM_CLAUDE_HOME` = `$HOME/.claude`, `CLAUDE_CONFIG_DIR` unset |
 | Claude | Saved login, explicit directory | `haiku_subscription_directory` | `ROBOTEAM_CLAUDE_HOME` = the `CLAUDE_CONFIG_DIR` used at login |
-| Claude | Anthropic API key | `haiku`, `opus` | `ANTHROPIC_API_KEY` |
 | Claude | Third-party Anthropic-compatible API | `kimi`, `kimi_code`, `qwen`, `glm`, `deepseek` | `KIMI_API_KEY`; `KIMI_CODE_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_ANTHROPIC_BASE_URL`; `ZAI_API_KEY`; `DEEPSEEK_API_KEY` |
 
 The catalog is authoritative when this table and it differ.

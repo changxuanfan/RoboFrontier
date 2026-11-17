@@ -12,7 +12,7 @@ from fake_pipeline import FakeWorld, fake_capture
 from physics.test_motion_check import robot_fixture
 from roboteam.physics.robot_control import quat_matrix, matrix_quat, rotation_vector, advance_rotation
 from roboteam.physics.motion_check import RobotGeometry, prepare_check, state_id
-from roboteam.runtime.setup import prepare_run
+from team_harness import prepare_run
 from roboteam.runtime.service import RuntimeService
 from roboteam.tasks.config import load_harness
 from motion import filled, MOVE

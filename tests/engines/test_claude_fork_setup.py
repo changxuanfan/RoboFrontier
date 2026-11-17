@@ -27,7 +27,7 @@ class ForkSetupTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(); self.run=Path(self.tmp.name)/'run'
         self.run.mkdir(); (self.run/'workspace').mkdir(); self.store=RuntimeStore(self.run/'private/state/runtime.sqlite')
-        cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harnesses/policy.json').read_text())
+        cfg=json.loads((Path(__file__).resolve().parents[2]/'configs/harness.json').read_text())
         cfg.update(engine='claude',topology='adaptive',model='fake',effort='high')
         self.store.initialize('run',cfg,['A','B']); self.store.update_agent('Controller',thread_id=PARENT,ready=True)
         self.store.start(); self.store.begin_call('batch','Controller','delegate',{'scopes':[]})

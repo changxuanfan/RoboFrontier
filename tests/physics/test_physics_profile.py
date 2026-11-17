@@ -58,7 +58,7 @@ class StepSettingsTests(unittest.TestCase):
         self.assertEqual(w.model.opt.noslip_iterations, 10)
 
     def test_harness_has_no_physics_settings(self):
-        harness = json.loads(Path('configs/harnesses/policy.json').read_text())
+        harness = json.loads(Path('configs/harness.json').read_text())
         self.assertFalse({'physics_profile', 'gripper_position_servo', 'allowed_tcp_speed_m_s'} & set(harness))
 
 

@@ -9,7 +9,7 @@ from fake_pipeline import fake_capture
 from roboteam.runtime import segments as run_segments
 from roboteam.tasks import families as task_families
 from roboteam.runtime.clock import BudgetGuard, protocol
-from roboteam.runtime.setup import prepare_run
+from team_harness import prepare_run
 from roboteam.runtime.service import RuntimeService
 from engines.test_claude_supervisor import Dispatcher, Policy
 from runtime.test_policy_probe import BudgetWorld

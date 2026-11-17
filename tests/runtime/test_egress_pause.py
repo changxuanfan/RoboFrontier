@@ -3,7 +3,7 @@ import json,os,sys,tempfile,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 from tests.fake_pipeline import FakeWorld,fake_capture
-from roboteam.runtime.setup import prepare_run
+from team_harness import prepare_run
 from roboteam.runtime.service import RuntimeService
 from roboteam.batch.slurm_proxy import atomic
 

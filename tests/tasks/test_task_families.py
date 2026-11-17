@@ -119,9 +119,9 @@ class FamilyReleaseTests(unittest.TestCase):
     def test_policy_harness_records_motion_at_its_frozen_rate(self):
         from roboteam.runtime.pipeline import World
         from roboteam.tasks.config import load_harness
-        self.assertEqual(read(ROOT/'configs/harnesses/policy.json')['motion_hz'], 30)
+        self.assertEqual(read(ROOT/'configs/harness.json')['motion_hz'], 30)
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
-            run = prepare('mosaic-a04-6x12-d1', Path(tmp)/'run', harness=ROOT/'configs/harnesses/policy.json')
+            run = prepare('mosaic-a04-6x12-d1', Path(tmp)/'run', harness=ROOT/'configs/harness.json')
             self.assertEqual(read(run/'private/inputs/harness.json')['motion_hz'], 30)
             world = World(run, read(run/'private/inputs/task.json'))
             try:
@@ -133,7 +133,7 @@ class FamilyReleaseTests(unittest.TestCase):
             finally:
                 world.close()
             # A harness without motion_hz and process_log records at 60 Hz with full logs.
-            plain_cfg = {k: v for k, v in read(ROOT/'configs/harnesses/policy.json').items() if k not in ('motion_hz', 'process_log')}
+            plain_cfg = {k: v for k, v in read(ROOT/'configs/harness.json').items() if k not in ('motion_hz', 'process_log')}
             plain_path = Path(tmp)/'plain.json'; plain_path.write_text(json.dumps(plain_cfg))
             plain = prepare('mosaic-a04-6x12-d1', Path(tmp)/'plain', harness=plain_path)
             world = World(plain, read(plain/'private/inputs/task.json'))
@@ -145,18 +145,18 @@ class FamilyReleaseTests(unittest.TestCase):
                 world.close()
             bad = Path(tmp)/'bad.json'
             for value in (0, -30, True, float('nan')):
-                bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'motion_hz': value}))
+                bad.write_text(json.dumps({**read(ROOT/'configs/harness.json'), 'motion_hz': value}))
                 with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'motion sampling'):
                     load_harness(bad)
             for value in ('every-step', 'events-5s', 'events-10'):
-                bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'process_log': value}))
+                bad.write_text(json.dumps({**read(ROOT/'configs/harness.json'), 'process_log': value}))
                 with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'process log format'):
                     load_harness(bad)
             # Every Monitor format, and only those, is accepted (task_config keeps the list literal).
             from roboteam.tasks.evaluate import PROCESS_LOG_FORMATS
             self.assertEqual(sorted(PROCESS_LOG_FORMATS), ['events-10s', 'events-1s', 'events-60s', 'full'])
             for value in PROCESS_LOG_FORMATS:
-                bad.write_text(json.dumps({**read(ROOT/'configs/harnesses/policy.json'), 'process_log': value}))
+                bad.write_text(json.dumps({**read(ROOT/'configs/harness.json'), 'process_log': value}))
                 with self.subTest(value=value):
                     self.assertEqual(load_harness(bad)['process_log'], value)
 

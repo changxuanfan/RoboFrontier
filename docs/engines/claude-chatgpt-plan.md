@@ -99,7 +99,7 @@ the Messages SSE alive. It can slow parallel tasks; it does not change their too
 model context, outputs or fork ancestry. Leave room for other consumers of the same
 API project; this process cannot reserve quota against external clients.
 
-`sol61_chatgpt_plan` is a Claude engine profile. Its local key is supplied as
+`sol_chatgpt_plan` is a Claude engine profile. Its local key is supplied as
 `ROBOTEAM_CHATGPT_GATEWAY_KEY`, with the actual OAuth credential retained only
 by the adapter. Full tools, model effort and adaptive topology are frozen through
 the ordinary benchmark configuration. The context budget is 300,000 with a

@@ -82,7 +82,7 @@ class CodexSegmentResumeTests(unittest.TestCase):
             t = Path(tmp).resolve(); home = t / 'home'; home.mkdir(); (t / 'codex-home').mkdir()
             requests = []
             # A centralized run: one Controller thread and no delegates.
-            harness = json.loads((ROOT / 'configs/harnesses/policy.json').read_text())
+            harness = json.loads((ROOT / 'configs/harness.json').read_text())
             harness.update(engine='codex', topology='single-agent', model=STUB['model'], effort=STUB['effort'],
                            record_realtime_video=False)
             (t / 'harness.json').write_text(json.dumps(harness))

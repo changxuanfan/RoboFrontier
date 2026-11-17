@@ -41,7 +41,7 @@ class ClaudeSessionHostIntegrationTests(unittest.TestCase):
                 first = host.session_id
                 self.assertGreaterEqual(len(probe.REQUESTS), 2)
                 self.assertIn('"type": "image"', json.dumps(probe.REQUESTS[-1]))
-                cfg = json.loads((Path(__file__).resolve().parents[2] / 'configs/harnesses/policy.json').read_text())
+                cfg = json.loads((Path(__file__).resolve().parents[2] / 'configs/harness.json').read_text())
                 cfg.update(engine='claude', topology='single-agent', startup_protocol='direct_controller')
                 store = RuntimeStore(run / 'private/state/runtime.sqlite')
                 try:

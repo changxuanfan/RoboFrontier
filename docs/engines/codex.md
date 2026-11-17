@@ -39,7 +39,7 @@ Profiles are the `codex` section of `configs/models.json`; the
 [authentication matrix](README.md#authentication-matrix) lists each one's credential. Model and
 provider settings are process-local and never change the user's global Codex configuration.
 
-**API profiles** (`luna`, OpenLux, third-party) read their key from `.env`. With the default
+**API profiles** (`sol`, the default; `luna`; third-party) read their key from `.env`. With the default
 `runtime.codex_home_scope = "task"` each run gets its own Codex home under `.roboteam/codex/`
 (or under `runtime.codex_home`), shared by that run's Controller, snapshots and delegates so fork
 lineage stays readable. Homes are initialized one at a time before any task host starts.
@@ -48,7 +48,7 @@ lineage stays readable. Homes are initialized one at a time before any task host
 talks to a loopback process that holds the Anthropic key and translates the protocol. See
 [Codex with Claude](codex-claude-api.md) before using it; it is not an Anthropic-supported route.
 
-**ChatGPT login** (`luna_subscription`, `sol61_subscription`, `terra61_subscription`, `astra`)
+**ChatGPT login** (`sol_subscription`, `luna_subscription`, `terra_subscription`, `astra_subscription`)
 uses Codex's own login and needs `runtime.codex_home_scope = "shared"` (task scope refuses these
 profiles). The shared home is `runtime.codex_home`, else `CODEX_HOME`, else
 `~/.roboteam/codex-home`, never the personal `~/.codex`. Log in there once; a batch refuses
@@ -62,7 +62,7 @@ CODEX_HOME=~/.roboteam/codex-home codex login status
 ```toml
 # Untracked site TOML for a subscription batch
 [policy]
-profile = "luna_subscription"
+profile = "sol_subscription"
 
 [runtime]
 codex_home_scope = "shared"

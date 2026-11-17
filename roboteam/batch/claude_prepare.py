@@ -15,6 +15,7 @@ import subprocess
 from urllib.parse import urlsplit
 
 from roboteam.runtime import layout as run_layout
+from roboteam.tasks.config import DEFAULT_HARNESS
 from roboteam.tasks.families import ROOT, RELEASE, read
 from roboteam.batch.prepare import load_env, select_cases
 from roboteam.batch.handoff import digest
@@ -146,7 +147,7 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
             write_json(target, {'code_symbols': dial_code(case)})
             puzzles[case] = target
     for name, p in profiles.items():
-        cfg = read(ROOT / 'configs/harnesses/policy.json')
+        cfg = read(DEFAULT_HARNESS)
         if topology in ('hierarchical', 'decentralized'): cfg['startup_protocol'] = 'direct_team'
         cfg.update(engine='claude', topology=topology, model=p['model'], effort=p['effort'], record_realtime_video=record_video)
         if observation_image_profile is not None:cfg['observation_image_profile']=observation_image_profile

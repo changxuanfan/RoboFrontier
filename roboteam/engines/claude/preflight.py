@@ -20,6 +20,7 @@ import uuid
 from pathlib import Path
 
 
+from roboteam.configuration import DEFAULT_PROFILES
 from roboteam.runtime import preflight_probe
 from roboteam.engines.claude.profile_identity import fingerprint
 from roboteam.engines.claude.runner import run_turn
@@ -233,7 +234,7 @@ def run_precheck(name, output, budget, base_env, binary='claude', check_fork=Fal
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile', default='haiku')
+    parser.add_argument('--profile', default=DEFAULT_PROFILES['claude'])
     parser.add_argument('--max-budget-usd', type=float, required=True)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--check-fork', action='store_true', help='Also run a tool-free native fork and verify transcript history')

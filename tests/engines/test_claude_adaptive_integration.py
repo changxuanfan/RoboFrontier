@@ -115,7 +115,7 @@ class StubModel(http.server.BaseHTTPRequestHandler):
 class AdaptiveIntegrationTests(unittest.TestCase):
     def test_cli_runtime_delegate_fork_and_return(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp); config=json.loads((ROOT/'configs/harnesses/policy.json').read_text())
+            root=Path(tmp); config=json.loads((ROOT/'configs/harness.json').read_text())
             config.update(engine='claude',topology='adaptive',model='claude-opus-5-5',effort='high')
             config_path=root/'config.json'; config_path.write_text(json.dumps(config))
             run=prepare_run(root/'run',harness_path=config_path)

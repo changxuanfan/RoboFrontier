@@ -47,9 +47,9 @@ modes:
 
 | Mode | What to set | How the job gets it |
 | --- | --- | --- |
-| API key (Codex `luna`, third-party profiles) | The profile's `env_key`, e.g. `OPENAI_API_KEY`, in `.env` | `slurm-submit` loads `.env`; `sbatch --export=ALL` hands it to the job |
-| Claude subscription token (`haiku_subscription_token`, `opus_subscription`) | `CLAUDE_CODE_OAUTH_TOKEN` in the checkout's `.env`, **not** exported | `slurm-submit` strips it from the `sbatch` environment and records the `.env` path; the job reads it from there and passes it to the CLI on a pipe |
-| Codex subscription (`luna_subscription`) | `slurm.auth_mode = "subscription"` and a credential store (below) | The job takes a lease on the store after allocation |
+| API key (Codex `sol`, Claude `opus`, third-party profiles) | The profile's `env_key`, e.g. `OPENAI_API_KEY`, in `.env` | `slurm-submit` loads `.env`; `sbatch --export=ALL` hands it to the job |
+| Claude subscription token (`opus_subscription`, `haiku_subscription_token`) | `CLAUDE_CODE_OAUTH_TOKEN` in the checkout's `.env`, **not** exported | `slurm-submit` strips it from the `sbatch` environment and records the `.env` path; the job reads it from there and passes it to the CLI on a pipe |
+| Codex subscription (`sol_subscription`) | `slurm.auth_mode = "subscription"` and a credential store (below) | The job takes a lease on the store after allocation |
 
 - A Claude run refuses to start when the token is in a starting environment under bubblewrap:
   unset it in the shell before `slurm-submit`.
@@ -86,7 +86,7 @@ schema_version = 11
 
 [policy]
 engine = "codex"
-profile = "luna"
+profile = "sol"
 topology = "adaptive"
 
 [batch]

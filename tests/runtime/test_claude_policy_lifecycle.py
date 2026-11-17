@@ -40,7 +40,7 @@ class LifecycleTests(unittest.TestCase):
     def test_frozen_inputs_real_runtime_start_and_scheduler(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            cfg = json.loads((ROOT / 'configs/harnesses/policy.json').read_text())
+            cfg = json.loads((ROOT / 'configs/harness.json').read_text())
             cfg.update(engine='claude', topology='single-agent', model='fake', effort='high')
             config_path = root / 'config.json'
             config_path.write_text(json.dumps(cfg))

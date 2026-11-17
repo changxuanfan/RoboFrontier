@@ -4,7 +4,7 @@ schema_version = 11
 
 [policy]
 engine = "codex"
-profile = "luna_subscription"
+profile = "sol_subscription"
 effort = "high"
 topology = "adaptive"
 
@@ -25,7 +25,7 @@ codex_tool_backend = "landlock-v1"
 auth_mode = "subscription"
 # Replace with a canonical private directory on durable operator storage.
 # Only a reference is frozen at submission; no credentials are copied then.
-credential_store = "/ABSOLUTE/PRIVATE/roboteam-luna"
+credential_store = "/ABSOLUTE/PRIVATE/roboteam-codex"
 # The Mac route, for clusters that cannot reach the model API themselves; the Mac must stay
 # on. The reference carries no proxy password, endpoint snapshot or native credential.
 # egress_mode = "mac-ssh"
