@@ -14,6 +14,7 @@ changing a setting never changes a prepared batch. The released tasks are in
 | `harnesses/oracle.json` | The Oracle's harness, with its own model and effort fields |
 | `harness.json` | The harness a task without one uses (`roboteam/tasks/config.py`); tests rely on its `hierarchical` topology |
 | `policy-env/` | The policy Python environment's inputs (`core.in`, `store.in`) and locks (`core.lock`, `all.lock`) |
+| `requirements/` | The optional dependencies of the two model adapters: `codex-claude.txt` (opus-5.5 in Codex) and `chatgpt-plan.txt` (gpt-6.1-sol in Claude Code) |
 | `policy-assets.json` | The pinned policy asset archive and its inventory, restored by `roboteam bootstrap` |
 | `factory-assets.json` | The Factory recording release: split sizes and SHA-256 fingerprints |
 | `backgrounds/robo_factory.json` | Robo World's appearance, layout and shared visual resources |

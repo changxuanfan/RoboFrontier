@@ -1,7 +1,7 @@
 # The tasks
 
-Four families, each at three scales (team sizes) and three levels (how hard the mechanism is):
-36 cases. The release, [`benchmark/release.json`](../../benchmark/release.json) with its
+Four task types, each at three team sizes and three difficulty levels: 36 tasks. In the code and
+the file names a task type is a *family*, a team size a *scale* and a task a *case*. The release, [`benchmark/release.json`](../../benchmark/release.json) with its
 `release_id`, names every case's scene, public task and family materials by hash; each case lives
 in `benchmark/<family>/<case>/`, and each family's cases are listed in
 `benchmark/<family>/catalog.json`.

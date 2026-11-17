@@ -14,7 +14,7 @@ service only when explicitly invoked. The other scripts do not call a model prov
 | `codex_claude_gateway.py` | Authenticated loopback Responses-to-Messages adapter for `claude-opus-5-5`; Codex owns tools, sessions, compaction and forks |
 | `codex_claude_monitor.py` | Live cache-hit rate, token totals and estimated cost per run from the gateway's metadata log; read-only, standard library |
 
-Install the optional [adapter dependency](../requirements-codex-claude.txt) into a separate
+Install the optional [adapter dependency](../configs/requirements/codex-claude.txt) into a separate
 environment and run the gateway as `python scripts/codex_claude_gateway.py`, not with
 `-m scripts.NAME`. The monitor needs no extra package. See
 [credentials, limits and the live-run commands](../docs/engines/codex-claude-api.md).
@@ -27,7 +27,7 @@ environment and run the gateway as `python scripts/codex_claude_gateway.py`, not
 | `claude_chatgpt_gateway.py` | Authenticated loopback Messages-to-Responses adapter; Claude Code owns tools, sessions and forks |
 | `chatgpt_plan_websocket.py` | Gateway support module for connection-local Responses history and shared API admission |
 
-Install the optional [adapter dependencies](../requirements-chatgpt-plan.txt).
+Install the optional [adapter dependencies](../configs/requirements/chatgpt-plan.txt).
 Run the standalone entry points as `python scripts/chatgpt_plan_auth.py` and
 `python scripts/claude_chatgpt_gateway.py`, rather than with `-m scripts.NAME`.
 The WebSocket module is imported by the gateway, not a separate command.

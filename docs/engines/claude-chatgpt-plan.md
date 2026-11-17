@@ -15,11 +15,11 @@ incomplete, interrupted, or wrong-model streams do not emit `message_stop`.
 
 ## Authentication and trust
 
-Install the optional [adapter dependencies](../../requirements-chatgpt-plan.txt),
+Install the optional [adapter dependencies](../../configs/requirements/chatgpt-plan.txt),
 then run the standalone sign-in helper:
 
 ```sh
-python -m pip install -r requirements-chatgpt-plan.txt
+python -m pip install -r configs/requirements/chatgpt-plan.txt
 python scripts/chatgpt_plan_auth.py login --credential-file /private/plan/account.json
 ```
 

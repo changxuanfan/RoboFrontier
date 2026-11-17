@@ -379,7 +379,7 @@ def sse(raw):
     return events
 
 
-@unittest.skipUnless(importlib.util.find_spec('anthropic'), 'needs the optional anthropic SDK (requirements-codex-claude.txt)')
+@unittest.skipUnless(importlib.util.find_spec('anthropic'), 'needs the optional anthropic SDK (configs/requirements/codex-claude.txt)')
 class GatewayHttpTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()

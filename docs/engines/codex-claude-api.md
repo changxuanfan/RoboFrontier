@@ -49,7 +49,7 @@ The SDK is an optional dependency, kept out of the core environment:
 
 ```sh
 python3 -m venv .venv-gateway
-.venv-gateway/bin/python -m pip install -r requirements-codex-claude.txt
+.venv-gateway/bin/python -m pip install -r configs/requirements/codex-claude.txt
 mkdir -p -m 700 ~/.roboteam/secrets ~/.roboteam/codex-claude
 # Put the Anthropic key, alone, in ~/.roboteam/secrets/anthropic-api-key.txt (chmod 600).
 
