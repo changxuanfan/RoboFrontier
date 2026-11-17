@@ -169,17 +169,6 @@ def robot_label_moves(model, data, avoid_objects=True):
     return moves
 
 
-def apply_display_labels(model, data, avoid_objects=True):
-    """Place letter labels as every video shows them."""
-    moves = robot_label_moves(model, data, avoid_objects=avoid_objects)
-    for name, move in moves.items():
-        gid = model.geom(name).id
-        model.geom_pos[gid][:2] = move['to_xy']
-        model.geom_quat[gid] = move['quat_wxyz']
-    mujoco.mj_kinematics(model, data)
-    return moves
-
-
 def place_robot_labels(model, data, task):
     """Put a run's letter labels where its videos show them, before the run starts.
 

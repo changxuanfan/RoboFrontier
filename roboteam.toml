@@ -60,20 +60,5 @@ memory_gib = 0                       # 0 adds no limit beyond the Docker daemon/
 cpus = 0.0                           # 0 adds no CPU quota
 seccomp_profile = "default"          # default | unconfined; explicit opt-in for nested Codex sandboxes
 
-[factory]
-data_root = "runs/factory-data/r14"
-asset_lock = "configs/factory-assets.json"
-source = "release"                   # release (pinned installer) | imported (existing closed-recording bundle)
-device = "OPTIX"                     # OPTIX | CUDA | METAL | CPU; separate from policy observations
-blender = ""                         # Empty resolves BLENDER_BIN or the installed executable
-mode = "desks"                       # desks | promo; full promo defaults to 210.5 seconds
-views = ["front", "side"]
-width = 1920
-height = 1080
-samples = 64
-duration_s = 0.0                     # 0 preserves the full reviewed timeline; positive values cap a preview
-import_speedup = 0.0                 # Newly imported recording only; 0 uses the family release speedup
-parallel = 1                        # Slurm render array concurrency, independent of benchmark parallelism
-
 [paths]
 runs_root = ""                        # Where runs, receipts and caches go; empty is <repo>/runs. ROBOTEAM_RUNS_ROOT overrides

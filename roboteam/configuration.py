@@ -23,9 +23,6 @@ SCHEMA = {
               'egress_mode': str, 'egress_root': str, 'egress_wait_s': int, 'egress_pause_s': int},
     'container': {'image': str, 'workspace': str, 'memory_gib': int, 'cpus': float,
                   'seccomp_profile': str},
-    'factory': {'data_root': str, 'asset_lock': str, 'source': str, 'device': str,
-                'blender': str, 'mode': str, 'views': list, 'width': int, 'height': int,
-                'samples': int, 'duration_s': float, 'import_speedup': float, 'parallel': int},
     'paths': {'runs_root': str},
 }
 
@@ -124,9 +121,12 @@ def _configuration_shape(version):
     # Older frozen configurations remain exact: an already-hashed experiment
     # configuration never gains a later option.
     shape = {k: dict(v) if isinstance(v, dict) else v for k, v in SCHEMA.items()
-             if (version >= 2 or k != 'factory') and (version >= 9 or k != 'paths')}
-    # Configurations frozen at versions 3 to 10 hold an [oracle] section. Nothing reads it;
-    # it is accepted as it is so that those files still validate.
+             if version >= 9 or k != 'paths'}
+    # Configurations frozen before version 11 hold a [factory] section (from version 2) and an
+    # [oracle] section (from version 3). Nothing reads them; they are accepted as they are so
+    # that those files still validate.
+    if 2 <= version <= 10:
+        shape['factory'] = dict
     if 3 <= version <= 10:
         shape['oracle'] = dict
     if version < 5:
@@ -263,26 +263,6 @@ def validate_configuration(config):
         raise ValueError('Invalid container.image')
     if container['memory_gib'] < 0 or not math.isfinite(container['cpus']) or container['cpus'] < 0:
         raise ValueError('Container resource limits must be finite and nonnegative')
-    if version >= 2:
-        factory = config['factory']
-        choice('factory', 'source', ('release', 'imported'))
-        choice('factory', 'device', ('OPTIX', 'CUDA', 'METAL', 'CPU'))
-        choice('factory', 'mode', ('desks', 'promo'))
-        if (not factory['views'] or any(type(v) is not str or v not in ('front', 'side') for v in factory['views'])
-                or len(set(factory['views'])) != len(factory['views'])):
-            raise ValueError('factory.views must select distinct front/side views')
-        if not factory['data_root'].strip() or not factory['asset_lock'].strip():
-            raise ValueError('Factory data_root and asset_lock must be nonempty paths')
-        for field in ('width', 'height', 'samples', 'parallel'):
-            if factory[field] <= 0:
-                raise ValueError('factory.'+field+' must be positive')
-        if factory['width'] % 2 or factory['height'] % 2:
-            raise ValueError('Factory video dimensions must be even')
-        for field in ('duration_s', 'import_speedup'):
-            value = factory[field]
-            # duration_s 0 keeps the full timeline; import_speedup 0 uses the family's release speedup.
-            if not math.isfinite(value) or value < 0:
-                raise ValueError('Invalid factory.'+field)
 
 
 def rendering_environment(device, system, base):

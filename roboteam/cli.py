@@ -455,8 +455,6 @@ def argument_parser(*, prog=None):
     p.add_argument('--output', type=Path, required=True)
     p = sub.add_parser('container', help='Run the native CLI in persistent local Docker volumes')
     p.add_argument('arguments', nargs=argparse.REMAINDER)
-    from .factory.workflow import add_arguments
-    add_arguments(sub)
     return parser
 
 
@@ -469,15 +467,6 @@ def main(argv=None):
             write_json(args.result_file, value)
         _print(value)
     try:
-        if args.command == 'factory':
-            from contextlib import redirect_stdout
-            from .factory.workflow import execute
-            # Native exporters can print progress. Keep the unified command's
-            # stdout as one machine-readable result; diagnostics use stderr.
-            with redirect_stdout(sys.stderr):
-                report = execute(args)
-            emit(report)
-            return 0
         if args.command == 'container':
             from .batch.container import execute, validate_arguments
             # Resolve help and invalid syntax before configuration, Docker or auth.
