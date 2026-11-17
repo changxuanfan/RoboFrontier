@@ -1,61 +1,98 @@
 <div align="center">
 
-<img src="docs/media/readme/banner.png" alt="RoboTeam. Can multimodal agents run a robot world? 36 tasks, 4 families, up to 16 arms; a map of Robo World's four zones" width="100%">
+# RoboTeam
 
-**Can Multimodal Agents Work Together on Long Physical Tasks?**
+**Benchmarking Vision-Based Multi-Agent Control of Many Robot Arms in Real Time**
 
 [Project page](https://changxuanfan.github.io/RoboTeam/) ·
-[Film](https://changxuanfan.github.io/RoboTeam/#film) ·
 [Tasks](docs/tasks/README.md) ·
-[Getting started](docs/getting-started.md)
+[Getting started](docs/getting-started.md) ·
+[Docs](docs/README.md)
 
 [![License: MIT](https://img.shields.io/badge/code-MIT-3b7fc4?style=flat-square)](LICENSE)
 [![Data: CC BY 4.0](https://img.shields.io/badge/data%20%26%20media-CC%20BY%204.0-3f9440?style=flat-square)](LICENSE-DATA.md)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-d65b3c?style=flat-square)](pyproject.toml)
 
-<a href="https://changxuanfan.github.io/RoboTeam/#film"><img src="docs/media/readme/teaser.webp" alt="One moment from each Robo World zone: Transport, Mosaic, Relay and Dial" width="100%"></a>
-
-<sub>One moment from each zone of Robo World. Oracle reference runs. Select to watch the full film.</sub>
+<img src="docs/media/readme/overview.png" alt="RoboTeam at a glance: the four task types and one step of each, the four agent systems, the two tool modes, and 20 minutes of one run" width="100%">
 
 </div>
 
 ## What it is
 
-RoboTeam asks multimodal agents to **organize, communicate and collaborate**
-across many robot arms. Every model drives the same simulated Franka arms through the
-same robot tool, sees the same cameras and follows the same rules. Nothing is scripted:
-who does what, when to wait, how to talk and how to recover are the agent's choices.
+RoboTeam is a simulated benchmark where multimodal agents control **4 to 16 robot arms in
+real time from camera images alone**. Its 36 tasks are long jobs that the arms must do
+together, such as passing timbers or building a picture from hundreds of cubes.
 
 | | |
 | --- | --- |
-| **Agents** | Native Codex and Claude Code sessions. A Controller owns the task and, in the adaptive protocol, forks delegates for bounded jobs and takes their arms back. |
-| **One robot tool** | Move arms and grippers, batch and pre-check motions, observe from named cameras, wait for events, message teammates, delegate and hand work back. Every call and its outcome is recorded. |
-| **Robo World** | MuJoCo dynamics with real contacts and simulated Franka Panda arms. Grasps slip, timbers swing, springs push back; no teleporting, state writes or resets. |
-| **Scoring** | Success is judged on the final world state; failures, retries, time, tokens, collisions and parallelism are reported beside it. |
+| **Real time** | The world advances with the clock and never waits for an agent. It runs in MuJoCo with a 2 ms physics step. |
+| **Vision only** | Agents get RGB images from fixed cameras (1280 × 800) and the state of the arms. They never receive object positions, depth or contacts. |
+| **One robot tool** | Arms move only through one tool with simple commands: move an arm to a pose, or open, close or grasp with a gripper. Every failed motion or grasp is visible. |
+| **Code tools** | Unless a condition removes them, agents also have a shell, file editing and their own Python code, inside a sandbox that keeps them away from the simulator and the evaluator. |
+| **Long runs** | A run ends when the agents declare the task done or after 24 hours of active time. Agents may fail and retry. |
 
-## Four task families
+## Tasks
 
-Each family has nine tasks: three team sizes crossed with three difficulty levels. A larger
-team brings more arms and more work; a higher level changes the physics of the job itself.
+Four task types, each at three team sizes and three difficulty levels. Team size adds arms and
+work to divide. Difficulty makes the same job physically or visually harder.
 
-<img src="docs/media/readme/benchmark.jpg" alt="The largest team of each family at Levels 1, 2 and 3, in their initial states, with what each level changes" width="100%">
+<div align="center">
+<img src="docs/media/readme/tasks.png" alt="The four task types and their three levels" width="70%">
+</div>
 
-<sub>Initial states of the largest team of each family at Levels 1–3.</sub>
+| Task type | The job | Arms | Level 1 → 2 → 3 |
+| --- | --- | --- | --- |
+| **Transport** | Deliver every item to its target board | 4, 8, 12 | Flat targets → sockets → sockets on a sprung board |
+| **Mosaic** | Build a reference picture from colored cubes | 4, 6, 8 | Pockets → printed lines → unmarked cells |
+| **Relay** | Move long timbers to a goal, handing over in the air | 8, 12, 16 | Straight → curved with a hanging weight → hinged with a hanging weight |
+| **Dial** | Find a hidden code by turning and holding spring-loaded knobs | 4 to 16 | Knobs on the table → modules held in the air → cranks |
 
-The videos below are **Oracle** reference runs rendered in Robo World. The Oracle is
-gpt-6.1-sol in Codex as a single agent, given the ground-truth position of every object instead
-of camera images; its programs read hidden task state. The runs show that each task can be
-done. The Mosaic 6- and 8-arm runs and `dial-best5-n08-d3` were operator-assisted;
-Transport and Mosaic were recorded with the scenes' earlier physics settings, not the
-released ones, and the Mosaic 6- and 8-arm Level 3 clips replay their Level 2 runs; the Relay
-runs' completion was confirmed by review. Idle time is removed and
-playback is sped up. Each montage plays all nine tasks of a family at once:
-rows are difficulty levels 1–3, columns are team sizes.
+Each task type has [its own guide](docs/tasks/README.md), and the 36 cases are in
+[`benchmark/`](benchmark/README.md).
 
-### 🟦 Transport — deliver ordered items to their boards
+## Agent systems
 
-4, 8 and 12 arms · 12–36 targets · L1 release on the board · L2 blades into fixed blind
-slots · L3 a spring-mounted moving board.
+| Agent system | Organization |
+| --- | --- |
+| `adaptive` | One Controller that forks delegates, hands them arms and takes the arms back. |
+| `single-agent` | One agent controls every arm. |
+| `hierarchical` | One Worker per arm under a Controller. |
+| `decentralized` | One Worker per arm and no Controller; Workers coordinate directly. |
+
+Agents run in a coding-agent harness, either Codex or Claude Code. In both, they get the same
+robot tool, instructions, camera images and sandbox, and they can write lessons to one shared
+skill file that starts empty in every run.
+
+## Results
+
+<div align="center">
+<img src="docs/media/readme/results.png" alt="How many of the 36 tasks each of the 14 conditions completes" width="55%">
+</div>
+
+- **The best models complete most tasks, but at a high price.** With the adaptive system,
+  gpt-6.1-sol and opus-5.5 complete 28 and 27 of the 36 tasks, and four other models at most 3.
+  A typical task takes gpt-6.1-sol 3.5 hours and 218 million input tokens, and 34% of its
+  atomic steps fail at least once and must be retried.
+- **Other agent systems trade time for tokens.** The four systems complete a similar number of
+  tasks. The hierarchical and decentralized systems are faster than the adaptive system but use
+  1.9 and 1.7 times its tokens, and the single agent uses fewer tokens but takes 1.6 times as long.
+- **What limits the agents is recovering positions from images.** Given ground-truth object
+  positions (the Oracle), gpt-6.1-sol completes all 36 tasks. With low-resolution images it
+  completes 14, and without code tools 13.
+
+No model or agent system is yet fast, cheap and reliable at once.
+
+## Videos
+
+The videos below are **Oracle** reference runs: gpt-6.1-sol in Codex as a single agent, given
+the ground-truth position of every object instead of camera images. They show that each task
+can be done; some recordings were operator-assisted or made on earlier scene revisions, as the
+[Oracle guide](docs/oracle/README.md#published-reference-videos) lists. Idle time is removed and
+playback is sped up. Each montage plays all nine tasks of
+a task type at once: rows are Levels 1 to 3, columns are team sizes. Runs of every model are on
+the [project page](https://changxuanfan.github.io/RoboTeam/).
+
+### Transport
 
 <!-- media:montage-transport -->
 
@@ -63,10 +100,7 @@ https://github.com/user-attachments/assets/6224985c-da54-4098-9066-18fc0c023712
 
 <!-- /media:montage-transport -->
 
-### 🟩 Mosaic — fill a color pattern with distinct cubes
-
-4, 6 and 8 arms · 72–288 cells · L1 pockets guide each cube · L2 printed grid lines
-· L3 no visible grid.
+### Mosaic
 
 <!-- media:montage-mosaic -->
 
@@ -74,10 +108,7 @@ https://github.com/user-attachments/assets/07e18688-2711-4835-a474-398f504023ea
 
 <!-- /media:montage-mosaic -->
 
-### 🟧 Relay — carry long timbers arm to arm
-
-8, 12 and 16 arms · 2–4 timbers · L1 straight timber · L2 a 63-degree arc with a pendant
-· L3 a deflected timber on passive springs.
+### Relay
 
 <!-- media:montage-relay -->
 
@@ -85,11 +116,7 @@ https://github.com/user-attachments/assets/d786c4b1-1cde-4034-b195-56546a41e8ee
 
 <!-- /media:montage-relay -->
 
-### 🟨 Dial — crack a hidden code with spring dials
-
-4, 6 and 8 dials on 4–16 arms · L1 fixed modules · L2 lift each module with support and
-grasp · L3 lifted modules with an eccentric crank. A BEST display shows only the best
-match count so far.
+### Dial
 
 <!-- media:montage-dial -->
 
@@ -119,27 +146,6 @@ https://github.com/user-attachments/assets/f4abfc06-8e7c-433a-bc16-aa3cb9df9641
 <!-- /gallery -->
 
 </details>
-
-## How a run works
-
-<img src="docs/media/readme/protocol.svg" alt="The adaptive protocol: a Controller forks delegates that take arms for a bounded job and return them" width="100%">
-
-All benchmark runs use the **adaptive** protocol: one Controller reads the task, keeps
-the plan and either drives arms itself or forks a delegate for a bounded job, which hands
-its arms back with `return_task`. We compare it with three fixed organizations on the
-same tasks:
-
-| Agent system | Organization |
-| --- | --- |
-| `adaptive` | One Controller that forks delegates, hands them arms and takes the arms back. |
-| `single-agent` | One agent controls every arm. |
-| `hierarchical` | One Worker per arm under a Controller. |
-| `decentralized` | One Worker per arm and no Controller; Workers coordinate directly. |
-
-Each run gets 24 hours of active time from its START: reading, planning and waiting count,
-pauses the harness makes for a network outage or a usage limit do not. Benchmark
-results, the communication study and the skills study are on the
-[project page](https://changxuanfan.github.io/RoboTeam/#results).
 
 ## Getting started
 
@@ -230,21 +236,25 @@ also collected into `runs/exports/<batch>-<hash>/` and a verified ZIP beside it 
 is `paths.runs_root`, default `runs/`). [Getting started](docs/getting-started.md) goes through each step in detail;
 [docs/](docs/README.md) has every guide.
 
+## Repository layout
+
 | Path | What is there |
 | --- | --- |
 | [`benchmark/`](benchmark/README.md) | The 36 released tasks and `release.json` |
-| [`roboteam/`](roboteam) | Simulation, engine hosts, runtime protocol, evidence |
-| [`prompts/`](prompts) | Every text a model reads: rules, roles, skills |
+| [`roboteam/`](roboteam) | The package: simulation, robot tool, runtime with its sandbox, the Codex and Claude Code adapters, evaluation and analysis |
+| [`prompts/`](prompts) | Every text an agent reads: rules, roles and guides |
 | [`configs/`](configs/README.md) | Model profiles, harness settings, pinned asset archives, examples |
+| [`scripts/`](scripts/README.md) | Engineering commands: policy environment, release, analysis, media |
+| [`tests/`](docs/development/testing.md) | The test suite |
+| [`docs/`](docs/README.md) | Guides by topic |
 | [`site/`](site/DESIGN.md) | The project page |
-| [`docs/`](docs/README.md) | Guides by topic, and the project history |
 
 ## Citation
 
 ```bibtex
 @misc{roboteam2026,
-  title  = {RoboTeam: Can Multimodal Agents Work Together on Long
-            Physical Tasks?},
+  title  = {RoboTeam: Benchmarking Vision-Based Multi-Agent Control of
+            Many Robot Arms in Real Time},
   author = {Fan, Changxuan and others},
   year   = {2026},
   url    = {https://github.com/changxuanfan/RoboTeam}

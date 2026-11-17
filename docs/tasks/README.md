@@ -11,7 +11,7 @@ in `benchmark/<family>/<case>/`, and each family's cases are listed in
 | Transport | `transport-a04/a08/a12-d1..d3` (4, 8, 12 arms; 12, 24, 36 items) | Deliver each requested cube or cylinder to its place on a destination board | released on the board → both blades in fixed blind slots → the same slots on a spring-supported board | [Transport](transport.md) |
 | Mosaic | `mosaic-a04-6x12`, `a06-9x18`, `a08-12x24`, `d1..d3` (4, 6, 8 arms; 72, 162, 288 cells) | Build a four-color Tulip pattern, one cube per cell | 70 mm pockets → printed lines → no visible grid | [Mosaic](mosaic.md) |
 | Relay | `relay-a08/a12/a16-d1..d3` (8, 12, 16 arms; 2, 3, 4 timbers) | Carry long timbers to GOAL with at least one airborne handover each | straight beam → arc with a hanging pendant → sprung elbow with a pendant | [Relay](relay.md) |
-| Dial | `dial-best5-n04/n06/n08-d1..d3` (4, 6, 8 dials; 4, 6, 8 arms at Level 1, twice that at Levels 2 and 3) | Find and hold the code, with only a BEST-so-far record as feedback | fixed gear dials → each module held in the air by a second arm → the same with a crank | [Dial](dial-best5.md) |
+| Dial | `dial-best5-n04/n06/n08-d1..d3` (4, 6, 8 dials; 4, 6, 8 arms at Level 1, twice that at Levels 2 and 3) | Find and hold the code, with only a BEST-so-far record as feedback | fixed gear dials → each module held in the air by a second arm → the same with a crank | [Dial](dial.md) |
 
 ## What every case shares
 

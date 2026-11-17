@@ -27,11 +27,8 @@ jobs:
           from pathlib import Path
           tasks = json.loads(Path('site/data/tasks.json').read_text())
           media = json.loads(Path('site/data/media.json').read_text())
-          results = json.loads(Path('site/data/results.json').read_text())
           assert len(tasks['tasks']) == 36, 'expected the 36 released tasks'
           assert all(s['base'].startswith('https://') for s in media['sets']), 'media must point at published URLs'
-          assert results['schema'] == 'roboteam.site-results.v1'
-          assert 'SYNTHETIC' not in json.dumps(results), 'never publish a test fixture'
           PY
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
       - name: Upload the page only (local media, fixtures and explorations are ignored)

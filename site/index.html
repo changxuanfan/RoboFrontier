@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RoboTeam — Multimodal agents in a multi-robot world</title>
-<meta name="description" content="RoboTeam: a benchmark where multimodal agents organize, communicate and collaborate across up to sixteen robot arms in one physical world.">
+<title>RoboTeam — Agents controlling many robot arms in real time</title>
+<meta name="description" content="RoboTeam: a benchmark where multimodal agents control 4 to 16 robot arms in real time from camera images alone, on 36 long multi-arm tasks.">
 <meta property="og:title" content="RoboTeam">
-<meta property="og:description" content="Multimodal agents in charge of up to sixteen robot arms: 36 physical tasks in four families, in one simulated robot world.">
+<meta property="og:description" content="Multimodal agents control 4 to 16 robot arms in real time from camera images alone. 36 long tasks, six models, every run on video.">
 <meta property="og:image" content="assets/img/og.jpg">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1013" media="(prefers-color-scheme: dark)">
@@ -14,242 +14,143 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script>try{var t=localStorage.getItem('rf-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
+<script>try{var t=localStorage.getItem('roboteam-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="stylesheet" href="assets/css/site.css">
 <script src="assets/js/site.js" defer></script>
 </head>
 <body>
-<a class="skip" href="#overview">Skip to content</a>
+<a class="skip" href="#watch">Skip to content</a>
 <header class="rail" id="rail">
   <a class="brand" href="#top" aria-label="RoboTeam home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>RoboTeam</a>
   <nav aria-label="Sections">
-    <a href="#overview" data-chapter="overview">Overview</a>
-    <a href="#benchmark" data-chapter="benchmark">Benchmark</a>
-    <a href="#watch" data-chapter="watch">Videos</a>
+    <a href="#watch" data-chapter="watch">Watch</a>
+    <a href="#tasks" data-chapter="tasks">Tasks</a>
+    <a href="#how" data-chapter="how">How it works</a>
     <a href="#results" data-chapter="results">Results</a>
-    <a href="#analysis" data-chapter="analysis">Studies</a>
     <a href="#cite" data-chapter="cite">Cite</a>
   </nav>
   <div class="rail-links">
     <a href="https://github.com/changxuanfan/RoboTeam">GitHub</a>
-    <button class="theme" type="button" id="theme" aria-label="Switch to dark theme" aria-pressed="false"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><span>Theme</span></button>
+    <button class="theme" type="button" id="theme" aria-label="Switch to dark theme" aria-pressed="false"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span>Theme</span></button>
   </div>
 </header>
 
 <main id="top">
 <section class="hero" aria-labelledby="hero-title">
   <div class="hero-text">
-    <p class="plate"><i aria-hidden="true"></i>Multi-robot benchmark · Multimodal agents</p>
+    <p class="plate"><i aria-hidden="true"></i>Real time · Camera images only · Up to 16 arms</p>
     <h1 id="hero-title">RoboTeam</h1>
-    <p class="title-line">Can Multimodal Agents Work Together on Long Physical Tasks?</p>
-    <p class="lede"><b>Can multimodal agents run a robot world?</b> RoboTeam puts multimodal agents in charge of up to sixteen robot arms in Robo World, a physical simulation. They read the task, split the work, talk and recover from mistakes, and are measured on all of it.</p>
+    <p class="title-line">Benchmarking Vision-Based Multi-Agent Control of Many Robot Arms in Real Time</p>
+    <p class="lede">Agents call one robot tool and write their own code to control <b>4 to 16 robot arms</b>. The world never pauses while they think, and they see it only through cameras. Watch them pass timbers, plug parts into sockets, build pictures from hundreds of cubes and crack a code on spring-loaded dials.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/changxuanfan/RoboTeam"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg>Code</a>
-      <button class="btn" type="button" data-film><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>Film <span>3:41</span></button>
-      <a class="btn" href="data/tasks.json" download>Task data</a>
+      <a class="btn primary" href="#watch"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>Watch the runs</a>
+      <a class="btn" href="https://github.com/changxuanfan/RoboTeam"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg>Code</a>
       <a class="btn" href="#cite">BibTeX</a>
     </div>
   </div>
-  <figure class="hero-media">
-    <div class="screen">
-      <video class="hero-video" id="hero-video" muted loop playsinline autoplay preload="auto" poster="assets/img/hero.jpg">
-        <source src="assets/video/hero.mp4" type="video/mp4">
-      </video>
-      <span class="live" aria-hidden="true"><i></i>Robo World</span>
-    </div>
-    <figcaption>One moment from each zone, then the whole hall. Oracle reference runs, not model results. <button class="link" type="button" data-film>Full film, 3:41 →</button></figcaption>
-  </figure>
+  <div class="stage" id="stage" aria-label="One run of each task type"></div>
 </section>
 
 <div class="spec" aria-label="Benchmark at a glance">
   <div><strong data-count="36">36</strong><small>Tasks</small></div>
-  <div><strong data-count="4">4</strong><small>Families</small></div>
+  <div><strong data-count="4">4</strong><small>Task types</small></div>
   <div><strong><span data-count="4">4</span>–<span data-count="16">16</span></strong><small>Arms per task</small></div>
-  <div><strong data-count="3">3</strong><small>Levels</small></div>
-  <div><strong><span data-count="24">24</span>h</strong><small>Per run</small></div>
+  <div><strong data-count="6">6</strong><small>Models</small></div>
+  <div><strong><span data-count="24">24</span>h</strong><small>Per run, at most</small></div>
 </div>
 
-<section class="chapter" id="overview" aria-labelledby="overview-title">
+<section class="chapter" id="watch" aria-labelledby="watch-title">
   <div class="chapter-head reveal">
-    <p class="kicker">01 · Overview</p>
-    <h2 id="overview-title">An agent, a robot tool and a world that pushes back.</h2>
-    <p class="sub">Every model drives the same arms through the same tool, sees the same cameras and obeys the same rules. Nothing is scripted: allocation, timing, communication and recovery are the agent's choices.</p>
+    <p class="kicker">Watch</p>
+    <h2 id="watch-title">Every model, every task, on video.</h2>
+    <p class="sub">Pick a model and a task type. Each tile is one full run, with idle time removed and playback sped up. Hover to preview and select to open it.</p>
   </div>
-  <div class="loop reveal" aria-label="How a run works">
-    <article class="loop-step">
-      <span class="loop-index">A</span>
-      <h3>Multimodal agents</h3>
-      <p>Native Codex and Claude Code sessions. One Controller owns the task; in adaptive mode it spawns delegates for bounded jobs and takes their arms back.</p>
-    </article>
-    <div class="loop-wire" aria-hidden="true"><span>tool calls →</span></div>
-    <article class="loop-step">
-      <span class="loop-index">B</span>
-      <h3>One robot tool</h3>
-      <p>Move arms and grippers, batch and pre-check motions, observe from named cameras, wait for events, message teammates, delegate and hand work back. Every call is logged with its outcome.</p>
-    </article>
-    <div class="loop-wire" aria-hidden="true"><span>← images · events</span></div>
-    <article class="loop-step">
-      <span class="loop-index">C</span>
-      <h3>Robo World</h3>
-      <p>Robo World runs MuJoCo dynamics with real contacts and simulated Franka Panda arms: grasps slip, timbers swing, springs push back. No teleporting, no state writes, no resets.</p>
-    </article>
+  <div class="wall-controls reveal">
+    <div class="segmented wide" role="tablist" aria-label="Model" id="source-tabs"></div>
+    <div class="segmented" role="tablist" aria-label="Task type" id="wall-family"></div>
+    <div class="segmented" role="tablist" aria-label="Camera" id="wall-view">
+      <button type="button" role="tab" aria-selected="true" data-view="front">Front</button>
+      <button type="button" role="tab" aria-selected="false" data-view="side">Side</button>
+    </div>
   </div>
-  <div class="principles reveal">
-    <div><h4>Same contract</h4><p>Identical tasks, physics, tools, prompts and limits for every model.</p></div>
-    <div><h4>Long horizon</h4><p>Each run gets 24 hours of active time from its START. Planning and waiting count; pauses for outages or usage limits do not.</p></div>
-    <div><h4>Outcome first</h4><p>Success is judged on the final world state; collisions, retries and process events are reported beside it.</p></div>
-    <div><h4>Fully recorded</h4><p>Every action, message, camera image and motion frame is kept; motion can be replayed and re-rendered.</p></div>
-  </div>
+  <p class="wall-about" id="wall-about" aria-live="polite"></p>
+  <div class="wall" id="wall"></div>
 </section>
 
-<section class="chapter" id="benchmark" aria-labelledby="benchmark-title">
+<section class="chapter" id="tasks" aria-labelledby="tasks-title">
   <div class="chapter-head reveal">
-    <p class="kicker">02 · Benchmark</p>
-    <h2 id="benchmark-title">Four ways to work together.</h2>
-    <p class="sub">Each family has nine tasks: three team sizes crossed with three difficulty levels. A larger team brings more arms and more work; a higher level changes the physics of the job itself.</p>
+    <p class="kicker">Tasks</p>
+    <h2 id="tasks-title">Four jobs that no arm can finish alone.</h2>
+    <p class="sub">Each task type comes at three team sizes and three difficulty levels. A larger team adds arms and work to divide. A higher level makes the same job physically or visually harder.</p>
   </div>
-  <div class="families reveal" id="families"></div>
-
   <div class="explainer reveal" id="explainer">
     <div class="explainer-head">
-      <div>
-        <h3 class="h3-big">What changes from task to task</h3>
-        <p class="sub small">Pick a family. Columns add arms and work; rows raise the level. Each image is the task's real initial state; hover to watch its Oracle run, select to open it.</p>
-      </div>
-      <div class="segmented" role="tablist" aria-label="Family" id="explain-tabs"></div>
+      <div class="segmented" role="tablist" aria-label="Task type" id="explain-tabs"></div>
+      <p class="sub small">Each image is the task at its start. Hover to preview a run, select to open it.</p>
     </div>
     <div class="explainer-body">
       <aside class="explain-side" id="explain-side" aria-live="polite"></aside>
       <div class="explain-grid" id="explain-grid"></div>
     </div>
   </div>
+</section>
 
-  <div class="map-block reveal">
-    <div>
-      <h3 class="h3-big">All 36 tasks share one floor.</h3>
-      <p class="sub small">Robo World as a map: the four zones in their floor colors, nine tables each. A table grows with its team; every dot is an arm.</p>
-    </div>
-    <figure class="plan">
-      <div class="plan-map" id="plan" aria-label="Schematic map of Robo World: four zones of nine tasks"></div>
-      <figcaption id="plan-caption" aria-live="polite">Hover a table to see its task; select it to watch the Oracle run.</figcaption>
-    </figure>
+<section class="chapter" id="how" aria-labelledby="how-title">
+  <div class="chapter-head reveal">
+    <p class="kicker">How it works</p>
+    <h2 id="how-title">A world that never waits, seen only through cameras.</h2>
+    <p class="sub">Every model drives the same simulated Franka arms through the same tool, sees the same cameras and follows the same rules.</p>
+  </div>
+  <div class="pillars reveal">
+    <article><span class="pillar-index">01</span><h3>Real time</h3><p>The world advances with the clock and never waits for an agent. A real robot would not wait for a model, and pausing for one agent would also stop its teammates.</p></article>
+    <article><span class="pillar-index">02</span><h3>Camera images only</h3><p>Agents ask for RGB images from 14 to 69 fixed cameras and read the state of the arms. They never receive object positions, depth or contacts.</p></article>
+    <article><span class="pillar-index">03</span><h3>One robot tool</h3><p>Arms move only through one tool: move an arm to a pose, or open, close or grasp with a gripper. Every failed motion or grasp is visible.</p></article>
+    <article><span class="pillar-index">04</span><h3>Their own code</h3><p>Agents also have a shell, file editing and Python, for example to measure object positions in an image. A sandbox keeps them away from the simulator and the evaluator.</p></article>
   </div>
 
   <div class="protocol reveal">
     <div>
-      <p class="kicker">Protocol</p>
-      <h3 class="h3-big">The Controller decides who works.</h3>
-      <p class="sub">All benchmark runs use the adaptive protocol. A single Controller reads the task, keeps the plan and either drives arms itself or delegates a bounded job — "stack row 3 with arms C and D" — to a forked delegate, which hands the arms back when its job is done.</p>
-      <ul class="facts">
-        <li><b>Delegates</b> are forks of the Controller's own session: they inherit what it knows.</li>
-        <li><b>Arms</b> have exactly one owner at a time; ownership moves with delegation and return.</li>
-        <li><b>Messages</b> go through the robot tool, so every exchange is part of the record.</li>
-      </ul>
+      <h3 class="h3-big">Four ways to organize the agents.</h3>
+      <p class="sub">The adaptive system is the most flexible: one controller holds every arm, forks itself into delegates when work can be shared, and takes the arms back when their jobs end. The other three keep a fixed structure.</p>
+      <div class="topologies" id="topologies"></div>
     </div>
-    <figure class="protocol-figure" aria-label="Animated diagram: a Controller spawns three delegates that take arms and return them">
+    <figure class="protocol-figure" aria-label="Animated diagram: a controller forks three delegates that take arms and return them">
       <svg viewBox="0 0 600 380" id="protocol-svg">
         <g class="p-links">
           <path d="M300 92 C300 150 110 150 110 214"/><path d="M300 92 L300 214"/><path d="M300 92 C300 150 490 150 490 214"/>
         </g>
-        <g class="p-ctrl"><rect x="210" y="36" width="180" height="56" rx="6"/><text x="300" y="60">CONTROLLER</text><text class="t-dim" x="300" y="78">plan · allocate · verify</text></g>
+        <g class="p-ctrl"><rect x="210" y="36" width="180" height="56" rx="6"/><text x="300" y="60">CONTROLLER</text><text class="t-dim" x="300" y="78">holds every arm</text></g>
         <g class="p-del d1"><rect x="40" y="214" width="140" height="52" rx="6"/><text x="110" y="238">DELEGATE 1</text><text class="t-dim" x="110" y="255">arms A · B</text></g>
         <g class="p-del d2"><rect x="230" y="214" width="140" height="52" rx="6"/><text x="300" y="238">DELEGATE 2</text><text class="t-dim" x="300" y="255">arms C · D · E</text></g>
         <g class="p-del d3"><rect x="420" y="214" width="140" height="52" rx="6"/><text x="490" y="238">DELEGATE 3</text><text class="t-dim" x="490" y="255">arm F</text></g>
         <g class="p-arms" id="p-arms"></g>
-        <text class="t-caption" x="300" y="360">fork → work → return_task → arms go back to the Controller</text>
+        <text class="t-caption" x="300" y="360">fork → work → return the arms</text>
       </svg>
     </figure>
   </div>
 </section>
 
-<section class="chapter" id="watch" aria-labelledby="watch-title">
-  <div class="chapter-head reveal">
-    <p class="kicker">03 · Videos</p>
-    <h2 id="watch-title">Every task, on film.</h2>
-    <p class="sub">Every run rendered in Robo World, front and side. Model runs appear here as they are rendered; the Oracle reference runs show that each task can be done.</p>
-    <p class="sub small note"><b>Oracle</b> runs are privileged reference programs that read hidden task state; they are not model results. Some were operator-assisted, and some predate the released physics revision; each video says which. Videos are edited for viewing: idle time removed, played at 10–30×.</p>
-  </div>
-  <div class="wall-controls reveal">
-    <div class="segmented" role="tablist" aria-label="Video source" id="source-tabs"></div>
-    <div class="segmented" role="tablist" aria-label="Family" id="wall-family"></div>
-    <div class="segmented" role="tablist" aria-label="Camera" id="wall-view">
-      <button type="button" role="tab" aria-selected="true" data-view="front">Front</button>
-      <button type="button" role="tab" aria-selected="false" data-view="side">Side</button>
-    </div>
-  </div>
-  <div class="wall" id="wall"></div>
-</section>
-
 <section class="chapter" id="results" aria-labelledby="results-title">
   <div class="chapter-head reveal">
-    <p class="kicker">04 · Results</p>
-    <h2 id="results-title">Who gets the job done, and at what cost?</h2>
-    <p class="sub">Every model runs the adaptive protocol on all 36 tasks, for up to 24 hours each. Completion alone saturates for strong models, so the board leads with how often they fail along the way; completion, time and tokens sit beside it.</p>
+    <p class="kicker">Results</p>
+    <h2 id="results-title">Not yet fast, cheap and reliable at once.</h2>
+    <p class="sub">Fourteen conditions each run the 36 tasks once: four agent systems, two changes to what the agent sees or may use, two harnesses and six models.</p>
   </div>
-  <div class="studies">
-    <article class="study wide reveal" id="study-main">
-      <header><span class="tag">Main benchmark · Adaptive</span><h3>Failures per model</h3><p>Failed robot actions per run and the failure rate, with retries and completion beside them.</p></header>
-      <div id="results-body"></div>
-    </article>
-    <article class="study reveal" id="study-time">
-      <header><span class="tag">Over time</span><h3>Completion over the run</h3><p>Share of tasks complete against hours since START, one line per model.</p></header>
-      <div id="time-chart"></div>
-    </article>
-    <article class="study reveal" id="study-tokens">
-      <header><span class="tag">Cost</span><h3>Tokens over the run</h3><p>Cumulative input and output tokens against hours, Controller and delegates together.</p></header>
-      <div id="token-chart"></div>
-    </article>
-  </div>
-  <details class="definitions reveal">
-    <summary>How each metric is defined</summary>
-    <dl>
-      <dt>Completion rate</dt><dd>Share of runs whose final world state meets the task's completion conditions, judged by the independent scorer.</dd>
-      <dt>Mean progress</dt><dd>Share of the task's goals met at the end: targets, cells or timbers placed; for Dial, an unlock counts as complete.</dd>
-      <dt>Failed actions, failure rate</dt><dd>Robot actions that ended in failure (for example a grasp outside tolerance or a timeout), per run and as a share of all actions.</dd>
-      <dt>Retries, retry rate</dt><dd>Actions that repeat the same operation on the same arm right after that arm's failed action.</dd>
-      <dt>Time to finish</dt><dd>Wall time from START to completion, over completed runs only.</dd>
-      <dt>Input, output tokens</dt><dd>Provider-reported tokens over every session of a run: Controller and all delegates.</dd>
-      <dt>Arm collisions</dt><dd>Contact episodes between two different robots.</dd>
-      <dt>Parallel efficiency</dt><dd>Mean number of moving arms divided by the number of arms, while any arm is moving. An arm moves when a joint turns faster than 0.02 rad/s.</dd>
-      <dt>Messages</dt><dd>Messages sent between roles through the robot tool.</dd>
-    </dl>
-  </details>
-</section>
-
-<section class="chapter" id="analysis" aria-labelledby="analysis-title">
-  <div class="chapter-head reveal">
-    <p class="kicker">05 · Studies</p>
-    <h2 id="analysis-title">What makes a team work?</h2>
-    <p class="sub">Three controlled comparisons beside the benchmark: whether written skills help a team improve itself, how agents should communicate, and what each arm needs to see.</p>
-  </div>
-  <div class="studies">
-    <article class="study reveal" id="skills">
-      <header><span class="tag">Self-improvement</span><h3>With and without skills</h3><p>Agents may write lessons into a shared <code>skills.md</code> during a run. Paired runs with and without it: progress over time and late-run repeated failures.</p></header>
-      <div id="skills-chart"></div>
-    </article>
-    <article class="study reveal" id="communication">
-      <header><span class="tag">Communication</span><h3>Four ways to organize</h3><p>The same GPT model on the four largest Level 3 tasks under each organization; the benchmark uses Adaptive.</p></header>
-      <div class="topologies" id="topologies"></div>
-      <div id="communication-chart"></div>
-    </article>
-    <article class="study reveal" id="cameras">
-      <header><span class="tag">Perception</span><h3>Own cameras or every camera</h3><p>Every arm has front and side cameras, and the hall has global views. Ego-centric runs let each role read only its own arms' cameras; the full setting opens every camera to every role.</p></header>
-      <div id="camera-chart"></div>
-    </article>
-  </div>
+  <div class="findings reveal" id="findings"></div>
+  <div class="board reveal" id="board"></div>
 </section>
 
 <section class="chapter cite" id="cite" aria-labelledby="cite-title">
   <div class="chapter-head reveal">
-    <p class="kicker">06 · Cite</p>
+    <p class="kicker">Cite</p>
     <h2 id="cite-title">Use RoboTeam.</h2>
   </div>
   <div class="cite-grid reveal">
     <div class="code-card">
       <button class="copy" type="button" data-copy="bibtex">Copy</button>
 <pre id="bibtex">@misc{roboteam2026,
-  title  = {RoboTeam: Can Multimodal Agents Work Together on Long
-            Physical Tasks?},
+  title  = {RoboTeam: Benchmarking Vision-Based Multi-Agent Control of
+            Many Robot Arms in Real Time},
   author = {Fan, Changxuan and others},
   year   = {2026},
   url    = {https://github.com/changxuanfan/RoboTeam}
@@ -259,14 +160,13 @@
       <li><a href="https://github.com/changxuanfan/RoboTeam">Source code <span>MIT</span></a></li>
       <li><a href="data/tasks.json">Public task data <span>JSON</span></a></li>
       <li><a href="data/media.json">Video index <span>JSON</span></a></li>
-      <li><a href="data/results.json">Benchmark results <span>JSON</span></a></li>
       <li><a href="https://github.com/changxuanfan/RoboTeam/blob/main/LICENSE-DATA.md">Data and media <span>CC BY 4.0</span></a></li>
     </ul>
   </div>
 </section>
 </main>
 
-<footer class="foot"><span>RoboTeam · 2026</span><span>All videos are simulation renders in Robo World, not real hardware.</span></footer>
+<footer class="foot"><span>RoboTeam · 2026</span><span>All videos are simulation renders, not real hardware.</span></footer>
 
 <dialog class="player" id="player" aria-label="Video player">
   <div class="player-top">
