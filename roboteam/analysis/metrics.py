@@ -237,6 +237,21 @@ class Clock:
         return float(np.interp(sim, self.s, self.w)) if self.ok else None
 
 
+GRASP_FAILURE = 'Grasp stopped outside expected object-width'
+
+
+def grasps(A):
+    """Grasps and failed grasps among the actions.
+
+    A grasp is a gripper action in grasp mode. It fails when the gripper stops at a width that
+    does not match the object: the action states the expected width, and the gripper settles
+    outside it. A grasp that fails for another reason (a stop, an interruption) is not counted
+    as failed."""
+    attempts = [x for x in A if x.get('type') == 'gripper' and x.get('mode') == 'grasp']
+    failed = sum(1 for x in attempts if x.get('status') == 'failed' and str(x.get('reason') or '').startswith(GRASP_FAILURE))
+    return {'grasps': len(attempts), 'failed': failed}
+
+
 def failures(A, ignore_after=None):
     out = []
     for x in A:
@@ -569,6 +584,7 @@ def compute(d):
     A = d.get('actions') or []
     O['actions'] = len(A)
     O['failed_actions_all'] = sum(1 for x in A if x['status'] not in ('completed', None))
+    O['grasp'] = grasps(A)
     O['reasons'] = collections.Counter(
         str(x.get('reason'))[:45] for x in A if x['status'] not in ('completed', None)
     ).most_common(8)
