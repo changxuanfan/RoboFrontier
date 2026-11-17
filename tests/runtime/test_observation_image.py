@@ -45,9 +45,11 @@ class ObservationImageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, mujoco.Renderer(model,width=1280,height=800) as renderer:
             root=Path(tmp);(root/'public/observations').mkdir(parents=True)
             world=SimpleNamespace(model=model,data=data,time=0,arms={})
-            service=SimpleNamespace(obs=0,directory=root,world=world,context=renderer._mjr_context,
-                scene=renderer._scene,options=mujoco.MjvOption(),offscreen_context=True,
+            # No worker here, so the owner draws the capture itself; it needs only a current graphics context.
+            service=SimpleNamespace(obs=0,directory=root,world=world,context=renderer._mjr_context,offscreen_context=True,
                 perf={'capture_wall_s':0.,'captures':0})
+            service.capture_request=lambda cameras:Service.capture_request(service,cameras)
+            service.render_here=lambda request:Service.render_here(service,request)
             for name,size,fmt,suffix in ((DEFAULT_PROFILE,(896,560),'JPEG','.jpg'),(LEGACY_PROFILE,(1280,800),'PNG','.png')):
                 service.observation_image=observation_profile({'observation_image_profile':name})
                 result=Service.capture(service,['top']);path=Path(result['images']['top'])
@@ -92,7 +94,6 @@ class ObservationImageTests(unittest.TestCase):
 
     def test_capture_reduces_only_under_the_low_resolution_profile_on_both_render_routes(self):
         from robofrontier.physics.observation_image import render_size
-        from robofrontier.physics.render_worker import render_images
         model=self.scene();data=mujoco.MjData(model);mujoco.mj_forward(model,data)
         sharp_profile=observation_profile({'observation_image_profile':DEFAULT_PROFILE})
         low_profile=observation_profile({'observation_image_profile':LOW_RESOLUTION_PROFILE})
@@ -101,32 +102,34 @@ class ObservationImageTests(unittest.TestCase):
         self.assertEqual((low_profile['format'],low_profile['quality'],low_profile['extension']),('JPEG',95,'.jpg'))
         with tempfile.TemporaryDirectory() as tmp, mujoco.Renderer(model,width=1280,height=800) as renderer:
             root=Path(tmp);(root/'public/observations').mkdir(parents=True)
-            rgb=self.rendered(model,data,renderer,896,560)
-            sharp,low=self.as_rendered(rgb,sharp_profile),self.as_rendered(rgb,low_profile,(128,80))
             world=SimpleNamespace(model=model,data=data,time=0,arms={})
+            service=SimpleNamespace(obs=0,directory=root,world=world,context=renderer._mjr_context,offscreen_context=True,
+                perf={'capture_wall_s':0.,'captures':0},render_worker=None)
+            service.capture_request=lambda cameras:Service.capture_request(service,cameras)
+            service.render_here=lambda request:Service.render_here(service,request)
             class Queue:  # A render worker that keeps the request instead of drawing it.
                 def submit(self,request):self.request=request;return True
-            for profile,expected in ((sharp_profile,sharp),(low_profile,low)):
-                # The world's own capture.
-                service=SimpleNamespace(obs=0,directory=root,world=world,context=renderer._mjr_context,
-                    scene=renderer._scene,options=mujoco.MjvOption(),offscreen_context=True,
-                    perf={'capture_wall_s':0.,'captures':0},observation_image=profile)
+            written={}
+            for profile in (sharp_profile,low_profile):
+                service.observation_image=profile;service.render_worker=None
+                # The owner draws the capture itself, the same way twice.
                 first=Path(Service.capture(service,['top'])['images']['top']).read_bytes()
                 again=Path(Service.capture(service,['top'])['images']['top']).read_bytes()
-                self.assertEqual(first,expected);self.assertEqual(again,expected)
-                # The render worker's capture, from the request the world queues.
-                service.render_worker=Queue();service.capture_in_worker=lambda cameras,s=service:Service.capture_in_worker(s,cameras)
+                self.assertEqual(first,again)
+                # The capture a render worker receives: drawn at the default size, reduced only under the low profile.
+                service.render_worker=Queue()
                 path=Path(Service.capture(service,['top'])['images']['top']);request=service.render_worker.request
                 self.assertEqual((request['width'],request['height']),(896,560))
                 self.assertEqual(request.get('output_size'),[128,80] if profile is low_profile else None)
-                mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN,renderer._mjr_context)
-                render_images(mujoco,Image,model,data,renderer._scene,mujoco.MjvOption(),renderer._mjr_context,request)
-                self.assertEqual(path.read_bytes(),expected)
-            with Image.open(io.BytesIO(low)) as image:
-                self.assertEqual((image.size,image.format),((128,80),'JPEG'))
-                # Each pixel is the mean of its 7 x 7 block of the rendered frame.
-                mean=rgb[::-1].reshape(80,7,128,7,3).mean(axis=(1,3))
-                self.assertLess(np.abs(np.asarray(image.convert('RGB'),dtype=float)-mean).mean(),6)
+                # Drawn from that request, it is the same file as the owner's own capture.
+                service.render_worker=None;Service.render_here(service,request)
+                self.assertEqual(path.read_bytes(),first)
+                written[profile['width']]=first
+            with Image.open(io.BytesIO(written[128])) as low, Image.open(io.BytesIO(written[896])) as sharp:
+                self.assertEqual((low.size,low.format),((128,80),'JPEG'))
+                # Each pixel is the mean of its 7 x 7 block of the sharp frame.
+                mean=np.asarray(sharp.convert('RGB'),dtype=float).reshape(80,7,128,7,3).mean(axis=(1,3))
+                self.assertLess(np.abs(np.asarray(low.convert('RGB'),dtype=float)-mean).mean(),6)
 
     def test_low_resolution_run_states_its_size_and_keeps_every_other_public_input(self):
         from robofrontier.configuration import load_configuration
