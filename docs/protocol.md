@@ -42,14 +42,13 @@ freezes it as `observation_image_profile`, and the public task states the format
 When a published camera calibration names an image size, the run gets a copy at the observation
 resolution and the published file stays as it is. Video recording has its own resolution.
 
-Every observation image has one look, set in `roboteam/physics/observation_look.py`. The
-renderer draws from a copy of the world's model whose colours and textures are converted to linear
-light, with fill light added so that a white object comes out white, and each image gets one display
-transform before it is saved. The world's own model is not changed, so physics, the live view and the
-recording are as before. The conversion is done once per model and the transform is a table lookup, so
-an image costs about what it did: about 30 ms on a laptop GPU.
-Runs made before this change (including the released results) show the scene as MuJoCo draws it
-directly, which is darker and more contrasty; compare images across that boundary with care.
+A run's harness also names the look of its images as `observation_look`
+(`roboteam/physics/observation_look.py`). `direct`, the default, writes the scene as MuJoCo draws
+it. `linear` draws from a copy of the world's model whose colours and textures are converted to
+linear light, with fill light added so that a white object comes out white, and gives each image one
+display transform; its pictures are brighter and less heavy. Neither look changes the world's own
+model, so physics, the live view and the recording are the same. An image takes about 30 ms on a
+laptop GPU.
 
 ## Robot requests and IDs
 

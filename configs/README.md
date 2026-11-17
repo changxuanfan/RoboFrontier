@@ -10,7 +10,7 @@ changing a setting never changes a prepared batch. The released tasks are in
 | Path | What it is |
 | --- | --- |
 | `models.json` | Every model profile, one section per engine (`engines.codex`, `engines.claude`, which also holds Claude transcript prices). A run freezes its engine's section |
-| `harnesses/policy.json` | The policy runtime's settings (topology, startup protocol, timeouts, check intervals, motion and video rates); no speeds or forces, which every action states |
+| `harnesses/policy.json` | The policy runtime's settings (topology, startup protocol, timeouts, check intervals, motion and video rates, and optionally `observation_look`); no speeds or forces, which every action states |
 | `harnesses/oracle.json` | The Oracle's harness, with its own model and effort fields |
 | `harness.json` | The harness a task without one uses (`roboteam/tasks/config.py`); tests rely on its `hierarchical` topology |
 | `policy-env/` | The policy Python environment's inputs (`core.in`, `store.in`) and locks (`core.lock`, `all.lock`) |

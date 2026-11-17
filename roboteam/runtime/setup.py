@@ -7,6 +7,7 @@ import shutil
 
 from .store import RuntimeStore, packed
 from ..physics.observation_image import DEFAULT_PROFILE, observation_profile
+from ..physics.observation_look import DEFAULT_LOOK, look_of
 from ..tasks.provenance import environment_logic_manifest
 from . import layout as run_layout, tool_mode
 from .bootstrap import SKILLS_HEADER, write_bootstraps
@@ -32,6 +33,8 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     cfg['coordinator'] = 'Controller'
     # Freeze new-run defaults; absent fields in already prepared runs remain legacy.
     cfg.setdefault('observation_image_profile', DEFAULT_PROFILE)
+    cfg.setdefault('observation_look', DEFAULT_LOOK)
+    look_of(cfg)
     # Letter labels sit beside each robot, as in this run's videos.
     cfg.setdefault('robot_labels', 'beside-robot-v1')
     image_profile = observation_profile(cfg)

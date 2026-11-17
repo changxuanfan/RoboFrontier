@@ -31,6 +31,7 @@ from ..tasks.config import load_task, action_limits, panda_control_profile
 from ..physics.robot_control import PandaArm
 from ..tasks.scene import camera_names
 from ..physics.observation_image import observation_profile, reduced_size, render_size, save_observation
+from ..physics.observation_look import look_of
 from .tool_errors import CallIdConflict, conflict_error
 from .service import RuntimeService
 from ..physics.motion_check import CONTROL_DT, TRACKING_LIMIT, RobotGeometry, prepare_check, state_id
@@ -293,6 +294,7 @@ class Service(RuntimeService):
         self.perf={'world_step_wall_s':0.,'world_steps':0,'capture_wall_s':0.,'captures':0,'pump_wall_s':0.}
         cfg = json.loads((Path(directory)/'private/inputs/harness.json').read_text())
         self.observation_image = observation_profile(cfg)
+        self.observation_look = look_of(cfg)
         from .segments import output_dir
         video_factory = (lambda:Video(output_dir(Path(directory).resolve(),self.world.segment)/
                          (self.task.get('recording_camera','global')+'-realtime.mp4'),1280,800,self.config['video_fps'])) \
@@ -320,7 +322,7 @@ class Service(RuntimeService):
     def render_here(self,request):
         """A capture the worker could not take or finish, drawn here from its own recorded state."""
         from ..physics.render_worker import LocalRenderer
-        if getattr(self,'local_renderer',None) is None:self.local_renderer=LocalRenderer(mujoco,self.world.model)
+        if getattr(self,'local_renderer',None) is None:self.local_renderer=LocalRenderer(mujoco,self.world.model,getattr(self,'observation_look','direct'))
         try:self.local_renderer.render(mujoco,Image,request)
         finally:
             # The view and the recording draw with the owner's own context: give it its buffer back.
@@ -413,7 +415,7 @@ class Service(RuntimeService):
             self.record_cam=mujoco.MjvCamera();self.record_cam.type=mujoco.mjtCamera.mjCAMERA_FIXED
             self.record_cam.fixedcamid=self.world.model.camera(self.task.get('recording_camera','global')).id
             from ..physics.render_worker import RenderWorker
-            self.render_worker=RenderWorker(self.world.model)
+            self.render_worker=RenderWorker(self.world.model,self.observation_look)
             self.server=ThreadingHTTPServer(('127.0.0.1',0),Handler);self.server.daemon_threads=True
             threading.Thread(target=self.server.serve_forever,daemon=True).start()
             url=f'http://127.0.0.1:{self.server.server_port}'
