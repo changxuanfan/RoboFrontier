@@ -96,7 +96,7 @@ class GuardTests(active.Fixture):
 
 
 class PausedWorldTests(active.Fixture):
-    """An outage, egress or usage-limit pause does not count toward the wall backstop (E8)."""
+    """An outage, egress or usage-limit pause does not count toward the wall backstop."""
     def setUp(self):
         super().setUp()
         self.answers = []

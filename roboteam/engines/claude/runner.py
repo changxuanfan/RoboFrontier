@@ -70,8 +70,8 @@ def _denied_paths(table):
                 continue
             for child in children:
                 if child.is_symlink():
-                    # Claude Code resolves a rule's path, so a rule on a link closes its target:
-                    # ~/Repos/roomscript2 -> RoboTeam closed every run inside the repository.
+                    # Claude Code resolves a rule's path, so a rule on a link closes its target: a
+                    # link to a folder holding the run would close the run itself.
                     # The target keeps whatever its own place in the table grants (as landlock.allowlist).
                     continue
                 if child.name not in keep:

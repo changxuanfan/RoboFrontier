@@ -1,4 +1,4 @@
-// A role's calls run one at a time in arrival order; other roles are not held up (E1).
+// A role's calls run one at a time in arrival order; other roles are not held up.
 const test = require('node:test');
 const assert = require('node:assert');
 const {PolicyHost, robotTool} = require('../../roboteam/engines/codex/codex_policy_host.js');

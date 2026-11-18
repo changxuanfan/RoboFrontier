@@ -41,7 +41,7 @@ class RelayCameraMountTests(unittest.TestCase):
         return model
 
     def test_every_released_relay_task_publishes_the_pose_mujoco_gives_each_camera(self):
-        cases = read(ROOT/RELEASE)['families']['relay']['gpt']
+        cases = read(ROOT/RELEASE)['families']['relay']['policy']
         self.assertEqual(len(cases), 9)
         for case in cases:
             with self.subTest(case=case['id']):

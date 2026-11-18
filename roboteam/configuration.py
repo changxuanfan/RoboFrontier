@@ -192,7 +192,7 @@ def validate_configuration(config):
     elif slurm['credential_store'] or config['runtime']['codex_home_scope'] == 'job':
         raise ValueError('Job scope and credential_store require slurm.auth_mode=subscription')
     choice('slurm', 'egress_mode', ('direct', 'mac-ssh'))
-    # A route outage holds the world like any other outage, up to the wall backstop (E8);
+    # A route outage holds the world like any other outage, up to the wall backstop;
     # only the mac-ssh route has a pause of its own, direct egress uses the outage probe.
     if not 0 <= slurm['egress_pause_s'] <= MAX_EGRESS_PAUSE_S:
         raise ValueError('slurm.egress_pause_s must be between 0 and %d' % MAX_EGRESS_PAUSE_S)

@@ -111,7 +111,7 @@ def latest_receipts(name, runs=None):
 
 def require_ready(name, runs=None, **kwargs):
     """Refuse a Claude run without passed precheck receipts for this profile, CLI version and
-    model configuration, as a Codex run needs its compatibility receipt (E5)."""
+    model configuration, as a Codex run needs its compatibility receipt."""
     basic, blocked = latest_receipts(name, runs)
     if basic is None or blocked is None:
         raise ValueError(f'No Claude precheck receipts for {name}; run `roboteam preflight --engine claude '

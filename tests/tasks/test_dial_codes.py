@@ -11,7 +11,7 @@ from roboteam.tasks.families import dial_code, prepare, read, ROOT, RELEASE
 class DialCodeTests(unittest.TestCase):
     def test_every_dial_case_has_a_valid_code(self):
         release = read(ROOT/RELEASE)
-        for case in release['families']['dial']['gpt']:
+        for case in release['families']['dial']['policy']:
             task = read(ROOT/case['directory']/'task.json')
             code = dial_code(case['id'])
             self.assertEqual(len(code), len(task['dials']))

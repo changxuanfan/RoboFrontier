@@ -50,11 +50,11 @@ def select_cases(families=None, cases=None, level=None, min_arms=False):
     for name,family in release['families'].items():
         if families and name not in families:continue
         rows=[]
-        for case in family['gpt']:
+        for case in family['policy']:
             task=read(ROOT/case['directory']/'task.json')
             if cases and case['id'] not in cases or level is not None and task['level']!=level:continue
             rows.append(dict(case_id=case['id'],family=name,level=task['level'],arms=len(task['arms']),
-                             directory=case['directory'],qualification=case['qualification']))
+                             directory=case['directory']))
         if min_arms and rows:
             minimum=min(row['arms'] for row in rows)
             rows=[row for row in rows if row['arms']==minimum]

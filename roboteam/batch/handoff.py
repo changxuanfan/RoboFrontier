@@ -36,7 +36,7 @@ def pinned_asset_release(root, config):
 def scene_assets(root=ROOT):
     expected={}
     for family in read(root/RELEASE)['families'].values():
-        for case in family['gpt']:
+        for case in family['policy']:
             directory=Path(case['directory'])
             for asset in read(root/directory/'workstation.json').get('assets', []):
                 relative=PurePosixPath(asset['path'])
@@ -200,7 +200,7 @@ def doctor(names, root=ROOT):
         try:profile(name);entry['configuration_valid']=True
         except ValueError as error:entry.update(configuration_valid=False,error=str(error))
         profiles[name]=entry
-    assets=[check_case_assets(case,root) for family in read(root/RELEASE)['families'].values() for case in family['gpt']]
+    assets=[check_case_assets(case,root) for family in read(root/RELEASE)['families'].values() for case in family['policy']]
     return dict(tools=tools,profiles=profiles,task_release_sha256=digest(root/RELEASE),
                 assets=dict(missing=sum(len(a['missing']) for a in assets),changed=sum(len(a['changed']) for a in assets)),
                 panda_manifest_available=(root/'vendor/panda/SOURCE.json').is_file(),

@@ -215,7 +215,7 @@ class PreparationTests(unittest.TestCase):
         self.assertIsNone(self.store.get('after_score'))
 
     def test_continuing_a_network_review_hold_by_hand_lifts_the_hold(self):
-        # 2026-11-13: two runs held for review were continued by hand; the hold survived into the
+        # Two runs held for review were continued by hand; the hold survived into the
         # new world, which kept the resume request waiting until the host gave up, twice.
         self.store.put('egress_review_hold', True); self.store.put('dispatch_paused', True)
         with self.assertRaisesRegex(ValueError, 'held for network review'):

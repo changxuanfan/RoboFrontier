@@ -1,4 +1,4 @@
-"""Runs use the pinned engine and library versions and refuse others (E6)."""
+"""Runs use the pinned engine and library versions and refuse others."""
 import re
 import subprocess
 import unittest

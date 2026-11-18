@@ -8,7 +8,7 @@
       },
       "speedup": 20,
       "fps": 30,
-      "gpt": [
+      "policy": [
         {
           "id": "transport-a04-d1",
           "directory": "benchmark/transport/transport-a04-d1",
@@ -19,7 +19,6 @@
             "workstation.json": "ad61f2709097709884b7d0363dcb9b4293063260353a3c0c40735927165cf906"
           },
           "public_files": {},
-          "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
             "path": "benchmark/transport/transport-a04-d1/public/task.json",
             "sha256": "2ef50b1fa68346f97c773ca9f8fc1aba72692e26e9008ec0a00a1f1884932b12"
@@ -35,7 +34,6 @@
             "workstation.json": "56b702b656fb8910808f7f8d9c9599b4b6562e5929b5e8c840a953b79026ee85"
           },
           "public_files": {},
-          "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
             "path": "benchmark/transport/transport-a04-d2/public/task.json",
             "sha256": "5f757fa93d27c07b788665bfc33e6c1b0a22378a66a1b166f8e4e6650fc2180e"
@@ -51,7 +49,6 @@
             "workstation.json": "764ff6d2091f3169504c8aeb2c5c893ec70763517f643b5a4cb1bbe9806f1781"
           },
           "public_files": {},
-          "qualification": "r14_tabletop_variant_with_r13_reference_and_geometric_compatibility",
           "public_projection": {
             "path": "benchmark/transport/transport-a04-d3/public/task.json",
             "sha256": "7134543582bfa3fadde1cb907480cc549c470c2401f42092bf6e0aa032442888"
@@ -67,7 +64,6 @@
             "workstation.json": "a0a4266fc0924aa9b2ea4f9452aa5b8e2f7dad41f62a1cc0dccc160c2ca5ded0"
           },
           "public_files": {},
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a08-d1/public/task.json",
             "sha256": "42bfcddaa188a1ae4638f30c254551fa61069c79a7f4416e7cd53deb69966459"
@@ -83,7 +79,6 @@
             "workstation.json": "ba60af1ea50a9273de60cdab8d0544bcfc3f26d142d0f6f546d9b888f8ca9734"
           },
           "public_files": {},
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a08-d2/public/task.json",
             "sha256": "681b2d36b67a1b78c2dc1a1ff3bb619d3720dfbfaabc63462740450968de0665"
@@ -99,7 +94,6 @@
             "workstation.json": "ff577f185400d7dc570a15ea241d842d61b0fc489f598b4308348fa0f4b7c763"
           },
           "public_files": {},
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a08-d3/public/task.json",
             "sha256": "26bab3123a3aceaa70b234830ef03daaf495db363b0d222a9065f1855a0f08a8"
@@ -115,7 +109,6 @@
             "workstation.json": "6e0703507da1d8fd7d83b9797479358960ca663b513752dfe19ee1d694392392"
           },
           "public_files": {},
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a12-d1/public/task.json",
             "sha256": "9e9a762d83d10facbe36153b1c16d84d6279aaa9e186f60cb943ae9332251def"
@@ -131,7 +124,6 @@
             "workstation.json": "3e7fadc5fddd948211ae071af88016d9b9beb104be81ee2eca5823360aeee976"
           },
           "public_files": {},
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a12-d2/public/task.json",
             "sha256": "cd2b6d941e74bf56eff963c52b20b394cd5142a15728b8c8b0ad28fb77d77a7a"
@@ -147,7 +139,6 @@
             "workstation.json": "76912aef6903ada8f5b39f480dad581660bd73f42b134b492e5ff9cae8328d02"
           },
           "public_files": {},
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/transport/transport-a12-d3/public/task.json",
             "sha256": "cc6cb34595d188d345339c8301a55dc9432c226f4246cbb58d55d68fb33a3b5b"
@@ -162,7 +153,7 @@
       },
       "speedup": 30,
       "fps": 30,
-      "gpt": [
+      "policy": [
         {
           "id": "mosaic-a04-6x12-d1",
           "directory": "benchmark/mosaic/mosaic-a04-6x12-d1",
@@ -178,7 +169,6 @@
               "sha256": "f3699181bb8494da9c8c5364a58f95143828a24c922d502ca71fdb7965b7f0f3"
             }
           },
-          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d1/public/task.json",
             "sha256": "5bd0876ec2d74c34061172d48eae636298f39e8c52785f940b81e7e4985b744c"
@@ -199,7 +189,6 @@
               "sha256": "f3699181bb8494da9c8c5364a58f95143828a24c922d502ca71fdb7965b7f0f3"
             }
           },
-          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d2/public/task.json",
             "sha256": "297a211dbbc2b27537e5ea734ab09696d7c26312be5d5f66e773c53d3b5ccc95"
@@ -220,7 +209,6 @@
               "sha256": "f3699181bb8494da9c8c5364a58f95143828a24c922d502ca71fdb7965b7f0f3"
             }
           },
-          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a04-6x12-d3/public/task.json",
             "sha256": "4a0ca8cc6690cd32f095e1410376bfa7c0aaeaf1df698f5efb97d8749f19fd7e"
@@ -241,7 +229,6 @@
               "sha256": "72b85c20800681546a80759cade80f544e5208b86d911e640b30c27e29488328"
             }
           },
-          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d1/public/task.json",
             "sha256": "e672fe197b8f376f443bbc893ae9831ac1dc6f0d36ee753a2834b572bf5c8251"
@@ -262,7 +249,6 @@
               "sha256": "72b85c20800681546a80759cade80f544e5208b86d911e640b30c27e29488328"
             }
           },
-          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d2/public/task.json",
             "sha256": "56d4c0660428d473b8753ca702d5f41ba7db3f670bd7f37c8f6b5af304d0c2dc"
@@ -283,7 +269,6 @@
               "sha256": "72b85c20800681546a80759cade80f544e5208b86d911e640b30c27e29488328"
             }
           },
-          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a06-9x18-d3/public/task.json",
             "sha256": "2b7a941ff9858cc638ba3742136a5f1efb2e86683c5ab7ae8ff9ed850859598d"
@@ -304,7 +289,6 @@
               "sha256": "5a1244d7b2ae59d51676e100224741d58c88c7202756ef58e585359863056e92"
             }
           },
-          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d1/public/task.json",
             "sha256": "2565ab3b2edc0d6584428e27ba87b23d8f38e0dbec95f9ca08652bf7b9bb40c8"
@@ -325,7 +309,6 @@
               "sha256": "5a1244d7b2ae59d51676e100224741d58c88c7202756ef58e585359863056e92"
             }
           },
-          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d2/public/task.json",
             "sha256": "4ca30c95f65200126029a4fb24d0c1a0be121a6dd956e176401bd1857bb95f83"
@@ -346,7 +329,6 @@
               "sha256": "5a1244d7b2ae59d51676e100224741d58c88c7202756ef58e585359863056e92"
             }
           },
-          "qualification": "r15_grid_pitch_71mm_from_r14_static_checks",
           "public_projection": {
             "path": "benchmark/mosaic/mosaic-a08-12x24-d3/public/task.json",
             "sha256": "c85bf4435dde24e580a819971c1c2d706d942000c9a7a6078f94ec07e9aa5845"
@@ -361,7 +343,7 @@
       },
       "speedup": 20,
       "fps": 30,
-      "gpt": [
+      "policy": [
         {
           "id": "relay-a08-d1",
           "directory": "benchmark/relay/relay-a08-d1",
@@ -372,7 +354,6 @@
             "workstation.json": "eb4a9a06985da32cbbc1974c67e1fc47ac124bca214207d94b2b93dd6ee269d9"
           },
           "public_files": {},
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a08-d1/public/task.json",
             "sha256": "df7962a55f16d9b642ab1b8847afd059aa6102d8db0a927dc7057e94e5dd1459"
@@ -388,7 +369,6 @@
             "workstation.json": "797e60b64c3a8b71f6782c7adcb35850c2bada7e4125b89f86ea7070da3634d3"
           },
           "public_files": {},
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a08-d2/public/task.json",
             "sha256": "ba8080510459398a8896a1e501517ddee22e5644d69615557a9b784fcf1fed9a"
@@ -404,7 +384,6 @@
             "workstation.json": "0ea14c74655c618525249a5ae3af160c322692679d7840694d40c47642c85472"
           },
           "public_files": {},
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a08-d3/public/task.json",
             "sha256": "b2002e504ce175991785aca7e4c5bdae8b0a6923e4e8fcd696895a10a328c509"
@@ -420,7 +399,6 @@
             "workstation.json": "f8018aa7e74671c9958e8afbccaaf8d0ff96fe04b5bc6f50aa0dfd85dd7df3fc"
           },
           "public_files": {},
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a12-d1/public/task.json",
             "sha256": "e22063006d4e8c4cd90334f9e65975896a14d2f40c0993dc6f4852dc745f8ae9"
@@ -436,7 +414,6 @@
             "workstation.json": "87eb16dc0b8f411d7bd7e62c916128382701053465e8885f958b049dc40e891c"
           },
           "public_files": {},
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a12-d2/public/task.json",
             "sha256": "73d0f3eb32414a035bab3b56fdbbe75a6f1ea0b853fa3c3460a9320812f81b7d"
@@ -452,7 +429,6 @@
             "workstation.json": "ffd8986505a88cfd48168ce7d95be40086dbfdaf77dec20b93eca4744df01f47"
           },
           "public_files": {},
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a12-d3/public/task.json",
             "sha256": "36b1a79686db43a8cb5c585d21d3b15c8534e1f00ce34ba0919b6fa95e841ab3"
@@ -468,7 +444,6 @@
             "workstation.json": "b299dd3eb3d0b289a3d5af36b5f6ab5c501f8b880d6d737d3bac366522a79b9c"
           },
           "public_files": {},
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a16-d1/public/task.json",
             "sha256": "33a7c7af91efc08f013bb2b69cc725554dac915e1b9dc414eb05da0cf5c3ede0"
@@ -484,7 +459,6 @@
             "workstation.json": "e89a3ddd1feb6ba0d2b2d25a5b14e7101f43cf7ca6251774d30681dd3d2b9cfc"
           },
           "public_files": {},
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a16-d2/public/task.json",
             "sha256": "89425713558ff99626b25b6e5964108422740e90580902c4e72525c81397ff2e"
@@ -500,7 +474,6 @@
             "workstation.json": "16f39bd8a840ca2dd050675a9b71220c703a6cb409f490802e11f7cc61c58a83"
           },
           "public_files": {},
-          "qualification": "final_goal_contract_with_historical_user_goal_evidence",
           "public_projection": {
             "path": "benchmark/relay/relay-a16-d3/public/task.json",
             "sha256": "a68208de2d37f72c3a057abe0f1bbbbc0d63a956a5511e2e40382fc4eeb5963c"
@@ -515,7 +488,7 @@
       },
       "speedup": 10,
       "fps": 30,
-      "gpt": [
+      "policy": [
         {
           "id": "dial-best5-n04-d1",
           "directory": "benchmark/dial/dial-best5-n04-d1",
@@ -547,7 +520,6 @@
               "sha256": "e78a7e2834149996dc48f0d4d71398c8432b49d5b57e5445d177caf9d300214e"
             }
           },
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n04-d1/public/task.json",
             "sha256": "ec60105dd67334dab4b8bee397ac5956dfa85367ec969f98ef94b72bad07deb8"
@@ -584,7 +556,6 @@
               "sha256": "479b3bdda0521304f0fadd46967b7511055ae77c481e9239cc60144aef68753e"
             }
           },
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n04-d2/public/task.json",
             "sha256": "85f14b7a2613b71dd74e3c8262e51b8d1fc6882c8f8027a03eb14ab5016bce76"
@@ -621,7 +592,6 @@
               "sha256": "479b3bdda0521304f0fadd46967b7511055ae77c481e9239cc60144aef68753e"
             }
           },
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n04-d3/public/task.json",
             "sha256": "66c9add7c47414e64e39c8d42f574041382d28788ca5627315a124a006e290e3"
@@ -658,7 +628,6 @@
               "sha256": "1a5bdc007226dd9b6364e7c1d68dc97a963fcafc2d1b7416e79bb06ede88310c"
             }
           },
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n06-d1/public/task.json",
             "sha256": "b3af5c120b5c37eacf07a92766516ffd22da1a16d6ff490d196521b9a63c0207"
@@ -695,7 +664,6 @@
               "sha256": "c226c8983fa145e4e759346eeb13a03d798565afdf6b14f2b9643e595f3834b1"
             }
           },
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n06-d2/public/task.json",
             "sha256": "2c8ffc3def4b7e9beb9d9d2b4108f64042035b34db7a3fdfca1b79e6be410844"
@@ -732,7 +700,6 @@
               "sha256": "c226c8983fa145e4e759346eeb13a03d798565afdf6b14f2b9643e595f3834b1"
             }
           },
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n06-d3/public/task.json",
             "sha256": "e8c17246afee724137144d66ff6ae964ea7a0edcd250ae504546c68313f6b141"
@@ -769,7 +736,6 @@
               "sha256": "2d0153ddb30853c830c6a6cf2e5d552ec85e75de2755a6957f10b800cfbbc020"
             }
           },
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n08-d1/public/task.json",
             "sha256": "a6f11454a6615d68dff7dce1cbcb03cab61f777b51593794ce16e5b8f5276e19"
@@ -806,7 +772,6 @@
               "sha256": "9a8f8229967dae3fa0095470bdb61430fa753e3ace7a6e240d0f6c534de9690c"
             }
           },
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n08-d2/public/task.json",
             "sha256": "9c5e82d8c904f423e1582b169aac57ca4a405ad5192a90a94ae4c138255732fd"
@@ -843,7 +808,6 @@
               "sha256": "9a8f8229967dae3fa0095470bdb61430fa753e3ace7a6e240d0f6c534de9690c"
             }
           },
-          "qualification": "rolling_friction_003_candidate_not_full_task_qualified",
           "public_projection": {
             "path": "benchmark/dial/dial-best5-n08-d3/public/task.json",
             "sha256": "7af39245b92972abbed9e6228c52b6cc189f98f722cf7fd7a2c6d773047d59ae"
@@ -858,7 +822,6 @@
     "fps": 30,
     "export_requires_duration": true
   },
-  "transport_physics_revision": "r14-rolling-friction-candidate-20261029",
   "private": {
     "scope": "Evaluator-only values. Never copied into a run's public files.",
     "dial_codes": {
@@ -936,9 +899,9 @@
       ]
     }
   },
-  "release_id": "9d807a17fa593e83",
+  "release_id": "f62513a8e211a513",
   "frozen": {
-    "release_id": "9d807a17fa593e83",
+    "release_id": "f62513a8e211a513",
     "date": "2026-11-18",
     "physics_validation": "20261111-143742.json"
   }

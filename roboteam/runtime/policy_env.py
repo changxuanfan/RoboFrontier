@@ -200,7 +200,7 @@ def apply_default():
     """Name the environment for this process's preparation: the one chosen, or the default.
 
     Every run on every platform uses a checked policy environment and the closed access
-    table (E12); there is no run on the host's Python."""
+    table; there is no run on the host's Python."""
     value = os.environ.get(ENV_VAR)
     if value and value.strip().lower() in OFF:
         raise ValueError(ENV_VAR + '=' + value + ' is not supported: every run uses a policy environment')

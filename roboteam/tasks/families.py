@@ -21,7 +21,7 @@ def resolve_case(case_id, root=ROOT):
     root = Path(root)
     release = read(root/RELEASE)
     matches = [(name, family, c) for name, family in release['families'].items()
-               for c in family['gpt'] if c['id'] == case_id]
+               for c in family['policy'] if c['id'] == case_id]
     if len(matches) != 1:
         raise ValueError('Case must identify exactly one released family input')
     name, family, case = matches[0]
@@ -61,7 +61,7 @@ def protocol_for(case, release_sha256, wall_limit_s=86400):
         release_sha256=release_sha256, case_id=case['id'],
         source_task_sha256=case['source_files']['task.json'],
         source_scene_sha256=case['source_files']['scene.xml'],
-        reference_evidence=case['qualification'], total_wall_limit_s=wall_limit_s,
+        total_wall_limit_s=wall_limit_s,
         clock=ACTIVE_TIME_CLOCK, wall_backstop_s=WALL_BACKSTOP_S, evaluation_semantics='terminal_outcome_v2',
         experience='fresh_run_only', presentation_loop=False)
     if case['id'].startswith('relay-'):
@@ -163,7 +163,7 @@ def validate_frozen_policy(task, directory):
     protocol = task['run_protocol']
     if sha(release) != protocol['release_sha256']:
         raise ValueError('Frozen policy release differs')
-    cases = [c for f in read(release)['families'].values() for c in f['gpt']
+    cases = [c for f in read(release)['families'].values() for c in f['policy']
              if c['id'] == task['id']]
     if len(cases) != 1:
         raise ValueError('Policy case is not in the frozen release')

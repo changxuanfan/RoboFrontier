@@ -365,7 +365,7 @@ def timing(case_id):
 def jobs(selected, cases):
     from roboteam.tasks.families import read
     release = read(ROOT/'benchmark/release.json')
-    ids = [c['id'] for f in release['families'].values() for c in f['gpt']]
+    ids = [c['id'] for f in release['families'].values() for c in f['policy']]
     if cases: ids = [i for i in ids if i in cases]
     out = []
     if 'rest' in selected: out += [(rest, (i,)) for i in ids]

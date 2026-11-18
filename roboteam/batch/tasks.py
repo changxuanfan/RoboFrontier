@@ -26,7 +26,7 @@ def check_case_assets(case, root=ROOT):
 def prepare_batch(output, families=None, harness=None):
     output=Path(output).resolve();output.mkdir(parents=True,exist_ok=False)
     cases=[c for name,f in read(ROOT/RELEASE)['families'].items()
-           if families is None or name in families for c in f['gpt']]
+           if families is None or name in families for c in f['policy']]
     jobs=[dict(case_id=c['id'],run_directory=str(output/c['id']),status='pending')for c in cases]
     manifest=dict(status='preparing',simulator_started=False,model_calls=0,
         isolation='One run directory, runtime database, connection set and independent service per task',jobs=jobs)
@@ -68,10 +68,10 @@ def main():
         return
     rows = []; failed = False
     for family in read(ROOT/RELEASE)['families'].values():
-        for case in family['gpt']:
+        for case in family['policy']:
             if args.command == 'check':
                 resolve_case(case['id'])
-            row=dict(id=case['id'], directory=case['directory'],qualification=case['qualification'])
+            row=dict(id=case['id'], directory=case['directory'])
             if args.command=='check' and args.assets:
                 row['assets']=check_case_assets(case)
                 failed = failed or bool(row['assets']['missing'] or row['assets']['changed'])

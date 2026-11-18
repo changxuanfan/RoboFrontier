@@ -69,12 +69,12 @@ def plan(config):
     policy = config['policy']
     model = _catalog(config)['profiles'][policy['profile']]['model']
     return {'schema': 'roboteam.plan.v1', 'model_calls': 0, 'simulator_started': False,
-            'engine': policy['engine'], 'model': model, 'effort': policy['effort'],
+            'engine': policy['engine'], 'profile': policy['profile'], 'model': model, 'effort': policy['effort'],
             'topology': policy['topology'], 'parallel': config['batch']['parallel'],
             'startup_interval_s': config['batch']['startup_interval_s'],
             'task_wall_limit_s': config['batch']['task_wall_limit_s'],
             'task_count': len(selected), 'jobs': selected, 'policy_environment': _policy_environment(),
-            'qualification': 'Requires matching live provider compatibility receipts (roboteam preflight)'}
+            'preflight': 'A run requires matching live provider receipts (roboteam preflight)'}
 
 
 def prepare(output, config):
@@ -255,7 +255,7 @@ def run(batch, *, continuing=False):
     from .runtime import versions
     require_runtime(config)
     document = json.loads((Path(batch)/'batch.json').read_text())
-    # Every run uses a policy environment and the closed access table (E12), except a robot_only
+    # Every run uses a policy environment and the closed access table, except a robot_only
     # run: its roles have no shell or file tool, so there is nothing for either to confine.
     from .runtime import tool_mode
     for job in document.get('jobs', []):

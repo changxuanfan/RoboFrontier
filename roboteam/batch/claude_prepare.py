@@ -115,7 +115,7 @@ def prepare_batch(output, names, families=None, cases=None, level=None, min_arms
                 and Path(p['native_config_dir']).resolve().is_relative_to(Path(output).resolve())):
             raise ValueError('Keep the native authentication home outside the evidence batch')
     release = read(ROOT / RELEASE)
-    released = {case['id']: case for family in release['families'].values() for case in family['gpt']}
+    released = {case['id']: case for family in release['families'].values() for case in family['policy']}
     for case in selected:
         report = check_case_assets(released[case], ROOT)
         if report['missing'] or report['changed']:
@@ -204,7 +204,7 @@ def doctor(names, root=ROOT, catalog=CATALOG):
                           'credential_set': bool(p.get('native_config_dir')) if p.get('auth_mode') == 'native_login' else bool(os.environ.get(p['env_key'])),
                           'native_login_home': p.get('native_config_dir'),
                           'base_url_configured': bool(p['base_url']), 'live_verified': False}
-    assets = [check_case_assets(case, root) for family in read(root / RELEASE)['families'].values() for case in family['gpt']]
+    assets = [check_case_assets(case, root) for family in read(root / RELEASE)['families'].values() for case in family['policy']]
     return {'claude': cli, 'profiles': profiles, 'release_sha256': digest(root / RELEASE),
             'assets': {'missing': sum(len(a['missing']) for a in assets), 'changed': sum(len(a['changed']) for a in assets)},
             'recording_tools': {name: bool(shutil.which(name)) for name in ('ffmpeg', 'ffprobe')},

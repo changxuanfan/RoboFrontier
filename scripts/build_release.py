@@ -202,7 +202,7 @@ def index_release():
     path = BENCHMARK/'release.json'
     release = json.loads(path.read_text())
     for family in release['families'].values():
-        for case in family['gpt']:
+        for case in family['policy']:
             folder = ROOT/case['directory']
             case['source_files'] = {name: file_sha256(folder/name) for name in case['source_files']}
             projection = case.get('public_projection')
@@ -212,7 +212,7 @@ def index_release():
     # private codes. Recorded with a date when the release is frozen (docs/physics.md).
     content = {'cases': {case['id']: {**case['source_files'], 'public/task.json': case['public_projection']['sha256'],
                                       **{'public/'+n: e['sha256'] for n, e in case.get('public_files', {}).items()}}
-                         for family in release['families'].values() for case in family['gpt']},
+                         for family in release['families'].values() for case in family['policy']},
                'catalogs': {name: file_sha256(ROOT/family['catalog']['path']) for name, family in release['families'].items()},
                'private': release.get('private', {})}
     release_id = hashlib.sha256(json.dumps(content, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
@@ -341,7 +341,7 @@ def codes(args):
     path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
     private = release.setdefault('private', {'scope': 'Evaluator-only values. Never copied into a run\'s public files.'})
     stored = private.setdefault('dial_codes', {})
-    for case in release['families']['dial']['gpt']:
+    for case in release['families']['dial']['policy']:
         if case['id'] in stored: continue
         task = json.loads((ROOT/case['directory']/'task.json').read_text())
         stored[case['id']] = [secrets.choice(alphabet(task)) for _ in task['dials']]
@@ -395,7 +395,7 @@ def public(args):
     from roboteam.tasks.families import prepare
     path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
     for family_name, family in release['families'].items():
-        for case in family['gpt']:
+        for case in family['policy']:
             folder = ROOT/case['directory']; target = folder/'public'
             with tempfile.TemporaryDirectory(prefix='rf-public-') as temporary:
                 run = Path(temporary)/'run'; prepare(case['id'], run)

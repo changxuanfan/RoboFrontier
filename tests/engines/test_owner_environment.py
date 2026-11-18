@@ -1,4 +1,4 @@
-"""Both engines start the physics owner with one environment, without credentials (E4)."""
+"""Both engines start the physics owner with one environment, without credentials."""
 import json
 import os
 import subprocess

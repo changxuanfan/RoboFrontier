@@ -386,8 +386,8 @@ class PolicySettingsTests(unittest.TestCase):
                 self.assertFalse(any(rule.startswith('Read(//'+str(folder).lstrip('/')+')') for rule in deny), folder)
 
     def test_a_link_beside_the_run_gets_no_rule(self):
-        # 2026-11-11: ~/Repos/roomscript2 -> RoboTeam got Edit(//.../roomscript2/**); Claude
-        # Code resolves the link, so every run inside the repository lost its workspace.
+        # A rule on a link to the repository would be resolved by Claude Code to the repository
+        # itself, and every run inside it would lose its workspace.
         from roboteam.runtime import access as policy_access
         from roboteam.engines.claude.runner import policy_settings
         with tempfile.TemporaryDirectory() as tmp:

@@ -130,7 +130,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(recovery.RecoveryBlocked, 'already recovered'): recovery.inspect(self.run, ROOT)
 
     def test_a_world_that_closed_by_itself_continues_and_fails_its_unfinished_action(self):
-        # Observed 2026-11-10: an operator pause found an arm still stopping; the seal timed out,
+        # An operator pause found an arm still stopping; the seal timed out,
         # the host left and the world closed itself, leaving the action uncertain.
         self.store.begin_call('stopping', 'Controller', 'move', {'robot': self.robots[0]})
         self.store.db.execute("INSERT INTO actions VALUES ('stopping','Controller','uncertain',?)",

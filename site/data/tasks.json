@@ -1,6 +1,6 @@
 {
  "schema": "roboteam.site-tasks.v1",
- "release_sha256": "dc167aa3ee75bd0e22b97cd5994efb3e21b6f1e83bdf80e09d379ba5783b4a9d",
+ "release_sha256": "790f478f3dcab0dc2fdfb48ac78ba78a4a63a26a8108a34b1ce09727b7248c6f",
  "families": {
   "transport": {
    "name": "Transport",

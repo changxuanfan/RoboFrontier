@@ -21,8 +21,7 @@ Tables are 0.8 m high. Arms grasp the red timber, never the pendant, its eyes or
 
 The public task lists every camera's fixed world position, `wxyz` orientation and vertical field
 of view in `static_camera_mounts`, the form Transport uses; `scripts/build_release.py public`
-reads the values from the compiled scene. Runs prepared from release `020a26c59223ce50`
-(2026-11-11) received the camera names only.
+reads the values from the compiled scene.
 
 ## Completion
 

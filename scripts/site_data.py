@@ -21,6 +21,8 @@ import re
 
 from roboteam.tasks.config import ROOT
 
+# The published project page; README media links point at it.
+PROJECT_PAGE = 'https://changxuanfan.github.io/RoboTeam/'
 SITE = ROOT / 'site/data'
 ORACLE_VIDEOS = ROOT / 'site/data/oracle-videos.json'
 
@@ -67,7 +69,7 @@ def tasks():
     references = oracle_videos()
     rows = []
     for family in FAMILIES:
-        for record in release['families'][family]['gpt']:
+        for record in release['families'][family]['policy']:
             # The same rule overlay a new policy run receives.
             task = policy_task(record['id'])
             public = public_task(task)
@@ -105,7 +107,7 @@ def media(specs, film=None):
     return write(SITE / 'media.json', document)
 
 
-def readme_gallery(page='https://changxuanfan.github.io/RoboTeam/', readme=ROOT / 'README.md'):
+def readme_gallery(page=PROJECT_PAGE, readme=ROOT / 'README.md'):
     """Fill the README's gallery block: per family a 3 x 3 table of task thumbnails."""
     data = json.loads((SITE / 'tasks.json').read_text())
     blocks = []

@@ -28,13 +28,13 @@ class FamilyReleaseTests(unittest.TestCase):
 
     def test_the_release_has_36_exact_sources(self):
         release = read(ROOT/RELEASE)
-        rows = [c for f in release['families'].values() for c in f['gpt']]
+        rows = [c for f in release['families'].values() for c in f['policy']]
         self.assertEqual(len(rows), 36)
         self.assertEqual(len({c['id'] for c in rows}), 36)
         for c in rows:
             resolve_case(c['id'])
         mosaic = release['families']['mosaic']
-        self.assertEqual(read(ROOT/mosaic['gpt'][0]['directory']/'task.json')['scale']['scene_revision'], 15)
+        self.assertEqual(read(ROOT/mosaic['policy'][0]['directory']/'task.json')['scale']['scene_revision'], 15)
 
     def test_prepared_task_is_not_an_inherited_oracle_pass_and_detects_edits(self):
         task = policy_task('transport-a04-d1')
@@ -164,7 +164,7 @@ class FamilyReleaseTests(unittest.TestCase):
 class ReleaseRecordTests(unittest.TestCase):
     def test_the_release_pins_no_harness_and_the_asset_pin_follows_it(self):
         # Each run freezes its own harness.json and harness_sha256; the release's own
-        # harness pin went stale on 2026-10-28 and nothing enforced it.
+        # harness pin could go stale with nothing enforcing it.
         from roboteam.tasks.families import sha
         self.assertNotIn('harness', sorted(read(ROOT/RELEASE)))
         assets = read(ROOT/'configs/policy-assets.json')

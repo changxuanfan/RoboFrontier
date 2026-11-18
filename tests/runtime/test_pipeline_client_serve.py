@@ -1,4 +1,4 @@
-"""A served client answers each request as the one-shot command would (E3)."""
+"""A served client answers each request as the one-shot command would."""
 import json
 import subprocess
 import sys

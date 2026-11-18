@@ -1,5 +1,5 @@
 {
-  "schema": "roboteam.suite.v2",
+  "family": "dial",
   "feedback": {
     "version": "best5-v1",
     "mode": "best_so_far",
@@ -21,138 +21,101 @@
     {
       "family": "dial",
       "level": 1,
-      "suite_version": 2,
-      "scene_revision": 11,
       "scale_index": 0,
       "arms": 4,
       "dials": 4,
       "id": "dial-best5-n04-d1",
       "ring_radius_m": 1.55,
-      "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n04-d1",
-      "status": "environment_preview_only"
+      "directory": "benchmark/dial/dial-best5-n04-d1"
     },
     {
       "family": "dial",
       "level": 2,
-      "suite_version": 2,
-      "scene_revision": 11,
       "scale_index": 0,
       "arms": 8,
       "dials": 4,
       "id": "dial-best5-n04-d2",
       "ring_radius_m": 1.55,
-      "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n04-d2",
-      "status": "environment_preview_only"
+      "directory": "benchmark/dial/dial-best5-n04-d2"
     },
     {
       "family": "dial",
       "level": 3,
-      "suite_version": 2,
-      "scene_revision": 11,
       "scale_index": 0,
       "arms": 8,
       "dials": 4,
       "id": "dial-best5-n04-d3",
       "ring_radius_m": 1.55,
-      "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n04-d3",
-      "status": "environment_preview_only"
+      "directory": "benchmark/dial/dial-best5-n04-d3"
     },
     {
       "family": "dial",
       "level": 1,
-      "suite_version": 2,
-      "scene_revision": 11,
       "scale_index": 1,
       "arms": 6,
       "dials": 6,
       "id": "dial-best5-n06-d1",
       "ring_radius_m": 1.55,
-      "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n06-d1",
-      "status": "environment_preview_only"
+      "directory": "benchmark/dial/dial-best5-n06-d1"
     },
     {
       "family": "dial",
       "level": 2,
-      "suite_version": 2,
-      "scene_revision": 11,
       "scale_index": 1,
       "arms": 12,
       "dials": 6,
       "id": "dial-best5-n06-d2",
       "ring_radius_m": 1.55,
-      "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n06-d2",
-      "status": "environment_preview_only"
+      "directory": "benchmark/dial/dial-best5-n06-d2"
     },
     {
       "family": "dial",
       "level": 3,
-      "suite_version": 2,
-      "scene_revision": 11,
       "scale_index": 1,
       "arms": 12,
       "dials": 6,
       "id": "dial-best5-n06-d3",
       "ring_radius_m": 1.55,
-      "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n06-d3",
-      "status": "environment_preview_only"
+      "directory": "benchmark/dial/dial-best5-n06-d3"
     },
     {
       "family": "dial",
       "level": 1,
-      "suite_version": 2,
-      "scene_revision": 11,
       "scale_index": 2,
       "arms": 8,
       "dials": 8,
       "id": "dial-best5-n08-d1",
       "ring_radius_m": 1.55,
-      "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n08-d1",
-      "status": "environment_preview_only"
+      "directory": "benchmark/dial/dial-best5-n08-d1"
     },
     {
       "family": "dial",
       "level": 2,
-      "suite_version": 2,
-      "scene_revision": 11,
       "scale_index": 2,
       "arms": 16,
       "dials": 8,
       "id": "dial-best5-n08-d2",
       "ring_radius_m": 1.55,
-      "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n08-d2",
-      "status": "environment_preview_only"
+      "directory": "benchmark/dial/dial-best5-n08-d2"
     },
     {
       "family": "dial",
       "level": 3,
-      "suite_version": 2,
-      "scene_revision": 11,
       "scale_index": 2,
       "arms": 16,
       "dials": 8,
       "id": "dial-best5-n08-d3",
       "ring_radius_m": 1.55,
-      "source_scene_revision": 10,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n08-d3",
-      "status": "environment_preview_only"
+      "directory": "benchmark/dial/dial-best5-n08-d3"
     }
-  ],
-  "oracle_verified": false
+  ]
 }

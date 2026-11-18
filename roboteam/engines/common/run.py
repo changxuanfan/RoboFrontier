@@ -277,7 +277,7 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
                       and (not evaluation_required or evaluation_present)
                       and result.get('reason') in ('world_ended', 'stop_requested', 'wall_limit'))
             # A turn still open after the team finished is recorded (finish_turns_drained), not
-            # reviewed: the score was already written at finish, as on Codex (E10).
+            # reviewed: the score was already written at finish, as on Codex.
             # A wall-backstop stop is never a clean closure: its result needs review and is not counted.
             if result.get('wall_backstop'): closed = False
             result.update(status='finished' if closed else 'needs_review', owner_alive=owner_alive, scored=False,

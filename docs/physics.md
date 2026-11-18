@@ -119,12 +119,6 @@ beyond it still fails.
 ## Freezing the release
 
 `benchmark/release.json` names every case file by hash and carries `release_id`, a hash of the
-whole release. The release is frozen: `frozen` records release `9d807a17fa593e83`, 2026-11-17, and
+whole release. The release is frozen: `frozen` records release `f62513a8e211a513`, 2026-11-18, and
 the validation run it passed. Every step of `scripts/build_release.py` that writes the release
 refuses from then on, so physics, scenes and task files no longer change.
-
-Release `9d807a17fa593e83` replaces `020a26c59223ce50`, frozen on 2026-11-11. Two things differ:
-the nine Relay public tasks now list their camera mounts ([Relay](tasks/relay.md)), and the case
-files carry the name RoboTeam and no longer hold two unused fields, and the cameras were corrected
-([tasks](tasks/README.md#cameras)). No physics value changed, so the validation run of 2026-11-11
-still stands.

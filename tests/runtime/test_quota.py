@@ -23,7 +23,7 @@ class QuotaTests(unittest.TestCase):
         self.assertEqual(found['resets_at'], datetime(2026, 11, 10, 13, 30, tzinfo=NY).timestamp())
 
     def test_a_limit_that_outlasts_its_stated_reset(self):
-        # 2026-11-13: worlds resumed at 15:21 after "resets 3:20pm"; the continuation failed again
+        # Worlds resumed at 15:21 after "resets 3:20pm"; the continuation failed again
         # with the same text. It was read as tomorrow's 3:20pm, and in other runs it ended the new
         # pause at once, spending the roles' one continuation on a limit still in force.
         hk = ZoneInfo('Asia/Hong_Kong')
@@ -33,7 +33,7 @@ class QuotaTests(unittest.TestCase):
         self.assertEqual(resume_at({'resets_at': found['resets_at'], 'paused_at': now}), now + PAST_RESET_S)
 
     def test_a_hyphenated_window_name_is_a_usage_limit(self):
-        # The message that stopped ten Opus runs on 2026-11-11: it was read as a session error.
+        # This message was once read as a session error.
         now = datetime(2026, 11, 11, 17, 45, tzinfo=ZoneInfo('Asia/Hong_Kong')).timestamp()
         found = usage_limit("You've hit your 5-hour limit \u00b7 resets 9:10pm (Asia/Hong_Kong)", now)
         self.assertIsNotNone(found)
@@ -107,7 +107,7 @@ class WorldQuotaPauseTests(active.Fixture):
         self.assertEqual(len(lines), 2)
 
     def test_a_pause_in_a_later_segment_gets_a_new_claim(self):
-        # 2026-11-13 relay-a16-d2: the owner process restarts at each segment, so a per-process
+        # The owner process restarts at each segment, so a per-process
         # counter named a later pause 'quota-1' again; network-recovery then saw the role's
         # once-per-pause claim as already used and held the run for review for good.
         from roboteam.runtime.egress_pause import WorldPause

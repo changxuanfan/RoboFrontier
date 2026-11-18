@@ -71,7 +71,7 @@ class CompactedForkTests(unittest.TestCase):
         self.assertEqual(first_input(copied[copied_history_length(source, copied):]), 'delegate task')
 
     def test_edited_file_display_path_and_background_task_notice_are_cli_rows(self):
-        # Observed in a real Opus run (2026-11-10): a compacted copy adds `displayPath` to an
+        # A compacted copy adds `displayPath` to an
         # edited-file notice, and a parent with background commands gets their notice first.
         from roboteam.engines.claude.provenance import copied_history_length
         notice = {'type': 'edited_text_file', 'filename': '/run/workspace/handoff.md', 'snippet': '1\tplan'}
@@ -98,7 +98,7 @@ class CompactedForkTests(unittest.TestCase):
                          '<task-notification>x')
 
     def test_uncompacted_copy_of_a_parent_that_changed_directory(self):
-        # Observed 2026-11-10: the parent had cd'd into workspace/tools; the copy carried the
+        # The parent had cd'd into workspace/tools; the copy carried the
         # fork's launch directory on every row and nothing else differed.
         from roboteam.engines.claude.provenance import copied_history_length
         parent = [row('a', 'user', None, message={'role': 'user', 'content': 'task'}),
@@ -129,7 +129,7 @@ class CompactedForkTests(unittest.TestCase):
         with self.assertRaises(ValueError): fork_provenance(PARENT, CHILD, self.config, at=source)
 
     def test_compacted_copy_orders_a_split_assistant_message_as_its_metadata(self):
-        # Observed 2026-11-10: three tool calls of one response were preserved; the file
+        # Three tool calls of one response were preserved; the file
         # interleaves call/result, the metadata and the copy list calls first.
         from roboteam.engines.claude.provenance import copied_history_length
         old = row('old', 'user', None, message={'role': 'user', 'content': 'old'})
@@ -164,7 +164,7 @@ class CompactedForkTests(unittest.TestCase):
                 with self.assertRaises(ValueError): fork_provenance(PARENT, CHILD, self.config, at=source)
 
     def test_a_fork_may_keep_only_some_api_retry_notices(self):
-        # Observed 2026-11-10 after a network outage: the parent had 11 retry notices, the
+        # After a network outage the parent had 11 retry notices, the
         # fork kept 6; a row that hung from a dropped notice hangs from its kept ancestor.
         from roboteam.engines.claude.provenance import copied_history_length
         retry = lambda ident, parent: row(ident, 'system', parent, subtype='api_error', source='request_retry', retryAttempt=1)

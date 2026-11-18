@@ -130,7 +130,7 @@ def probe(fixtures):
     attempt('network_udp', udp_send)
     # Signal 0 asks only whether a signal could be sent, to a process outside this run.
     attempt('signal_other_process', lambda: os.kill(fixtures['host_pid'], 0))
-    # No credential may be readable from here in any ancestor's environment (E17): the Claude
+    # No credential may be readable from here in any ancestor's environment: the Claude
     # CLI gets its token on a pipe (claude.runner.start_cli), and where the sandbox hides other
     # processes (Seatbelt, Landlock) no environment is readable at all.
     def ancestors():

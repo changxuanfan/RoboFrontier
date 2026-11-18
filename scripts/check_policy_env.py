@@ -229,7 +229,7 @@ def throwaway_run(scratch, name, environment):
         (run/folder).mkdir(parents=True)
     (other/'private/inputs').mkdir(parents=True)
     (other/'private/inputs/task.json').write_text('OTHER-RUN')
-    # A link beside the run to a folder holding it, as ~/Repos/roomscript2 -> RoboTeam: a
+    # A link beside the run to a folder holding it: a
     # rule on the link closes its target, so it would close this run's workspace too.
     (scratch/name/'alias').symlink_to(scratch/name)
     (run/'public/inputs/task.json').write_text('PUBLIC')

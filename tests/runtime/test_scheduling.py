@@ -170,7 +170,7 @@ class SchedulingTests(unittest.TestCase):
         self.assertEqual(self.commands(104),[])
         self.assertTrue(self.s.agent('A')['recovery_required'])
     def test_wakes_from_before_a_continued_segment_do_not_count(self):
-        # Observed 2026-11-10: three wakes for one system event went unacknowledged when the
+        # Three wakes for one system event went unacknowledged when the
         # network dropped; after the run continued, they flagged the Controller at once.
         self.s.send('Controller',['A'],'work','1')
         for n in range(3):
