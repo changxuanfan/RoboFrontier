@@ -655,7 +655,7 @@ def to_responses(payload, effort='high', replay=None, session_id=None, fork_sour
         request['tools'] = [
             {
                 'type': 'namespace',
-                'name': 'robot_frontier',
+                'name': 'robot_team',
                 'description': 'Tools executed by the native Claude Code harness.',
                 'tools': definitions,
             }

@@ -1,6 +1,6 @@
 """Opt-in, unscored MuJoCo smoke with real Claude CLI and loopback fake model.
 
-Run with ROBOTEAM_PHYSICS_SMOKE=1; requires the R14 assets and graphics.
+Run with ROBOTEAM_PHYSICS_SMOKE=1; requires the task assets and graphics.
 No provider requests or genuine credentials are used. A failed live owner is
 left on disk for inspection rather than deleting its working directory.
 """

@@ -416,7 +416,7 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
                             {
                                 'id': 'fc_native',
                                 'type': 'function_call',
-                                'namespace': 'robot_frontier',
+                                'namespace': 'robot_team',
                                 'status': 'completed',
                                 'call_id': 'call_native',
                                 'name': 'Read',
@@ -428,7 +428,7 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
                             {
                                 'id': 'fc_native_edit',
                                 'type': 'function_call',
-                                'namespace': 'robot_frontier',
+                                'namespace': 'robot_team',
                                 'status': 'completed',
                                 'call_id': 'call_native_edit',
                                 'name': 'Edit',
@@ -586,7 +586,7 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
                                 'id': 'fc_pending_' + str(number),
                                 'type': 'function_call',
                                 'call_id': 'call_pending_' + str(number),
-                                'namespace': 'robot_frontier',
+                                'namespace': 'robot_team',
                                 'name': 'mcp__robot__robot',
                                 'status': 'completed',
                                 'arguments': '{ "op": "observe", "data": {}, "views": ["top"] }',

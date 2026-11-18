@@ -121,7 +121,7 @@ class WebSocketStateTests(unittest.TestCase):
                         'type': 'function_call',
                         'call_id': 'call_1',
                         'name': 'robot',
-                        'namespace': 'robot_frontier',
+                        'namespace': 'robot_team',
                         'arguments': '{ "op": "observe" }',
                         'status': 'completed',
                     },

@@ -81,10 +81,8 @@ class World:
             if texture.get('file'):
                 texture.set('file', str(folder / texture.get('file')))
         self.xml = ET.tostring(root, encoding='unicode')
-        from roboteam.sim.hall.world import check_hall, has_desk, load_world, task_geoms
-
         # A released task runs at its desk in the hall. Any other scene (tools and tests build these) runs by itself.
-        from roboteam.sim.hall.world import hall_facts
+        from roboteam.sim.hall.world import check_hall, hall_facts, has_desk, load_world, task_geoms
 
         workstation = (folder / 'workstation.json').exists()
         if workstation and hall_facts() is None:

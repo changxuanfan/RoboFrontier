@@ -303,7 +303,7 @@ class MessagesBridgeTests(unittest.TestCase):
                 {
                     'type': 'function_call',
                     'call_id': 'call_1',
-                    'namespace': 'robot_frontier',
+                    'namespace': 'robot_team',
                     'name': 'robot',
                     'arguments': '{"op":"observe"}',
                 }
@@ -564,7 +564,7 @@ class ExactReplayTests(unittest.TestCase):
                     'id': 'fc_default',
                     'type': 'function_call',
                     'name': 'Edit',
-                    'namespace': 'robot_frontier',
+                    'namespace': 'robot_team',
                     'call_id': 'call_default',
                     'arguments': '{ "file_path": "fixture.txt" }',
                 }
@@ -632,7 +632,7 @@ class ExactReplayTests(unittest.TestCase):
                 'id': 'fc_fixture',
                 'type': 'function_call',
                 'status': 'completed',
-                'namespace': 'robot_frontier',
+                'namespace': 'robot_team',
                 'call_id': 'call_fixture',
                 'name': 'robot',
                 'arguments': '{\n "op": "observe", "view": "top"\n}',

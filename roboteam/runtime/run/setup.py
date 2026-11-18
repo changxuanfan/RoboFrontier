@@ -182,8 +182,8 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
     (directory / 'private/inputs/meta').mkdir()
     runbook = (ROOT / 'docs/development/manager-runbook.md').read_text()
     for target in ('architecture.md', 'test-coverage.md'):
-        runbook = runbook.replace('](' + target + ')', '](frozen-source/docs/development/' + target + ')')
-    runbook = runbook.replace('](../../prompts/', '](frozen-source/prompts/')
+        runbook = runbook.replace('](' + target + ')', '](../frozen-source/docs/development/' + target + ')')
+    runbook = runbook.replace('](../../prompts/', '](../frozen-source/prompts/')
     (directory / 'private/inputs/meta/meta-runbook.md').write_text(runbook)
     python = ROOT / '.venv/bin/python'
     for actor, info in roles.items():

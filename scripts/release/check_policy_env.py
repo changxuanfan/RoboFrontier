@@ -2,7 +2,7 @@
 
 Runs each real CLI against a local stub model in a throwaway run, with the access table and
 variables a real run freezes. No provider is contacted and no credential is used. Prints
-ok/denied per attempt and never prints file contents; exits nonzero on any difference. A pass
+one JSON line per harness and never prints file contents; exits nonzero on any difference. A pass
 on both harnesses records a receipt beside the environment, which preparing a run requires. The
 receipt lists each harness with the sandbox and CLI version it ran, and preparation refuses any
 other combination. Give --scratch where batches will really run, since where a run sits changes

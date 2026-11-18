@@ -189,7 +189,7 @@ small TOML of your own, passed before the command (`roboteam --config site.toml 
 [`docs/hosts/examples/`](docs/hosts/examples) has one for the Mac, RunPod and Slurm.
 
 ```sh
-.venv/bin/roboteam doctor --harness claude                  # CLI version, sandbox, renderer, credentials
+.venv/bin/roboteam doctor --harness claude                  # CLI version, sandbox, renderer
 .venv/bin/roboteam plan --harness claude --task-types relay --level 1
 ```
 
@@ -216,7 +216,7 @@ check that its sandbox holds:
 
 ```sh
 .venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam   # prints its root
-.venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id>
+.venv/bin/python -m scripts.release.check_policy_env --harness claude /Users/Shared/roboteam/policy-env-<id>
 ```
 
 On macOS that base is the default. On Linux pick one (outside `/tmp`) and set
