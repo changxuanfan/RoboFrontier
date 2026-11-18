@@ -1,9 +1,9 @@
 {
-  "release": "assets-20261118",
-  "url": "https://github.com/changxuanfan/RoboTeam/releases/download/assets-20261118/task-assets-20261118.tar.gz",
-  "archive_sha256": "364cb6706da1f77f4087c08d40b778a87eeeb006da264df69553967d32755630",
+  "release": "assets-20261118b",
+  "url": "https://github.com/changxuanfan/RoboTeam/releases/download/assets-20261118b/task-assets-20261118b.tar.gz",
+  "archive_sha256": "a2a6a84de63cda636645e9096b3a1529d45cc518669e05ed84eff489b49cb73e",
   "panda_source_sha256": "b3702cb6a1f33835ebf19cfa303b4108ce67dd4aece802d8f732f3b984736c4d",
-  "archive_release_sha256": "f2dee2898db353a0b36c45477e3f690cdd9664c075d5acd0746b669be0eed695",
-  "release_sha256": "f2dee2898db353a0b36c45477e3f690cdd9664c075d5acd0746b669be0eed695",
-  "hall_sha256": "9709066b76de55d9c9068bd82deac690e0e521f1f34c13a1d8e9355c1554ac44"
+  "archive_release_sha256": "fd0a008989f745767d7083c9ad05ec059fbc5d4cab6eb78f4944f57d674c45e0",
+  "release_sha256": "fd0a008989f745767d7083c9ad05ec059fbc5d4cab6eb78f4944f57d674c45e0",
+  "hall_sha256": "fbfa7ba9b28da663d35197a5d607938f3a283dd6a946ef410e0c3e1d8d274024"
 }

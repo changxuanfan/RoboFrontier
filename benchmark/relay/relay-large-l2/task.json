@@ -12,7 +12,7 @@
     "directory": "benchmark/relay/relay-large-l2"
   },
   "scene_asset": "benchmark/relay/relay-large-l2",
-  "scene_sha256": "6951329965332592b6e6b5c53dc18d67f6e335fe31a26dbc4d19872f0265be68",
+  "scene_sha256": "093a38951b73e63cf7631121c71c7e3f0515d4bf941ad140164e86916f5458c6",
   "arms": {
     "A": {
       "base_position_m": [
@@ -862,9 +862,13 @@
     "top",
     "payload_close",
     "payload_01_close",
+    "payload_01_weight_close",
     "payload_02_close",
+    "payload_02_weight_close",
     "payload_03_close",
-    "payload_04_close"
+    "payload_03_weight_close",
+    "payload_04_close",
+    "payload_04_weight_close"
   ],
   "view_camera": "global",
   "recording_camera": "global",

@@ -46,7 +46,7 @@ cases ([the released files](../../benchmark/README.md)).
 
 ## Cameras
 
-Every camera is fixed in the world. A task has 14 to 53 of them: two at each arm, four
+Every camera is fixed in the world. A task has 14 to 69 of them: two at each arm, four
 overviews, and close-ups that depend on the task type.
 
 | Group | Names | What it shows |
@@ -55,15 +55,15 @@ overviews, and close-ups that depend on the task type.
 | Overviews | `global`, `global_side`, `global_rear`, `top` | The whole desk from the front and from the side; `global_rear` is `global` turned half a turn about the table centre; `top` looks straight down |
 | Transport close-ups | `board_A_close`, …; from Level 2 `plug_close`, `socket_close` | One per target board; one example each of an item's blades and a board's slots |
 | Mosaic close-ups | `assembly_01`, … | The build area, in two to four parts |
-| Relay close-ups | `payload_close`, `payload_01_close`, … | The start area, and each timber where it starts |
-| Dial close-ups | `D01_high`, `D01_side`, …; `board` | Two per dial, from above and from the side; the BEST display |
+| Relay close-ups | `payload_close`, `payload_01_close`, …; from Level 2 `payload_01_weight_close`, …; at Level 3 `payload_01_hinge_close`, … | The start area and each timber where it starts; each hanging weight and each hinge where it starts |
+| Dial close-ups | `D01_front`, `D01_side`, `D01_high`, `D01_face`, …; `board` | Four per dial: from the front, from the side, from above, and straight down on its face; the BEST display |
 
 | Task type | Small | Medium | Large |
 | --- | --- | --- | --- |
 | Transport (Level 1 / Levels 2 and 3) | 16 / 18 | 28 / 30 | 40 / 42 |
 | Mosaic | 14 | 19 | 24 |
-| Relay | 23 | 32 | 41 |
-| Dial (Level 1 / Levels 2 and 3) | 21 / 29 | 29 / 41 | 37 / 53 |
+| Relay (Level 1 / Level 2 / Level 3) | 23 / 25 / 27 | 32 / 35 / 38 | 41 / 45 / 49 |
+| Dial (Level 1 / Levels 2 and 3) | 29 / 37 | 41 / 53 | 53 / 69 |
 
 A camera does not follow anything: once a timber is carried away, its close-up shows an empty
 table. No camera has more than 40% of its image covered by a robot at the start of a task.

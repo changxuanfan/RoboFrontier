@@ -49281,6 +49281,21 @@
       "vertical_fov_deg": 48.0
     },
     {
+      "id": "payload_01_weight_close",
+      "position_m": [
+        -2.602036,
+        1.559463,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        0.5139063777456722,
+        0.339511842155323,
+        -0.43425178265415026,
+        -0.657310682410011
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
       "id": "payload_02_close",
       "position_m": [
         -1.1486007185024072,
@@ -49296,6 +49311,21 @@
       "vertical_fov_deg": 48.0
     },
     {
+      "id": "payload_02_weight_close",
+      "position_m": [
+        -0.813141,
+        2.850516,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        -0.2854082928491087,
+        -0.18857597247069283,
+        0.5180053953613154,
+        0.783997206217125
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
       "id": "payload_03_close",
       "position_m": [
         0.30812096747346374,
@@ -49309,9 +49339,24 @@
         -0.4738154278954996
       ],
       "vertical_fov_deg": 48.0
+    },
+    {
+      "id": "payload_03_weight_close",
+      "position_m": [
+        1.374049,
+        2.602472,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        -0.02958070858254011,
+        -0.019535414537930743,
+        0.5507345031128701,
+        0.8339273687435892
+      ],
+      "vertical_fov_deg": 38.0
     }
   ],
-  "scene_sha256": "b8cf331e0cc8ffa20696dcb6014b4dfb3e7e37f52181aba352ea12ec93f99c63",
+  "scene_sha256": "5c76333eba2a8c1225ac63947b911f17a91e2d8bd2afaf7b4c74e42eb41165e2",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

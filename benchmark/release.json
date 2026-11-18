@@ -357,30 +357,30 @@
           "id": "relay-small-l2",
           "directory": "benchmark/relay/relay-small-l2",
           "source_files": {
-            "scene.xml": "1ad8df4423767084f46b43fb833a8126ddb9818cd24d50a4a130ccf12151a387",
-            "task.json": "81f4b88933dde082c461abeed3265433cdab389b74abdb7e1bfc956908762860",
+            "scene.xml": "948243fbcf1142ff9bea73fa298d7c288b31f3a9bdc3547adcc71aa7f1d673c7",
+            "task.json": "1f1daa94755307b6f91049dbb95aebb44f622d5d1db8700bcc60b9a3120285ab",
             "environment.json": "5c2ffb89fd40884c6b1630db8391b7ca338164c4b8fa7ac487eed10a9599cc56",
-            "workstation.json": "769b2f7ea99501ae4fa0d87d1b0a70f5b314b46c0f372eca95c37e857dd18a4e"
+            "workstation.json": "70e521697034fc7819a0c902a889b848c89dc7fb0c3506b9fe643f5d1006a4a7"
           },
           "public_files": {},
           "public_projection": {
             "path": "benchmark/relay/relay-small-l2/public/task.json",
-            "sha256": "4205e19da42927fd57bdf26888f962f8603edfe79f6d894ab06c10ff6e7dda4a"
+            "sha256": "b56961be910e4d49b0feaedad89a01ee1eda16d665f3bc5168c562aa713701d5"
           }
         },
         {
           "id": "relay-small-l3",
           "directory": "benchmark/relay/relay-small-l3",
           "source_files": {
-            "scene.xml": "440ead91673a9dffab3518e1b0d9bb903ebd15ea4ab0659f3ae4114af14e1d5d",
-            "task.json": "a543511c37cc3c636b6ae127cfefa9a19f0d8094eb50198c9211c05e792b8c85",
+            "scene.xml": "4d99384e6b71c3fdd554bb7aafafc2c5e75dfabcff96db100c7709e81c80acef",
+            "task.json": "ff59cb0fd9df958c889b8e1d0c7308ce585c6b8597ec45d33734284b5d271306",
             "environment.json": "61eeb198bb24f0e419f1f08cfb606d8e5c80b430e0f93af2973e07f1a4203a5b",
-            "workstation.json": "435b3f2ec43b06b5c1bf0d63e948c610646ae3191635cc1db070bd69204c5a84"
+            "workstation.json": "5d89e509edb8013e8b4f5911069c51276b2d03f4c03c32732bc789c10ca54bf6"
           },
           "public_files": {},
           "public_projection": {
             "path": "benchmark/relay/relay-small-l3/public/task.json",
-            "sha256": "bc21e901658cac4a7e4017c6a6708debb5229bd05bde5c99e69f983db461ca85"
+            "sha256": "2acc90b404f847d7dcb8089aba2050c5033614cd05ee04345b5765ffddbb800c"
           }
         },
         {
@@ -402,30 +402,30 @@
           "id": "relay-medium-l2",
           "directory": "benchmark/relay/relay-medium-l2",
           "source_files": {
-            "scene.xml": "b8cf331e0cc8ffa20696dcb6014b4dfb3e7e37f52181aba352ea12ec93f99c63",
-            "task.json": "7827513cc93bafae07613224a417203b876e8b3db1b3e064e85d288cfb6ecd8e",
+            "scene.xml": "5c76333eba2a8c1225ac63947b911f17a91e2d8bd2afaf7b4c74e42eb41165e2",
+            "task.json": "dee0eadb3b2b481212da4da7496b6dbd1a92a27349119434608414c3c4e8f81c",
             "environment.json": "45d49b781839fe9376ae3c88d7553fe25f59a62de0ba712735eaae62f43e6a7a",
-            "workstation.json": "ad0acdb4ff15a6971340a9deaf06e800e19fc2ddc7474ce2f7a201b3426c5fc2"
+            "workstation.json": "2e72a3fda695665b59bcc4ebd47a643cdc828873e04b501c92eb38bae0f51cb4"
           },
           "public_files": {},
           "public_projection": {
             "path": "benchmark/relay/relay-medium-l2/public/task.json",
-            "sha256": "a22194b7e9b5daa726d40d4c66ce2bca922a871f483b73f8467f0a005d5b7226"
+            "sha256": "8b00ffde7d3bbe3417523e83b67cb090aa4f50c14e82152c6a0abf4f5ce6edb6"
           }
         },
         {
           "id": "relay-medium-l3",
           "directory": "benchmark/relay/relay-medium-l3",
           "source_files": {
-            "scene.xml": "34f6984bb9b57b4e65603662aadb195b2f5a5bf63c085f149bf45d02f54557df",
-            "task.json": "cac9d382a2410d5c2388e6f97a7bbacaf2f810e424ec46f11df938630aa04a6d",
+            "scene.xml": "fcf4c59eda15d849db2238d7cfc3588fcc02e15caed6dc4b410ed28656067620",
+            "task.json": "7418eaf876e787239866825ba04cf96cafc6ba1bd30bbfeeed970b4ee669d7c9",
             "environment.json": "c513ff7e3de5cbbfe0eb807956b8bcd8798ee0bce1c42e4f4e319dedab794074",
-            "workstation.json": "7217e1bd8ad7a4f49b3be59cdfba76605e80a36fdc54be7f240c7a8f7b1e6461"
+            "workstation.json": "54c6f1ba8ff489fe8b14edd6828303176e6b060d5aad0515b29ca76a658e48f9"
           },
           "public_files": {},
           "public_projection": {
             "path": "benchmark/relay/relay-medium-l3/public/task.json",
-            "sha256": "fca4cf3ada998eeb454d1f38210e9f2eb7ef7a5e5190c4f0974cc940b52e228d"
+            "sha256": "4eed86cd1cedaabf7a84c679c744790a271f015da6e8ffc08f1a17b48f59cf61"
           }
         },
         {
@@ -447,30 +447,30 @@
           "id": "relay-large-l2",
           "directory": "benchmark/relay/relay-large-l2",
           "source_files": {
-            "scene.xml": "6951329965332592b6e6b5c53dc18d67f6e335fe31a26dbc4d19872f0265be68",
-            "task.json": "2b46c08f66e005c2b6dd13a3fb8639ce028a9f28f2bd563f92726f5257b5ef7a",
+            "scene.xml": "093a38951b73e63cf7631121c71c7e3f0515d4bf941ad140164e86916f5458c6",
+            "task.json": "06e11bc2ffb41dec745339c1081442149ca9714e8c1f1b2314f3ff4dae1f0f96",
             "environment.json": "8aae4932af8153ce280c48c327294883f4642acd4365596bc727592f72dc4e27",
-            "workstation.json": "8262f1e451207af0d344483d63545453a64d6fa44278275aa51e272f3cc2ae85"
+            "workstation.json": "700617203db2e1312679e50104e8a3300cbce03a25a7ebddf00f57fc34bf8db0"
           },
           "public_files": {},
           "public_projection": {
             "path": "benchmark/relay/relay-large-l2/public/task.json",
-            "sha256": "88f532a02aa76142c9e0f86d8f75ff7dd76485f6963a7fdbdf0e56358815d55c"
+            "sha256": "9a3d618f2126d2a70be6a835456e4be353284082dbc42c39ddfcac4c7d69f5ac"
           }
         },
         {
           "id": "relay-large-l3",
           "directory": "benchmark/relay/relay-large-l3",
           "source_files": {
-            "scene.xml": "71bd1bd6f85f3d51005ec47a25adaef658c386fce4d0e523459638428ecdb7cc",
-            "task.json": "67d475daec1b2d064e23a0de4cd3d00defdec5c4777df13d4a0af0448422c24d",
+            "scene.xml": "4fc51c7ecdf2ca840d0ad808c21fda88b8d6d482b7ba4b4a87aa38febc30a3cd",
+            "task.json": "ffc46b8c3d756174b3b8bafaf2239210ab13f48cd9786492aa7fce573f6b627d",
             "environment.json": "d901c97677faf7f405a0dd7557f1192ed4b93ff343e9b4c5dafd484bf05a678d",
-            "workstation.json": "3c8ff47bc0bd29acfddef9b692b2108bbf634339a559e5c4d5b9f1cd43816314"
+            "workstation.json": "daed5bc5fd7e8aaeab867a835ec4061b44c57532bbdc7a60ea710445478d5937"
           },
           "public_files": {},
           "public_projection": {
             "path": "benchmark/relay/relay-large-l3/public/task.json",
-            "sha256": "f759a4861dd182fb4a3b8956a525035c760694929ef819a7444c362d153c6a63"
+            "sha256": "658da81736485c60c5c95d50250dd239b3b86d3fe32bc1edf473265f2981f0ed"
           }
         }
       ]
@@ -485,19 +485,19 @@
           "id": "dial-small-l1",
           "directory": "benchmark/dial/dial-small-l1",
           "source_files": {
-            "scene.xml": "cb69fd8036c82af90e7db77cf80974ef6ca738d498506c4be2a853e9edae325b",
-            "task.json": "585b1b02f057c36dcd12d7c2d0ec74fa697254738f1521425251219a32183cce",
+            "scene.xml": "9884ec1f5288b340c6b997e753d9b128385ff2b05dd16ae3da6afac28261d2ac",
+            "task.json": "a472d4204211c2be037e468521038157d38c3f569dd3aa8e99ec61acd3286bd7",
             "environment.json": "a6957a600ce9d1c6ed32cf2d256febd4adffe752c11c0b5439d2cc151cfca28d",
-            "workstation.json": "4a22cb3c8ae6293b75070842c9e9056967257afcb0ee92b1058406e787cfd085"
+            "workstation.json": "1d9387b7020e881aa81f2f78c4bc6a2ad85aaa01062d7307f2aec42b6ffa68fe"
           },
           "public_files": {
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-small-l1/public/camera-calibration.json",
-              "sha256": "854eff9c53e41f3d7621f1ed366786ef64498d662dcabed0db389687d12ce89e"
+              "sha256": "9c5056c9f6eee526296ee767faaac5f6797919b2dc869b7d2102c59ae4cee0f0"
             },
             "preview-global.png": {
               "path": "benchmark/dial/dial-small-l1/public/preview-global.png",
-              "sha256": "d1c18afb0beeeba24223fc8e33d1217e7b58fd8efeec54f2947492d52da1b48b"
+              "sha256": "88269db26a25f2189d143cac08e91438a4b0ec0fb0804ba6f6cdf7ca3e02fc3c"
             },
             "preview-global_rear.png": {
               "path": "benchmark/dial/dial-small-l1/public/preview-global_rear.png",
@@ -514,22 +514,22 @@
           },
           "public_projection": {
             "path": "benchmark/dial/dial-small-l1/public/task.json",
-            "sha256": "20eaf3ecf032e7832a638eeca10be28898548fa0cb5d5e9f41a5ba3e47f69356"
+            "sha256": "cf2b5ae170a424e0c8929619d8187f50d9328018b009f3cb7395834ca1345365"
           }
         },
         {
           "id": "dial-small-l2",
           "directory": "benchmark/dial/dial-small-l2",
           "source_files": {
-            "scene.xml": "8fef2353279122c393f23443bb2272bde421e62cd4bb3e6098415993e1606458",
-            "task.json": "7735ffb25572c12f8bf155ab00fcace022096c0aa16f6c5b48c04caeb2946a1e",
+            "scene.xml": "0231c1b97f83784f15ec9b03a838e99d9fb7fe689af7a635a42f72f498534e8f",
+            "task.json": "a09ddbd173baf12571cf7c28b49b4b6b85f44928cb0140fbac0f23fcd543f2bc",
             "environment.json": "3d400ab875c747b05c7c3174046752f3b7543d4f74adae1e42b506406eb1bfdb",
-            "workstation.json": "ff4010047834cdf95e3122df2ccaeb1a780afb809e1d1fba5d7deeed411fe852"
+            "workstation.json": "c0019da08cfab199e312f666d5154890daec86af32b8985a1edcaa41df4e2e65"
           },
           "public_files": {
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-small-l2/public/camera-calibration.json",
-              "sha256": "f554a08453cc1f70aa678810792370e005b57d8588dc9af05568411a5cd6e163"
+              "sha256": "aa2df7d1faf0f02452048d6f1946f6b22d38e6e3ca699dd6a980a91412685055"
             },
             "preview-global.png": {
               "path": "benchmark/dial/dial-small-l2/public/preview-global.png",
@@ -550,22 +550,22 @@
           },
           "public_projection": {
             "path": "benchmark/dial/dial-small-l2/public/task.json",
-            "sha256": "8d719c7b5b2c5a52f0ad2c24c3d479b450720098315395babdb3f46d6bb2b734"
+            "sha256": "823f677fef6cfcc4b2a516723b6f9464db1d6853d7dec59543d500153c2de47b"
           }
         },
         {
           "id": "dial-small-l3",
           "directory": "benchmark/dial/dial-small-l3",
           "source_files": {
-            "scene.xml": "7f088fdcd50616f56e2596b17e09e6593bdb67f4766b4b97a34a57c18b97b49a",
-            "task.json": "d15dbbe9d7bfefd4bdbf608adedbbd03d11fc66f0709e5a273268186354d30f5",
+            "scene.xml": "329c4755ce7da5ed4d7045c55163ef028b4f5592a67c9ad32e1eda37e8766d7d",
+            "task.json": "91184e2327fb7ab5cc7027720fa909efe1e8396b34bbc60faa7849096a8ad225",
             "environment.json": "57bb9f407e3aafc98adb9fba7f5ab9dbe51787869c67b286b4010b4040a5876d",
-            "workstation.json": "6c44ad45291255ad46490a3648b046ee56c74dc4e71b720e98f1095e5021aa13"
+            "workstation.json": "aa0f13e2891c4c9d6a93ebb92f0953313c3711f781bfc6e613abe3c8404489e3"
           },
           "public_files": {
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-small-l3/public/camera-calibration.json",
-              "sha256": "f554a08453cc1f70aa678810792370e005b57d8588dc9af05568411a5cd6e163"
+              "sha256": "aa2df7d1faf0f02452048d6f1946f6b22d38e6e3ca699dd6a980a91412685055"
             },
             "preview-global.png": {
               "path": "benchmark/dial/dial-small-l3/public/preview-global.png",
@@ -586,26 +586,26 @@
           },
           "public_projection": {
             "path": "benchmark/dial/dial-small-l3/public/task.json",
-            "sha256": "6c212e80a371b8f48ed597f69266e6ae686e93b282322407382282455319e46e"
+            "sha256": "758c7ad3ccdf975708aa3065a29083f9362e6192aec0f2668fcf8fff50509da5"
           }
         },
         {
           "id": "dial-medium-l1",
           "directory": "benchmark/dial/dial-medium-l1",
           "source_files": {
-            "scene.xml": "5e2b7659aed2ac83d4bc756360acb69cf6d420d1c883f4dd408033aa82a675e4",
-            "task.json": "ef2d4348a29478f03f08bb9b17d9238f1d5c9e66d268f0a520c5e73045fc11c2",
+            "scene.xml": "e304a79d51a0393b9c084f727e4f634cb7fd4ab2f7e87e3e05851e2dee1b5099",
+            "task.json": "ee10866aa35b89d430ab60d8d8614946150d845facfd9e132e12addd455a0054",
             "environment.json": "4df7a2ac8d9464587ec58a9f023875be90b9003168bdc206f01904cdd9667af5",
-            "workstation.json": "b44336d2d276dee0eaf1bc18ff3767384388c090e56f31891afbb3d410c79b86"
+            "workstation.json": "3c4ef322177706c6be8dd8f6243f1bac2c820bd14a9b852b88a35a04bd19746a"
           },
           "public_files": {
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-medium-l1/public/camera-calibration.json",
-              "sha256": "a4ecf976e89b1e872abd0a1492b5fd5bbbff7a95caab52a954960102a9af1eb1"
+              "sha256": "97f74eaeacbf274bbdceb99a5d707c9916e8483e22756feefcf3b02f1e0114ed"
             },
             "preview-global.png": {
               "path": "benchmark/dial/dial-medium-l1/public/preview-global.png",
-              "sha256": "4334f7b35b95ec0ad1e667378f8ef773ffff85be156a67271225edd7f2e0a857"
+              "sha256": "cebae31e786d3d120839fcf6972e5d910d4086e7c0e129f3b03a02b9c5e68b8e"
             },
             "preview-global_rear.png": {
               "path": "benchmark/dial/dial-medium-l1/public/preview-global_rear.png",
@@ -622,22 +622,22 @@
           },
           "public_projection": {
             "path": "benchmark/dial/dial-medium-l1/public/task.json",
-            "sha256": "bf45372dce33f3f99daa5b9ca50755dcdfa3b65870bad0bea6cd9104add6fa3e"
+            "sha256": "311a17becc8b4f61698c9454425ffc6d203ed6fddc62faf773aa6356c3782763"
           }
         },
         {
           "id": "dial-medium-l2",
           "directory": "benchmark/dial/dial-medium-l2",
           "source_files": {
-            "scene.xml": "d48a4bfccd589e3556996e70230610f8de52745249fc377a9e51cd0735f0367f",
-            "task.json": "0f58d662c43d9523fd01405c3fe0695015d0acc611c9e795de44af6bc7743607",
+            "scene.xml": "12da9276bdcd9d3347983c3fecaddc1b6c98214f594362b4ac544f23b5048316",
+            "task.json": "98eefc2661f95799ffca8dd32a3c399c341231f29f8abaac0a6e332d5daf6ba2",
             "environment.json": "9797d11830cb59aecab4d8fc84daa4f989f546979e1f05cf2cbd9dfd3bb39749",
-            "workstation.json": "98788d9ecbade1cedef83119c5218eca9493c7eed386b7d35b9f9121386c2a1e"
+            "workstation.json": "cc2305601446227a8b8e53b49d14e503fe6a45bfdf6b074e698ab7432ea6f0e0"
           },
           "public_files": {
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-medium-l2/public/camera-calibration.json",
-              "sha256": "7d740951413eef69f0b32a965dd5807af8fb48c3de48991259257bad4a5daadd"
+              "sha256": "6a2b0ef84fe5e410f487345c6ef45ef94a3b6709c53a2c2d87eda78e0195f292"
             },
             "preview-global.png": {
               "path": "benchmark/dial/dial-medium-l2/public/preview-global.png",
@@ -658,22 +658,22 @@
           },
           "public_projection": {
             "path": "benchmark/dial/dial-medium-l2/public/task.json",
-            "sha256": "eaf16d77bd851a8167fe7ce01e5b3d24bd8fb69694c4c0b00b13d8910bd2f1db"
+            "sha256": "433e7106c0cc26287df8476facb1e1516b7c686063add64ce606eb8a76248c43"
           }
         },
         {
           "id": "dial-medium-l3",
           "directory": "benchmark/dial/dial-medium-l3",
           "source_files": {
-            "scene.xml": "445d98ae06392d2a16b9f2306e086e9af7d5b8793850b9d49b600673a10eaf3d",
-            "task.json": "cc90d32145e5857a9ebf5c27dc50087061f0d9d528a3d8942d04b4221d4b674f",
+            "scene.xml": "71bfce91aebbd823c37fc234348ae9302a6f6c15dd8bc05decd51d9469ab438a",
+            "task.json": "05d580a1dfe7a2a0e119a3a1df843c9b376a3c87482d4349e152b7d9b616ab99",
             "environment.json": "41fdb015f7b5f6cbd7eaaaa80472342d8637f1eedddddec9476a8a1ceb3b2d4a",
-            "workstation.json": "25afac938f455ec26e27749d201f51741f110d80b4d21e19348aa4e739e36191"
+            "workstation.json": "67ad6b45eb52cccbf1eca9609af6b8cbb109b724949066862911fc6d59527c95"
           },
           "public_files": {
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-medium-l3/public/camera-calibration.json",
-              "sha256": "7d740951413eef69f0b32a965dd5807af8fb48c3de48991259257bad4a5daadd"
+              "sha256": "6a2b0ef84fe5e410f487345c6ef45ef94a3b6709c53a2c2d87eda78e0195f292"
             },
             "preview-global.png": {
               "path": "benchmark/dial/dial-medium-l3/public/preview-global.png",
@@ -694,26 +694,26 @@
           },
           "public_projection": {
             "path": "benchmark/dial/dial-medium-l3/public/task.json",
-            "sha256": "cb76d692fb43da99dc081ca95aff69b4a5c2cfa8b3230019f74470b18c1ce5f0"
+            "sha256": "5061abdda744e126806e7f62af2322dda04cf02f2c92c3f71dc0aef18848d465"
           }
         },
         {
           "id": "dial-large-l1",
           "directory": "benchmark/dial/dial-large-l1",
           "source_files": {
-            "scene.xml": "0188b8f3446e533e0a755bce0a6435fc1efc0d67b38907eba8e1acd691a08cb3",
-            "task.json": "2046d379b6e9924644a77ede647e50496b53a2096d5022183b6b28a91962202f",
+            "scene.xml": "7f1631ad4cb9ae5dbc9446963b86db2a9f7a57329805860d0446d233e0898b61",
+            "task.json": "2f3adc8a9b13883448011c78adfe2dcaed7ffe27cf62509d26d572512f8a948f",
             "environment.json": "f29489340737a8b1b5e1f1fd584d7a59345c0e4a378241d89946a72615593e30",
-            "workstation.json": "a22d15555df78b362b1dbc3051068acc9e3ac8238de3d9cf44198bd18926af45"
+            "workstation.json": "52a6a59c24cedfc0a501237b1a7626047530288676042ddaf644525167d3cddb"
           },
           "public_files": {
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-large-l1/public/camera-calibration.json",
-              "sha256": "932e307332341bb5fbc1ead545053ae82c55def5b11a78feceb01816d2781a4e"
+              "sha256": "bcdecf5fe46a3f962504699e7789ea554b521ba0e61c31e8255c058aaece6eeb"
             },
             "preview-global.png": {
               "path": "benchmark/dial/dial-large-l1/public/preview-global.png",
-              "sha256": "16ddb0b496180bde77408c0869c6391fcc9e9286a0d1b6f956a4343a5648c940"
+              "sha256": "019ed09fd89ea1dbaf110ae760c150e21c0a5a3000fa9da1afba52283b74c9a0"
             },
             "preview-global_rear.png": {
               "path": "benchmark/dial/dial-large-l1/public/preview-global_rear.png",
@@ -730,22 +730,22 @@
           },
           "public_projection": {
             "path": "benchmark/dial/dial-large-l1/public/task.json",
-            "sha256": "b291a709f4c0184a0e77b43465ac69f3762877b7150f8c0956dae223d1d12865"
+            "sha256": "a4f6521257896a05a14b6da42deac2161695ea033cbb27e6a0f02526014ad286"
           }
         },
         {
           "id": "dial-large-l2",
           "directory": "benchmark/dial/dial-large-l2",
           "source_files": {
-            "scene.xml": "c5e28034074a3fcf3ee3c050520357101ae57680e4f7cea0e02988a588b3d5da",
-            "task.json": "80038dd42c584bb45e875d8a610ca4370bb4d3187cbb78dbe26bc448ad46f9a1",
+            "scene.xml": "b2cab71b7211c5ed6218b946124dc4502233aebc9ba7d715a90a0237a27d3302",
+            "task.json": "a143dce981f592180f952fb23cd8539295c7314240117412c61a87b80a93b17c",
             "environment.json": "2e910a4f7be36a9e81dbf31e8215b7e9de039536b73d6a6737f950dc67c52634",
-            "workstation.json": "39c73ef8d6ebdfd98de1f3712f6c3ccc6a8940da33724ede2370890f0a23bf1b"
+            "workstation.json": "a41d8e16781cefeabaf7ecc6657430ebb89fc75619d457125a709ef9975896c6"
           },
           "public_files": {
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-large-l2/public/camera-calibration.json",
-              "sha256": "51cbbf56e0751be88e9e4b45bc627722f049425e854e4e472d14694a038a87b1"
+              "sha256": "98bc1c97256007e6d6e49feb838a66ef31673fb57838efbc49fa036e4feaf7e1"
             },
             "preview-global.png": {
               "path": "benchmark/dial/dial-large-l2/public/preview-global.png",
@@ -766,22 +766,22 @@
           },
           "public_projection": {
             "path": "benchmark/dial/dial-large-l2/public/task.json",
-            "sha256": "86a08cf525f2c8c0606de0d378c3d17a556ad4fdf7297ad6a94f11d9d5d9efa9"
+            "sha256": "c7c0eff11fd0bb46e140168b1f7f5a01261353e1e808e3f393f14770a2d39dbb"
           }
         },
         {
           "id": "dial-large-l3",
           "directory": "benchmark/dial/dial-large-l3",
           "source_files": {
-            "scene.xml": "999baf420b071319db25233e075e01f8dc80e777d3b39507714e6f41703c1ef7",
-            "task.json": "41a605d4b960ac1ac217dd14d41fe37290d64bdcc3f68777d45c4d0bc72b4027",
+            "scene.xml": "d87b0e551244e5e32e4f39989d07e8b05e12a0533e7d180522a1e1a13b6b2990",
+            "task.json": "6710b38efd6ef5b7a76486707d3561e6d095cae8bd6030867b920b524f703f56",
             "environment.json": "28efe6cdd54861a847921cbafdc3a36caee717c3cf76dd8c3583243780db197a",
-            "workstation.json": "2a182f87275c13c8abc7bcc90e1d188f4c60286fd1b27a3d525a10d38a708744"
+            "workstation.json": "74583e2239f11e4812dcbed5ea5f0b3ed2cc811598473cf6ac1c9f34173f5a0d"
           },
           "public_files": {
             "camera-calibration.json": {
               "path": "benchmark/dial/dial-large-l3/public/camera-calibration.json",
-              "sha256": "51cbbf56e0751be88e9e4b45bc627722f049425e854e4e472d14694a038a87b1"
+              "sha256": "98bc1c97256007e6d6e49feb838a66ef31673fb57838efbc49fa036e4feaf7e1"
             },
             "preview-global.png": {
               "path": "benchmark/dial/dial-large-l3/public/preview-global.png",
@@ -802,7 +802,7 @@
           },
           "public_projection": {
             "path": "benchmark/dial/dial-large-l3/public/task.json",
-            "sha256": "1134c02a0cc1758359360ae85f7e976f18c74f1487d4a414e6a065abd725dc09"
+            "sha256": "2ad2f1b03882c6021b759d22740b16cb2f938eb0544c87119afd635b23b17703"
           }
         }
       ]
@@ -885,9 +885,9 @@
       ]
     }
   },
-  "release_id": "771721ae25c92702",
+  "release_id": "b00c53d7f049259a",
   "frozen": {
-    "release_id": "771721ae25c92702",
+    "release_id": "b00c53d7f049259a",
     "date": "2026-11-18",
     "physics_validation": "20261111-143742.json"
   }

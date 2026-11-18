@@ -2108,8 +2108,14 @@
     </body>
     <camera name="payload_close" pos="-2.0788939366884494 0.2687005768508882 1.8224999999999998" fovy="48" quat="0.8796562825713216 0.4717284847325486 0.028657774910772652 0.05343962164817854" />
     <camera name="payload_01_close" pos="-2.07889393668845 0.26870057685088816 1.8224999999999998" fovy="48" quat="0.8796562825713217 0.47172848473254847 0.02865777491077263 0.053439621648178524" />
+    <camera name="payload_01_weight_close" pos="-2.635991 1.543799 1.12" xyaxes="-0.188172 -0.982136 0.0 0.368586 -0.070619 0.926907" fovy="38" />
+    <camera name="payload_01_hinge_close" pos="-2.058721 1.561665 1.0765" xyaxes="0.125702 0.992068 -0.0 -0.59404 0.075269 0.800906" fovy="42" />
     <camera name="payload_02_close" pos="-1.1486007185024072 1.498771626851721 1.8224999999999998" fovy="48" quat="0.8531165909016808 0.45749618879533 -0.11851695494169033 -0.22100464012638152" />
+    <camera name="payload_02_weight_close" pos="-0.849818 2.857802 1.12" xyaxes="-0.729519 -0.68396 0.0 0.256713 -0.273813 0.92689" fovy="38" />
+    <camera name="payload_02_hinge_close" pos="-0.372295 2.532945 1.0765" xyaxes="0.684656 0.728866 -0.0 -0.436343 0.409876 0.801003" fovy="42" />
     <camera name="payload_03_close" pos="0.30812096747346374 1.706066080022464 1.8225000000000002" fovy="48" quat="0.743067903301779 0.39848097833544427 -0.2540904194882801 -0.4738154278954996" />
+    <camera name="payload_03_weight_close" pos="1.348659 2.629925 1.12" xyaxes="-0.992215 -0.124538 0.0 0.046738 -0.372371 0.926906" fovy="38" />
+    <camera name="payload_03_hinge_close" pos="1.544037 2.086429 1.0765" xyaxes="0.982357 0.187017 -0.0 -0.111984 0.588225 0.800906" fovy="42" />
     <geom name="table_relay_arc_0" type="mesh" mesh="table_relay_arc_0" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <geom name="table_relay_arc_0_leg" type="box" pos="1.9410081143570732 1.9410081143570728 0.375" size="0.04 0.04 0.375" rgba="0.32 0.36 0.4 1.0" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <geom name="table_relay_arc_1" type="mesh" mesh="table_relay_arc_1" material="table_oak" mass="0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />

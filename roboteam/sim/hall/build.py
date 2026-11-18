@@ -805,7 +805,7 @@ class _Builder:
             self.sign(
                 body,
                 side + '_left',
-                'TRANSPORT' if side == 'north' else 'DIAL LAB',
+                'TRANSPORT' if side == 'north' else 'DIAL',
                 [-W * 0.27, -0.12, 4.6],
                 [5.3, 0.72],
                 group=layer,
@@ -814,7 +814,7 @@ class _Builder:
             self.sign(
                 body,
                 side + '_right',
-                'MOSAIC' if side == 'north' else 'AIR RELAY',
+                'MOSAIC' if side == 'north' else 'RELAY',
                 [W * 0.27, -0.12, 4.6],
                 [5.3, 0.72],
                 group=layer,

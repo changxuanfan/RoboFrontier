@@ -14,7 +14,7 @@
     "directory": "benchmark/dial/dial-small-l2"
   },
   "scene_asset": "benchmark/dial/dial-small-l2",
-  "scene_sha256": "8fef2353279122c393f23443bb2272bde421e62cd4bb3e6098415993e1606458",
+  "scene_sha256": "0231c1b97f83784f15ec9b03a838e99d9fb7fe689af7a635a42f72f498534e8f",
   "arms": {
     "A": {
       "base_position_m": [
@@ -400,15 +400,23 @@
     "global_rear",
     "global_side",
     "top",
+    "D01_front",
     "D01_side",
     "D01_high",
+    "D02_front",
     "D02_side",
     "D02_high",
+    "D03_front",
     "D03_side",
     "D03_high",
+    "D04_front",
     "D04_side",
     "D04_high",
-    "board"
+    "board",
+    "D01_face",
+    "D02_face",
+    "D03_face",
+    "D04_face"
   ],
   "view_camera": "global",
   "recording_camera": "global",

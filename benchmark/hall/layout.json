@@ -61,7 +61,7 @@
     },
     {
       "id": "relay",
-      "label": "AIR RELAY",
+      "label": "RELAY",
       "bounds_xy_m": [
         -24.5,
         -22.0,
@@ -83,7 +83,7 @@
     },
     {
       "id": "dial",
-      "label": "DIAL LAB",
+      "label": "DIAL",
       "workstation_gap_m": 0.6,
       "bounds_xy_m": [
         1.5,

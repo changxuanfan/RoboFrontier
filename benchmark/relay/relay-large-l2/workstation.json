@@ -65170,6 +65170,21 @@
       "vertical_fov_deg": 48.0
     },
     {
+      "id": "payload_01_weight_close",
+      "position_m": [
+        -1.862625,
+        -0.737211,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        0.7202311793928655,
+        0.48128619463701094,
+        -0.2775970276738476,
+        -0.41541610140777196
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
       "id": "payload_02_close",
       "position_m": [
         -1.346550992617015,
@@ -65183,6 +65198,21 @@
         -0.061835746749632985
       ],
       "vertical_fov_deg": 48.0
+    },
+    {
+      "id": "payload_02_weight_close",
+      "position_m": [
+        -1.517794,
+        1.274475,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        -0.4156856072543638,
+        -0.27788409316618434,
+        0.48129128000900134,
+        0.7199615340239193
+      ],
+      "vertical_fov_deg": 38.0
     },
     {
       "id": "payload_03_close",
@@ -65200,6 +65230,21 @@
       "vertical_fov_deg": 48.0
     },
     {
+      "id": "payload_03_weight_close",
+      "position_m": [
+        -0.343481,
+        1.951924,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        -0.14474658664243292,
+        -0.09672508102628179,
+        0.5471197921655694,
+        0.818750644199153
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
       "id": "payload_04_close",
       "position_m": [
         0.127757,
@@ -65213,9 +65258,24 @@
         -0.7414068582838146
       ],
       "vertical_fov_deg": 48.0
+    },
+    {
+      "id": "payload_04_weight_close",
+      "position_m": [
+        1.518675,
+        1.273425,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        0.2840263326010817,
+        0.18979523881644172,
+        0.5221777303356745,
+        0.7814328043109485
+      ],
+      "vertical_fov_deg": 38.0
     }
   ],
-  "scene_sha256": "6951329965332592b6e6b5c53dc18d67f6e335fe31a26dbc4d19872f0265be68",
+  "scene_sha256": "093a38951b73e63cf7631121c71c7e3f0515d4bf941ad140164e86916f5458c6",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

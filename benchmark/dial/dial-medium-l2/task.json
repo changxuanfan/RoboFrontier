@@ -14,7 +14,7 @@
     "directory": "benchmark/dial/dial-medium-l2"
   },
   "scene_asset": "benchmark/dial/dial-medium-l2",
-  "scene_sha256": "d48a4bfccd589e3556996e70230610f8de52745249fc377a9e51cd0735f0367f",
+  "scene_sha256": "12da9276bdcd9d3347983c3fecaddc1b6c98214f594362b4ac544f23b5048316",
   "arms": {
     "A": {
       "base_position_m": [
@@ -526,19 +526,31 @@
     "global_rear",
     "global_side",
     "top",
+    "D01_front",
     "D01_side",
     "D01_high",
+    "D02_front",
     "D02_side",
     "D02_high",
+    "D03_front",
     "D03_side",
     "D03_high",
+    "D04_front",
     "D04_side",
     "D04_high",
+    "D05_front",
     "D05_side",
     "D05_high",
+    "D06_front",
     "D06_side",
     "D06_high",
-    "board"
+    "board",
+    "D01_face",
+    "D02_face",
+    "D03_face",
+    "D04_face",
+    "D05_face",
+    "D06_face"
   ],
   "view_camera": "global",
   "recording_camera": "global",

@@ -156,8 +156,11 @@
     "top",
     "payload_close",
     "payload_01_close",
+    "payload_01_weight_close",
     "payload_02_close",
-    "payload_03_close"
+    "payload_02_weight_close",
+    "payload_03_close",
+    "payload_03_weight_close"
   ],
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",
   "initial_supplies": [
@@ -1104,6 +1107,23 @@
       "fixed_world": true
     },
     {
+      "id": "payload_01_weight_close",
+      "frame": "world",
+      "position_m": [
+        -2.602036,
+        1.559463,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        0.5139063777456722,
+        0.339511842155323,
+        -0.43425178265415026,
+        -0.657310682410011
+      ],
+      "vertical_fov_deg": 38.0,
+      "fixed_world": true
+    },
+    {
       "id": "payload_02_close",
       "frame": "world",
       "position_m": [
@@ -1121,6 +1141,23 @@
       "fixed_world": true
     },
     {
+      "id": "payload_02_weight_close",
+      "frame": "world",
+      "position_m": [
+        -0.813141,
+        2.850516,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        -0.2854082928491087,
+        -0.18857597247069283,
+        0.5180053953613154,
+        0.783997206217125
+      ],
+      "vertical_fov_deg": 38.0,
+      "fixed_world": true
+    },
+    {
       "id": "payload_03_close",
       "frame": "world",
       "position_m": [
@@ -1135,6 +1172,23 @@
         -0.4738154278954996
       ],
       "vertical_fov_deg": 48.0,
+      "fixed_world": true
+    },
+    {
+      "id": "payload_03_weight_close",
+      "frame": "world",
+      "position_m": [
+        1.374049,
+        2.602472,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        -0.02958070858254011,
+        -0.019535414537930743,
+        0.5507345031128701,
+        0.8339273687435892
+      ],
+      "vertical_fov_deg": 38.0,
       "fixed_world": true
     }
   ],

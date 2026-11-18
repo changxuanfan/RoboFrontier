@@ -24184,6 +24184,21 @@
       "vertical_fov_deg": 48.0
     },
     {
+      "id": "D01_front",
+      "position_m": [
+        -0.58,
+        -0.47,
+        1.35
+      ],
+      "quaternion_wxyz": [
+        0.8936056302471361,
+        0.44885295764940514,
+        -0.0,
+        -0.0
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
       "id": "D01_side",
       "position_m": [
         0.42000000000000004,
@@ -24210,6 +24225,21 @@
         0.3108171408263151,
         0.08254197903668868,
         0.24303343521926615
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
+      "id": "D02_front",
+      "position_m": [
+        0.0,
+        -0.47,
+        1.35
+      ],
+      "quaternion_wxyz": [
+        0.8936056302471361,
+        0.44885295764940514,
+        -0.0,
+        -0.0
       ],
       "vertical_fov_deg": 38.0
     },
@@ -24244,6 +24274,21 @@
       "vertical_fov_deg": 38.0
     },
     {
+      "id": "D03_front",
+      "position_m": [
+        0.58,
+        -0.47,
+        1.35
+      ],
+      "quaternion_wxyz": [
+        0.8936056302471361,
+        0.44885295764940514,
+        -0.0,
+        -0.0
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
       "id": "D03_side",
       "position_m": [
         1.58,
@@ -24270,6 +24315,21 @@
         0.3108171408263151,
         0.08254197903668868,
         0.24303343521926615
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
+      "id": "D04_front",
+      "position_m": [
+        -0.58,
+        -0.63,
+        1.35
+      ],
+      "quaternion_wxyz": [
+        0.9468869078368741,
+        0.3215667640897034,
+        -0.0,
+        -0.0
       ],
       "vertical_fov_deg": 38.0
     },
@@ -24304,6 +24364,21 @@
       "vertical_fov_deg": 38.0
     },
     {
+      "id": "D05_front",
+      "position_m": [
+        0.0,
+        -0.63,
+        1.35
+      ],
+      "quaternion_wxyz": [
+        0.9468869078368741,
+        0.3215667640897034,
+        -0.0,
+        -0.0
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
       "id": "D05_side",
       "position_m": [
         1.0,
@@ -24330,6 +24405,21 @@
         0.3108171408263151,
         0.08254197903668868,
         0.24303343521926615
+      ],
+      "vertical_fov_deg": 38.0
+    },
+    {
+      "id": "D06_front",
+      "position_m": [
+        0.58,
+        -0.63,
+        1.35
+      ],
+      "quaternion_wxyz": [
+        0.9468869078368741,
+        0.3215667640897034,
+        -0.0,
+        -0.0
       ],
       "vertical_fov_deg": 38.0
     },
@@ -24377,9 +24467,99 @@
         0.0
       ],
       "vertical_fov_deg": 40.0
+    },
+    {
+      "id": "D01_face",
+      "position_m": [
+        -0.58,
+        0.23,
+        3.805
+      ],
+      "quaternion_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "vertical_fov_deg": 7.2
+    },
+    {
+      "id": "D02_face",
+      "position_m": [
+        0.0,
+        0.23,
+        3.805
+      ],
+      "quaternion_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "vertical_fov_deg": 7.2
+    },
+    {
+      "id": "D03_face",
+      "position_m": [
+        0.58,
+        0.23,
+        3.805
+      ],
+      "quaternion_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "vertical_fov_deg": 7.2
+    },
+    {
+      "id": "D04_face",
+      "position_m": [
+        -0.58,
+        -0.23,
+        3.805
+      ],
+      "quaternion_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "vertical_fov_deg": 7.2
+    },
+    {
+      "id": "D05_face",
+      "position_m": [
+        0.0,
+        -0.23,
+        3.805
+      ],
+      "quaternion_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "vertical_fov_deg": 7.2
+    },
+    {
+      "id": "D06_face",
+      "position_m": [
+        0.58,
+        -0.23,
+        3.805
+      ],
+      "quaternion_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "vertical_fov_deg": 7.2
     }
   ],
-  "scene_sha256": "5e2b7659aed2ac83d4bc756360acb69cf6d420d1c883f4dd408033aa82a675e4",
+  "scene_sha256": "e304a79d51a0393b9c084f727e4f634cb7fd4ab2f7e87e3e05851e2dee1b5099",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

@@ -116,7 +116,11 @@
     "top",
     "payload_close",
     "payload_01_close",
-    "payload_02_close"
+    "payload_01_weight_close",
+    "payload_01_hinge_close",
+    "payload_02_close",
+    "payload_02_weight_close",
+    "payload_02_hinge_close"
   ],
   "coordinate_frame": "Workstation metres, +X east, +Y north, +Z up; radians; wxyz quaternions",
   "initial_supplies": [
@@ -844,6 +848,40 @@
       "fixed_world": true
     },
     {
+      "id": "payload_01_weight_close",
+      "frame": "world",
+      "position_m": [
+        -1.852296,
+        0.145558,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        -0.24349855368849369,
+        -0.16411413786688595,
+        0.5342555487626175,
+        0.7926827945150412
+      ],
+      "vertical_fov_deg": 38.0,
+      "fixed_world": true
+    },
+    {
+      "id": "payload_01_hinge_close",
+      "frame": "world",
+      "position_m": [
+        -1.431472,
+        -0.25,
+        1.0765
+      ],
+      "quaternion_wxyz": [
+        0.8459429386591742,
+        0.42376636577853216,
+        0.14499503580858109,
+        0.28944611132023224
+      ],
+      "vertical_fov_deg": 42.0,
+      "fixed_world": true
+    },
+    {
       "id": "payload_02_close",
       "frame": "world",
       "position_m": [
@@ -858,6 +896,40 @@
         -0.2872581128500094
       ],
       "vertical_fov_deg": 48.0,
+      "fixed_world": true
+    },
+    {
+      "id": "payload_02_weight_close",
+      "frame": "world",
+      "position_m": [
+        -0.352296,
+        0.145558,
+        1.12
+      ],
+      "quaternion_wxyz": [
+        -0.2434979723994758,
+        -0.1641138125312773,
+        0.5342558114719161,
+        0.7926828633711449
+      ],
+      "vertical_fov_deg": 38.0,
+      "fixed_world": true
+    },
+    {
+      "id": "payload_02_hinge_close",
+      "frame": "world",
+      "position_m": [
+        0.068528,
+        -0.25,
+        1.0765
+      ],
+      "quaternion_wxyz": [
+        0.8459428347028644,
+        0.42376657330108813,
+        0.14499510681407576,
+        0.28944607575075315
+      ],
+      "vertical_fov_deg": 42.0,
       "fixed_world": true
     }
   ],

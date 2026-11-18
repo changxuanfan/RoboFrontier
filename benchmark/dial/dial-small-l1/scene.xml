@@ -679,6 +679,7 @@
       </body>
       <geom name="D01_label" type="box" pos="-.04 .04 .0047" size=".018 .011 .0002" material="D01_identity" contype="0" conaffinity="0" mass="0" />
     </body>
+    <camera name="D01_front" pos="-0.3 -0.47 1.35" xyaxes="1.0 -0.0 0.0 0.0 0.597062 0.802195" fovy="38" />
     <camera name="D01_side" pos="0.7 -0.01999999999999999 1.4" xyaxes="0.24253562503633297 0.9701425001453319 -0.0 -0.4567009283847611 0.11417523209619028 0.8822631571069248" fovy="38" />
     <camera name="D01_high" pos="0.10000000000000003 -0.47 1.9" xyaxes="0.8682431421244592 0.4961389383568338 -0.0 -0.39351709066751694 0.6886549086681546 0.609014545080681" fovy="38" />
     <body name="D02_module" pos="0.3 0.23 0.805" quat="1 0 0 0">
@@ -705,6 +706,7 @@
       </body>
       <geom name="D02_label" type="box" pos="-.04 .04 .0047" size=".018 .011 .0002" material="D02_identity" contype="0" conaffinity="0" mass="0" />
     </body>
+    <camera name="D02_front" pos="0.3 -0.47 1.35" xyaxes="1.0 -0.0 0.0 0.0 0.597062 0.802195" fovy="38" />
     <camera name="D02_side" pos="1.3 -0.01999999999999999 1.4" xyaxes="0.24253562503633297 0.9701425001453319 -0.0 -0.4567009283847611 0.11417523209619028 0.8822631571069248" fovy="38" />
     <camera name="D02_high" pos="0.7 -0.47 1.9" xyaxes="0.8682431421244592 0.4961389383568338 -0.0 -0.39351709066751694 0.6886549086681546 0.609014545080681" fovy="38" />
     <body name="D03_module" pos="-0.3 -0.23 0.805" quat="1 0 0 0">
@@ -731,6 +733,7 @@
       </body>
       <geom name="D03_label" type="box" pos="-.04 .04 .0047" size=".018 .011 .0002" material="D03_identity" contype="0" conaffinity="0" mass="0" />
     </body>
+    <camera name="D03_front" pos="-0.3 -0.63 1.35" xyaxes="1.0 -0.0 0.0 0.0 0.79319 0.608975" fovy="38" />
     <camera name="D03_side" pos="0.7 -0.48 1.4" xyaxes="0.24253562503633294 0.9701425001453319 -0.0 -0.4567009283847611 0.11417523209619027 0.8822631571069248" fovy="38" />
     <camera name="D03_high" pos="0.10000000000000003 -0.9299999999999999 1.9" xyaxes="0.8682431421244592 0.4961389383568338 -0.0 -0.39351709066751694 0.6886549086681546 0.609014545080681" fovy="38" />
     <body name="D04_module" pos="0.3 -0.23 0.805" quat="1 0 0 0">
@@ -757,6 +760,7 @@
       </body>
       <geom name="D04_label" type="box" pos="-.04 .04 .0047" size=".018 .011 .0002" material="D04_identity" contype="0" conaffinity="0" mass="0" />
     </body>
+    <camera name="D04_front" pos="0.3 -0.63 1.35" xyaxes="1.0 -0.0 0.0 0.0 0.79319 0.608975" fovy="38" />
     <camera name="D04_side" pos="1.3 -0.48 1.4" xyaxes="0.24253562503633294 0.9701425001453319 -0.0 -0.4567009283847611 0.11417523209619027 0.8822631571069248" fovy="38" />
     <camera name="D04_high" pos="0.7 -0.9299999999999999 1.9" xyaxes="0.8682431421244592 0.4961389383568338 -0.0 -0.39351709066751694 0.6886549086681546 0.609014545080681" fovy="38" />
     <geom name="score_base" type="box" pos="0.7 0.0 0.8180000000000001" size="0.22 0.17 0.018" rgba="0.945 0.937 0.91 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
@@ -769,6 +773,10 @@
     <geom name="score_0_5" type="box" pos="0.6487499999999999 0.020000000000000018 0.837" size="0.00625 0.028749999999999998 0.0003" rgba="0.32 0.27 0.25 1.0" contype="0" conaffinity="0" mass="0" />
     <geom name="score_0_6" type="box" pos="0.6999999999999998 -0.015000000000000017 0.837" size="0.045 0.00625 0.0003" rgba="0.32 0.27 0.25 0.0" contype="0" conaffinity="0" mass="0" />
     <camera name="board" pos="0.7 0.0 1.65" xyaxes="1 0 0 0 1 0" fovy="40" />
+    <camera name="D01_face" pos="-0.3 0.23 3.805" xyaxes="1.0 0.0 0.0 0.0 1.0 0.0" fovy="7.2" />
+    <camera name="D02_face" pos="0.3 0.23 3.805" xyaxes="1.0 0.0 0.0 0.0 1.0 0.0" fovy="7.2" />
+    <camera name="D03_face" pos="-0.3 -0.23 3.805" xyaxes="1.0 0.0 0.0 0.0 1.0 0.0" fovy="7.2" />
+    <camera name="D04_face" pos="0.3 -0.23 3.805" xyaxes="1.0 0.0 0.0 0.0 1.0 0.0" fovy="7.2" />
     <geom name="table_leg_0_0" type="box" pos="-0.9 -0.9 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <geom name="table_leg_0_1" type="box" pos="0.9 -0.9 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <geom name="table_leg_0_2" type="box" pos="-0.9 0.9 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
