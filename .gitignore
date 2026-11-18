@@ -41,3 +41,6 @@ __pycache__/
 
 # The built hall ships in the asset archive (scripts/release/build_hall.py).
 /benchmark/hall/built/
+
+# Offline Cycles rendering, the film and their sources: local only, never published.
+/offline
