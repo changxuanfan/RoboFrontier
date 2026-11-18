@@ -5,11 +5,11 @@ description: Execute a RoboTeam run as Controller, Worker or adaptive delegate w
 
 # Robot collaboration
 
-Read [tools](references/tools.md) before robot operations. Read
-[communication](references/communication.md) in hierarchical, decentralized and adaptive
-runs, and [bounded forks](references/adaptive.md) in adaptive runs. Read
-[motion screening](references/motion-check.md) when you consider `check_motion`.
-The task's family Skill (`task_skill`) covers that family's manipulation.
+Read [tools](tools.md) before robot operations. Read
+[communication](communication.md) in hierarchical, decentralized and adaptive
+runs, and [bounded forks](adaptive.md) in adaptive runs. Read
+[motion screening](motion-check.md) when you consider `check_motion`.
+The task guide (`task_skill`) covers that family's manipulation.
 
 ## Roles and lifecycle
 

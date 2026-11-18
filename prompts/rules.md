@@ -9,7 +9,7 @@ These rules are part of your system prompt. Your first message carries your othe
 inputs in full, each under its path: `task.json`, `roles.json`, your role file, the
 robot-collaboration Skill and its tool reference, and the family materials
 task.json lists (paths relative to `public/inputs/`). The same files stay readable
-on disk. task.json states what this task requires; `task_skill` is the family Skill
+on disk. task.json states what this task requires; `task_skill` is the task guide
 on how to do it well.
 <!-- /tools -->
 <!-- tools:robot_only -->
@@ -18,8 +18,8 @@ inputs in full, each under its path: `task.json`, `roles.json`, your role file, 
 robot-collaboration Skill and its tool reference, and the family materials
 task.json lists (paths relative to `public/inputs/`). You can read any of them
 again, and the images the task lists, with the robot tool's `public_file`
-operation. task.json states what this task requires; `task_skill` is the family
-Skill on how to do it well.
+operation. task.json states what this task requires; `task_skill` is the task
+guide on how to do it well.
 <!-- /tools -->
 
 <!-- tools:full -->
