@@ -14,9 +14,7 @@ import threading
 import numpy as np
 
 from roboteam.sim.render.image import save_observation
-from roboteam.sim.render.look import DEFAULT_LOOK, display, look_model, set_colours
-
-MAX_GEOM = 5000
+from roboteam.sim.render.look import MAX_GEOM, HallView, display, look_model, set_colours, view_options
 
 
 def _graphics_context():
@@ -41,7 +39,7 @@ def _graphics_context():
     return window
 
 
-def apply_state(mujoco, model, data, state, look=DEFAULT_LOOK):
+def apply_state(mujoco, model, data, state):
     """Pose and appearance of the capture moment; everything drawn derives from these.
 
     `model` is the copy that `look_model` made, never the world's own model."""
@@ -49,13 +47,13 @@ def apply_state(mujoco, model, data, state, look=DEFAULT_LOOK):
     if model.nmocap:
         data.mocap_pos[:] = state['mocap_pos']
         data.mocap_quat[:] = state['mocap_quat']
-    set_colours(model, state['geom_rgba'], look)
+    set_colours(model, state['geom_rgba'])
     mujoco.mj_kinematics(model, data)
     mujoco.mj_comPos(model, data)
     mujoco.mj_camlight(model, data)
 
 
-def render_images(mujoco, Image, model, data, scene, options, context, request, look=DEFAULT_LOOK):
+def render_images(mujoco, Image, model, data, scene, options, context, request, hall):
     """Write one capture's images from a state already applied to `data`."""
     width, height = request['width'], request['height']
     viewport = mujoco.MjrRect(0, 0, width, height)
@@ -63,6 +61,7 @@ def render_images(mujoco, Image, model, data, scene, options, context, request, 
         camera = mujoco.MjvCamera()
         camera.type = mujoco.mjtCamera.mjCAMERA_FIXED
         camera.fixedcamid = camera_id
+        hall.select(model, data, camera_id, width, height)
         mujoco.mjv_updateScene(model, data, options, None, camera, mujoco.mjtCatBit.mjCAT_ALL, scene)
         mujoco.mjr_render(viewport, scene, context)
         rgb = np.empty((height, width, 3), dtype=np.uint8)
@@ -70,7 +69,7 @@ def render_images(mujoco, Image, model, data, scene, options, context, request, 
         # The display transform maps each pixel on its own, so it can run before the frame is flipped and reduced.
         save_observation(
             Image,
-            display(rgb, look),
+            display(rgb),
             path,
             request['format'],
             request['save_options'],
@@ -78,19 +77,19 @@ def render_images(mujoco, Image, model, data, scene, options, context, request, 
         )
 
 
-def _serve(connection, model_bytes, look):
+def _serve(connection, model_bytes):
     import mujoco
     from PIL import Image
 
-    model = look_model(pickle.loads(model_bytes), look)
+    model = look_model(pickle.loads(model_bytes))
     # Held for the life of the process: an EGL or OSMesa context object frees its context when
     # it is collected, and MjrContext then fails (gladLoadGL error).
     _graphics = _graphics_context()
     data = mujoco.MjData(model)
     context = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
     scene = mujoco.MjvScene(model, maxgeom=MAX_GEOM)
-    options = mujoco.MjvOption()
-    options.geomgroup[3] = 0
+    options = view_options()
+    hall = HallView(model)
     mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, context)
     connection.send('ready')
     while True:
@@ -101,18 +100,18 @@ def _serve(connection, model_bytes, look):
         if request is None:
             return
         try:
-            apply_state(mujoco, model, data, request['state'], look)
-            render_images(mujoco, Image, model, data, scene, options, context, request, look)
+            apply_state(mujoco, model, data, request['state'])
+            render_images(mujoco, Image, model, data, scene, options, context, request, hall)
             connection.send((request['id'], None))
         except Exception as error:
             connection.send((request['id'], repr(error)))
 
 
 class RenderWorker:
-    def __init__(self, model, look=DEFAULT_LOOK, ready_timeout_s=120.0):
+    def __init__(self, model, ready_timeout_s=120.0):
         spawn = multiprocessing.get_context('spawn')
         self.connection, child = spawn.Pipe()
-        self.process = spawn.Process(target=_serve, args=(child, pickle.dumps(model), look), daemon=True)
+        self.process = spawn.Process(target=_serve, args=(child, pickle.dumps(model)), daemon=True)
         self.process.start()
         child.close()
         if not self.connection.poll(ready_timeout_s) or self.connection.recv() != 'ready':
@@ -203,18 +202,46 @@ class LocalRenderer:
 
     It needs a current graphics context and draws to its own offscreen buffer."""
 
-    def __init__(self, mujoco, model, look=DEFAULT_LOOK):
-        self.look = look
-        self.model = look_model(model, look)
+    def __init__(self, mujoco, model):
+        self.model = look_model(model)
         self.data = mujoco.MjData(self.model)
         self.context = mujoco.MjrContext(self.model, mujoco.mjtFontScale.mjFONTSCALE_150)
         self.scene = mujoco.MjvScene(self.model, maxgeom=MAX_GEOM)
-        self.options = mujoco.MjvOption()
-        self.options.geomgroup[3] = 0
+        self.options = view_options()
+        self.hall = HallView(self.model)
+
+    def frame(self, mujoco, world, camera_id, width, height):
+        """The world as it is now, from one camera: display pixels, rows bottom-up."""
+        state = {'qpos': world.data.qpos, 'geom_rgba': world.model.geom_rgba[: world.task_geoms]}
+        if world.model.nmocap:
+            state.update(mocap_pos=world.data.mocap_pos, mocap_quat=world.data.mocap_quat)
+        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, self.context)
+        apply_state(mujoco, self.model, self.data, state)
+        camera = mujoco.MjvCamera()
+        camera.type = mujoco.mjtCamera.mjCAMERA_FIXED
+        camera.fixedcamid = camera_id
+        self.hall.select(self.model, self.data, camera_id, width, height)
+        mujoco.mjv_updateScene(
+            self.model, self.data, self.options, None, camera, mujoco.mjtCatBit.mjCAT_ALL, self.scene
+        )
+        viewport = mujoco.MjrRect(0, 0, width, height)
+        mujoco.mjr_render(viewport, self.scene, self.context)
+        rgb = np.empty((height, width, 3), dtype=np.uint8)
+        mujoco.mjr_readPixels(rgb, None, viewport, self.context)
+        return display(rgb)
+
+    def show(self, mujoco, rgb, width, height):
+        """Draw a frame from `frame` into the window, scaled to its size."""
+        from OpenGL import GL
+
+        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_WINDOW, self.context)
+        GL.glPixelZoom(width / rgb.shape[1], height / rgb.shape[0])
+        mujoco.mjr_drawPixels(rgb.reshape(-1), None, mujoco.MjrRect(0, 0, width, height), self.context)
+        GL.glPixelZoom(1, 1)
 
     def render(self, mujoco, Image, request):
         mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, self.context)
-        apply_state(mujoco, self.model, self.data, request['state'], self.look)
+        apply_state(mujoco, self.model, self.data, request['state'])
         render_images(
-            mujoco, Image, self.model, self.data, self.scene, self.options, self.context, request, self.look
+            mujoco, Image, self.model, self.data, self.scene, self.options, self.context, request, self.hall
         )

@@ -19,7 +19,14 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/helpers'))
-from anthropic_upstream_fixture import AnthropicStub, message_events, text, thinking, tool_use, usage  # noqa: E402
+from anthropic_upstream_fixture import (  # noqa: E402
+    AnthropicStub,
+    message_events,
+    text,
+    thinking,
+    tool_use,
+    usage,
+)
 from roboteam.harness.adapters.claude_in_codex import gateway  # noqa: E402
 
 LOCAL_KEY = 'local-gateway-key-not-a-credential-0123456789'

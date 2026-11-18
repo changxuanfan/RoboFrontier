@@ -28,7 +28,6 @@ from roboteam.runtime.world.service import RuntimeService
 from roboteam.sim.live_video import Video
 from roboteam.sim.motion_check import RobotGeometry, prepare_check, state_id
 from roboteam.sim.render.image import DEFAULT_PROFILE, observation_profile, reduced_size, render_size
-from roboteam.sim.render.look import look_of
 from roboteam.sim.robot_control import PandaArm
 from roboteam.tasks.config import action_limits, load_task, panda_control_profile
 
@@ -82,7 +81,16 @@ class World:
             if texture.get('file'):
                 texture.set('file', str(folder / texture.get('file')))
         self.xml = ET.tostring(root, encoding='unicode')
-        self.model = mujoco.MjModel.from_xml_string(self.xml)
+        from roboteam.sim.hall.world import check_hall, has_desk, load_world, task_geoms
+
+        # A released task runs at its desk in the hall. Any other scene (tools and tests build these) runs by itself.
+        released = (folder / 'workstation.json').exists() and has_desk(self.task.get('id'))
+        self.hall = check_hall() if released else None
+        if released:
+            self.model, self.task_scene = load_world(self.xml, self.task['id'])
+        else:
+            self.model, self.task_scene = mujoco.MjModel.from_xml_string(self.xml), None
+        self.task_geoms = task_geoms(self.model)
         self.data = mujoco.MjData(self.model)
         mujoco.mj_resetDataKeyframe(self.model, self.data, self.model.key('initial').id)
         mujoco.mj_forward(self.model, self.data)
@@ -155,10 +163,18 @@ class World:
 
         write_effective_physics(output / 'effective-physics.json', self.model, self.task['task_type'])
         (output / 'scene.xml').write_text(portable_xml(self.xml, output))
+        if self.hall:
+            atomic_json(output / 'hall.json', self.hall)
 
     @property
     def time(self):
         return float(self.data.time)
+
+    def task_model(self):
+        """A copy of the task scene's model with this world's current settings, without the hall."""
+        from roboteam.sim.hall.world import task_copy
+
+        return task_copy(self.model, getattr(self, 'task_scene', None))
 
     def held_grasps(self):
         """Arms holding a confirmed grasp, as a continued segment would restore them."""
@@ -295,7 +311,7 @@ class World:
         }
 
     def robot_model(self, cfg):
-        return RobotGeometry(self.model, self.arms).describe(self, cfg)
+        return RobotGeometry(self.task_model(), self.arms).describe(self, cfg)
 
     def check_motion(self, parameters, cfg):
         return prepare_check(self, parameters, cfg)
@@ -469,7 +485,6 @@ class Service(RuntimeService):
         }
         cfg = json.loads((Path(directory) / 'private/inputs/run.json').read_text())
         self.observation_image = observation_profile(cfg)
-        self.observation_look = look_of(cfg)
         from roboteam.runtime.run.segments import output_dir
 
         video_factory = (
@@ -505,7 +520,7 @@ class Service(RuntimeService):
             images.append((world.model.camera(name).id, str(path)))
             paths[name] = str(path)
         data, model = world.data, world.model
-        state = {'qpos': data.qpos.copy(), 'geom_rgba': model.geom_rgba.copy()}
+        state = {'qpos': data.qpos.copy(), 'geom_rgba': model.geom_rgba[: world.task_geoms].copy()}
         if model.nmocap:
             state.update(mocap_pos=data.mocap_pos.copy(), mocap_quat=data.mocap_quat.copy())
         width, height = render_size(self.observation_image)
@@ -526,19 +541,8 @@ class Service(RuntimeService):
         from roboteam.sim.render.worker import LocalRenderer
 
         if getattr(self, 'local_renderer', None) is None:
-            self.local_renderer = LocalRenderer(
-                mujoco, self.world.model, getattr(self, 'observation_look', 'direct')
-            )
-        try:
-            self.local_renderer.render(mujoco, Image, request)
-        finally:
-            # The view and the recording draw with the owner's own context: give it its buffer back.
-            mujoco.mjr_setBuffer(
-                mujoco.mjtFramebuffer.mjFB_OFFSCREEN
-                if getattr(self, 'offscreen_context', None)
-                else mujoco.mjtFramebuffer.mjFB_WINDOW,
-                self.context,
-            )
+            self.local_renderer = LocalRenderer(mujoco, self.world.model)
+        self.local_renderer.render(mujoco, Image, request)
 
     def finish_failed_captures(self):
         requests = self.render_worker.failed_captures()
@@ -683,21 +687,14 @@ class Service(RuntimeService):
                 self.directory / 'private/outputs/render-backend.json',
                 current_backend(self.config.get('render_device')),
             )
-            self.context = mujoco.MjrContext(self.world.model, mujoco.mjtFontScale.mjFONTSCALE_150)
-            self.scene = mujoco.MjvScene(self.world.model, maxgeom=5000)
-            self.options = mujoco.MjvOption()
-            self.options.geomgroup[3] = 0
-            self.cam = mujoco.MjvCamera()
-            self.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
-            self.cam.fixedcamid = self.world.model.camera(self.task.get('view_camera', 'global')).id
-            self.record_cam = mujoco.MjvCamera()
-            self.record_cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
-            self.record_cam.fixedcamid = self.world.model.camera(
-                self.task.get('recording_camera', 'global')
-            ).id
-            from roboteam.sim.render.worker import RenderWorker
+            from roboteam.sim.render.worker import LocalRenderer, RenderWorker
 
-            self.render_worker = RenderWorker(self.world.model, self.observation_look)
+            # The view and the recording are drawn here, with the look of the observation images.
+            self.local_renderer = LocalRenderer(mujoco, self.world.model)
+            self.context = self.local_renderer.context
+            view_camera = self.world.model.camera(self.task.get('view_camera', 'global')).id
+            record_camera = self.world.model.camera(self.task.get('recording_camera', 'global')).id
+            self.render_worker = RenderWorker(self.world.model)
             self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
             self.server.daemon_threads = True
             threading.Thread(target=self.server.serve_forever, daemon=True).start()
@@ -758,36 +755,12 @@ class Service(RuntimeService):
                             stream.write(json.dumps({'at': time.time(), **self.perf}) + '\n')
                         next_perf = now + 5
                     if not self.hidden and now >= next_frame:
-                        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_WINDOW, self.context)
-                        w, h = glfw.get_framebuffer_size(self.window)
-                        viewport = mujoco.MjrRect(0, 0, w, h)
-                        mujoco.mjv_updateScene(
-                            self.world.model,
-                            self.world.data,
-                            self.options,
-                            None,
-                            self.cam,
-                            mujoco.mjtCatBit.mjCAT_ALL,
-                            self.scene,
-                        )
-                        mujoco.mjr_render(viewport, self.scene, self.context)
+                        rgb = self.local_renderer.frame(mujoco, self.world, view_camera, 1280, 800)
+                        self.local_renderer.show(mujoco, rgb, *glfw.get_framebuffer_size(self.window))
                         glfw.swap_buffers(self.window)
                         next_frame = now + 1 / 30
                     if self.video and now >= next_record:
-                        mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, self.context)
-                        viewport = mujoco.MjrRect(0, 0, 1280, 800)
-                        mujoco.mjv_updateScene(
-                            self.world.model,
-                            self.world.data,
-                            self.options,
-                            None,
-                            self.record_cam,
-                            mujoco.mjtCatBit.mjCAT_ALL,
-                            self.scene,
-                        )
-                        mujoco.mjr_render(viewport, self.scene, self.context)
-                        rgb = np.empty((800, 1280, 3), dtype=np.uint8)
-                        mujoco.mjr_readPixels(rgb, None, viewport, self.context)
+                        rgb = self.local_renderer.frame(mujoco, self.world, record_camera, 1280, 800)
                         frame = np.ascontiguousarray(rgb[::-1])
                         fps = self.config['video_fps']
                         self.video.frame(frame)

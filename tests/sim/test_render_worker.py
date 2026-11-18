@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 
 from roboteam.sim.render.cocoa import start_glfw
-from roboteam.sim.render.look import LINEAR, TO_DISPLAY, TO_LINEAR, display, look_model, look_of
+from roboteam.sim.render.look import TO_DISPLAY, TO_LINEAR, display, look_model
 from roboteam.sim.render.worker import LocalRenderer, RenderWorker
 
 SCENE = '''<mujoco><visual><global offwidth="1280" offheight="800"/></visual><worldbody>
@@ -38,7 +38,7 @@ class RenderWorkerTests(unittest.TestCase):
         self.data.qpos[:3] = [0.1, 0.05, 0.2]
         mujoco.mj_forward(self.model, self.data)
         try:
-            self.worker = RenderWorker(self.model, LINEAR)
+            self.worker = RenderWorker(self.model)
         except RuntimeError as error:
             self.skipTest(str(error))
 
@@ -58,7 +58,7 @@ class RenderWorkerTests(unittest.TestCase):
             self.skipTest('No window here')
         glfw.make_context_current(window)
         del source_data, path  # self.job carries the state and the path
-        LocalRenderer(mujoco, source_model, LINEAR).render(mujoco, Image, self.job)
+        LocalRenderer(mujoco, source_model).render(mujoco, Image, self.job)
         glfw.destroy_window(window)
 
     def test_worker_draws_what_the_owner_would(self):
@@ -102,19 +102,9 @@ class ObservationLookTests(unittest.TestCase):
     def setUp(self):
         self.model = mujoco.MjModel.from_xml_string(SCENE)
 
-    def test_the_default_look_draws_the_scene_as_it_is(self):
-        self.assertEqual(look_of({}), 'direct')
-        with self.assertRaises(ValueError):
-            look_of({'observation_look': 'other'})
-        visual = look_model(self.model)
-        self.assertTrue(np.array_equal(visual.geom_rgba, self.model.geom_rgba))
-        self.assertTrue(np.array_equal(visual.vis.headlight.ambient, self.model.vis.headlight.ambient))
-        pixels = np.arange(256, dtype=np.uint8)
-        self.assertTrue(np.array_equal(display(pixels), pixels))
-
     def test_the_worlds_own_model_is_left_alone(self):
         colours, light = self.model.geom_rgba.copy(), self.model.vis.headlight.ambient.copy()
-        visual = look_model(self.model, LINEAR)
+        visual = look_model(self.model)
         self.assertTrue(np.array_equal(self.model.geom_rgba, colours))
         self.assertTrue(np.array_equal(self.model.vis.headlight.ambient, light))
         self.assertFalse(np.array_equal(visual.geom_rgba, colours))
@@ -122,18 +112,16 @@ class ObservationLookTests(unittest.TestCase):
     def test_colours_are_lit_in_linear_light(self):
         box = self.model.geom('box').id
         self.assertTrue(
-            np.allclose(
-                look_model(self.model, LINEAR).geom_rgba[box, :3], self.model.geom_rgba[box, :3] ** 2.2
-            )
+            np.allclose(look_model(self.model).geom_rgba[box, :3], self.model.geom_rgba[box, :3] ** 2.2)
         )
-        self.assertEqual(look_model(self.model, LINEAR).geom_rgba[box, 3], 1)
+        self.assertEqual(look_model(self.model).geom_rgba[box, 3], 1)
 
     def test_display_keeps_black_white_grey_and_order(self):
         self.assertEqual((int(TO_DISPLAY[0]), int(TO_DISPLAY[255])), (0, 255))
         self.assertTrue(
             (np.diff(TO_DISPLAY.astype(int)) >= 0).all() and (np.diff(TO_LINEAR.astype(int)) >= 0).all()
         )
-        grey = display(np.full((2, 2, 3), 90, np.uint8), LINEAR)
+        grey = display(np.full((2, 2, 3), 90, np.uint8))
         self.assertTrue((grey[..., 0] == grey[..., 1]).all() and (grey[..., 1] == grey[..., 2]).all())
         self.assertGreater(int(grey[0, 0, 0]), 90)  # mid tones come out lighter than the renderer wrote them
 

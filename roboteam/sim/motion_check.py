@@ -220,7 +220,9 @@ def prepare_check(world, parameters, cfg):
     motions = parameters['motions']
     if not isinstance(motions, list) or not motions or len(motions) > len(world.arms):
         raise ValueError('Supply one candidate per selected arm')
-    geometry = RobotGeometry(world.model, world.arms)
+    # The check plans on the task scene alone; the hall around it has no part in robot motion.
+    model = world.task_model()
+    geometry = RobotGeometry(model, world.arms)
     allowed = {
         mujoco.mjtGeom.mjGEOM_SPHERE,
         mujoco.mjtGeom.mjGEOM_CAPSULE,
@@ -263,7 +265,7 @@ def prepare_check(world, parameters, cfg):
     # A fresh data object defaults non-robot coordinates; no live free joint or
     # contact state is copied. Only explicitly named robot coordinates enter.
     preview = copy.copy(world)
-    preview.model = copy.copy(world.model)
+    preview.model = model
     preview.data = mujoco.MjData(preview.model)
     preview.data.time = world.time
     preview.arms = {}
@@ -290,7 +292,7 @@ def prepare_check(world, parameters, cfg):
         for suffix in ('finger_joint1', 'finger_joint2'):
             preview.data.joint(name + '_' + suffix).qpos[:] = world.data.joint(name + '_' + suffix).qpos
         preview.arms[name] = clone
-    mujoco.mj_kinematics(world.model, preview.data)
+    mujoco.mj_kinematics(model, preview.data)
     scheduled = {}
     for motion in motions:
         if not isinstance(motion, dict) or set(motion) - {
@@ -321,9 +323,9 @@ def prepare_check(world, parameters, cfg):
     reason = None
     if len(geometry.geoms) < 2:
         reason = 'Need at least two robots for inter-arm screening'
-    elif any(int(world.model.geom_type[g]) not in allowed for gs in geometry.geoms.values() for g in gs):
+    elif any(int(model.geom_type[g]) not in allowed for gs in geometry.geoms.values() for g in gs):
         reason = 'Unsupported collision geometry'
-    elif int(world.model.opt.disableflags) & int(mujoco.mjtDisableBit.mjDSBL_NATIVECCD):
+    elif int(model.opt.disableflags) & int(mujoco.mjtDisableBit.mjDSBL_NATIVECCD):
         reason = 'Native convex collision distance pipeline is disabled'
     elif any(a.job and a.job_op == 'gripper' for a in world.arms.values()):
         reason = 'An active gripper changes geometry; fixed-finger prediction unavailable'
@@ -367,7 +369,7 @@ def prepare_check(world, parameters, cfg):
                 preview.data.qpos[arm.qids] = arm.qref
                 preview.data.qvel[arm.dofs] = arm.velocity
             preview.data.time += dt
-            mujoco.mj_kinematics(world.model, preview.data)
+            mujoco.mj_kinematics(model, preview.data)
             failures = preview.poll_actions(cfg['action_timeout_sim_s'])
             if any(r['status'] != 'completed' for r in failures):
                 yield {**report, 'reason': 'Nominal controller failed to reach a target', 'closest': best}

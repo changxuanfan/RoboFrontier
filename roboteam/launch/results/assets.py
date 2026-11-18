@@ -5,6 +5,7 @@ Codex login, benchmark results, prepared worlds or private Dial answers.
 """
 
 import argparse
+import hashlib
 import io
 import json
 import os
@@ -62,10 +63,42 @@ def panda_assets(source):
     return expected
 
 
+HALL = 'benchmark/hall/built/'
+
+
+def hall_assets(facts, pinned):
+    """The built hall's files by hash. `facts` is its hall.json, whose own hash is pinned in
+    benchmark/assets.json and so vouches for the scene file and every texture and mesh."""
+    expected = {HALL + 'hall.json': pinned, HALL + 'hall.xml': facts['hall_sha256']}
+    for name, checksum in facts['files'].items():
+        relative = PurePosixPath(name)
+        if relative.is_absolute() or '..' in relative.parts:
+            raise ValueError('Unsafe hall asset path')
+        expected[HALL + name] = checksum
+    return expected
+
+
+def pinned_hall(root):
+    """The hash of the built hall's hall.json this checkout pins, or None for a release without a hall."""
+    path = root / 'benchmark/assets.json'
+    return read(path).get('hall_sha256') if path.is_file() else None
+
+
+def local_hall_assets(source, config):
+    """The built hall under `source`, checked against the pin; nothing for a release without a hall."""
+    if not config.get('hall_sha256'):
+        return {}
+    path = source / HALL / 'hall.json'
+    if digest(path) != config['hall_sha256']:
+        raise ValueError('The built hall does not match the pinned release (scripts/release/build_hall.py)')
+    return hall_assets(read(path), config['hall_sha256'])
+
+
 def export_assets(source, output, root=ROOT):
     source, output = Path(source).resolve(), Path(output).absolute()
     expected = scene_assets(root)
     expected.update(panda_assets(source))
+    expected.update(local_hall_assets(source, {'hall_sha256': pinned_hall(root)}))
     sources = {}
     for name, checksum in expected.items():
         path = source / name
@@ -118,6 +151,15 @@ def restore_assets(archive_path, root=ROOT):
                 raise ValueError('Unsafe Panda source path')
         expected.update({'vendor/panda/' + name: checksum for name, checksum in panda['sha256'].items()})
         expected['vendor/panda/SOURCE.json'] = manifest['files']['vendor/panda/SOURCE.json']
+        pinned = pinned_hall(root)
+        if pinned:
+            if HALL + 'hall.json' not in names:
+                raise ValueError('The archive holds no hall')
+            with archive.extractfile(HALL + 'hall.json') as stream:
+                content = stream.read()
+            if hashlib.sha256(content).hexdigest() != pinned:
+                raise ValueError('The archive holds a different hall than this release pins')
+            expected.update(hall_assets(json.loads(content), pinned))
         if expected != manifest['files'] or set(names) != set(expected) | {'assets-manifest.json'}:
             raise ValueError('Unexpected archive contents')
         staged = Path(temporary)
@@ -190,11 +232,12 @@ def setup_assets(root=ROOT, archive_path=None):
         if digest(root / 'vendor/panda/SOURCE.json') != config['panda_source_sha256']:
             raise ValueError('Existing Panda source manifest does not match the pinned release')
         expected.update(panda_assets(root))
+        expected.update(local_hall_assets(root, config))
         if all(
             (root / name).is_file() and digest(root / name) == checksum for name, checksum in expected.items()
         ):
             return {'status': 'already_complete', 'files': len(expected)}
-    except (FileNotFoundError, KeyError):
+    except (FileNotFoundError, KeyError, ValueError):
         pass
     archive_path = ensure_asset_archive(root, archive_path)
     result = restore_assets(archive_path, root)

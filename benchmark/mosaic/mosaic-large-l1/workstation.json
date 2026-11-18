@@ -53413,14 +53413,14 @@
       "id": "global_rear",
       "position_m": [
         0.0,
-        3.745375386604189,
-        3.6676949246409025
+        4.07991,
+        3.450093
       ],
       "quaternion_wxyz": [
         0.0,
         0.0,
-        0.4213840651888828,
-        0.9068822799045593
+        0.4213839027382591,
+        0.9068823553874413
       ],
       "vertical_fov_deg": 43.0
     },
@@ -53515,7 +53515,7 @@
       "vertical_fov_deg": 40.0
     }
   ],
-  "scene_sha256": "4c3560a6310f12f1228270d9d82aac2bc3d13ea29f07d33834835b13dc9bfd30",
+  "scene_sha256": "f6ac15eaa59c6d2eb577049481a6e274e9513b6b95bdc469bbc7a7cd66441ce2",
   "support_surfaces": {
     "tabletop_z_m": 0.8,
     "ground_collision": "floor",

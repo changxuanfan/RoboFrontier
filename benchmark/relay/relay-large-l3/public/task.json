@@ -141,7 +141,7 @@
     "Each timber must have at least 70 percent of its centreline length in the vertical space above the GOAL outline. Final completion requires release from every robot; direct or indirect table support is not required.",
     "Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.",
     "The initial endpoint chord is 1.20m. The underside fixed eye is 100 mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170 mm long and carries a 600g weight. There is no mounting stem, cable or tray.",
-    "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with \u00b125 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
+    "The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.",
     "A handover qualifies only while the timber is off the table and at least two current holders keep it: a new arm must hold the timber for at least 0.2 seconds before a current holder lets go. A timber placed in GOAL without a qualified handover is not complete; a regrasp of a timber resting on the table is never a handover.",
     "A timber that falls may be lifted again by the arms that held it when it fell. If any other arm picks it up, none of that timber's handovers counts until it is put down, lifted again by those arms and handed over again in the air. Pushing or dragging a timber along the table is allowed but is never a handover.",
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
@@ -1342,14 +1342,14 @@
       "frame": "world",
       "position_m": [
         0.0,
-        6.077712070336709,
-        5.206403898609783
+        5.979944,
+        4.367221
       ],
       "quaternion_wxyz": [
         0.0,
         0.0,
-        0.4213840651888827,
-        0.9068822799045593
+        0.4213839027382591,
+        0.9068823553874413
       ],
       "vertical_fov_deg": 43.0,
       "fixed_world": true

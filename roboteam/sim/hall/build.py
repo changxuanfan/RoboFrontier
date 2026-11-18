@@ -1859,7 +1859,9 @@ def build_factory(config_path=DEFAULT_CONFIG, output=None, workstation_catalog=N
         if not (-W / 2 < x0 < x1 < W / 2 and -D / 2 < y0 < y1 < D / 2):
             raise ValueError('Region outside building: ' + r['id'])
     assets = output / 'assets'
-    shutil.copytree(ROOT / 'benchmark/hall', assets, dirs_exist_ok=True)
+    shutil.copytree(
+        ROOT / 'benchmark/hall', assets, dirs_exist_ok=True, ignore=shutil.ignore_patterns('built')
+    )
     (assets / 'meshes').mkdir(parents=True, exist_ok=True)
     (assets / 'textures').mkdir(exist_ok=True)
     _texture_assets(assets / 'textures', config['seed'], config['appearance'].get('painted_roof', False))

@@ -41,13 +41,15 @@ freeze it as `observation_image_profile`, and the public task states the format 
 When a published camera calibration names an image size, the run gets a copy at the observation
 resolution and the published file stays as it is. Video recording has its own resolution.
 
-A run's settings also name the look of its images as `observation_look`
-(`roboteam/sim/render/look.py`). `direct`, the default, writes the scene as MuJoCo draws
-it. `linear` draws from a copy of the world's model whose colours and textures are converted to
-linear light, with fill light added so that a white object comes out white, and gives each image one
-display transform; its pictures are brighter and less heavy. Neither look changes the world's own
-model, so physics, the live view and the recording are the same. An image takes about 30 ms on a
-laptop GPU.
+A released task runs at its desk in the factory hall (`roboteam/sim/hall/world.py`). The hall
+and the other 35 desks, each at its task's start, stand still around the desk and take no part in
+collisions, so the motion is the same with and without them. Images are drawn from a copy of the
+world's model (`roboteam/sim/render/look.py`): colours and textures are converted to linear light,
+the hall's key light casts hard shadows, and each image gets one display transform. An image draws
+only the hall shapes that can show in it or shade it. The result is the image that drawing all of
+them gives: in some views a handful of pixels differ by one level out of 255, from antialiasing.
+The arms on the other desks are drawn from simplified meshes. An image takes 10 to 40 ms on a laptop GPU. The live view and the recording are drawn the
+same way.
 
 ## Robot requests and IDs
 

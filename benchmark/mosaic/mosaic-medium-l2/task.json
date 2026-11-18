@@ -15,7 +15,7 @@
     "directory": "benchmark/mosaic/mosaic-medium-l2"
   },
   "scene_asset": "benchmark/mosaic/mosaic-medium-l2",
-  "scene_sha256": "dff9c6aa9f0fa705417792dd628994ab7f7254736b38aacb575bf2e4abd3d6b7",
+  "scene_sha256": "f95489b1b859b4b38e95d7b234eba38c42a0de0b413bef1d3b56fe9bc8176efa",
   "arms": {
     "A": {
       "base_position_m": [

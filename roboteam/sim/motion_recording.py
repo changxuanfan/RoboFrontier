@@ -72,7 +72,8 @@ class MotionWriter:
         self.wall = []
         self.closed = False
         self.previous = np.asarray(data.qpos, dtype='<f4').view('<u4').copy()
-        self.colors = model.geom_rgba.copy()
+        # The recording covers the task scene's own geoms; the hall around it never changes.
+        self.colors = model.geom_rgba[: len(self.geom_ids)].copy()
         self.events = (self.path / 'events.jsonl').open('x')
         self.meta = dict(
             schema='roboteam.motion.v1',
@@ -89,7 +90,7 @@ class MotionWriter:
             frames=0,
             write_wall_s=0.0,
             max_sample_gap_s=0.0,
-            initial_rgba=model.geom_rgba.tolist(),
+            initial_rgba=self.colors.tolist(),
             quantization='float64 to float32 is lossy; compressed float32 states reconstruct exactly',
             created_unix_s=time.time(),
         )
@@ -113,7 +114,7 @@ class MotionWriter:
             raise RuntimeError('Recorder already closed')
         # Monitor/device updates precede this hook. Appearance changes use the
         # same physics clock even when they fall between position samples.
-        changed = np.flatnonzero(np.any(self.model.geom_rgba != self.colors, axis=1))
+        changed = np.flatnonzero(np.any(self.model.geom_rgba[: len(self.colors)] != self.colors, axis=1))
         if len(changed):
             self.event(
                 data.time,

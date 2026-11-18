@@ -39,3 +39,6 @@ __pycache__/
 /benchmark/hall/textures/*
 !/benchmark/hall/textures/exterior-daylight-v1.png
 !/benchmark/hall/textures/exterior-daylight-v1.prompt.txt
+
+# The built hall ships in the asset archive (scripts/release/build_hall.py).
+/benchmark/hall/built/

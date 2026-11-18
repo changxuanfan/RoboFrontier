@@ -12,7 +12,7 @@
     "directory": "benchmark/transport/transport-small-l1"
   },
   "scene_asset": "benchmark/transport/transport-small-l1",
-  "scene_sha256": "83c12c855e70127cba355f254b4936ad0f2f8adf3851953765f13c415ec84e5e",
+  "scene_sha256": "2879dd050af56dd6a5764676f4520fa84cc2a982cd597f09b3d0d9a0d923586f",
   "arms": {
     "A": {
       "base_position_m": [

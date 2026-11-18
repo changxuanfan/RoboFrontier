@@ -92,7 +92,7 @@ prepared batch.
 | --- | --- |
 | `roboteam.toml` | The defaults for new runs |
 | `models.json` | Every selectable model, one section per harness (`harnesses.codex`, `harnesses.claude`, which also holds Claude transcript prices). A run freezes its harness's section |
-| `roboteam/runtime/run/defaults.json` | The policy runtime's settings (system, startup protocol, timeouts, check intervals, motion and video rates, and optionally `observation_look`); no speeds or forces, which every action states. A batch sets the harness, system, model and effort over it |
+| `roboteam/runtime/run/defaults.json` | The policy runtime's settings (system, startup protocol, timeouts, check intervals, motion and video rates); no speeds or forces, which every action states. A batch sets the harness, system, model and effort over it |
 | `roboteam/runtime/sandbox/policy-env/` | The policy Python environment's inputs (`core.in`, `store.in`) and locks (`core.lock`, `all.lock`) |
 | `roboteam/harness/adapters/*/requirements.txt` | The optional dependencies of the two model adapters: `claude_in_codex` (opus-5.5 in Codex) and `gpt_in_claude` (gpt-6.1-sol in Claude Code) |
 | `benchmark/assets.json` | The pinned policy asset archive and its inventory, restored by `roboteam bootstrap` |

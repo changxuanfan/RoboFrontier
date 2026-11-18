@@ -206,7 +206,6 @@ def compose(
     shell,
     catalog_path,
     output,
-    table_opening_scale=None,
     source_overrides=None,
     source_root=None,
     placement_overrides=None,
@@ -296,10 +295,10 @@ def compose(
     del shell_model, shell_data
 
     def floor_label(name, text, position, half):
-        image = Image.new('RGB', (1600, 256), (245, 245, 240))
+        image = Image.new('RGB', (800, 128), (245, 245, 240))
         draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype(str(root_dir / 'benchmark/hall/fonts/BarlowCondensed-SemiBold.ttf'), 150)
-        draw.text((800, 128), text, font=font, anchor='mm', fill=(0, 0, 0))
+        font = ImageFont.truetype(str(root_dir / 'benchmark/hall/fonts/BarlowCondensed-SemiBold.ttf'), 75)
+        draw.text((400, 64), text, font=font, anchor='mm', fill=(0, 0, 0))
         file = output / 'workstation-assets' / (name + '.png')
         file.parent.mkdir(exist_ok=True)
         image.save(file)
@@ -335,16 +334,7 @@ def compose(
         source.frame()
         m, d = source.model, source.data
         amap = assets.import_source(source)
-        from roboteam.sim.table_presentation import scale_rectangular_opening_for_render
-
-        if place['task_type'] == 'transport':
-            item = next(c for c in catalog['cases'] if c['id'] == place['case_id'])
-            scale_rectangular_opening_for_render(
-                m,
-                item.get('table_opening_scale', 1.0) if table_opening_scale is None else table_opening_scale,
-            )
-            mujoco.mj_kinematics(m, d)
-        # Display only: a letter label under a robot base slides out towards the table edge.
+        # A run moves a letter label out from under its robot base (place_robot_labels): the same here.
         from roboteam.sim.hall.labels import robot_label_moves
 
         label_moves = robot_label_moves(m, d, avoid_objects=place['task_type'] != 'mosaic')
@@ -409,9 +399,6 @@ def compose(
                     kwargs.update(mesh=amap[m.mesh(mid).name], pos=vec(raw_p), quat=vec(matrix_quat(raw_r)))
                 if m.geom_matid[g] >= 0:
                     kwargs['material'] = amap[m.mat(int(m.geom_matid[g])).name]
-                if entry['id'].startswith('table_') and 'leg' not in entry['id']:
-                    if root.find("asset/material[@name='factory_bench_wood']") is not None:
-                        kwargs['material'] = 'factory_bench_wood'
                 ET.SubElement(body, 'geom', **kwargs)
                 geommap[entry['id']] = kwargs['name']
         mapping[place['case_id']] = dict(
@@ -470,7 +457,6 @@ def compose(
         workstation_names=mapping,
         task_workstations=len(plan),
         source_catalog=str(Path(catalog_path).resolve()),
-        table_opening_linear_scale=table_opening_scale,
         source_overrides={k: str(Path(v).resolve()) for k, v in (source_overrides or {}).items()},
     )
     manifest['factory_labels'] = dict(

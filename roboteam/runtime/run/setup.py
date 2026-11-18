@@ -12,7 +12,6 @@ from roboteam.runtime.run.bootstrap import SKILLS_HEADER, write_bootstraps
 from roboteam.runtime.tools import tools_mode
 from roboteam.runtime.world.store import RuntimeStore, packed
 from roboteam.sim.render.image import observation_profile
-from roboteam.sim.render.look import DEFAULT_LOOK, look_of
 from roboteam.tasks.config import (
     CONTROLLER,
     ROOT,
@@ -44,8 +43,6 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
         raise ValueError('Choose a new run directory; existing runs are never overwritten')
     task, cfg = load_task(task_path), load_run_settings(run_settings_path)
     # Freeze the defaults the run settings leave out.
-    cfg.setdefault('observation_look', DEFAULT_LOOK)
-    look_of(cfg)
     # Letter labels sit beside each robot, as in this run's videos.
     cfg.setdefault('robot_labels', 'beside-robot-v1')
     image_profile = observation_profile(cfg)

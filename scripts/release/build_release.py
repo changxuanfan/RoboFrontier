@@ -9,6 +9,7 @@ run again on its own output.
     python -m scripts.release.build_release letters   # print Transport block letters upright
     python -m scripts.release.build_release codes     # one fixed private code per Dial case
     python -m scripts.release.build_release public    # each case's final public task and materials
+    python -m scripts.release.build_release cameras   # camera records and Dial previews follow the scenes
     python -m scripts.release.build_release check     # the scenes already carry them
 
 See docs/benchmark/physics.md for the values and where they come from.
@@ -587,6 +588,99 @@ def public(args):
     pin_asset_release()
 
 
+def _follow_cameras(value, names, pose):
+    """Camera name lists and camera pose lists rebuilt in the scene's order; everything else as it is."""
+    if isinstance(value, dict):
+        return {k: _follow_cameras(v, names, pose) for k, v in value.items()}
+    if isinstance(value, list):
+        if value and all(isinstance(x, str) for x in value) and 'global' in value:
+            return list(names)
+        if value and all(isinstance(x, dict) for x in value) and any(x.get('id') == 'global' for x in value):
+            order = list(value[0])
+            extra = {k: v for k, v in value[0].items() if k not in ('id', *pose['global'])}
+            return [{k: {'id': n, **pose[n], **extra}[k] for k in order} for n in names]
+        return [_follow_cameras(x, names, pose) for x in value]
+    return value
+
+
+def draw_previews(folder, names, width=1280, height=800):
+    """Dial's public previews of its fixed cameras at the start, drawn as a run draws its images."""
+    import tempfile
+
+    from PIL import Image
+
+    from roboteam.runtime.world.pipeline import World
+    from roboteam.sim.render.worker import LocalRenderer, _graphics_context
+    from roboteam.tasks.task_types import prepare
+
+    with tempfile.TemporaryDirectory(prefix='rf-preview-') as temporary:
+        run = Path(temporary) / 'run'
+        prepare(folder.name, run)
+        world = World(run, json.loads((run / 'private/inputs/task.json').read_text()))
+        graphics = _graphics_context()
+        renderer = LocalRenderer(mujoco, world.model)
+        for name in names:
+            rgb = renderer.frame(mujoco, world, world.model.camera(name).id, width, height)
+            Image.fromarray(np.ascontiguousarray(rgb[::-1])).save(folder / 'public' / f'preview-{name}.png')
+        del renderer, graphics
+
+
+def cameras(args):
+    """After the cameras of a scene changed: the camera lists and poses its case files record
+    follow the compiled scene, Dial's public previews are drawn again, and every recorded hash
+    of a changed file is rewritten."""
+    require_unfrozen()
+    release = json.loads((BENCHMARK / 'release.json').read_text())
+    for task_type in release['task_types'].values():
+        for case in task_type['policy']:
+            folder = ROOT / case['directory']
+            recorded = dict(case['source_files'])
+            model = compile_scene(folder)
+            names = [model.camera(c).name for c in range(model.ncam)]
+            pose = {
+                n: {
+                    'position_m': model.cam_pos[model.camera(n).id].tolist(),
+                    'quaternion_wxyz': model.cam_quat[model.camera(n).id].tolist(),
+                    'vertical_fov_deg': float(model.cam_fovy[model.camera(n).id]),
+                }
+                for n in names
+            }
+            for name in (
+                'task.json',
+                'workstation.json',
+                'public/task.json',
+                'public/camera-calibration.json',
+            ):
+                path = folder / name
+                if not path.exists():
+                    continue
+                text = path.read_text()
+                old = json.loads(text)
+                new = _follow_cameras(old, names, pose)
+                if new != old:
+                    second = text.split('\n')[1] if '\n' in text else ''
+                    indent = len(second) - len(second.lstrip()) or None
+                    path.write_text(json.dumps(new, indent=indent, ensure_ascii=False) + '\n')
+            replace_hashes(
+                folder,
+                {
+                    old: file_sha256(folder / n)
+                    for n, old in recorded.items()
+                    if old != file_sha256(folder / n)
+                },
+            )
+            previews = [
+                n[len('preview-') : -len('.png')]
+                for n in case.get('public_files', {})
+                if n.startswith('preview-')
+            ]
+            if previews and not args.keep_previews:
+                draw_previews(folder, previews)
+            print(case['id'], len(names), 'cameras', len(previews), 'previews', flush=True)
+    index_release()
+    pin_asset_release()
+
+
 def require_unfrozen():
     if json.loads((BENCHMARK / 'release.json').read_text()).get('frozen'):
         raise SystemExit(
@@ -635,6 +729,9 @@ def main(argv=None):
     sub.add_parser('letters').set_defaults(run=letters)
     sub.add_parser('codes').set_defaults(run=codes)
     sub.add_parser('public').set_defaults(run=public)
+    step = sub.add_parser('cameras')
+    step.add_argument('--keep-previews', action='store_true')
+    step.set_defaults(run=cameras)
     step = sub.add_parser('settle')
     step.add_argument('--cases', nargs='*')
     step.set_defaults(run=settle)

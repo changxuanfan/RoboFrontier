@@ -121,6 +121,43 @@ class HandoffAssetsTests(unittest.TestCase):
         write('vendor/panda/SOURCE.json', json.dumps({'sha256': {'robot.xml': checksum(robot)}}))
         return scene
 
+    def hall_fixture(self, root):
+        """A built hall and the pin that vouches for it."""
+        built = root / 'benchmark/hall/built'
+        (built / 'files').mkdir(parents=True)
+        (built / 'hall.xml').write_text('<mujoco/>')
+        (built / 'files/floor.png').write_text('texture')
+        facts = {
+            'hall_sha256': digest(built / 'hall.xml'),
+            'files': {'files/floor.png': digest(built / 'files/floor.png')},
+        }
+        (built / 'hall.json').write_text(json.dumps(facts))
+        (root / 'benchmark/assets.json').write_text(json.dumps({'hall_sha256': digest(built / 'hall.json')}))
+        return built
+
+    def test_the_pinned_hall_travels_in_the_archive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, target = root / 'source', root / 'target'
+            self.fixture(source)
+            self.fixture(target)
+            self.hall_fixture(source)
+            built = self.hall_fixture(target)
+            archive = root / 'assets.tar.gz'
+            self.assertEqual(export_assets(source, archive, source)['files'], 6)
+            for name in ('hall.json', 'hall.xml', 'files/floor.png'):
+                (built / name).unlink()
+            self.assertEqual(restore_assets(archive, target)['restored'], 3)
+            self.assertEqual((built / 'files/floor.png').read_text(), 'texture')
+            # A checkout that pins another hall refuses this archive.
+            (target / 'benchmark/assets.json').write_text(json.dumps({'hall_sha256': '0' * 64}))
+            with self.assertRaisesRegex(ValueError, 'different hall'):
+                restore_assets(archive, target)
+            # A hall that is not the pinned one is never exported.
+            (source / 'benchmark/hall/built/hall.json').write_text('{}')
+            with self.assertRaisesRegex(ValueError, 'does not match the pinned'):
+                export_assets(source, root / 'bad.tar.gz', source)
+
     def test_archive_restores_exact_assets_and_does_not_export_credentials(self):
         import tarfile
 

@@ -14,7 +14,7 @@
     "directory": "benchmark/dial/dial-medium-l3"
   },
   "scene_asset": "benchmark/dial/dial-medium-l3",
-  "scene_sha256": "467df19039adcb15174fe816f354ce15f5ec3957426e5951bf5a679e9d763a9f",
+  "scene_sha256": "445d98ae06392d2a16b9f2306e086e9af7d5b8793850b9d49b600673a10eaf3d",
   "arms": {
     "A": {
       "base_position_m": [

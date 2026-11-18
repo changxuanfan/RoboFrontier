@@ -104,9 +104,6 @@ def freeze_scene(task, directory):
         compiler.set('meshdir', 'model-assets')
         ET.indent(root)
         ET.ElementTree(root).write(dest / 'scene.xml', encoding='unicode')
-    for name in ('preview-global.png', 'preview-global_rear.png', 'preview-top.png'):
-        if (source / name).is_file():
-            shutil.copy2(source / name, directory / 'public/inputs' / name)
     if task['task_type'] == 'mosaic':
         shutil.copy2(source / 'public/target-pattern.png', directory / 'public/inputs/target-pattern.png')
     for name in ('robot-layout.png', 'camera-guide.json'):

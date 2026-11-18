@@ -123,7 +123,9 @@ class Monitor:
         self.geom_owner = np.full(self.m.ngeom, -1, dtype=int)
         self.finger = np.full(self.m.ngeom, -1, dtype=int)
         roots = {self.m.body(r + '_link0').id: i for i, r in enumerate(self.robots)}
-        for g in range(self.m.ngeom):
+        # Hall shapes follow the task's own and belong to no robot or object.
+        self.task_geoms = getattr(world, 'task_geoms', self.m.ngeom)
+        for g in range(self.task_geoms):
             body = int(self.m.geom_bodyid[g])
             name = self.m.body(body).name or ''
             while body and body not in roots:
@@ -267,7 +269,7 @@ class Monitor:
 
     def descendant_geoms(self, root):
         out = []
-        for g in range(self.m.ngeom):
+        for g in range(self.task_geoms):
             if not (self.m.geom_contype[g] or self.m.geom_conaffinity[g]):
                 continue
             b = int(self.m.geom_bodyid[g])

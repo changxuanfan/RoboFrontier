@@ -50,7 +50,7 @@ class ObservationImageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, mujoco.Renderer(model, width=1280, height=800) as renderer:
             root = Path(tmp)
             (root / 'public/observations').mkdir(parents=True)
-            world = SimpleNamespace(model=model, data=data, time=0, arms={})
+            world = SimpleNamespace(model=model, data=data, time=0, arms={}, task_geoms=model.ngeom)
             # No worker here, so the owner draws the capture itself; it needs only a current graphics context.
             service = SimpleNamespace(
                 obs=0,
@@ -136,7 +136,7 @@ class ObservationImageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, mujoco.Renderer(model, width=1280, height=800) as renderer:
             root = Path(tmp)
             (root / 'public/observations').mkdir(parents=True)
-            world = SimpleNamespace(model=model, data=data, time=0, arms={})
+            world = SimpleNamespace(model=model, data=data, time=0, arms={}, task_geoms=model.ngeom)
             service = SimpleNamespace(
                 obs=0,
                 directory=root,

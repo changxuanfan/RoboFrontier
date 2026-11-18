@@ -1165,7 +1165,7 @@
     <geom name="table_leg_0_2" type="box" pos="-1.9599999999999997 0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <geom name="table_leg_0_3" type="box" pos="1.9599999999999997 0.93 0.375" size="0.035 0.035 0.375" rgba="0.3 0.32 0.34 1.0" friction="0.4 0.005 0.0001" condim="4" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
     <camera name="global" pos="0.0 -3.435572 3.292954" xyaxes="1.0 -0.0 0.0 0.0 0.644871 0.764291" fovy="43" />
-    <camera name="global_rear" pos="0.0 3.3608132653516316 3.5684127065852516" xyaxes="-1.0 0.0 0.0 0.0 -0.6448709392097829 0.7642914835078909" fovy="43" />
+    <camera name="global_rear" pos="0.0 3.435572 3.292954" xyaxes="-1.0 0.0 0.0 0.0 -0.644871 0.764291" fovy="43" />
     <camera name="global_side" pos="-4.031704 0.0 2.985442" xyaxes="0.0 -1.0 0.0 0.572383 0.0 0.819987" fovy="48" />
     <camera name="top" pos="0.0 0.0 5.283392572125644" xyaxes="1 0 0 0 1 0" fovy="48" />
     <body name="payload_01" pos="-1.46 0.0 0.8225" quat="1.0 0.0 0.0 0.0">
