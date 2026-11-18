@@ -53,8 +53,8 @@ class StandingPhysicsSmokeTests(unittest.TestCase):
                 PhysicalStandingModel.requests.clear()
                 try:
                     batch = directory / 'batch'
-                    prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], system=system)
-                    run = batch / 'haiku/transport-a04-d1'
+                    prepare_batch(batch, ['haiku'], cases=['transport-small-l1'], system=system)
+                    run = batch / 'haiku/transport-small-l1'
                     launch = run / 'private/inputs/claude.json'
                     data = json.loads(launch.read_text())
                     data['model_entry'].update(

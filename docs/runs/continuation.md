@@ -89,7 +89,7 @@ crashed host leaves no orphan holding the world lock.
 
 ```sh
 .venv/bin/roboteam continue BATCH                          # every run that may continue
-.venv/bin/roboteam continue BATCH --cases dial-best5-n04-d1  # only these
+.venv/bin/roboteam continue BATCH --cases dial-small-l1  # only these
 ```
 
 The batch must not be running. Each run gets its next segment

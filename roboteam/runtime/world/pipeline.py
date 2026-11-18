@@ -153,7 +153,7 @@ class World:
         output.mkdir(parents=True, exist_ok=True)
         from roboteam.runtime.world.effective_physics import write as write_effective_physics
 
-        write_effective_physics(output / 'effective-physics.json', self.model, self.task['family'])
+        write_effective_physics(output / 'effective-physics.json', self.model, self.task['task_type'])
         (output / 'scene.xml').write_text(portable_xml(self.xml, output))
 
     @property
@@ -328,49 +328,48 @@ class World:
         forward_after_step(self)
 
     def start_trial(self):
-        if self.task.get('execution_readiness') == 'environment_preview_only':
+        if 'execution_readiness' not in self.task:
             raise ValueError(
-                'This v2 scene is an environment preview. Mechanism-specific evaluation and recording '
-                'commissioning are required before starting a policy trial.'
+                'This task was not prepared as a policy trial (roboteam.tasks.task_types.policy_task); '
+                'a released task file on its own cannot be started.'
             )
         if self.task.get('execution_readiness') == 'prepared_policy_trial':
             from roboteam.tasks.task_types import validate_frozen_policy
 
             validate_frozen_policy(self.task, self.directory)
-        if self.task.get('kind') == 'frontier_suite':
-            from roboteam.tasks.evaluate import Monitor
+        from roboteam.tasks.evaluate import Monitor
 
-            secret = (
-                json.loads((self.directory / 'private/inputs/suite-code.json').read_text())['code_symbols']
-                if self.task['family'] == 'dial'
-                else None
+        secret = (
+            json.loads((self.directory / 'private/inputs/suite-code.json').read_text())['code_symbols']
+            if self.task['task_type'] == 'dial'
+            else None
+        )
+        frozen = json.loads((self.directory / 'private/inputs/run.json').read_text())
+        self.suite_sampler = Monitor(
+            self,
+            secret=secret,
+            log_path=self.directory / 'private/outputs/suite-process.jsonl',
+            log_format=frozen.get('process_log', 'full'),
+            append=self.segment > 0,
+        )
+        source = self.directory / Path(self.task['scene_asset']).parent
+        if (source / 'workstation.json').exists():
+            from roboteam.sim.motion_recording import MotionWriter
+
+            # Run settings without motion_hz record at 60 Hz.
+            hz = frozen.get('motion_hz', 60)
+            from roboteam.runtime.run.segments import output_dir
+
+            folder = output_dir(self.directory, self.segment)
+            folder.mkdir(parents=True, exist_ok=True)
+            self.motion_recorder = MotionWriter(
+                folder / 'motion',
+                source,
+                self.model,
+                self.data,
+                hz=hz,
+                cache=runs_root() / 'state-assets',
             )
-            frozen = json.loads((self.directory / 'private/inputs/run.json').read_text())
-            self.suite_sampler = Monitor(
-                self,
-                secret=secret,
-                log_path=self.directory / 'private/outputs/suite-process.jsonl',
-                log_format=frozen.get('process_log', 'full'),
-                append=self.segment > 0,
-            )
-            source = self.directory / Path(self.task['scene_asset']).parent
-            if (source / 'workstation.json').exists():
-                from roboteam.sim.motion_recording import MotionWriter
-
-                # Run settings without motion_hz record at 60 Hz.
-                hz = frozen.get('motion_hz', 60)
-                from roboteam.runtime.run.segments import output_dir
-
-                folder = output_dir(self.directory, self.segment)
-                folder.mkdir(parents=True, exist_ok=True)
-                self.motion_recorder = MotionWriter(
-                    folder / 'motion',
-                    source,
-                    self.model,
-                    self.data,
-                    hz=hz,
-                    cache=runs_root() / 'state-assets',
-                )
 
     def end_trial(self):
         if getattr(self, 'suite_sampler', None) is not None:
@@ -443,11 +442,9 @@ class World:
         return None
 
     def evaluate(self):
-        if self.task.get('kind') == 'frontier_suite':
-            if self.suite_sampler is None:
-                return {'all_goals_met': False, 'task_success': False, 'scope': 'Trial not started'}
-            return self.suite_sampler.result()
-        raise ValueError('Unsupported task kind: ' + str(self.task.get('kind')))
+        if getattr(self, 'suite_sampler', None) is None:
+            return {'all_goals_met': False, 'task_success': False, 'scope': 'Trial not started'}
+        return self.suite_sampler.result()
 
 
 class Service(RuntimeService):

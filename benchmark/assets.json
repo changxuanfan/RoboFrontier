@@ -1,8 +1,8 @@
 {
-  "release": "assets-20261111",
-  "url": "https://github.com/changxuanfan/RoboTeam/releases/download/assets-20261111/policy-assets-20261111.tar.gz",
-  "archive_sha256": "83169e74fb0e12f702bbc500b01350a47403a9e488afcd9d8b37bf163e98e8df",
+  "release": "assets-20261118",
+  "url": "https://github.com/changxuanfan/RoboTeam/releases/download/assets-20261118/task-assets-20261118.tar.gz",
+  "archive_sha256": "f8f6a933422ab379717550a9b3fb578d688ac55d2cc4f9d1dea5c7b041cc6d15",
   "panda_source_sha256": "b3702cb6a1f33835ebf19cfa303b4108ce67dd4aece802d8f732f3b984736c4d",
-  "archive_release_sha256": "f1f255de39e9d99e370a57e985bfdb364839d3ff7c2f84d64ff741e3a1f4ceae",
-  "release_sha256": "790f478f3dcab0dc2fdfb48ac78ba78a4a63a26a8108a34b1ce09727b7248c6f"
+  "archive_release_sha256": "2e1e7e213e1e26f0fa1a72758873293c85fa8ac44780a30b767092c8296b2187",
+  "release_sha256": "2e1e7e213e1e26f0fa1a72758873293c85fa8ac44780a30b767092c8296b2187"
 }

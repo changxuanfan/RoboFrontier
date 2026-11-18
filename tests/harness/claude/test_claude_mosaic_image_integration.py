@@ -57,7 +57,7 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 batch = Path(tmp) / 'batch'
-                case = 'mosaic-a04-6x12-d1'
+                case = 'mosaic-small-l1'
                 ReferenceModel.image_names = ['target-pattern.png']
                 prepare_batch(batch, ['opus'], cases=[case])
                 run = batch / 'opus' / case
@@ -138,7 +138,7 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
         ReferenceModel.requests.clear()
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                case = 'dial-best5-n04-d1'
+                case = 'dial-small-l1'
                 batch = Path(tmp) / 'batch'
                 prepare_batch(batch, ['opus'], cases=[case])
                 run = batch / 'opus' / case

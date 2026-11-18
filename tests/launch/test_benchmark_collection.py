@@ -342,7 +342,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             batch, run, _ = self.make_batch(root)
-            write(run / 'private/inputs/task.json', {'kind': 'frontier_suite'})
+            write(run / 'private/inputs/task.json', {'id': 'transport-small-l1'})
             with sqlite3.connect(run / 'private/state/runtime.sqlite') as conn:
                 conn.execute('create table meta(key text,value text)')
                 conn.execute('insert into meta values (?,?)', ('lifecycle', json.dumps('running')))

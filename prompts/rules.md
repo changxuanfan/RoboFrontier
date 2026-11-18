@@ -7,18 +7,18 @@ These rules apply to every policy role in this run. Paths are under `{{RUN_DIR}}
 <!-- tools:full -->
 These rules are part of your system prompt. Your first message carries your other
 inputs in full, each under its path: `task.json`, `roles.json`, your role file, the
-robot-collaboration Skill and its tool reference, and the task materials
+collaboration guide and its tool reference, and the task materials
 task.json lists (paths relative to `public/inputs/`). The same files stay readable
-on disk. task.json states what this task requires; `task_skill` is the task guide
+on disk. task.json states what this task requires; `task_guide` is the task guide
 on how to do it well.
 <!-- /tools -->
 <!-- tools:robot_only -->
 These rules are part of your system prompt. Your first message carries your other
 inputs in full, each under its path: `task.json`, `roles.json`, your role file, the
-robot-collaboration Skill and its tool reference, and the task materials
+collaboration guide and its tool reference, and the task materials
 task.json lists (paths relative to `public/inputs/`). You can read any of them
 again, and the images the task lists, with the robot tool's `public_file`
-operation. task.json states what this task requires; `task_skill` is the task
+operation. task.json states what this task requires; `task_guide` is the task
 guide on how to do it well.
 <!-- /tools -->
 
@@ -28,10 +28,10 @@ feedback, your work note, authorized messages and the reports referenced to you,
 and this run's shared lessons in `{{RUN_DIR}}/workspace/skills.md`. Public robot specifications and declared
 calibration are usable. Private evaluator state, scene source, the benchmark's code,
 probes and recipes, other runs, other role connections and earlier solutions
-are not policy inputs. The rules, role instructions, Skills and task inputs are
+are not policy inputs. The rules, role instructions, guides and task inputs are
 frozen for this run and read-only. You work in `{{RUN_DIR}}/workspace/`, the only place
 you can write: keep temporary files there, and add lessons to its `skills.md` as the
-Skill describes.
+collaboration guide describes.
 <!-- /tools -->
 <!-- tools:robot_only -->
 Policy inputs are the public task and task materials, permitted RGB and robot
@@ -40,10 +40,10 @@ and this run's shared lessons, which the robot tool's `skills` operation reads a
 extends. Public robot specifications and declared
 calibration are usable. Private evaluator state, scene source, the benchmark's code,
 probes and recipes, other runs, other role connections and earlier solutions
-are not policy inputs. The rules, role instructions, Skills and task inputs are
+are not policy inputs. The rules, role instructions, guides and task inputs are
 frozen for this run and read-only. The robot tool is your only tool in this run:
 there is no shell, no code execution and no file tool. Keep progress in your
-work note, and add lessons through `skills` as the Skill describes.
+work note, and add lessons through `skills` as the collaboration guide describes.
 <!-- /tools -->
 
 Operate robots only through the robot tool your host binds (CLI: `robot`;

@@ -17,7 +17,6 @@ relative path such as `_media/oracle/` for a local preview.
 import argparse
 import hashlib
 import json
-import re
 from pathlib import Path
 
 from roboteam.tasks.config import ROOT
@@ -74,17 +73,16 @@ def oracle_videos():
     return json.loads(ORACLE_VIDEOS.read_text())['videos']
 
 
-def workload(case):
-    """The task type's unit of work for one case, from its released identity."""
-    task_type, arms = case['family'], case['arm_count']
-    if task_type == 'transport':
-        return 3 * arms
-    if task_type == 'mosaic':
-        rows, cols = map(int, re.search(r'-(\d+)x(\d+)-', case['id']).groups())
-        return rows * cols
-    if task_type == 'relay':
-        return {8: 2, 12: 3, 16: 4}[arms]
-    return len(case['dials'])
+def workload(task):
+    """The task type's unit of work for one case, from its released task: targets, cells,
+    timbers or dials."""
+    if task['task_type'] == 'transport':
+        return len(task['goals'])
+    if task['task_type'] == 'mosaic':
+        return task['grid']['rows'] * task['grid']['columns']
+    if task['task_type'] == 'relay':
+        return len(task['objects'])
+    return len(task['dials'])
 
 
 def tasks():
@@ -98,7 +96,7 @@ def tasks():
     references = oracle_videos()
     rows = []
     for task_type in TASK_TYPES:
-        for record in release['families'][task_type]['policy']:
+        for record in release['task_types'][task_type]['policy']:
             # The same rule overlay a new policy run receives.
             task = policy_task(record['id'])
             public = public_task(task)
@@ -106,32 +104,26 @@ def tasks():
                 for folder in ('public/inputs', 'private/inputs'):
                     (Path(temporary) / folder).mkdir(parents=True)
                 freeze_public(task, Path(temporary), public)
-            case = {
-                'id': public['id'],
-                'family': public['family'],
-                'level': public['level'],
-                'arm_count': len(task['arms']),
-                'dials': public.get('dials'),
-            }
             rows.append(
                 {
-                    'id': case['id'],
-                    'family': task_type,
-                    'level': case['level'],
-                    'arms': case['arm_count'],
-                    'workload': workload(case),
+                    'id': public['id'],
+                    'task_type': task_type,
+                    'size': task['scale']['size'],
+                    'level': public['level'],
+                    'arms': len(task['arms']),
+                    'workload': workload(task),
                     'unit': TASK_TYPES[task_type]['unit'],
-                    'level_note': TASK_TYPES[task_type]['levels'][case['level'] - 1],
+                    'level_note': TASK_TYPES[task_type]['levels'][public['level'] - 1],
                     'objective': public['objective'],
                     'rules': public['rules'],
-                    'oracle': references[case['id']],
+                    'oracle': references[public['id']],
                 }
             )
-    rows.sort(key=lambda r: (list(TASK_TYPES).index(r['family']), r['arms'], r['workload'], r['level']))
+    rows.sort(key=lambda r: (list(TASK_TYPES).index(r['task_type']), r['arms'], r['workload'], r['level']))
     document = {
         'schema': 'roboteam.site-tasks.v1',
         'release_sha256': hashlib.sha256(payload).hexdigest(),
-        'families': TASK_TYPES,
+        'task_types': TASK_TYPES,
         'tasks': rows,
     }
     return write(SITE / 'tasks.json', document)
@@ -171,8 +163,8 @@ def readme_gallery(page=PROJECT_PAGE, readme=ROOT / 'README.md'):
     """Fill the README's gallery block: per task type a 3 x 3 table of task thumbnails."""
     data = json.loads((SITE / 'tasks.json').read_text())
     blocks = []
-    for task_type, info in data['families'].items():
-        rows = [t for t in data['tasks'] if t['family'] == task_type]
+    for task_type, info in data['task_types'].items():
+        rows = [t for t in data['tasks'] if t['task_type'] == task_type]
         key = (lambda t: t['workload']) if task_type == 'dial' else (lambda t: t['arms'])
         scales = sorted({key(t) for t in rows})
         head = ''.join(f'<th>{s} {"dials" if task_type == "dial" else "arms"}</th>' for s in scales)

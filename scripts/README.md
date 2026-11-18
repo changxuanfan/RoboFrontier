@@ -32,7 +32,7 @@ See [physics](../docs/benchmark/physics.md) and [benchmark](../benchmark/README.
 | Script | Purpose |
 | --- | --- |
 | `run_tests.py` | Run every Python and Node test in parallel, rerunning a failed module alone; CI's `all-tests` job |
-| `check_harness.py` | Offline checks: fake services, robot and contact physics, Node hosts, syntax and documentation links; `--protocol-only` blocks physics |
+| `check_runtime.py` | Offline checks: fake services, robot and contact physics, Node hosts, syntax and documentation links; `--protocol-only` blocks physics |
 | `verify_evidence_replay.py` | Compare restored evidence with the original: all motion states and events, and sampled renders |
 | `view_batch.py` | Loopback, read-only batch viewer using existing JSON and images only ([viewer](../docs/runs/viewer.md)) |
 

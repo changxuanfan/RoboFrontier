@@ -11,7 +11,7 @@ from roboteam.tasks.task_types import RELEASE, ROOT, read
 
 class RelayTerminalContactTests(unittest.TestCase):
     def test_all_nine_public_tasks_declare_the_same_user_contact_contract(self):
-        relay = read(ROOT / RELEASE)['families']['relay']['policy']
+        relay = read(ROOT / RELEASE)['task_types']['relay']['policy']
         self.assertEqual(len(relay), 9)
         for case in relay:
             task = json.loads((ROOT / case['directory'] / 'task.json').read_text())

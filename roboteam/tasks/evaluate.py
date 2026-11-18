@@ -117,7 +117,7 @@ class Monitor:
         self.m = world.model
         self.d = world.data
         self.task = world.task
-        self.task_type = self.task['family']
+        self.task_type = self.task['task_type']
         self.robots = list(world.arms)
         self.robot_index = {r: i for i, r in enumerate(self.robots)}
         self.geom_owner = np.full(self.m.ngeom, -1, dtype=int)
@@ -760,7 +760,7 @@ def mosaic_candidates(mon, positions, stable):
 
 
 def placement_candidates(mon, positions, stable):
-    if mon.task['family'] == 'mosaic':
+    if mon.task['task_type'] == 'mosaic':
         return mosaic_candidates(mon, positions, stable)
     task = mon.task
     m, d = mon.m, mon.d
@@ -769,7 +769,7 @@ def placement_candidates(mon, positions, stable):
     side = task['cube_size_m']
     tol = 0.0003
     for i, g in enumerate(goals):
-        if task['family'] == 'transport':
+        if task['task_type'] == 'transport':
             board = d.body(g['board'])
             br = board.xmat.reshape(3, 3)
             bv = mon.velocity(board.id)

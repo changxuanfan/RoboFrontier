@@ -36,7 +36,7 @@ def snapshot(run):
     return files
 
 
-def prepared(root, harness, case='transport-a04-d1'):
+def prepared(root, harness, case='transport-small-l1'):
     """A prepared run of `case` for `harness` with the default run settings."""
     path = Path(root) / (harness + '-run.json')
     path.write_text(json.dumps(dict(RUN_SETTINGS, harness=harness)))
@@ -87,7 +87,7 @@ class HarnessParityTests(unittest.TestCase):
             tempfile.TemporaryDirectory() as tmp,
             patch('mujoco.mj_step', side_effect=AssertionError('No physics')),
         ):
-            for case in ('transport-a04-d1', 'mosaic-a04-6x12-d1', 'relay-a08-d1', 'dial-best5-n04-d1'):
+            for case in ('transport-small-l1', 'mosaic-small-l1', 'relay-small-l1', 'dial-small-l1'):
                 with self.subTest(case=case):
                     self.assert_same_inputs(self.prepare_pair(tmp, case, 'adaptive'))
 
@@ -98,7 +98,7 @@ class HarnessParityTests(unittest.TestCase):
         ):
             for system in ('single-agent', 'hierarchical', 'decentralized'):
                 with self.subTest(system=system):
-                    runs = self.prepare_pair(tmp, 'transport-a04-d1', system)
+                    runs = self.prepare_pair(tmp, 'transport-small-l1', system)
                     self.assert_same_inputs(runs)
                     roles = json.loads((runs['codex'] / 'public/inputs/roles.json').read_text())['roles']
                     for actor, info in roles.items():
@@ -112,7 +112,7 @@ class HarnessParityTests(unittest.TestCase):
             tempfile.TemporaryDirectory() as tmp,
             patch('mujoco.mj_step', side_effect=AssertionError('No physics')),
         ):
-            run = self.prepare_pair(tmp, 'mosaic-a04-6x12-d1', 'adaptive')['codex']
+            run = self.prepare_pair(tmp, 'mosaic-small-l1', 'adaptive')['codex']
             public = run / 'public/inputs'
             text = (run / 'private/inputs/bootstrap/Controller.md').read_text()
             for relative in (
@@ -219,7 +219,7 @@ class HarnessRenderingTests(unittest.TestCase):
         run_settings = dict(RUN_SETTINGS, harness=harness)
         path = Path(tmp) / (harness + '.json')
         path.write_text(json.dumps(run_settings))
-        return prepare('transport-a04-d1', Path(tmp) / harness, path)
+        return prepare('transport-small-l1', Path(tmp) / harness, path)
 
     def test_claude_policy_turns_get_confined_file_tools_and_the_frozen_system_prompt(self):
         from roboteam.harness.claude.session.runner import (

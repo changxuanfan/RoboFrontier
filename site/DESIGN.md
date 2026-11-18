@@ -50,7 +50,7 @@ Results are not kept in this repository. The page fetches them from the data rep
  "conditions": [{"key": "adaptive", "label": "Adaptive", "group": "Agent systems · gpt-6.1-sol, Codex",
                  "completed": 0, "within": {"3": 0, "6": 0, "12": 0, "24": 0},
                  "median_hours": 0.0, "median_input_tokens_m": 0.0, "atomic_failure": 0.0}],
- "outcomes": {"gpt-6.1-sol": {"mosaic-a08-12x24-d3": {"completed": false, "hours": 24.0}}}}
+ "outcomes": {"gpt-6.1-sol": {"mosaic-large-l3": {"completed": false, "hours": 24.0}}}}
 ```
 
 `conditions` are drawn in the order given, grouped by `group`. `outcomes` is keyed by video

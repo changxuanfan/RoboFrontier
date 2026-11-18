@@ -210,7 +210,7 @@ class ObservationImageTests(unittest.TestCase):
                     if p.is_file()
                 }
 
-            for case in ('mosaic-a04-6x12-d3', 'dial-best5-n04-d3'):
+            for case in ('mosaic-small-l3', 'dial-small-l3'):
                 sharp = prepare(case, root / case / 'sharp', root / (DEFAULT_PROFILE + '.json'))
                 low = prepare(case, root / case / 'low', root / (LOW_RESOLUTION_PROFILE + '.json'))
                 self.assertEqual(
@@ -254,7 +254,7 @@ class ObservationImageTests(unittest.TestCase):
         from roboteam.tasks.task_types import prepare
 
         with tempfile.TemporaryDirectory() as tmp:
-            run = prepare('dial-best5-n04-d1', Path(tmp) / 'dial')
+            run = prepare('dial-small-l1', Path(tmp) / 'dial')
             public = json.loads((run / 'public/inputs/task.json').read_text())
             # The policy sees one calibration sized for this run; the signed original is private.
             original = json.loads(

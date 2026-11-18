@@ -202,7 +202,7 @@ def load_segment(run):
 
 def _motion_folder_inventory(path, task):
     if not (path / 'stream.json').is_file():
-        return ['missing motion recording'] if task.get('kind') == 'frontier_suite' else []
+        return ['missing motion recording'] if task.get('id') else []
 
     def checked(name, checksum=None):
         p = path / name

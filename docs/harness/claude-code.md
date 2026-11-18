@@ -69,7 +69,7 @@ export ROBOTEAM_CLAUDE_HOME="$HOME/.claude"
 claude auth login --claudeai
 claude auth status --json
 .venv/bin/roboteam prepare --harness claude --model haiku_subscription \
-  --render native --cases transport-a04-d1 --output runs/policy/haiku-login
+  --render native --cases transport-small-l1 --output runs/policy/haiku-login
 ```
 
 `haiku_subscription` requires `$HOME/.claude` with `CLAUDE_CONFIG_DIR` unset. Claude Code keeps a

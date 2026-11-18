@@ -24,8 +24,8 @@ const svg = (tag, attrs = {}, ...kids) => {
 };
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canHover = matchMedia('(hover: hover)').matches;
-const FAMILY_ORDER = ['transport', 'mosaic', 'relay', 'dial'];
-const SHOWCASE = {transport: 'transport-a12-d3', mosaic: 'mosaic-a08-12x24-d3', relay: 'relay-a16-d3', dial: 'dial-best5-n08-d3'};
+const TYPE_ORDER = ['transport', 'mosaic', 'relay', 'dial'];
+const SHOWCASE = {transport: 'transport-large-l3', mosaic: 'mosaic-large-l3', relay: 'relay-large-l3', dial: 'dial-large-l3'};
 // The video sets on the wall, in this order: the six models of the paper, then the Oracle.
 // A set shows "soon" until data/media.json lists it. `about` says how the set was run.
 const SOURCES = [
@@ -40,7 +40,7 @@ const SOURCES = [
 // Results are published apart from the code, in the data repository.
 const RESULTS_URL = 'https://changxuanfan.github.io/RoboTeam-data/results.json';
 
-const state = {tasks: null, media: null, results: null, source: 'oracle', family: 'all', view: 'front', explainFamily: 'transport'};
+const state = {tasks: null, media: null, results: null, source: 'oracle', taskType: 'all', view: 'front', explainType: 'transport'};
 
 async function load(path) {
   try { const r = await fetch(path, {cache: 'no-cache'}); return r.ok ? r.json() : null; } catch { return null; }
@@ -115,9 +115,8 @@ function hoverPlay(host) {
   return host;
 }
 
-const familyOf = id => id.split('-')[0];
-const scaleOf = id => id.replace(/-d\d$/, '');
-const scaleNumber = id => +(id.match(/-[an](\d+)/) || [0, 0])[1];
+const typeOf = id => id.split('-')[0];
+const SIZES = ['small', 'medium', 'large'];
 // The first published set that has this task, models before the Oracle.
 const bestSet = id => SOURCES.find(s => clip(s.key, id, 'front'))?.key;
 const outcome = (key, id) => state.results?.outcomes?.[key]?.[id];
@@ -127,13 +126,13 @@ function pendingPanel(title, text) { return h('div', {class: 'pending'}, h('h4',
 // ---------- hero: one live run of each task type ----------
 function stage() {
   const box = $('#stage');
-  for (const key of FAMILY_ORDER) {
+  for (const key of TYPE_ORDER) {
     const id = SHOWCASE[key], t = task(id), set = bestSet(id), c = set && clip(set, id, 'front');
-    const all = state.tasks.tasks.filter(x => x.family === key).map(x => x.id);
+    const all = state.tasks.tasks.filter(x => x.task_type === key).map(x => x.id);
     const tile = h('button', {class: 'stage-tile', type: 'button', style: `--c:${famColor(key)}`, disabled: !c,
-      'aria-label': `${state.tasks.families[key].name}: ${t.arms} arms. Open the run.`, onclick: () => openPlayer(set, id, all)},
+      'aria-label': `${state.tasks.task_types[key].name}: ${t.arms} arms. Open the run.`, onclick: () => openPlayer(set, id, all)},
       c ? h('video', {src: c.video, poster: c.poster, muted: true, loop: true, playsinline: true, autoplay: !reduced, preload: 'metadata'}) : h('div', {class: 'stage-empty'}),
-      h('span', {class: 'stage-label'}, h('b', {}, state.tasks.families[key].name), `${t.arms} arms`));
+      h('span', {class: 'stage-label'}, h('b', {}, state.tasks.task_types[key].name), `${t.arms} arms`));
     const v = $('video', tile); if (v) v.muted = true;
     box.append(tile);
   }
@@ -150,25 +149,25 @@ function wallControls() {
     tabs.append(h('button', {type: 'button', role: 'tab', 'aria-selected': s.key === state.source, title: pending ? 'Videos are being prepared' : null,
       onclick: e => { state.source = s.key; $$('button', tabs).forEach(b => b.setAttribute('aria-selected', b === e.currentTarget)); drawWall(); }},
       s.label, pending ? h('small', {}, '· soon') : null)); }
-  const fam = $('#wall-family');
-  for (const key of ['all', ...FAMILY_ORDER]) fam.append(h('button', {type: 'button', role: 'tab', 'aria-selected': key === state.family,
+  const fam = $('#wall-type');
+  for (const key of ['all', ...TYPE_ORDER]) fam.append(h('button', {type: 'button', role: 'tab', 'aria-selected': key === state.taskType,
     style: key === 'all' ? null : `--c:${famColor(key)}`,
-    onclick: e => { state.family = key; $$('button', fam).forEach(b => b.setAttribute('aria-selected', b === e.currentTarget)); drawWall(); }},
-    key === 'all' ? null : h('i'), key === 'all' ? 'All' : state.tasks.families[key].name));
+    onclick: e => { state.taskType = key; $$('button', fam).forEach(b => b.setAttribute('aria-selected', b === e.currentTarget)); drawWall(); }},
+    key === 'all' ? null : h('i'), key === 'all' ? 'All' : state.tasks.task_types[key].name));
   $$('#wall-view button').forEach(b => b.addEventListener('click', () => {
     state.view = b.dataset.view; $$('#wall-view button').forEach(x => x.setAttribute('aria-selected', x === b)); drawWall(); }));
   drawWall();
 }
 function drawWall() {
   const box = $('#wall'); box.replaceChildren();
-  const list = state.tasks.tasks.filter(t => state.family === 'all' || t.family === state.family);
+  const list = state.tasks.tasks.filter(t => state.taskType === 'all' || t.task_type === state.taskType);
   const ids = list.map(t => t.id);
   const done = list.filter(t => outcome(state.source, t.id)?.completed).length, scored = list.filter(t => outcome(state.source, t.id)).length;
   $('#wall-about').textContent = sourceOf(state.source).about + (scored ? ` Completed ${done} of ${scored} shown.` : '');
   let shown = 0;
   for (const t of list) {
     const c = clip(state.source, t.id, state.view), o = outcome(state.source, t.id);
-    const tile = h('button', {class: 'tile' + (c ? '' : ' empty'), type: 'button', style: `--c:${famColor(t.family)}`, disabled: !c,
+    const tile = h('button', {class: 'tile' + (c ? '' : ' empty'), type: 'button', style: `--c:${famColor(t.task_type)}`, disabled: !c,
       'aria-label': c ? `Play ${t.id}` : `${t.id}: video not published yet`, onclick: () => openPlayer(state.source, t.id, ids)},
       c ? frame(c, o ? (o.completed ? `Completed · ${hours(o.hours)}` : 'Not completed') : null) : h('div', {class: 'frame'}, h('span', {}, 'Soon')),
       h('div', {class: 'tile-meta'}, h('span', {class: 'chip'}, h('i'), h('b', {}, t.id)), `${t.arms} arms · L${t.level}`));
@@ -196,7 +195,7 @@ function openPlayer(key, id, list) {
 }
 function showPlayer() {
   const t = task(player.id), c = clip(player.key, player.id, player.view) || clip(player.key, player.id, 'front'), o = outcome(player.key, player.id);
-  const fam = state.tasks.families[t.family];
+  const fam = state.tasks.task_types[t.task_type];
   $('#player-kicker').textContent = `${sourceOf(player.key)?.label || player.key} · ${fam.name} · Level ${t.level}`;
   $('#player-title').textContent = t.id;
   $('#player-facts').textContent = `${t.arms} arms · ${t.workload} ${t.unit} · ${t.level_note}.` +
@@ -221,25 +220,24 @@ function playerControls() {
   d.addEventListener('keydown', e => { if (e.key === 'ArrowRight') step(1); if (e.key === 'ArrowLeft') step(-1); });
 }
 
-// ---------- explainer: what changes across a family's nine tasks ----------
-// Initial-state renders from the task atlas (site/assets/atlas), one camera per family.
+// ---------- explainer: what changes across a task type's nine tasks ----------
+// Initial-state renders from the task atlas (site/assets/atlas), one camera per task type.
 const ATLAS_VIEW = {transport: 'global', mosaic: 'top', relay: 'global', dial: 'global'};
-const atlasImage = id => `assets/atlas/${id}-${ATLAS_VIEW[familyOf(id)]}.jpg`;
+const atlasImage = id => `assets/atlas/${id}-${ATLAS_VIEW[typeOf(id)]}.jpg`;
 const range = xs => { const v = [...new Set(xs)].sort((a, b) => a - b); return v.length > 1 ? `${v[0]}–${v.at(-1)}` : `${v[0]}`; };
 function explainer() {
   const tabs = $('#explain-tabs');
-  for (const key of FAMILY_ORDER) tabs.append(h('button', {type: 'button', role: 'tab', 'aria-selected': key === state.explainFamily, style: `--c:${famColor(key)}`,
-    onclick: e => { state.explainFamily = key; $$('button', tabs).forEach(b => b.setAttribute('aria-selected', b === e.currentTarget)); drawExplainer(); }},
-    h('i'), state.tasks.families[key].name));
+  for (const key of TYPE_ORDER) tabs.append(h('button', {type: 'button', role: 'tab', 'aria-selected': key === state.explainType, style: `--c:${famColor(key)}`,
+    onclick: e => { state.explainType = key; $$('button', tabs).forEach(b => b.setAttribute('aria-selected', b === e.currentTarget)); drawExplainer(); }},
+    h('i'), state.tasks.task_types[key].name));
   drawExplainer();
 }
 function drawExplainer() {
-  const key = state.explainFamily, fam = state.tasks.families[key];
-  const rows = state.tasks.tasks.filter(t => t.family === key);
-  const scales = [...new Set(rows.map(t => scaleOf(t.id)))].sort((a, b) => scaleNumber(a) - scaleNumber(b));
+  const key = state.explainType, fam = state.tasks.task_types[key];
+  const rows = state.tasks.tasks.filter(t => t.task_type === key);
   const side = $('#explain-side'), grid = $('#explain-grid');
   side.style.setProperty('--c', famColor(key)); grid.style.setProperty('--c', famColor(key));
-  const teams = scales.map(sc => { const col = rows.filter(r => scaleOf(r.id) === sc), t = col[0];
+  const teams = SIZES.map(size => { const col = rows.filter(r => r.size === size), t = col[0];
     // Dial columns are dial counts; their arm count doubles from Level 2.
     return key === 'dial' ? {head: `${t.workload} dials`, sub: `${range(col.map(r => r.arms))} arms`} : {head: `${t.arms} arms`, sub: `${t.workload} ${t.unit}`}; });
   side.replaceChildren(
@@ -253,8 +251,8 @@ function drawExplainer() {
     ...teams.map(tm => h('div', {class: 'col-head'}, h('b', {}, tm.head), tm.sub)));
   for (const level of [1, 2, 3]) {
     grid.append(h('div', {class: 'row-head'}, h('b', {}, `L${level}`), h('span', {}, fam.levels[level - 1])));
-    for (const sc of scales) {
-      const t = rows.find(r => scaleOf(r.id) === sc && r.level === level), set = bestSet(t.id), c = set && clip(set, t.id, 'front');
+    for (const size of SIZES) {
+      const t = rows.find(r => r.size === size && r.level === level), set = bestSet(t.id), c = set && clip(set, t.id, 'front');
       const cell = h('button', {class: 'shot', type: 'button', 'aria-label': `${t.id} at its start. Open a run.`,
         onclick: () => openPlayer(set, t.id, rows.map(r => r.id))},
         frame(c ? {...c, poster: atlasImage(t.id)} : {poster: atlasImage(t.id), video: null}), h('span', {class: 'shot-id'}, t.id));
@@ -354,7 +352,7 @@ function deepLink() {
   const source = mediaSet(p.get('source')) ? p.get('source') : bestSet(id) || 'oracle';
   state.view = p.get('view') === 'side' ? 'side' : 'front';
   $('#watch').scrollIntoView();
-  openPlayer(source, id, state.tasks.tasks.filter(t => t.family === task(id).family).map(t => t.id));
+  openPlayer(source, id, state.tasks.tasks.filter(t => t.task_type === task(id).task_type).map(t => t.id));
 }
 main();
 })();

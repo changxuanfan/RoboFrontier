@@ -42,7 +42,7 @@ class RobotLabelTests(unittest.TestCase):
     def test_a_run_places_its_labels_where_its_videos_do(self):
         from roboteam.sim.hall.labels import place_robot_labels
 
-        case = resolve_case('mosaic-a04-6x12-d2')[2]
+        case = resolve_case('mosaic-small-l2')[2]
         world = Workstation(ROOT / case['directory'])
         world.frame()
         expected = robot_label_moves(world.model, world.data, avoid_objects=False)
@@ -55,7 +55,7 @@ class RobotLabelTests(unittest.TestCase):
             self.assertEqual(world.model.geom_contype[gid], 0)  # display only, no contact
 
     def test_released_block_letters_read_upright(self):
-        for case in ('transport-a04-d2', 'transport-a12-d3'):
+        for case in ('transport-small-l2', 'transport-large-l3'):
             world = Workstation(ROOT / resolve_case(case)[2]['directory'])
             model = world.model
             sides = 0
@@ -72,10 +72,10 @@ class RobotLabelTests(unittest.TestCase):
             self.assertGreater(sides, 0)
 
     def test_mosaic_labels_leave_the_robot_bases(self):
-        self.check('mosaic-a04-6x12-d1')
+        self.check('mosaic-small-l1')
 
     def test_transport_labels_turn_when_the_edge_is_near(self):
-        self.check('transport-a04-d1')
+        self.check('transport-small-l1')
 
 
 if __name__ == '__main__':

@@ -7,9 +7,9 @@ it counts. Final placement in GOAL is free: timbers may touch or stack.
 
 | Level | Timber |
 | --- | --- |
-| 1 (`d1`) | A straight beam |
-| 2 (`d2`) | A 63° circular arc with a free-hanging pendant (170 mm wooden shaft, 600 g) on its underside |
-| 3 (`d3`) | A 31.5° elbow (148.5° interior angle) on passive out-of-plane springs (±25°), with the same pendant |
+| 1 (`l1`) | A straight beam |
+| 2 (`l2`) | A 63° circular arc with a free-hanging pendant (170 mm wooden shaft, 600 g) on its underside |
+| 3 (`l3`) | A 31.5° elbow (148.5° interior angle) on passive out-of-plane springs (±25°), with the same pendant |
 
 | Arms | Layout | Timbers |
 | --- | --- | --- |

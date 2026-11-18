@@ -2,14 +2,14 @@
 
 The team builds a four-color Tulip pattern (cream, navy, coral, sage), background cells
 included, with one 60 mm cube per cell on a 71 mm pitch. The pattern matrix and the target image
-(`public/inputs/family/target-pattern.png`) are in world orientation: row 1 toward +Y (north),
+(`public/inputs/task/target-pattern.png`) are in world orientation: row 1 toward +Y (north),
 column 1 toward −X (west). Stock allocations to stations do not restrict which arm uses an item.
 
 | Level | Grid | Scales |
 | --- | --- | --- |
-| 1 (`d1`) | 70 mm square pockets, 20 mm deep | 6×12 cells with 4 arms, 9×18 with 6, 12×24 with 8 |
-| 2 (`d2`) | 3 mm red printed lines | the same |
-| 3 (`d3`) | No visible grid; the declared pattern and coordinates are the reference | the same |
+| 1 (`l1`) | 70 mm square pockets, 20 mm deep | 6×12 cells with 4 arms, 9×18 with 6, 12×24 with 8 |
+| 2 (`l2`) | 3 mm red printed lines | the same |
+| 3 (`l3`) | No visible grid; the declared pattern and coordinates are the reference | the same |
 
 ## Geometry
 

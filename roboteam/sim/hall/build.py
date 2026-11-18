@@ -1255,7 +1255,7 @@ class _Builder:
 
         catalog_path = ROOT / settings['catalog']
         catalog = json.loads(catalog_path.read_text())
-        if 'families' in catalog:
+        if 'task_types' in catalog:
             # The release itself: one workstation per released case.
             def facts(task_type, case_id):
                 listed = json.loads((ROOT / 'benchmark' / task_type / 'catalog.json').read_text())['cases']
@@ -1268,12 +1268,12 @@ class _Builder:
             catalog = {
                 'cases': [
                     {
-                        'family': task_type,
+                        'task_type': task_type,
                         'id': row['id'],
                         'directory': row['directory'],
                         **facts(task_type, row['id']),
                     }
-                    for task_type, entry in catalog['families'].items()
+                    for task_type, entry in catalog['task_types'].items()
                     for row in entry['policy']
                 ]
             }

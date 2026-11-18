@@ -16,7 +16,7 @@ class GoalFractionTests(unittest.TestCase):
     def test_scoring_result_serializes_numpy_fraction_at_both_sides_of_threshold(self):
         m, d, relay = GoalSupportTests().world()
         mon = relay.mon
-        mon.task.update(family='relay', level=1)
+        mon.task.update(task_type='relay', level=1)
         mon.task = final_task(mon.task)
         mon.task['run_protocol'] = {'evaluation_semantics': 'terminal_outcome_v2'}
         mon.violations = []
@@ -61,7 +61,7 @@ class GoalFractionTests(unittest.TestCase):
     def test_suspended_released_and_process_violations_are_independent(self):
         m, d, relay = GoalSupportTests().world()
         mon = relay.mon
-        mon.task.update(family='relay', level=1)
+        mon.task.update(task_type='relay', level=1)
         mon.task = final_task(mon.task)
         mon.task['run_protocol'] = {'evaluation_semantics': 'terminal_outcome_v2'}
         mon.violations = [{'kind': 'drop'}]
@@ -84,7 +84,7 @@ class GoalFractionTests(unittest.TestCase):
     def test_threshold_treats_each_timber_individually(self):
         m, d, relay = GoalSupportTests().world()
         mon = relay.mon
-        mon.task.update(family='relay', level=1)
+        mon.task.update(task_type='relay', level=1)
         mon.task = final_task(mon.task)
         mon.task['run_protocol'] = {'evaluation_semantics': 'terminal_outcome_v2'}
         mon.violations = []

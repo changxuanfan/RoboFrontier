@@ -1,18 +1,19 @@
 # Benchmark
 
-The released RoboTeam benchmark: four task families with nine cases each. Every policy run
+The released RoboTeam benchmark: four task types with nine cases each. Every policy run
 selects its case from [`release.json`](release.json); the [task guides](../docs/tasks/README.md)
 describe the tasks and their scoring, and [physics](../docs/benchmark/physics.md) the physics every scene
 carries.
 
-| Family | Cases | What the robots do |
+| Task type | Cases | What the robots do |
 | --- | --- | --- |
-| [`transport/`](transport) | `transport-a{04,08,12}-d{1,2,3}` | Deliver ordered items and insert them into boards, by handover or staging |
-| [`relay/`](relay) | `relay-a{08,12,16}-d{1,2,3}` | Carry long timbers in relay, with an airborne handover each, and release them over GOAL |
-| [`mosaic/`](mosaic) | `mosaic-a04-6x12`, `a06-9x18`, `a08-12x24`, each `d{1,2,3}` | Place correctly colored cubes in every cell of a target pattern |
-| [`dial/`](dial) | `dial-best5-n{04,06,08}-d{1,2,3}` | Turn and hold spring dials, using BEST/READY feedback to unlock |
+| [`transport/`](transport) | `transport-{small,medium,large}-l{1,2,3}` | Deliver ordered items and insert them into boards, by handover or staging |
+| [`relay/`](relay) | `relay-{small,medium,large}-l{1,2,3}` | Carry long timbers in relay, with an airborne handover each, and release them over GOAL |
+| [`mosaic/`](mosaic) | `mosaic-{small,medium,large}-l{1,2,3}` | Place correctly colored cubes in every cell of a target pattern |
+| [`dial/`](dial) | `dial-{small,medium,large}-l{1,2,3}` | Turn and hold spring dials, using BEST/READY feedback to unlock |
 
-`aNN` is the number of arms, `nNN` the number of dials and `dN` the level.
+A case id is `<task type>-<team size>-l<level>`. The number of arms and the workload (items, cells,
+timbers or dials) are in the case's `task.json` and in its task type's `catalog.json`, not in the id.
 
 ## Layout
 
@@ -20,13 +21,13 @@ carries.
 benchmark/
   release.json              every case: scene, task and public files by hash; release_id; frozen;
                             private: each Dial case's code
-  <family>/
-    catalog.json            the family's case catalog
+  <task-type>/
+    catalog.json            the task type's case catalog
     <case>/
       scene.xml             the scene, with the release physics written into it
-      task.json environment.json workstation.json   (parameters.json, target-pattern.png where used)
+      task.json environment.json workstation.json
       public/task.json      the public task a run receives, exactly
-      public/*              the family materials a run receives (Mosaic target pattern, Dial
+      public/*              the task materials a run receives (Mosaic target pattern, Dial
                             previews, table geometry and camera calibration)
       assets/               meshes and textures, restored from the pinned asset archive (not in Git)
   assets.json               the pinned asset archive and its inventory, restored by `roboteam bootstrap`
@@ -45,5 +46,5 @@ validation and the platform checks; after that nothing here changes.
 
 [`hall/`](hall) is the factory hall the cases stand in when they are shown together: `layout.json`
 (its appearance, layout and shared visual resources, read by `roboteam/sim/hall/build.py`), the
-fonts, the Poly Haven source textures and the authored exterior texture. It is not a task family
+fonts, the Poly Haven source textures and the authored exterior texture. It is not a task type
 and no run reads it.

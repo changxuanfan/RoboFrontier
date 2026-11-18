@@ -42,7 +42,7 @@ class SignalPhysicsSmokeTests(unittest.TestCase):
             if four_cases:
                 prepare_batch(batch, ['opus'], level=1, min_arms=True, system='adaptive')
             else:
-                prepare_batch(batch, ['opus'], cases=['transport-a04-d1'], system='adaptive')
+                prepare_batch(batch, ['opus'], cases=['transport-small-l1'], system='adaptive')
             jobs = json.loads((batch / 'batch.json').read_text())['jobs']
             self.assertEqual(len(jobs), 4 if four_cases else 1)
             for job in jobs:

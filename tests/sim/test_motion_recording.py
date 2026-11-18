@@ -13,7 +13,7 @@ from roboteam.tasks.task_types import ROOT, resolve_case
 
 class MotionRecordingTests(unittest.TestCase):
     def setUp(self):
-        self.source = ROOT / resolve_case('transport-a04-d1')[2]['directory']
+        self.source = ROOT / resolve_case('transport-small-l1')[2]['directory']
         self.w = Workstation(self.source)
 
     def test_float32_exact_roundtrip_events_and_bounded_chunks(self):
@@ -92,7 +92,7 @@ class MotionRecordingTests(unittest.TestCase):
             self.assertEqual(frozen.manifest['scene_sha256'], self.w.manifest['scene_sha256'])
             world = World(path, task)
             self.assertEqual(world.model.nq, frozen.model.nq)
-            with self.assertRaisesRegex(ValueError, 'environment preview'):
+            with self.assertRaisesRegex(ValueError, 'not prepared as a policy trial'):
                 world.start_trial()
             world.close()
 

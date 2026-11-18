@@ -119,6 +119,6 @@ beyond it still fails.
 ## Freezing the release
 
 `benchmark/release.json` names every case file by hash and carries `release_id`, a hash of the
-whole release. The release is frozen: `frozen` records release `f62513a8e211a513`, 2026-11-18, and
+whole release. The release is frozen: `frozen` records release `e5fe89125dff5483`, 2026-11-18, and
 the validation run it passed. Every step of `scripts/release/build_release.py` that writes the release
 refuses from then on, so physics, scenes and task files no longer change.

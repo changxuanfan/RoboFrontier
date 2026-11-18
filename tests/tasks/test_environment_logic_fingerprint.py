@@ -11,7 +11,7 @@ class EnvironmentLogicFingerprintTests(unittest.TestCase):
         self.assertNotEqual(before['sha256'], after['sha256'])
         self.assertEqual(before['schema'], 'roboteam.environment-logic.v2')
         self.assertEqual(before, environment_logic_manifest({evaluator: 'before', 'unrelated.py': 'ignored'}))
-        dial = {'family': 'dial'}
+        dial = {'task_type': 'dial'}
         self.assertNotEqual(
             environment_logic_manifest({evaluator: 'x', game: 'a'}, dial)['sha256'],
             environment_logic_manifest({evaluator: 'x', game: 'b'}, dial)['sha256'],

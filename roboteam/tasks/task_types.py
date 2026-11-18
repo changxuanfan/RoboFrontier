@@ -26,7 +26,7 @@ def resolve_case(case_id, root=ROOT):
     release = read(root / RELEASE)
     matches = [
         (name, task_type, c)
-        for name, task_type in release['families'].items()
+        for name, task_type in release['task_types'].items()
         for c in task_type['policy']
         if c['id'] == case_id
     ]
@@ -120,7 +120,6 @@ def validate_policy_task(task, root=ROOT):
         or protocol.get('case_id') != task['id']
         or protocol.get('source_task_sha256') != case['source_files']['task.json']
         or protocol.get('source_scene_sha256') != task['scene_sha256']
-        or task.get('oracle_verified') is not False
     ):
         raise ValueError('Policy source/release binding differs')
     original = read(Path(root) / case['directory'] / 'task.json')
@@ -136,7 +135,7 @@ def freeze_public(task, directory, public, root=ROOT):
     """Give a run its case's public task and task materials, as the release wrote them.
 
     `public` is replaced by the case's public/task.json, keeping only this run's own
-    protocol and image profile (scripts/release/build_release.py public). The materials go to public/inputs/family/,
+    protocol and image profile (scripts/release/build_release.py public). The materials go to public/inputs/task/,
     with the task guide from prompts/guides."""
     if task.get('execution_readiness') != READINESS:
         return None
@@ -149,18 +148,18 @@ def freeze_public(task, directory, public, root=ROOT):
     public.clear()
     public.update(read(root / projection['path']))
     public.update(own)
-    task_type_dir = directory / 'public/inputs/family'
+    task_type_dir = directory / 'public/inputs/task'
     task_type_dir.mkdir()
     hashes = {}
     sources = {name: root / source['path'] for name, source in case['public_files'].items()}
     for name, source in case['public_files'].items():
         if Path(name).name != name or sha(root / source['path']) != source['sha256']:
             raise ValueError('Invalid/changed public task type file: ' + name)
-    sources['skill.md'] = root / 'prompts/guides' / (task_type_name + '.md')
+    sources['guide.md'] = root / 'prompts/guides' / (task_type_name + '.md')
     for name, source in sorted(sources.items()):
         shutil.copyfile(source, task_type_dir / name)
-        hashes['public/inputs/family/' + name] = sha(source)
-    # The scene's own copy of the Mosaic target image is superseded by the task type copy.
+        hashes['public/inputs/task/' + name] = sha(source)
+    # The Mosaic target image freeze_scene copied is superseded by the task materials' copy.
     target_image = directory / 'public/inputs/target-pattern.png'
     if target_image.is_file() and (task_type_dir / target_image.name).is_file():
         target_image.unlink()
@@ -195,7 +194,7 @@ def validate_frozen_policy(task, directory):
     protocol = task['run_protocol']
     if sha(release) != protocol['release_sha256']:
         raise ValueError('Frozen policy release differs')
-    cases = [c for f in read(release)['families'].values() for c in f['policy'] if c['id'] == task['id']]
+    cases = [c for f in read(release)['task_types'].values() for c in f['policy'] if c['id'] == task['id']]
     if len(cases) != 1:
         raise ValueError('Policy case is not in the frozen release')
     case = cases[0]

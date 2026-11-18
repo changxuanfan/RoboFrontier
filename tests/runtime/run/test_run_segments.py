@@ -229,7 +229,7 @@ class EligibilityTests(unittest.TestCase):
 
 
 class FakeReader:
-    meta = {'case_id': 'transport-a04-d1', 'source_scene_sha256': 'scene'}
+    meta = {'case_id': 'transport-small-l1', 'source_scene_sha256': 'scene'}
 
     def __init__(self, nq):
         self.nq = nq

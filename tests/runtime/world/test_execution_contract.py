@@ -296,7 +296,7 @@ class SceneTopologyContractTests(unittest.TestCase):
         from roboteam.tasks.task_types import policy_task
 
         cls.mosaic_task = cls.root / 'mosaic-task.json'
-        cls.mosaic_task.write_text(json.dumps(policy_task('mosaic-a04-6x12-d1')))
+        cls.mosaic_task.write_text(json.dumps(policy_task('mosaic-small-l1')))
         for name, task_path in [('transport', None), ('mosaic', cls.mosaic_task)]:
             run = prepare_run(cls.root / ('geometry-' + name), task_path)
             task = json.loads((run / 'private/inputs/task.json').read_text())

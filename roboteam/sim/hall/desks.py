@@ -27,7 +27,7 @@ def colour_compatible_signature(source):
     path = Path(source.path)
     tree = ET.parse(path / 'scene.xml')
     for geom in tree.iter('geom'):
-        if source.manifest['case']['family'] == 'mosaic' and re.fullmatch(
+        if source.manifest['case']['task_type'] == 'mosaic' and re.fullmatch(
             r'[A-Z]_stock[0-9]+_geom', geom.get('name', '')
         ):
             geom.attrib.pop('rgba', None)
@@ -55,7 +55,7 @@ def placements(catalog, regions, root, aisle=1.2, source_overrides=None):
         entries = []
         gap = float(region.get('workstation_gap_m', aisle))
         for case in catalog['cases']:
-            if case['family'] != task_type:
+            if case['task_type'] != task_type:
                 continue
             source = Workstation((source_overrides or {}).get(case['id'], root / case['directory']))
             m, d = source.model, source.data

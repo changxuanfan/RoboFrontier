@@ -13,7 +13,7 @@ class RelayContractTests(unittest.TestCase):
     def world(self):
         model, data, relay = support_fixture.GoalSupportTests().world()
         mon = relay.mon
-        mon.task.update(family='relay', level=1)
+        mon.task.update(task_type='relay', level=1)
         mon.task = final_task(mon.task)
         mon.violations = []
         mon.bilateral = lambda *args, **kwargs: set()

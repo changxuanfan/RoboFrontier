@@ -14,8 +14,8 @@ from roboteam.tasks.task_types import ROOT
 
 
 def relay_world():
-    """The released relay-a08-d1 scene at its initial state, with its evaluator."""
-    scene = ROOT / 'benchmark/relay/relay-a08-d1'
+    """The released relay-small-l1 scene at its initial state, with its evaluator."""
+    scene = ROOT / 'benchmark/relay/relay-small-l1'
     t = SimpleNamespace(
         model=mujoco.MjModel.from_xml_path(str(scene / 'scene.xml')),
         task=json.loads((scene / 'task.json').read_text()),

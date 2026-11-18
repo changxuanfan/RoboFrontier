@@ -41,7 +41,7 @@ class FinishPhysicsSmokeTests(unittest.TestCase):
         FinishModel.requests.clear()
         try:
             batch = directory / 'batch'
-            case = 'transport-a04-d1'
+            case = 'transport-small-l1'
             prepare_batch(batch, ['opus'], cases=[case], system='single-agent')
             run = batch / 'opus' / case
             launch = run / 'private/inputs/claude.json'

@@ -253,7 +253,7 @@ def index_release():
     """Record each released case's current file hashes in its release.json policy entry."""
     path = BENCHMARK / 'release.json'
     release = json.loads(path.read_text())
-    for task_type in release['families'].values():
+    for task_type in release['task_types'].values():
         for case in task_type['policy']:
             folder = ROOT / case['directory']
             case['source_files'] = {name: file_sha256(folder / name) for name in case['source_files']}
@@ -271,12 +271,12 @@ def index_release():
                 'public/task.json': case['public_projection']['sha256'],
                 **{'public/' + n: e['sha256'] for n, e in case.get('public_files', {}).items()},
             }
-            for task_type in release['families'].values()
+            for task_type in release['task_types'].values()
             for case in task_type['policy']
         },
         'catalogs': {
             name: file_sha256(ROOT / task_type['catalog']['path'])
-            for name, task_type in release['families'].items()
+            for name, task_type in release['task_types'].items()
         },
         'private': release.get('private', {}),
     }
@@ -469,7 +469,7 @@ def codes(args):
         'private', {'scope': 'Evaluator-only values. Never copied into a run\'s public files.'}
     )
     stored = private.setdefault('dial_codes', {})
-    for case in release['families']['dial']['policy']:
+    for case in release['task_types']['dial']['policy']:
         if case['id'] in stored:
             continue
         task = json.loads((ROOT / case['directory'] / 'task.json').read_text())
@@ -513,7 +513,7 @@ def with_camera_mounts(public, mounts):
     for key, value in public.items():
         if key == 'static_camera_mounts':
             continue
-        if key == 'family_materials':
+        if key == 'task_materials':
             result['static_camera_mounts'] = mounts
         result[key] = value
     result.setdefault('static_camera_mounts', mounts)
@@ -537,7 +537,7 @@ def public(args):
 
     path = BENCHMARK / 'release.json'
     release = json.loads(path.read_text())
-    for task_type_name, task_type in release['families'].items():
+    for task_type_name, task_type in release['task_types'].items():
         for case in task_type['policy']:
             folder = ROOT / case['directory']
             target = folder / 'public'
@@ -546,9 +546,7 @@ def public(args):
                 prepare(case['id'], run)
                 received = json.loads((run / 'public/inputs/task.json').read_text())
                 materials = {
-                    p.name: p
-                    for p in sorted((run / 'public/inputs/family').iterdir())
-                    if p.name != 'skill.md'
+                    p.name: p for p in sorted((run / 'public/inputs/task').iterdir()) if p.name != 'guide.md'
                 }
                 staged = Path(temporary) / 'public'
                 staged.mkdir()

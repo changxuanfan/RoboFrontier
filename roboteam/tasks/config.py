@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ..io import ROOT
 
-DEFAULT_CASE = 'transport-a04-d1'  # The smallest released case; tests and bare prepare_run use it.
+DEFAULT_CASE = 'transport-small-l1'  # The smallest released case; tests and bare prepare_run use it.
 # The policy runtime's settings; a batch sets the harness, system, model and effort over them.
 DEFAULT_RUN_SETTINGS = ROOT / 'roboteam/runtime/run/defaults.json'
 # The lead role: the one agent of a single-agent or adaptive run, and the lead of a hierarchical team.
@@ -90,15 +90,15 @@ def panda_control_profile(config):
 
 
 def load_task(path=None):
-    """A released task (kind frontier_suite); by default the policy task of DEFAULT_CASE."""
+    """A released task; by default the policy task of DEFAULT_CASE."""
     if path is None:
         from .task_types import policy_task
 
         task = policy_task(DEFAULT_CASE)
     else:
         task = json.loads(Path(path).read_text())
-    if task.get('kind') != 'frontier_suite' or not task.get('scene_asset'):
-        raise ValueError('Only released tasks (kind frontier_suite) are supported')
+    if not task.get('scene_asset'):
+        raise ValueError('Only released tasks are supported')
     from .public import validate
 
     return validate(task)

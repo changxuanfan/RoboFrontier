@@ -23,7 +23,7 @@ class SiteTaskDataTests(unittest.TestCase):
         rows = json.loads(generated)['tasks']
         self.assertEqual(len({row['id'] for row in rows}), 36)
         for task_type in site_data.TASK_TYPES:
-            self.assertEqual(sum(row['family'] == task_type for row in rows), 9)
+            self.assertEqual(sum(row['task_type'] == task_type for row in rows), 9)
         for forbidden in ('code_symbols', 'private/inputs', '/Users/', '/home/', 'oracle_solution'):
             self.assertNotIn(forbidden, generated)
 

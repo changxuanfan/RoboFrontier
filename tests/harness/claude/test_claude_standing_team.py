@@ -64,8 +64,8 @@ def standing_fixture(system, *, factory=RoleHost, endpoint=None, env=None):
         batch = Path(tmp) / 'batch'
         # A local fake model and a fake key: nothing to expose (claude_prepare.exposed_api_keys).
         with patch('roboteam.launch.claude_prepare.exposed_api_keys', return_value=[]):
-            prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], system=system)
-        run = batch / 'haiku/transport-a04-d1'
+            prepare_batch(batch, ['haiku'], cases=['transport-small-l1'], system=system)
+        run = batch / 'haiku/transport-small-l1'
         launch = run / 'private/inputs/claude.json'
         data = json.loads(launch.read_text())
         if endpoint:

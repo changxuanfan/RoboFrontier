@@ -4,7 +4,7 @@ In a full run every role reads workspace/skills.md and edits it with its own fil
 tools. A robot_only role has none, so the runtime does it: `skills` lists headings,
 returns entries and appends an entry or a revision. Earlier text is never changed or
 removed, which is also the rule a full run's roles follow (the "Run skills" section of
-the Skill). The runtime handles one request at a time, so appends never collide.
+the collaboration guide). The runtime handles one request at a time, so appends never collide.
 """
 
 import os

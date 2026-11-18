@@ -36,7 +36,7 @@ class PolicyHostTests(unittest.TestCase):
         self.run = Path(self.tmp.name) / 'run'
         public = self.run / 'public/inputs'
         public.mkdir(parents=True)
-        (public / 'task.json').write_text(json.dumps({'family_materials': []}))
+        (public / 'task.json').write_text(json.dumps({'task_materials': []}))
         (public / 'roles.json').write_text(
             json.dumps({'system': 'single-agent', 'roles': {'Controller': {'kind': 'controller'}}})
         )

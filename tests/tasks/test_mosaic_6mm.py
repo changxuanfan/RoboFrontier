@@ -9,7 +9,7 @@ from roboteam.tasks.evaluate import mosaic_candidates
 class MosaicSixMmTests(unittest.TestCase):
     def candidate(self, offset, completion=None, color='cream', stable=True):
         task = {
-            'family': 'mosaic',
+            'task_type': 'mosaic',
             'level': 2,
             'cube_size_m': 0.06,
             'completion': completion or {},

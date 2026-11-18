@@ -24,7 +24,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -184,14 +183,9 @@ def montage(manifest_path, task_type, output, length_s=60, view='front'):
     if len(cases) != 9:
         raise ValueError(f'{task_type} has {len(cases)} encoded tasks, expected 9')
 
-    def scale(c):
-        return int(re.search(r'-[an](\d+)', c).group(1))  # arms, or dials for Dial
-
-    columns = sorted({scale(c) for c in cases})
-    grid = [
-        [next(c for c in cases if scale(c) == col and c.endswith(f'-d{level}')) for col in columns]
-        for level in (1, 2, 3)
-    ]
+    grid = [[f'{task_type}-{size}-l{level}' for size in ('small', 'medium', 'large')] for level in (1, 2, 3)]
+    if sorted(c for row in grid for c in row) != cases:
+        raise ValueError(f'{task_type} tasks are not three sizes at three levels')
     inputs, filters = [], []
     for i, case in enumerate(c for row in grid for c in row):
         record = manifest['tasks'][case][view]
@@ -314,10 +308,9 @@ def explainer(atlas, out, width=1800):
         d.text((x, pad + 10), label, font=mono(22), fill=dim)
     d.text((pad, pad + 10), 'LARGEST TEAM PER TASK TYPE', font=mono(22), fill=dim)
     for r, key in enumerate(['transport', 'mosaic', 'relay', 'dial']):
-        fam, y = data['families'][key], pad + head + r * (row + gap)
-        tasks = [t for t in data['tasks'] if t['family'] == key]
+        fam, y = data['task_types'][key], pad + head + r * (row + gap)
+        tasks = [t for t in data['tasks'] if t['task_type'] == key]
         top = max(tasks, key=lambda t: (t['workload'], t['arms']))
-        scale = re.sub(r'-d\d$', '', top['id'])
         d.rounded_rectangle(
             [pad, y, width - pad, y + row - 1],
             radius=12,
@@ -344,7 +337,7 @@ def explainer(atlas, out, width=1800):
             (pad + 24, y + row - 46), f"{work[0]}-{work[-1]} {fam['unit'].upper()}", font=mono(20), fill=dim
         )
         for level in (1, 2, 3):
-            t = next(t for t in tasks if t['id'] == f'{scale}-d{level}')
+            t = next(t for t in tasks if t['size'] == top['size'] and t['level'] == level)
             x = pad + side + (level - 1) * (cw + gap)
             shot = (
                 Image.open(Path(atlas) / f"{t['id']}-{view[key]}.jpg")

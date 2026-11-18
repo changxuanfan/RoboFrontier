@@ -146,7 +146,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
         config = load_configuration(
             overrides={
                 'render': {'device': 'native'},
-                'selection': {'cases': ['transport-a04-d1']},
+                'selection': {'cases': ['transport-small-l1']},
                 'batch': {'parallel': 1},
             }
         )
@@ -171,7 +171,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
                 config = load_configuration(
                     overrides={
                         'policy': {'system': system},
-                        'selection': {'cases': ['transport-a04-d1']},
+                        'selection': {'cases': ['transport-small-l1']},
                         'batch': {'parallel': 1},
                     }
                 )
@@ -197,7 +197,7 @@ class UnifiedConfigurationTests(unittest.TestCase):
                     overrides={
                         'policy': {'harness': 'claude', 'model': 'haiku', 'system': system},
                         'render': {'device': 'native'},
-                        'selection': {'cases': ['transport-a04-d1']},
+                        'selection': {'cases': ['transport-small-l1']},
                     }
                 )
                 batch = Path(tmp) / 'batch'

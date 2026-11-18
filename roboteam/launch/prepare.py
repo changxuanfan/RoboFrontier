@@ -47,10 +47,10 @@ def load_env(path):
 def select_cases(task_types=None, cases=None, level=None, min_arms=False):
     """Resolve selection from released task metadata, without creating a world."""
     release = read(ROOT / RELEASE)
-    if task_types and set(task_types) - set(release['families']):
+    if task_types and set(task_types) - set(release['task_types']):
         raise ValueError('Unknown task types')
     selected = []
-    for name, task_type in release['families'].items():
+    for name, task_type in release['task_types'].items():
         if task_types and name not in task_types:
             continue
         rows = []

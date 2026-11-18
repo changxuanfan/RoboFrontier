@@ -143,7 +143,7 @@ QUOTA_RESUME = (
 # What workspace/skills.md holds when a run is prepared.
 SKILLS_HEADER = (
     '# Run skills\nShared by all roles in this run. Rules and format: the "Run skills" section '
-    'of your Skill.\n'
+    'of the collaboration guide.\n'
 )
 STARTUP = {
     'direct_controller': (
@@ -184,7 +184,7 @@ def bootstrap_text(run, actor):
         paths.append('guide/adaptive.md')
     if (public / 'environment.md').is_file():
         paths.append('environment.md')
-    for name in task.get('family_materials', []):
+    for name in task.get('task_materials', []):
         if not isinstance(name, str):
             raise ValueError('Invalid public material reference')
         if name.endswith(('.md', '.json', '.txt')):

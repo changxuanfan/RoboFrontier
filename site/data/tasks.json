@@ -1,7 +1,7 @@
 {
  "schema": "roboteam.site-tasks.v1",
- "release_sha256": "790f478f3dcab0dc2fdfb48ac78ba78a4a63a26a8108a34b1ce09727b7248c6f",
- "families": {
+ "release_sha256": "2e1e7e213e1e26f0fa1a72758873293c85fa8ac44780a30b767092c8296b2187",
+ "task_types": {
   "transport": {
    "name": "Transport",
    "verb": "Deliver ordered items to their boards, by handover or staging",
@@ -45,8 +45,9 @@
  },
  "tasks": [
   {
-   "id": "transport-a04-d1",
-   "family": "transport",
+   "id": "transport-small-l1",
+   "task_type": "transport",
+   "size": "small",
    "level": 1,
    "arms": 4,
    "workload": 12,
@@ -68,8 +69,9 @@
    }
   },
   {
-   "id": "transport-a04-d2",
-   "family": "transport",
+   "id": "transport-small-l2",
+   "task_type": "transport",
+   "size": "small",
    "level": 2,
    "arms": 4,
    "workload": 12,
@@ -91,8 +93,9 @@
    }
   },
   {
-   "id": "transport-a04-d3",
-   "family": "transport",
+   "id": "transport-small-l3",
+   "task_type": "transport",
+   "size": "small",
    "level": 3,
    "arms": 4,
    "workload": 12,
@@ -114,8 +117,9 @@
    }
   },
   {
-   "id": "transport-a08-d1",
-   "family": "transport",
+   "id": "transport-medium-l1",
+   "task_type": "transport",
+   "size": "medium",
    "level": 1,
    "arms": 8,
    "workload": 24,
@@ -137,8 +141,9 @@
    }
   },
   {
-   "id": "transport-a08-d2",
-   "family": "transport",
+   "id": "transport-medium-l2",
+   "task_type": "transport",
+   "size": "medium",
    "level": 2,
    "arms": 8,
    "workload": 24,
@@ -160,8 +165,9 @@
    }
   },
   {
-   "id": "transport-a08-d3",
-   "family": "transport",
+   "id": "transport-medium-l3",
+   "task_type": "transport",
+   "size": "medium",
    "level": 3,
    "arms": 8,
    "workload": 24,
@@ -183,8 +189,9 @@
    }
   },
   {
-   "id": "transport-a12-d1",
-   "family": "transport",
+   "id": "transport-large-l1",
+   "task_type": "transport",
+   "size": "large",
    "level": 1,
    "arms": 12,
    "workload": 36,
@@ -206,8 +213,9 @@
    }
   },
   {
-   "id": "transport-a12-d2",
-   "family": "transport",
+   "id": "transport-large-l2",
+   "task_type": "transport",
+   "size": "large",
    "level": 2,
    "arms": 12,
    "workload": 36,
@@ -229,8 +237,9 @@
    }
   },
   {
-   "id": "transport-a12-d3",
-   "family": "transport",
+   "id": "transport-large-l3",
+   "task_type": "transport",
+   "size": "large",
    "level": 3,
    "arms": 12,
    "workload": 36,
@@ -252,8 +261,9 @@
    }
   },
   {
-   "id": "mosaic-a04-6x12-d1",
-   "family": "mosaic",
+   "id": "mosaic-small-l1",
+   "task_type": "mosaic",
+   "size": "small",
    "level": 1,
    "arms": 4,
    "workload": 72,
@@ -274,8 +284,9 @@
    }
   },
   {
-   "id": "mosaic-a04-6x12-d2",
-   "family": "mosaic",
+   "id": "mosaic-small-l2",
+   "task_type": "mosaic",
+   "size": "small",
    "level": 2,
    "arms": 4,
    "workload": 72,
@@ -296,8 +307,9 @@
    }
   },
   {
-   "id": "mosaic-a04-6x12-d3",
-   "family": "mosaic",
+   "id": "mosaic-small-l3",
+   "task_type": "mosaic",
+   "size": "small",
    "level": 3,
    "arms": 4,
    "workload": 72,
@@ -318,8 +330,9 @@
    }
   },
   {
-   "id": "mosaic-a06-9x18-d1",
-   "family": "mosaic",
+   "id": "mosaic-medium-l1",
+   "task_type": "mosaic",
+   "size": "medium",
    "level": 1,
    "arms": 6,
    "workload": 162,
@@ -340,8 +353,9 @@
    }
   },
   {
-   "id": "mosaic-a06-9x18-d2",
-   "family": "mosaic",
+   "id": "mosaic-medium-l2",
+   "task_type": "mosaic",
+   "size": "medium",
    "level": 2,
    "arms": 6,
    "workload": 162,
@@ -362,8 +376,9 @@
    }
   },
   {
-   "id": "mosaic-a06-9x18-d3",
-   "family": "mosaic",
+   "id": "mosaic-medium-l3",
+   "task_type": "mosaic",
+   "size": "medium",
    "level": 3,
    "arms": 6,
    "workload": 162,
@@ -384,8 +399,9 @@
    }
   },
   {
-   "id": "mosaic-a08-12x24-d1",
-   "family": "mosaic",
+   "id": "mosaic-large-l1",
+   "task_type": "mosaic",
+   "size": "large",
    "level": 1,
    "arms": 8,
    "workload": 288,
@@ -406,8 +422,9 @@
    }
   },
   {
-   "id": "mosaic-a08-12x24-d2",
-   "family": "mosaic",
+   "id": "mosaic-large-l2",
+   "task_type": "mosaic",
+   "size": "large",
    "level": 2,
    "arms": 8,
    "workload": 288,
@@ -428,8 +445,9 @@
    }
   },
   {
-   "id": "mosaic-a08-12x24-d3",
-   "family": "mosaic",
+   "id": "mosaic-large-l3",
+   "task_type": "mosaic",
+   "size": "large",
    "level": 3,
    "arms": 8,
    "workload": 288,
@@ -450,8 +468,9 @@
    }
   },
   {
-   "id": "relay-a08-d1",
-   "family": "relay",
+   "id": "relay-small-l1",
+   "task_type": "relay",
+   "size": "small",
    "level": 1,
    "arms": 8,
    "workload": 2,
@@ -477,8 +496,9 @@
    }
   },
   {
-   "id": "relay-a08-d2",
-   "family": "relay",
+   "id": "relay-small-l2",
+   "task_type": "relay",
+   "size": "small",
    "level": 2,
    "arms": 8,
    "workload": 2,
@@ -506,8 +526,9 @@
    }
   },
   {
-   "id": "relay-a08-d3",
-   "family": "relay",
+   "id": "relay-small-l3",
+   "task_type": "relay",
+   "size": "small",
    "level": 3,
    "arms": 8,
    "workload": 2,
@@ -535,8 +556,9 @@
    }
   },
   {
-   "id": "relay-a12-d1",
-   "family": "relay",
+   "id": "relay-medium-l1",
+   "task_type": "relay",
+   "size": "medium",
    "level": 1,
    "arms": 12,
    "workload": 3,
@@ -562,8 +584,9 @@
    }
   },
   {
-   "id": "relay-a12-d2",
-   "family": "relay",
+   "id": "relay-medium-l2",
+   "task_type": "relay",
+   "size": "medium",
    "level": 2,
    "arms": 12,
    "workload": 3,
@@ -591,8 +614,9 @@
    }
   },
   {
-   "id": "relay-a12-d3",
-   "family": "relay",
+   "id": "relay-medium-l3",
+   "task_type": "relay",
+   "size": "medium",
    "level": 3,
    "arms": 12,
    "workload": 3,
@@ -620,8 +644,9 @@
    }
   },
   {
-   "id": "relay-a16-d1",
-   "family": "relay",
+   "id": "relay-large-l1",
+   "task_type": "relay",
+   "size": "large",
    "level": 1,
    "arms": 16,
    "workload": 4,
@@ -647,8 +672,9 @@
    }
   },
   {
-   "id": "relay-a16-d2",
-   "family": "relay",
+   "id": "relay-large-l2",
+   "task_type": "relay",
+   "size": "large",
    "level": 2,
    "arms": 16,
    "workload": 4,
@@ -676,8 +702,9 @@
    }
   },
   {
-   "id": "relay-a16-d3",
-   "family": "relay",
+   "id": "relay-large-l3",
+   "task_type": "relay",
+   "size": "large",
    "level": 3,
    "arms": 16,
    "workload": 4,
@@ -705,8 +732,9 @@
    }
   },
   {
-   "id": "dial-best5-n04-d1",
-   "family": "dial",
+   "id": "dial-small-l1",
+   "task_type": "dial",
+   "size": "small",
    "level": 1,
    "arms": 4,
    "workload": 4,
@@ -730,8 +758,9 @@
    }
   },
   {
-   "id": "dial-best5-n06-d1",
-   "family": "dial",
+   "id": "dial-medium-l1",
+   "task_type": "dial",
+   "size": "medium",
    "level": 1,
    "arms": 6,
    "workload": 6,
@@ -755,8 +784,9 @@
    }
   },
   {
-   "id": "dial-best5-n04-d2",
-   "family": "dial",
+   "id": "dial-small-l2",
+   "task_type": "dial",
+   "size": "small",
    "level": 2,
    "arms": 8,
    "workload": 4,
@@ -780,8 +810,9 @@
    }
   },
   {
-   "id": "dial-best5-n04-d3",
-   "family": "dial",
+   "id": "dial-small-l3",
+   "task_type": "dial",
+   "size": "small",
    "level": 3,
    "arms": 8,
    "workload": 4,
@@ -805,8 +836,9 @@
    }
   },
   {
-   "id": "dial-best5-n08-d1",
-   "family": "dial",
+   "id": "dial-large-l1",
+   "task_type": "dial",
+   "size": "large",
    "level": 1,
    "arms": 8,
    "workload": 8,
@@ -830,8 +862,9 @@
    }
   },
   {
-   "id": "dial-best5-n06-d2",
-   "family": "dial",
+   "id": "dial-medium-l2",
+   "task_type": "dial",
+   "size": "medium",
    "level": 2,
    "arms": 12,
    "workload": 6,
@@ -855,8 +888,9 @@
    }
   },
   {
-   "id": "dial-best5-n06-d3",
-   "family": "dial",
+   "id": "dial-medium-l3",
+   "task_type": "dial",
+   "size": "medium",
    "level": 3,
    "arms": 12,
    "workload": 6,
@@ -880,8 +914,9 @@
    }
   },
   {
-   "id": "dial-best5-n08-d2",
-   "family": "dial",
+   "id": "dial-large-l2",
+   "task_type": "dial",
+   "size": "large",
    "level": 2,
    "arms": 16,
    "workload": 8,
@@ -905,8 +940,9 @@
    }
   },
   {
-   "id": "dial-best5-n08-d3",
-   "family": "dial",
+   "id": "dial-large-l3",
+   "task_type": "dial",
+   "size": "large",
    "level": 3,
    "arms": 16,
    "workload": 8,

@@ -51,7 +51,7 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
     image_profile = observation_profile(cfg)
     puzzle = None
     puzzle_relative = None
-    if task.get('family') == 'dial':
+    if task.get('task_type') == 'dial':
         n = len(task['dials'])
         from roboteam.tasks.dial import alphabet
 
@@ -125,7 +125,7 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
                     str(calibration.get('scope', 'Camera calibration'))
                     + '; image size matches this run observation profile'
                 )
-                if task_type_release is not None and calibration_ref == 'family/' + calibration_path.name:
+                if task_type_release is not None and calibration_ref == 'task/' + calibration_path.name:
                     # The policy sees one calibration, sized for this run; the signed
                     # release copy moves to private/ and keeps its recorded hash.
                     original = directory / 'private/inputs/release-materials' / calibration_path.name
@@ -133,7 +133,7 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
                     shutil.move(calibration_path, original)
                     calibration['source_calibration'] = str(original.relative_to(directory))
                     task_type_release['public_files'][str(original.relative_to(directory))] = (
-                        task_type_release['public_files'].pop('public/inputs/family/' + calibration_path.name)
+                        task_type_release['public_files'].pop('public/inputs/task/' + calibration_path.name)
                     )
                     write_json(calibration_path, calibration)
                 else:
@@ -288,7 +288,7 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
     if task_type_release is not None:
         p = directory / 'private/inputs/release.json'
         inputs[str(p.relative_to(directory))] = hashlib.sha256(p.read_bytes()).hexdigest()
-    logic = environment_logic_manifest(source_hashes, task) if task.get('kind') == 'frontier_suite' else None
+    logic = environment_logic_manifest(source_hashes, task)
     write_json(
         directory / 'private/inputs/manifest.json',
         {

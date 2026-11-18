@@ -5,7 +5,7 @@ Agent system: `{{SYSTEM}}`. Team finish authority: **{{FINISH_AUTHORITY}}**.
 
 {{COMMUNICATION_ROUTE}}
 
-After START apply the Skill's standing local authority while joint plans form. Choose local positions, orientations, apertures, speeds, views and already-decided chunks with meaningful verification boundaries. Treat task requirements as canonical when a proposal conflicts with them.
+After START apply the collaboration guide's standing local authority while joint plans form. Choose local positions, orientations, apertures, speeds, views and already-decided chunks with meaningful verification boundaries. Treat task requirements as canonical when a proposal conflicts with them.
 
 Within scope, verify enabling resource facts using permitted views/reports and continue without renewed approval. If an avoidable message gate blocks progress, propose delegated verification or another executable prefix with resource/time evidence; honor restrictions until changed.
 

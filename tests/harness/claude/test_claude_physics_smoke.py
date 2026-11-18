@@ -46,7 +46,7 @@ class MotionModel(StubModel):
 class PhysicsSmokeTests(unittest.TestCase):
     def test_adaptive_unscored_lifecycle_with_synthetic_model(self):
         directory = Path(tempfile.mkdtemp(prefix='claude-physics-synthetic-'))
-        case = os.environ.get('ROBOTEAM_PHYSICS_CASE', 'transport-a04-d1')
+        case = os.environ.get('ROBOTEAM_PHYSICS_CASE', 'transport-small-l1')
         record_video = os.environ.get('ROBOTEAM_PHYSICS_VIDEO') == '1'
         MotionModel.requests.clear()
         server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), MotionModel)

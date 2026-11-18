@@ -77,7 +77,7 @@ def prepare_batch(
 
     for case in selected:
         task = policy_task(case)
-        if task.get('family') == 'dial':
+        if task.get('task_type') == 'dial':
             target = output / 'private/dial' / (case + '.json')
             write_json(target, {'code_symbols': dial_code(case)})
             puzzles[case] = target

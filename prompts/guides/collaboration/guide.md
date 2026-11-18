@@ -9,7 +9,7 @@ Read [tools](tools.md) before robot operations. Read
 [communication](communication.md) in hierarchical, decentralized and adaptive
 runs, and [bounded forks](adaptive.md) in adaptive runs. Read
 [motion screening](motion-check.md) when you consider `check_motion`.
-The task guide (`task_skill`) covers that task type's manipulation.
+The task guide (`task_guide`) covers that task type's manipulation.
 
 ## Roles and lifecycle
 
@@ -138,7 +138,7 @@ corrected misunderstanding, when and how a retry works, a faster or steadier
 method, and a non-obvious finding or special case; anything that keeps recurring
 belongs here. Write once a conclusion is verified, not at every step and not only
 at the end. Do not log progress, which belongs in your work note, record one-off
-or obvious steps, or restate the task, rules or Skills. Write as much as clarity
+or obvious steps, or restate the task, rules or guides. Write as much as clarity
 needs; a complex case may need the whole sequence and its decisive details.
 
 Before writing, scan the headings:
@@ -208,5 +208,5 @@ An example from an unrelated domain:
     Confidence: medium.
 
 Share a lesson through your permitted route when it changes another role's
-choices now. This file applies only to this run; the frozen Skills stay
+choices now. This file applies only to this run; the frozen guides stay
 unchanged, and cross-run reuse needs an explicitly declared protocol.

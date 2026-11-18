@@ -34,7 +34,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         )
         self.batch = self.root / 'batch'
         self.run = prepare(
-            'transport-a04-d1', self.batch / 'opus_subscription' / 'transport-a04-d1', run_settings
+            'transport-small-l1', self.batch / 'opus_subscription' / 'transport-small-l1', run_settings
         ).resolve()
         write_json(
             self.batch / 'batch.json',
@@ -43,7 +43,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
                 'jobs': [
                     {
                         'model_entry': 'opus_subscription',
-                        'case_id': 'transport-a04-d1',
+                        'case_id': 'transport-small-l1',
                         'run_directory': str(self.run),
                     }
                 ],
@@ -54,7 +54,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
             {
                 'status': 'running',
                 'jobs': [
-                    {'case_id': 'transport-a04-d1', 'status': 'needs_review', 'reason': 'dispatch_paused'}
+                    {'case_id': 'transport-small-l1', 'status': 'needs_review', 'reason': 'dispatch_paused'}
                 ],
             },
         )
@@ -153,7 +153,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         self.store.put('delegations', batch)
         write_json(
             run_layout.batch_path(self.batch, 'engineering_status'),
-            {'status': 'running', 'jobs': [{'case_id': 'transport-a04-d1', 'status': 'starting'}]},
+            {'status': 'running', 'jobs': [{'case_id': 'transport-small-l1', 'status': 'starting'}]},
         )
         with self.assertRaisesRegex(recovery.RecoveryBlocked, 'not handed this task back'):
             recovery.inspect(self.run, ROOT)

@@ -96,7 +96,7 @@ def batch_snapshot(base):
                 key=row['key'],
                 case_id=row['case_id'],
                 model_entry=row.get('model_entry'),
-                task_type=row.get('task_type', task.get('family')),
+                task_type=row.get('task_type', task.get('task_type')),
                 level=row.get('level', task.get('level')),
                 arms=row.get(
                     'arms', len(task['arms']) if isinstance(task.get('arms'), (dict, list)) else None

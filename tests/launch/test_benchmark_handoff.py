@@ -34,7 +34,7 @@ class HandoffAssetsTests(unittest.TestCase):
 
     @staticmethod
     def new_rule(release):
-        release['families']['test']['policy'][0]['task_sha256'] = 'scoring revision'
+        release['task_types']['test']['policy'][0]['task_sha256'] = 'scoring revision'
 
     def test_a_reviewed_task_only_revision_reuses_the_pinned_archive(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -50,7 +50,7 @@ class HandoffAssetsTests(unittest.TestCase):
             # The release changed again after review.
             path = target / 'benchmark/release.json'
             release = json.loads(path.read_text())
-            release['families']['test']['policy'][0]['note'] = 'unreviewed'
+            release['task_types']['test']['policy'][0]['note'] = 'unreviewed'
             path.write_text(json.dumps(release))
             with self.assertRaisesRegex(ValueError, 'Task release does not match'):
                 setup_assets(target, archive)
@@ -115,7 +115,7 @@ class HandoffAssetsTests(unittest.TestCase):
         )
         write(
             'benchmark/release.json',
-            json.dumps({'families': {'test': {'policy': [{'directory': 'configs/environments/test'}]}}}),
+            json.dumps({'task_types': {'test': {'policy': [{'directory': 'configs/environments/test'}]}}}),
         )
         robot = write('vendor/panda/robot.xml', 'robot')
         write('vendor/panda/SOURCE.json', json.dumps({'sha256': {'robot.xml': checksum(robot)}}))

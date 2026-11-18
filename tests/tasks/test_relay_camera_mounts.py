@@ -41,7 +41,7 @@ class RelayCameraMountTests(unittest.TestCase):
         return model
 
     def test_every_released_relay_task_publishes_the_pose_mujoco_gives_each_camera(self):
-        cases = read(ROOT / RELEASE)['families']['relay']['policy']
+        cases = read(ROOT / RELEASE)['task_types']['relay']['policy']
         self.assertEqual(len(cases), 9)
         for case in cases:
             with self.subTest(case=case['id']):
@@ -65,7 +65,7 @@ class RelayCameraMountTests(unittest.TestCase):
 
     def test_a_prepared_relay_run_receives_the_mounts_of_its_own_frozen_scene(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = prepare('relay-a08-d1', Path(tmp) / 'relay')
+            run = prepare('relay-small-l1', Path(tmp) / 'relay')
             public = read(run / 'public/inputs/task.json')
             self.assert_mounts_match_scene(public, run / 'private/inputs/scene')
 

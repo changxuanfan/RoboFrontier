@@ -1,87 +1,87 @@
 {
-  "family": "relay",
+  "task_type": "relay",
   "rule_revision": "relay-timber-goal-70pct-v1",
   "cases": [
     {
-      "family": "relay",
+      "task_type": "relay",
       "level": 1,
-      "scale_index": 0,
+      "size": "small",
       "arms": 8,
-      "id": "relay-a08-d1",
+      "id": "relay-small-l1",
       "table_height_m": 0.8,
-      "directory": "benchmark/relay/relay-a08-d1"
+      "directory": "benchmark/relay/relay-small-l1"
     },
     {
-      "family": "relay",
+      "task_type": "relay",
       "level": 2,
-      "scale_index": 0,
+      "size": "small",
       "arms": 8,
-      "id": "relay-a08-d2",
+      "id": "relay-small-l2",
       "table_height_m": 0.8,
-      "directory": "benchmark/relay/relay-a08-d2"
+      "directory": "benchmark/relay/relay-small-l2"
     },
     {
-      "family": "relay",
+      "task_type": "relay",
       "level": 3,
-      "scale_index": 0,
+      "size": "small",
       "arms": 8,
-      "id": "relay-a08-d3",
+      "id": "relay-small-l3",
       "table_height_m": 0.8,
-      "directory": "benchmark/relay/relay-a08-d3"
+      "directory": "benchmark/relay/relay-small-l3"
     },
     {
-      "family": "relay",
+      "task_type": "relay",
       "level": 1,
-      "scale_index": 1,
+      "size": "medium",
       "arms": 12,
-      "id": "relay-a12-d1",
+      "id": "relay-medium-l1",
       "table_height_m": 0.8,
-      "directory": "benchmark/relay/relay-a12-d1"
+      "directory": "benchmark/relay/relay-medium-l1"
     },
     {
-      "family": "relay",
+      "task_type": "relay",
       "level": 2,
-      "scale_index": 1,
+      "size": "medium",
       "arms": 12,
-      "id": "relay-a12-d2",
+      "id": "relay-medium-l2",
       "table_height_m": 0.8,
-      "directory": "benchmark/relay/relay-a12-d2"
+      "directory": "benchmark/relay/relay-medium-l2"
     },
     {
-      "family": "relay",
+      "task_type": "relay",
       "level": 3,
-      "scale_index": 1,
+      "size": "medium",
       "arms": 12,
-      "id": "relay-a12-d3",
+      "id": "relay-medium-l3",
       "table_height_m": 0.8,
-      "directory": "benchmark/relay/relay-a12-d3"
+      "directory": "benchmark/relay/relay-medium-l3"
     },
     {
-      "family": "relay",
+      "task_type": "relay",
       "level": 1,
-      "scale_index": 2,
+      "size": "large",
       "arms": 16,
-      "id": "relay-a16-d1",
+      "id": "relay-large-l1",
       "table_height_m": 0.8,
-      "directory": "benchmark/relay/relay-a16-d1"
+      "directory": "benchmark/relay/relay-large-l1"
     },
     {
-      "family": "relay",
+      "task_type": "relay",
       "level": 2,
-      "scale_index": 2,
+      "size": "large",
       "arms": 16,
-      "id": "relay-a16-d2",
+      "id": "relay-large-l2",
       "table_height_m": 0.8,
-      "directory": "benchmark/relay/relay-a16-d2"
+      "directory": "benchmark/relay/relay-large-l2"
     },
     {
-      "family": "relay",
+      "task_type": "relay",
       "level": 3,
-      "scale_index": 2,
+      "size": "large",
       "arms": 16,
-      "id": "relay-a16-d3",
+      "id": "relay-large-l3",
       "table_height_m": 0.8,
-      "directory": "benchmark/relay/relay-a16-d3"
+      "directory": "benchmark/relay/relay-large-l3"
     }
   ]
 }

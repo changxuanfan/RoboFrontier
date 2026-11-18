@@ -72,7 +72,7 @@ class CliBenchmarkTests(unittest.TestCase):
             catalog['models']['luna']['benchmark_system'] = 'decentralized'
             config = root / 'models.json'
             config.write_text(json.dumps(catalog))
-            prepared = prepare_batch(root / 'batch', ['luna'], cases=['transport-a04-d1'], config=config)
+            prepared = prepare_batch(root / 'batch', ['luna'], cases=['transport-small-l1'], config=config)
             run = Path(json.loads(prepared.read_text())['jobs'][0]['run_directory'])
             run_settings = json.loads((run / 'private/inputs/run.json').read_text())
             self.assertEqual(
@@ -80,7 +80,7 @@ class CliBenchmarkTests(unittest.TestCase):
             )
 
     def test_level_and_minimum_arms_select_four_tasks_without_launch(self):
-        expected = ['transport-a04-d2', 'mosaic-a04-6x12-d2', 'relay-a08-d2', 'dial-best5-n04-d2']
+        expected = ['transport-small-l2', 'mosaic-small-l2', 'relay-small-l2', 'dial-small-l2']
         with patch.object(benchmark.subprocess, 'run') as launch:
             rows = select_cases(level=2, min_arms=True)
             self.assertEqual([row['case_id'] for row in rows], expected)
@@ -162,7 +162,7 @@ class CliBenchmarkTests(unittest.TestCase):
     def test_models_share_fresh_private_dial_instance_but_not_runtime(self):
         with tempfile.TemporaryDirectory() as tmp:
             file = prepare_batch(
-                Path(tmp) / 'batch', ['astra_subscription', 'deepseek'], cases=['dial-best5-n04-d1']
+                Path(tmp) / 'batch', ['astra_subscription', 'deepseek'], cases=['dial-small-l1']
             )
             batch = json.loads(file.read_text())
             a, b = [Path(j['run_directory']) for j in batch['jobs']]
@@ -301,7 +301,7 @@ class CliBenchmarkTests(unittest.TestCase):
 
     def test_released_policy_service_enforces_24h_of_active_time_without_host(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = prepare('transport-a04-d1', Path(tmp) / 'run')
+            run = prepare('transport-small-l1', Path(tmp) / 'run')
             s = RuntimeService(run, BudgetWorld, fake_capture)
             try:
                 s.store.update_agent('Controller', ready=True, thread_id='engineering-only')

@@ -210,7 +210,7 @@ continuation is by hand:
 
 ```sh
 .venv/bin/roboteam continue runs/policy/my-batch                     # every run that may continue
-.venv/bin/roboteam continue runs/policy/my-batch --cases transport-a04-d1
+.venv/bin/roboteam continue runs/policy/my-batch --cases transport-small-l1
 ```
 
 A continuation after the finish or the cutoff keeps the score recorded at that stop. If the

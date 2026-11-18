@@ -77,7 +77,7 @@ class DirectTeamStartTests(unittest.TestCase):
     def test_a_refused_start_gate_leaves_the_run_prepared(self):
         from unittest.mock import patch
 
-        for readiness in ('environment_preview_only', 'prepared_policy_trial'):
+        for readiness in (None, 'prepared_policy_trial'):
             with self.subTest(readiness=readiness), tempfile.TemporaryDirectory() as temporary:
                 service, call = self.make_service(Path(temporary), 'decentralized')
                 videos = []
@@ -86,7 +86,9 @@ class DirectTeamStartTests(unittest.TestCase):
                     call('Meta', 'bind', {'actor': actor, 'thread_id': 'thread-' + actor})
                 started = []
                 service.world.start_trial = lambda: started.append(1)
-                service.task['execution_readiness'] = readiness
+                service.task.pop('execution_readiness', None)
+                if readiness:
+                    service.task['execution_readiness'] = readiness
                 with patch(
                     'roboteam.tasks.task_types.validate_frozen_policy',
                     side_effect=ValueError('Frozen policy release differs'),

@@ -65,7 +65,7 @@ public/inputs/rules.md             frozen shared rules (also in the system promp
 public/inputs/roles.json           roles and agent system
 public/inputs/roles/<role>.md      role instructions
 public/inputs/guide/               the robot-collaboration guide and its references
-public/inputs/family/              task guide and materials
+public/inputs/task/                task guide (guide.md) and materials
 public/inputs/environment.md       the policy environment; policy-env.sh is sourced before each Claude command
 public/observations/               timestamped RGB observations
 public/results/                    reports returned by roles
@@ -111,7 +111,7 @@ shared filesystem.
 | --- | --- | --- |
 | Frozen inputs and source snapshots | Preparation | Once before launch |
 | Role notes, self-reported state, review deadlines | Agent through tools | Material decisions, before ending a turn |
-| Mail, delivery batches, acknowledgments, notices | Harness | Communication events |
+| Mail, delivery batches, acknowledgments, notices | Runtime | Communication events |
 | Call IDs and accepted / running / terminal / unknown outcomes | Execution service | Request and action transitions |
 | Native session observations | Harness driver | Timestamped platform observations |
 | Images and optional real-time video | Observation and recording service | Requested observations or configured sampling |
@@ -120,7 +120,7 @@ shared filesystem.
 
 Each role records plans, commitments, evidence references, blockers and its next decision in its
 own `work` note in the run database. Verified lessons for the run go in `workspace/skills.md`,
-which every role shares. Other roles read selected notes; the harness does not inject everything
+which every role shares. Other roles read selected notes; the runtime does not inject everything
 into every context. Single keeps its own notes, standing Workers keep their work, and Adaptive
 delegates hand findings back in their `return_task` report. Learning across runs needs an explicit
 experiment with recorded provenance.

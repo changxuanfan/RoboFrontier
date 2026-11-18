@@ -186,7 +186,7 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         self.root = Path(self.tmp.name).resolve()
 
     def test_runs_freeze_the_active_clock(self):
-        new = task_types.policy_task('transport-a04-d1')
+        new = task_types.policy_task('transport-small-l1')
         self.assertEqual(new['run_protocol']['clock'], ACTIVE)
         task_types.validate_policy_task(new)
         for changed in (
@@ -208,7 +208,7 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         return store
 
     def test_continuation_needs_remaining_active_time(self):
-        run = task_types.prepare('transport-a04-d1', self.root / 'new')
+        run = task_types.prepare('transport-small-l1', self.root / 'new')
         store = self.store(run)
         # Twice the limit has passed on the wall clock, but little of it was active.
         store.put('start_at', time.time() - 2 * 86400)

@@ -116,7 +116,7 @@ a permission profile; Claude Code as file-tool rules plus its Bash isolation.
   `/usr/sbin` cannot run; the folders stay listable and their other programs run. On macOS the
   root stays readable (a table without it aborts `/bin/sh`), so `/usr/bin/python3` runs, without
   third-party packages.
-- **Harness and policy environments stay separate.** Both use Python 3.12, but the harness keeps
+- **Runtime and policy environments stay separate.** Both use Python 3.12, but the runtime keeps
   its own installation, MuJoCo and Pillow; merging them would give scripts the simulator.
 
 ## Newer versions

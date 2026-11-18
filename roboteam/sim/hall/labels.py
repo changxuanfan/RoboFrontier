@@ -212,7 +212,7 @@ def place_robot_labels(model, data, task):
     scratch = mujoco.MjData(model)
     mujoco.mj_resetDataKeyframe(model, scratch, model.key('initial').id)
     mujoco.mj_kinematics(model, scratch)
-    moves = robot_label_moves(model, scratch, avoid_objects=task.get('family') != 'mosaic')
+    moves = robot_label_moves(model, scratch, avoid_objects=task.get('task_type') != 'mosaic')
     for name, move in moves.items():
         gid = model.geom(name).id
         model.geom_pos[gid][:2] = move['to_xy']

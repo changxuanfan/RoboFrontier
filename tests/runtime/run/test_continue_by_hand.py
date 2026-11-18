@@ -18,7 +18,7 @@ from roboteam.runtime.world.store import RuntimeStore
 
 
 class Reader:
-    meta = {'case_id': 'transport-a04-d1', 'source_scene_sha256': 'scene'}
+    meta = {'case_id': 'transport-small-l1', 'source_scene_sha256': 'scene'}
 
     def selected_frames(self, indices):
         for i in indices:
@@ -33,7 +33,7 @@ class ContinueByHandTests(unittest.TestCase):
         self.batch = root / 'batch'
         self.batch.mkdir()
         self.runs = {}
-        for case in ('transport-a04-d1', 'transport-a04-d2'):
+        for case in ('transport-small-l1', 'transport-small-l2'):
             (root / case).mkdir()
             self.runs[case] = prepared(root / case, 'codex', case).resolve()
         config = load_configuration(None, {'policy': {'harness': 'codex'}})
@@ -62,12 +62,12 @@ class ContinueByHandTests(unittest.TestCase):
         self.addCleanup(patcher.stop)
 
     def test_a_named_finished_run_continues_and_the_batch_reopens_for_it_only(self):
-        report = cli.continue_runs(self.batch, ['transport-a04-d2'])
-        self.assertEqual((report['prepared'], report['refused']), (['transport-a04-d2'], {}))
+        report = cli.continue_runs(self.batch, ['transport-small-l2'])
+        self.assertEqual((report['prepared'], report['refused']), (['transport-small-l2'], {}))
         document = json.loads((self.batch / 'batch.json').read_text())
         self.assertEqual(document['status'], 'running')
         self.assertEqual([j['status'] for j in document['jobs']], ['closed', 'prepared'])
-        store = RuntimeStore(self.runs['transport-a04-d2'] / 'private/state/runtime.sqlite')
+        store = RuntimeStore(self.runs['transport-small-l2'] / 'private/state/runtime.sqlite')
         try:
             self.assertEqual((store.get('lifecycle'), store.get('segment')), ('resuming', 1))
             self.assertEqual(store.get('after_score')['reason'], 'finish')

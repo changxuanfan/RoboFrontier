@@ -6,7 +6,7 @@ that repeats counts, and the report says which modules failed only in parallel.
     .venv/bin/python -m scripts.dev.run_tests --workers 4 runtime.run.test_run_segments harness
 
 Arguments name modules (runtime.run.test_run_segments) or folders under tests/ (harness, harness.codex).
-Exits 1 when a failure repeats. CI runs it in the all-tests job (.github/workflows/harness.yml).
+Exits 1 when a failure repeats. CI runs it in the all-tests job (.github/workflows/tests.yml).
 """
 
 import argparse

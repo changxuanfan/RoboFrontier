@@ -153,7 +153,7 @@ def prepare_batch(
             raise ValueError('Keep the native authentication home outside the evidence batch')
     release = read(ROOT / RELEASE)
     released = {
-        case['id']: case for task_type in release['families'].values() for case in task_type['policy']
+        case['id']: case for task_type in release['task_types'].values() for case in task_type['policy']
     }
     for case in selected:
         report = check_case_assets(released[case], ROOT)
@@ -191,7 +191,7 @@ def prepare_batch(
     puzzles = {}
     for case in selected:
         task = policy_task(case)
-        if task.get('family') == 'dial':
+        if task.get('task_type') == 'dial':
             target = output / 'private/dial' / (case + '.json')
             write_json(target, {'code_symbols': dial_code(case)})
             puzzles[case] = target
@@ -285,7 +285,7 @@ def doctor(names, root=ROOT, catalog=CATALOG):
         }
     assets = [
         check_case_assets(case, root)
-        for task_type in read(root / RELEASE)['families'].values()
+        for task_type in read(root / RELEASE)['task_types'].values()
         for case in task_type['policy']
     ]
     return {

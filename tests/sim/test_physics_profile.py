@@ -29,7 +29,7 @@ def world(task_type='transport'):
     model = mujoco.MjModel.from_xml_string(BOX)
     arm = SimpleNamespace(job=None)
     return SimpleNamespace(
-        model=model, data=mujoco.MjData(model), arms={'A': arm}, task={'family': task_type}
+        model=model, data=mujoco.MjData(model), arms={'A': arm}, task={'task_type': task_type}
     )
 
 
@@ -132,10 +132,10 @@ class ReleasedScenePhysicsTests(unittest.TestCase):
     def test_released_scene_names_match_the_contact_rule(self):
         # task type: (arms, Dial module disks and stems, fingers' collision geoms per arm)
         expected = {
-            'transport-a08-d1': (8, 0),
-            'mosaic-a04-6x12-d1': (4, 0),
-            'relay-a08-d2': (8, 0),
-            'dial-best5-n04-d2': (8, 8),
+            'transport-medium-l1': (8, 0),
+            'mosaic-small-l1': (4, 0),
+            'relay-small-l2': (8, 0),
+            'dial-small-l2': (8, 8),
         }
         for folder in cases():
             if folder.name not in expected:

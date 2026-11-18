@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "id": "robo-factory-v10",
+  "id": "roboteam-hall",
   "units": "metres",
   "coordinate_frame": "+X east, +Y north, +Z up",
   "seed": 1729,

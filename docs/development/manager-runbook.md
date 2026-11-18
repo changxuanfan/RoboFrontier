@@ -3,7 +3,7 @@
 The manager (a person, a shell script or an outer coding agent) prepares, launches, watches,
 stops and collects batches. It never decides task strategy, chooses robots, scopes, grasps or
 recovery moves, or changes frozen inputs; the measured team follows its frozen role files and the
-[collaboration skill](../../prompts/guides/collaboration/guide.md). Ready-made prompts for an
+[collaboration guide](../../prompts/guides/collaboration/guide.md). Ready-made prompts for an
 outer agent: [Codex](manager-codex.md), [Claude Code](manager-claude.md).
 State and evidence boundaries are in the [architecture](architecture.md).
 

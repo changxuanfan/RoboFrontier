@@ -199,7 +199,7 @@ class AccessTableTests(Fixture):
 
         with patch.dict(os.environ, {policy_env.ENV_VAR: str(self.root)}):
             with self.assertRaisesRegex(ValueError, 'has not checked.*native'):
-                prepare_batch(self.tmp / 'batch', ['astra_subscription'], cases=['dial-best5-n04-d1'])
+                prepare_batch(self.tmp / 'batch', ['astra_subscription'], cases=['dial-small-l1'])
         self.assertFalse((self.tmp / 'batch').exists())
 
     def test_a_cli_that_hangs_or_is_missing_has_no_version(self):

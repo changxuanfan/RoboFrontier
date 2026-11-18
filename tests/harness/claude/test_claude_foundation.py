@@ -36,7 +36,7 @@ class ClaudeFoundationTests(unittest.TestCase):
 
             release = root / RELEASE
             release.parent.mkdir(parents=True)
-            release.write_text(json.dumps({'families': {}}))
+            release.write_text(json.dumps({'task_types': {}}))
             with (
                 patch.dict('os.environ', {'FAKE_KEY': 'environment-secret'}, clear=True),
                 patch('roboteam.launch.claude_prepare.shutil.which', return_value=None),
@@ -185,20 +185,20 @@ class ClaudeFoundationTests(unittest.TestCase):
             (public / 'task.json').write_text(
                 json.dumps(
                     {
-                        'initial_reference_images': ['family/view.png'],
+                        'initial_reference_images': ['task/view.png'],
                         'robot_layout_image': 'public/inputs/robot-layout.png',
                         'target': {'reference_image': 'target-pattern.png'},
                     }
                 )
             )
-            image = public / 'family/view.png'
+            image = public / 'task/view.png'
             image.parent.mkdir()
             png = b'\x89PNG\r\n\x1a\nimage'
             image.write_bytes(png)
             (public / 'robot-layout.png').write_bytes(png)
             (public / 'target-pattern.png').write_bytes(png)
             bridge = RobotBridge(run, connection)
-            response = bridge.call({'op': 'public_image', 'data': {'names': ['family/view.png']}})
+            response = bridge.call({'op': 'public_image', 'data': {'names': ['task/view.png']}})
             self.assertEqual(base64.b64decode(response['content'][1]['data']), png)
             layout = bridge.call(
                 {'op': 'public_image', 'data': {'names': ['public/inputs/robot-layout.png']}}
@@ -211,7 +211,7 @@ class ClaudeFoundationTests(unittest.TestCase):
             image.unlink()
             image.symlink_to(Path(tmp) / 'outside.png')
             with self.assertRaises(ValueError):
-                bridge.call({'op': 'public_image', 'data': {'names': ['family/view.png']}})
+                bridge.call({'op': 'public_image', 'data': {'names': ['task/view.png']}})
 
     def test_every_policy_runtime_op_is_exposed_and_admin_ops_are_not(self):
         # Codex forwards any op to the runtime; Claude's bridge must allow the same policy set.

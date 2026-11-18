@@ -1,4 +1,4 @@
-# Dial (BEST5)
+# Dial
 
 Each dial module has a knob with six marks (0–5, 60° apart) and a secret digit 1–5. The team
 turns every knob to a nonzero mark and holds them all at once. The panel's BEST digit shows the
@@ -8,9 +8,9 @@ input is entirely correct.
 
 | Level | Modules | Arms (4, 6, 8 dials) |
 | --- | --- | --- |
-| 1 (`d1`) | Fixed gear dials on the table | 4, 6, 8 |
-| 2 (`d2`) | Free modules: a second arm holds each blue handle with the module at least 20 mm clear of every support while another turns the red knob | 8, 12, 16 |
-| 3 (`d3`) | As level 2, turned by a single-sided crank against a stiffer spring | 8, 12, 16 |
+| 1 (`l1`) | Fixed gear dials on the table | 4, 6, 8 |
+| 2 (`l2`) | Free modules: a second arm holds each blue handle with the module at least 20 mm clear of every support while another turns the red knob | 8, 12, 16 |
+| 3 (`l3`) | As level 2, turned by a single-sided crank against a stiffer spring | 8, 12, 16 |
 
 The table is 0.8 m high and each white disk 0.3 m across. Each case's public task and task type
 materials (previews, camera calibration, `table-geometry.json`) give its table outline, bases,

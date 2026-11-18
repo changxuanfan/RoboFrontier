@@ -291,10 +291,10 @@ class RuntimeService:
     def check_startable(self):
         """The task's START gates. World.start_trial repeats them as it opens the recorders."""
         readiness = self.task.get('execution_readiness')
-        if readiness == 'environment_preview_only':
+        if readiness is None:
             raise ValueError(
-                'This v2 scene is an environment preview. Mechanism-specific evaluation and recording '
-                'commissioning are required before starting a policy trial.'
+                'This task was not prepared as a policy trial (roboteam.tasks.task_types.policy_task); '
+                'a released task file on its own cannot be started.'
             )
         if readiness == 'prepared_policy_trial':
             from roboteam.tasks.task_types import validate_frozen_policy

@@ -39,7 +39,7 @@ def score(handovers):
     """Two timbers fully inside GOAL and released, with the given handovers on each."""
     _, _, relay = GoalSupportTests().world()
     mon = relay.mon
-    mon.task.update(family='relay', level=1)
+    mon.task.update(task_type='relay', level=1)
     mon.task = final_task(mon.task)
     mon.task['run_protocol'] = {'evaluation_semantics': 'terminal_outcome_v2'}
     mon.violations = []
@@ -82,7 +82,7 @@ class Scenario:
     def __init__(self, inside=True):
         _, self.data, self.relay = GoalSupportTests().world()
         mon = self.mon = self.relay.mon
-        mon.task.update(family='relay', level=1)
+        mon.task.update(task_type='relay', level=1)
         mon.task = final_task(mon.task)
         mon.task['run_protocol'] = {
             'evaluation_semantics': 'terminal_outcome_v2',
@@ -240,9 +240,9 @@ class DropRecoveryTests(unittest.TestCase):
 class ProtocolTests(unittest.TestCase):
     def test_only_relay_tasks_carry_the_rule(self):
         self.assertEqual(
-            policy_task('relay-a08-d1')['run_protocol']['relay_completion_rule'], RELAY_HANDOVER_RULE
+            policy_task('relay-small-l1')['run_protocol']['relay_completion_rule'], RELAY_HANDOVER_RULE
         )
-        self.assertNotIn('relay_completion_rule', policy_task('transport-a04-d1')['run_protocol'])
+        self.assertNotIn('relay_completion_rule', policy_task('transport-small-l1')['run_protocol'])
 
 
 class RestartTests(unittest.TestCase):

@@ -29,7 +29,7 @@ BACKSTOP = 2 * DAY
 
 class ProtocolTests(unittest.TestCase):
     def test_runs_freeze_a_48h_backstop(self):
-        new = task_types.policy_task('transport-a04-d1')
+        new = task_types.policy_task('transport-small-l1')
         self.assertEqual(new['run_protocol']['wall_backstop_s'], BACKSTOP)
         task_types.validate_policy_task(new)
         self.assertEqual(wall_backstop_s(new['run_protocol']), BACKSTOP)
@@ -49,7 +49,7 @@ class ProtocolTests(unittest.TestCase):
 
     def test_the_world_owner_reads_the_frozen_backstop(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = task_types.prepare('transport-a04-d1', Path(tmp) / 'run')
+            run = task_types.prepare('transport-small-l1', Path(tmp) / 'run')
             s = RuntimeService(run, BudgetWorld, fake_capture)
             try:
                 self.assertEqual(s.policy_budget.wall_backstop_s, BACKSTOP)
@@ -196,7 +196,7 @@ class ContinuationTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.run = task_types.prepare('transport-a04-d1', Path(self.tmp.name) / 'run')
+        self.run = task_types.prepare('transport-small-l1', Path(self.tmp.name) / 'run')
         from roboteam.runtime.world.store import RuntimeStore
 
         self.store = RuntimeStore(self.run / 'private/state/runtime.sqlite')

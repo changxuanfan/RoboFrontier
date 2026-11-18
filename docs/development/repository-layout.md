@@ -83,7 +83,7 @@ roboteam/
 | `docs/` | `getting-started.md` and `cli.md` at the top level; `tasks/`, `benchmark/` (rules, physics, robot-tool-only runs), `harness/` (Codex, Claude Code, the two adapters, shared login), `hosts/` (Mac, Linux, Slurm, Docker, the policy environment, and `examples/` with a starting site TOML per platform), `runs/` (continuation, evidence storage, viewer) and `development/`; `media/readme/` holds the README images. Every prepared run freezes `development/manager-runbook.md`, `architecture.md` and `test-coverage.md` by name. | Generated renders (`docs/generated/` is ignored) |
 | `site/` | The project page: `index.html`, `DESIGN.md`, `data/` (task and media indexes, and the note on each Oracle video) and `assets/` (`atlas/`, `css/`, `img/`, `js/`). | The task videos, which are published from separate media repositories; the results, which the page fetches from the data repository |
 | `docker/` | `Dockerfile` for `roboteam container`. | |
-| `.github/` | `workflows/harness.yml` (the offline checks) and `workflows/site.yml` (the project page). | |
+| `.github/` | `workflows/tests.yml` (the offline checks) and `workflows/site.yml` (the project page). | |
 
 ## Folders not in Git
 

@@ -30,7 +30,7 @@ from roboteam.tasks.scene import camera_names
 from roboteam.tasks.task_types import ROOT, prepare
 from runtime.run.test_run_segments_integration import wait_until
 
-CASE = 'mosaic-a04-6x12-d1'
+CASE = 'mosaic-small-l1'
 BOOTSTRAP, RESUME = 'This is a new, independent RoboTeam trial', 'The host stopped unexpectedly'
 
 

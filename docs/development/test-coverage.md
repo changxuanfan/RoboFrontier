@@ -1,11 +1,11 @@
-# Harness check coverage
+# Runtime check coverage
 
-What the offline harness checker exercises and what it does not establish. It is a description of
+What the offline runtime checker exercises and what it does not establish. It is a description of
 coverage, not a pass record: a pass is the report the checker writes.
 
 ```sh
-.venv/bin/python -m scripts.dev.check_harness --report runs/engineering/full.json
-.venv/bin/python -m scripts.dev.check_harness --protocol-only --report runs/engineering/protocol.json
+.venv/bin/python -m scripts.dev.check_runtime --report runs/engineering/full.json
+.venv/bin/python -m scripts.dev.check_runtime --protocol-only --report runs/engineering/protocol.json
 ```
 
 Both modes also run every Node host test (`tests/**/test_*.js` with `node --test`) and the Meta
@@ -21,7 +21,7 @@ Markdown resolves inside the checkout.
 - **`--protocol-only`** runs a fixed list of contract modules with MuJoCo model creation and
   stepping replaced by errors. It covers synthetic task and runtime contracts, private scoring on
   synthetic records, frozen inputs and recovery boundaries. It does not cover contacts,
-  rendering or provider behavior. CI runs it in `.github/workflows/harness.yml`, before the tests.
+  rendering or provider behavior. CI runs it in `.github/workflows/tests.yml`, before the tests.
 
 ## Contracts the tests cover
 

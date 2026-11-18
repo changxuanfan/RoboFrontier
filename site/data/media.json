@@ -5,7 +5,7 @@
    "key": "oracle",
    "base": "https://changxuanfan.github.io/RoboTeam-media-oracle/oracle/",
    "tasks": {
-    "dial-best5-n04-d1": {
+    "dial-small-l1": {
      "front": {
       "video": "dial-best5-n04-d1-front.mp4",
       "poster": "dial-best5-n04-d1-front.jpg",
@@ -21,7 +21,7 @@
       "sha256": "4094b2dce82eade34ca24a90c9909f3ae8f3a322bfab55a756d528e7efef2439"
      }
     },
-    "dial-best5-n04-d2": {
+    "dial-small-l2": {
      "front": {
       "video": "dial-best5-n04-d2-front.mp4",
       "poster": "dial-best5-n04-d2-front.jpg",
@@ -37,7 +37,7 @@
       "sha256": "e2fc871724e1cb8ff45d58579a0ec0a1f66132645e4c5acc75c96eee87c506a1"
      }
     },
-    "dial-best5-n04-d3": {
+    "dial-small-l3": {
      "front": {
       "video": "dial-best5-n04-d3-front.mp4",
       "poster": "dial-best5-n04-d3-front.jpg",
@@ -53,7 +53,7 @@
       "sha256": "5ee209fcc3897618e19be95dff9c8ad8d4e8896b67c829a9139cbd243c781759"
      }
     },
-    "dial-best5-n06-d1": {
+    "dial-medium-l1": {
      "front": {
       "video": "dial-best5-n06-d1-front.mp4",
       "poster": "dial-best5-n06-d1-front.jpg",
@@ -69,7 +69,7 @@
       "sha256": "b295180889046099d9e58102f28733bc87918afa37a313187d7bd3c29abfba40"
      }
     },
-    "dial-best5-n06-d2": {
+    "dial-medium-l2": {
      "front": {
       "video": "dial-best5-n06-d2-front.mp4",
       "poster": "dial-best5-n06-d2-front.jpg",
@@ -85,7 +85,7 @@
       "sha256": "da82b6f8082076c51ba4dd155007a458d48d4a2aa4e4ce448fd7635a69574f77"
      }
     },
-    "dial-best5-n06-d3": {
+    "dial-medium-l3": {
      "front": {
       "video": "dial-best5-n06-d3-front.mp4",
       "poster": "dial-best5-n06-d3-front.jpg",
@@ -101,7 +101,7 @@
       "sha256": "7ee1287d5beb07ed647257e893b0d6c60510ec648c6409dab7a1c3b84738697c"
      }
     },
-    "dial-best5-n08-d1": {
+    "dial-large-l1": {
      "front": {
       "video": "dial-best5-n08-d1-front.mp4",
       "poster": "dial-best5-n08-d1-front.jpg",
@@ -117,7 +117,7 @@
       "sha256": "59bdb7b691d6cf15ffa090ea268d3caae85ffd9cdc5144bdcb3b95fe581e40ad"
      }
     },
-    "dial-best5-n08-d2": {
+    "dial-large-l2": {
      "front": {
       "video": "dial-best5-n08-d2-front.mp4",
       "poster": "dial-best5-n08-d2-front.jpg",
@@ -133,7 +133,7 @@
       "sha256": "7e87ee06a0420789c7f8ad9c2c79e52c7714bbfdb7b82ebad04f820bdeb063cd"
      }
     },
-    "dial-best5-n08-d3": {
+    "dial-large-l3": {
      "front": {
       "video": "dial-best5-n08-d3-front.mp4",
       "poster": "dial-best5-n08-d3-front.jpg",
@@ -149,7 +149,7 @@
       "sha256": "e261083105e7ec1e2788943b9228f9e42e85998e253fd564130f3149160e1ecc"
      }
     },
-    "mosaic-a04-6x12-d1": {
+    "mosaic-small-l1": {
      "front": {
       "video": "mosaic-a04-6x12-d1-front.mp4",
       "poster": "mosaic-a04-6x12-d1-front.jpg",
@@ -165,7 +165,7 @@
       "sha256": "53f75ea2245eadda0820aa8810959016846af4f00737721b9d853f9dccfa2f88"
      }
     },
-    "mosaic-a04-6x12-d2": {
+    "mosaic-small-l2": {
      "front": {
       "video": "mosaic-a04-6x12-d2-front.mp4",
       "poster": "mosaic-a04-6x12-d2-front.jpg",
@@ -181,7 +181,7 @@
       "sha256": "c88ae84791bd8761b3a2e1f419793dfe52cbedac1b79bc799d94913af42b5814"
      }
     },
-    "mosaic-a04-6x12-d3": {
+    "mosaic-small-l3": {
      "front": {
       "video": "mosaic-a04-6x12-d3-front.mp4",
       "poster": "mosaic-a04-6x12-d3-front.jpg",
@@ -197,7 +197,7 @@
       "sha256": "e5002c345f475744c6e86665e31cacd49487cdff467e7cebb5e0183e3d38649c"
      }
     },
-    "mosaic-a06-9x18-d1": {
+    "mosaic-medium-l1": {
      "front": {
       "video": "mosaic-a06-9x18-d1-front.mp4",
       "poster": "mosaic-a06-9x18-d1-front.jpg",
@@ -213,7 +213,7 @@
       "sha256": "59558f6da74ba7253f16a4dd434c60011675e22aa53eac87b18f1dd5bb145029"
      }
     },
-    "mosaic-a06-9x18-d2": {
+    "mosaic-medium-l2": {
      "front": {
       "video": "mosaic-a06-9x18-d2-front.mp4",
       "poster": "mosaic-a06-9x18-d2-front.jpg",
@@ -229,7 +229,7 @@
       "sha256": "5fb1d806b63b83bc48040c7dea4f77f7b983bfc3267b831945daa8554cfe01ec"
      }
     },
-    "mosaic-a06-9x18-d3": {
+    "mosaic-medium-l3": {
      "front": {
       "video": "mosaic-a06-9x18-d3-front.mp4",
       "poster": "mosaic-a06-9x18-d3-front.jpg",
@@ -245,7 +245,7 @@
       "sha256": "dcd6be135bbe00aeaf0356cabcb145a43696c6afa8d7d7acb6ba234576ec1013"
      }
     },
-    "mosaic-a08-12x24-d1": {
+    "mosaic-large-l1": {
      "front": {
       "video": "mosaic-a08-12x24-d1-front.mp4",
       "poster": "mosaic-a08-12x24-d1-front.jpg",
@@ -261,7 +261,7 @@
       "sha256": "54093c35d6b7ca8d011ce3f2af51dc583a648f3a884fb46a11599f411dd19119"
      }
     },
-    "mosaic-a08-12x24-d2": {
+    "mosaic-large-l2": {
      "front": {
       "video": "mosaic-a08-12x24-d2-front.mp4",
       "poster": "mosaic-a08-12x24-d2-front.jpg",
@@ -277,7 +277,7 @@
       "sha256": "0684d177779c02acafe4a224b090a0e207a64502262f673a5ed0cbb93cab2287"
      }
     },
-    "mosaic-a08-12x24-d3": {
+    "mosaic-large-l3": {
      "front": {
       "video": "mosaic-a08-12x24-d3-front.mp4",
       "poster": "mosaic-a08-12x24-d3-front.jpg",
@@ -293,7 +293,7 @@
       "sha256": "551b0a6bbaab2600e67fa1545abddb5ec1efa1d3437ef91ea9b02158edc16719"
      }
     },
-    "relay-a08-d1": {
+    "relay-small-l1": {
      "front": {
       "video": "relay-a08-d1-front.mp4",
       "poster": "relay-a08-d1-front.jpg",
@@ -309,7 +309,7 @@
       "sha256": "b271e022ebec2732d57fd0a70fb51542d0f2feef81a2778c94747367d6d09f4f"
      }
     },
-    "relay-a08-d2": {
+    "relay-small-l2": {
      "front": {
       "video": "relay-a08-d2-front.mp4",
       "poster": "relay-a08-d2-front.jpg",
@@ -325,7 +325,7 @@
       "sha256": "c39fe4b3ace5b021ec90307a6ab25591be48c4e0813daab18603d1ec2ddc0972"
      }
     },
-    "relay-a08-d3": {
+    "relay-small-l3": {
      "front": {
       "video": "relay-a08-d3-front.mp4",
       "poster": "relay-a08-d3-front.jpg",
@@ -341,7 +341,7 @@
       "sha256": "0f2604ee4d9f6e9b5c827397f945ff1b9a7c23b2ab41ee785ff3711277f79248"
      }
     },
-    "relay-a12-d1": {
+    "relay-medium-l1": {
      "front": {
       "video": "relay-a12-d1-front.mp4",
       "poster": "relay-a12-d1-front.jpg",
@@ -357,7 +357,7 @@
       "sha256": "0c874f80c716c5d92373f51c22336943ca48f50002b1a2286539e8248840ebdf"
      }
     },
-    "relay-a12-d2": {
+    "relay-medium-l2": {
      "front": {
       "video": "relay-a12-d2-front.mp4",
       "poster": "relay-a12-d2-front.jpg",
@@ -373,7 +373,7 @@
       "sha256": "97fd12e7904c4ed8fcabfa54467b69f01aff6a5bd098eb6b6d8c3ed41170bd88"
      }
     },
-    "relay-a12-d3": {
+    "relay-medium-l3": {
      "front": {
       "video": "relay-a12-d3-front.mp4",
       "poster": "relay-a12-d3-front.jpg",
@@ -389,7 +389,7 @@
       "sha256": "7b0ab501d5e8c08a8378d3a76db39cdc8b66fedfb541d2713f972b76453aeb0a"
      }
     },
-    "relay-a16-d1": {
+    "relay-large-l1": {
      "front": {
       "video": "relay-a16-d1-front.mp4",
       "poster": "relay-a16-d1-front.jpg",
@@ -405,7 +405,7 @@
       "sha256": "5e4075637b88a95dd47580173b80d10b93d6723da30a05a7ae3633957bd600dc"
      }
     },
-    "relay-a16-d2": {
+    "relay-large-l2": {
      "front": {
       "video": "relay-a16-d2-front.mp4",
       "poster": "relay-a16-d2-front.jpg",
@@ -421,7 +421,7 @@
       "sha256": "518ef3303cfa8888f99c0d586513eded9255fac2a3571c8257772fabd3d93abc"
      }
     },
-    "relay-a16-d3": {
+    "relay-large-l3": {
      "front": {
       "video": "relay-a16-d3-front.mp4",
       "poster": "relay-a16-d3-front.jpg",
@@ -437,7 +437,7 @@
       "sha256": "d2c815eb77b2b24cc76cf350f41c8401c7380ee072aef48b426641e07debe3aa"
      }
     },
-    "transport-a04-d1": {
+    "transport-small-l1": {
      "front": {
       "video": "transport-a04-d1-front.mp4",
       "poster": "transport-a04-d1-front.jpg",
@@ -453,7 +453,7 @@
       "sha256": "ab164d07ae2d8ef6e21f58532d4b30b52933e99ffc88749f830ad8f38289194f"
      }
     },
-    "transport-a04-d2": {
+    "transport-small-l2": {
      "front": {
       "video": "transport-a04-d2-front.mp4",
       "poster": "transport-a04-d2-front.jpg",
@@ -469,7 +469,7 @@
       "sha256": "25f1d167010b3dbb9c270287bc094341f43f5688f533c4139f4ac11be765a5b6"
      }
     },
-    "transport-a04-d3": {
+    "transport-small-l3": {
      "front": {
       "video": "transport-a04-d3-front.mp4",
       "poster": "transport-a04-d3-front.jpg",
@@ -485,7 +485,7 @@
       "sha256": "b1e57e14641e307b176126d8ff6c02e35b589df9ab4c89464ed99fc2a3f7117b"
      }
     },
-    "transport-a08-d1": {
+    "transport-medium-l1": {
      "front": {
       "video": "transport-a08-d1-front.mp4",
       "poster": "transport-a08-d1-front.jpg",
@@ -501,7 +501,7 @@
       "sha256": "9ef2b5278b3d0760681a4f3db906144f31d6e66e77163255e11fe8c79180c3e7"
      }
     },
-    "transport-a08-d2": {
+    "transport-medium-l2": {
      "front": {
       "video": "transport-a08-d2-front.mp4",
       "poster": "transport-a08-d2-front.jpg",
@@ -517,7 +517,7 @@
       "sha256": "3bcc9a18535b98334aa24b68a2149b5f669e339155e879f90998848cd7c08190"
      }
     },
-    "transport-a08-d3": {
+    "transport-medium-l3": {
      "front": {
       "video": "transport-a08-d3-front.mp4",
       "poster": "transport-a08-d3-front.jpg",
@@ -533,7 +533,7 @@
       "sha256": "82f3230786a3e8cc86d71f6245f6e07070f5772fa6a1534f0a2f12c57ab3a61d"
      }
     },
-    "transport-a12-d1": {
+    "transport-large-l1": {
      "front": {
       "video": "transport-a12-d1-front.mp4",
       "poster": "transport-a12-d1-front.jpg",
@@ -549,7 +549,7 @@
       "sha256": "10e3452f299dedf3f10cc42e31e95850bc703c3041394f04040e0c8f3357726c"
      }
     },
-    "transport-a12-d2": {
+    "transport-large-l2": {
      "front": {
       "video": "transport-a12-d2-front.mp4",
       "poster": "transport-a12-d2-front.jpg",
@@ -565,7 +565,7 @@
       "sha256": "3aa440f1d5894413dadd9f9d78b61004c42d9e0cae884c26520f44280ac7e216"
      }
     },
-    "transport-a12-d3": {
+    "transport-large-l3": {
      "front": {
       "video": "transport-a12-d3-front.mp4",
       "poster": "transport-a12-d3-front.jpg",

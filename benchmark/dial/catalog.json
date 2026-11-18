@@ -1,7 +1,7 @@
 {
-  "family": "dial",
+  "task_type": "dial",
   "feedback": {
-    "version": "best5-v1",
+    "version": "best-v1",
     "mode": "best_so_far",
     "symbol_count": 5,
     "total_marks": 6,
@@ -19,103 +19,103 @@
   },
   "cases": [
     {
-      "family": "dial",
+      "task_type": "dial",
       "level": 1,
-      "scale_index": 0,
+      "size": "small",
       "arms": 4,
       "dials": 4,
-      "id": "dial-best5-n04-d1",
+      "id": "dial-small-l1",
       "ring_radius_m": 1.55,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n04-d1"
+      "directory": "benchmark/dial/dial-small-l1"
     },
     {
-      "family": "dial",
+      "task_type": "dial",
       "level": 2,
-      "scale_index": 0,
+      "size": "small",
       "arms": 8,
       "dials": 4,
-      "id": "dial-best5-n04-d2",
+      "id": "dial-small-l2",
       "ring_radius_m": 1.55,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n04-d2"
+      "directory": "benchmark/dial/dial-small-l2"
     },
     {
-      "family": "dial",
+      "task_type": "dial",
       "level": 3,
-      "scale_index": 0,
+      "size": "small",
       "arms": 8,
       "dials": 4,
-      "id": "dial-best5-n04-d3",
+      "id": "dial-small-l3",
       "ring_radius_m": 1.55,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n04-d3"
+      "directory": "benchmark/dial/dial-small-l3"
     },
     {
-      "family": "dial",
+      "task_type": "dial",
       "level": 1,
-      "scale_index": 1,
+      "size": "medium",
       "arms": 6,
       "dials": 6,
-      "id": "dial-best5-n06-d1",
+      "id": "dial-medium-l1",
       "ring_radius_m": 1.55,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n06-d1"
+      "directory": "benchmark/dial/dial-medium-l1"
     },
     {
-      "family": "dial",
+      "task_type": "dial",
       "level": 2,
-      "scale_index": 1,
+      "size": "medium",
       "arms": 12,
       "dials": 6,
-      "id": "dial-best5-n06-d2",
+      "id": "dial-medium-l2",
       "ring_radius_m": 1.55,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n06-d2"
+      "directory": "benchmark/dial/dial-medium-l2"
     },
     {
-      "family": "dial",
+      "task_type": "dial",
       "level": 3,
-      "scale_index": 1,
+      "size": "medium",
       "arms": 12,
       "dials": 6,
-      "id": "dial-best5-n06-d3",
+      "id": "dial-medium-l3",
       "ring_radius_m": 1.55,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n06-d3"
+      "directory": "benchmark/dial/dial-medium-l3"
     },
     {
-      "family": "dial",
+      "task_type": "dial",
       "level": 1,
-      "scale_index": 2,
+      "size": "large",
       "arms": 8,
       "dials": 8,
-      "id": "dial-best5-n08-d1",
+      "id": "dial-large-l1",
       "ring_radius_m": 1.55,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n08-d1"
+      "directory": "benchmark/dial/dial-large-l1"
     },
     {
-      "family": "dial",
+      "task_type": "dial",
       "level": 2,
-      "scale_index": 2,
+      "size": "large",
       "arms": 16,
       "dials": 8,
-      "id": "dial-best5-n08-d2",
+      "id": "dial-large-l2",
       "ring_radius_m": 1.55,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n08-d2"
+      "directory": "benchmark/dial/dial-large-l2"
     },
     {
-      "family": "dial",
+      "task_type": "dial",
       "level": 3,
-      "scale_index": 2,
+      "size": "large",
       "arms": 16,
       "dials": 8,
-      "id": "dial-best5-n08-d3",
+      "id": "dial-large-l3",
       "ring_radius_m": 1.55,
       "table_height_m": 0.8,
-      "directory": "benchmark/dial/dial-best5-n08-d3"
+      "directory": "benchmark/dial/dial-large-l3"
     }
   ]
 }

@@ -123,7 +123,7 @@ class SetupTests(unittest.TestCase):
         self.assertFalse((run / 'private/state').exists())
 
     def test_eight_workers_prepare_with_same_skill_in_both_systems(self):
-        p = ROOT / 'benchmark/transport/transport-a08-d1/task.json'
+        p = ROOT / 'benchmark/transport/transport-medium-l1/task.json'
         # The template marks its tool-dependent passages; a full run gets the full wording.
         from roboteam.runtime.tools.tools_mode import render
 

@@ -42,7 +42,7 @@ class BatchViewerTests(unittest.TestCase):
         run = base / 'profile/task'
         (run / 'private/state').mkdir(parents=True)
         job = dict(
-            case_id='transport-a04-d1',
+            case_id='transport-small-l1',
             task_type='transport',
             level=1,
             arms=4,
@@ -93,7 +93,7 @@ class BatchViewerTests(unittest.TestCase):
                 {
                     'status': 'running',
                     'jobs': [
-                        {'model_entry': 'test-model', 'case_id': 'transport-a04-d1', 'status': 'running'}
+                        {'model_entry': 'test-model', 'case_id': 'transport-small-l1', 'status': 'running'}
                     ],
                 },
             )
@@ -200,7 +200,7 @@ class BatchViewerTests(unittest.TestCase):
                     with urlopen(url + '/frame/' + key, timeout=3) as response:
                         self.assertEqual(response.read(), expected)
                 with self.assertRaises(HTTPError):
-                    urlopen(url + '/frame/transport-a04-d1', timeout=3)
+                    urlopen(url + '/frame/transport-small-l1', timeout=3)
 
     @unittest.skipUnless(shutil.which('node'), 'needs Node.js')
     def test_inline_browser_script_is_valid_without_running_a_browser(self):

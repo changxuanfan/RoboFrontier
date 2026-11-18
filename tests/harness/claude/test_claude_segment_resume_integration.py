@@ -31,7 +31,7 @@ from roboteam.tasks.scene import camera_names
 from runtime.run.test_run_segments_integration import wait_until
 
 ROOT = Path(__file__).resolve().parents[3]
-CASE = 'mosaic-a04-6x12-d1'
+CASE = 'mosaic-small-l1'
 RESUME = 'The host stopped unexpectedly'
 CHILD = (
     'import json,os,sys;from roboteam.harness.claude.run import run_task;'

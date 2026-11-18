@@ -12,7 +12,7 @@ def is_current(task):
 
 
 def final_task(task):
-    if task.get('family') != 'relay':
+    if task.get('task_type') != 'relay':
         raise ValueError('Relay contract requires a Relay task')
     result = deepcopy(task)
     level = result['level']

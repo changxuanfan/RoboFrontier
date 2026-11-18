@@ -16,7 +16,7 @@ class FactorySourceCompatibilityTest(unittest.TestCase):
                 (root / 'assets').mkdir(exist_ok=True)
                 (root / 'assets/mesh.obj').write_bytes(asset)
                 return colour_compatible_signature(
-                    SimpleNamespace(path=root, manifest={"case": {"family": "mosaic"}})
+                    SimpleNamespace(path=root, manifest={"case": {"task_type": "mosaic"}})
                 )
 
             baseline = signature(

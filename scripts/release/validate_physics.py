@@ -189,9 +189,9 @@ def rest(case_id):
 
 
 CARRY = {  # case, arm, body, grasp width, offset of the object centre in the hand
-    'mosaic-cube': ('mosaic-a04-6x12-d1', 'A', 'A_stock01', 0.06, (0, 0, 0)),
-    'transport-cube': ('transport-a04-d1', 'A', 'A_item1', 0.06, (0, 0, 0)),
-    'transport-cylinder': ('transport-a08-d1', 'A', None, 0.06, (0, 0, 0)),
+    'mosaic-cube': ('mosaic-small-l1', 'A', 'A_stock01', 0.06, (0, 0, 0)),
+    'transport-cube': ('transport-small-l1', 'A', 'A_item1', 0.06, (0, 0, 0)),
+    'transport-cylinder': ('transport-medium-l1', 'A', None, 0.06, (0, 0, 0)),
 }
 
 
@@ -346,7 +346,7 @@ def push():
     from roboteam.sim.robot_control import IKNoSolution
 
     with task_dir() as folder:
-        b = Bench('transport-a04-d1', folder)
+        b = Bench('transport-small-l1', folder)
         arm = 'A'
         body = 'A_item1'
         base = b.data.body(arm + '_link0').xpos.copy()
@@ -387,7 +387,7 @@ def push():
 
 def collide():
     with task_dir() as folder:
-        b = Bench('transport-a04-d1', folder)
+        b = Bench('transport-small-l1', folder)
         pa, _ = b.tcp('A')
         pb, _ = b.tcp('B')
         middle = (pa + pb) / 2
@@ -420,7 +420,7 @@ def relay(force=40.0):
     carry it and set it down. The timber must not move when a receiver closes, drop, or
     slide in a hand."""
     with task_dir() as folder:
-        b = Bench('relay-a08-d1', folder)
+        b = Bench('relay-small-l1', folder)
         P = 'payload_01'
         width = 0.045
 
@@ -523,7 +523,7 @@ def relay(force=40.0):
         return dict(name='relay', **out)
 
 
-def dial(case_id='dial-best5-n04-d1', speed=1.0):
+def dial(case_id='dial-small-l1', speed=1.0):
     with task_dir() as folder:
         b = Bench(case_id, folder)
         arm = 'A'
@@ -630,7 +630,7 @@ def jobs(selected, cases):
     from roboteam.tasks.task_types import read
 
     release = read(ROOT / 'benchmark/release.json')
-    ids = [c['id'] for f in release['families'].values() for c in f['policy']]
+    ids = [c['id'] for f in release['task_types'].values() for c in f['policy']]
     if cases:
         ids = [i for i in ids if i in cases]
     out = []
@@ -649,7 +649,7 @@ def jobs(selected, cases):
     if 'collide' in selected:
         out += [(collide, ())]
     if 'dial' in selected:
-        out += [(dial, ('dial-best5-n04-d1', v)) for v in (0.3, 1.0)]
+        out += [(dial, ('dial-small-l1', v)) for v in (0.3, 1.0)]
     if 'relay' in selected:
         out += [(relay, (f,)) for f in (40.0, 70.0)]
     if 'timing' in selected:

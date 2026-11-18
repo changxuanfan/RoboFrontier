@@ -15,7 +15,7 @@ task_wall_limit_s = 86400.0
 
 [selection]
 level = 3
-cases = ["transport-a12-d3", "mosaic-a08-12x24-d3", "relay-a16-d3", "dial-best5-n08-d3"]
+cases = ["transport-large-l3", "mosaic-large-l3", "relay-large-l3", "dial-large-l3"]
 
 [render]
 device = "cpu"

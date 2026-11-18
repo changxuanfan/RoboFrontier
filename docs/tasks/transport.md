@@ -8,9 +8,9 @@ staging, as the team chooses.
 
 | Level | Board | Done when |
 | --- | --- | --- |
-| 1 (`d1`) | Flat board | The item is released inside its target footprint, upright and still |
-| 2 (`d2`) | Fixed board with blind slots | Both flat blades of the item are inside the real slots, the item seated, released and still |
-| 3 (`d3`) | The same slots on a passive spring-supported board (z, roll, pitch) | As level 2, judged in the board's current frame, with the board still too |
+| 1 (`l1`) | Flat board | The item is released inside its target footprint, upright and still |
+| 2 (`l2`) | Fixed board with blind slots | Both flat blades of the item are inside the real slots, the item seated, released and still |
+| 3 (`l3`) | The same slots on a passive spring-supported board (z, roll, pitch) | As level 2, judged in the board's current frame, with the board still too |
 
 ## Geometry
 

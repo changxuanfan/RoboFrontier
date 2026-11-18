@@ -277,8 +277,8 @@ A changed model, endpoint, effort, catalog or CLI version needs a new receipt.
 | `--level 1` | 12 |
 | all levels | 36 |
 
-Minimum-arm level 1 selects Transport 4, Mosaic 4, Relay 8 and Dial 4 arms (Dial's `n04` counts
-dials). `batch.parallel` counts whole runs; delegates, standing Workers and forks add sessions and
+Minimum-arm level 1 selects Transport 4, Mosaic 4, Relay 8 and Dial 4 arms (the small
+case of each task type). `batch.parallel` counts whole runs; delegates, standing Workers and forks add sessions and
 model requests inside each run, so CPU, memory, rendering and the provider's rate limits bound
 throughput, not the setting. Concurrent batches add up. Every run of a Dial case uses the fixed
 code in `benchmark/release.json`, so all models face the same puzzles.

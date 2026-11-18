@@ -53,24 +53,24 @@ PYTHONPATH=tests:tests/helpers .venv/bin/python -m unittest runtime.world.test_p
 node --test tests/harness/codex/test_tool_errors.js
 ```
 
-## The harness checker
+## The runtime checker
 
 ```sh
-.venv/bin/python -m scripts.dev.check_harness --protocol-only --report runs/engineering/protocol.json
-.venv/bin/python -m scripts.dev.check_harness --report runs/engineering/full.json
+.venv/bin/python -m scripts.dev.check_runtime --protocol-only --report runs/engineering/protocol.json
+.venv/bin/python -m scripts.dev.check_runtime --report runs/engineering/full.json
 ```
 
 `--protocol-only` runs a fixed set of contract modules with MuJoCo model creation and stepping
 blocked; the full mode discovers every Python test. Both also run the Node host tests, JavaScript
 syntax checks and the documentation link check. What each covers is in
-[harness check coverage](test-coverage.md).
+[runtime check coverage](test-coverage.md).
 
 ## Physics validation
 
 ```sh
 .venv/bin/python -m scripts.release.validate_physics                    # every scenario, every case
 .venv/bin/python -m scripts.release.validate_physics carry dial --workers 4
-.venv/bin/python -m scripts.release.validate_physics rest --cases transport-a04-d1
+.venv/bin/python -m scripts.release.validate_physics rest --cases transport-small-l1
 ```
 
 Scenarios: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`. Results go to
@@ -79,8 +79,8 @@ part. Criteria and the current status are in [physics](../benchmark/physics.md#v
 
 ## CI
 
-`.github/workflows/harness.yml` has one job, `all-tests`, on a clean Linux machine. It runs
-`check_harness --protocol-only`, then `scripts.dev.run_tests --workers 4` under `xvfb-run` with the
+`.github/workflows/tests.yml` has one job, `all-tests`, on a clean Linux machine. It runs
+`check_runtime --protocol-only`, then `scripts.dev.run_tests --workers 4` under `xvfb-run` with the
 scene assets restored. It starts on pull requests and on pushes to `main`, except when a change
 touches only `docs/`, `site/`, `README.md` or the licenses; the files under those folders that
 tests read (`docs/runs/continuation.md`, `site/data/`) still start it.

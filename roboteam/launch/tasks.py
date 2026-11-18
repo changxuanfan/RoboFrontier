@@ -33,7 +33,7 @@ def prepare_batch(output, task_types=None, run_settings=None):
     output.mkdir(parents=True, exist_ok=False)
     cases = [
         c
-        for name, f in read(ROOT / RELEASE)['families'].items()
+        for name, f in read(ROOT / RELEASE)['task_types'].items()
         if task_types is None or name in task_types
         for c in f['policy']
     ]
@@ -85,7 +85,7 @@ def main():
         return
     rows = []
     failed = False
-    for task_type in read(ROOT / RELEASE)['families'].values():
+    for task_type in read(ROOT / RELEASE)['task_types'].values():
         for case in task_type['policy']:
             if args.command == 'check':
                 resolve_case(case['id'])

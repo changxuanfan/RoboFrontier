@@ -144,7 +144,7 @@ removing any source.
   (accumulated `*_s` seconds, `samples`, raw Dial angles, speeds and clearances, Relay
   `timber_inside_fraction`) appear only in snapshots. Each Dial trial is written with its event.
   On 600 simulated seconds of moving arms this is about 2.6 MB per simulated hour for
-  `transport-a12-d3` and 20 MB for `mosaic-a08-12x24-d3`.
+  `transport-large-l3` and 20 MB for `mosaic-large-l3`.
 
 Other values the run settings accept: `events-1s` and `events-60s` (snapshots every 1 or 60 s; with
 `events-60s` a scene that records motion leaves poses out of all but the last snapshot, and

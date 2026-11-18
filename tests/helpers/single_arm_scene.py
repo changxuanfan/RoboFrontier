@@ -149,7 +149,7 @@ def make_world(directory, cubes=None, run_settings=None, noslip_iterations=10):
         (directory / 'private/inputs/run.json').write_text(json.dumps(run_settings))
     task = {
         'kind': 'single_arm_test_scene',
-        'family': 'transport',
+        'task_type': 'transport',
         'scene_asset': 'private/inputs/scene/scene.xml',
         'arms': {ARM: {}},
         'objects': [{'id': name} for name in cubes],

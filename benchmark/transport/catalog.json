@@ -1,86 +1,86 @@
 {
-  "family": "transport",
+  "task_type": "transport",
   "cases": [
     {
-      "family": "transport",
+      "task_type": "transport",
       "level": 1,
-      "scale_index": 0,
+      "size": "small",
       "arms": 4,
-      "id": "transport-a04-d1",
+      "id": "transport-small-l1",
       "table_height_m": 0.8,
-      "directory": "benchmark/transport/transport-a04-d1"
+      "directory": "benchmark/transport/transport-small-l1"
     },
     {
-      "family": "transport",
+      "task_type": "transport",
       "level": 2,
-      "scale_index": 0,
+      "size": "small",
       "arms": 4,
-      "id": "transport-a04-d2",
+      "id": "transport-small-l2",
       "table_height_m": 0.8,
-      "directory": "benchmark/transport/transport-a04-d2"
+      "directory": "benchmark/transport/transport-small-l2"
     },
     {
-      "family": "transport",
+      "task_type": "transport",
       "level": 3,
-      "scale_index": 0,
+      "size": "small",
       "arms": 4,
-      "id": "transport-a04-d3",
+      "id": "transport-small-l3",
       "table_height_m": 0.8,
-      "directory": "benchmark/transport/transport-a04-d3"
+      "directory": "benchmark/transport/transport-small-l3"
     },
     {
-      "family": "transport",
+      "task_type": "transport",
       "level": 1,
-      "scale_index": 1,
+      "size": "medium",
       "arms": 8,
-      "id": "transport-a08-d1",
+      "id": "transport-medium-l1",
       "table_height_m": 0.8,
-      "directory": "benchmark/transport/transport-a08-d1"
+      "directory": "benchmark/transport/transport-medium-l1"
     },
     {
-      "family": "transport",
+      "task_type": "transport",
       "level": 2,
-      "scale_index": 1,
+      "size": "medium",
       "arms": 8,
-      "id": "transport-a08-d2",
+      "id": "transport-medium-l2",
       "table_height_m": 0.8,
-      "directory": "benchmark/transport/transport-a08-d2"
+      "directory": "benchmark/transport/transport-medium-l2"
     },
     {
-      "family": "transport",
+      "task_type": "transport",
       "level": 3,
-      "scale_index": 1,
+      "size": "medium",
       "arms": 8,
-      "id": "transport-a08-d3",
+      "id": "transport-medium-l3",
       "table_height_m": 0.8,
-      "directory": "benchmark/transport/transport-a08-d3"
+      "directory": "benchmark/transport/transport-medium-l3"
     },
     {
-      "family": "transport",
+      "task_type": "transport",
       "level": 1,
-      "scale_index": 2,
+      "size": "large",
       "arms": 12,
-      "id": "transport-a12-d1",
+      "id": "transport-large-l1",
       "table_height_m": 0.8,
-      "directory": "benchmark/transport/transport-a12-d1"
+      "directory": "benchmark/transport/transport-large-l1"
     },
     {
-      "family": "transport",
+      "task_type": "transport",
       "level": 2,
-      "scale_index": 2,
+      "size": "large",
       "arms": 12,
-      "id": "transport-a12-d2",
+      "id": "transport-large-l2",
       "table_height_m": 0.8,
-      "directory": "benchmark/transport/transport-a12-d2"
+      "directory": "benchmark/transport/transport-large-l2"
     },
     {
-      "family": "transport",
+      "task_type": "transport",
       "level": 3,
-      "scale_index": 2,
+      "size": "large",
       "arms": 12,
-      "id": "transport-a12-d3",
+      "id": "transport-large-l3",
       "table_height_m": 0.8,
-      "directory": "benchmark/transport/transport-a12-d3"
+      "directory": "benchmark/transport/transport-large-l3"
     }
   ]
 }

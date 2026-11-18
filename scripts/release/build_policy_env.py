@@ -33,7 +33,7 @@ from roboteam.runtime.sandbox import policy_env
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = policy_env.CONFIG
-# The harness's Python series, in a separate installation. roboteam/runtime/sandbox/policy-env/*.lock are resolved for it.
+# The runtime's Python series, in a separate installation. roboteam/runtime/sandbox/policy-env/*.lock are resolved for it.
 PYTHON = policy_env.PYTHON
 identity = policy_env.identity
 UV = ('uvx', '--from', 'uv==0.13.7', 'uv')  # A host's own uv may not know this Python yet.

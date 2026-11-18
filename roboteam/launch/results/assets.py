@@ -36,7 +36,7 @@ def pinned_asset_release(root, config):
 
 def scene_assets(root=ROOT):
     expected = {}
-    for task_type in read(root / RELEASE)['families'].values():
+    for task_type in read(root / RELEASE)['task_types'].values():
         for case in task_type['policy']:
             directory = Path(case['directory'])
             for asset in read(root / directory / 'workstation.json').get('assets', []):
@@ -181,7 +181,7 @@ def ensure_asset_archive(root=ROOT, archive_path=None):
 
 
 def setup_assets(root=ROOT, archive_path=None):
-    """Fetch the pinned R14 archive or restore an explicitly supplied local copy."""
+    """Fetch the pinned asset archive or restore an explicitly supplied local copy."""
     root = Path(root).resolve()
     config = read(root / 'benchmark/assets.json')
     pinned_asset_release(root, config)
@@ -236,7 +236,7 @@ def doctor(names, root=ROOT):
         model_entries[name] = entry
     assets = [
         check_case_assets(case, root)
-        for task_type in read(root / RELEASE)['families'].values()
+        for task_type in read(root / RELEASE)['task_types'].values()
         for case in task_type['policy']
     ]
     return dict(

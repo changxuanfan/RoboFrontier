@@ -172,7 +172,7 @@ class PhysicalRestoreTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            run = prepared(root, 'codex', case='mosaic-a04-6x12-d1').resolve()
+            run = prepared(root, 'codex', case='mosaic-small-l1').resolve()
             task = json.loads((run / 'private/inputs/task.json').read_text())
             world = World(run, task)
             pose = world.data.qpos.copy()

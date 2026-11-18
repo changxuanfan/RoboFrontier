@@ -23,15 +23,15 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(loose, [])
 
     def test_one_job_runs_the_protocol_check_and_every_test(self):
-        text = (ROOT / '.github/workflows/harness.yml').read_text()
+        text = (ROOT / '.github/workflows/tests.yml').read_text()
         self.assertEqual(
             re.findall(r'^  ([\w-]+):$', text.split('\njobs:\n', 1)[1], flags=re.M), ['all-tests']
         )
-        self.assertIn('scripts.dev.check_harness --protocol-only', text)
+        self.assertIn('scripts.dev.check_runtime --protocol-only', text)
         self.assertIn('scripts.dev.run_tests', text)
 
     def test_documentation_changes_do_not_start_the_tests_but_files_tests_read_do(self):
-        text = (ROOT / '.github/workflows/harness.yml').read_text()
+        text = (ROOT / '.github/workflows/tests.yml').read_text()
         for trigger in ('pull_request', 'push'):
             paths = re.findall(
                 r"- '([^']+)'",

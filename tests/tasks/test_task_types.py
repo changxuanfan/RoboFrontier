@@ -48,27 +48,30 @@ class TaskTypeReleaseTests(unittest.TestCase):
 
     def test_the_release_has_36_exact_sources(self):
         release = read(ROOT / RELEASE)
-        rows = [c for f in release['families'].values() for c in f['policy']]
+        rows = [c for f in release['task_types'].values() for c in f['policy']]
         self.assertEqual(len(rows), 36)
         self.assertEqual(len({c['id'] for c in rows}), 36)
         for c in rows:
             resolve_case(c['id'])
-        mosaic = release['families']['mosaic']
+        mosaic = release['task_types']['mosaic']
         self.assertEqual(
-            read(ROOT / mosaic['policy'][0]['directory'] / 'task.json')['scale']['scene_revision'], 15
+            [read(ROOT / c['directory'] / 'task.json')['scale']['size'] for c in mosaic['policy']],
+            [size for size in ('small', 'medium', 'large') for _ in range(3)],
         )
 
-    def test_prepared_task_is_not_an_inherited_oracle_pass_and_detects_edits(self):
-        task = policy_task('transport-a04-d1')
+    def test_prepared_task_states_its_readiness_and_detects_edits(self):
+        task = policy_task('transport-small-l1')
         validate_policy_task(task)
-        self.assertFalse(task['oracle_verified'])
+        # The released file carries no readiness; preparing a run states it.
+        self.assertNotIn('execution_readiness', read(ROOT / task['scene_asset'] / 'task.json'))
+        self.assertEqual(task['execution_readiness'], 'prepared_policy_trial')
         self.assertEqual(task['run_protocol']['total_wall_limit_s'], 86400)
         task['completion']['stable_duration_sim_s'] = 0
         with self.assertRaisesRegex(ValueError, 'changed outside'):
             validate_policy_task(task)
 
     def test_each_task_type_freezes_guidance_public_facts_and_private_release(self):
-        cases = ['transport-a04-d1', 'mosaic-a04-6x12-d1', 'relay-a08-d1', 'dial-best5-n04-d1']
+        cases = ['transport-small-l1', 'mosaic-small-l1', 'relay-small-l1', 'dial-small-l1']
         with (
             tempfile.TemporaryDirectory() as tmp,
             patch('mujoco.mj_step', side_effect=AssertionError('No physics')),
@@ -94,9 +97,8 @@ class TaskTypeReleaseTests(unittest.TestCase):
                     released,
                 )
                 for name in spec['public_files']:
-                    self.assertTrue((run / 'public/inputs/family' / name).is_file(), name)
-                self.assertTrue((run / 'public/inputs' / public['task_skill']).is_file())
-                self.assertNotIn('family_guidance', public)
+                    self.assertTrue((run / 'public/inputs/task' / name).is_file(), name)
+                self.assertTrue((run / 'public/inputs' / public['task_guide']).is_file())
                 if case.startswith('relay-'):
                     self.assertTrue(public['completion']['required_airborne_handover'])
                     self.assertNotIn('relay_completion_rule', public['completion'])
@@ -107,7 +109,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
                     self.assertFalse(public['completion']['acceptance']['process_compliance_required'])
                 if case.startswith('mosaic-'):
                     self.assertFalse(public['completion']['process_violations_clear_required'])
-                    self.assertEqual(public['target']['reference_image'], 'family/target-pattern.png')
+                    self.assertEqual(public['target']['reference_image'], 'task/target-pattern.png')
                 if case.startswith('dial-'):
                     self.assertIn('latched', public['completion']['success_semantics'])
                 rules = (run / 'public/inputs/rules.md').read_text()
@@ -122,7 +124,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
                         for p in (run / 'public').rglob('*')
                     )
                 )
-                material = run / 'public/inputs' / public['task_skill']
+                material = run / 'public/inputs' / public['task_guide']
                 material.write_text('changed')
                 self.assertIn('input:' + str(material.relative_to(run)), verify_inputs(run))
                 scene = run / 'private/inputs/scene/task.json'
@@ -133,7 +135,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
     def test_each_task_type_starts_frozen_evaluator_and_recording_without_steps(self):
         from roboteam.runtime.world.pipeline import World
 
-        cases = ['transport-a04-d1', 'mosaic-a04-6x12-d1', 'relay-a08-d1', 'dial-best5-n04-d1']
+        cases = ['transport-small-l1', 'mosaic-small-l1', 'relay-small-l1', 'dial-small-l1']
         with (
             tempfile.TemporaryDirectory() as tmp,
             patch('mujoco.mj_step', side_effect=AssertionError('No physics')),
@@ -160,7 +162,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
             patch('mujoco.mj_step', side_effect=AssertionError('No physics')),
         ):
             run = prepare(
-                'mosaic-a04-6x12-d1',
+                'mosaic-small-l1',
                 Path(tmp) / 'run',
                 run_settings=ROOT / 'roboteam/runtime/run/defaults.json',
             )
@@ -184,7 +186,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
             }
             plain_path = Path(tmp) / 'plain.json'
             plain_path.write_text(json.dumps(plain_cfg))
-            plain = prepare('mosaic-a04-6x12-d1', Path(tmp) / 'plain', run_settings=plain_path)
+            plain = prepare('mosaic-small-l1', Path(tmp) / 'plain', run_settings=plain_path)
             world = World(plain, read(plain / 'private/inputs/task.json'))
             try:
                 world.start_trial()

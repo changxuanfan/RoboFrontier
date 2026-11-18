@@ -58,7 +58,7 @@ def settings(task_type):
 
 def attach(world):
     """Apply the task type's step settings; returns the per-step part, or None."""
-    task_type = settings(world.task['family'])
+    task_type = settings(world.task['task_type'])
     if task_type['sleep'] == 'always':
         world.model.opt.enableflags |= SLEEP
         return None

@@ -12,5 +12,5 @@ The [command-line guide](cli.md) lists every setting and command, and the
 | Harnesses | [Overview](harness/README.md), [Codex](harness/codex.md), [Claude Code](harness/claude-code.md), [providers](harness/README.md#providers) |
 | Running | [Mac](hosts/mac.md), [RunPod and plain Linux](hosts/linux.md), [Slurm](hosts/slurm.md), [Docker](hosts/docker.md), [policy Python environment](hosts/policy-environment.md), [robot-only runs](benchmark/robot-tool-only.md), [stopped runs and continuing them](runs/continuation.md), [evidence storage](runs/evidence-storage.md), [saved-run viewer](runs/viewer.md), [Codex access-only attachments](harness/shared-login.md), [manager runbook](development/manager-runbook.md) |
 | Configuration | [Settings files](cli.md#settings-files), [example site TOMLs](hosts/examples), [engineering scripts](../scripts/README.md) |
-| Development | [Testing](development/testing.md), [harness check coverage](development/test-coverage.md) |
+| Development | [Testing](development/testing.md), [runtime check coverage](development/test-coverage.md) |
 | Project page | [Design and sources](../site/DESIGN.md) |
