@@ -74,6 +74,7 @@ MUST_FAIL = (
     'write_environment',
     'run_other_python',
     'import_mujoco',
+    'mujoco_simulates',
     'pip_install_absent_package',
     'network_tcp',
     'network_external',
@@ -85,6 +86,10 @@ MUST_FAIL = (
     'read_parent_environ',
     'ps_parent_environment',
 )
+# What must work instead of failing in an environment variant (policy_env.VARIANTS), and a
+# package that variant must still be unable to install.
+VARIANT_WORKS = {None: (), 'mujoco': ('import_mujoco', 'mujoco_simulates')}
+ABSENT_PACKAGE = {None: 'mujoco', 'mujoco': 'pybullet'}
 HOST_ONLY = 'ROBOTEAM_PROBE_HOST_ONLY'
 # What the parent-environment probes look for: a subscription credential in any ancestor's
 # environment. The local stub's fake API key stays in the CLI's environment; Claude API-key
@@ -492,6 +497,7 @@ def check_harness(name, environment, scratch, mode):
         'closed_folders': CLOSED_FOLDERS[sys.platform],
         'few_processes': FEW_PROCESSES,
         'core_packages': policy_env.load(environment)['packages'],
+        'absent_package': ABSENT_PACKAGE[policy_env.load(environment).get('variant')],
         'tmp_file': str(Path('/tmp') / ('roboteam-probe-new-' + scratch.name)),
         'other_run_file': str(other / 'private/inputs/task.json'),
         'repo_file': str(ROOT / 'pyproject.toml'),
@@ -565,12 +571,16 @@ def known_limits(name, mode):
     return known
 
 
-def differences(results, known=()):
-    wrong = [name + ' should work' for name in MUST_WORK if results.get(name) != 'ok' and name not in known]
+def differences(results, known=(), variant=None):
+    """What differs from what must work and what must fail, for an environment of `variant`."""
+    works = VARIANT_WORKS[variant]
+    wrong = [
+        name + ' should work' for name in MUST_WORK + works if results.get(name) != 'ok' and name not in known
+    ]
     wrong += [
         name + ' should be denied'
         for name in MUST_FAIL
-        if results.get(name) != 'denied' and name not in known
+        if name not in works and results.get(name) != 'denied' and name not in known
     ]
     return wrong
 
@@ -612,7 +622,7 @@ def main(argv=None):
     try:
         for name in names:
             results = check_harness(name, environment, scratch, modes[name])
-            wrong = differences(results, known_limits(name, modes[name]))
+            wrong = differences(results, known_limits(name, modes[name]), manifest.get('variant'))
             print(
                 json.dumps(
                     {

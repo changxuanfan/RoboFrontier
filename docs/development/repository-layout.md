@@ -39,6 +39,7 @@ roboteam/
                        fault_injection.py dashboard.html
     tools/             the robot tool: robot_ops.py action_batch.py delegation.py scheduling.py
                        run_skills.py public_files.py stop_diagnostics.py tool_errors.py tools_mode.py
+                       observation_mode.py ground_truth.py (the `state` operation)
                        pipeline_client.py
     run/               setup.py bootstrap.py layout.py segments.py versions.py diagnostics.py cli.py
                        defaults.json (the policy runtime's default settings)

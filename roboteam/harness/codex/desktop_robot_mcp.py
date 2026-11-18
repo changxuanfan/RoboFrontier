@@ -210,6 +210,10 @@ def view_image(run, view, name):
 
 def public_images(run, data):
     """Return only reference images explicitly listed in the frozen public task."""
+    from roboteam.runtime.tools import observation_mode
+
+    if observation_mode.of_run(run) == observation_mode.GROUND_TRUTH:
+        raise ValueError('This run has no camera images: public_image is not available')
     if set(data) != {'names'} or not isinstance(data['names'], list) or not data['names']:
         raise ValueError('Provide names from the public task initial_reference_images')
     if len(data['names']) > 8 or len(set(data['names'])) != len(data['names']):

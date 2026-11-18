@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.tools import tools_mode
+from roboteam.runtime.tools import observation_mode, tools_mode
 
 HARNESS_LINES = {
     'claude': (
@@ -22,6 +22,22 @@ HARNESS_LINES = {
         'View images listed in the task with view_image. Do not use Codex collaboration tools '
         '(spawn_agent and similar); split work only through robot delegate.'
     ),
+}
+# The last line of a ground_truth run's first message (runtime/tools/observation_mode.py);
+# {{FOLDER}} is the run's ground-truth folder.
+GROUND_TRUTH_LINES = {
+    harness: (
+        'This run has no camera images. Read the live scene with robot op state and data {}; the task as '
+        'the evaluator has it and its MuJoCo scene are under {{FOLDER}}, and your Python has mujoco.' + extra
+    )
+    for harness, extra in (
+        ('claude', ''),
+        (
+            'codex',
+            ' Do not use Codex collaboration tools (spawn_agent and similar); split work only through '
+            'robot delegate.',
+        ),
+    )
 }
 # The last line of a robot_only run's first message, the same on every harness: the robot
 # tool is the role's only tool (runtime/tools/tools_mode.py).
@@ -232,6 +248,10 @@ def bootstrap_text(run, actor):
         + (
             ROBOT_ONLY_LINE
             if mode == tools_mode.ROBOT_ONLY
+            else GROUND_TRUTH_LINES[run_settings.get('harness', 'codex')].replace(
+                '{{FOLDER}}', str(public / 'ground-truth')
+            )
+            if observation_mode.of(run_settings) == observation_mode.GROUND_TRUTH
             else HARNESS_LINES[run_settings.get('harness', 'codex')]
         )
         + '\n'

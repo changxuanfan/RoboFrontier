@@ -75,6 +75,7 @@ boundary; use nonblocking or concurrent submissions when work can overlap. New
 evidence to interpret, failures, unresolved execution and intermediate images
 return control. Use READY's limits for pose, aperture, speed and joint targets.
 
+<!-- observation:images -->
 Track robots with proprioception and objects with RGB: a commanded TCP is not a
 measured object position. Relate the task's object pose to the observed
 object-to-tool offset; transport and release can change it. A settled width or
@@ -83,6 +84,17 @@ lifting and placement after clearing, and before withdrawing from a payload,
 check measured aperture and RGB that the jaws have cleared it. Ending force
 control does not establish release. Choose informative views when occlusion
 dominates; recomputing on the same ambiguous view adds no evidence. Report
+<!-- /observation -->
+<!-- observation:ground_truth -->
+Track robots with proprioception and objects with `state`: a commanded TCP is not a
+measured object position. Relate the task's object pose to the measured
+object-to-tool offset; transport and release can change it. A settled width or
+`is_grasped` is a width inference, not proof of support: verify retention after
+lifting and placement after clearing from the object's pose and velocity, and
+before withdrawing from a payload, check measured aperture and the object's pose
+that the jaws have cleared it. Ending force control does not establish release.
+Read `state` again after each action that can move an object. Report
+<!-- /observation -->
 observed state separately from targets and remaining uncertainty. Sustained
 holding can be useful work: a tool return, wait or handback does not itself
 require releasing. After transport uncertainty, query or retry the original ID.

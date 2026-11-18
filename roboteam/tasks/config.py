@@ -134,6 +134,9 @@ def load_run_settings(path=None):
     from roboteam.runtime.tools.tools_mode import of as tools_mode
 
     tools_mode(c)
+    from roboteam.runtime.tools.observation_mode import check_combination
+
+    check_combination(c)
     if c.get('startup_protocol') not in ('direct_controller', 'direct_team'):
         raise ValueError('Unknown startup protocol')
     if c['startup_protocol'] == 'direct_controller' and c['system'] not in ('adaptive', 'single-agent'):

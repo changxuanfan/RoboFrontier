@@ -51,6 +51,60 @@ them gives: in some views a handful of pixels differ by one level out of 255, fr
 The arms on the other desks are drawn from simplified meshes. An image takes 10 to 40 ms on a laptop GPU. The live view and the recording are drawn the
 same way.
 
+## Ground-truth observation
+
+`policy.observation = "ground_truth"` (or `--observation ground_truth`) prepares runs whose roles
+get the simulator's state instead of camera images. Everything else is an ordinary run: the same
+robot tool, the same actions and timing, the same real-time world, the same scoring. Any harness,
+model and system may select it. The default is `images`. The paper's Oracle condition is Codex
+with the model entry `sol` and the single-agent system:
+
+```sh
+.venv/bin/roboteam prepare --output runs/policy/<batch> --harness codex --model sol \
+  --system single-agent --observation ground_truth
+```
+
+What a role gets:
+
+- **`state`**, a robot operation that only reads. It returns the simulation time; for every task
+  object its position, quaternion (wxyz), linear and angular velocity; every joint of the task
+  scene as `[position, velocity]` by name (arms, fingers, dial hinges, board springs; a free or
+  ball joint gives its full position and velocity vectors); and what the evaluator currently
+  tracks: progress, goals met, violations and completion (`{"started": false}` before START).
+- **`public/inputs/ground-truth/`**: `task.json`, the task as the evaluator has it (objects, goals,
+  exact targets, mechanism, completion rule), and `scene.xml` with its `assets/`, the task's
+  MuJoCo scene. The factory hall is not included. The public `task.json` names the folder as
+  `ground_truth`.
+- **A simulator**: the `mujoco` variant of the [policy Python environment](../hosts/policy-environment.md#the-mujoco-variant),
+  the ordinary environment plus the `mujoco` package at the benchmark's own version.
+
+What it does not get:
+
+- **No camera images.** `observe` returns robot feedback only. No image is rendered or written,
+  for an action's completion either. A `cameras` or `views` selection and `public_image` are
+  refused, and the public task names no camera, calibration or reference image. The video
+  recording and the live view are for people and stay as they are.
+- **No way to change the world except robot actions.** `state` never writes. A role's own
+  simulations run on its own copy.
+- **Nothing private.** The run's `private/` folder, the wall limit and the benchmark's code stay
+  closed, as in every run.
+
+**The Dial code stays private in every run.** The code lives in the private part of
+`benchmark/release.json` and reaches a run only as `private/inputs/suite-code.json`. The
+ground-truth task file holds no code. For Dial, `state` gives the dial angles (as joint state)
+and what the display shows an images role: the BEST value and the READY status, with the solved
+flag, the count of valid trials, each module's support and clearance, and the violations. It
+never gives the code or which dial is right.
+
+`ground_truth` with `tools = "robot_only"` is refused: the role needs its code tools. A
+ground_truth run freezes `"observation": "ground_truth"` in `private/inputs/run.json`; an images
+run's frozen settings are what they always were. Codex keeps a separate preflight receipt,
+`<model>.ground_truth/`. The prompt passages that differ are marked in the templates with
+`<!-- observation:images -->` and `<!-- observation:ground_truth -->`
+(`roboteam/runtime/tools/observation_mode.py`). Tests: `tests/runtime/tools/test_ground_truth.py`,
+`tests/launch/test_observation_mode_configuration.py` and
+`tests/runtime/sandbox/test_policy_env_variant.py`.
+
 ## Robot requests and IDs
 
 For a new robot request on either harness, omit the outer `call_id`; the host generates one and

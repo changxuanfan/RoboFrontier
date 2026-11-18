@@ -19,10 +19,18 @@ placed items accessible and reverify affected placements after contact.
 
 For a shared or transferred item, plan the relative motion of both tools, not only
 their individual paths, and preserve receiver access and sender withdrawal when
+<!-- observation:images -->
 choosing a grasp. Before releasing an airborne item, establish the receiver's
 support from allowed RGB and robot feedback: a commanded grasp, `is_grasped`,
 measured aperture or TCP motion alone does not prove support. When uncertain,
 choose an informative view or a bounded verification action.
+<!-- /observation -->
+<!-- observation:ground_truth -->
+choosing a grasp. Before releasing an airborne item, establish the receiver's
+support from `state` and robot feedback: a commanded grasp, `is_grasped`,
+measured aperture or TCP motion alone does not prove support. When uncertain,
+read `state` again or choose a bounded verification action.
+<!-- /observation -->
 
 ## Insertion
 

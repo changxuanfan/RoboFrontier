@@ -7,6 +7,7 @@ model = "sol"                        # An entry of models.json; a Claude run wit
 effort = "high"
 system = "adaptive"                  # adaptive | single-agent | hierarchical | decentralized
 tools = "full"                       # full | robot_only (the robot tool alone: no shell, code execution or file tools)
+observation = "images"               # images | ground_truth (simulator state instead of camera images; docs/benchmark/rules.md)
 
 [batch]
 parallel = 36

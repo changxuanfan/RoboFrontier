@@ -34,6 +34,8 @@ POLICY_OPS = frozenset(
         # refuses them elsewhere.
         'public_file',
         'skills',
+        # Only a ground_truth run accepts this (runtime/tools/observation_mode.py).
+        'state',
     )
 )
 

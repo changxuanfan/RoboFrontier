@@ -176,6 +176,12 @@ class World:
 
         return task_copy(self.model, getattr(self, 'task_scene', None))
 
+    def ground_truth_state(self):
+        """The reply of the robot tool's `state` in a ground_truth run; reads only."""
+        from roboteam.runtime.tools.ground_truth import state
+
+        return state(self)
+
     def held_grasps(self):
         """Arms holding a confirmed grasp, as a continued segment would restore them."""
         holds = {}

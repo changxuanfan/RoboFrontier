@@ -131,12 +131,12 @@ def validate_policy_task(task, root=ROOT):
     return protocol
 
 
-def freeze_public(task, directory, public, root=ROOT):
+def freeze_public(task, directory, public, root=ROOT, observation='images'):
     """Give a run its case's public task and task materials, as the release wrote them.
 
     `public` is replaced by the case's public/task.json, keeping only this run's own
     protocol and image profile (scripts/release/build_release.py public). The materials go to public/inputs/task/,
-    with the task guide from prompts/guides."""
+    with the task guide from prompts/guides in the wording of the run's observation mode."""
     if task.get('execution_readiness') != READINESS:
         return None
     root, directory = Path(root), Path(directory)
@@ -156,9 +156,14 @@ def freeze_public(task, directory, public, root=ROOT):
         if Path(name).name != name or sha(root / source['path']) != source['sha256']:
             raise ValueError('Invalid/changed public task type file: ' + name)
     sources['guide.md'] = root / 'prompts/guides' / (task_type_name + '.md')
+    from roboteam.runtime.tools import observation_mode
+
     for name, source in sorted(sources.items()):
         shutil.copyfile(source, task_type_dir / name)
-        hashes['public/inputs/task/' + name] = sha(source)
+        if name == 'guide.md':
+            # Passages that depend on what the role observes with are marked in the guide.
+            (task_type_dir / name).write_text(observation_mode.render(source.read_text(), observation))
+        hashes['public/inputs/task/' + name] = sha(task_type_dir / name)
     # The Mosaic target image freeze_scene copied is superseded by the task materials' copy.
     target_image = directory / 'public/inputs/target-pattern.png'
     if target_image.is_file() and (task_type_dir / target_image.name).is_file():

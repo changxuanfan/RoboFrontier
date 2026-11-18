@@ -1,6 +1,11 @@
 # Tool contract v0.24
 
+<!-- observation:images -->
 In the CLI benchmark, call the bound `robot` tool with `op`, `data`, optional stable `call_id`, and `views` naming RGB images to return. For `observe`, select cameras in `data.cameras` and the images to load in `views`. The host binds your current role; after other local work call `robot` with `op:"inbox"` to check events.
+<!-- /observation -->
+<!-- observation:ground_truth -->
+In the CLI benchmark, call the bound `robot` tool with `op`, `data` and optional stable `call_id`. This run has no camera images: leave `views` out, and read the scene with `state` (Ground truth, below). The host binds your current role; after other local work call `robot` with `op:"inbox"` to check events.
+<!-- /observation -->
 
 For Codex CLI and Claude MCP, omit the outer `call_id` on a new robot request; the host generates a request ID returned as `call_id`. Explicit IDs remain supported for compatibility. For a physical action, save this ID for status and safe recovery. A `job` query is a new request: put the original action ID in `data.call_id` and omit the outer `call_id`, for example `{"op":"job","data":{"call_id":"ACTION_ID"}}`. The response's outer `call_id` identifies the query; the `execution` record describes the target action (its ID may appear as `action_id` or `call_id`). If a request result is uncertain, inspect `pending` and query the original action; to retry that same request, supply its original outer `call_id` with identical `op` and `data`. Never replay uncertain physical work under a new ID. A conflict rejects the new request; it does not prove what happened to the original.
 
@@ -9,7 +14,12 @@ In Desktop the same tool is the `roboteam_robot` MCP tool; connection files and 
 ## Task tools
 
 - `ready {}`: queries controlled_robots, run limits and robot_facts: compact static capabilities, TCP/status definitions, fixed base poses and per-robot TCP command bounds. It is optional, for every role, and does not trigger START; continue after the response. In a run with a READY barrier it also registers readiness. Use these definitions when interpreting command/feedback positions and controller modes. All policy roles receive the same static robot facts. Bounds are admitted commands, not full-link envelopes or guaranteed safe zones. Current state comes from observe; detailed geometry through robot_model. No object state or task plan is supplied. It starts no physics actions.
+<!-- observation:images -->
 - `observe {"cameras":["global"]}`: returns timestamped RGB paths and robot proprioception: TCP position/quaternion, joint positions/velocities, actual and commanded gripper width, gripper velocity and controller status. Camera names come from task metadata. Select and actually load images when needed; there is no automatic proof of viewing. No live object state/depth/contact truth is exposed.
+<!-- /observation -->
+<!-- observation:ground_truth -->
+- `observe {}`: returns timestamped robot proprioception: TCP position/quaternion, joint positions/velocities, actual and commanded gripper width, gripper velocity and controller status. It takes no cameras and returns no images. Object state comes from `state`.
+<!-- /observation -->
 - `move {"target_m":[x,y,z],"speed_m_s":number,"acceleration_m_s2":number,"angular_speed_rad_s":number,"angular_acceleration_rad_s2":number}` or the same with `"delta_m":[dx,dy,dz]`: world-frame TCP position along a straight line; optional `quaternion_wxyz:[w,x,y,z]` chooses world orientation. All four rates are required on every move; there are no defaults. They are bounded by the real Franka Panda limits: TCP speed ≤ 2.0 m/s and acceleration ≤ 13 m/s², hand rotation ≤ 2.5 rad/s and ≤ 25 rad/s², each above 0.001. Each joint also stays within its own speed and acceleration limit, so a long or fast move may run slower than requested. An orientation-only move holds the current TCP position. Omitted orientation retains the current reference. Quaternions are normalized; zero/nonfinite values fail. Robot-only IK validates position and orientation; a failed solve is not proof that every pose/seed is impossible. A move rejected for no verified IK solution also returns `ik_detail`: the closest TCP pose the solver found with its position and rotation errors, the target's and that pose's horizontal distance from the robot base, the orientation used (requested, or the current one kept), and whether the same position solves with the robot's home hand orientation, with that quaternion. These are solver facts, not a suggested target. No object selection, grasp or collision-free path is inferred.
 
 Pose interpolation uses the shorter quaternion rotation; a final orientation alone does not specify signed winding or a longer path. Choose finite intermediate poses when direction/path matters. Object motion follows contact, not the requested tool angle. Completed commands keep the current pose and established grasp across observations, waits and normal ownership handback; robot holding is not proof of the object's setting.
@@ -47,7 +57,12 @@ Every response identifies the call. Both Controller and Worker tool returns atta
 
 For `move` or `gripper`, optional `"wait":false` returns after acceptance so you can communicate, observe or plan while your arm moves. `execution_status:running` is not completion. The action keeps its original call ID; use `job` or `wait_events` with that ID. One arm still accepts only one physical action at a time. Default `wait:true` returns at completion. Neither option interprets a plan or schedules future motions automatically.
 
+<!-- observation:images -->
 These actions also accept `"cameras":["global","A_front"]` for the completion observation. Choose allowed names from READY/task metadata; generated scenes may also have top and board_top; `[]` returns robot feedback without rendering RGB. Omission preserves the selected robot's front/side defaults for direct clients. Nonblocking actions save the selected completion observation under the original call, retrievable with job; a query does not recapture it.
+<!-- /observation -->
+<!-- observation:ground_truth -->
+The completion observation of these actions is robot feedback only; a `cameras` or `views` selection is refused. Nonblocking actions save it under the original call, retrievable with job.
+<!-- /observation -->
 
 `run_ended:true` means the team run has closed. Late messages can still be saved for audit; they cannot reopen execution and do not trigger further team work. No new motion is accepted after finish.
 
@@ -62,10 +77,25 @@ These actions also accept `"cameras":["global","A_front"]` for the completion ob
 - `skills {"action":"headings"}` lists the run's shared lessons as numbered entries with their revision headings. `skills {"action":"read","entries":[2,5]}` returns those entries; without `entries` it returns the whole file. `skills {"action":"append","heading":"…","body":"…"}` adds an entry and `skills {"action":"revise","entry":2,"heading":"…","body":"…"}` adds a revision at the end of entry 2. Earlier text cannot be changed or removed. The Run skills section of the collaboration guide says what to write and in which format.
 <!-- /tools -->
 
+<!-- observation:images -->
 ## Selected images
 
 For move/gripper, the named views are requested as the completion cameras unless data.cameras is explicit. Thus views:["global"] requests and loads global, while views:[] requests robot feedback only. Explicit data.cameras can capture additional cameras without loading them; select views from that list. For observe, data.cameras selects capture and views selects loading. For job, selected images come from the original action's saved observation with its original timestamp. A running job normally has no terminal image. No extra observe call is made, and the action result is kept if an image cannot be loaded. An active model doing no tool calls receives queued events at its next robot boundary, not by running-turn steer.
 
+<!-- /observation -->
+<!-- observation:ground_truth -->
+## Ground truth
+
+`state {}` returns the live world at the current simulation time. It only reads; it moves nothing and changes nothing.
+
+- `sim_time_s`: the simulation time of the reading.
+- `objects`: for every object of the task, by its ID, `position_m` [x,y,z], `quaternion_wxyz`, `linear_velocity_m_s` and `angular_velocity_rad_s`, in the world frame of the task.
+- `joints`: every named joint as `[position, velocity]`: robot joints (`A_joint1` …) and finger joints, and task mechanisms such as dial hinges and board springs. Hinges are in rad and rad/s, slides in m and m/s. A free or ball joint gives its full position and velocity vectors instead of two numbers.
+- `evaluator`: what the task's evaluator currently tracks: `{"started":false}` before START, afterwards its progress, goals met, violations and completion. It is a reading of the current state, not a verdict; the run is scored after it ends. For Dial it holds what the display shows (`display.value`, the BEST count, and `display.status`: invalid, qualifying or ready), whether the code is solved, the count of valid trials, the support and clearance state of each module and the violations; it never holds the code or which dial is right.
+
+`ground-truth/task.json` (under `public/inputs/`) is the task as the evaluator has it: every object with its initial pose, every goal with its exact target, the mechanism and the completion rule. `ground-truth/scene.xml` is the task's MuJoCo scene; its keyframe `initial` is the starting state. Your Python has `mujoco`: load the scene from that folder, set joint positions from `state` when you want your copy to match the live world, and plan there. The live world runs inside a larger hall that the scene file leaves out; it does not touch the task. Your copy is yours alone: only robot actions change the live world, and time keeps running while you compute.
+
+<!-- /observation -->
 ## Infrastructure boundary
 
 Meta binds sessions, starts the run under its selected startup protocol, imports native session status observations and drives plan/claim/dispatch-result operations. Policy agents do not use these administrative operations. Meta's notifications contain a wake ID and trigger reason, never task instructions.

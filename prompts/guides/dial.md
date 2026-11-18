@@ -5,15 +5,29 @@ description: Operate spring dials and movable modules with paired support, and i
 
 # Dial
 
+<!-- observation:images -->
 The robot `ready` tool reports robot capabilities; it is unrelated to the dial
 apparatus READY indicator. Before judging table-edge or ring-cutout clearance,
 read the geometry reference in `static_workstation`, and use `camera_calibration`
 to relate views to the common frame.
+<!-- /observation -->
+<!-- observation:ground_truth -->
+The robot `ready` tool reports robot capabilities; it is unrelated to the dial
+apparatus READY indicator. Before judging table-edge or ring-cutout clearance,
+read the geometry reference in `static_workstation`. `state` gives every module's
+pose and every dial's hinge angle in the common frame.
+<!-- /observation -->
 
 ## Feedback as evidence
 
+<!-- observation:images -->
 Bind each BEST/READY reading to the timestamped RGB configuration that produced
 it, keeping intended settings separate from disk positions you can verify. A
+<!-- /observation -->
+<!-- observation:ground_truth -->
+Bind each BEST/READY reading (`evaluator.display` in `state`) to the dial angles of
+the same reading, keeping intended settings separate from disk positions you can verify. A
+<!-- /observation -->
 commanded wrist angle describes the tool; the dial's angle belongs to the movable
 white disk's frame, which you update after slip or reorientation. An unchanged
 BEST does not tell you whether the current input is equal or worse, or which dial
@@ -41,7 +55,14 @@ cost of an occupied gripper.
 
 ## Recovery
 
+<!-- observation:images -->
 After a failed move or opening, use the original action's terminal feedback and
 selected RGB to distinguish an admission failure, a settled failure and an unknown
 outcome. Confirm actual opening and separation before retreating or changing a
+<!-- /observation -->
+<!-- observation:ground_truth -->
+After a failed move or opening, use the original action's terminal feedback and
+`state` to distinguish an admission failure, a settled failure and an unknown
+outcome. Confirm actual opening and separation before retreating or changing a
+<!-- /observation -->
 supporting grasp; keep sustained support while it is needed.

@@ -133,6 +133,7 @@ def prepare_batch(
     startup_timeout_s=None,
     render_device=None,
     tools='full',
+    observation='images',
 ):
     """Prepare one run per model and case, frozen for roboteam/launch/claude_batch.py."""
     from roboteam.tasks.task_types import dial_code, policy_task, prepare
@@ -214,6 +215,8 @@ def prepare_batch(
             cfg['render_device'] = render_device
         if tools != 'full':
             cfg['tools'] = tools
+        if observation != 'images':
+            cfg['observation'] = observation
         cfg_path = output / 'models' / name / 'run.json'
         write_json(cfg_path, cfg)
         for case in selected:

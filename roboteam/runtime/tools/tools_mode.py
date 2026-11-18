@@ -16,7 +16,24 @@ MODES = (FULL, ROBOT_ONLY)
 # Robot operations that exist only in a robot_only run.
 ROBOT_ONLY_OPS = ('public_file', 'skills')
 
-_BLOCK = re.compile(r'^<!-- tools:(full|robot_only) -->\n(.*?)^<!-- /tools -->\n', re.M | re.S)
+
+def render_marked(text, setting, modes, mode):
+    """A prompt template for one value of a run setting (`tools` here, `observation` in
+    observation_mode.py).
+
+    A passage that depends on the setting sits between `<!-- <setting>:<mode> -->` and
+    `<!-- /<setting> -->`, each alone on a line; only the passages of `mode` are kept and the
+    marker lines are removed. Text outside the markers is shared by every mode.
+    """
+    if mode not in modes:
+        raise ValueError('Unknown %s mode: %s' % (setting, mode))
+    block = re.compile(
+        r'^<!-- %s:(%s) -->\n(.*?)^<!-- /%s -->\n' % (setting, '|'.join(modes), setting), re.M | re.S
+    )
+    rendered = block.sub(lambda match: match.group(2) if match.group(1) == mode else '', text)
+    if '<!-- %s:' % setting in rendered or '<!-- /%s -->' % setting in rendered:
+        raise ValueError('Unbalanced %s-mode markers in a prompt template' % setting)
+    return rendered
 
 
 def of(config):
@@ -40,15 +57,8 @@ def of_run(run):
 
 
 def render(text, mode):
-    """A prompt template for one mode.
-
-    A passage that depends on the tools sits between `<!-- tools:<mode> -->` and
-    `<!-- /tools -->`, each alone on a line; only the passages of `mode` are kept and the
-    marker lines are removed. Text outside the markers is shared by both modes.
-    """
+    """A prompt template for one tool mode: the passages between `<!-- tools:<mode> -->` and
+    `<!-- /tools -->` (render_marked)."""
     if mode not in MODES:
         raise ValueError('Unknown tool mode: ' + str(mode))
-    rendered = _BLOCK.sub(lambda match: match.group(2) if match.group(1) == mode else '', text)
-    if '<!-- tools:' in rendered or '<!-- /tools -->' in rendered:
-        raise ValueError('Unbalanced tool-mode markers in a prompt template')
-    return rendered
+    return render_marked(text, 'tools', MODES, mode)

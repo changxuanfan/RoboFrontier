@@ -16,7 +16,7 @@ from pathlib import Path
 
 from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.setup import verify_inputs, write_json
-from roboteam.runtime.tools import public_files, run_skills, tools_mode
+from roboteam.runtime.tools import observation_mode, public_files, run_skills, tools_mode
 from roboteam.runtime.tools.delegation import Delegations
 from roboteam.runtime.tools.stop_diagnostics import stop_diagnostics
 from roboteam.runtime.world.store import RuntimeStore
@@ -80,6 +80,11 @@ class RuntimeService:
                 raise ValueError('Connection belongs to another run/protocol')
             self.tokens[actor] = conn['token']
         self.capture = capture
+        self.ground_truth = observation_mode.of(self.config) == observation_mode.GROUND_TRUTH
+        if self.ground_truth:
+            # No camera image is rendered or written for any caller in a ground_truth run:
+            # every observation is robot feedback alone.
+            self.capture = self.robot_feedback
         self.video_factory = video_factory
         self.lock = threading.RLock()
         self.queue = queue.Queue()
@@ -410,7 +415,22 @@ class RuntimeService:
             return {'delegate_report_unavailable': True}
         return {'delegate_report': report}
 
+    def robot_feedback(self, cameras=()):
+        """An observation without images: what a ground_truth run returns wherever an images run
+        would capture cameras."""
+        return {
+            'sim_time_s': float(self.world.time),
+            'captured_at': time.time(),
+            'robot': {name: arm.observe() for name, arm in getattr(self.world, 'arms', {}).items()},
+        }
+
     def selected_cameras(self, cameras, allow_empty=False):
+        if self.ground_truth:
+            if cameras:
+                raise ValueError(
+                    'This run has no camera images: omit cameras and views, and read the scene with state'
+                )
+            return []
         allowed = set(camera_names(self.task))
         if (
             not isinstance(cameras, list)
@@ -427,8 +447,17 @@ class RuntimeService:
         kind = self.store.agent(actor)['kind']
         manager = kind == 'manager'
         try:
-            if op in ('bind', 'start', 'resume', 'state', 'shutdown') and not manager:
-                raise ValueError('Meta administrative operation')
+            # `state` is Meta's snapshot; for a policy role of a ground_truth run it is the
+            # ground-truth state of the world (runtime/tools/ground_truth.py).
+            policy_state = op == 'state' and not manager and self.ground_truth
+            if op in ('bind', 'start', 'resume', 'state', 'shutdown') and not manager and not policy_state:
+                raise ValueError(
+                    'Unknown tool operation'
+                    if op in observation_mode.GROUND_TRUTH_OPS
+                    else 'Meta administrative operation'
+                )
+            if op in observation_mode.IMAGE_OPS and self.ground_truth:
+                raise ValueError('This run has no camera images: ' + op + ' is not available')
             if manager and op not in ('bind', 'start', 'resume', 'state', 'shutdown', 'observe'):
                 raise ValueError(
                     'Meta observes/administers; business decisions and robot actions belong to policy roles'
@@ -459,7 +488,7 @@ class RuntimeService:
                             for k in ('min_check_interval_s', 'max_check_interval_s', 'motion_check')
                         },
                         'execution_timing': execution_timing(self.config),
-                        'cameras': camera_names(self.task),
+                        'cameras': [] if self.ground_truth else camera_names(self.task),
                         'action_limits': action_limits(),
                         'action_batch': {
                             'supported': True,
@@ -726,10 +755,18 @@ class RuntimeService:
                     value = self.store.checkpoint_work(actor, state, data['note'], data.get('after_s'))
                     self.respond(job, {'saved': True, 'work': value})
             elif op == 'observe':
-                cameras = data.get(
-                    'cameras', ['global'] if kind != 'worker' else [actor + '_front', actor + '_side']
-                )
-                self.respond(job, {'observation': self.capture(self.selected_cameras(cameras))})
+                if self.ground_truth:
+                    # Robot feedback alone; a camera selection is refused, not ignored.
+                    # Meta's engineering captures (the seal's final view) name cameras; they
+                    # get the same feedback.
+                    if not manager:
+                        self.selected_cameras(data.get('cameras', []))
+                    self.respond(job, {'observation': self.robot_feedback()})
+                else:
+                    cameras = data.get(
+                        'cameras', ['global'] if kind != 'worker' else [actor + '_front', actor + '_side']
+                    )
+                    self.respond(job, {'observation': self.capture(self.selected_cameras(cameras))})
             elif op == 'stop':
                 if set(data) - {'robot', 'call_id'}:
                     raise ValueError('stop accepts robot and the active call_id')
@@ -828,7 +865,8 @@ class RuntimeService:
                 if not isinstance(data.get('wait', True), bool):
                     raise ValueError('wait must be boolean')
                 self.selected_cameras(
-                    data.get('cameras', [robot + '_front', robot + '_side']), allow_empty=True
+                    data.get('cameras', [] if self.ground_truth else [robot + '_front', robot + '_side']),
+                    allow_empty=True,
                 )
                 parameters = {k: v for k, v in data.items() if k not in ('wait', 'robot', 'cameras')}
                 prepared = self.world.validate_action(robot, op, parameters, self.config)
@@ -959,6 +997,13 @@ class RuntimeService:
                         ),
                     },
                 )
+            elif op == 'state' and not manager:
+                if set(data):
+                    raise ValueError('state takes no data')
+                read = getattr(self.world, 'ground_truth_state', None)
+                if read is None:
+                    raise ValueError('This executor reports no ground-truth state')
+                self.respond(job, {'state': read()})
             elif op == 'state':
                 self.respond(job, self.snapshot())
             elif op == 'finish':

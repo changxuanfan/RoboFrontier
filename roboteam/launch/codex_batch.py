@@ -97,6 +97,7 @@ def prepare_batch(
                 'startup_timeout_s',
                 'render_device',
                 'tools',
+                'observation',
             }
             if set(run_settings_overrides) - allowed:
                 raise ValueError('Unsupported run settings overrides')
@@ -260,13 +261,17 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
         key = launch['model_entry'].get('env_key')
         if key and not os.environ.get(key):
             raise ValueError('Missing credential environment variable: ' + key)
+        from roboteam.runtime.tools import observation_mode
         from roboteam.runtime.tools.tools_mode import of as tools_mode_of
         from roboteam.runtime.tools.tools_mode import receipt_name
 
         receipt = (
             runs_root()
             / 'engineering/model-compatibility'
-            / receipt_name(job['model_entry'], tools_mode_of(launch['model_entry']))
+            / observation_mode.receipt_name(
+                receipt_name(job['model_entry'], tools_mode_of(launch['model_entry'])),
+                observation_mode.of(launch['model_entry']),
+            )
             / 'report.json'
         )
         if not receipt.is_file():
@@ -576,10 +581,18 @@ def main():
             if key and not os.environ.get(key):
                 raise ValueError('Set ' + key + ' before live preflight')
             scope = 'model-smoke' if args.smoke_only else 'model-compatibility'
+            from roboteam.runtime.tools import observation_mode
             from roboteam.runtime.tools.tools_mode import of as tools_mode_of
             from roboteam.runtime.tools.tools_mode import receipt_name
 
-            target = runs_root() / 'engineering' / scope / receipt_name(name, tools_mode_of(selected))
+            target = (
+                runs_root()
+                / 'engineering'
+                / scope
+                / observation_mode.receipt_name(
+                    receipt_name(name, tools_mode_of(selected)), observation_mode.of(selected)
+                )
+            )
             target.mkdir(parents=True, exist_ok=True)
             write_json(target / 'launch.json', launch_config(selected, target))
             # A failed/interrupted new check must not leave an older pass usable

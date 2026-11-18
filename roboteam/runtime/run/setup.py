@@ -9,7 +9,7 @@ from pathlib import Path
 from roboteam.io import write_json
 from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.bootstrap import SKILLS_HEADER, write_bootstraps
-from roboteam.runtime.tools import tools_mode
+from roboteam.runtime.tools import observation_mode, tools_mode
 from roboteam.runtime.world.store import RuntimeStore, packed
 from roboteam.sim.render.image import observation_profile
 from roboteam.tasks.config import (
@@ -94,7 +94,9 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
     public = public_task(task)
     from roboteam.tasks.task_types import freeze_public
 
-    task_type_release = freeze_public(task, directory, public)
+    observation = observation_mode.check_combination(cfg)
+    ground_truth = observation == observation_mode.GROUND_TRUTH
+    task_type_release = freeze_public(task, directory, public, observation=observation)
     from roboteam.tasks.scene import camera_names
 
     public['cameras'] = camera_names(task)
@@ -137,6 +139,13 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
                     derived = directory / 'public/inputs/observation-camera-calibration.json'
                     write_json(derived, calibration)
                     public['camera_calibration'] = 'observation-camera-calibration.json'
+    if ground_truth:
+        # Instead of camera images the role gets the task as the evaluator has it and the task
+        # scene (tasks/ground_truth.py); its public task names them and no camera.
+        from roboteam.tasks import ground_truth as ground_truth_files
+
+        ground_truth_files.freeze(task, directory)
+        public = ground_truth_files.public_view(public)
     write_json(directory / 'public/inputs/task.json', public)
     write_json(directory / 'private/inputs/run.json', cfg)
     roles = {cfg['manager']: {'kind': 'manager'}}
@@ -151,16 +160,19 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
         {'system': cfg['system'], 'manager': cfg['manager'], 'roles': roles},
     )
     templates = ROOT / 'prompts'
-    # Passages that depend on the role's tools are marked in the templates (tools_mode.render).
+    # Passages that depend on the role's tools or on what it observes with are marked in the
+    # templates (tools_mode.render, observation_mode.render).
     mode = tools_mode.of(cfg)
-    rules = tools_mode.render((templates / 'rules.md').read_text(), mode).replace(
-        '{{RUN_DIR}}', str(directory)
-    )
+
+    def render(text):
+        return observation_mode.render(tools_mode.render(text, mode), observation)
+
+    rules = render((templates / 'rules.md').read_text()).replace('{{RUN_DIR}}', str(directory))
     (directory / 'public/inputs/rules.md').write_text(rules)
     shutil.copytree(templates / 'guides/collaboration', directory / 'public/inputs/guide')
     for template in sorted((directory / 'public/inputs/guide').rglob('*.md')):
         text = template.read_text()
-        rendered = tools_mode.render(text, mode)
+        rendered = render(text)
         if rendered != text:
             template.write_text(rendered)
     # The run's shared lessons file, inside the policy's only writable folder. Its
@@ -202,7 +214,7 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
                 else 'Negotiate affected commitments and shared resources directly with relevant Workers.'
             ),
         }
-        text = (templates / 'roles' / f'{filename}.md').read_text()
+        text = render((templates / 'roles' / f'{filename}.md').read_text())
         for key, value in values.items():
             text = text.replace('{{' + key + '}}', value)
         role_file = (
@@ -230,6 +242,8 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
     from roboteam.runtime.sandbox import policy_env
 
     if policy_env.selected() is not None and mode != tools_mode.ROBOT_ONLY:
+        # A ground_truth run's shells have a simulator; no other run's may.
+        policy_env.require_variant(policy_env.selected(), observation_mode.environment_variant(cfg))
         policy_env.prepare_run(directory, policy_env.selected())
     # One frozen first message per policy role, sent unchanged by either harness.
     write_bootstraps(directory)
@@ -303,7 +317,10 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
             'model_requested': cfg['model'],
             'effort_requested': cfg['effort'],
             'task_type_release': task_type_release,
-            'observation_contract': task['observation_contract'],
+            'observation_contract': public['observation_contract']
+            if ground_truth
+            else task['observation_contract'],
+            **({'observation': observation} if ground_truth else {}),
             'manager': 'Meta session executes deterministic dispatcher; no independent desktop takeover',
             'isolation': (
                 'Role authentication and protocol/integrity checks; policies have the robot tool alone, with no '

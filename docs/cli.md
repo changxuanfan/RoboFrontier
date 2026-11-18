@@ -22,7 +22,7 @@ command's result as JSON).
 
 `config`, `plan`, `prepare`, `doctor`, `preflight` and `slurm-submit` accept the selection
 options `--harness {codex,claude}`, `--model`, `--effort`, `--system`,
-`--tools {full,robot_only}`, `--parallel`,
+`--tools {full,robot_only}`, `--observation {images,ground_truth}`, `--parallel`,
 `--render {nvidia,cpu,native}`, `--level {1,2,3}`, `--min-arms`, `--cases` and `--task-types`.
 
 ## Installation
@@ -61,6 +61,7 @@ system, 36 runs at once, 0.3 s between host launches, and 24 h of active time pe
 | `policy.effort` | Requested reasoning effort; must match the preflight receipt |
 | `policy.system` | `adaptive`, `single-agent`, `hierarchical` or `decentralized` |
 | `policy.tools` | `full` (default) or `robot_only`: the robot tool alone ([robot-only runs](benchmark/robot-tool-only.md)) |
+| `policy.observation` | `images` (default) or `ground_truth`: the simulator's state instead of camera images ([ground-truth observation](benchmark/rules.md#ground-truth-observation)) |
 | `batch.parallel` | Runs at once, 1 to 36 |
 | `batch.startup_interval_s` | Gap between host launches (0.3 s); never between robot calls |
 | `batch.task_wall_limit_s` | Active time per run, 86,400 s ([how it is counted](runs/continuation.md#time)); at most 86,400 for Claude Code |
@@ -93,7 +94,7 @@ prepared batch.
 | `roboteam.toml` | The defaults for new runs |
 | `models.json` | Every selectable model, one section per harness (`harnesses.codex`, `harnesses.claude`, which also holds Claude transcript prices). A run freezes its harness's section |
 | `roboteam/runtime/run/defaults.json` | The policy runtime's settings (system, startup protocol, timeouts, check intervals, motion and video rates); no speeds or forces, which every action states. A batch sets the harness, system, model and effort over it |
-| `roboteam/runtime/sandbox/policy-env/` | The policy Python environment's inputs (`core.in`, `store.in`) and locks (`core.lock`, `all.lock`) |
+| `roboteam/runtime/sandbox/policy-env/` | The policy Python environment's inputs (`core.in`, `store.in`) and locks (`core.lock`, `all.lock`); `mujoco.in` and `mujoco.lock` are the variant of ground_truth runs |
 | `roboteam/harness/adapters/*/requirements.txt` | The optional dependencies of the two model adapters: `claude_in_codex` (opus-5.5 in Codex) and `gpt_in_claude` (gpt-6.1-sol in Claude Code) |
 | `benchmark/assets.json` | The pinned policy asset archive and its inventory, restored by `roboteam bootstrap` |
 | `docs/hosts/examples/mac.toml`, `slurm.toml`, `linux.toml` | A starting site TOML for each platform; copy one to an untracked file |

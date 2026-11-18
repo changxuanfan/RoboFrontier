@@ -21,6 +21,16 @@ PROCESS_POOL = (
     "with m.get_context('fork').Pool(2) as pool:\n"
     "    assert pool.map(abs, [-1, -2]) == [1, 2]\n"
 )
+# A tiny model built and stepped: gravity moves a free body. Works only where the simulator is installed.
+SIMULATE = (
+    "import mujoco\n"
+    "m = mujoco.MjModel.from_xml_string('<mujoco><worldbody><body pos=\"0 0 1\"><freejoint/>"
+    "<geom size=\"0.1\"/></body></worldbody></mujoco>')\n"
+    "d = mujoco.MjData(m)\n"
+    "for _ in range(10):\n"
+    "    mujoco.mj_step(m, d)\n"
+    "assert d.time > 0 and d.qpos[2] < 1\n"
+)
 PROCESS_EXECUTOR = (
     "import multiprocessing as m\n"
     "from concurrent.futures import ProcessPoolExecutor\n"
@@ -159,8 +169,18 @@ def probe(fixtures):
         'run_other_python',
         lambda: subprocess.run([fixtures['other_python'], '-c', 'pass'], check=True, capture_output=True),
     )
+    # The simulator: absent from the ordinary environment, present in the `mujoco` variant.
     attempt('import_mujoco', lambda: importable('mujoco'))
-    attempt('pip_install_absent_package', lambda: shell(sys.executable + ' -m pip install -q mujoco'))
+    attempt(
+        'mujoco_simulates',
+        lambda: subprocess.run(
+            [sys.executable, '-c', SIMULATE], check=True, capture_output=True, timeout=120
+        ),
+    )
+    attempt(
+        'pip_install_absent_package',
+        lambda: shell(sys.executable + ' -m pip install -q ' + fixtures.get('absent_package', 'mujoco')),
+    )
     attempt('network_tcp', lambda: connect(socket.SOCK_STREAM, ('127.0.0.1', fixtures['listener_port'])))
     attempt('network_external', lambda: connect(socket.SOCK_STREAM, ('1.1.1.1', 443)))
     attempt('unix_socket_shared', unix_socket)

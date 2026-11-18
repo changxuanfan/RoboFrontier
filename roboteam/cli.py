@@ -19,9 +19,18 @@ from .tasks.config import startup_protocol
 
 
 def _receipt_name(policy):
+    from roboteam.runtime.tools import observation_mode
     from roboteam.runtime.tools.tools_mode import receipt_name
 
-    return receipt_name(policy['model'], policy.get('tools', 'full'))
+    return observation_mode.receipt_name(
+        receipt_name(policy['model'], policy.get('tools', 'full')), observation_mode.of(policy)
+    )
+
+
+def _environment_variant(policy):
+    from roboteam.runtime.tools.observation_mode import environment_variant
+
+    return environment_variant(policy)
 
 
 def _print(value):
@@ -45,6 +54,8 @@ def _catalog(config):
         )
         if policy.get('tools', 'full') != 'full':
             catalog['models'][policy['model']]['tools'] = policy['tools']
+        if policy.get('observation', 'images') != 'images':
+            catalog['models'][policy['model']]['observation'] = policy['observation']
         if config['runtime']['codex_home_scope'] == 'job':
             catalog['models'][policy['model']]['runner_backend'] = 'slurm-managed-v1'
     return catalog
@@ -58,12 +69,12 @@ def _catalog_file(config):
         yield path
 
 
-def _policy_environment():
+def _policy_environment(variant=None):
     """What `prepare` would freeze for policy scripts, without changing anything."""
     from roboteam.runtime.sandbox.policy_env import ENV_VAR, default_root, selected
 
     try:
-        root = selected() if os.environ.get(ENV_VAR) else default_root()
+        root = selected() if os.environ.get(ENV_VAR) else default_root(variant)
     except ValueError as error:
         return {'status': 'unavailable', 'error': str(error)}
     return (
@@ -97,9 +108,31 @@ def plan(config):
         'task_wall_limit_s': config['batch']['task_wall_limit_s'],
         'task_count': len(selected),
         'jobs': selected,
-        'policy_environment': _policy_environment(),
+        'policy_environment': _policy_environment(
+            None if policy.get('tools', 'full') == 'robot_only' else _environment_variant(policy)
+        ),
         'preflight': 'A run requires matching live provider receipts (roboteam preflight)',
     }
+
+
+def _run_settings(config):
+    """What a configuration sets over the default run settings of each prepared run."""
+    policy, system = config['policy'], config['policy']['system']
+    run_settings = {
+        'system': system,
+        'startup_protocol': startup_protocol(system),
+        'observation_image_profile': config['render']['observation_profile'],
+        'startup_timeout_s': config['batch']['startup_timeout_s'],
+        'render_device': config['render']['device'],
+        'record_realtime_video': config['render']['record_realtime_video'],
+    }
+    # Written only for a robot_only run, so a full run's frozen run settings are what they always were.
+    if policy.get('tools', 'full') != 'full':
+        run_settings['tools'] = policy['tools']
+    # Likewise written only for a ground_truth run.
+    if policy.get('observation', 'images') != 'images':
+        run_settings['observation'] = policy['observation']
+    return run_settings
 
 
 def prepare(output, config):
@@ -119,17 +152,7 @@ def prepare(output, config):
         raise ValueError('Choose a new output directory; prepared runs are never overwritten')
     setup_assets()
     system = policy['system']
-    run_settings = {
-        'system': system,
-        'startup_protocol': startup_protocol(system),
-        'observation_image_profile': config['render']['observation_profile'],
-        'startup_timeout_s': config['batch']['startup_timeout_s'],
-        'render_device': config['render']['device'],
-        'record_realtime_video': config['render']['record_realtime_video'],
-    }
-    # Written only for a robot_only run, so a full run's frozen run settings are what they always were.
-    if policy.get('tools', 'full') != 'full':
-        run_settings['tools'] = policy['tools']
+    run_settings = _run_settings(config)
     with _catalog_file(config) as catalog:
         if policy['harness'] == 'claude':
             from roboteam.launch.claude_prepare import prepare_batch as prepare_claude
@@ -149,6 +172,7 @@ def prepare(output, config):
                 startup_timeout_s=config['batch']['startup_timeout_s'],
                 render_device=config['render']['device'],
                 tools=policy.get('tools', 'full'),
+                observation=policy.get('observation', 'images'),
             )
         else:
             from roboteam.launch.codex_batch import prepare_batch as prepare_codex
@@ -563,6 +587,11 @@ def argument_parser(*, prog=None):
             choices=('full', 'robot_only'),
             help='full: the robot tool and the harness code tools; robot_only: the robot tool alone',
         )
+        p.add_argument(
+            '--observation',
+            choices=('images', 'ground_truth'),
+            help='images: camera images; ground_truth: the simulator state instead of camera images',
+        )
         p.add_argument('--parallel', type=int)
         p.add_argument('--render', choices=('nvidia', 'cpu', 'native'))
         p.add_argument('--level', type=int, choices=(1, 2, 3))
@@ -661,7 +690,7 @@ def main(argv=None):
         if args.command in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
             overrides = {}
             for section, fields in (
-                ('policy', ('harness', 'model', 'effort', 'system', 'tools')),
+                ('policy', ('harness', 'model', 'effort', 'system', 'tools', 'observation')),
                 ('batch', ('parallel',)),
                 ('selection', ('level', 'min_arms', 'cases', 'task_types')),
             ):
@@ -711,7 +740,10 @@ def main(argv=None):
                     # No shell runs in a robot_only run, so it freezes no Python environment.
                     os.environ[ENV_VAR] = 'off'
                 else:
-                    apply_default()
+                    # A ground_truth run uses the environment variant with a simulator.
+                    from roboteam.runtime.tools.observation_mode import environment_variant
+
+                    apply_default(environment_variant(config['policy']))
                 emit({'batch': str(prepare(args.output, config)), 'model_calls': 0})
         elif args.command == 'continue':
             report = continue_runs(args.batch, args.cases)

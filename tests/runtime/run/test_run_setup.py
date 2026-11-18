@@ -124,12 +124,17 @@ class SetupTests(unittest.TestCase):
 
     def test_eight_workers_prepare_with_same_skill_in_both_systems(self):
         p = ROOT / 'benchmark/transport/transport-medium-l1/task.json'
-        # The template marks its tool-dependent passages; a full run gets the full wording.
+        # The template marks the passages that depend on the tools and on what a role observes
+        # with; a full images run gets those wordings.
+        from roboteam.runtime.tools import observation_mode
         from roboteam.runtime.tools.tools_mode import render
 
-        skill = render(
-            (Path(__file__).resolve().parents[3] / 'prompts/guides/collaboration/guide.md').read_text(),
-            'full',
+        skill = observation_mode.render(
+            render(
+                (Path(__file__).resolve().parents[3] / 'prompts/guides/collaboration/guide.md').read_text(),
+                'full',
+            ),
+            'images',
         ).encode()
         for system in ('hierarchical', 'decentralized'):
             cfg = load_run_settings()

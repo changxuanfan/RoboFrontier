@@ -7,6 +7,10 @@ environment is kept. Point prepared runs at it with ROBOTEAM_POLICY_ENV.
 
     .venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam
 
+--variant mujoco builds the environment of ground_truth runs instead: the same packages plus
+the MuJoCo simulator of mujoco.lock, in its own folder (policy-env-mujoco-<id>). The ordinary
+environment never holds a simulator.
+
 Each host builds its own folder from the same locks. Linux needs glibc 2.28 or newer,
 which the wheels in the locks require. To move to newer versions, update PYTHON (in
 roboteam/runtime/sandbox/policy_env.py) and UV,
@@ -14,6 +18,7 @@ then relock; --upgrade matters, since compile otherwise keeps a lock's existing 
 
     uv pip compile --universal --python-version 3.12 --generate-hashes --no-header --upgrade core.in store.in -o all.lock
     uv pip compile --universal --python-version 3.12 --generate-hashes --no-header core.in -c all.lock -o core.lock
+    uv pip compile --universal --python-version 3.12 --generate-hashes --no-header mujoco.in -c all.lock -o mujoco.lock
 """
 
 import argparse
@@ -75,11 +80,11 @@ def make_writable(root):
             path.chmod(stat.S_IMODE(path.stat().st_mode) | stat.S_IWUSR)
 
 
-def build(base):
+def build(base, variant=None):
     # A shared account's ~/.local packages and pip settings must not reach the build or its manifest.
     os.environ.update(PYTHONNOUSERSITE='1', PIP_CONFIG_FILE=os.devnull)
     base = Path(base).expanduser().resolve()
-    target = base / ('policy-env-' + identity())
+    target = base / policy_env.folder_name(variant)
     base.mkdir(parents=True, exist_ok=True)
     # Hosts sharing a base build the same identity; one builds, the others wait and
     # then find its valid environment instead of deleting a tree still being built.
@@ -93,7 +98,10 @@ def build(base):
             make_writable(target)
             shutil.rmtree(target)
         target.mkdir(parents=True)
-        install(target)
+        if variant is None:
+            install(target)
+        else:
+            install(target, variant)
         try:
             policy_env.verify(target)
         except Exception:
@@ -105,8 +113,9 @@ def build(base):
         return target
 
 
-def install(target):
+def install(target, variant=None):
     """Install the pinned Python, packages and wheel store into the empty target and seal it."""
+    extra = policy_env.variant_files(variant)
     installs = target / 'python'
     # Standalone: not the host's Python, so nothing else on the machine affects it.
     run([*UV, 'python', 'install', PYTHON, '--no-bin', '--install-dir', installs])
@@ -128,6 +137,8 @@ def install(target):
             '--require-hashes',
             '-r',
             CONFIG / 'core.lock',
+            # A variant's packages are locked against the same versions (-c all.lock).
+            *(part for name in extra[1:] for part in ('-r', CONFIG / name)),
         ]
     )
     run(
@@ -153,12 +164,16 @@ def install(target):
     )
     installed = {re.sub(r'[-_.]+', '-', item['name']).lower(): item['version'] for item in listed}
     wheels = sorted(path.name for path in (target / 'wheels').glob('*.whl'))
+    # Only what the variant itself names may be one of the forbidden packages.
+    allowed = set(names(CONFIG / extra[0])) if extra else set()
     for name in FORBIDDEN:
+        if name in allowed:
+            continue
         if name in installed or any(
             re.sub(r'[-_.]+', '-', wheel).lower().startswith(name + '-') for wheel in wheels
         ):
             raise ValueError('Forbidden package in the policy environment: ' + name)
-    core = names(CONFIG / 'core.in')
+    core = sorted(names(CONFIG / 'core.in') + (names(CONFIG / extra[0]) if extra else []))
     version = subprocess.check_output(
         [python, '-c', 'import platform; print(platform.python_version())'], text=True
     ).strip()
@@ -175,9 +190,11 @@ def install(target):
         'wheels': wheels,
         'locks_sha256': {
             name: hashlib.sha256((CONFIG / name).read_bytes()).hexdigest()
-            for name in ('core.lock', 'all.lock')
+            for name in ('core.lock', 'all.lock', *extra[1:])
         },
     }
+    if variant is not None:
+        manifest['variant'] = variant
     manifest['tree_sha256'] = policy_env.tree_sha256(target)
     (target / policy_env.MANIFEST).write_text(json.dumps(manifest, indent=1) + '\n')
     make_read_only(target)
@@ -186,8 +203,13 @@ def install(target):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--base', required=True, help='Folder outside the home folder and the repository')
+    parser.add_argument(
+        '--variant',
+        choices=sorted(name for name in policy_env.VARIANTS if name),
+        help='Build this variant instead of the ordinary environment (mujoco: for ground_truth runs)',
+    )
     args = parser.parse_args(argv)
-    target = build(args.base)
+    target = build(args.base, args.variant)
     size = sum(p.stat().st_size for p in target.rglob('*') if p.is_file() and not p.is_symlink())
     print(
         json.dumps(

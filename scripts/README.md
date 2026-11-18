@@ -13,7 +13,7 @@ provider.
 
 | Script | Purpose |
 | --- | --- |
-| `build_policy_env.py` | Build the read-only Python environment and offline wheel store for policy scripts, once per host (`--base FOLDER`) |
+| `build_policy_env.py` | Build the read-only Python environment and offline wheel store for policy scripts, once per host (`--base FOLDER`; `--variant mujoco` builds the one ground_truth runs use) |
 | `check_policy_env.py` | Check a built environment and each harness's sandbox with a local stub model before a batch uses them (`ENVIRONMENT --scratch FOLDER [--harness]`) |
 
 See [policy environment](../docs/hosts/policy-environment.md).
@@ -22,6 +22,7 @@ See [policy environment](../docs/hosts/policy-environment.md).
 
 | Script | Purpose |
 | --- | --- |
+| `build_hall.py` | Build the factory hall that runs load (`benchmark/hall/built`, untracked) from the released scenes and pin its hash in `benchmark/assets.json` |
 | `build_release.py` | Write the release into the released case folders: `physics`, `settle`, `letters`, `codes`, `public`; `check` confirms the scenes carry the release physics. Each step rewrites the hashes in `benchmark/release.json` |
 | `validate_physics.py` | Check the release physics and the Franka limits on the released scenes: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`; results in `runs/engineering/validate-physics/` |
 

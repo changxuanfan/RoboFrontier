@@ -23,6 +23,7 @@ guide on how to do it well.
 <!-- /tools -->
 
 <!-- tools:full -->
+<!-- observation:images -->
 Policy inputs are the public task and task materials, permitted RGB and robot
 feedback, your work note, authorized messages and the reports referenced to you,
 and this run's shared lessons in `{{RUN_DIR}}/workspace/skills.md`. Public robot specifications and declared
@@ -32,6 +33,37 @@ are not policy inputs. The rules, role instructions, guides and task inputs are
 frozen for this run and read-only. You work in `{{RUN_DIR}}/workspace/`, the only place
 you can write: keep temporary files there, and add lessons to its `skills.md` as the
 collaboration guide describes.
+<!-- /observation -->
+<!-- observation:ground_truth -->
+Policy inputs are the public task and task materials, the ground truth this run
+gives you, robot feedback, your work note, authorized messages and the reports
+referenced to you, and this run's shared lessons in `{{RUN_DIR}}/workspace/skills.md`.
+Public robot specifications are usable. The benchmark's code, probes and recipes,
+other runs, other role connections, earlier solutions and anything under the run's
+`private/` folder are not policy inputs. The rules, role instructions, guides and
+task inputs are frozen for this run and read-only. You work in
+`{{RUN_DIR}}/workspace/`, the only place you can write: keep temporary files there,
+and add lessons to its `skills.md` as the collaboration guide describes.
+
+This run gives you ground truth instead of camera images. There are no cameras:
+`observe` returns robot feedback only, and no operation returns an image. In
+their place you have:
+
+- the robot tool's `state` operation: the current position, orientation and
+  velocity of every task object, the position and velocity of every joint, and
+  what the evaluator currently tracks (the tool reference describes the reply);
+- `{{RUN_DIR}}/public/inputs/ground-truth/`: `task.json`, the task as the evaluator
+  has it (every object, goal and exact target), and `scene.xml` with its assets,
+  the task's MuJoCo scene;
+- the `mujoco` package in your Python, so you can load that scene and plan in
+  your own copy of it.
+
+Where the task, a guide or a role text speaks of RGB, images, cameras or views,
+use `state` instead. Your own simulations never change the live world: it
+changes only through robot actions. A Dial code stays private in every run:
+`state` gives the dial angles and what the display shows, never the code or
+which dial is right.
+<!-- /observation -->
 <!-- /tools -->
 <!-- tools:robot_only -->
 Policy inputs are the public task and task materials, permitted RGB and robot

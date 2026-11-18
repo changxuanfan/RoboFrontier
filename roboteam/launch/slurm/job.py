@@ -273,12 +273,15 @@ def submit(config, output, *, queue=False, root=ROOT):
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     # Where preflight wrote it: the configured runs root, else the submitting checkout's runs/.
     receipts = runs_root(config) if runs_root(config) != ROOT / 'runs' else root / 'runs'
+    from roboteam.runtime.tools import observation_mode
     from roboteam.runtime.tools.tools_mode import receipt_name
 
     receipt = (
         receipts
         / 'engineering/model-compatibility'
-        / receipt_name(policy['model'], policy.get('tools', 'full'))
+        / observation_mode.receipt_name(
+            receipt_name(policy['model'], policy.get('tools', 'full')), observation_mode.of(policy)
+        )
         / 'report.json'
     )
     if policy['harness'] == 'codex' and (
@@ -406,12 +409,16 @@ def stage(submission, local):
     asset = source / 'runs/asset-cache' / (manifest['sha256']['policy-assets.tar.gz'] + '.tar.gz')
     _copy_verified(submission / 'policy-assets.tar.gz', asset)
     if config['policy']['harness'] == 'codex':
+        from roboteam.runtime.tools import observation_mode
         from roboteam.runtime.tools.tools_mode import receipt_name
 
         receipt = (
             source
             / 'runs/engineering/model-compatibility'
-            / receipt_name(config['policy']['model'], config['policy'].get('tools', 'full'))
+            / observation_mode.receipt_name(
+                receipt_name(config['policy']['model'], config['policy'].get('tools', 'full')),
+                observation_mode.of(config['policy']),
+            )
             / 'report.json'
         )
         _copy_verified(submission / 'provider-report.json', receipt)
@@ -466,7 +473,9 @@ def execute(local):
             if config['policy'].get('tools', 'full') == 'robot_only':
                 os.environ[ENV_VAR] = 'off'  # As `roboteam prepare`: no shell, so no Python environment.
             else:
-                apply_default()
+                from roboteam.runtime.tools.observation_mode import environment_variant
+
+                apply_default(environment_variant(config['policy']))
             prepare(ROOT / 'runs/policy/batch', config)
             if (local / 'STOP').exists():
                 request_stop(local)

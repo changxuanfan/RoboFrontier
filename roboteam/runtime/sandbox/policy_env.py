@@ -169,16 +169,59 @@ PYTHON = 'cpython-3.12.16'
 CONFIG = Path(__file__).resolve().with_name('policy-env')
 
 
-def identity():
-    """The environment's folder suffix: its locks, interpreter and platform."""
+# The ordinary environment (None) holds no physics simulator. A named variant adds the
+# locked packages of its file to the preinstalled ones; only the runs it is meant for may
+# use it (require_variant). `mujoco` is for ground_truth runs (runtime/tools/observation_mode.py).
+VARIANTS = {None: None, 'mujoco': 'mujoco'}
+# System folders a variant's shells search after /usr/bin and /bin. On macOS `import mujoco`
+# runs `sysctl`, which lives in /usr/sbin.
+VARIANT_PATH = {'mujoco': ('/usr/sbin',)}
+
+
+def variant_files(variant):
+    """The input and lock file names a variant adds; none for the ordinary environment."""
+    if variant not in VARIANTS:
+        raise ValueError('Unknown policy environment variant: ' + str(variant))
+    name = VARIANTS[variant]
+    return () if name is None else (name + '.in', name + '.lock')
+
+
+def identity(variant=None):
+    """The environment's folder suffix: its locks, interpreter and platform (and its variant).
+
+    The ordinary environment's value does not depend on any variant's files."""
     import platform
     import sys
 
     digest = hashlib.sha256()
-    for name in ('core.lock', 'all.lock'):
+    for name in ('core.lock', 'all.lock', *variant_files(variant)[1:]):
         digest.update((CONFIG / name).read_bytes())
-    digest.update(json.dumps([PYTHON, sys.platform, platform.machine()]).encode())
+    digest.update(
+        json.dumps(
+            [PYTHON, sys.platform, platform.machine(), *([] if variant is None else [variant])]
+        ).encode()
+    )
     return digest.hexdigest()[:12]
+
+
+def folder_name(variant=None):
+    """The build's folder under its base: policy-env-<id>, or policy-env-<variant>-<id>."""
+    return 'policy-env-' + ('' if variant is None else variant + '-') + identity(variant)
+
+
+def require_variant(root, variant):
+    """Refuse an environment built as another variant than the run needs.
+
+    A ground_truth run needs the simulator; every other run must not have one."""
+    actual = load(root).get('variant')
+    if actual != variant:
+
+        def name(value):
+            return 'the ordinary environment' if value is None else 'the %s variant' % value
+
+        raise ValueError(
+            'This run needs %s of the policy environment, but %s is %s' % (name(variant), root, name(actual))
+        )
 
 
 BASE_VAR = 'ROBOTEAM_POLICY_ENV_BASE'
@@ -195,7 +238,7 @@ def selected():
     return root.resolve()
 
 
-def default_root():
+def default_root(variant=None):
     """The environment `roboteam prepare` uses when ROBOTEAM_POLICY_ENV is unset.
 
     New runs use the build of the current locks by default: under ROBOTEAM_POLICY_ENV_BASE,
@@ -209,10 +252,11 @@ def default_root():
     if not base:
         return None
     base = Path(base)
-    root = base / ('policy-env-' + identity())
+    root = base / folder_name(variant)
     hint = (
-        ' Build and check it once: .venv/bin/python -m scripts.release.build_policy_env --base %s, then '
-        '.venv/bin/python -m scripts.release.check_policy_env %s.' % (base, root)
+        ' Build and check it once: .venv/bin/python -m scripts.release.build_policy_env --base %s%s, then '
+        '.venv/bin/python -m scripts.release.check_policy_env %s.'
+        % (base, '' if variant is None else ' --variant ' + variant, root)
     )
     if not root.is_dir():
         raise ValueError('The default policy environment is not built: ' + str(root) + '.' + hint)
@@ -226,17 +270,19 @@ def default_root():
     return root.resolve()
 
 
-def apply_default():
+def apply_default(variant=None):
     """Name the environment for this process's preparation: the one chosen, or the default.
 
     Every run on every platform uses a checked policy environment and the closed access
-    table; there is no run on the host's Python."""
+    table; there is no run on the host's Python. `variant` is what the runs need
+    (observation_mode.environment_variant): the default is that variant's build, and preparing a
+    run refuses a chosen environment of another variant (require_variant)."""
     value = os.environ.get(ENV_VAR)
     if value and value.strip().lower() in OFF:
         raise ValueError(ENV_VAR + '=' + value + ' is not supported: every run uses a policy environment')
     if value:
         return selected()
-    root = default_root()
+    root = default_root(variant)
     if root is None:
         raise ValueError(
             'No policy environment: set ' + BASE_VAR + ' to the folder holding the build of this host '
@@ -253,7 +299,9 @@ def variables(root, run):
     temporary = workspace / TEMPORARY
     manifest = load(root)
     return {
-        'PATH': str(root / manifest['bin']) + ':/usr/bin:/bin',
+        'PATH': ':'.join(
+            [str(root / manifest['bin']), '/usr/bin', '/bin', *VARIANT_PATH.get(manifest.get('variant'), ())]
+        ),
         'LANG': 'C.UTF-8',
         'HOME': str(temporary / 'home'),
         'TMPDIR': str(temporary),

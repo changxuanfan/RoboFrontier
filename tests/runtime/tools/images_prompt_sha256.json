@@ -1,0 +1,62 @@
+{
+  "prompts/guides/collaboration/adaptive.md": {
+    "full": "567843f4bb65352045be275cfe1f65ea79441ddb3ed1407f01dd5577234e36d7",
+    "robot_only": "15dbe622c977bdaf3cb1b13b62cfdffadfc41d744ec5b654fe784c02db15f9fa"
+  },
+  "prompts/guides/collaboration/communication.md": {
+    "full": "10d7e695361c292a6562a7a0109448c44f5efe1dc2540af7d7ecae7e7f1d12ab",
+    "robot_only": "10d7e695361c292a6562a7a0109448c44f5efe1dc2540af7d7ecae7e7f1d12ab"
+  },
+  "prompts/guides/collaboration/guide.md": {
+    "full": "400f1249ed7e8e7d9a11a32e7fec2a2ff2818c016b9fe1b463cb1e2ed6f690ca",
+    "robot_only": "dce9118cf2835550ea3e06ff2e1c19b1c7b9ff23f3bf921f5cf510fee1af10a4"
+  },
+  "prompts/guides/collaboration/motion-check.md": {
+    "full": "ad7fd89018dc9aa8dd79b6ba79394b4b270ed67a1673653d9b8cf68d28e35a27",
+    "robot_only": "ad7fd89018dc9aa8dd79b6ba79394b4b270ed67a1673653d9b8cf68d28e35a27"
+  },
+  "prompts/guides/collaboration/tools.md": {
+    "full": "c231fdf6ba2da7bee6c00da2ceceeede709c23096895a293ade629ef50109b53",
+    "robot_only": "e99f614d7b4215cae8523d56755cd5e5135db27e0861f66ef6381713e28ca410"
+  },
+  "prompts/guides/dial.md": {
+    "full": "dad6c6186675273bdf8cb988e3d06834158cb0b9fa598ac3587bb56044751e07",
+    "robot_only": "dad6c6186675273bdf8cb988e3d06834158cb0b9fa598ac3587bb56044751e07"
+  },
+  "prompts/guides/mosaic.md": {
+    "full": "06450c06563d66a35ed266ce98d80db2fc0b39ceead8e72f7a29df3b8d3fd041",
+    "robot_only": "06450c06563d66a35ed266ce98d80db2fc0b39ceead8e72f7a29df3b8d3fd041"
+  },
+  "prompts/guides/relay.md": {
+    "full": "1471c626835abf90d0283e1a4b88516abd7b51a4b87e8d0051c04577dd69af32",
+    "robot_only": "1471c626835abf90d0283e1a4b88516abd7b51a4b87e8d0051c04577dd69af32"
+  },
+  "prompts/guides/transport.md": {
+    "full": "2f33d871e1c214ce6065dcae14eba03f5b04ffda0112bf0dd7416a28516e80c3",
+    "robot_only": "2f33d871e1c214ce6065dcae14eba03f5b04ffda0112bf0dd7416a28516e80c3"
+  },
+  "prompts/roles/adaptive-controller.md": {
+    "full": "c81b2681c2d52eb2d1240208e1d57eae5d3fe0bb5ef851ac8afebbbb6bef8c1d",
+    "robot_only": "c81b2681c2d52eb2d1240208e1d57eae5d3fe0bb5ef851ac8afebbbb6bef8c1d"
+  },
+  "prompts/roles/meta-manager.md": {
+    "full": "a5fc2fe5f49d7eae8fbf712fdb91ecf88cfb255c681be2b4dc928fc843c41842",
+    "robot_only": "a5fc2fe5f49d7eae8fbf712fdb91ecf88cfb255c681be2b4dc928fc843c41842"
+  },
+  "prompts/roles/single-agent.md": {
+    "full": "23d2e5832011ace80e15a3dc06eaaab50a3eb58509845bdd2d0303fd23604090",
+    "robot_only": "23d2e5832011ace80e15a3dc06eaaab50a3eb58509845bdd2d0303fd23604090"
+  },
+  "prompts/roles/team-controller.md": {
+    "full": "50cd4370e72ddb7ce0615b0cdce8d80d11a49dbcbf7608053a99fdd614178966",
+    "robot_only": "50cd4370e72ddb7ce0615b0cdce8d80d11a49dbcbf7608053a99fdd614178966"
+  },
+  "prompts/roles/worker.md": {
+    "full": "a2d77ee9a54fe8eb8f98609ec4370cd63d00602a8b04c171a1a44847076eb60e",
+    "robot_only": "a2d77ee9a54fe8eb8f98609ec4370cd63d00602a8b04c171a1a44847076eb60e"
+  },
+  "prompts/rules.md": {
+    "full": "7463bbe30157deec72f603bda0d4e299fd78ef9e3890fc7541d1a9eed62bbcba",
+    "robot_only": "f008a96ba8f8ff44aa28a5218e01684bf178c8b68afcae28a405763d76c49d3b"
+  }
+}

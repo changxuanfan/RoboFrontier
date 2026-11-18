@@ -15,7 +15,7 @@ DEFAULT_MODELS = {'codex': 'sol', 'claude': 'opus'}
 SYSTEMS = ('adaptive', 'single-agent', 'hierarchical', 'decentralized')
 SCHEMA = {
     'schema_version': int,
-    'policy': dict.fromkeys(('harness', 'model', 'effort', 'system', 'tools'), str),
+    'policy': dict.fromkeys(('harness', 'model', 'effort', 'system', 'tools', 'observation'), str),
     'batch': {
         'parallel': int,
         'startup_interval_s': float,
@@ -156,7 +156,17 @@ def validate_configuration(config):
         raise ValueError(
             'Unsupported configuration schema_version: this code reads version %d' % SCHEMA_VERSION
         )
-    _validate_shape(config, SCHEMA)
+    from roboteam.runtime.tools import observation_mode
+
+    # A batch prepared before the observation setting existed is an images batch; its frozen
+    # configuration is read as it is, never rewritten.
+    policy = config.get('policy')
+    shaped = (
+        {**config, 'policy': {**policy, 'observation': observation_mode.IMAGES}}
+        if isinstance(policy, dict) and 'observation' not in policy
+        else config
+    )
+    _validate_shape(shaped, SCHEMA)
 
     def choice(section, field, allowed):
         if config[section][field] not in allowed:
@@ -169,6 +179,9 @@ def validate_configuration(config):
 
     choice('policy', 'tools', MODES)
     robot_only = config['policy']['tools'] == ROBOT_ONLY
+    if config['policy'].get('observation', observation_mode.IMAGES) not in observation_mode.MODES:
+        raise ValueError('Invalid policy.observation: choose from ' + ', '.join(observation_mode.MODES))
+    observation_mode.check_combination(config['policy'])
     from re import fullmatch
 
     if not fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', config['policy']['model']):

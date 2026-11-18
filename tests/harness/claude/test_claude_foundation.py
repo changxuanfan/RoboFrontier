@@ -224,10 +224,13 @@ class ClaudeFoundationTests(unittest.TestCase):
         ops |= {
             o for group in re.findall(r"op in \(([^)]*)\)", source) for o in re.findall(r"'([a-z_]+)'", group)
         }
-        admin = {'bind', 'start', 'resume', 'state', 'shutdown'}
+        admin = {'bind', 'start', 'resume', 'shutdown'}
         self.assertIn('recover_action', ops)
         self.assertEqual(ops - POLICY_OPS, admin)
         self.assertFalse(admin & POLICY_OPS)
+        # `state` is Meta's snapshot, and for a policy role the ground-truth reading that only a
+        # ground_truth run accepts (tests/runtime/tools/test_ground_truth.py).
+        self.assertIn('state', ops & POLICY_OPS)
 
     def test_connection_cannot_be_manager(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -30,6 +30,25 @@ network and `uvx`; the result is read-only and runs need no network:
 It prints the build's `root`. The folder name carries a hash of the locks, the Python version
 and the platform, so each host builds its own. Linux needs glibc 2.28 or newer.
 
+### The mujoco variant
+
+The ordinary environment holds no physics simulator. A run prepared with
+`--observation ground_truth` ([ground-truth observation](../benchmark/rules.md#ground-truth-observation))
+uses a second build instead: the same Python and packages plus `mujoco`, hash-locked in
+`mujoco.lock` at the version of the repository's `uv.lock`. Build and check it the same way:
+
+```sh
+.venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam --variant mujoco
+.venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-mujoco-<id>
+```
+
+Its folder is `policy-env-mujoco-<id>`, with its own hash and its own check receipt; the ordinary
+build's name and hash do not depend on it. `prepare` picks the variant for ground_truth runs and
+the ordinary build for every other run, and refuses either kind of run with the other build. The
+check requires `import mujoco` and a short simulation to work in the variant and to fail in the
+ordinary build. The variant's shells also search `/usr/sbin`, where macOS keeps the `sysctl`
+that `import mujoco` runs.
+
 ## Check
 
 Run the check where batches will run (on a compute node for Slurm), with `--scratch` on the

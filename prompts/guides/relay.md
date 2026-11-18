@@ -19,8 +19,14 @@ delegate, rather than splitting coupled support across independent scopes.
 
 Choose teams, the route and handover points from reach, observations and the
 cost of each regrasp. Preserve receiver access and sender withdrawal when choosing
+<!-- observation:images -->
 a grasp. Before releasing an existing hold, establish the receiver's support from
 allowed RGB and robot evidence; width-based grasp feedback alone is insufficient.
+<!-- /observation -->
+<!-- observation:ground_truth -->
+a grasp. Before releasing an existing hold, establish the receiver's support from
+`state` and robot evidence; width-based grasp feedback alone is insufficient.
+<!-- /observation -->
 Update the shared reference after slip or reorientation.
 
 Every timber needs a qualified airborne handover before it can count as complete, so
@@ -33,7 +39,12 @@ count, and it must be put down, lifted by those arms and handed over in the air 
 
 ## At the goal
 
+<!-- observation:images -->
 Check each assembly separately against the completion rule from permitted views,
+<!-- /observation -->
+<!-- observation:ground_truth -->
+Check each assembly separately against the completion rule from `state`,
+<!-- /observation -->
 and confirm that every robot has released it and the jaws have cleared it before
 proposing completion. After a drop or collision, reason from the actual scene and
 recover with ordinary actions.

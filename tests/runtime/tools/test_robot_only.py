@@ -10,7 +10,7 @@ from pathlib import Path
 from fake_pipeline import FakeWorld, fake_capture
 from roboteam.runtime.run import bootstrap
 from roboteam.runtime.run.setup import prepare_run, verify_inputs
-from roboteam.runtime.tools import public_files, run_skills, tools_mode
+from roboteam.runtime.tools import observation_mode, public_files, run_skills, tools_mode
 from roboteam.runtime.tools.delegation import Delegations
 from roboteam.runtime.tools.robot_ops import check_request
 from roboteam.runtime.world.service import RuntimeService
@@ -94,7 +94,9 @@ class PreparationTests(unittest.TestCase):
                         else Path('guides/collaboration') / path.relative_to(run / 'public/inputs/guide')
                     )
                 )
-                expected = tools_mode.render(source.read_text(), 'full').replace('{{RUN_DIR}}', str(run))
+                expected = observation_mode.render(
+                    tools_mode.render(source.read_text(), 'full'), 'images'
+                ).replace('{{RUN_DIR}}', str(run))
                 self.assertEqual(path.read_text(), expected)
             first = (run / 'private/inputs/bootstrap/Controller.md').read_text()
             self.assertIn(bootstrap.HARNESS_LINES['codex'], first)
