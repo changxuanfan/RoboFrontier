@@ -1,4 +1,5 @@
 """The per-run loop both batch supervisors share (launch/supervise.py)."""
+
 import unittest
 
 from roboteam.launch.supervise import supervise_run
@@ -7,9 +8,16 @@ from roboteam.launch.supervise import supervise_run
 class SuperviseRunTests(unittest.TestCase):
     def run_case(self, results, answers, *, continuing=False, state='prepared'):
         results, answers, records = list(results), list(answers), []
-        outcome = supervise_run('run', lambda: results.pop(0), continuing=continuing, lifecycle=lambda run: state,
-                                try_continue=lambda run, why: answers.pop(0), final=lambda r: r == 'final',
-                                reason=str, record=lambda r, ok, why: records.append((r, ok)))
+        outcome = supervise_run(
+            'run',
+            lambda: results.pop(0),
+            continuing=continuing,
+            lifecycle=lambda run: state,
+            try_continue=lambda run, why: answers.pop(0),
+            final=lambda r: r == 'final',
+            reason=str,
+            record=lambda r, ok, why: records.append((r, ok)),
+        )
         return outcome, records
 
     def test_an_unexpected_end_continues_until_the_table_says_no(self):
@@ -25,7 +33,10 @@ class SuperviseRunTests(unittest.TestCase):
         self.assertEqual((outcome, records), (('ended', 'final', True), [(None, True)]))
         outcome, _ = self.run_case([], [(False, 'integrity')], continuing=True, state='ended')
         self.assertEqual(outcome, ('refused', 'integrity', False))
-        self.assertEqual(self.run_case(['final'], [], continuing=True, state='resuming')[0], ('ended', 'final', True))
+        self.assertEqual(
+            self.run_case(['final'], [], continuing=True, state='resuming')[0], ('ended', 'final', True)
+        )
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

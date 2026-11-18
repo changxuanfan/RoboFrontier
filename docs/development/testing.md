@@ -11,6 +11,23 @@ uv sync --locked
 Node.js is needed for the Node host tests. Tests that drive an installed harness CLI run it against
 a local stub model and skip when the CLI is absent.
 
+## Formatting and lint
+
+Python is formatted and linted with [ruff](https://docs.astral.sh/ruff/) at the version CI pins;
+the settings are in `pyproject.toml` (110 columns, quotes kept as written). CI runs both checks
+before the tests:
+
+```sh
+uvx ruff@0.17.5 format --check roboteam scripts tests    # without --check: rewrite the files
+uvx ruff@0.17.5 check roboteam scripts tests             # --fix applies the safe fixes
+```
+
+The Codex host and the Node tests are formatted with Prettier (`.prettierrc.json`):
+
+```sh
+npx --yes prettier@3 --write roboteam/harness/codex/host/*.js "tests/**/*.js" "tests/**/*.cjs"
+```
+
 ## Every test, in parallel
 
 ```sh

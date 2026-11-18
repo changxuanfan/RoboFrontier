@@ -1,10 +1,11 @@
 """Offline lifecycle using the real runtime, scheduler and a synthetic world."""
+
 import http.server
 import json
-from pathlib import Path
 import tempfile
 import threading
 import unittest
+from pathlib import Path
 
 from fake_pipeline import FakeWorld, fake_capture
 from roboteam.harness.claude.systems.single_agent import SingleAgentPolicyHost
@@ -47,28 +48,38 @@ class LifecycleTests(unittest.TestCase):
             service = RuntimeService(run, FakeWorld, fake_capture)
 
             class Handler(http.server.BaseHTTPRequestHandler):
-                def log_message(self, *args): pass
+                def log_message(self, *args):
+                    pass
+
                 def do_POST(self):
                     body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
                     if self.path != '/op' or service.tokens.get(body['actor']) != self.headers.get('X-Token'):
-                        self.send_error(403); return
+                        self.send_error(403)
+                        return
                     with service.lock:
-                        job = service.accept(body['actor'], body['op'], body['data'], body['call_id'], body.get('ack_delivery'))
+                        job = service.accept(
+                            body['actor'], body['op'], body['data'], body['call_id'], body.get('ack_delivery')
+                        )
                         service.pump()
                     result = json.dumps(job['result']).encode()
-                    self.send_response(200); self.end_headers(); self.wfile.write(result)
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(result)
 
             server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
             threading.Thread(target=server.serve_forever, daemon=True).start()
             for actor in ('Meta', 'Controller'):
                 conn = run / 'private/state/connections' / (actor + '.json')
-                data = json.loads(conn.read_text()); data['url'] = f'http://127.0.0.1:{server.server_port}'
+                data = json.loads(conn.read_text())
+                data['url'] = f'http://127.0.0.1:{server.server_port}'
                 conn.write_text(json.dumps(data))
             host = SingleAgentPolicyHost(run, {'model': 'fake', 'effort': 'high'}, {}, host_factory=Host)
             try:
                 host.bind_and_bootstrap()
                 self.assertEqual(service.store.get('lifecycle'), 'running')
-                self.assertIn('The experiment has started and the task clock is running', host.host.prompts[0])
+                self.assertIn(
+                    'The experiment has started and the task clock is running', host.host.prompts[0]
+                )
                 self.assertEqual(len(host.host.prompts), 1)
                 host.host.state = 'idle'
                 self.assertEqual(len(host.cycle()['dispatched']), 0)
@@ -76,8 +87,10 @@ class LifecycleTests(unittest.TestCase):
                 host.host.state = 'idle'
             finally:
                 host.close()
-                server.shutdown(); server.server_close()
+                server.shutdown()
+                server.server_close()
                 service.close()
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

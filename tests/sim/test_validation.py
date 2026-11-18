@@ -1,12 +1,20 @@
 """A fast part of the release physics validation (scripts/release/validate_physics.py)."""
+
 import unittest
 from pathlib import Path
 
 from scripts.release import validate_physics as vp
 
-ASSETS = all((Path('benchmark')/task_type/case/'assets').is_dir() for task_type, case in
-             (('transport', 'transport-a04-d1'), ('mosaic', 'mosaic-a04-6x12-d1'), ('relay', 'relay-a08-d2'),
-              ('relay', 'relay-a08-d1'), ('dial', 'dial-best5-n04-d1')))
+ASSETS = all(
+    (Path('benchmark') / task_type / case / 'assets').is_dir()
+    for task_type, case in (
+        ('transport', 'transport-a04-d1'),
+        ('mosaic', 'mosaic-a04-6x12-d1'),
+        ('relay', 'relay-a08-d2'),
+        ('relay', 'relay-a08-d1'),
+        ('dial', 'dial-best5-n04-d1'),
+    )
+)
 
 
 @unittest.skipUnless(ASSETS, 'Generated scene assets missing; run `python -m roboteam.cli bootstrap`')
@@ -16,10 +24,10 @@ class ReleasePhysicsValidationTests(unittest.TestCase):
             with self.subTest(case=case):
                 result = vp.rest(case)
                 self.assertTrue(result['passed'], result)
-                self.assertLess(result['first_5s_mm'], .05, result)
+                self.assertLess(result['first_5s_mm'], 0.05, result)
 
     def test_a_held_cube_stays_put_and_a_released_cube_settles(self):
-        result = vp.carry('transport-cube', ('joint1', .5))
+        result = vp.carry('transport-cube', ('joint1', 0.5))
         self.assertTrue(result['passed'], result)
         result = vp.place('transport-cube')
         self.assertTrue(result['passed'], result)
@@ -29,11 +37,11 @@ class ReleasePhysicsValidationTests(unittest.TestCase):
         self.assertTrue(result['passed'], result)
 
     def test_an_airborne_relay_handover_holds_the_timber(self):
-        result = vp.relay(40.)
+        result = vp.relay(40.0)
         self.assertTrue(result['passed'], result)
 
     def test_a_slowly_turned_dial_follows_the_hand(self):
-        result = vp.dial('dial-best5-n04-d1', .3)
+        result = vp.dial('dial-best5-n04-d1', 0.3)
         self.assertTrue(result['passed'], result)
 
 

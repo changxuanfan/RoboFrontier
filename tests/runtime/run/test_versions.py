@@ -1,4 +1,5 @@
 """Runs use the pinned harness and library versions and refuse others."""
+
 import unittest
 from types import SimpleNamespace
 
@@ -12,12 +13,12 @@ def cli(output):
 
 class VersionTests(unittest.TestCase):
     def test_the_pins_match_the_lock_file_and_the_docker_image(self):
-        lock = (ROOT/'uv.lock').read_text()
+        lock = (ROOT / 'uv.lock').read_text()
         for name, version in versions.LIBRARIES.items():
             self.assertIn(f'name = "{name}"\nversion = "{version}"', lock)
-        docker = (ROOT/'docker/Dockerfile').read_text()
-        self.assertIn('CLAUDE_CODE_VERSION='+versions.HARNESSES['claude'], docker)
-        self.assertIn('CODEX_VERSION='+versions.HARNESSES['codex'], docker)
+        docker = (ROOT / 'docker/Dockerfile').read_text()
+        self.assertIn('CLAUDE_CODE_VERSION=' + versions.HARNESSES['claude'], docker)
+        self.assertIn('CODEX_VERSION=' + versions.HARNESSES['codex'], docker)
 
     def test_a_different_harness_version_is_refused(self):
         self.assertEqual(versions.harness_version('claude', cli('2.1.316 (Claude Code)\n')), '2.1.316')

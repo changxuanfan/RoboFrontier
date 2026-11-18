@@ -2,23 +2,24 @@
 
 Such a run is recorded as wall_backstop, needs review, is excluded from analysis and continues
 only on an operator's explicit authorization. Runs frozen without the field are unchanged."""
+
 import json
-from pathlib import Path
 import sqlite3
 import tempfile
 import time
 import unittest
+from pathlib import Path
 
+from fake_pipeline import fake_capture
+from launch import test_claude_batch as claude_batch
+from roboteam.analysis import extract, metrics
 from roboteam.runtime.run import segments as run_segments
-from roboteam.tasks import task_types
+from roboteam.runtime.time.clock import BudgetGuard, backstop_since, protocol, wall_backstop_s
 from roboteam.runtime.time.egress_pause import WorldPause
 from roboteam.runtime.time.outage import OutageMonitor
-from roboteam.runtime.time.clock import BudgetGuard, backstop_since, protocol, wall_backstop_s
-from roboteam.analysis import extract, metrics
 from roboteam.runtime.world.service import RuntimeService
-from fake_pipeline import fake_capture
+from roboteam.tasks import task_types
 from runtime.time import test_active_time as active
-from launch import test_claude_batch as claude_batch
 from runtime.world.test_policy_probe import BudgetWorld
 
 ACTIVE = active.ACTIVE
@@ -33,18 +34,27 @@ class ProtocolTests(unittest.TestCase):
         task_types.validate_policy_task(new)
         self.assertEqual(wall_backstop_s(new['run_protocol']), BACKSTOP)
         with self.assertRaises(ValueError):
-            task_types.validate_policy_task(dict(new, run_protocol={k: v for k, v in new['run_protocol'].items() if k != 'wall_backstop_s'}))
+            task_types.validate_policy_task(
+                dict(
+                    new, run_protocol={k: v for k, v in new['run_protocol'].items() if k != 'wall_backstop_s'}
+                )
+            )
         with self.assertRaises(ValueError):
-            task_types.validate_policy_task(dict(new, run_protocol=dict(new['run_protocol'], wall_backstop_s=60)))
+            task_types.validate_policy_task(
+                dict(new, run_protocol=dict(new['run_protocol'], wall_backstop_s=60))
+            )
         from roboteam.tasks.public import public_task
+
         self.assertNotIn('run_protocol', public_task(new))
 
     def test_the_world_owner_reads_the_frozen_backstop(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = task_types.prepare('transport-a04-d1', Path(tmp)/'run')
+            run = task_types.prepare('transport-a04-d1', Path(tmp) / 'run')
             s = RuntimeService(run, BudgetWorld, fake_capture)
-            try: self.assertEqual(s.policy_budget.wall_backstop_s, BACKSTOP)
-            finally: s.close()
+            try:
+                self.assertEqual(s.policy_budget.wall_backstop_s, BACKSTOP)
+            finally:
+                s.close()
 
 
 class GuardTests(active.Fixture):
@@ -52,14 +62,16 @@ class GuardTests(active.Fixture):
         return BudgetGuard(protocol(limit), wall_backstop_s=BACKSTOP)
 
     def json(self, name):
-        return json.loads((self.run/'private/outputs'/name).read_text())
+        return json.loads((self.run / 'private/outputs' / name).read_text())
 
     def test_fires_at_48h_of_wall_time_with_little_active_time(self):
         guard = self.guard()
         self.ticks(guard, [0, 1, 2], wall=self.start + 100)
-        self.ticks(guard, [3], wall=self.start + BACKSTOP - 1); self.assertIsNone(guard.cutoff)
+        self.ticks(guard, [3], wall=self.start + BACKSTOP - 1)
+        self.assertIsNone(guard.cutoff)
         self.ticks(guard, [4], wall=self.start + BACKSTOP)
-        self.assertTrue(guard.backstopped); self.assertLess(guard.active, 10)
+        self.assertTrue(guard.backstopped)
+        self.assertLess(guard.active, 10)
         self.assertEqual(self.events('POLICY_WALL_LIMIT'), [])
         event = self.events('POLICY_WALL_BACKSTOP')[0]
         self.assertEqual((event['wall_backstop_s'], event['wall_since_start_s']), (BACKSTOP, BACKSTOP))
@@ -69,34 +81,46 @@ class GuardTests(active.Fixture):
         self.ticks(guard, [4.1], wall=self.start + BACKSTOP)
         self.assertTrue(guard.completed)
         report = self.json('evaluation.json')
-        self.assertEqual((report['termination_reason'], report['wall_backstop'], report['needs_review'],
-                          report['budget_exhausted']), ('wall_backstop', True, True, False))
+        self.assertEqual(
+            (
+                report['termination_reason'],
+                report['wall_backstop'],
+                report['needs_review'],
+                report['budget_exhausted'],
+            ),
+            ('wall_backstop', True, True, False),
+        )
         self.assertEqual(self.s.store.get('termination_reason'), 'wall_backstop')
         self.assertEqual(self.s.store.get('lifecycle'), 'ended')
-        self.assertEqual(len(self.events('POLICY_BACKSTOP_CLOSED')), 1); self.assertEqual(self.events('POLICY_BUDGET_CLOSED'), [])
+        self.assertEqual(len(self.events('POLICY_BACKSTOP_CLOSED')), 1)
+        self.assertEqual(self.events('POLICY_BUDGET_CLOSED'), [])
         self.assertTrue(run_segments.wall_backstopped(self.run))
 
     def test_does_not_fire_once_the_active_time_cutoff_fired(self):
         guard = self.guard(limit=10)
-        self.ticks(guard, range(11), wall=self.start + 100); self.assertIsNotNone(guard.cutoff)
+        self.ticks(guard, range(11), wall=self.start + 100)
+        self.assertIsNotNone(guard.cutoff)
         self.ticks(guard, [10.05], wall=self.start + 3 * DAY)
-        self.assertFalse(guard.backstopped); self.assertEqual(self.events('POLICY_WALL_BACKSTOP'), [])
+        self.assertFalse(guard.backstopped)
+        self.assertEqual(self.events('POLICY_WALL_BACKSTOP'), [])
         self.assertNotIn('wall_backstop', self.json('budget-cutoff.json'))
         self.ticks(guard, [10.2], wall=self.start + 3 * DAY)
         self.assertEqual(self.json('evaluation.json')['termination_reason'], 'wall_limit')
         self.assertFalse(run_segments.wall_backstopped(self.run))
 
-
     def test_counts_from_an_authorized_continuation(self):
         guard = self.guard()
         self.s.store.put('wall_backstop_waived', {'at': self.start + BACKSTOP + 50})
         self.assertEqual(backstop_since(self.s.store), self.start + BACKSTOP + 50)
-        self.ticks(guard, [0, 1], wall=self.start + BACKSTOP + 100); self.assertIsNone(guard.cutoff)
-        self.ticks(guard, [2], wall=self.start + 2 * BACKSTOP + 50); self.assertTrue(guard.backstopped)
+        self.ticks(guard, [0, 1], wall=self.start + BACKSTOP + 100)
+        self.assertIsNone(guard.cutoff)
+        self.ticks(guard, [2], wall=self.start + 2 * BACKSTOP + 50)
+        self.assertTrue(guard.backstopped)
 
 
 class PausedWorldTests(active.Fixture):
     """An outage, egress or usage-limit pause does not count toward the wall backstop."""
+
     def setUp(self):
         super().setUp()
         self.answers = []
@@ -107,9 +131,12 @@ class PausedWorldTests(active.Fixture):
 
     def test_a_held_world_waits_and_its_pause_is_left_out_afterwards(self):
         from roboteam.runtime.time.clock import backstop_elapsed
+
         self.answers.extend([True, False, False, False])
-        for _ in range(4): self.monitor.step()
-        self.s.pump(); self.assertEqual(self.s.store.get('physics_state'), 'paused_by_egress')
+        for _ in range(4):
+            self.monitor.step()
+        self.s.pump()
+        self.assertEqual(self.s.store.get('physics_state'), 'paused_by_egress')
         now = time.time()
         self.s.store.put('start_at', now - BACKSTOP)
         self.s.store.put('pause_since_wall', now - BACKSTOP + 10)  # held for all but its first 10 s
@@ -117,7 +144,9 @@ class PausedWorldTests(active.Fixture):
         self.s.pump()
         self.assertEqual(self.events('POLICY_WALL_BACKSTOP'), [])
         self.assertLess(backstop_elapsed(self.s.store, time.time()), 20)
-        self.answers.append(True); self.monitor.step(); self.s.pump()
+        self.answers.append(True)
+        self.monitor.step()
+        self.s.pump()
         self.assertEqual(len(self.events('OUTAGE_RESUMED')), 1)
         self.assertIsNone(self.s.store.get('pause_since_wall'))
         self.assertGreater(self.s.store.get('pause_wall_s'), BACKSTOP - 20)
@@ -130,25 +159,34 @@ class SupervisorTests(unittest.TestCase):
 
     def test_a_world_held_past_the_backstop_is_ended_by_the_host(self):
         from roboteam.harness.claude.supervisor import ACTIVE_CLOSE_WAIT_S
-        p = self.running(dispatch_paused=True, physics_state='paused_by_egress', active_s=10.)
+
+        p = self.running(dispatch_paused=True, physics_state='paused_by_egress', active_s=10.0)
         result = self.supervisor(p, lambda: None, wall_backstop_s=100).run()
         self.assertEqual((result['reason'], result['wall_backstop']), ('wall_backstop', True))
         self.assertEqual(self.now, 100 + ACTIVE_CLOSE_WAIT_S + 30)
 
     def test_the_worlds_backstop_end_is_reported_as_such(self):
-        p = self.running(active_s=10.)
+        p = self.running(active_s=10.0)
+
         def tick():
-            if self.now == 5: p.store.data.update(wall_backstop={'at': 5}, dispatch_paused=True)
-            if self.now == 8: p.store.data['lifecycle'] = 'ended'; p.host.state = 'idle'
+            if self.now == 5:
+                p.store.data.update(wall_backstop={'at': 5}, dispatch_paused=True)
+            if self.now == 8:
+                p.store.data['lifecycle'] = 'ended'
+                p.host.state = 'idle'
+
         result = self.supervisor(p, tick, wall_backstop_s=100).run()
-        self.assertEqual((result['reason'], result['ended_by'], result['wall_backstop']),
-                         ('world_ended', 'wall_backstop', True))
+        self.assertEqual(
+            (result['reason'], result['ended_by'], result['wall_backstop']),
+            ('world_ended', 'wall_backstop', True),
+        )
 
     def test_not_after_the_active_time_cutoff_fired(self):
         from roboteam.harness.claude.supervisor import RunSupervisor
-        p = self.running(); p.store.data.update(lifecycle='running', start_at=0)
-        supervisor = RunSupervisor(p, lambda: True, wall_backstop_s=100,
-                                           wall_clock=lambda: 10_000)
+
+        p = self.running()
+        p.store.data.update(lifecycle='running', start_at=0)
+        supervisor = RunSupervisor(p, lambda: True, wall_backstop_s=100, wall_clock=lambda: 10_000)
         self.assertTrue(supervisor._backstop_overdue())
         supervisor._wall_limit_reached = lambda: True
         self.assertFalse(supervisor._backstop_overdue())
@@ -156,60 +194,97 @@ class SupervisorTests(unittest.TestCase):
 
 class ContinuationTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
-        self.run = task_types.prepare('transport-a04-d1', Path(self.tmp.name)/'run')
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.run = task_types.prepare('transport-a04-d1', Path(self.tmp.name) / 'run')
         from roboteam.runtime.world.store import RuntimeStore
-        self.store = RuntimeStore(self.run/'private/state/runtime.sqlite'); self.addCleanup(self.store.close)
-        self.store.put('lifecycle', 'ended'); self.store.put('start_at', time.time() - BACKSTOP)
+
+        self.store = RuntimeStore(self.run / 'private/state/runtime.sqlite')
+        self.addCleanup(self.store.close)
+        self.store.put('lifecycle', 'ended')
+        self.store.put('start_at', time.time() - BACKSTOP)
         self.store.put('wall_backstop', {'at': time.time(), 'segment': 0})
-        outputs = self.run/'private/outputs'; outputs.mkdir(parents=True, exist_ok=True)
-        (outputs/'budget-cutoff.json').write_text(json.dumps({'cutoff_unix_s': 1., 'wall_backstop': True}))
-        (outputs/'evaluation.json').write_text(json.dumps({'termination_reason': 'wall_backstop'}))
+        outputs = self.run / 'private/outputs'
+        outputs.mkdir(parents=True, exist_ok=True)
+        (outputs / 'budget-cutoff.json').write_text(json.dumps({'cutoff_unix_s': 1.0, 'wall_backstop': True}))
+        (outputs / 'evaluation.json').write_text(json.dumps({'termination_reason': 'wall_backstop'}))
 
     def test_refused_without_an_operator_authorization(self):
-        self.assertEqual(run_segments.retry_eligibility(self.run, self.store), (False, run_segments.BACKSTOP_REFUSAL))
+        self.assertEqual(
+            run_segments.retry_eligibility(self.run, self.store), (False, run_segments.BACKSTOP_REFUSAL)
+        )
         with self.assertRaisesRegex(ValueError, 'wall-time backstop'):
             run_segments.prepare_retry(self.run, self.store, 'operator')
 
     def test_an_authorized_continuation_sets_the_backstop_records_aside(self):
         run_segments._waive_backstop(self.run, self.store, 'grant')
-        outputs = self.run/'private/outputs'
-        self.assertFalse((outputs/'budget-cutoff.json').exists())
-        self.assertTrue((outputs/'budget-cutoff-wall-backstop-0.json').exists())
-        self.assertTrue((outputs/'evaluation-wall-backstop-0.json').exists())
+        outputs = self.run / 'private/outputs'
+        self.assertFalse((outputs / 'budget-cutoff.json').exists())
+        self.assertTrue((outputs / 'budget-cutoff-wall-backstop-0.json').exists())
+        self.assertTrue((outputs / 'evaluation-wall-backstop-0.json').exists())
         self.assertIsNone(self.store.get('wall_backstop'))
         self.assertEqual(self.store.get('wall_backstop_waived')['authorization'], 'grant')
         self.assertFalse(run_segments.wall_backstopped(self.run))
 
 
 class FakeRun:
-    def __init__(self, files): self.files = files
-    def find(self, *names): return next((n for n in names if n in self.files), None)
-    def read(self, name): return self.files[name]
+    def __init__(self, files):
+        self.files = files
+
+    def find(self, *names):
+        return next((n for n in names if n in self.files), None)
+
+    def read(self, name):
+        return self.files[name]
 
 
 class AnalysisTests(unittest.TestCase):
     def test_a_backstopped_run_is_excluded_with_its_reason(self):
-        cutoff = extract.trial_cutoff(FakeRun({'private/outputs/budget-cutoff.json': json.dumps(
-            {'cutoff_unix_s': 5., 'sim_time_s': 1., 'wall_backstop': True, 'evaluation': {'task_success': True}})}), None)
+        cutoff = extract.trial_cutoff(
+            FakeRun(
+                {
+                    'private/outputs/budget-cutoff.json': json.dumps(
+                        {
+                            'cutoff_unix_s': 5.0,
+                            'sim_time_s': 1.0,
+                            'wall_backstop': True,
+                            'evaluation': {'task_success': True},
+                        }
+                    )
+                }
+            ),
+            None,
+        )
         self.assertTrue(cutoff['wall_backstop'])
         self.assertEqual(metrics.excluded({'cutoff': cutoff}), 'wall_backstop')
         self.assertEqual(metrics.excluded({'evaluation.json': {'wall_backstop': True}}), 'wall_backstop')
-        normal = extract.trial_cutoff(FakeRun({'private/outputs/budget-cutoff.json': json.dumps(
-            {'cutoff_unix_s': 5., 'sim_time_s': 1.})}), None)
-        self.assertIsNone(metrics.excluded({'cutoff': normal, 'evaluation.json': {'termination_reason': 'wall_limit'}}))
+        normal = extract.trial_cutoff(
+            FakeRun(
+                {'private/outputs/budget-cutoff.json': json.dumps({'cutoff_unix_s': 5.0, 'sim_time_s': 1.0})}
+            ),
+            None,
+        )
+        self.assertIsNone(
+            metrics.excluded({'cutoff': normal, 'evaluation.json': {'termination_reason': 'wall_limit'}})
+        )
 
     def test_compute_marks_the_run(self):
-        d = {'sel': {'id': 'r', 'task_type': 'transport'}, 'kind': 'dir', 'cutoff': {'unix': 5., 'sim': 1., 'wall_backstop': True}}
+        d = {
+            'sel': {'id': 'r', 'task_type': 'transport'},
+            'kind': 'dir',
+            'cutoff': {'unix': 5.0, 'sim': 1.0, 'wall_backstop': True},
+        }
         row = metrics.compute(d)
         self.assertEqual((row['excluded'], row['needs_review']), ('wall_backstop', True))
 
     def test_the_event_fallback_reads_an_unwaived_backstop(self):
         db = sqlite3.connect(':memory:')
         db.execute('create table events (seq integer primary key, created real, kind text, value text)')
-        db.execute("insert into events (created, kind, value) values (7, 'POLICY_WALL_BACKSTOP', '{\"sim_time_s\": 2}')")
+        db.execute(
+            "insert into events (created, kind, value) values (7, 'POLICY_WALL_BACKSTOP', '{\"sim_time_s\": 2}')"
+        )
         cut = extract.trial_cutoff_event(db)
-        self.assertEqual((cut['unix'], cut['sim'], cut['wall_backstop']), (7., 2., True))
+        self.assertEqual((cut['unix'], cut['sim'], cut['wall_backstop']), (7.0, 2.0, True))
         db.execute("insert into events (created, kind, value) values (8, 'WALL_BACKSTOP_WAIVED', '{}')")
         self.assertIsNone(extract.trial_cutoff_event(db))
 
@@ -224,49 +299,87 @@ class BatchSummaryTests(unittest.TestCase):
             if run_dir.endswith('case1'):
                 return {'status': 'needs_review', 'reason': 'world_ended', 'wall_backstop': True}
             return {'status': 'finished', 'reason': 'world_ended'}
+
         state = self.run_case(runner)
         self.assertEqual(state['status'], 'needs_review')
-        self.assertEqual([(j['status'], j['reason']) for j in state['jobs']],
-                         [('closed', 'world_ended'), ('needs_review', 'wall_backstop'),
-                          ('closed', 'world_ended'), ('closed', 'world_ended')])
+        self.assertEqual(
+            [(j['status'], j['reason']) for j in state['jobs']],
+            [
+                ('closed', 'world_ended'),
+                ('needs_review', 'wall_backstop'),
+                ('closed', 'world_ended'),
+                ('closed', 'world_ended'),
+            ],
+        )
 
 
 class CodexBatchSummaryTests(unittest.TestCase):
     def test_the_codex_batch_marks_a_backstopped_run(self):
-        import hashlib, os
+        import hashlib
+        import os
         from types import SimpleNamespace
         from unittest.mock import patch
+
         from roboteam.harness.shared import preflight_probe
         from roboteam.launch import codex_batch as benchmark
         from roboteam.runtime.run.setup import write_json
+
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary); batch = root/'batch'
+            root = Path(temporary)
+            batch = root / 'batch'
             selected = {'provider': 'openai_api', 'env_key': 'RF_TEST_KEY'}
             jobs = []
             for case, backstopped in (('one', True), ('two', False)):
-                run = batch/'luna'/case
-                write_json(run/'private/inputs/codex.json', {'model_entry': selected, 'args': []})
-                write_json(run/'private/inputs/models.json', {'models': []})
-                write_json(run/'private/outputs/budget-cutoff.json', {'cutoff_unix_s': 1., **({'wall_backstop': True} if backstopped else {})})
-                jobs.append({'model_entry': 'luna', 'case_id': case, 'run_directory': str(run), 'status': 'prepared'})
-            catalog = (Path(jobs[0]['run_directory'])/'private/inputs/models.json').read_bytes()
-            write_json(root/'runs/engineering/model-compatibility/luna/report.json', {
-                'passed': True, 'model_entry_sha256': hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest(),
-                'catalog_sha256': hashlib.sha256(catalog).hexdigest(), 'codex_version': 'test-cli',
-                'probe_version': preflight_probe.VERSION})
-            write_json(batch/'batch.json', {'status': 'prepared_not_started', 'jobs': jobs,
-                'execution': {'codex_home_scope': 'task', 'startup_interval_s': 0}})
-            with patch.object(benchmark, 'ROOT', root), patch.object(benchmark, 'runs_root', return_value=root/'runs'), patch.object(benchmark, 'verify_inputs', return_value=[]), \
-                    patch.object(benchmark, 'initialize_codex_home'), \
-                    patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'), \
-                    patch.object(benchmark.subprocess, 'run'), \
-                    patch.object(benchmark.subprocess, 'Popen', return_value=SimpleNamespace(pid=99999, wait=lambda: 0)), \
-                    patch.object(benchmark, 'try_continue', return_value=(False, run_segments.BACKSTOP_REFUSAL)), \
-                    patch.dict(os.environ, {'RF_TEST_KEY': 'never-persist-this'}):
+                run = batch / 'luna' / case
+                write_json(run / 'private/inputs/codex.json', {'model_entry': selected, 'args': []})
+                write_json(run / 'private/inputs/models.json', {'models': []})
+                write_json(
+                    run / 'private/outputs/budget-cutoff.json',
+                    {'cutoff_unix_s': 1.0, **({'wall_backstop': True} if backstopped else {})},
+                )
+                jobs.append(
+                    {'model_entry': 'luna', 'case_id': case, 'run_directory': str(run), 'status': 'prepared'}
+                )
+            catalog = (Path(jobs[0]['run_directory']) / 'private/inputs/models.json').read_bytes()
+            write_json(
+                root / 'runs/engineering/model-compatibility/luna/report.json',
+                {
+                    'passed': True,
+                    'model_entry_sha256': hashlib.sha256(
+                        json.dumps(selected, sort_keys=True).encode()
+                    ).hexdigest(),
+                    'catalog_sha256': hashlib.sha256(catalog).hexdigest(),
+                    'codex_version': 'test-cli',
+                    'probe_version': preflight_probe.VERSION,
+                },
+            )
+            write_json(
+                batch / 'batch.json',
+                {
+                    'status': 'prepared_not_started',
+                    'jobs': jobs,
+                    'execution': {'codex_home_scope': 'task', 'startup_interval_s': 0},
+                },
+            )
+            with (
+                patch.object(benchmark, 'ROOT', root),
+                patch.object(benchmark, 'runs_root', return_value=root / 'runs'),
+                patch.object(benchmark, 'verify_inputs', return_value=[]),
+                patch.object(benchmark, 'initialize_codex_home'),
+                patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'),
+                patch.object(benchmark.subprocess, 'run'),
+                patch.object(
+                    benchmark.subprocess, 'Popen', return_value=SimpleNamespace(pid=99999, wait=lambda: 0)
+                ),
+                patch.object(benchmark, 'try_continue', return_value=(False, run_segments.BACKSTOP_REFUSAL)),
+                patch.dict(os.environ, {'RF_TEST_KEY': 'never-persist-this'}),
+            ):
                 benchmark.run_batch(batch, 1)
-            state = json.loads((batch/'batch.json').read_text())
-            self.assertEqual([(j['status'], j.get('reason')) for j in state['jobs']],
-                             [('needs_review', 'wall_backstop'), ('closed', None)])
+            state = json.loads((batch / 'batch.json').read_text())
+            self.assertEqual(
+                [(j['status'], j.get('reason')) for j in state['jobs']],
+                [('needs_review', 'wall_backstop'), ('closed', None)],
+            )
             self.assertEqual(state['status'], 'needs_review')
 
 

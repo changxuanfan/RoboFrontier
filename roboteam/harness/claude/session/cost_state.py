@@ -1,8 +1,9 @@
 """Read native cumulative cost metadata without treating history as new spend."""
-from decimal import Decimal, InvalidOperation
+
 import json
-from pathlib import Path
 import re
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
 
 UUID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
 
@@ -28,7 +29,7 @@ def baseline(directory, session):
         return Decimal('0')
     if not isinstance(session, str) or not UUID.fullmatch(session):
         return None
-    matches = list(Path(directory).glob('projects/*/'+session+'.jsonl'))
+    matches = list(Path(directory).glob('projects/*/' + session + '.jsonl'))
     if len(matches) != 1:
         return None
     latest = None
@@ -56,5 +57,5 @@ def invocation_cost(summary, before):
         summary['total_cost_usd'] = None
         summary['cost_scope'] = 'unknown'
     else:
-        summary['total_cost_usd'] = float(total-before) if before is not None else float(total)
+        summary['total_cost_usd'] = float(total - before) if before is not None else float(total)
         summary['cost_scope'] = 'invocation' if before is not None else 'session_total_upper_bound'

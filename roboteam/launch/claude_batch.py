@@ -1,20 +1,21 @@
 """Run a prepared Claude batch: one supervisor, up to 36 runs in parallel (roboteam run)."""
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+
 import fcntl
 import json
-from pathlib import Path
 import re
 import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from pathlib import Path
 
 from roboteam.harness.claude.run import _check_shared_budget, _positive, run_task
-from roboteam.harness.claude.session.runner import build_env
 from roboteam.harness.claude.session.native_home import config_directory
+from roboteam.harness.claude.session.runner import build_env
+from roboteam.launch.claude_prepare import BATCH_SCHEMA, LAUNCH_SCHEMA
+from roboteam.launch.launch_schedule import LaunchSchedule
 from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.bootstrap import STARTUP_TIMEOUT_S
-from roboteam.runtime.run.setup import verify_inputs, write_json
-from roboteam.launch.launch_schedule import LaunchSchedule
 from roboteam.runtime.run.segments import try_continue
-from roboteam.launch.claude_prepare import BATCH_SCHEMA, LAUNCH_SCHEMA
+from roboteam.runtime.run.setup import verify_inputs, write_json
 
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z')
 
@@ -34,7 +35,8 @@ def _touch(path):
 
 def _stop_all(folder, jobs):
     _touch(_b(folder, 'stop'))
-    for job in jobs: _touch(_r(job['run_directory'], 'stop'))
+    for job in jobs:
+        _touch(_r(job['run_directory'], 'stop'))
 
 
 def _jobs(folder):
@@ -43,16 +45,27 @@ def _jobs(folder):
     if batch.get('schema') != BATCH_SCHEMA or batch.get('status') != 'prepared_not_started':
         raise ValueError('Expected a prepared Claude batch')
     jobs = batch.get('jobs')
-    if not isinstance(jobs, list) or not jobs: raise ValueError('Batch has no jobs')
+    if not isinstance(jobs, list) or not jobs:
+        raise ValueError('Batch has no jobs')
     seen = set()
     for job in jobs:
         name, case = job.get('model_entry'), job.get('case_id')
-        if not isinstance(name, str) or not ID.fullmatch(name) or not isinstance(case, str) or not ID.fullmatch(case):
+        if (
+            not isinstance(name, str)
+            or not ID.fullmatch(name)
+            or not isinstance(case, str)
+            or not ID.fullmatch(case)
+        ):
             raise ValueError('Invalid model or case name')
         expected = (folder / name / case).resolve()
-        if not expected.is_relative_to(folder) or Path(job['run_directory']).resolve() != expected or expected in seen:
+        if (
+            not expected.is_relative_to(folder)
+            or Path(job['run_directory']).resolve() != expected
+            or expected in seen
+        ):
             raise ValueError('Unexpected or duplicate run directory')
-        if not expected.is_dir(): raise ValueError('Run directory missing')
+        if not expected.is_dir():
+            raise ValueError('Run directory missing')
         seen.add(expected)
     return jobs
 
@@ -68,23 +81,40 @@ def _run_once_continued(runner, run_dir, base_env, continuing=False, **options):
     With `continuing`, a run that had started before the batch process died is first
     prepared for its next segment; a run that never started starts normally.
     """
-    from roboteam.runtime.world.store import RuntimeStore
     from roboteam.launch.supervise import supervise_run
+    from roboteam.runtime.world.store import RuntimeStore
+
     def lifecycle(run):
         store = RuntimeStore(Path(run) / 'private/state/runtime.sqlite')
-        try: return store.get('lifecycle')
-        finally: store.close()
+        try:
+            return store.get('lifecycle')
+        finally:
+            store.close()
+
     segments = []
+
     def record(result, continued, why):
-        segments.append({'reason': 'batch process exited' if result is None else result.get('reason'),
-                         'continued': continued, 'why': why})
+        segments.append(
+            {
+                'reason': 'batch process exited' if result is None else result.get('reason'),
+                'continued': continued,
+                'why': why,
+            }
+        )
+
     # The host's own wall limit or a STOP is final, even if its seal could not be recorded;
     # a finish, a cutoff and every other stop are told apart by the stop table.
     outcome, result, _ = supervise_run(
-        run_dir, lambda: runner(run_dir, base_env, **options), continuing=continuing, lifecycle=lifecycle,
+        run_dir,
+        lambda: runner(run_dir, base_env, **options),
+        continuing=continuing,
+        lifecycle=lifecycle,
         try_continue=lambda run, why: try_continue(run, why),
         final=lambda r: r.get('status') == 'finished' or r.get('reason') in FINAL,
-        reason=lambda r: 'harness run ended: ' + str(r.get('reason')), record=record, exited='batch process exited')
+        reason=lambda r: 'harness run ended: ' + str(r.get('reason')),
+        record=record,
+        exited='batch process exited',
+    )
     if outcome == 'refused':
         return {'status': 'needs_review', 'reason': 'not_continued', 'segments': segments}
     result['segments'] = segments
@@ -97,13 +127,18 @@ def _preflight(jobs, env, verifier, continuing=False, budgets=(None, None)):
         if _r(run, 'stop').exists() or (_r(run, 'engineering_claim').exists() and not continuing):
             raise ValueError('A run is stopped or already claimed')
         changed = verifier(run)
-        if changed: raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
+        if changed:
+            raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
         launch = json.loads((run / 'private/inputs/claude.json').read_text())
         config = json.loads((run / 'private/inputs/run.json').read_text())
         model_entry = launch['model_entry']
-        if (launch.get('schema') != LAUNCH_SCHEMA or config.get('harness') != 'claude'
-                or config.get('system') not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized') or config.get('model') != model_entry.get('model')
-                or config.get('effort') != model_entry.get('effort')):
+        if (
+            launch.get('schema') != LAUNCH_SCHEMA
+            or config.get('harness') != 'claude'
+            or config.get('system') not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized')
+            or config.get('model') != model_entry.get('model')
+            or config.get('effort') != model_entry.get('effort')
+        ):
             raise ValueError('Run does not match its Claude launch model')
         _check_shared_budget(run, config['system'], *budgets)
         if model_entry.get('auth_mode') != 'native_login' and not env.get(model_entry.get('env_key')):
@@ -123,27 +158,45 @@ def run_until_signal(folder, base_env, **options):
     active runs stop and seal, queued runs do not start, and this process returns."""
     import signal
     import threading
+
     stop = threading.Event()
     previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
     try:
-        for sig in previous: signal.signal(sig, lambda signum, frame: stop.set())
+        for sig in previous:
+            signal.signal(sig, lambda signum, frame: stop.set())
         return run_batch(folder, base_env, stop_requested=stop.is_set, **options)
     finally:
-        for sig, handler in previous.items(): signal.signal(sig, handler)
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
 
 
-def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400,
-              startup_timeout_s=STARTUP_TIMEOUT_S, runner=run_task, verifier=verify_inputs, stop_requested=lambda: False,
-              startup_interval_s=.3, continuing=False):
+def run_batch(
+    folder,
+    base_env,
+    *,
+    parallel,
+    turn_budget_usd=None,
+    total_budget_usd=None,
+    wall_limit_s=86400,
+    startup_timeout_s=STARTUP_TIMEOUT_S,
+    runner=run_task,
+    verifier=verify_inputs,
+    stop_requested=lambda: False,
+    startup_interval_s=0.3,
+    continuing=False,
+):
     """Run a prepared batch once; it makes paid model calls.
 
     `continuing` picks up a batch whose process died: unfinished runs continue in their
     next segment (by the stop table, run_segments.STOP_REASONS) and runs that never started start now.
     """
     folder = Path(folder).resolve()
-    if type(parallel) is not int or not 1 <= parallel <= 36: raise ValueError('Parallel must be 1..36')
-    if turn_budget_usd is not None: _positive(turn_budget_usd, 'per-turn budget', 1000)
-    if total_budget_usd is not None: _positive(total_budget_usd, 'per-task budget', 1000)
+    if type(parallel) is not int or not 1 <= parallel <= 36:
+        raise ValueError('Parallel must be 1..36')
+    if turn_budget_usd is not None:
+        _positive(turn_budget_usd, 'per-turn budget', 1000)
+    if total_budget_usd is not None:
+        _positive(total_budget_usd, 'per-task budget', 1000)
     _positive(wall_limit_s, 'wall limit', 86400)
     _positive(startup_timeout_s, 'startup timeout', 86400)
     jobs = _jobs(folder)
@@ -160,24 +213,39 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
                 raise ValueError('Only a batch whose process stopped while running can continue')
             unfinished = [i for i, j in enumerate(state['jobs']) if j['status'] in ('queued', 'starting')]
             jobs = [jobs[i] for i in unfinished]
-        elif claim.exists(): raise ValueError('Batch already claimed; never restart')
-        if _b(folder, 'stop').exists() or stop_requested(): raise ValueError('Batch was stopped before launch')
+        elif claim.exists():
+            raise ValueError('Batch already claimed; never restart')
+        if _b(folder, 'stop').exists() or stop_requested():
+            raise ValueError('Batch was stopped before launch')
         _preflight(jobs, base_env, verifier, continuing, (turn_budget_usd, total_budget_usd))
-        if _b(folder, 'stop').exists() or stop_requested(): raise ValueError('Batch was stopped before launch')
+        if _b(folder, 'stop').exists() or stop_requested():
+            raise ValueError('Batch was stopped before launch')
         if continuing:
             state.setdefault('continued_at', []).append(time.time())
             positions = unfinished
         else:
             with claim.open('x') as out:
                 import os
+
                 os.fchmod(out.fileno(), 0o600)
                 json.dump({'claimed_at': time.time(), 'pid': os.getpid()}, out)
-                out.flush(); os.fsync(out.fileno())
-            state = {'schema': 'roboteam.claude-engineering-status.v1', 'status': 'running',
-                     'started_at': time.time(), 'parallel': parallel, 'scored': False,
-                     'turn_budget_usd': turn_budget_usd, 'task_budget_usd': total_budget_usd, 'wall_limit_s': wall_limit_s,
-                     'startup_timeout_s': startup_timeout_s,
-                     'jobs': [{'model_entry': j['model_entry'], 'case_id': j['case_id'], 'status': 'queued'} for j in jobs]}
+                out.flush()
+                os.fsync(out.fileno())
+            state = {
+                'schema': 'roboteam.claude-engineering-status.v1',
+                'status': 'running',
+                'started_at': time.time(),
+                'parallel': parallel,
+                'scored': False,
+                'turn_budget_usd': turn_budget_usd,
+                'task_budget_usd': total_budget_usd,
+                'wall_limit_s': wall_limit_s,
+                'startup_timeout_s': startup_timeout_s,
+                'jobs': [
+                    {'model_entry': j['model_entry'], 'case_id': j['case_id'], 'status': 'queued'}
+                    for j in jobs
+                ],
+            }
             positions = list(range(len(jobs)))
         write_json(state_path, state)
         next_job = 0
@@ -193,12 +261,22 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
                         stopping = True
                         _stop_all(folder, jobs)
                         break
-                    local = next_job; index = positions[local]
-                    future = schedule.launch(lambda: pool.submit(
-                        _run_once_continued, runner, jobs[local]['run_directory'], base_env, continuing=continuing,
-                        turn_budget_usd=turn_budget_usd, total_budget_usd=total_budget_usd,
-                        wall_limit_s=wall_limit_s, startup_timeout_s=startup_timeout_s),
-                        stopped=lambda:_b(folder, 'stop').exists() or stop_requested())
+                    local = next_job
+                    index = positions[local]
+                    future = schedule.launch(
+                        lambda: pool.submit(
+                            _run_once_continued,
+                            runner,
+                            jobs[local]['run_directory'],
+                            base_env,
+                            continuing=continuing,
+                            turn_budget_usd=turn_budget_usd,
+                            total_budget_usd=total_budget_usd,
+                            wall_limit_s=wall_limit_s,
+                            startup_timeout_s=startup_timeout_s,
+                        ),
+                        stopped=lambda: _b(folder, 'stop').exists() or stop_requested(),
+                    )
                     if future is None:
                         stopping = True
                         _stop_all(folder, jobs)
@@ -208,31 +286,45 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
                     write_json(state_path, state)
                     pending[future] = index
                 if stopping and next_job < len(jobs):
-                    for local in range(next_job, len(jobs)): state['jobs'][positions[local]]['status'] = 'stopped_before_start'
-                    next_job = len(jobs); write_json(state_path, state)
-                if not pending: break
-                done, _ = wait(pending, timeout=.25, return_when=FIRST_COMPLETED)
+                    for local in range(next_job, len(jobs)):
+                        state['jobs'][positions[local]]['status'] = 'stopped_before_start'
+                    next_job = len(jobs)
+                    write_json(state_path, state)
+                if not pending:
+                    break
+                done, _ = wait(pending, timeout=0.25, return_when=FIRST_COMPLETED)
                 for future in done:
                     index = pending.pop(future)
                     try:
                         result = future.result()
-                        state['jobs'][index]['status'] = 'closed' if result.get('status') == 'finished' else 'needs_review'
-                        state['jobs'][index]['reason'] = 'wall_backstop' if result.get('wall_backstop') else result.get('reason')
-                        if result.get('segments'): state['jobs'][index]['segments'] = result['segments']
+                        state['jobs'][index]['status'] = (
+                            'closed' if result.get('status') == 'finished' else 'needs_review'
+                        )
+                        state['jobs'][index]['reason'] = (
+                            'wall_backstop' if result.get('wall_backstop') else result.get('reason')
+                        )
+                        if result.get('segments'):
+                            state['jobs'][index]['segments'] = result['segments']
                     except Exception as error:
                         state['jobs'][index].update(status='needs_review', error_type=type(error).__name__)
                     write_json(state_path, state)
         # A task recovered by hand (roboteam/harness/claude/recover_task.py) closes before the batch does.
         from roboteam.harness.shared.recovery import wait_for_recoveries
-        waiting = [{'run_directory': jobs[local]['run_directory'], 'status': state['jobs'][index]['status']}
-                   for local, index in enumerate(positions)]
+
+        waiting = [
+            {'run_directory': jobs[local]['run_directory'], 'status': state['jobs'][index]['status']}
+            for local, index in enumerate(positions)
+        ]
         wait_for_recoveries(waiting)
         for entry, index in zip(waiting, positions):
-            if 'recovery' in entry: state['jobs'][index].update(status=entry['status'], recovery=entry['recovery'])
+            if 'recovery' in entry:
+                state['jobs'][index].update(status=entry['status'], recovery=entry['recovery'])
         if any(j['status'] == 'needs_review' for j in state['jobs']):
             state['status'] = 'needs_review'
-        elif any(j['status'] == 'stopped_before_start' or j.get('reason') == 'stop_requested'
-                 for j in state['jobs']):
+        elif any(
+            j['status'] == 'stopped_before_start' or j.get('reason') == 'stop_requested'
+            for j in state['jobs']
+        ):
             state['status'] = 'stopped'
         else:
             state['status'] = 'closed'

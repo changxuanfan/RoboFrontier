@@ -19,8 +19,8 @@ import math
 import numpy as np
 
 from . import extract
-from . import motion as trial_motion
 from . import metrics as M
+from . import motion as trial_motion
 
 DIAL_MARK_DEG = 60.0
 DIAL_BAND_DEG = 4.0
@@ -151,11 +151,7 @@ def turn_list(turns):
 def result(steps, extra, obj_extra):
     N = len(steps) + len(extra)
     fa = sum(bool(s['failed']) for s in steps) + len(extra)
-    fo = (
-        sum('object' in s['failed'] for s in steps)
-        + sum('object' in v for v in extra.values())
-        + obj_extra
-    )
+    fo = sum('object' in s['failed'] for s in steps) + sum('object' in v for v in extra.values()) + obj_extra
     return dict(
         atomic_total=N,
         atomic_failed=fa,
@@ -234,9 +230,7 @@ def transport_atomic(d, clk):
     for t, arm, p in rels:
         if (arm, t) in used or not p:
             continue
-        nxt = [
-            g for g in grasps if g[0] > t and g[2] and math.dist(g[2][:2], p[:2]) < HANDOFF_RADIUS_M
-        ]
+        nxt = [g for g in grasps if g[0] > t and g[2] and math.dist(g[2][:2], p[:2]) < HANDOFF_RADIUS_M]
         if nxt and nxt[0][1] != arm:
             steps.append(dict(t=t, arm=arm, goal=None, item=None, rel=t, failed=set()))
     steps.sort(key=lambda s: s['t'])
@@ -350,9 +344,7 @@ def dial_atomic(d, clk, turns):
     S = d['suite']
     A = [x for x in d['actions'] if x['s'] and x['e']]
     done = M.until(clk.wall(S['solved_at']) if S.get('solved_at') is not None else None, d)
-    steps = sorted(
-        [dict(t=clk.wall(t), dial=k, failed=set()) for t, k in turns], key=lambda s: s['t']
-    )
+    steps = sorted([dict(t=clk.wall(t), dial=k, failed=set()) for t, k in turns], key=lambda s: s['t'])
     if done:
         steps = [s for s in steps if s['t'] <= done + 1e-6]
     ts = [s['t'] for s in steps]

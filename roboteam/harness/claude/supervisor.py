@@ -3,35 +3,67 @@
 This does not admit benchmark batches or create worlds. The caller owns the
 physical process; seal is the only normal shutdown path and never replays work.
 """
+
 import math
 import time
 
 from roboteam.runtime.run.bootstrap import STARTUP_TIMEOUT_S
 
-
 # The world counts active running time and ends the run itself: the host ends a run on its own only this far past the world's limit, and
 # waits this long after the world's cutoff for it to brake and close.
-ACTIVE_BACKSTOP_S = 60.
-ACTIVE_CLOSE_WAIT_S = 120.
+ACTIVE_BACKSTOP_S = 60.0
+ACTIVE_CLOSE_WAIT_S = 120.0
 
 
 class RunSupervisor:
-    def __init__(self, policy, owner_alive, *, stop_requested=lambda: False,
-                 startup_timeout_s=STARTUP_TIMEOUT_S, wall_limit_s=86400, poll_s=1,
-                 seal_timeout_s=30, finish_turn_grace_s=30,
-                 wall_backstop_s=None, clock=time.monotonic, wall_clock=time.time, sleep=time.sleep):
-        for name, value, maximum in (('startup_timeout_s', startup_timeout_s, 86400),
-                                     ('wall_limit_s', wall_limit_s, 86400),
-                                     ('poll_s', poll_s, 60)):
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 < value <= maximum:
+    def __init__(
+        self,
+        policy,
+        owner_alive,
+        *,
+        stop_requested=lambda: False,
+        startup_timeout_s=STARTUP_TIMEOUT_S,
+        wall_limit_s=86400,
+        poll_s=1,
+        seal_timeout_s=30,
+        finish_turn_grace_s=30,
+        wall_backstop_s=None,
+        clock=time.monotonic,
+        wall_clock=time.time,
+        sleep=time.sleep,
+    ):
+        for name, value, maximum in (
+            ('startup_timeout_s', startup_timeout_s, 86400),
+            ('wall_limit_s', wall_limit_s, 86400),
+            ('poll_s', poll_s, 60),
+        ):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or not 0 < value <= maximum
+            ):
                 raise ValueError('Invalid ' + name)
-        if isinstance(seal_timeout_s, bool) or not isinstance(seal_timeout_s, (int, float)) or not math.isfinite(seal_timeout_s) or not 0 <= seal_timeout_s <= 120:
+        if (
+            isinstance(seal_timeout_s, bool)
+            or not isinstance(seal_timeout_s, (int, float))
+            or not math.isfinite(seal_timeout_s)
+            or not 0 <= seal_timeout_s <= 120
+        ):
             raise ValueError('Invalid seal timeout')
-        if (isinstance(finish_turn_grace_s, bool) or not isinstance(finish_turn_grace_s, (int, float))
-                or not math.isfinite(finish_turn_grace_s) or not 0 <= finish_turn_grace_s <= 120):
+        if (
+            isinstance(finish_turn_grace_s, bool)
+            or not isinstance(finish_turn_grace_s, (int, float))
+            or not math.isfinite(finish_turn_grace_s)
+            or not 0 <= finish_turn_grace_s <= 120
+        ):
             raise ValueError('Invalid finished-turn grace period')
-        if wall_backstop_s is not None and (isinstance(wall_backstop_s, bool) or not isinstance(wall_backstop_s, (int, float))
-                                            or not math.isfinite(wall_backstop_s) or wall_backstop_s <= 0):
+        if wall_backstop_s is not None and (
+            isinstance(wall_backstop_s, bool)
+            or not isinstance(wall_backstop_s, (int, float))
+            or not math.isfinite(wall_backstop_s)
+            or wall_backstop_s <= 0
+        ):
             raise ValueError('Invalid wall backstop')
         self.policy = policy
         self.owner_alive = owner_alive
@@ -52,10 +84,14 @@ class RunSupervisor:
     def _wall_limit_reached(self):
         """The world's own wall-limit guard has fired: it pauses dispatch, stops the arms and
         then ends the run, so a pause seen in between is that normal end, not a review stop."""
-        if self._backstopped(): return True
-        if self._after_score(): return False
+        if self._backstopped():
+            return True
+        if self._after_score():
+            return False
         db = getattr(self.policy.store, 'db', None)
-        return bool(db and db.execute("SELECT 1 FROM events WHERE kind='POLICY_WALL_LIMIT' LIMIT 1").fetchone())
+        return bool(
+            db and db.execute("SELECT 1 FROM events WHERE kind='POLICY_WALL_LIMIT' LIMIT 1").fetchone()
+        )
 
     def _after_score(self):
         """A continuation after the finish or the cutoff has no limit (run_segments.STOP_REASONS)."""
@@ -68,22 +104,29 @@ class RunSupervisor:
     def _backstop_overdue(self):
         """The world did not end the run at its wall backstop, even after the closing wait: a hung
         owner. The host ends it itself, with the same reason."""
-        if self.wall_backstop_s is None or self.policy.store.get('start_at') is None or self._after_score(): return False
+        if self.wall_backstop_s is None or self.policy.store.get('start_at') is None or self._after_score():
+            return False
         # The active-time cutoff already fired: the run is closing at its limit, not the backstop.
-        if not self._backstopped() and self._wall_limit_reached(): return False
+        if not self._backstopped() and self._wall_limit_reached():
+            return False
         from roboteam.runtime.time.clock import backstop_elapsed
-        return (backstop_elapsed(self.policy.store, self.wall_clock())
-                >= self.wall_backstop_s + ACTIVE_CLOSE_WAIT_S + self.seal_timeout_s)
+
+        return (
+            backstop_elapsed(self.policy.store, self.wall_clock())
+            >= self.wall_backstop_s + ACTIVE_CLOSE_WAIT_S + self.seal_timeout_s
+        )
 
     def _limit_reached(self):
-        if self._after_score(): return False
+        if self._after_score():
+            return False
         # The world's own guard fires at the limit; this is only a backstop if it did not.
-        return float(self.policy.store.get('active_s', 0.) or 0.) >= self.wall_limit_s + ACTIVE_BACKSTOP_S
+        return float(self.policy.store.get('active_s', 0.0) or 0.0) >= self.wall_limit_s + ACTIVE_BACKSTOP_S
 
     def _await_world_close(self):
         """After the world's wall limit fired, wait for it to brake and end the run."""
-        if self.cutoff_seen is None: self.cutoff_seen = self.clock()
-        return self.clock()-self.cutoff_seen < ACTIVE_CLOSE_WAIT_S+self.seal_timeout_s
+        if self.cutoff_seen is None:
+            self.cutoff_seen = self.clock()
+        return self.clock() - self.cutoff_seen < ACTIVE_CLOSE_WAIT_S + self.seal_timeout_s
 
     def _turn_states(self):
         # Standing teams expose a team status; Adaptive also has child hosts
@@ -114,48 +157,67 @@ class RunSupervisor:
                 reason = 'owner_unavailable'
             else:
                 # A run continued after an unexpected exit resumes its sessions (docs/runs/continuation.md).
-                if getattr(self.policy, 'resuming', False): self.policy.resume_segment()
-                else: self.policy.bind_and_bootstrap()
+                if getattr(self.policy, 'resuming', False):
+                    self.policy.resume_segment()
+                else:
+                    self.policy.bind_and_bootstrap()
                 if self.policy.store.get('lifecycle') == 'running':
                     started = True
                 while True:
                     if self.stop_requested():
-                        reason = 'stop_requested'; break
+                        reason = 'stop_requested'
+                        break
                     lifecycle = self.policy.store.get('lifecycle')
                     if lifecycle in ('ended', 'interrupted', 'recovery_required'):
-                        reason = 'world_' + lifecycle; break
+                        reason = 'world_' + lifecycle
+                        break
                     if not self.owner_alive():
-                        reason = 'owner_unavailable'; break
+                        reason = 'owner_unavailable'
+                        break
                     if self._backstop_overdue():
-                        reason = 'wall_backstop'; break
+                        reason = 'wall_backstop'
+                        break
                     if self.policy.store.get('physics_state') == 'paused_by_egress':
                         # The world holds itself through a route or model-API outage (egress_pause);
                         # it resumes by itself and the paused time does not count.
-                        self.sleep(self.poll_s); continue
+                        self.sleep(self.poll_s)
+                        continue
                     if self.policy.store.get('dispatch_paused', False):
                         if self._wall_limit_reached() and self._await_world_close():
-                            self.sleep(self.poll_s); continue
-                        reason = 'dispatch_paused'; break
+                            self.sleep(self.poll_s)
+                            continue
+                        reason = 'dispatch_paused'
+                        break
                     observation = self.policy.host.observe()
                     state = observation['status']
                     if started and self._limit_reached():
-                        reason = 'wall_limit'; break
-                    recovering = (state == 'error' and hasattr(self.policy.host, 'recover_capacity')
-                                  and self.policy.host.recover_capacity(self.policy.store))
+                        reason = 'wall_limit'
+                        break
+                    recovering = (
+                        state == 'error'
+                        and hasattr(self.policy.host, 'recover_capacity')
+                        and self.policy.host.recover_capacity(self.policy.store)
+                    )
                     if state in ('unknown', 'error') and not recovering:
-                        session_evidence = {key: observation.get(key) for key in
-                                            ('budget_status', 'last_result_subtype', 'last_turn_reported_cost_usd')}
-                        reason = 'session_' + state; break
+                        session_evidence = {
+                            key: observation.get(key)
+                            for key in ('budget_status', 'last_result_subtype', 'last_turn_reported_cost_usd')
+                        }
+                        reason = 'session_' + state
+                        break
                     now = self.clock()
                     if not started:
                         if now - began >= self.startup_timeout_s:
-                            reason = 'startup_timeout'; break
+                            reason = 'startup_timeout'
+                            break
                     else:
                         if self._limit_reached():
-                            reason = 'wall_limit'; break
+                            reason = 'wall_limit'
+                            break
                         result = self.policy.cycle()
                         if result.get('paused') and not self._wall_limit_reached():
-                            reason = 'dispatch_paused'; break
+                            reason = 'dispatch_paused'
+                            break
                     self.sleep(self.poll_s)
         except Exception as error:
             error_type = type(error).__name__
@@ -165,8 +227,13 @@ class RunSupervisor:
             # existing native turns to receive its reply and settle their
             # accounting before cancellation. No dispatch or physics occurs.
             # A wall-limit end cuts the turns off instead: no reply is due.
-            ended_by = ('wall_backstop' if reason == 'world_ended' and self._backstopped()
-                        else 'wall_limit' if reason == 'world_ended' and self._wall_limit_reached() else None)
+            ended_by = (
+                'wall_backstop'
+                if reason == 'world_ended' and self._backstopped()
+                else 'wall_limit'
+                if reason == 'world_ended' and self._wall_limit_reached()
+                else None
+            )
             if reason == 'world_ended' and ended_by is None:
                 try:
                     deadline = self.clock() + self.finish_turn_grace_s
@@ -185,22 +252,35 @@ class RunSupervisor:
                 self.policy.stop()
                 if hasattr(self.policy.host, 'wait'):
                     from roboteam.harness.claude.session.runner import STOP_WAIT_S
+
                     self.policy.host.wait(timeout=STOP_WAIT_S)
             except Exception as error:
                 error_type = error_type or type(error).__name__
             try:
                 # The shared seal leaves an unresolved live world paused rather
                 # than force-closing or replaying uncertain physical actions.
-                sealed = self.policy.dispatcher.admin('seal', {'timeout_s': self.seal_timeout_s}) if self.policy.dispatcher else None
+                sealed = (
+                    self.policy.dispatcher.admin('seal', {'timeout_s': self.seal_timeout_s})
+                    if self.policy.dispatcher
+                    else None
+                )
                 if sealed is None:
                     from roboteam.runtime.world.seal import seal_run
+
                     sealed = seal_run(self.policy.store, self.seal_timeout_s)
             except Exception as error:
                 seal_error_type = type(error).__name__
-        return {'reason': reason, 'error_type': error_type, 'error': error_message, 'seal': sealed,
-                'seal_error_type': seal_error_type, 'started': started,
-                'session_evidence': session_evidence,
-                'finish_turns_drained': finish_turns_drained, 'ended_by': ended_by,
-                # Stopped by wall time, not the active-time limit: needs review, never counted.
-                'wall_backstop': reason == 'wall_backstop' or ended_by == 'wall_backstop',
-                'scope': 'engineering lifecycle; task success requires runtime evaluation'}
+        return {
+            'reason': reason,
+            'error_type': error_type,
+            'error': error_message,
+            'seal': sealed,
+            'seal_error_type': seal_error_type,
+            'started': started,
+            'session_evidence': session_evidence,
+            'finish_turns_drained': finish_turns_drained,
+            'ended_by': ended_by,
+            # Stopped by wall time, not the active-time limit: needs review, never counted.
+            'wall_backstop': reason == 'wall_backstop' or ended_by == 'wall_backstop',
+            'scope': 'engineering lifecycle; task success requires runtime evaluation',
+        }

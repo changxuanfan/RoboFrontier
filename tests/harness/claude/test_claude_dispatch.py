@@ -1,7 +1,7 @@
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from roboteam.harness.claude.systems.dispatch import ClaudeDispatcher
 from roboteam.runtime.world.store import RuntimeStore
@@ -13,10 +13,18 @@ class FakeHost:
     state = 'idle'
     turn_id = 'initial-turn'
     sent = []
+
     def observe(self):
-        return {'actor': self.actor, 'thread_id': self.session_id, 'status': self.state, 'turn_id': self.turn_id}
+        return {
+            'actor': self.actor,
+            'thread_id': self.session_id,
+            'status': self.state,
+            'turn_id': self.turn_id,
+        }
+
     def send(self, prompt):
-        self.sent.append(prompt); self.state = 'active'
+        self.sent.append(prompt)
+        self.state = 'active'
         return {'threadId': self.session_id}
 
 
@@ -24,17 +32,22 @@ class ClaudeDispatchTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = RuntimeStore(Path(self.tmp.name) / 'runtime.sqlite')
-        cfg = json.loads((Path(__file__).resolve().parents[3] / 'roboteam/runtime/run/defaults.json').read_text())
+        cfg = json.loads(
+            (Path(__file__).resolve().parents[3] / 'roboteam/runtime/run/defaults.json').read_text()
+        )
         cfg.update(harness='claude', system='single-agent', startup_protocol='direct_controller')
         self.store.initialize('run', cfg, ['A'])
         self.store.update_agent('Controller', thread_id='test-session')
         self.store.start()
         # The Controller has saved work to continue, so the scheduler owes it a wake.
         self.store.checkpoint_work('Controller', 'continue', 'inspect the scene')
-        self.host = FakeHost(); self.host.state = 'idle'; self.host.sent = []
+        self.host = FakeHost()
+        self.host.state = 'idle'
+        self.host.sent = []
 
     def tearDown(self):
-        self.store.close(); self.tmp.cleanup()
+        self.store.close()
+        self.tmp.cleanup()
 
     def test_scheduler_wakes_idle_controller_without_supplying_task_strategy(self):
         dispatcher = ClaudeDispatcher(self.store, self.host)
@@ -56,6 +69,7 @@ class ClaudeDispatchTests(unittest.TestCase):
         def broken_send(prompt):
             self.host.sent.append(prompt)
             raise OSError('acknowledgement lost')
+
         self.host.send = broken_send
         dispatcher = ClaudeDispatcher(self.store, self.host)
         result = dispatcher.cycle()
@@ -66,21 +80,32 @@ class ClaudeDispatchTests(unittest.TestCase):
         self.assertIn('uncertain', [row['status'] for row in self.store.wake_rows()])
 
     def test_claude_delegate_binding_is_closed_until_verified(self):
-        from roboteam.runtime.run.cli import execute
         import time
-        cfg = self.store.get('config'); cfg['system'] = 'adaptive'; self.store.put('config', cfg)
+
+        from roboteam.runtime.run.cli import execute
+
+        cfg = self.store.get('config')
+        cfg['system'] = 'adaptive'
+        self.store.put('config', cfg)
         with self.assertRaisesRegex(ValueError, 'not yet qualified'):
             execute(self.store, 'delegate-bind', {}, 'test-owner', time.time())
         with self.assertRaisesRegex(ValueError, 'not yet qualified'):
             execute(self.store, 'delegate-snapshot-bind', {}, 'test-owner', time.time())
-        self.assertEqual(execute(self.store, 'snapshot', {}, 'test-owner', time.time())['config']['harness'], 'claude')
+        self.assertEqual(
+            execute(self.store, 'snapshot', {}, 'test-owner', time.time())['config']['harness'], 'claude'
+        )
 
     def test_unqualified_system_and_wrong_identity_are_rejected(self):
         self.host.session_id = 'other'
-        with self.assertRaises(ValueError): ClaudeDispatcher(self.store, self.host)
+        with self.assertRaises(ValueError):
+            ClaudeDispatcher(self.store, self.host)
         self.host.session_id = 'test-session'
-        cfg = self.store.get('config'); cfg['system'] = 'adaptive'; self.store.put('config', cfg)
-        with self.assertRaises(ValueError): ClaudeDispatcher(self.store, self.host)
+        cfg = self.store.get('config')
+        cfg['system'] = 'adaptive'
+        self.store.put('config', cfg)
+        with self.assertRaises(ValueError):
+            ClaudeDispatcher(self.store, self.host)
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

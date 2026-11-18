@@ -1,9 +1,10 @@
 """The Relay rules and completion contract as the released tasks carry them, for evaluator fixtures."""
+
 from copy import deepcopy
 
 RULE_REVISION = 'relay-timber-goal-70pct-v1'
-BOUNDARY_TOLERANCE_M = .050
-LOW_RELEASE_GAP_M = .030
+BOUNDARY_TOLERANCE_M = 0.050
+LOW_RELEASE_GAP_M = 0.030
 
 
 def is_current(task):
@@ -29,19 +30,31 @@ def final_task(task):
         'Only ordinary robot actuators and real contacts may change the live task. No hand welds, object-state writes, hidden-state tools, runtime physics changes or stabilizing attachments.',
     ]
     if level > 1:
-        rules.append(f'The initial endpoint chord is {mechanism["chord_m"]:.2f}m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.')
+        rules.append(
+            f'The initial endpoint chord is {mechanism["chord_m"]:.2f}m. The underside fixed eye is 100mm along the timber from its end and directly interlinks with a free eye; the wooden pendant shaft is 170mm long and carries a 600g weight. There is no mounting stem, cable or tray.'
+        )
     if level == 2:
         rules.append('The rigid circular-arc timber subtends 63 degrees.')
     if level == 3:
-        rules.append('The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.')
+        rules.append(
+            'The manufactured elbow has 31.5 degrees deflection (148.5 degrees interior angle). All hinges are passive out-of-plane angular springs with ±25 degree limits, moving with the timber. With the root horizontal, the top-view centerline opening is fixed while projected lengths change.'
+        )
     result['rules'] = rules
     result['completion'] = dict(
-        rule_revision=RULE_REVISION, boundary_tolerance_m=BOUNDARY_TOLERANCE_M, timber_inside_fraction_min=.7, timber_goal_tolerance_m=0.,
-        stable_duration_sim_s=0., require_stationary=False,
-        allow_goal_payload_contact=True, arbitrary_goal_placement=True,
-        required_airborne_handover=True, support_via_goal_payload=True,
-        allow_goal_partial_support=True, allow_near_goal_release=True,
+        rule_revision=RULE_REVISION,
+        boundary_tolerance_m=BOUNDARY_TOLERANCE_M,
+        timber_inside_fraction_min=0.7,
+        timber_goal_tolerance_m=0.0,
+        stable_duration_sim_s=0.0,
+        require_stationary=False,
+        allow_goal_payload_contact=True,
+        arbitrary_goal_placement=True,
+        required_airborne_handover=True,
+        support_via_goal_payload=True,
+        allow_goal_partial_support=True,
+        allow_near_goal_release=True,
         max_release_gap_m=LOW_RELEASE_GAP_M,
         release_height_reference='lowest_assembly_part',
-        scope='Each timber centreline at least 70% above the painted Goal, released; process history retained separately')
+        scope='Each timber centreline at least 70% above the painted Goal, released; process history retained separately',
+    )
     return result

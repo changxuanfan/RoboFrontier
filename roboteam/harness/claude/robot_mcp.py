@@ -1,9 +1,11 @@
 """Claude role binding around the shared robot MCP implementation."""
+
 import argparse
 from pathlib import Path
-from roboteam.harness.shared.robot_mcp import serve
-from roboteam.harness.shared.robot_mcp import RobotBridge as SharedRobotBridge
+
 from roboteam.harness.claude.systems.request_identity import bind_delegate
+from roboteam.harness.shared.robot_mcp import RobotBridge as SharedRobotBridge
+from roboteam.harness.shared.robot_mcp import serve
 from roboteam.runtime.tools.pipeline_client import client_call
 
 

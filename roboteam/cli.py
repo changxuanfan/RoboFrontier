@@ -1,23 +1,26 @@
 """Command-line entry point shared by native policy harnesses and evidence tools."""
+
 import argparse
-from contextlib import contextmanager
 import hashlib
 import json
 import os
-from pathlib import Path
 import platform
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
+from pathlib import Path
+
+from roboteam.runtime.run import layout as run_layout
+from roboteam.runtime.sandbox import policy_env
 
 from .configuration import ROOT, SYSTEMS, load_configuration, rendering_environment, runs_root
-from roboteam.runtime.sandbox import policy_env
-from roboteam.runtime.run import layout as run_layout
 from .tasks.config import startup_protocol
 
 
 def _receipt_name(policy):
     from roboteam.runtime.tools.tools_mode import receipt_name
+
     return receipt_name(policy['model'], policy.get('tools', 'full'))
 
 
@@ -28,6 +31,7 @@ def _print(value):
 def _catalog(config):
     policy = config['policy']
     from .configuration import model_catalog
+
     catalog = model_catalog(policy['harness'])
     if policy['model'] not in catalog['models']:
         raise ValueError('Unknown ' + policy['harness'] + ' model: ' + policy['model'])
@@ -36,7 +40,9 @@ def _catalog(config):
         # New portable batches and their preflight use the same checked-in
         # template, independent of another Desktop session's mutable cache.
         catalog['models'][policy['model']]['use_cached_model_metadata'] = False
-        catalog['models'][policy['model']]['tool_backend'] = config['runtime'].get('codex_tool_backend', 'native')
+        catalog['models'][policy['model']]['tool_backend'] = config['runtime'].get(
+            'codex_tool_backend', 'native'
+        )
         if policy.get('tools', 'full') != 'full':
             catalog['models'][policy['model']]['tools'] = policy['tools']
         if config['runtime']['codex_home_scope'] == 'job':
@@ -47,7 +53,7 @@ def _catalog(config):
 @contextmanager
 def _catalog_file(config):
     with tempfile.TemporaryDirectory(prefix='roboteam-catalog-') as temporary:
-        path = Path(temporary)/'models.json'
+        path = Path(temporary) / 'models.json'
         path.write_text(json.dumps(_catalog(config)))
         yield path
 
@@ -55,37 +61,57 @@ def _catalog_file(config):
 def _policy_environment():
     """What `prepare` would freeze for policy scripts, without changing anything."""
     from roboteam.runtime.sandbox.policy_env import ENV_VAR, default_root, selected
+
     try:
         root = selected() if os.environ.get(ENV_VAR) else default_root()
     except ValueError as error:
         return {'status': 'unavailable', 'error': str(error)}
-    return {'status': 'host_python', 'root': None} if root is None else {'status': 'frozen', 'root': str(root)}
+    return (
+        {'status': 'host_python', 'root': None} if root is None else {'status': 'frozen', 'root': str(root)}
+    )
 
 
 def plan(config):
     from roboteam.launch.prepare import select_cases
+
     selection = config['selection']
-    selected = select_cases(selection['task_types'] or None, selection['cases'] or None,
-                            selection['level'] or None, selection['min_arms'])
+    selected = select_cases(
+        selection['task_types'] or None,
+        selection['cases'] or None,
+        selection['level'] or None,
+        selection['min_arms'],
+    )
     policy = config['policy']
     model = _catalog(config)['models'][policy['model']]['model']
-    return {'schema': 'roboteam.plan.v1', 'model_calls': 0, 'simulator_started': False,
-            'harness': policy['harness'], 'model_entry': policy['model'], 'model': model, 'effort': policy['effort'],
-            'system': policy['system'], 'parallel': config['batch']['parallel'],
-            'startup_interval_s': config['batch']['startup_interval_s'],
-            'task_wall_limit_s': config['batch']['task_wall_limit_s'],
-            'task_count': len(selected), 'jobs': selected, 'policy_environment': _policy_environment(),
-            'preflight': 'A run requires matching live provider receipts (roboteam preflight)'}
+    return {
+        'schema': 'roboteam.plan.v1',
+        'model_calls': 0,
+        'simulator_started': False,
+        'harness': policy['harness'],
+        'model_entry': policy['model'],
+        'model': model,
+        'effort': policy['effort'],
+        'system': policy['system'],
+        'parallel': config['batch']['parallel'],
+        'startup_interval_s': config['batch']['startup_interval_s'],
+        'task_wall_limit_s': config['batch']['task_wall_limit_s'],
+        'task_count': len(selected),
+        'jobs': selected,
+        'policy_environment': _policy_environment(),
+        'preflight': 'A run requires matching live provider receipts (roboteam preflight)',
+    }
 
 
 def prepare(output, config):
-    from roboteam.launch.results.assets import setup_assets
     from roboteam.launch.prepare import load_env
+    from roboteam.launch.results.assets import setup_assets
     from roboteam.runtime.run.setup import write_json
+
     policy, selection = config['policy'], config['selection']
-    load_env(ROOT/'.env')
+    load_env(ROOT / '.env')
     plan(config)  # Reject invalid model and selection before any installation.
     from roboteam.runtime.run import versions
+
     pinned = versions.require(policy['harness'])
     policy_env.require_private_route(config)
     output = Path(output).resolve()
@@ -93,47 +119,68 @@ def prepare(output, config):
         raise ValueError('Choose a new output directory; prepared runs are never overwritten')
     setup_assets()
     system = policy['system']
-    run_settings = {'system': system,
-               'startup_protocol': startup_protocol(system),
-               'observation_image_profile': config['render']['observation_profile'],
-               'startup_timeout_s': config['batch']['startup_timeout_s'],
-               'render_device': config['render']['device'],
-               'record_realtime_video': config['render']['record_realtime_video']}
+    run_settings = {
+        'system': system,
+        'startup_protocol': startup_protocol(system),
+        'observation_image_profile': config['render']['observation_profile'],
+        'startup_timeout_s': config['batch']['startup_timeout_s'],
+        'render_device': config['render']['device'],
+        'record_realtime_video': config['render']['record_realtime_video'],
+    }
     # Written only for a robot_only run, so a full run's frozen run settings are what they always were.
     if policy.get('tools', 'full') != 'full':
         run_settings['tools'] = policy['tools']
     with _catalog_file(config) as catalog:
         if policy['harness'] == 'claude':
             from roboteam.launch.claude_prepare import prepare_batch as prepare_claude
-            result = prepare_claude(output, [policy['model']], task_types=selection['task_types'] or None,
-                                   cases=selection['cases'] or None, catalog=catalog,
-                                   level=selection['level'] or None, min_arms=selection['min_arms'],
-                                   system=system, record_video=config['render']['record_realtime_video'],
-                                   wall_limit_s=config['batch']['task_wall_limit_s'],
-                                   observation_image_profile=config['render']['observation_profile'],
-                                   startup_timeout_s=config['batch']['startup_timeout_s'],
-                                   render_device=config['render']['device'],
-                                   tools=policy.get('tools', 'full'))
+
+            result = prepare_claude(
+                output,
+                [policy['model']],
+                task_types=selection['task_types'] or None,
+                cases=selection['cases'] or None,
+                catalog=catalog,
+                level=selection['level'] or None,
+                min_arms=selection['min_arms'],
+                system=system,
+                record_video=config['render']['record_realtime_video'],
+                wall_limit_s=config['batch']['task_wall_limit_s'],
+                observation_image_profile=config['render']['observation_profile'],
+                startup_timeout_s=config['batch']['startup_timeout_s'],
+                render_device=config['render']['device'],
+                tools=policy.get('tools', 'full'),
+            )
         else:
             from roboteam.launch.codex_batch import prepare_batch as prepare_codex
-            result = prepare_codex(output, [policy['model']], task_types=selection['task_types'] or None,
-                                   cases=selection['cases'] or None, config=catalog,
-                                   level=selection['level'] or None, min_arms=selection['min_arms'],
-                                   wall_limit_s=config['batch']['task_wall_limit_s'], run_settings_overrides=run_settings)
+
+            result = prepare_codex(
+                output,
+                [policy['model']],
+                task_types=selection['task_types'] or None,
+                cases=selection['cases'] or None,
+                config=catalog,
+                level=selection['level'] or None,
+                min_arms=selection['min_arms'],
+                wall_limit_s=config['batch']['task_wall_limit_s'],
+                run_settings_overrides=run_settings,
+            )
     batch = json.loads(result.read_text())
     batch['execution'] = {**config['runtime'], 'startup_interval_s': config['batch']['startup_interval_s']}
     batch['versions'] = pinned
     batch['effective_configuration_sha256'] = hashlib.sha256(
-        json.dumps(config, sort_keys=True, allow_nan=False).encode()).hexdigest()
-    write_json(output/'effective-config.json', config)
+        json.dumps(config, sort_keys=True, allow_nan=False).encode()
+    ).hexdigest()
+    write_json(output / 'effective-config.json', config)
     # Include the effective settings in each run's immutable input inventory.
     for job in batch['jobs']:
         run = Path(job['run_directory'])
-        frozen = run/'private/inputs/effective-config.json'
+        frozen = run / 'private/inputs/effective-config.json'
         write_json(frozen, config)
-        manifest_path = run/'private/inputs/manifest.json'
+        manifest_path = run / 'private/inputs/manifest.json'
         manifest = json.loads(manifest_path.read_text())
-        manifest['input_sha256'][str(frozen.relative_to(run))] = hashlib.sha256(frozen.read_bytes()).hexdigest()
+        manifest['input_sha256'][str(frozen.relative_to(run))] = hashlib.sha256(
+            frozen.read_bytes()
+        ).hexdigest()
         write_json(manifest_path, manifest)
     write_json(result, batch)
     return result
@@ -142,38 +189,62 @@ def prepare(output, config):
 def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=None):
     """Explicit paid connectivity check; preparation and planning never call it."""
     from roboteam.launch.prepare import load_env
-    load_env(ROOT/'.env')
+
+    load_env(ROOT / '.env')
     policy = config['policy']
     if not confirm_spend:
-        return {'status': 'not_run', 'model_calls': 0,
-                'reason': 'Add --confirm-spend to authorize real provider calls',
-                'harness': policy['harness'], 'model_entry': policy['model']}
+        return {
+            'status': 'not_run',
+            'model_calls': 0,
+            'reason': 'Add --confirm-spend to authorize real provider calls',
+            'harness': policy['harness'],
+            'model_entry': policy['model'],
+        }
     from roboteam.runtime.run.diagnostics import require_runtime
+
     require_runtime(config, render=False)
     with _catalog_file(config) as catalog:
         if policy['harness'] == 'claude':
             if max_budget_usd is None:
                 raise ValueError('Claude preflight requires an explicit --max-budget-usd estimate')
-            from roboteam.harness.claude.checks.preflight import run_precheck
             import uuid
-            output = runs_root()/'engineering/claude-precheck'/uuid.uuid4().hex
-            report = run_precheck(policy['model'], output, max_budget_usd, dict(os.environ),
-                                  check_fork=not smoke_only, catalog=catalog)
+
+            from roboteam.harness.claude.checks.preflight import run_precheck
+
+            output = runs_root() / 'engineering/claude-precheck' / uuid.uuid4().hex
+            report = run_precheck(
+                policy['model'],
+                output,
+                max_budget_usd,
+                dict(os.environ),
+                check_fork=not smoke_only,
+                catalog=catalog,
+            )
             if smoke_only or not report.get('passed'):
                 return report
             # The blocked-parent fork check: a run needs both receipts, as a Codex run needs its one.
             from roboteam.harness.claude.checks.blocked_precheck import run_blocked_precheck
-            blocked_output = runs_root()/'engineering/claude-blocked-precheck'/uuid.uuid4().hex
-            blocked = run_blocked_precheck(policy['model'], blocked_output, max_budget_usd,
-                                           dict(os.environ), catalog=catalog)
-            return {**report, 'passed': bool(blocked['passed']),
-                    'blocked_precheck': {'passed': blocked['passed'], 'checks': blocked['checks'],
-                                         'error_type': blocked['error_type'],
-                                         'receipt': str(blocked_output/'receipt.json')}}
-        from roboteam.harness.codex.launch import model_entry, launch_config, initialize_codex_home
+
+            blocked_output = runs_root() / 'engineering/claude-blocked-precheck' / uuid.uuid4().hex
+            blocked = run_blocked_precheck(
+                policy['model'], blocked_output, max_budget_usd, dict(os.environ), catalog=catalog
+            )
+            return {
+                **report,
+                'passed': bool(blocked['passed']),
+                'blocked_precheck': {
+                    'passed': blocked['passed'],
+                    'checks': blocked['checks'],
+                    'error_type': blocked['error_type'],
+                    'receipt': str(blocked_output / 'receipt.json'),
+                },
+            }
+        from roboteam.harness.codex.launch import initialize_codex_home, launch_config, model_entry
+
         selected = model_entry(policy['model'], catalog)
         if config['runtime']['codex_home_scope'] == 'job':
-            from roboteam.launch.slurm.job import subscription_environment, _local_storage
+            from roboteam.launch.slurm.job import _local_storage, subscription_environment
+
             # Explicitly authorized live preflight, inside an allocation, with
             # its own local credential owner and no physical task START.
             scratch = config['slurm']['scratch_root'] or os.environ.get('SLURM_TMPDIR')
@@ -182,48 +253,81 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             _local_storage(scratch)
             with tempfile.TemporaryDirectory(prefix='rf-pf-', dir=scratch) as temporary:
                 with subscription_environment(config, temporary, on_failure=lambda: None):
-                    command = [sys.executable, '-m', 'roboteam.launch.codex_batch', 'preflight', '--models', policy['model'],
-                               '--model-config', str(catalog)]
+                    command = [
+                        sys.executable,
+                        '-m',
+                        'roboteam.launch.codex_batch',
+                        'preflight',
+                        '--models',
+                        policy['model'],
+                        '--model-config',
+                        str(catalog),
+                    ]
                     if smoke_only:
                         command.append('--smoke-only')
                     subprocess.run(command, cwd=ROOT, check=True)
-            folder = (runs_root(config)/'engineering'/('model-smoke' if smoke_only else 'model-compatibility')
-                      /_receipt_name(policy))
-            return json.loads((folder/'report.json').read_text())
+            folder = (
+                runs_root(config)
+                / 'engineering'
+                / ('model-smoke' if smoke_only else 'model-compatibility')
+                / _receipt_name(policy)
+            )
+            return json.loads((folder / 'report.json').read_text())
         key = selected.get('env_key')
         if key and not os.environ.get(key):
             raise ValueError('Missing credential environment variable: ' + key)
         from roboteam.harness.codex.launch import gateway_environment
+
         env = gateway_environment(selected, dict(os.environ))
         if config['runtime']['codex_home_scope'] == 'task':
             if selected['provider'] == 'openai':
-                raise ValueError('Native subscription preflight requires explicit shared authentication configuration')
+                raise ValueError(
+                    'Native subscription preflight requires explicit shared authentication configuration'
+                )
             fingerprint = hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest()[:20]
-            home = ROOT/'.roboteam/preflight'/fingerprint
+            home = ROOT / '.roboteam/preflight' / fingerprint
         else:
             from roboteam.harness.codex.launch import codex_home
-            home = Path(config['runtime']['codex_home']).expanduser().resolve() if config['runtime']['codex_home'] else codex_home(env)
+
+            home = (
+                Path(config['runtime']['codex_home']).expanduser().resolve()
+                if config['runtime']['codex_home']
+                else codex_home(env)
+            )
         home.mkdir(parents=True, exist_ok=True, mode=0o700)
         env['CODEX_HOME'] = str(home)
-        folder = (runs_root(config)/'engineering'/('model-smoke' if smoke_only else 'model-compatibility')
-                      /_receipt_name(policy))
+        folder = (
+            runs_root(config)
+            / 'engineering'
+            / ('model-smoke' if smoke_only else 'model-compatibility')
+            / _receipt_name(policy)
+        )
         folder.mkdir(parents=True, exist_ok=True)
         initialize_codex_home(launch_config(selected, folder), folder, env=env)
-        command = [sys.executable, '-m', 'roboteam.launch.codex_batch', 'preflight', '--models', policy['model'],
-                   '--model-config', str(catalog)]
+        command = [
+            sys.executable,
+            '-m',
+            'roboteam.launch.codex_batch',
+            'preflight',
+            '--models',
+            policy['model'],
+            '--model-config',
+            str(catalog),
+        ]
         if smoke_only:
             command.append('--smoke-only')
         subprocess.run(command, cwd=ROOT, env=env, check=True)
-        return json.loads((folder/'report.json').read_text())
+        return json.loads((folder / 'report.json').read_text())
 
 
 def _frozen_configuration(batch):
     # New CLI runs never reinterpret a prepared batch using a changed local TOML.
-    path = Path(batch)/'effective-config.json'
+    path = Path(batch) / 'effective-config.json'
     config = json.loads(path.read_text())
     from .configuration import validate_configuration
+
     validate_configuration(config)
-    document = json.loads((Path(batch)/'batch.json').read_text())
+    document = json.loads((Path(batch) / 'batch.json').read_text())
     expected = hashlib.sha256(json.dumps(config, sort_keys=True, allow_nan=False).encode()).hexdigest()
     if document.get('effective_configuration_sha256') != expected:
         raise ValueError('Effective batch configuration changed; prepare a new batch')
@@ -244,49 +348,69 @@ def run(batch, *, continuing=False):
         # Both harnesses need passed compatibility receipts; Codex checks its own per run.
         from roboteam.harness.claude.checks.readiness import require_ready
         from roboteam.harness.claude.session.runner import require_hidden_token
-        frozen = [json.loads((Path(job['run_directory'])/'private/inputs/claude.json').read_text())
-                  for job in json.loads((Path(batch)/'batch.json').read_text()).get('jobs', [])]
+
+        frozen = [
+            json.loads((Path(job['run_directory']) / 'private/inputs/claude.json').read_text())
+            for job in json.loads((Path(batch) / 'batch.json').read_text()).get('jobs', [])
+        ]
         # Each run's frozen model, effort included, must match a receipt, as Codex checks per run.
         for model_entry in {json.dumps(item['model_entry'], sort_keys=True) for item in frozen} or {None}:
-            require_ready(config['policy']['model'], selected=json.loads(model_entry) if model_entry else None)
+            require_ready(
+                config['policy']['model'], selected=json.loads(model_entry) if model_entry else None
+            )
         # Seatbelt and Landlock keep other processes' environments unreadable; bubblewrap does not.
         if any(item.get('bash_isolation') == 'claude-sandbox' for item in frozen):
             require_hidden_token()
-    from roboteam.runtime.run.diagnostics import require_runtime
     from roboteam.runtime.run import versions
+    from roboteam.runtime.run.diagnostics import require_runtime
+
     require_runtime(config)
-    document = json.loads((Path(batch)/'batch.json').read_text())
+    document = json.loads((Path(batch) / 'batch.json').read_text())
     # Every run uses a policy environment and the closed access table, except a robot_only
     # run: its roles have no shell or file tool, so there is nothing for either to confine.
     from roboteam.runtime.tools import tools_mode
+
     for job in document.get('jobs', []):
         if tools_mode.of_run(job['run_directory']) == tools_mode.ROBOT_ONLY:
             continue
-        access = json.loads((Path(job['run_directory'])/'private/inputs/policy-access.json').read_text())
+        access = json.loads((Path(job['run_directory']) / 'private/inputs/policy-access.json').read_text())
         if access.get('schema') != 'roboteam.policy-access.v2':
-            raise ValueError('Run prepared without a policy environment: '+job['run_directory'])
+            raise ValueError('Run prepared without a policy environment: ' + job['run_directory'])
     pinned = document.get('versions')
     if pinned != versions.require(config['policy']['harness']):
-        raise ValueError('This batch was prepared with other program versions: '+json.dumps(pinned))
-    environment = {**rendering_environment(config['render']['device'], platform.system(), os.environ),
-                   **versions.HARNESS_ENVIRONMENT[config['policy']['harness']]}
+        raise ValueError('This batch was prepared with other program versions: ' + json.dumps(pinned))
+    environment = {
+        **rendering_environment(config['render']['device'], platform.system(), os.environ),
+        **versions.HARNESS_ENVIRONMENT[config['policy']['harness']],
+    }
     os.environ.clear()
     os.environ.update(environment)
     if config['policy']['harness'] == 'claude':
         from roboteam.launch.claude_batch import run_until_signal
-        state = run_until_signal(batch, dict(os.environ), parallel=config['batch']['parallel'],
-                          startup_interval_s=config['batch']['startup_interval_s'],
-                          startup_timeout_s=config['batch']['startup_timeout_s'],
-                          wall_limit_s=config['batch']['task_wall_limit_s'], continuing=continuing)
+
+        state = run_until_signal(
+            batch,
+            dict(os.environ),
+            parallel=config['batch']['parallel'],
+            startup_interval_s=config['batch']['startup_interval_s'],
+            startup_timeout_s=config['batch']['startup_timeout_s'],
+            wall_limit_s=config['batch']['task_wall_limit_s'],
+            continuing=continuing,
+        )
     else:
         from roboteam.launch.codex_batch import run_batch
+
         run_batch(batch, config['batch']['parallel'], continuing=continuing)
-        state = json.loads((Path(batch)/'batch.json').read_text())
+        state = json.loads((Path(batch) / 'batch.json').read_text())
     result = {'batch': str(Path(batch).resolve()), 'status': state['status']}
     if config['evidence']['auto_collect']:
-        output = runs_root(config)/'exports'/(Path(batch).name+'-'+hashlib.sha256(str(Path(batch).resolve()).encode()).hexdigest()[:8])
+        output = (
+            runs_root(config)
+            / 'exports'
+            / (Path(batch).name + '-' + hashlib.sha256(str(Path(batch).resolve()).encode()).hexdigest()[:8])
+        )
         result['collection'] = str(collect(batch, output))
-        result['collection_complete'] = json.loads((output/'collection.json').read_text())['complete']
+        result['collection_complete'] = json.loads((output / 'collection.json').read_text())['complete']
         if config['evidence']['auto_archive']:
             result['archive'] = str(archive_collection(output, output.with_suffix('.zip')))
             with Path(result['archive']).open('rb') as stream:
@@ -296,10 +420,14 @@ def run(batch, *, continuing=False):
 
 def _lock_held(path):
     import fcntl
-    if not path.exists(): return False
+
+    if not path.exists():
+        return False
     with path.open('a+') as lock:
-        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError: return True
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
         fcntl.flock(lock, fcntl.LOCK_UN)
     return False
 
@@ -309,18 +437,21 @@ def _with_live_runs(batch, state):
     then only its end, so a run whose own record shows it working is reported `running`."""
     if state.get('status') != 'running':
         return state
-    jobs = json.loads((Path(batch)/'batch.json').read_text()).get('jobs', [])
+    jobs = json.loads((Path(batch) / 'batch.json').read_text()).get('jobs', [])
     for job, entry in zip(jobs, state.get('jobs', [])):
         run = Path(job['run_directory'])
         if entry.get('status') == 'starting':  # Claude: the run's own status file
             own = run_layout.path(run, 'engineering_status')
-            try: working = json.loads(own.read_text()).get('status') == 'running'
-            except (OSError, ValueError): working = False
+            try:
+                working = json.loads(own.read_text()).get('status') == 'running'
+            except (OSError, ValueError):
+                working = False
         elif entry.get('status') == 'prepared':  # Codex: its host process was started
             working = run_layout.path(run, 'host_process').is_file()
         else:
             continue
-        if working: entry['status'] = 'running'
+        if working:
+            entry['status'] = 'running'
     return state
 
 
@@ -335,65 +466,79 @@ def continue_runs(batch, cases=None):
     os.environ.setdefault('ROBOTEAM_RUNS_ROOT', str(runs_root(_frozen_configuration(batch))))
     from roboteam.runtime.run import segments
     from roboteam.runtime.run.setup import write_json
+
     batch = Path(batch).resolve()
     config = _frozen_configuration(batch)
     harness = config['policy']['harness']
     lock = run_layout.batch_path(batch, 'engineering_lock' if harness == 'claude' else 'supervisor_lock')
-    if _lock_held(lock): raise ValueError('The batch is still running; stop it or wait before continuing runs')
-    document = json.loads((batch/'batch.json').read_text())
+    if _lock_held(lock):
+        raise ValueError('The batch is still running; stop it or wait before continuing runs')
+    document = json.loads((batch / 'batch.json').read_text())
     jobs = document['jobs']
     if cases:
         unknown = set(cases) - {job['case_id'] for job in jobs}
-        if unknown: raise ValueError('Not in this batch: '+', '.join(sorted(unknown)))
+        if unknown:
+            raise ValueError('Not in this batch: ' + ', '.join(sorted(unknown)))
         jobs = [job for job in jobs if job['case_id'] in cases]
     from roboteam.runtime.world.store import RuntimeStore
+
     def eligible(job, prepare=False):
         run = Path(job['run_directory'])
-        store = RuntimeStore(run/'private/state/runtime.sqlite')
+        store = RuntimeStore(run / 'private/state/runtime.sqlite')
         try:
             ok, why = segments.retry_eligibility(run, store, manual=True)
-            if ok and prepare: segments.prepare_retry(run, store, 'manual continue', manual=True)
+            if ok and prepare:
+                segments.prepare_retry(run, store, 'manual continue', manual=True)
             return ok, why
-        finally: store.close()
+        finally:
+            store.close()
+
     # Every named run is checked before any is changed, so a refusal leaves the batch as it was.
     verdicts = {job['case_id']: eligible(job) for job in jobs}
     refused = {case: why for case, (ok, why) in verdicts.items() if not ok}
     if cases and refused:
-        raise ValueError('Cannot continue: '+'; '.join(f'{k}: {v}' for k, v in refused.items()))
+        raise ValueError('Cannot continue: ' + '; '.join(f'{k}: {v}' for k, v in refused.items()))
     prepared = []
     for job in jobs:
         if verdicts[job['case_id']][0]:
             eligible(job, prepare=True)
             prepared.append(job['case_id'])
-    if not prepared: return {'batch': str(batch), 'prepared': [], 'refused': refused}
+    if not prepared:
+        return {'batch': str(batch), 'prepared': [], 'refused': refused}
     # Reopen the batch for exactly these runs; the others keep their final status.
     if harness == 'claude':
         path = run_layout.batch_path(batch, 'engineering_status')
         state = json.loads(path.read_text())
         for job, entry in zip(document['jobs'], state['jobs']):
-            if job['case_id'] in prepared: entry['status'] = 'queued'
-        state['status'] = 'running'; write_json(path, state)
+            if job['case_id'] in prepared:
+                entry['status'] = 'queued'
+        state['status'] = 'running'
+        write_json(path, state)
     else:
         for job in document['jobs']:
-            if job['case_id'] in prepared: job['status'] = 'prepared'
-        document['status'] = 'running'; write_json(batch/'batch.json', document)
+            if job['case_id'] in prepared:
+                job['status'] = 'prepared'
+        document['status'] = 'running'
+        write_json(batch / 'batch.json', document)
     run_layout.batch_path(batch, 'stop').unlink(missing_ok=True)
     return {'batch': str(batch), 'prepared': prepared, 'refused': refused}
 
 
 def collect(batch, output):
     from roboteam.launch.results.collect import collect_batch
+
     collect_batch(Path(batch), Path(output))
     return Path(output).resolve()
 
 
 def archive_collection(collection, output):
-    from roboteam.launch.results.archive_batch import create
     from roboteam.launch.results.archive import pack
+    from roboteam.launch.results.archive_batch import create
+
     output = Path(output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.rf-archive-', dir=output.parent) as temporary:
-        directory = Path(temporary)/'archive'
+        directory = Path(temporary) / 'archive'
         # Preserve reviewed/incomplete evidence too; its manifest keeps every
         # issue and does not certify physical actions, task success or scores.
         create(Path(collection), directory, allow_incomplete=True)
@@ -407,46 +552,73 @@ def argument_parser(*, prog=None):
     sub = parser.add_subparsers(dest='command', required=True)
     for name in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
         p = sub.add_parser(name)
-        p.add_argument('--harness', choices=('codex', 'claude'), help='Coding-agent harness the agents run in')
+        p.add_argument(
+            '--harness', choices=('codex', 'claude'), help='Coding-agent harness the agents run in'
+        )
         p.add_argument('--model', help='Model entry of models.json for the harness, such as sol or opus')
         p.add_argument('--effort', choices=('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
         p.add_argument('--system', choices=SYSTEMS, help='Agent system')
-        p.add_argument('--tools', choices=('full', 'robot_only'),
-                       help='full: the robot tool and the harness code tools; robot_only: the robot tool alone')
+        p.add_argument(
+            '--tools',
+            choices=('full', 'robot_only'),
+            help='full: the robot tool and the harness code tools; robot_only: the robot tool alone',
+        )
         p.add_argument('--parallel', type=int)
         p.add_argument('--render', choices=('nvidia', 'cpu', 'native'))
         p.add_argument('--level', type=int, choices=(1, 2, 3))
         p.add_argument('--min-arms', action='store_true', default=None)
         p.add_argument('--cases', nargs='+')
-        p.add_argument('--task-types', nargs='+', choices=('transport', 'mosaic', 'relay', 'dial'),
-                       help='Task types to select; all four when omitted')
+        p.add_argument(
+            '--task-types',
+            nargs='+',
+            choices=('transport', 'mosaic', 'relay', 'dial'),
+            help='Task types to select; all four when omitted',
+        )
         if name == 'prepare':
             p.add_argument('--output', type=Path, required=True)
         elif name == 'slurm-submit':
             p.add_argument('--output', type=Path, required=True)
-            p.add_argument('--queue', action='store_true', help='Submit to sbatch; otherwise only freeze a submission')
+            p.add_argument(
+                '--queue', action='store_true', help='Submit to sbatch; otherwise only freeze a submission'
+            )
         elif name == 'preflight':
             p.add_argument('--confirm-spend', action='store_true')
             p.add_argument('--smoke-only', action='store_true')
             p.add_argument('--max-budget-usd', type=float)
     sub.add_parser('bootstrap', help='Restore and verify pinned policy assets; never calls a model')
     for name in ('run', 'continue', 'status', 'stop'):
-        p = sub.add_parser(name, help='Continue stopped runs by hand, as the same trials (docs/runs/continuation.md)'
-                           if name == 'continue' else None)
+        p = sub.add_parser(
+            name,
+            help='Continue stopped runs by hand, as the same trials (docs/runs/continuation.md)'
+            if name == 'continue'
+            else None,
+        )
         p.add_argument('batch', type=Path)
         if name == 'continue':
-            p.add_argument('--cases', nargs='+', help='The runs to continue (default: every run that may continue)')
+            p.add_argument(
+                '--cases', nargs='+', help='The runs to continue (default: every run that may continue)'
+            )
         if name in ('run', 'continue'):
-            p.add_argument('--durable', action='store_true',
-                           help='Run as a background service that outlives this terminal: launchd with Interactive '
-                                'priority on macOS (the default there, a continuation included), a systemd user service '
-                                'or setsid daemon on Linux')
-            p.add_argument('--foreground', action='store_true',
-                           help='On macOS, run in this process at its own priority instead of the launchd service')
+            p.add_argument(
+                '--durable',
+                action='store_true',
+                help='Run as a background service that outlives this terminal: launchd with Interactive '
+                'priority on macOS (the default there, a continuation included), a systemd user service '
+                'or setsid daemon on Linux',
+            )
+            p.add_argument(
+                '--foreground',
+                action='store_true',
+                help='On macOS, run in this process at its own priority instead of the launchd service',
+            )
         if name == 'run':
-            p.add_argument('--continue', dest='continuing', action='store_true',
-                           help='Continue a batch whose supervisor died; a started run continues by itself once '
-                                '(docs/runs/continuation.md)')
+            p.add_argument(
+                '--continue',
+                dest='continuing',
+                action='store_true',
+                help='Continue a batch whose supervisor died; a started run continues by itself once '
+                '(docs/runs/continuation.md)',
+            )
     p = sub.add_parser('collect', help='Collect stopped native sessions, motion and evidence')
     p.add_argument('batch', type=Path)
     p.add_argument('--output', type=Path, required=True)
@@ -464,14 +636,18 @@ def argument_parser(*, prog=None):
 def main(argv=None):
     parser = argument_parser()
     args = parser.parse_args(argv)
+
     def emit(value):
         if args.result_file:
             from roboteam.runtime.run.setup import write_json
+
             write_json(args.result_file, value)
         _print(value)
+
     try:
         if args.command == 'container':
             from roboteam.launch.container.container import execute, validate_arguments
+
             # Resolve help and invalid syntax before configuration, Docker or auth.
             arguments = validate_arguments(args.arguments)
             report = execute(arguments, load_configuration(args.config, host='container'))
@@ -479,19 +655,26 @@ def main(argv=None):
             return report['exit_code']
         if args.command == 'bootstrap':
             from roboteam.launch.results.assets import setup_assets
+
             emit(setup_assets())
             return 0
         if args.command in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
             overrides = {}
-            for section, fields in (('policy', ('harness', 'model', 'effort', 'system', 'tools')),
-                                    ('batch', ('parallel',)),
-                                    ('selection', ('level', 'min_arms', 'cases', 'task_types'))):
-                updates = {field: getattr(args, field) for field in fields if getattr(args, field) is not None}
+            for section, fields in (
+                ('policy', ('harness', 'model', 'effort', 'system', 'tools')),
+                ('batch', ('parallel',)),
+                ('selection', ('level', 'min_arms', 'cases', 'task_types')),
+            ):
+                updates = {
+                    field: getattr(args, field) for field in fields if getattr(args, field) is not None
+                }
                 if updates:
                     overrides[section] = updates
             if args.render:
                 overrides['render'] = {'device': args.render}
-            config = load_configuration(args.config, overrides, host='slurm' if args.command == 'slurm-submit' else None)
+            config = load_configuration(
+                args.config, overrides, host='slurm' if args.command == 'slurm-submit' else None
+            )
             # Receipts, exports and caches go where this configuration says, for every later
             # call and child process (configuration.runs_root reads the variable first).
             os.environ.setdefault('ROBOTEAM_RUNS_ROOT', str(runs_root(config)))
@@ -501,22 +684,29 @@ def main(argv=None):
                 emit(plan(config))
             elif args.command == 'doctor':
                 from roboteam.runtime.run.diagnostics import inspect_runtime
+
                 report = inspect_runtime(config)
                 emit(report)
                 return 0 if report['passed'] else 2
             elif args.command == 'preflight':
-                report = preflight(config, confirm_spend=args.confirm_spend,
-                                   smoke_only=args.smoke_only, max_budget_usd=args.max_budget_usd)
+                report = preflight(
+                    config,
+                    confirm_spend=args.confirm_spend,
+                    smoke_only=args.smoke_only,
+                    max_budget_usd=args.max_budget_usd,
+                )
                 emit(report)
                 return 0 if report.get('passed') else 2
             elif args.command == 'slurm-submit':
                 from roboteam.launch.prepare import load_env
                 from roboteam.launch.slurm.job import submit
-                load_env(ROOT/'.env')
+
+                load_env(ROOT / '.env')
                 emit(submit(config, args.output, queue=args.queue))
             else:
                 # New runs use the frozen policy Python environment by default (policy_env.default_root).
                 from roboteam.runtime.sandbox.policy_env import ENV_VAR, apply_default
+
                 if config['policy'].get('tools', 'full') == 'robot_only':
                     # No shell runs in a robot_only run, so it freezes no Python environment.
                     os.environ[ENV_VAR] = 'off'
@@ -527,42 +717,58 @@ def main(argv=None):
             report = continue_runs(args.batch, args.cases)
             if report['prepared']:
                 if args.durable or (sys.platform == 'darwin' and not args.foreground):
-                    if args.foreground: raise ValueError('--durable and --foreground are exclusive')
-                    if sys.platform == 'darwin': from roboteam.launch.local.mac import submit as submit_durable
-                    else: from roboteam.launch.local.linux import submit as submit_durable
+                    if args.foreground:
+                        raise ValueError('--durable and --foreground are exclusive')
+                    if sys.platform == 'darwin':
+                        from roboteam.launch.local.mac import submit as submit_durable
+                    else:
+                        from roboteam.launch.local.linux import submit as submit_durable
                     report['service'] = submit_durable(args.batch, continuing=True)
                 else:
                     from roboteam.launch.prepare import load_env
-                    load_env(ROOT/'.env')
+
+                    load_env(ROOT / '.env')
                     report['result'] = run(args.batch, continuing=True)
             emit(report)
         elif args.command == 'run' and (args.durable or (sys.platform == 'darwin' and not args.foreground)):
             # On macOS a batch, a continuation included, runs under launchd with ProcessType=Interactive
             # by default, so it outlives the terminal or agent session that started it.
-            if args.foreground: raise ValueError('--durable and --foreground are exclusive')
+            if args.foreground:
+                raise ValueError('--durable and --foreground are exclusive')
             # On Linux (a RunPod pod) --durable starts a background service (launch/local/linux.py).
-            if sys.platform == 'darwin': from roboteam.launch.local.mac import submit as submit_durable
-            else: from roboteam.launch.local.linux import submit as submit_durable
+            if sys.platform == 'darwin':
+                from roboteam.launch.local.mac import submit as submit_durable
+            else:
+                from roboteam.launch.local.linux import submit as submit_durable
             emit(submit_durable(args.batch, continuing=args.continuing))
         elif args.command == 'run':
             from roboteam.launch.prepare import load_env
-            load_env(ROOT/'.env')
+
+            load_env(ROOT / '.env')
             emit(run(args.batch, continuing=args.continuing))
         elif args.command == 'status':
             # Read the supervisor's atomic snapshot, never open a writer's SQLite.
             snapshot = run_layout.batch_path(args.batch, 'engineering_status')
-            state = _with_live_runs(args.batch, json.loads((snapshot if snapshot.is_file() else args.batch/'batch.json').read_text()))
-            if sys.platform == 'darwin': from roboteam.launch.local.mac import service_state
-            else: from roboteam.launch.local.linux import service_state
+            state = _with_live_runs(
+                args.batch,
+                json.loads((snapshot if snapshot.is_file() else args.batch / 'batch.json').read_text()),
+            )
+            if sys.platform == 'darwin':
+                from roboteam.launch.local.mac import service_state
+            else:
+                from roboteam.launch.local.linux import service_state
             durable = service_state(args.batch)
             emit({**state, 'durable': durable} if durable else state)
         elif args.command == 'stop':
-            batch = json.loads((args.batch/'batch.json').read_text())
+            batch = json.loads((args.batch / 'batch.json').read_text())
             folder = args.batch.resolve()
             paths = [Path(job['run_directory']).resolve() for job in batch['jobs']]
             if any(not path.is_relative_to(folder) or path == folder for path in paths):
                 raise ValueError('Invalid run directory in batch')
-            for stop in [run_layout.batch_path(folder, 'stop'), *(run_layout.path(path, 'stop') for path in paths)]:
+            for stop in [
+                run_layout.batch_path(folder, 'stop'),
+                *(run_layout.path(path, 'stop') for path in paths),
+            ]:
                 stop.parent.mkdir(parents=True, exist_ok=True)
                 stop.touch()
             emit({'stop_requested': True, 'note': 'Inspect status and final sealing outcome'})
@@ -575,6 +781,7 @@ def main(argv=None):
             emit({'archive': str(archive), 'archive_sha256': checksum})
         elif args.command == 'extract':
             from roboteam.launch.results.archive import unpack
+
             emit(unpack(args.archive, args.output))
         return 0
     except (ValueError, OSError, KeyError) as error:

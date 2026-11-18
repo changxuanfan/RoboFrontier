@@ -1,9 +1,11 @@
 """An offline session adapter and one dispatch round, for tests of the scheduler."""
+
 from roboteam.runtime.tools.scheduling import Scheduler
 
 
 class FakeSessionAdapter:
     """Offline contract adapter. No Codex connections, inference or robot actions."""
+
     def __init__(self, observations):
         self.observations = observations
         self.sent = []

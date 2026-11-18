@@ -11,13 +11,14 @@ see the same interpreter and libraries on every host and for every harness.
 Only policy shells get these variables. The native CLIs keep their own environment,
 credentials and HOME.
 """
+
 import hashlib
 import json
 import os
-from pathlib import Path
 import shlex
 import stat
 import subprocess
+from pathlib import Path
 
 SCHEMA = 'roboteam.policy-env.v1'
 MANIFEST = 'policy-env.json'
@@ -60,7 +61,7 @@ def tree_sha256(root):
 def load(root):
     """The environment's manifest; raises when it is missing or malformed."""
     root = Path(root).resolve()
-    manifest = json.loads((root/MANIFEST).read_text())
+    manifest = json.loads((root / MANIFEST).read_text())
     if manifest.get('schema') != SCHEMA:
         raise ValueError('Not a policy environment: ' + str(root))
     return manifest
@@ -85,14 +86,20 @@ def receipt_path(root):
     less confined.
     """
     root = Path(root).resolve()
-    return root.parent/(root.name + RECEIPT_SUFFIX)
+    return root.parent / (root.name + RECEIPT_SUFFIX)
 
 
 def cli_version(binary, env=None, timeout_s=30):
     """What `binary --version` prints, or None when it is missing, fails or does not answer in time."""
     try:
-        done = subprocess.run([binary, '--version'], env=env, capture_output=True, text=True,
-                              stdin=subprocess.DEVNULL, timeout=timeout_s)
+        done = subprocess.run(
+            [binary, '--version'],
+            env=env,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=timeout_s,
+        )
     except (OSError, subprocess.SubprocessError):
         return None
     return (done.stdout.strip() or None) if done.returncode == 0 else None
@@ -114,16 +121,27 @@ def require_checked(root, manifest, wanted=None):
         receipt = json.loads(receipt_path(root).read_text())
     except (OSError, ValueError):
         raise ValueError(rerun) from None
-    if not isinstance(receipt, dict) or not receipt.get('passed') or receipt.get('tree_sha256') != manifest['tree_sha256']:
+    if (
+        not isinstance(receipt, dict)
+        or not receipt.get('passed')
+        or receipt.get('tree_sha256') != manifest['tree_sha256']
+    ):
         raise ValueError(rerun)
     if receipt.get('schema') != RECEIPT_SCHEMA or not isinstance(receipt.get('checked'), list):
-        raise ValueError('This build\'s check does not record which harnesses, sandboxes and CLI versions it '
-                         'ran; rerun scripts/release/check_policy_env.py: ' + str(root))
+        raise ValueError(
+            'This build\'s check does not record which harnesses, sandboxes and CLI versions it '
+            'ran; rerun scripts/release/check_policy_env.py: ' + str(root)
+        )
     if wanted is not None and wanted not in receipt['checked']:
-        raise ValueError('scripts/release/check_policy_env.py has not checked %s on this build (it checked %s); rerun it '
-                         'with this harness, sandbox and CLI: %s'
-                         % (json.dumps(wanted, sort_keys=True),
-                            ', '.join(json.dumps(item, sort_keys=True) for item in receipt['checked']), root))
+        raise ValueError(
+            'scripts/release/check_policy_env.py has not checked %s on this build (it checked %s); rerun it '
+            'with this harness, sandbox and CLI: %s'
+            % (
+                json.dumps(wanted, sort_keys=True),
+                ', '.join(json.dumps(item, sort_keys=True) for item in receipt['checked']),
+                root,
+            )
+        )
 
 
 def require_combination(harness, isolation):
@@ -155,11 +173,14 @@ def identity():
     """The environment's folder suffix: its locks, interpreter and platform."""
     import platform
     import sys
+
     digest = hashlib.sha256()
     for name in ('core.lock', 'all.lock'):
-        digest.update((CONFIG/name).read_bytes())
+        digest.update((CONFIG / name).read_bytes())
     digest.update(json.dumps([PYTHON, sys.platform, platform.machine()]).encode())
     return digest.hexdigest()[:12]
+
+
 BASE_VAR = 'ROBOTEAM_POLICY_ENV_BASE'
 
 
@@ -183,16 +204,25 @@ def default_root():
     falling back to the host's Python. A host without a base (Linux with none named) returns
     None, and preparation then refuses (apply_default)."""
     import sys
+
     base = os.environ.get(BASE_VAR) or (str(DEFAULT_BASE) if sys.platform == 'darwin' else None)
-    if not base: return None
+    if not base:
+        return None
     base = Path(base)
-    root = base/('policy-env-' + identity())
-    hint = (' Build and check it once: .venv/bin/python -m scripts.release.build_policy_env --base %s, then '
-            '.venv/bin/python -m scripts.release.check_policy_env %s.' % (base, root))
-    if not root.is_dir(): raise ValueError('The default policy environment is not built: ' + str(root) + '.' + hint)
+    root = base / ('policy-env-' + identity())
+    hint = (
+        ' Build and check it once: .venv/bin/python -m scripts.release.build_policy_env --base %s, then '
+        '.venv/bin/python -m scripts.release.check_policy_env %s.' % (base, root)
+    )
+    if not root.is_dir():
+        raise ValueError('The default policy environment is not built: ' + str(root) + '.' + hint)
     manifest = verify(root)
-    try: require_checked(root, manifest)
-    except ValueError as error: raise ValueError('The default policy environment did not pass its check. ' + str(error) + '.' + hint) from None
+    try:
+        require_checked(root, manifest)
+    except ValueError as error:
+        raise ValueError(
+            'The default policy environment did not pass its check. ' + str(error) + '.' + hint
+        ) from None
     return root.resolve()
 
 
@@ -204,11 +234,14 @@ def apply_default():
     value = os.environ.get(ENV_VAR)
     if value and value.strip().lower() in OFF:
         raise ValueError(ENV_VAR + '=' + value + ' is not supported: every run uses a policy environment')
-    if value: return selected()
+    if value:
+        return selected()
     root = default_root()
     if root is None:
-        raise ValueError('No policy environment: set ' + BASE_VAR + ' to the folder holding the build of this host '
-                         '(scripts/release/build_policy_env.py --base), or ' + ENV_VAR + ' to the build itself')
+        raise ValueError(
+            'No policy environment: set ' + BASE_VAR + ' to the folder holding the build of this host '
+            '(scripts/release/build_policy_env.py --base), or ' + ENV_VAR + ' to the build itself'
+        )
     os.environ[ENV_VAR] = str(root)
     return root
 
@@ -216,15 +249,27 @@ def apply_default():
 def variables(root, run):
     """What a policy shell receives, in place of the host's environment."""
     root = Path(root).resolve()
-    workspace = Path(run).resolve()/'workspace'
-    temporary = workspace/TEMPORARY
+    workspace = Path(run).resolve() / 'workspace'
+    temporary = workspace / TEMPORARY
     manifest = load(root)
-    return {'PATH': str(root/manifest['bin']) + ':/usr/bin:/bin', 'LANG': 'C.UTF-8', 'HOME': str(temporary/'home'),
-            'TMPDIR': str(temporary), 'TMP': str(temporary), 'TEMP': str(temporary),
-            'XDG_CACHE_HOME': str(temporary/'cache'), 'MPLBACKEND': 'Agg', 'MPLCONFIGDIR': str(temporary/'matplotlib'),
-            'PYTHONUSERBASE': str(workspace/USER_BASE), 'PIP_USER': '1', 'PIP_NO_INDEX': '1',
-            'PIP_FIND_LINKS': str(root/'wheels'), 'PIP_CONFIG_FILE': '/dev/null', 'PIP_NO_CACHE_DIR': '1',
-            'PIP_DISABLE_PIP_VERSION_CHECK': '1'}
+    return {
+        'PATH': str(root / manifest['bin']) + ':/usr/bin:/bin',
+        'LANG': 'C.UTF-8',
+        'HOME': str(temporary / 'home'),
+        'TMPDIR': str(temporary),
+        'TMP': str(temporary),
+        'TEMP': str(temporary),
+        'XDG_CACHE_HOME': str(temporary / 'cache'),
+        'MPLBACKEND': 'Agg',
+        'MPLCONFIGDIR': str(temporary / 'matplotlib'),
+        'PYTHONUSERBASE': str(workspace / USER_BASE),
+        'PIP_USER': '1',
+        'PIP_NO_INDEX': '1',
+        'PIP_FIND_LINKS': str(root / 'wheels'),
+        'PIP_CONFIG_FILE': '/dev/null',
+        'PIP_NO_CACHE_DIR': '1',
+        'PIP_DISABLE_PIP_VERSION_CHECK': '1',
+    }
 
 
 def shell_text(values):
@@ -233,9 +278,11 @@ def shell_text(values):
     Clears the rest of the shell's environment first, so a policy shell sees neither the
     host's settings nor a CLI's credentials. Only what a shell itself maintains stays.
     """
-    return ("for name in $(/usr/bin/env | /usr/bin/sed -n 's/^\\([A-Za-z_][A-Za-z0-9_]*\\)=.*/\\1/p'); do\n"
-            '  case "$name" in PWD|OLDPWD|SHLVL|_) ;; *) unset "$name" 2>/dev/null ;; esac\n'
-            'done\n' + ''.join('export %s=%s\n' % (name, shlex.quote(value)) for name, value in values.items()))
+    return (
+        "for name in $(/usr/bin/env | /usr/bin/sed -n 's/^\\([A-Za-z_][A-Za-z0-9_]*\\)=.*/\\1/p'); do\n"
+        '  case "$name" in PWD|OLDPWD|SHLVL|_) ;; *) unset "$name" 2>/dev/null ;; esac\n'
+        'done\n' + ''.join('export %s=%s\n' % (name, shlex.quote(value)) for name, value in values.items())
+    )
 
 
 def guide_text(root):
@@ -243,16 +290,18 @@ def guide_text(root):
     manifest = load(root)
     core = ', '.join('%s %s' % (name, manifest['packages'][name]) for name in manifest['core'])
     store = ', '.join(manifest['store'])
-    return ('# Python environment\n\n'
-            'Your shell provides `python` and `pip`: Python %s with %s.\n\n'
-            'These can also be installed, with no network, by `pip install NAME` from a local package store: %s. '
-            'Installed packages stay in this run. No other third-party packages are available, and the network is off.\n\n'
-            'Keep temporary files in `workspace/%s`, which the shell already uses as TMPDIR. Outside this run\'s '
-            '`public/` and `workspace/` folders your scripts can read only the operating system, this Python '
-            'environment and `/tmp`, which other runs share.\n\n'
-            'The folder above `workspace/` is closed, so `Operation not permitted` on it is expected. `workspace/%s` '
-            'belongs to the shell and tools; you do not need to inspect it.\n'
-            % (manifest['python'], core, store, TEMPORARY, TEMPORARY))
+    return (
+        '# Python environment\n\n'
+        'Your shell provides `python` and `pip`: Python %s with %s.\n\n'
+        'These can also be installed, with no network, by `pip install NAME` from a local package store: %s. '
+        'Installed packages stay in this run. No other third-party packages are available, and the network is off.\n\n'
+        'Keep temporary files in `workspace/%s`, which the shell already uses as TMPDIR. Outside this run\'s '
+        '`public/` and `workspace/` folders your scripts can read only the operating system, this Python '
+        'environment and `/tmp`, which other runs share.\n\n'
+        'The folder above `workspace/` is closed, so `Operation not permitted` on it is expected. `workspace/%s` '
+        'belongs to the shell and tools; you do not need to inspect it.\n'
+        % (manifest['python'], core, store, TEMPORARY, TEMPORARY)
+    )
 
 
 def prepare_run(run, root):
@@ -261,7 +310,7 @@ def prepare_run(run, root):
     values = variables(root, run)
     for name in ('HOME', 'TMPDIR', 'XDG_CACHE_HOME', 'MPLCONFIGDIR'):
         Path(values[name]).mkdir(parents=True, exist_ok=True)
-    public = run/'public/inputs'
-    (public/SHELL_FILE).write_text(shell_text(values))
-    (public/GUIDE_FILE).write_text(guide_text(root))
+    public = run / 'public/inputs'
+    (public / SHELL_FILE).write_text(shell_text(values))
+    (public / GUIDE_FILE).write_text(guide_text(root))
     return values

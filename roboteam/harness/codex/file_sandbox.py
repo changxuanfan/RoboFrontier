@@ -4,14 +4,25 @@ ABI 1/2 lack TCP and truncate rules. The worker installs its socket, legacy
 truncate/open and metadata seccomp restrictions BEFORE calling this function.
 Claude's independent Bash prefix retains its existing ABI 4 requirement.
 """
+
 import ctypes
 import os
 import stat
 
 from roboteam.harness.shared.landlock import (
-    abi, handled_fs, access_for, FILE_ONLY, CREATE_RULESET, ADD_RULE, RESTRICT_SELF,
-    PATH_BENEATH, PR_SET_NO_NEW_PRIVS, BIND_TCP, CONNECT_TCP,
-    SCOPE_ABSTRACT_UNIX, SCOPE_SIGNAL,
+    ADD_RULE,
+    BIND_TCP,
+    CONNECT_TCP,
+    CREATE_RULESET,
+    FILE_ONLY,
+    PATH_BENEATH,
+    PR_SET_NO_NEW_PRIVS,
+    RESTRICT_SELF,
+    SCOPE_ABSTRACT_UNIX,
+    SCOPE_SIGNAL,
+    abi,
+    access_for,
+    handled_fs,
 )
 
 
@@ -30,9 +41,11 @@ def restrict(rules):
     ruleset = libc.syscall(CREATE_RULESET, ctypes.byref(attr), ctypes.c_size_t(size), ctypes.c_uint32(0))
     if ruleset < 0:
         raise OSError(ctypes.get_errno(), 'landlock_create_ruleset failed')
+
     class PathBeneath(ctypes.Structure):
         _pack_ = 1
         _fields_ = [('allowed_access', ctypes.c_uint64), ('parent_fd', ctypes.c_int32)]
+
     try:
         for path, mode in rules:
             if mode not in ('list', 'read', 'write'):
@@ -49,8 +62,16 @@ def restrict(rules):
                 if not stat.S_ISDIR(kind):
                     access &= FILE_ONLY
                 rule = PathBeneath(access & fs, fd)
-                if libc.syscall(ADD_RULE, ctypes.c_int(ruleset), ctypes.c_int(PATH_BENEATH),
-                                ctypes.byref(rule), ctypes.c_uint32(0)) < 0:
+                if (
+                    libc.syscall(
+                        ADD_RULE,
+                        ctypes.c_int(ruleset),
+                        ctypes.c_int(PATH_BENEATH),
+                        ctypes.byref(rule),
+                        ctypes.c_uint32(0),
+                    )
+                    < 0
+                ):
                     raise OSError(ctypes.get_errno(), 'landlock_add_rule failed')
             finally:
                 os.close(fd)

@@ -1,23 +1,24 @@
 """Experimental role-bound MCP stdio server; not yet qualified for scored runs."""
+
 import base64
-from concurrent.futures import ThreadPoolExecutor
 import json
-from pathlib import Path
 import re
 import sys
 import threading
-import uuid
 import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
-from roboteam.runtime.tools.pipeline_client import client_call
-from roboteam.runtime.tools.tool_errors import CallIdConflict, conflict_error, uncertain_error
 from roboteam.harness.shared.identity import fingerprint
 from roboteam.launch.results.host_metrics import host_event
+from roboteam.runtime.tools.pipeline_client import client_call
+from roboteam.runtime.tools.robot_ops import check_request
+from roboteam.runtime.tools.tool_errors import CallIdConflict, conflict_error, uncertain_error
 
 # One description for every harness's robot tool (harness/shared/robot_tool.json).
 TOOL = json.loads((Path(__file__).resolve().with_name('robot_tool.json')).read_text())
 # Administrative methods are never made available through the policy connection.
-from roboteam.runtime.tools.robot_ops import check_request
 
 
 class RobotBridge:
@@ -50,24 +51,42 @@ class RobotBridge:
             key = json.dumps(request_id, sort_keys=True) if request_id is not None else None
             old = self.requests.get(key) if key is not None else None
             if old and old[0] != fingerprint(args):
-                return {'isError': True, 'content': [{'type': 'text', 'text':
-                    json.dumps(conflict_error(old[1]), ensure_ascii=False)}]}
+                return {
+                    'isError': True,
+                    'content': [
+                        {'type': 'text', 'text': json.dumps(conflict_error(old[1]), ensure_ascii=False)}
+                    ],
+                }
             call_id = old[1] if old else args.get('call_id') or uuid.uuid4().hex
             if not isinstance(call_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', call_id):
                 raise ValueError('Use a simple call ID, not a path')
-            if key is not None: self.requests[key] = (fingerprint(args), call_id)
+            if key is not None:
+                self.requests[key] = (fingerprint(args), call_id)
         began = time.monotonic()
         host_event(self.run, 'robot_tool_started', actor=self.actor, op=op, call_id=call_id)
         if op == 'public_image':
             try:
                 result = self.public_images(data)
             except Exception:
-                host_event(self.run, 'robot_tool_failed', actor=self.actor, op=op, call_id=call_id,
-                           duration_s=time.monotonic()-began, error_code='PUBLIC_IMAGE_UNAVAILABLE')
+                host_event(
+                    self.run,
+                    'robot_tool_failed',
+                    actor=self.actor,
+                    op=op,
+                    call_id=call_id,
+                    duration_s=time.monotonic() - began,
+                    error_code='PUBLIC_IMAGE_UNAVAILABLE',
+                )
                 raise
-            result['content'].append({'type':'text','text':json.dumps({'call_id':call_id})})
-            host_event(self.run, 'robot_tool_completed', actor=self.actor, op=op, call_id=call_id,
-                       duration_s=time.monotonic()-began)
+            result['content'].append({'type': 'text', 'text': json.dumps({'call_id': call_id})})
+            host_event(
+                self.run,
+                'robot_tool_completed',
+                actor=self.actor,
+                op=op,
+                call_id=call_id,
+                duration_s=time.monotonic() - began,
+            )
             return result
         if op == 'delegate' and not args.get('call_id'):
             try:
@@ -75,29 +94,77 @@ class RobotBridge:
                     raise ValueError('Native delegation binding required')
                 self.bind_delegation(self.run, self.actor, args, call_id)
             except ValueError:
-                host_event(self.run, 'robot_tool_failed', actor=self.actor, op=op, call_id=call_id,
-                           duration_s=time.monotonic()-began, error_code='DELEGATE_IDENTITY_UNVERIFIED')
-                return {'isError': True, 'content': [{'type': 'text', 'text': json.dumps({
-                    'call_id': call_id, 'error_code': 'DELEGATE_IDENTITY_UNVERIFIED',
-                    'request_status': 'rejected', 'execution_status': 'not_submitted',
-                    'note': 'No delegation was submitted: native tool identity could not be verified.'})}]}
+                host_event(
+                    self.run,
+                    'robot_tool_failed',
+                    actor=self.actor,
+                    op=op,
+                    call_id=call_id,
+                    duration_s=time.monotonic() - began,
+                    error_code='DELEGATE_IDENTITY_UNVERIFIED',
+                )
+                return {
+                    'isError': True,
+                    'content': [
+                        {
+                            'type': 'text',
+                            'text': json.dumps(
+                                {
+                                    'call_id': call_id,
+                                    'error_code': 'DELEGATE_IDENTITY_UNVERIFIED',
+                                    'request_status': 'rejected',
+                                    'execution_status': 'not_submitted',
+                                    'note': 'No delegation was submitted: native tool identity could not be verified.',
+                                }
+                            ),
+                        }
+                    ],
+                }
         if op in ('move', 'gripper', 'action_batch') and 'cameras' not in data:
             data = {**data, 'cameras': views}
         try:
             result = self.invoke(self.connection, op, data, call_id, log_call_id=False)
         except CallIdConflict:
-            host_event(self.run, 'robot_tool_failed', actor=self.actor, op=op, call_id=call_id,
-                       duration_s=time.monotonic()-began, error_code='CALL_ID_CONFLICT')
-            return {'isError': True, 'content': [{'type': 'text', 'text':
-                json.dumps(conflict_error(call_id), ensure_ascii=False)}]}
+            host_event(
+                self.run,
+                'robot_tool_failed',
+                actor=self.actor,
+                op=op,
+                call_id=call_id,
+                duration_s=time.monotonic() - began,
+                error_code='CALL_ID_CONFLICT',
+            )
+            return {
+                'isError': True,
+                'content': [
+                    {'type': 'text', 'text': json.dumps(conflict_error(call_id), ensure_ascii=False)}
+                ],
+            }
         except Exception:
-            host_event(self.run, 'robot_tool_failed', actor=self.actor, op=op, call_id=call_id,
-                       duration_s=time.monotonic()-began, error_code='TRANSPORT_UNCERTAIN')
-            return {'isError': True, 'content': [{'type': 'text', 'text':
-                json.dumps(uncertain_error(call_id), ensure_ascii=False)}]}
+            host_event(
+                self.run,
+                'robot_tool_failed',
+                actor=self.actor,
+                op=op,
+                call_id=call_id,
+                duration_s=time.monotonic() - began,
+                error_code='TRANSPORT_UNCERTAIN',
+            )
+            return {
+                'isError': True,
+                'content': [
+                    {'type': 'text', 'text': json.dumps(uncertain_error(call_id), ensure_ascii=False)}
+                ],
+            }
         result = {**result, 'call_id': call_id}
-        host_event(self.run, 'robot_tool_completed', actor=self.actor, op=op, call_id=call_id,
-                   duration_s=time.monotonic()-began)
+        host_event(
+            self.run,
+            'robot_tool_completed',
+            actor=self.actor,
+            op=op,
+            call_id=call_id,
+            duration_s=time.monotonic() - began,
+        )
         if op == 'work' and 'delegate_id' in data and 'delegate_report' not in result:
             result = self.attach_delegate_report(result, data['delegate_id'])
         # A robot_only run's public_file: text goes beside the JSON as it is, an image as an image.
@@ -109,9 +176,15 @@ class RobotBridge:
         if isinstance(file_text, str):
             content.append({'type': 'text', 'text': file_text})
         if public_file.get('kind') == 'image':
-            content.append(self.image_content(public_file.get('image'), 'Public file could not be loaded: '
-                                              + str(public_file.get('path'))))
-        observation = result.get('observation') or (result.get('original_result') or {}).get('observation') or {}
+            content.append(
+                self.image_content(
+                    public_file.get('image'),
+                    'Public file could not be loaded: ' + str(public_file.get('path')),
+                )
+            )
+        observation = (
+            result.get('observation') or (result.get('original_result') or {}).get('observation') or {}
+        )
         for view in views:
             name = observation.get('images', {}).get(view)
             if not name:
@@ -156,16 +229,23 @@ class RobotBridge:
         expected = root / (actor + '.json')
         try:
             ref = Path(status['result_ref'])
-            if (not root.is_relative_to((self.run/'public').resolve()) or ref.resolve() != expected
-                    or not expected.is_file() or expected.stat().st_size > 128_000):
+            if (
+                not root.is_relative_to((self.run / 'public').resolve())
+                or ref.resolve() != expected
+                or not expected.is_file()
+                or expected.stat().st_size > 128_000
+            ):
                 raise ValueError('Invalid or oversized report')
             report = json.loads(expected.read_text())
-            if not isinstance(report, dict) or report.get('actor') != actor or report.get('delegation_id') != status.get('delegation_id'):
+            if (
+                not isinstance(report, dict)
+                or report.get('actor') != actor
+                or report.get('delegation_id') != status.get('delegation_id')
+            ):
                 raise ValueError('Report identity mismatch')
         except (OSError, ValueError, TypeError):
             return {**result, 'delegate_report_unavailable': True}
         return {**result, 'delegate_report': report}
-
 
     def public_images(self, data):
         """Return only reference images explicitly listed in the frozen public task."""
@@ -194,7 +274,13 @@ class RobotBridge:
             if not data_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
                 raise ValueError('Public reference is not a PNG image')
             content.append({'type': 'text', 'text': 'Public reference: ' + name})
-            content.append({'type': 'image', 'data': base64.b64encode(data_bytes).decode('ascii'), 'mimeType': 'image/png'})
+            content.append(
+                {
+                    'type': 'image',
+                    'data': base64.b64encode(data_bytes).decode('ascii'),
+                    'mimeType': 'image/png',
+                }
+            )
         return {'content': content}
 
 
@@ -202,35 +288,59 @@ def handle(request, bridge):
     method = request.get('method')
     params = request.get('params') or {}
     if method == 'initialize':
-        return {'protocolVersion': params.get('protocolVersion', '2025-03-26'),
-                'capabilities': {'tools': {}}, 'serverInfo': {'name': 'roboteam-robot', 'version': '0.1.0-dev'}}
-    if method == 'ping': return {}
-    if method == 'tools/list': return {'tools': getattr(bridge, 'tools', [TOOL])}
+        return {
+            'protocolVersion': params.get('protocolVersion', '2025-03-26'),
+            'capabilities': {'tools': {}},
+            'serverInfo': {'name': 'roboteam-robot', 'version': '0.1.0-dev'},
+        }
+    if method == 'ping':
+        return {}
+    if method == 'tools/list':
+        return {'tools': getattr(bridge, 'tools', [TOOL])}
     if method == 'tools/call':
         if hasattr(bridge, 'call_tool'):
-            return bridge.call_tool(params.get('name'), params.get('arguments'), request.get('id'), params.get('_meta'))
-        if params.get('name') != 'robot': raise ValueError('Unknown tool')
+            return bridge.call_tool(
+                params.get('name'), params.get('arguments'), request.get('id'), params.get('_meta')
+            )
+        if params.get('name') != 'robot':
+            raise ValueError('Unknown tool')
         return bridge.call(params.get('arguments'), request_id=request.get('id'))
     raise ValueError('Unknown MCP method')
 
 
 def serve(bridge):
     lock = threading.Lock()
+
     def reply(request):
-        if 'id' not in request: return
+        if 'id' not in request:
+            return
         try:
             response = {'jsonrpc': '2.0', 'id': request['id'], 'result': handle(request, bridge)}
         except Exception as error:
-            response = {'jsonrpc': '2.0', 'id': request['id'], 'error': {'code': -32603, 'message': str(error)}}
+            response = {
+                'jsonrpc': '2.0',
+                'id': request['id'],
+                'error': {'code': -32603, 'message': str(error)},
+            }
         with lock:
             print(json.dumps(response, ensure_ascii=False), flush=True)
+
     with ThreadPoolExecutor(max_workers=8) as pool:
         for line in sys.stdin:
             try:
                 request = json.loads(line)
-                if not isinstance(request, dict): continue
+                if not isinstance(request, dict):
+                    continue
                 pool.submit(reply, request)
             except json.JSONDecodeError:
                 with lock:
-                    print(json.dumps({'jsonrpc': '2.0', 'id': None,
-                                      'error': {'code': -32700, 'message': 'Parse error'}}), flush=True)
+                    print(
+                        json.dumps(
+                            {
+                                'jsonrpc': '2.0',
+                                'id': None,
+                                'error': {'code': -32700, 'message': 'Parse error'},
+                            }
+                        ),
+                        flush=True,
+                    )

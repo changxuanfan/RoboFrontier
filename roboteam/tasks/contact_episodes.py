@@ -4,6 +4,7 @@ An episode is per body pair and contact kind. Contact returning after a gap
 strictly longer than 50 ms of simulation time starts a new episode. Gaps up to
 and including that threshold are joined to suppress solver chatter.
 """
+
 import math
 
 
@@ -40,8 +41,13 @@ class ContactEpisodes:
             'gap_merge_sim_s': self.GAP_S,
             'max_sample_gap_sim_s': self.max_sample_gap_s,
             'scope': 'Detected robot body-pair contacts, not unique physical impacts',
-            'inter_robot_episodes': sum(v for (kind, _), v in self.counts.items() if kind == 'inter_robot_contact'),
-            'self_robot_episodes': sum(v for (kind, _), v in self.counts.items() if kind == 'self_robot_contact'),
-            'by_pair': [dict(kind=kind, key=key, episodes=count)
-                        for (kind, key), count in sorted(self.counts.items())],
+            'inter_robot_episodes': sum(
+                v for (kind, _), v in self.counts.items() if kind == 'inter_robot_contact'
+            ),
+            'self_robot_episodes': sum(
+                v for (kind, _), v in self.counts.items() if kind == 'self_robot_contact'
+            ),
+            'by_pair': [
+                dict(kind=kind, key=key, episodes=count) for (kind, key), count in sorted(self.counts.items())
+            ],
         }

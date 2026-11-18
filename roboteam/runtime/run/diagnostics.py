@@ -1,38 +1,46 @@
 """Inspect local execution prerequisites without authenticating or calling models."""
+
 import json
 import os
-from pathlib import Path
 import platform
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 from roboteam.configuration import ROOT, rendering_environment
 
 
 def _checked(command, *, env, timeout=60):
-    result = subprocess.run(command, cwd=ROOT, env=env, text=True,
-                            capture_output=True, timeout=timeout)
+    result = subprocess.run(command, cwd=ROOT, env=env, text=True, capture_output=True, timeout=timeout)
     if result.returncode:
         # These probes receive no credentials and run only fixed local commands.
-        raise RuntimeError((result.stderr or result.stdout).strip()[-1600:] or
-                           'Local probe exited with code '+str(result.returncode))
+        raise RuntimeError(
+            (result.stderr or result.stdout).strip()[-1600:]
+            or 'Local probe exited with code ' + str(result.returncode)
+        )
     return result.stdout.strip()
 
 
 def _native_probe(harness, backend='native', robot_only=False):
     with tempfile.TemporaryDirectory(prefix='rf-native-probe-') as temporary:
         # Do not import another Desktop/session's mutable config or credentials.
-        env = {key: value for key, value in os.environ.items() if key in (
-            'PATH', 'HOME', 'TMPDIR', 'LANG', 'LC_ALL', 'SYSTEMROOT')}
-        env.update(CODEX_HOME=str(Path(temporary)/'codex'),
-                   CLAUDE_CONFIG_DIR=str(Path(temporary)/'claude'))
+        env = {
+            key: value
+            for key, value in os.environ.items()
+            if key in ('PATH', 'HOME', 'TMPDIR', 'LANG', 'LC_ALL', 'SYSTEMROOT')
+        }
+        env.update(
+            CODEX_HOME=str(Path(temporary) / 'codex'), CLAUDE_CONFIG_DIR=str(Path(temporary) / 'claude')
+        )
         for name in ('CODEX_HOME', 'CLAUDE_CONFIG_DIR'):
             Path(env[name]).mkdir(mode=0o700)
         version = _checked([harness, '--version'], env=env)
         if harness == 'codex':
             if backend == 'landlock-v1':
-                checked = json.loads(_checked([sys.executable, '-m', 'roboteam.harness.codex.tool_backend'], env=env))
+                checked = json.loads(
+                    _checked([sys.executable, '-m', 'roboteam.harness.codex.tool_backend'], env=env)
+                )
                 return {'version': version, **checked}
             if backend != 'native':
                 raise ValueError('Unknown Codex tool backend')
@@ -47,9 +55,18 @@ def _native_probe(harness, backend='native', robot_only=False):
 def _render_probe(device):
     env = rendering_environment(device, platform.system(), {})
     # Keep the dynamic loader/runtime environment, but no model credentials.
-    for key in ('PATH', 'HOME', 'TMPDIR', 'LANG', 'LC_ALL', 'SYSTEMROOT',
-                'LD_LIBRARY_PATH', 'NVIDIA_VISIBLE_DEVICES', 'NVIDIA_DRIVER_CAPABILITIES',
-                '__EGL_VENDOR_LIBRARY_FILENAMES'):
+    for key in (
+        'PATH',
+        'HOME',
+        'TMPDIR',
+        'LANG',
+        'LC_ALL',
+        'SYSTEMROOT',
+        'LD_LIBRARY_PATH',
+        'NVIDIA_VISIBLE_DEVICES',
+        'NVIDIA_DRIVER_CAPABILITIES',
+        '__EGL_VENDOR_LIBRARY_FILENAMES',
+    ):
         if key in os.environ:
             env[key] = os.environ[key]
     if device != 'cpu' and 'CUDA_VISIBLE_DEVICES' in os.environ:
@@ -83,17 +100,25 @@ def inspect_runtime(config, *, render=True):
             checks[name] = {'passed': True, **probe()}
         except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
             checks[name] = {'passed': False, 'error': str(error)}
-    return {'schema': 'roboteam.local-doctor.v1', 'model_calls': 0,
-            'harness': config['policy']['harness'],
-            'passed': all(check['passed'] for check in checks.values()), 'checks': checks,
-            'scope': 'Local CLI/sandbox/render only; no provider, task completion or concurrency qualification'}
+    return {
+        'schema': 'roboteam.local-doctor.v1',
+        'model_calls': 0,
+        'harness': config['policy']['harness'],
+        'passed': all(check['passed'] for check in checks.values()),
+        'checks': checks,
+        'scope': 'Local CLI/sandbox/render only; no provider, task completion or concurrency qualification',
+    }
 
 
 def require_runtime(config, *, render=True):
     report = inspect_runtime(config, render=render)
     if not report['passed']:
-        errors = '; '.join(name+': '+check['error'] for name, check in report['checks'].items()
-                           if not check['passed'])
-        raise ValueError('Local execution prerequisites failed before model calls. '+errors+
-                         ' Run roboteam doctor (or container doctor); see docs/hosts/docker.md for nested sandbox settings.')
+        errors = '; '.join(
+            name + ': ' + check['error'] for name, check in report['checks'].items() if not check['passed']
+        )
+        raise ValueError(
+            'Local execution prerequisites failed before model calls. '
+            + errors
+            + ' Run roboteam doctor (or container doctor); see docs/hosts/docker.md for nested sandbox settings.'
+        )
     return report

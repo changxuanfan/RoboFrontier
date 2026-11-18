@@ -19,16 +19,17 @@ Landlock network rules (ABI 4, Linux 6.7) or libseccomp the command does not run
 Standard library only (with the system's libseccomp), so the prefix runs it with `python -I`
 before any import.
 """
+
 import ctypes
 import ctypes.util
 import json
 import os
-from pathlib import Path
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 SCHEMA = 'roboteam.landlock-rules.v1'
 CREATE_RULESET, ADD_RULE, RESTRICT_SELF = 444, 445, 446  # Same number on x86_64 and arm64.
@@ -61,18 +62,66 @@ def access_for(mode, fs):
 # sockets (an existing named Unix socket, UDP, abstract sockets), signals and tracing of other
 # processes, namespaces and mounts, and metadata changes.
 DENIED_SYSCALLS = (
-    'socket', 'socketpair', 'socketcall', 'connect', 'bind', 'listen', 'accept', 'accept4',
-    'sendmsg', 'recvmsg', 'sendto', 'recvfrom', 'sendmmsg', 'recvmmsg',
-    'io_uring_setup', 'io_uring_enter', 'io_uring_register',
-    'ptrace', 'process_vm_readv', 'process_vm_writev', 'pidfd_getfd', 'pidfd_send_signal',
-    'kill', 'tkill', 'tgkill', 'rt_sigqueueinfo', 'rt_tgsigqueueinfo',
-    'mount', 'umount2', 'pivot_root', 'setns', 'unshare', 'setsid', 'setpgid', 'open_by_handle_at',
-    'bpf', 'perf_event_open',
+    'socket',
+    'socketpair',
+    'socketcall',
+    'connect',
+    'bind',
+    'listen',
+    'accept',
+    'accept4',
+    'sendmsg',
+    'recvmsg',
+    'sendto',
+    'recvfrom',
+    'sendmmsg',
+    'recvmmsg',
+    'io_uring_setup',
+    'io_uring_enter',
+    'io_uring_register',
+    'ptrace',
+    'process_vm_readv',
+    'process_vm_writev',
+    'pidfd_getfd',
+    'pidfd_send_signal',
+    'kill',
+    'tkill',
+    'tgkill',
+    'rt_sigqueueinfo',
+    'rt_tgsigqueueinfo',
+    'mount',
+    'umount2',
+    'pivot_root',
+    'setns',
+    'unshare',
+    'setsid',
+    'setpgid',
+    'open_by_handle_at',
+    'bpf',
+    'perf_event_open',
     # Landlock does not mediate these metadata changes, including on newer ABIs.
-    'chmod', 'fchmod', 'fchmodat', 'fchmodat2', 'chown', 'fchown', 'lchown', 'fchownat',
-    'chown32', 'fchown32', 'lchown32', 'setxattr', 'lsetxattr', 'fsetxattr',
-    'removexattr', 'lremovexattr', 'fremovexattr', 'utime', 'utimes', 'futimesat',
-    'utimensat', 'utimensat_time64',
+    'chmod',
+    'fchmod',
+    'fchmodat',
+    'fchmodat2',
+    'chown',
+    'fchown',
+    'lchown',
+    'fchownat',
+    'chown32',
+    'fchown32',
+    'lchown32',
+    'setxattr',
+    'lsetxattr',
+    'fsetxattr',
+    'removexattr',
+    'lremovexattr',
+    'fremovexattr',
+    'utime',
+    'utimes',
+    'futimesat',
+    'utimensat',
+    'utimensat_time64',
 )
 
 
@@ -93,16 +142,27 @@ def seccomp_filter(filesystem_abi=None, ignore_mode_changes=False):
     library.seccomp_syscall_resolve_name.restype = ctypes.c_int
     library.seccomp_rule_add.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_uint]
     library.seccomp_rule_add.restype = ctypes.c_int
+
     class ArgCompare(ctypes.Structure):
-        _fields_ = [('arg', ctypes.c_uint), ('op', ctypes.c_uint),
-                    ('datum_a', ctypes.c_uint64), ('datum_b', ctypes.c_uint64)]
-    library.seccomp_rule_add_array.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int,
-                                              ctypes.c_uint, ctypes.POINTER(ArgCompare)]
+        _fields_ = [
+            ('arg', ctypes.c_uint),
+            ('op', ctypes.c_uint),
+            ('datum_a', ctypes.c_uint64),
+            ('datum_b', ctypes.c_uint64),
+        ]
+
+    library.seccomp_rule_add_array.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+        ctypes.c_int,
+        ctypes.c_uint,
+        ctypes.POINTER(ArgCompare),
+    ]
     library.seccomp_rule_add_array.restype = ctypes.c_int
     library.seccomp_load.argtypes = [ctypes.c_void_p]
     library.seccomp_load.restype = ctypes.c_int
     library.seccomp_release.argtypes = [ctypes.c_void_p]
-    context = library.seccomp_init(0x7fff0000)  # SCMP_ACT_ALLOW
+    context = library.seccomp_init(0x7FFF0000)  # SCMP_ACT_ALLOW
     if not context:
         raise RuntimeError('seccomp_init failed')
     try:
@@ -162,21 +222,29 @@ def choose():
     if sys.platform == 'darwin':
         return 'claude-sandbox'
     if shutil.which('bwrap') and shutil.which('socat'):
-        probe = subprocess.run(['bwrap', '--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc',
-                                '--unshare-net', 'true'], capture_output=True, timeout=30)
+        probe = subprocess.run(
+            ['bwrap', '--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc', '--unshare-net', 'true'],
+            capture_output=True,
+            timeout=30,
+        )
         if probe.returncode == 0:
             return 'claude-sandbox'
     if abi() >= NETWORK_ABI and ctypes.util.find_library('seccomp'):
         return 'landlock-v1'
-    raise ValueError('No Bash isolation on this host: bubblewrap cannot create namespaces, and '
-                     'Landlock with network rules (ABI 4) or libseccomp is unavailable')
+    raise ValueError(
+        'No Bash isolation on this host: bubblewrap cannot create namespaces, and '
+        'Landlock with network rules (ABI 4) or libseccomp is unavailable'
+    )
 
 
 def handled_fs(version):
     mask = (1 << 13) - 1
-    if version >= 2: mask |= REFER
-    if version >= 3: mask |= TRUNCATE
-    if version >= 5: mask |= IOCTL_DEV
+    if version >= 2:
+        mask |= REFER
+    if version >= 3:
+        mask |= TRUNCATE
+    if version >= 5:
+        mask |= IOCTL_DEV
     return mask
 
 
@@ -196,10 +264,12 @@ def allowlist(table, read=(), write=()):
     """
     entries = {Path(p): mode for p, mode in table.items()}
     rules = []
+
     def visit(path, mode):
         below = [p for p, m in entries.items() if path in p.parents and m != mode]
         if not below:
-            if mode != 'deny': rules.append((str(path), mode))
+            if mode != 'deny':
+                rules.append((str(path), mode))
             return
         try:
             children = sorted(path.iterdir())
@@ -214,6 +284,7 @@ def allowlist(table, read=(), write=()):
                 visit(child, mode)
             elif mode != 'deny':
                 rules.append((str(child), mode))
+
     for path, mode in entries.items():
         visit(path, mode)
     return rules + [(str(p), 'read') for p in read] + [(str(p), 'write') for p in write]
@@ -229,8 +300,10 @@ def write_atomic(path, text, mode=0o600):
             output.write(text)
         os.replace(temporary, path)
     finally:
-        try: os.unlink(temporary)
-        except FileNotFoundError: pass
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
 
 
 def write_rules(path, rules, unconfined=()):
@@ -240,8 +313,10 @@ def write_rules(path, rules, unconfined=()):
     shell-quoted string. `unconfined` lists those exact strings for the run's own robot
     MCP servers, which run unconfined like every other harness process. A Bash command
     never matches one: Claude Code wraps it in its shell snapshot and an eval."""
-    write_atomic(path, json.dumps({'schema': SCHEMA, 'rules': rules, 'unconfined': sorted(unconfined)},
-                                  indent=1) + '\n')
+    write_atomic(
+        path,
+        json.dumps({'schema': SCHEMA, 'rules': rules, 'unconfined': sorted(unconfined)}, indent=1) + '\n',
+    )
 
 
 def restrict(rules):
@@ -258,9 +333,11 @@ def restrict(rules):
     ruleset = libc.syscall(CREATE_RULESET, ctypes.byref(attr), ctypes.c_size_t(size), ctypes.c_uint32(0))
     if ruleset < 0:
         raise OSError(ctypes.get_errno(), 'landlock_create_ruleset failed')
+
     class PathBeneath(ctypes.Structure):
         _pack_ = 1
         _fields_ = [('allowed_access', ctypes.c_uint64), ('parent_fd', ctypes.c_int32)]
+
     try:
         for path, mode in rules:
             try:
@@ -275,8 +352,16 @@ def restrict(rules):
                 if not stat.S_ISDIR(kind):
                     access &= FILE_ONLY
                 rule = PathBeneath(access & fs, fd)
-                if libc.syscall(ADD_RULE, ctypes.c_int(ruleset), ctypes.c_int(PATH_BENEATH),
-                                ctypes.byref(rule), ctypes.c_uint32(0)) < 0:
+                if (
+                    libc.syscall(
+                        ADD_RULE,
+                        ctypes.c_int(ruleset),
+                        ctypes.c_int(PATH_BENEATH),
+                        ctypes.byref(rule),
+                        ctypes.c_uint32(0),
+                    )
+                    < 0
+                ):
                     raise OSError(ctypes.get_errno(), 'landlock_add_rule failed for ' + path)
             finally:
                 os.close(fd)

@@ -3,17 +3,20 @@
 import contextlib
 import io
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
-from scripts.analysis import run_analysis
 from analysis.test_run_analysis_segments import BASE, Fixture, action, header, snap
+from scripts.analysis import run_analysis
 
 
 def dial_run(root, name):
     f = Fixture(root, name)
-    angles = lambda t, a: snap(float(t), private_angles_deg=[a], valid_trials=0, display=0, solved=False)
+
+    def angles(t, a):
+        return snap(float(t), private_angles_deg=[a], valid_trials=0, display=0, solved=False)
+
     f.log([header(), angles(0, 0.0), angles(1, 0.0), angles(3, 60.0), angles(5, 60.0)])
     f.db([action('A', 0, 2), action('A', 3, 5)], [(BASE, 'START', {})])
     return f
@@ -24,8 +27,14 @@ class ScriptTests(unittest.TestCase):
         self.tmp = Path(self.enterContext(tempfile.TemporaryDirectory()))
         dial_run(self.tmp / 'data', 'good')
         self.runs = self.tmp / 'runs.json'
-        self.runs.write_text(json.dumps([dict(id='good', k='good', task_type='dial'),
-                                         dict(id='gone', k='no/such/run', task_type='dial')]))
+        self.runs.write_text(
+            json.dumps(
+                [
+                    dict(id='good', k='good', task_type='dial'),
+                    dict(id='gone', k='no/such/run', task_type='dial'),
+                ]
+            )
+        )
 
     def main(self, *argv):
         err = io.StringIO()
@@ -37,8 +46,9 @@ class ScriptTests(unittest.TestCase):
         out = self.tmp / 'extracted'
         out.mkdir()
         (out / 'good.json').write_text('{"sel": {"id": "go')  # a worker killed mid-write
-        code, err = self.main('extract', '--root', self.tmp / 'data', '--runs', self.runs, '--out', out,
-                              '--workers', 1)
+        code, err = self.main(
+            'extract', '--root', self.tmp / 'data', '--runs', self.runs, '--out', out, '--workers', 1
+        )
         self.assertEqual(code, 1)
         self.assertIn('gone', err)
         self.assertFalse((out / 'gone.json').exists())
@@ -47,8 +57,9 @@ class ScriptTests(unittest.TestCase):
 
     def test_dial_turns_reports_failing_runs(self):
         out = self.tmp / 'turns.json'
-        code, err = self.main('dial-turns', '--root', self.tmp / 'data', '--runs', self.runs, '--out', out,
-                              '--workers', 1)
+        code, err = self.main(
+            'dial-turns', '--root', self.tmp / 'data', '--runs', self.runs, '--out', out, '--workers', 1
+        )
         self.assertEqual(code, 1)
         self.assertEqual(json.loads(out.read_text())['good']['turns'], [[3.0, 0]])
         self.assertEqual(list(json.loads(Path(str(out) + '.errors.json').read_text())), ['gone'])
@@ -56,8 +67,12 @@ class ScriptTests(unittest.TestCase):
     def test_atomic_lists_dial_runs_without_turns(self):
         out = self.tmp / 'extracted'
         self.runs.write_text(json.dumps([dict(id='good', k='good', task_type='dial')]))
-        self.assertEqual(self.main('extract', '--root', self.tmp / 'data', '--runs', self.runs, '--out', out,
-                                   '--workers', 1)[0], 0)
+        self.assertEqual(
+            self.main(
+                'extract', '--root', self.tmp / 'data', '--runs', self.runs, '--out', out, '--workers', 1
+            )[0],
+            0,
+        )
         turns = self.tmp / 'turns.json'
         turns.write_text(json.dumps({}))
         result = self.tmp / 'v2.json'

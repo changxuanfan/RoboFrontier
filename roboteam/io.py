@@ -1,10 +1,10 @@
 """Shared plumbing: the repository root, file hashes, atomic JSON writes and MJCF vectors."""
+
 import hashlib
 import json
 import os
-from pathlib import Path
 import tempfile
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,15 +19,18 @@ def write_json(path, value):
     """Write JSON atomically: private (0600), fsynced, then renamed into place; NaN is rejected."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False)+'\n'
-    fd, temporary = tempfile.mkstemp(prefix='.'+path.name+'-',dir=path.parent)
+    payload = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + '\n'
+    fd, temporary = tempfile.mkstemp(prefix='.' + path.name + '-', dir=path.parent)
     try:
-        with os.fdopen(fd,'w') as out:
-            os.fchmod(out.fileno(),0o600)
-            out.write(payload);out.flush();os.fsync(out.fileno())
-        os.replace(temporary,path)
+        with os.fdopen(fd, 'w') as out:
+            os.fchmod(out.fileno(), 0o600)
+            out.write(payload)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(temporary, path)
     finally:
-        if Path(temporary).exists():Path(temporary).unlink()
+        if Path(temporary).exists():
+            Path(temporary).unlink()
 
 
 def vector(values):

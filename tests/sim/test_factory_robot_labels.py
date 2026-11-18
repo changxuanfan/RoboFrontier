@@ -4,27 +4,30 @@ import unittest
 import mujoco
 import numpy as np
 
-from roboteam.sim.hall.labels import robot_label_moves, ROBOT_LABEL
-from roboteam.tasks.task_types import ROOT, resolve_case
+from roboteam.sim.hall.labels import ROBOT_LABEL, robot_label_moves
 from roboteam.sim.workstation import Workstation
+from roboteam.tasks.task_types import ROOT, resolve_case
 
 
 class RobotLabelTests(unittest.TestCase):
     """Letter labels sit on their robot's outline seen from above, upright for the front view."""
 
     def check(self, case):
-        source = ROOT/resolve_case(case)[2]['directory']
-        before = hashlib.sha256((source/'scene.xml').read_bytes()).hexdigest()
-        world = Workstation(source); world.frame()
+        source = ROOT / resolve_case(case)[2]['directory']
+        before = hashlib.sha256((source / 'scene.xml').read_bytes()).hexdigest()
+        world = Workstation(source)
+        world.frame()
         model, data = world.model, world.data
         moves = robot_label_moves(model, data)
         labels = [model.geom(g).name for g in range(model.ngeom) if ROBOT_LABEL.fullmatch(model.geom(g).name)]
         self.assertTrue(moves)
         for name, move in moves.items():
-            base = data.xpos[model.body(move['robot']+'_link0').id][:2]
-            start, end = np.asarray(move['from_xy'])-base, np.asarray(move['to_xy'])-base
+            base = data.xpos[model.body(move['robot'] + '_link0').id][:2]
+            start, end = np.asarray(move['from_xy']) - base, np.asarray(move['to_xy']) - base
             self.assertGreater(np.linalg.norm(end), np.linalg.norm(start))
-            self.assertGreater(float(start@end/np.linalg.norm(start)/np.linalg.norm(end)), np.cos(np.radians(90.5)))
+            self.assertGreater(
+                float(start @ end / np.linalg.norm(start) / np.linalg.norm(end)), np.cos(np.radians(90.5))
+            )
         self.assertEqual(set(moves), set(labels))
         # The spot is fixed: computing it again from the moved labels gives the same spots.
         for name, move in moves.items():
@@ -34,12 +37,14 @@ class RobotLabelTests(unittest.TestCase):
         for name, move in moves.items():
             np.testing.assert_allclose(again[name]['to_xy'], move['to_xy'], atol=1e-9)
         self.assertEqual(len(labels), len(set(labels)))
-        self.assertEqual(hashlib.sha256((source/'scene.xml').read_bytes()).hexdigest(), before)
+        self.assertEqual(hashlib.sha256((source / 'scene.xml').read_bytes()).hexdigest(), before)
 
     def test_a_run_places_its_labels_where_its_videos_do(self):
         from roboteam.sim.hall.labels import place_robot_labels
+
         case = resolve_case('mosaic-a04-6x12-d2')[2]
-        world = Workstation(ROOT/case['directory']); world.frame()
+        world = Workstation(ROOT / case['directory'])
+        world.frame()
         expected = robot_label_moves(world.model, world.data, avoid_objects=False)
         moved = place_robot_labels(world.model, world.data, dict(task_type='mosaic'))
         self.assertEqual(set(moved), set(expected))
@@ -51,7 +56,8 @@ class RobotLabelTests(unittest.TestCase):
 
     def test_released_block_letters_read_upright(self):
         for case in ('transport-a04-d2', 'transport-a12-d3'):
-            world = Workstation(ROOT/resolve_case(case)[2]['directory']); model = world.model
+            world = Workstation(ROOT / resolve_case(case)[2]['directory'])
+            model = world.model
             sides = 0
             for gid in range(model.ngeom):
                 name = model.geom(gid).name
@@ -60,8 +66,9 @@ class RobotLabelTests(unittest.TestCase):
                 axes = np.zeros(9)
                 mujoco.mju_quat2Mat(axes, model.geom_quat[gid])
                 axes = axes.reshape(3, 3)
-                if abs(axes[2, 2]) < .5:  # a side face: the letter's top is the block's top
-                    self.assertGreater(axes[2, 1], .5, name); sides += 1
+                if abs(axes[2, 2]) < 0.5:  # a side face: the letter's top is the block's top
+                    self.assertGreater(axes[2, 1], 0.5, name)
+                    sides += 1
             self.assertGreater(sides, 0)
 
     def test_mosaic_labels_leave_the_robot_bases(self):

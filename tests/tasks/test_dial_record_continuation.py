@@ -1,7 +1,8 @@
 """A continued segment's Dial evaluator takes over trials and BEST (docs/runs/continuation.md)."""
+
 import math
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
@@ -10,39 +11,50 @@ from roboteam.tasks.dial import DialFeedback
 from roboteam.tasks.evaluate import Monitor, SupportQualification
 
 
-def held(symbols, step=60.):
-    return np.radians([s*step for s in symbols])
+def held(symbols, step=60.0):
+    return np.radians([s * step for s in symbols])
 
 
 class ContinuationTests(unittest.TestCase):
     def monitor(self, game, angles, record):
-        stub = SimpleNamespace(w=SimpleNamespace(directory='run'), d=SimpleNamespace(qpos=np.array(angles), time=40.),
-                               qids=list(range(len(angles))), game=game, carried_trials=0)
-        with patch('roboteam.runtime.run.segments.current_restore', lambda run: ({'evaluator': record}, None)):
+        stub = SimpleNamespace(
+            w=SimpleNamespace(directory='run'),
+            d=SimpleNamespace(qpos=np.array(angles), time=40.0),
+            qids=list(range(len(angles))),
+            game=game,
+            carried_trials=0,
+        )
+        with patch(
+            'roboteam.runtime.run.segments.current_restore', lambda run: ({'evaluator': record}, None)
+        ):
             Monitor.continue_dial_record(stub)
         return stub
 
-    def play(self, game, t, angles, seconds=.4):
-        for k in range(int(seconds/.02)+1):
-            game.update(t+k*.02, angles, [0.]*len(angles), True)
+    def play(self, game, t, angles, seconds=0.4):
+        for k in range(int(seconds / 0.02) + 1):
+            game.update(t + k * 0.02, angles, [0.0] * len(angles), True)
         return game
 
     def test_best_and_trials_continue_and_a_held_input_is_not_counted_again(self):
         secret = (1, 2, 3, 4, 5, 1, 2, 3)
         guess = (1, 2, 3, 4, 5, 5, 5, 5)
         game = DialFeedback(secret)
-        stub = self.monitor(game, held(guess), {'valid_trials': 65, 'best': 6, 'solved': False, 'input_ready': True})
+        stub = self.monitor(
+            game, held(guess), {'valid_trials': 65, 'best': 6, 'solved': False, 'input_ready': True}
+        )
         self.assertEqual((game.queries, game.best, game.display, stub.carried_trials), (65, 6, 6, 65))
-        self.play(game, 40., held(guess))
+        self.play(game, 40.0, held(guess))
         self.assertEqual((game.queries, game.display, game.ready), (65, 6, True))
-        self.play(game, 41., held((1, 2, 3, 4, 5, 1, 2, 5)))
+        self.play(game, 41.0, held((1, 2, 3, 4, 5, 1, 2, 5)))
         self.assertEqual((game.queries, game.best), (66, 7))
         self.assertEqual(game.trials[-1]['index'], 66)
 
     def test_an_input_not_held_at_the_restore_frame_counts_as_a_new_trial(self):
         game = DialFeedback((1, 1, 1, 1))
-        self.monitor(game, held((2, 2, 2, 2)), {'valid_trials': 3, 'best': 2, 'solved': False, 'input_ready': False})
-        self.play(game, 40., held((2, 2, 2, 2)))
+        self.monitor(
+            game, held((2, 2, 2, 2)), {'valid_trials': 3, 'best': 2, 'solved': False, 'input_ready': False}
+        )
+        self.play(game, 40.0, held((2, 2, 2, 2)))
         self.assertEqual((game.queries, game.display), (4, 2))
 
     def test_without_a_carried_record_the_evaluator_starts_empty(self):
@@ -58,41 +70,72 @@ class SampledContinuationTests(unittest.TestCase):
 
     R holds the red rotor and B the blue stem of one Level 2 BEST dial, with symbol 2 set.
     """
+
     def monitor(self, record, red=True):
         mon = Monitor.__new__(Monitor)
         spec = {'mode': 'best_so_far', 'symbol_count': 5, 'require_red_grasp': True, 'display_digits': 1}
-        mon.task = {'level': 2, 'table_height_m': .4, 'dials': [{'id': 'd0'}],
-                    'mechanism': {'feedback': spec},
-                    'run_protocol': {'evaluation_semantics': 'terminal_outcome_v2'}}
-        mon.dials = mon.task['dials']; mon.robots = ['R', 'B']
+        mon.task = {
+            'level': 2,
+            'table_height_m': 0.4,
+            'dials': [{'id': 'd0'}],
+            'mechanism': {'feedback': spec},
+            'run_protocol': {'evaluation_semantics': 'terminal_outcome_v2'},
+        }
+        mon.dials = mon.task['dials']
+        mon.robots = ['R', 'B']
         mon.m = SimpleNamespace(ngeom=6, geom=lambda name: SimpleNamespace(id=0), geom_rgba=np.zeros((6, 4)))
-        step = 60.
-        mon.d = SimpleNamespace(time=40., qpos=np.radians([2*step]), qvel=np.zeros(1))
-        mon.w = SimpleNamespace(directory='run', arms={'R': SimpleNamespace(job=None, job_op=None, dofs=[0], grasp_force=30.),
-                                                       'B': SimpleNamespace(job=None, job_op=None, dofs=[0], grasp_force=70.)})
-        mon.geom_owner = np.array([-1, 0, 1, -1, -1, -1]); mon.red = {0: 0}; mon.blue = {3: 0}; mon.module_geoms = [[5]]
-        mon.qids = [0]; mon.dofs = [0]
+        step = 60.0
+        mon.d = SimpleNamespace(time=40.0, qpos=np.radians([2 * step]), qvel=np.zeros(1))
+        mon.w = SimpleNamespace(
+            directory='run',
+            arms={
+                'R': SimpleNamespace(job=None, job_op=None, dofs=[0], grasp_force=30.0),
+                'B': SimpleNamespace(job=None, job_op=None, dofs=[0], grasp_force=70.0),
+            },
+        )
+        mon.geom_owner = np.array([-1, 0, 1, -1, -1, -1])
+        mon.red = {0: 0}
+        mon.blue = {3: 0}
+        mon.module_geoms = [[5]]
+        mon.qids = [0]
+        mon.dofs = [0]
         self.red = red
-        mon.bilateral = lambda geoms, positive_force=False: {'B'} if 3 in geoms else ({'R'} if self.red else set())
-        mon.bottom = lambda geoms: .5
-        mon.contacts = lambda: ((np.array([[1, 0], [2, 3]]), np.array([-1e-4, -1e-4])) if self.red
-                                else (np.array([[2, 3]]), np.array([-1e-4])))
-        mon.blue_qualification = [SupportQualification()]; mon.previous_red = set(); mon.unsupported_since = {}
-        mon.holding_s = 0.; mon.minimum_clearance = np.full(1, math.inf); mon.violations = []; mon.carried_trials = 0
+        mon.bilateral = lambda geoms, positive_force=False: (
+            {'B'} if 3 in geoms else ({'R'} if self.red else set())
+        )
+        mon.bottom = lambda geoms: 0.5
+        mon.contacts = lambda: (
+            (np.array([[1, 0], [2, 3]]), np.array([-1e-4, -1e-4]))
+            if self.red
+            else (np.array([[2, 3]]), np.array([-1e-4]))
+        )
+        mon.blue_qualification = [SupportQualification()]
+        mon.previous_red = set()
+        mon.unsupported_since = {}
+        mon.holding_s = 0.0
+        mon.minimum_clearance = np.full(1, math.inf)
+        mon.violations = []
+        mon.carried_trials = 0
         mon.game = DialFeedback((1,))
-        with patch('roboteam.runtime.run.segments.current_restore', lambda run: ({'evaluator': record}, None)):
+        with patch(
+            'roboteam.runtime.run.segments.current_restore', lambda run: ({'evaluator': record}, None)
+        ):
             mon.continue_dial_record()
         return mon
 
     def play(self, mon, seconds, symbol=None):
-        if symbol is not None: mon.d.qpos = np.radians([symbol*(60. if mon.task['mechanism'] else 90.)])
+        if symbol is not None:
+            mon.d.qpos = np.radians([symbol * (60.0 if mon.task['mechanism'] else 90.0)])
         with patch('roboteam.tasks.dial.paint_display', lambda *args, **kwargs: None):
-            for _ in range(int(round(seconds/.02))):
-                mon.sample_dial(.02); mon.d.time += .02
+            for _ in range(int(round(seconds / 0.02))):
+                mon.sample_dial(0.02)
+                mon.d.time += 0.02
         return mon.result_cache
 
     def test_an_input_and_red_grasp_held_at_the_restore_frame_stay_the_same_trial(self):
-        mon = self.monitor({'valid_trials': 10, 'best': 0, 'solved': False, 'input_ready': True, 'support_ready': [True]})
+        mon = self.monitor(
+            {'valid_trials': 10, 'best': 0, 'solved': False, 'input_ready': True, 'support_ready': [True]}
+        )
         result = self.play(mon, 1.2)
         self.assertEqual((result['valid_trials'], result['carried_valid_trials']), (10, 10))
         self.assertEqual(mon.game.trials, [])
@@ -104,28 +147,36 @@ class SampledContinuationTests(unittest.TestCase):
         self.assertEqual(self.play(mon, 1.2)['valid_trials'], 10)
 
     def test_a_new_input_after_the_restore_frame_is_one_new_trial(self):
-        mon = self.monitor({'valid_trials': 10, 'best': 0, 'solved': False, 'input_ready': True, 'support_ready': [True]})
-        self.play(mon, .4)
+        mon = self.monitor(
+            {'valid_trials': 10, 'best': 0, 'solved': False, 'input_ready': True, 'support_ready': [True]}
+        )
+        self.play(mon, 0.4)
         self.assertEqual(self.play(mon, 1.2, symbol=3)['valid_trials'], 11)
         self.assertEqual(mon.violations, [])
 
     def test_a_red_grasp_made_after_the_restore_frame_without_support_is_still_premature(self):
-        mon = self.monitor({'valid_trials': 10, 'best': 0, 'solved': False, 'input_ready': False, 'support_ready': [False]}, red=False)
-        self.play(mon, .1)
+        mon = self.monitor(
+            {'valid_trials': 10, 'best': 0, 'solved': False, 'input_ready': False, 'support_ready': [False]},
+            red=False,
+        )
+        self.play(mon, 0.1)
         self.red = True
-        self.play(mon, .1)
+        self.play(mon, 0.1)
         self.assertEqual([v['kind'] for v in mon.violations], ['premature_red_contact'])
-
 
 
 class ProcessLogTests(unittest.TestCase):
     def test_an_unknown_log_format_leaves_an_existing_log_untouched(self):
         import tempfile
         from pathlib import Path
+
         with tempfile.TemporaryDirectory() as folder:
-            log = Path(folder)/'suite-process.jsonl'; log.write_text('kept\n')
-            with self.assertRaises(ValueError): Monitor(None, log_path=log, log_format='bogus')
+            log = Path(folder) / 'suite-process.jsonl'
+            log.write_text('kept\n')
+            with self.assertRaises(ValueError):
+                Monitor(None, log_path=log, log_format='bogus')
             self.assertEqual(log.read_text(), 'kept\n')
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

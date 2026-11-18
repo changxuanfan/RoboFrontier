@@ -2,19 +2,20 @@
 
 Skipped when no `claude` binary is installed.
 """
+
 import http.server
 import json
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import threading
 import time
 import unittest
+from pathlib import Path
 
-from roboteam.runtime.sandbox import access as policy_access
 from roboteam.harness.claude.session.runner import PersistentSession
 from roboteam.runtime.run.layout import manifest_record
+from roboteam.runtime.sandbox import access as policy_access
 
 SESSION = '44444444-4444-4444-8444-444444444444'
 CHILD = '55555555-5555-4555-8555-555555555555'
@@ -22,28 +23,62 @@ CHILD = '55555555-5555-4555-8555-555555555555'
 
 class SlowStub(http.server.BaseHTTPRequestHandler):
     """Replies with text; a prompt containing SLOW takes 8 s so the turn can be interrupted."""
+
     prompts = []
-    def log_message(self, *args): pass
+
+    def log_message(self, *args):
+        pass
+
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
         messages = [m for m in body.get('messages', []) if m.get('role') != 'system']
         last = messages[-1]['content']
-        text = last if isinstance(last, str) else ' '.join(str(b.get('text', '')) for b in last if isinstance(b, dict))
+        text = (
+            last
+            if isinstance(last, str)
+            else ' '.join(str(b.get('text', '')) for b in last if isinstance(b, dict))
+        )
         self.prompts.append(text)
-        if 'SLOW' in text: time.sleep(8)
-        message = {'id': 'm', 'type': 'message', 'role': 'assistant', 'model': 'x', 'content': [], 'stop_reason': None,
-                   'stop_sequence': None, 'usage': {'input_tokens': 1, 'output_tokens': 1}}
-        events = [('message_start', {'type': 'message_start', 'message': message}),
-                  ('content_block_start', {'type': 'content_block_start', 'index': 0, 'content_block': {'type': 'text', 'text': ''}}),
-                  ('content_block_delta', {'type': 'content_block_delta', 'index': 0, 'delta': {'type': 'text_delta', 'text': 'ok'}}),
-                  ('content_block_stop', {'type': 'content_block_stop', 'index': 0}),
-                  ('message_delta', {'type': 'message_delta', 'delta': {'stop_reason': 'end_turn', 'stop_sequence': None},
-                                     'usage': {'output_tokens': 1}}),
-                  ('message_stop', {'type': 'message_stop'})]
+        if 'SLOW' in text:
+            time.sleep(8)
+        message = {
+            'id': 'm',
+            'type': 'message',
+            'role': 'assistant',
+            'model': 'x',
+            'content': [],
+            'stop_reason': None,
+            'stop_sequence': None,
+            'usage': {'input_tokens': 1, 'output_tokens': 1},
+        }
+        events = [
+            ('message_start', {'type': 'message_start', 'message': message}),
+            (
+                'content_block_start',
+                {'type': 'content_block_start', 'index': 0, 'content_block': {'type': 'text', 'text': ''}},
+            ),
+            (
+                'content_block_delta',
+                {'type': 'content_block_delta', 'index': 0, 'delta': {'type': 'text_delta', 'text': 'ok'}},
+            ),
+            ('content_block_stop', {'type': 'content_block_stop', 'index': 0}),
+            (
+                'message_delta',
+                {
+                    'type': 'message_delta',
+                    'delta': {'stop_reason': 'end_turn', 'stop_sequence': None},
+                    'usage': {'output_tokens': 1},
+                },
+            ),
+            ('message_stop', {'type': 'message_stop'}),
+        ]
         data = ''.join('event: %s\ndata: %s\n\n' % (n, json.dumps(p)) for n, p in events).encode()
         try:
-            self.send_response(200); self.send_header('Content-Type', 'text/event-stream')
-            self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
         except BrokenPipeError:
             pass
 
@@ -57,18 +92,47 @@ class PersistentSessionTests(unittest.TestCase):
         session = PersistentSession(interrupt_grace_s=20)
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp).resolve(); run = root / 'repo/runs/b/p/case'
-                (run / 'private/inputs').mkdir(parents=True); (run / 'workspace').mkdir()
+                root = Path(tmp).resolve()
+                run = root / 'repo/runs/b/p/case'
+                (run / 'private/inputs').mkdir(parents=True)
+                (run / 'workspace').mkdir()
                 # A run with the frozen policy contract; earlier runs keep one process per turn.
                 (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
-                (run / 'private/inputs/policy-access.json').write_text(json.dumps(policy_access.record(
-                    run, repo=root/'repo', home=root/'home', tmp_dirs=(), checkouts=[root/'repo'])))
-                model_entry = {'provider': 'anthropic', 'model': 'claude-opus-5-5', 'env_key': 'ANTHROPIC_API_KEY', 'effort': 'high',
-                           'base_url': 'http://127.0.0.1:%d' % server.server_port}
+                (run / 'private/inputs/policy-access.json').write_text(
+                    json.dumps(
+                        policy_access.record(
+                            run,
+                            repo=root / 'repo',
+                            home=root / 'home',
+                            tmp_dirs=(),
+                            checkouts=[root / 'repo'],
+                        )
+                    )
+                )
+                model_entry = {
+                    'provider': 'anthropic',
+                    'model': 'claude-opus-5-5',
+                    'env_key': 'ANTHROPIC_API_KEY',
+                    'effort': 'high',
+                    'base_url': 'http://127.0.0.1:%d' % server.server_port,
+                }
                 env = {'PATH': os.environ.get('PATH', ''), 'ANTHROPIC_API_KEY': 'local-fake-key'}
-                turn = lambda prompt, n, **kw: session(model_entry, 'claude-opus-5-5', 'high', '{"mcpServers":{}}', prompt, run, env,
-                                                       events_name='turn-%d.jsonl' % n, **kw)
-                first = turn('FIRST', 1, session_id=SESSION); pid = session.process.pid
+
+                def turn(prompt, n, **kw):
+                    return session(
+                        model_entry,
+                        'claude-opus-5-5',
+                        'high',
+                        '{"mcpServers":{}}',
+                        prompt,
+                        run,
+                        env,
+                        events_name='turn-%d.jsonl' % n,
+                        **kw,
+                    )
+
+                first = turn('FIRST', 1, session_id=SESSION)
+                pid = session.process.pid
                 second = turn('SECOND', 2, resume=SESSION)
                 self.assertEqual((first['process'], second['process']), ('exited', 'exited'))
                 self.assertEqual(session.process.pid, pid)  # same CLI process for both turns
@@ -78,13 +142,16 @@ class PersistentSessionTests(unittest.TestCase):
                 totals = [float(t['summary']['native_session_total_cost_usd']) for t in (first, second)]
                 self.assertGreater(totals[1], totals[0])
                 self.assertEqual(second['summary']['cost_scope'], 'invocation')
-                self.assertAlmostEqual(second['summary']['total_cost_usd'], totals[1]-totals[0], places=9)
+                self.assertAlmostEqual(second['summary']['total_cost_usd'], totals[1] - totals[0], places=9)
                 # A stop interrupts the turn; the outcome is unknown but the process survives.
                 cancel = threading.Event()
+
                 def stop_once_slow_turn_reaches_model():
                     deadline = time.monotonic() + 30
-                    while not any('SLOW' in p for p in SlowStub.prompts) and time.monotonic() < deadline: time.sleep(.05)
+                    while not any('SLOW' in p for p in SlowStub.prompts) and time.monotonic() < deadline:
+                        time.sleep(0.05)
                     cancel.set()
+
                 threading.Thread(target=stop_once_slow_turn_reaches_model, daemon=True).start()
                 stopped = turn('SLOW please', 3, resume=SESSION, cancel_event=cancel)
                 self.assertEqual(stopped['process'], 'cancelled')
@@ -98,7 +165,9 @@ class PersistentSessionTests(unittest.TestCase):
                 self.assertEqual(resumed['summary']['session_id'], SESSION)
                 self.assertIn('FIRST', ' '.join(SlowStub.prompts))
         finally:
-            session.close(); server.shutdown(); server.server_close()
+            session.close()
+            server.shutdown()
+            server.server_close()
 
     def test_a_delegate_fork_is_the_first_turn_of_its_process(self):
         SlowStub.prompts = []
@@ -107,19 +176,52 @@ class PersistentSessionTests(unittest.TestCase):
         parent, child = PersistentSession(), PersistentSession()
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp).resolve(); run = root / 'repo/runs/b/p/case'
-                (run / 'private/inputs').mkdir(parents=True); (run / 'workspace').mkdir()
+                root = Path(tmp).resolve()
+                run = root / 'repo/runs/b/p/case'
+                (run / 'private/inputs').mkdir(parents=True)
+                (run / 'workspace').mkdir()
                 (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
-                (run / 'private/inputs/policy-access.json').write_text(json.dumps(policy_access.record(
-                    run, repo=root/'repo', home=root/'home', tmp_dirs=(), checkouts=[root/'repo'])))
-                model_entry = {'provider': 'anthropic', 'model': 'claude-opus-5-5', 'env_key': 'ANTHROPIC_API_KEY', 'effort': 'high',
-                           'base_url': 'http://127.0.0.1:%d' % server.server_port}
+                (run / 'private/inputs/policy-access.json').write_text(
+                    json.dumps(
+                        policy_access.record(
+                            run,
+                            repo=root / 'repo',
+                            home=root / 'home',
+                            tmp_dirs=(),
+                            checkouts=[root / 'repo'],
+                        )
+                    )
+                )
+                model_entry = {
+                    'provider': 'anthropic',
+                    'model': 'claude-opus-5-5',
+                    'env_key': 'ANTHROPIC_API_KEY',
+                    'effort': 'high',
+                    'base_url': 'http://127.0.0.1:%d' % server.server_port,
+                }
                 env = {'PATH': os.environ.get('PATH', ''), 'ANTHROPIC_API_KEY': 'local-fake-key'}
-                turn = lambda host, prompt, n, **kw: host(model_entry, 'claude-opus-5-5', 'high', '{"mcpServers":{}}', prompt, run,
-                                                          env, events_name='turn-%d.jsonl' % n, **kw)
+
+                def turn(host, prompt, n, **kw):
+                    return host(
+                        model_entry,
+                        'claude-opus-5-5',
+                        'high',
+                        '{"mcpServers":{}}',
+                        prompt,
+                        run,
+                        env,
+                        events_name='turn-%d.jsonl' % n,
+                        **kw,
+                    )
+
                 turn(parent, 'PARENT', 1, session_id=SESSION)
-                gate = {'open': run/'gate-open', 'closed': run/'gate-closed', 'deadline': time.time()+60}
-                forked = turn(child, 'CHILD', 2, session_id=CHILD, fork_from=SESSION, gate=gate); pid = child.process.pid
+                gate = {
+                    'open': run / 'gate-open',
+                    'closed': run / 'gate-closed',
+                    'deadline': time.time() + 60,
+                }
+                forked = turn(child, 'CHILD', 2, session_id=CHILD, fork_from=SESSION, gate=gate)
+                pid = child.process.pid
                 again = turn(child, 'AGAIN', 3, resume=CHILD)
                 self.assertEqual((forked['process'], again['process']), ('exited', 'exited'))
                 self.assertEqual({forked['summary']['session_id'], again['summary']['session_id']}, {CHILD})
@@ -132,7 +234,11 @@ class PersistentSessionTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'first turn'):
                     turn(child, 'REFORK', 4, session_id=CHILD, fork_from=SESSION, gate=gate)
         finally:
-            parent.close(); child.close(); server.shutdown(); server.server_close()
+            parent.close()
+            child.close()
+            server.shutdown()
+            server.server_close()
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

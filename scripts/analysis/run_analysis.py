@@ -25,12 +25,12 @@ redoes any existing record that does not load.
 """
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor
 import json
 import os
-from pathlib import Path
 import sys
 import traceback
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -107,9 +107,7 @@ def _skip_reason(d, turns, have_turns):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest='cmd', required=True)
     for name in ('extract', 'dial-turns'):
         s = sub.add_parser(name)
@@ -185,11 +183,7 @@ def main(argv=None):
         return 1 if bad else 0
     if a.cmd == 'atomic':
         v1 = (
-            {
-                r['id']: r.get('atomic')
-                for r in json.loads(Path(a.metrics).read_text())
-                if r.get('ok')
-            }
+            {r['id']: r.get('atomic') for r in json.loads(Path(a.metrics).read_text()) if r.get('ok')}
             if a.metrics
             else {}
         )
@@ -201,24 +195,30 @@ def main(argv=None):
                 rid = d['sel']['id']
                 new = atomic.compute(d, v1.get(rid), turns.get(rid))
             except Exception:
-                skipped.append(dict(id=path.stem, reason='error: ' + traceback.format_exc()[-300:], missing=True))
+                skipped.append(
+                    dict(id=path.stem, reason='error: ' + traceback.format_exc()[-300:], missing=True)
+                )
                 continue
             if new:
                 out.append(dict(id=rid, task_type=d['sel'].get('task_type'), v1=v1.get(rid), **new))
             else:
                 reason, missing = _skip_reason(d, turns.get(rid), bool(a.dial_turns))
-                skipped.append(dict(id=rid, task_type=d['sel'].get('task_type'), reason=reason, missing=missing))
+                skipped.append(
+                    dict(id=rid, task_type=d['sel'].get('task_type'), reason=reason, missing=missing)
+                )
         _write_atomic(Path(a.out), json.dumps(out, ensure_ascii=False))
         _write_atomic(Path(str(a.out) + '.skipped.json'), json.dumps(skipped, ensure_ascii=False, indent=1))
         for x in skipped:
-            print('SKIP' if not x['missing'] else 'MISSING', x['id'], x['reason'].splitlines()[0],
-                  file=sys.stderr)
+            print(
+                'SKIP' if not x['missing'] else 'MISSING',
+                x['id'],
+                x['reason'].splitlines()[0],
+                file=sys.stderr,
+            )
         missing = sum(x['missing'] for x in skipped)
         print(len(out), 'runs,', len(skipped), 'skipped,', missing, 'missing data')
         return 1 if missing else 0
-    rows = [
-        dict(package=str(x), **session_archive.summarize_session_archive(x)) for x in a.packages
-    ]
+    rows = [dict(package=str(x), **session_archive.summarize_session_archive(x)) for x in a.packages]
     Path(a.out).write_text(json.dumps(rows, ensure_ascii=False))
     return 0
 

@@ -7,6 +7,7 @@ segment described by that boundary. Only documented-by-observation metadata chan
 are normalized; unrecognized history changes fail closed. The model's own claims are
 never used as evidence.
 """
+
 import copy
 import hashlib
 import json
@@ -30,11 +31,20 @@ def _normalized(rows, preserved=()):
     Message content always has to match."""
     out = []
     for row in copy.deepcopy(rows):
-        for key in ENVIRONMENT_FIELDS: row.pop(key, None)
+        for key in ENVIRONMENT_FIELDS:
+            row.pop(key, None)
         notice = row.get('attachment')
-        if row.get('type') == 'attachment' and isinstance(notice, dict) and notice.get('type') == 'edited_text_file':
+        if (
+            row.get('type') == 'attachment'
+            and isinstance(notice, dict)
+            and notice.get('type') == 'edited_text_file'
+        ):
             notice.pop('displayPath', None)
-        if row.get('uuid') in preserved and row.get('type') == 'assistant' and isinstance(row.get('message'), dict):
+        if (
+            row.get('uuid') in preserved
+            and row.get('type') == 'assistant'
+            and isinstance(row.get('message'), dict)
+        ):
             row['message'].pop('usage', None)
         out.append(row)
     return out
@@ -50,21 +60,26 @@ def _without_retries(rows):
     gone = {row['uuid']: row.get('parentUuid') for row in rows if _is_retry(row)}
     out = []
     for row in rows:
-        if _is_retry(row): continue
+        if _is_retry(row):
+            continue
         link, seen = row.get('parentUuid'), set()
-        while link in gone and link not in seen: seen.add(link); link = gone[link]
+        while link in gone and link not in seen:
+            seen.add(link)
+            link = gone[link]
         out.append(row if link == row.get('parentUuid') else dict(row, parentUuid=link))
     return out
 
 
 def _prefix_holding(rows, count):
     """Length of the shortest prefix of `rows` that holds `count` rows other than retry notices."""
-    if count == 0: return 0
+    if count == 0:
+        return 0
     kept = 0
     for index, row in enumerate(rows):
         if not _is_retry(row):
             kept += 1
-            if kept == count: return index + 1
+            if kept == count:
+                return index + 1
     return None
 
 
@@ -114,14 +129,17 @@ def copied_history_length(source, copied):
     Its preserved-message metadata describes the only supported reordering and the
     two reparented edges. Unknown compaction formats fail closed.
     """
-    if copied[:len(source)] == source or _normalized(copied[:len(source)]) == _normalized(source):
+    if copied[: len(source)] == source or _normalized(copied[: len(source)]) == _normalized(source):
         return len(source)
     kept = _without_retries(source)
     length = _prefix_holding(copied, len(kept))
     if length is not None and _normalized(_without_retries(copied[:length])) == _normalized(kept):
         return length
-    boundaries = [i for i, row in enumerate(source)
-                  if row.get('type') == 'system' and row.get('subtype') == 'compact_boundary']
+    boundaries = [
+        i
+        for i, row in enumerate(source)
+        if row.get('type') == 'system' and row.get('subtype') == 'compact_boundary'
+    ]
     if not boundaries:
         raise ValueError('Native fork history does not match the source session')
     boundary = boundaries[-1]
@@ -134,31 +152,39 @@ def copied_history_length(source, copied):
         raise ValueError('Unsupported compaction metadata')
     ids = preserved.get('uuids')
     anchor = preserved.get('anchorUuid')
-    if (not isinstance(ids, list) or not ids or any(not isinstance(i, str) for i in ids)
-            or len(set(ids)) != len(ids) or preserved.get('allUuids') != ids
-            or segment.get('headUuid') != ids[0] or segment.get('tailUuid') != ids[-1]
-            or segment.get('anchorUuid') != anchor):
+    if (
+        not isinstance(ids, list)
+        or not ids
+        or any(not isinstance(i, str) for i in ids)
+        or len(set(ids)) != len(ids)
+        or preserved.get('allUuids') != ids
+        or segment.get('headUuid') != ids[0]
+        or segment.get('tailUuid') != ids[-1]
+        or segment.get('anchorUuid') != anchor
+    ):
         raise ValueError('Invalid preserved compaction segment')
     # The preserved rows are the ones just before the boundary. The metadata lists them in
     # the order the copy carries them, which can differ from file order: a split assistant
     # message's tool calls come before their results.
-    before = source[boundary-len(ids):boundary] if boundary >= len(ids) else []
+    before = source[boundary - len(ids) : boundary] if boundary >= len(ids) else []
     if sorted(row['uuid'] for row in before) != sorted(ids):
         raise ValueError('Preserved segment is not contiguous before compaction')
     rows = {row['uuid']: row for row in before}
-    anchors = [i for i in range(boundary+1, len(source)) if source[i]['uuid'] == anchor]
+    anchors = [i for i in range(boundary + 1, len(source)) if source[i]['uuid'] == anchor]
     if len(anchors) != 1 or source[anchors[0]].get('isCompactSummary') is not True:
         raise ValueError('Compaction summary anchor is missing or ambiguous')
     anchor_index = anchors[0]
     if anchor_index + 1 >= len(source):
         raise ValueError('Compaction has no post-summary history')
-    expected = _without_retries(source[boundary:anchor_index+1] + [rows[u] for u in ids] + source[anchor_index+1:])
+    expected = _without_retries(
+        source[boundary : anchor_index + 1] + [rows[u] for u in ids] + source[anchor_index + 1 :]
+    )
     length = _prefix_holding(copied, len(expected))
     if length is None:
         raise ValueError('Compacted native fork history does not match the source session')
     actual = _without_retries(copied[:length])
     insertion = next(i for i, row in enumerate(expected) if row['uuid'] == anchor) + 1
-    relinked = range(insertion, insertion+len(ids)+1)  # the preserved rows and the first row after them
+    relinked = range(insertion, insertion + len(ids) + 1)  # the preserved rows and the first row after them
     # Reparented edges: the segment hangs from the summary, each preserved row from an earlier
     # one of the segment (or the summary), and the history after it from the segment's tail.
     seen = {anchor}
@@ -171,7 +197,8 @@ def copied_history_length(source, copied):
         raise ValueError('Compacted native fork does not continue from the preserved tail')
     expected, actual = _normalized(expected, ids), _normalized(actual, ids)
     for index in relinked:
-        expected[index].pop('parentUuid', None); actual[index].pop('parentUuid', None)
+        expected[index].pop('parentUuid', None)
+        actual[index].pop('parentUuid', None)
     if actual != expected:
         raise ValueError('Compacted native fork history does not match the source session')
     return length
@@ -191,14 +218,19 @@ def fork_provenance(parent, child, config_dir, at=None):
     source = current if at is None else at
     if not source:
         raise ValueError('Source session has no recorded history')
-    if current[:len(source)] != source:
+    if current[: len(source)] != source:
         raise ForkDiverged('Source session no longer begins with the fork point')
     copied_length = copied_history_length(source, copy)
     if at is not None and {row['uuid'] for row in copy[copied_length:]} & {row['uuid'] for row in current}:
         raise ForkDiverged('Native fork copied source history beyond the fork point')
     digest = hashlib.sha256(json.dumps(source, sort_keys=True).encode()).hexdigest()
-    return {'source_thread_id': parent, 'source_ordinal': len(source),
-            'source_sha256': digest, 'source_last_uuid': source[-1]['uuid'], 'harness': 'claude'}
+    return {
+        'source_thread_id': parent,
+        'source_ordinal': len(source),
+        'source_sha256': digest,
+        'source_last_uuid': source[-1]['uuid'],
+        'harness': 'claude',
+    }
 
 
 def first_input(rows):
@@ -213,12 +245,17 @@ def first_input(rows):
         message = row.get('message')
         if row.get('type') != 'user' or row.get('isMeta') or not isinstance(message, dict):
             continue
-        if (row.get('origin') or {}).get('kind') == 'task-notification' and row.get('promptSource') == 'system':
+        if (row.get('origin') or {}).get('kind') == 'task-notification' and row.get(
+            'promptSource'
+        ) == 'system':
             continue
         content = message.get('content')
         if isinstance(content, str):
             return content
-        if isinstance(content, list) and content and all(
-                isinstance(item, dict) and item.get('type') == 'text' for item in content):
+        if (
+            isinstance(content, list)
+            and content
+            and all(isinstance(item, dict) and item.get('type') == 'text' for item in content)
+        ):
             return ''.join(item.get('text', '') for item in content)
     return None

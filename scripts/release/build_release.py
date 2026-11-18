@@ -13,6 +13,7 @@ run again on its own output.
 
 See docs/benchmark/physics.md for the values and where they come from.
 """
+
 import argparse
 import hashlib
 import json
@@ -27,7 +28,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-BENCHMARK = ROOT/'benchmark'
+BENCHMARK = ROOT / 'benchmark'
 TASK_TYPES = ('transport', 'mosaic', 'relay', 'dial')
 
 # Solver options every scene carries (docs/benchmark/physics.md). The rest of <option> stays as built:
@@ -39,10 +40,10 @@ SOLREF = '0.004 1'
 SOLIMP = '0.95 0.99 0.001 0.5 2'
 # Sliding friction: rubber finger pads 0.8, every other surface 0.4. Torsional and rolling
 # friction stay at their small values; round loose parts roll a little and stop.
-FINGER_FRICTION = (.8, .005, .0001)
-SURFACE_FRICTION = (.4, .005, .0001)
-DIAL_MODULE_ROLLING = .03       # a module disk leans on its rim and needs this to stop
-ROUND_ROLLING_PER_RADIUS = .1   # loose cylinders and spheres
+FINGER_FRICTION = (0.8, 0.005, 0.0001)
+SURFACE_FRICTION = (0.4, 0.005, 0.0001)
+DIAL_MODULE_ROLLING = 0.03  # a module disk leans on its rim and needs this to stop
+ROUND_ROLLING_PER_RADIUS = 0.1  # loose cylinders and spheres
 
 # The hand's tendon actuator passes half its force to each finger; a grasp may press each
 # finger with up to 140 N (sim/franka_limits.py), so the actuator reaches 280 N.
@@ -53,16 +54,21 @@ ROBOT_JOINT = re.compile(r'[A-Z]_(joint[1-7]|finger_joint[12])')
 
 
 def cases():
-    return [path.parent for task_type in TASK_TYPES for path in sorted((BENCHMARK/task_type).glob('*/scene.xml'))]
+    return [
+        path.parent
+        for task_type in TASK_TYPES
+        for path in sorted((BENCHMARK / task_type).glob('*/scene.xml'))
+    ]
 
 
 def compile_scene(folder, xml=None):
     """The scene as MuJoCo compiles it, with asset paths resolved against its folder."""
-    root = ET.fromstring(xml) if xml is not None else ET.parse(folder/'scene.xml').getroot()
+    root = ET.fromstring(xml) if xml is not None else ET.parse(folder / 'scene.xml').getroot()
     compiler = root.find('compiler')
-    compiler.set('meshdir', str((folder/compiler.get('meshdir', '')).resolve()))
+    compiler.set('meshdir', str((folder / compiler.get('meshdir', '')).resolve()))
     for texture in root.findall('asset/texture'):
-        if texture.get('file'): texture.set('file', str(folder/texture.get('file')))
+        if texture.get('file'):
+            texture.set('file', str(folder / texture.get('file')))
     return mujoco.MjModel.from_xml_string(ET.tostring(root, encoding='unicode'))
 
 
@@ -71,10 +77,14 @@ def geom_elements(root):
     geoms with bodies in depth-first order, which is how MuJoCo numbers them."""
     world = root.find('worldbody')
     ordered = list(world.findall('geom'))
+
     def visit(body):
         ordered.extend(body.findall('geom'))
-        for child in body.findall('body'): visit(child)
-    for body in world.findall('body'): visit(body)
+        for child in body.findall('body'):
+            visit(child)
+
+    for body in world.findall('body'):
+        visit(body)
     return ordered
 
 
@@ -84,19 +94,32 @@ def contact_parameters(model):
     for j in range(model.njnt):
         if ROBOT_JOINT.fullmatch(model.joint(j).name or ''):
             b = int(model.jnt_bodyid[j])
-            while b: robot.add(b); b = int(model.body_parentid[b])
-    free = {int(model.jnt_bodyid[j]) for j in range(model.njnt) if int(model.jnt_type[j]) == int(mujoco.mjtJoint.mjJNT_FREE)}
+            while b:
+                robot.add(b)
+                b = int(model.body_parentid[b])
+    free = {
+        int(model.jnt_bodyid[j])
+        for j in range(model.njnt)
+        if int(model.jnt_type[j]) == int(mujoco.mjtJoint.mjJNT_FREE)
+    }
     round_types = (int(mujoco.mjtGeom.mjGEOM_CYLINDER), int(mujoco.mjtGeom.mjGEOM_SPHERE))
     result = {}
     for g in range(model.ngeom):
-        if not model.geom_contype[g] | model.geom_conaffinity[g]: continue
-        body = int(model.geom_bodyid[g]); static = True; on_robot = False
+        if not model.geom_contype[g] | model.geom_conaffinity[g]:
+            continue
+        body = int(model.geom_bodyid[g])
+        static = True
+        on_robot = False
         b = body
         while b:
-            if b in robot: on_robot = True
-            if model.body_jntnum[b]: static = False
+            if b in robot:
+                on_robot = True
+            if model.body_jntnum[b]:
+                static = False
             b = int(model.body_parentid[b])
-        condim = int(model.geom_condim[g]); friction = SURFACE_FRICTION; priority = 0
+        condim = int(model.geom_condim[g])
+        friction = SURFACE_FRICTION
+        priority = 0
         if on_robot and 'finger' in (model.body(body).name or ''):
             friction, condim, priority = FINGER_FRICTION, 4, 1
         elif on_robot:
@@ -106,7 +129,10 @@ def contact_parameters(model):
         elif static:
             condim = max(condim, 4)
         elif body in free and int(model.geom_type[g]) in round_types:
-            friction, condim = (*SURFACE_FRICTION[:2], ROUND_ROLLING_PER_RADIUS*float(model.geom_size[g, 0])), 6
+            friction, condim = (
+                (*SURFACE_FRICTION[:2], ROUND_ROLLING_PER_RADIUS * float(model.geom_size[g, 0])),
+                6,
+            )
         else:
             condim = 4
         result[g] = (friction, condim, priority)
@@ -127,54 +153,76 @@ def apply_release_physics(root, model, label='scene'):
         if element.get('name', '') != (model.geom(g).name or ''):
             raise ValueError(f'{label}: geom {g} order differs from the XML')
     option = root.find('option')
-    for key, value in OPTION.items(): option.set(key, value)
+    for key, value in OPTION.items():
+        option.set(key, value)
     for g, (friction, condim, priority) in contact_parameters(model).items():
         element = elements[g]
         element.set('friction', ' '.join(number(v) for v in friction))
         element.set('condim', str(condim))
-        element.set('solref', SOLREF); element.set('solimp', SOLIMP)
-        if priority: element.set('priority', str(priority))
-        elif 'priority' in element.attrib: del element.attrib['priority']
+        element.set('solref', SOLREF)
+        element.set('solimp', SOLIMP)
+        if priority:
+            element.set('priority', str(priority))
+        elif 'priority' in element.attrib:
+            del element.attrib['priority']
     for actuator in root.find('actuator'):
-        if HAND_ACTUATOR.fullmatch(actuator.get('name', '')): actuator.set('forcerange', HAND_FORCE_RANGE)
+        if HAND_ACTUATOR.fullmatch(actuator.get('name', '')):
+            actuator.set('forcerange', HAND_FORCE_RANGE)
     return root
 
 
 def bake_physics(folder):
     """scene.xml with the release's solver options and contact parameters written in."""
-    root = ET.fromstring((folder/'scene.xml').read_text())
+    root = ET.fromstring((folder / 'scene.xml').read_text())
     apply_release_physics(root, compile_scene(folder), folder.name)
     ET.indent(root, '  ')
-    return ET.tostring(root, encoding='unicode')+'\n'
+    return ET.tostring(root, encoding='unicode') + '\n'
 
 
 def expected_contacts(model):
     """The release contact values applied to a compiled model in memory."""
     params = contact_parameters(model)
-    friction = model.geom_friction.copy(); condim = model.geom_condim.copy(); priority = model.geom_priority.copy()
-    solref = model.geom_solref.copy(); solimp = model.geom_solimp.copy()
+    friction = model.geom_friction.copy()
+    condim = model.geom_condim.copy()
+    priority = model.geom_priority.copy()
+    solref = model.geom_solref.copy()
+    solimp = model.geom_solimp.copy()
     for g, (f, c, p) in params.items():
-        friction[g] = f; condim[g] = c; priority[g] = p
-        solref[g] = [float(v) for v in SOLREF.split()]; solimp[g] = [float(v) for v in SOLIMP.split()]
-    return dict(geom_friction=friction, geom_condim=condim, geom_priority=priority, geom_solref=solref, geom_solimp=solimp)
+        friction[g] = f
+        condim[g] = c
+        priority[g] = p
+        solref[g] = [float(v) for v in SOLREF.split()]
+        solimp[g] = [float(v) for v in SOLIMP.split()]
+    return dict(
+        geom_friction=friction,
+        geom_condim=condim,
+        geom_priority=priority,
+        geom_solref=solref,
+        geom_solimp=solimp,
+    )
 
 
 def check_physics(folder):
     """Problems with a scene's baked physics; empty when it carries the release values."""
     model = compile_scene(folder)
     problems = []
-    if model.opt.cone != mujoco.mjtCone.mjCONE_ELLIPTIC: problems.append('cone')
-    if model.opt.impratio != 1. or model.opt.noslip_iterations != 10 or model.opt.noslip_tolerance != 1e-9:
+    if model.opt.cone != mujoco.mjtCone.mjCONE_ELLIPTIC:
+        problems.append('cone')
+    if model.opt.impratio != 1.0 or model.opt.noslip_iterations != 10 or model.opt.noslip_tolerance != 1e-9:
         problems.append('solver options')
     hands = [a for a in range(model.nu) if HAND_ACTUATOR.fullmatch(model.actuator(a).name or '')]
-    if not hands or any(list(model.actuator_forcerange[a]) != [-280., 280.] for a in hands): problems.append('hand actuator force')
+    if not hands or any(list(model.actuator_forcerange[a]) != [-280.0, 280.0] for a in hands):
+        problems.append('hand actuator force')
     for name, values in expected_contacts(model).items():
-        if not np.array_equal(getattr(model, name), values): problems.append(name)
+        if not np.array_equal(getattr(model, name), values):
+            problems.append(name)
     return problems
 
 
 def write_if_changed(path, text):
-    if path.read_text() != text: path.write_text(text); return True
+    if path.read_text() != text:
+        path.write_text(text)
+        return True
     return False
 
 
@@ -190,38 +238,60 @@ def replace_hashes(folder, replaced):
     while replaced:
         changes = {}
         for path in files:
-            text = path.read_text(); new = text
-            for old, value in replaced.items(): new = new.replace(old, value)
+            text = path.read_text()
+            new = text
+            for old, value in replaced.items():
+                new = new.replace(old, value)
             if new != text:
-                before = file_sha256(path); path.write_text(new); changes[before] = file_sha256(path)
+                before = file_sha256(path)
+                path.write_text(new)
+                changes[before] = file_sha256(path)
         replaced = changes
 
 
 def index_release():
     """Record each released case's current file hashes in its release.json policy entry."""
-    path = BENCHMARK/'release.json'
+    path = BENCHMARK / 'release.json'
     release = json.loads(path.read_text())
     for task_type in release['families'].values():
         for case in task_type['policy']:
-            folder = ROOT/case['directory']
-            case['source_files'] = {name: file_sha256(folder/name) for name in case['source_files']}
+            folder = ROOT / case['directory']
+            case['source_files'] = {name: file_sha256(folder / name) for name in case['source_files']}
             projection = case.get('public_projection')
-            if projection: projection['sha256'] = file_sha256(ROOT/projection['path'])
-            for entry in case.get('public_files', {}).values(): entry['sha256'] = file_sha256(ROOT/entry['path'])
+            if projection:
+                projection['sha256'] = file_sha256(ROOT / projection['path'])
+            for entry in case.get('public_files', {}).values():
+                entry['sha256'] = file_sha256(ROOT / entry['path'])
     # The release's identity: every case file, public file and catalog by hash, and the
     # private codes. Recorded with a date when the release is frozen (docs/benchmark/physics.md).
-    content = {'cases': {case['id']: {**case['source_files'], 'public/task.json': case['public_projection']['sha256'],
-                                      **{'public/'+n: e['sha256'] for n, e in case.get('public_files', {}).items()}}
-                         for task_type in release['families'].values() for case in task_type['policy']},
-               'catalogs': {name: file_sha256(ROOT/task_type['catalog']['path']) for name, task_type in release['families'].items()},
-               'private': release.get('private', {})}
-    release_id = hashlib.sha256(json.dumps(content, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
+    content = {
+        'cases': {
+            case['id']: {
+                **case['source_files'],
+                'public/task.json': case['public_projection']['sha256'],
+                **{'public/' + n: e['sha256'] for n, e in case.get('public_files', {}).items()},
+            }
+            for task_type in release['families'].values()
+            for case in task_type['policy']
+        },
+        'catalogs': {
+            name: file_sha256(ROOT / task_type['catalog']['path'])
+            for name, task_type in release['families'].items()
+        },
+        'private': release.get('private', {}),
+    }
+    release_id = hashlib.sha256(
+        json.dumps(content, sort_keys=True, separators=(',', ':')).encode()
+    ).hexdigest()[:16]
     if release.get('frozen') and release_id != release['frozen']['release_id']:
-        raise ValueError('The release is frozen (%s); its files may not change' % release['frozen']['release_id'])
+        raise ValueError(
+            'The release is frozen (%s); its files may not change' % release['frozen']['release_id']
+        )
     release['release_id'] = release_id
     release.setdefault('frozen', None)
-    path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
+    path.write_text(json.dumps(release, indent=2, ensure_ascii=False) + '\n')
     from scripts.site import site_data
+
     site_data.tasks()  # the project page's task index records the release hash
 
 
@@ -229,12 +299,13 @@ def physics(args):
     require_unfrozen()
     changed = 0
     for folder in cases():
-        before = file_sha256(folder/'scene.xml')
-        if write_if_changed(folder/'scene.xml', bake_physics(folder)):
+        before = file_sha256(folder / 'scene.xml')
+        if write_if_changed(folder / 'scene.xml', bake_physics(folder)):
             changed += 1
-            replace_hashes(folder, {before: file_sha256(folder/'scene.xml')})
+            replace_hashes(folder, {before: file_sha256(folder / 'scene.xml')})
         problems = check_physics(folder)
-        if problems: raise SystemExit(f'{folder.name}: {problems}')
+        if problems:
+            raise SystemExit(f'{folder.name}: {problems}')
     index_release()
     pin_asset_release()
     print(f'{changed} of {len(cases())} scenes rewritten')
@@ -245,37 +316,67 @@ def pin_asset_release():
     are unchanged: a step that changes an asset (letters) needs a new archive
     (roboteam.launch.results.assets assets), published and pinned in benchmark/assets.json;
     restore_assets refuses an archive whose files differ from the release's hashes."""
-    path = ROOT/'benchmark/assets.json'
-    config = json.loads(path.read_text()); config['release_sha256'] = file_sha256(BENCHMARK/'release.json')
-    path.write_text(json.dumps(config, indent=2)+'\n')
+    path = ROOT / 'benchmark/assets.json'
+    config = json.loads(path.read_text())
+    config['release_sha256'] = file_sha256(BENCHMARK / 'release.json')
+    path.write_text(json.dumps(config, indent=2) + '\n')
 
 
-SETTLE_S = 40.          # longer than Relay's 30 s weight settle
-REST_SPEED = 1e-4       # m/s or rad/s: every free and hinged part of the scene below this
+SETTLE_S = 40.0  # longer than Relay's 30 s weight settle
+REST_SPEED = 1e-4  # m/s or rad/s: every free and hinged part of the scene below this
 
 
 def settle_case(folder):
     """Run the scene with its arms holding still until nothing else moves, and return the
     resting coordinates of every joint that is not a robot's, with the largest change."""
     import tempfile
-    from roboteam.tasks.task_types import prepare
+
     from roboteam.runtime.world.pipeline import World
-    task_id = json.loads((folder/'task.json').read_text())['id']
+    from roboteam.tasks.task_types import prepare
+
+    task_id = json.loads((folder / 'task.json').read_text())['id']
     with tempfile.TemporaryDirectory(prefix='rf-settle-') as temporary:
-        run = Path(temporary)/'run'; prepare(task_id, run)
-        world = World(run, json.loads((run/'private/inputs/task.json').read_text()))
+        run = Path(temporary) / 'run'
+        prepare(task_id, run)
+        world = World(run, json.loads((run / 'private/inputs/task.json').read_text()))
         model, data = world.model, world.data
-        world.physics_profile = None; model.opt.enableflags &= ~int(mujoco.mjtEnableBit.mjENBL_SLEEP)
+        world.physics_profile = None
+        model.opt.enableflags &= ~int(mujoco.mjtEnableBit.mjENBL_SLEEP)
         scene = [j for j in range(model.njnt) if not ROBOT_JOINT.fullmatch(model.joint(j).name or '')]
-        qpos = [a for j in scene for a in range(model.jnt_qposadr[j], model.jnt_qposadr[j]+{0: 7, 1: 4}.get(int(model.jnt_type[j]), 1))]
-        dofs = [a for j in scene for a in range(model.jnt_dofadr[j], model.jnt_dofadr[j]+{0: 6, 1: 3}.get(int(model.jnt_type[j]), 1))]
-        start = data.qpos[qpos].copy(); still = 0
-        for _ in range(int(SETTLE_S/.02)):
+        qpos = [
+            a
+            for j in scene
+            for a in range(
+                model.jnt_qposadr[j], model.jnt_qposadr[j] + {0: 7, 1: 4}.get(int(model.jnt_type[j]), 1)
+            )
+        ]
+        dofs = [
+            a
+            for j in scene
+            for a in range(
+                model.jnt_dofadr[j], model.jnt_dofadr[j] + {0: 6, 1: 3}.get(int(model.jnt_type[j]), 1)
+            )
+        ]
+        start = data.qpos[qpos].copy()
+        still = 0
+        for _ in range(int(SETTLE_S / 0.02)):
             world.step()
-            still = still+1 if np.max(np.abs(data.qvel[dofs]), initial=0.) < REST_SPEED else 0
-            if still >= 50 and data.time > 5.: break
+            still = still + 1 if np.max(np.abs(data.qvel[dofs]), initial=0.0) < REST_SPEED else 0
+            if still >= 50 and data.time > 5.0:
+                break
         free = [j for j in scene if int(model.jnt_type[j]) == 0]
-        moved = max([float(np.linalg.norm(data.qpos[model.jnt_qposadr[j]:model.jnt_qposadr[j]+3]-start[qpos.index(model.jnt_qposadr[j]):qpos.index(model.jnt_qposadr[j])+3])) for j in free] or [0.])
+        moved = max(
+            [
+                float(
+                    np.linalg.norm(
+                        data.qpos[model.jnt_qposadr[j] : model.jnt_qposadr[j] + 3]
+                        - start[qpos.index(model.jnt_qposadr[j]) : qpos.index(model.jnt_qposadr[j]) + 3]
+                    )
+                )
+                for j in free
+            ]
+            or [0.0]
+        )
         return dict(zip(qpos, data.qpos[qpos].tolist())), moved, float(data.time), still >= 50
 
 
@@ -285,18 +386,28 @@ def settle(args):
     require_unfrozen()
     changed = 0
     for folder in cases():
-        if args.cases and folder.name not in args.cases: continue
+        if args.cases and folder.name not in args.cases:
+            continue
         rest, moved, seconds, settled = settle_case(folder)
-        if not settled: raise SystemExit(f'{folder.name}: still moving after {seconds:.0f} s')
-        if moved < 1e-5: continue
-        text = (folder/'scene.xml').read_text(); root = ET.fromstring(text)
-        key = root.find("keyframe/key[@name='initial']"); values = key.get('qpos').split()
-        for address, value in rest.items(): values[address] = repr(float(value))
-        before = file_sha256(folder/'scene.xml'); key.set('qpos', ' '.join(values))
-        ET.indent(root, '  '); (folder/'scene.xml').write_text(ET.tostring(root, encoding='unicode')+'\n')
-        replace_hashes(folder, {before: file_sha256(folder/'scene.xml')}); changed += 1
-        print(f'{folder.name}: moved {moved*1000:.3f} mm before rest ({seconds:.1f} s)', flush=True)
-    index_release(); pin_asset_release()
+        if not settled:
+            raise SystemExit(f'{folder.name}: still moving after {seconds:.0f} s')
+        if moved < 1e-5:
+            continue
+        text = (folder / 'scene.xml').read_text()
+        root = ET.fromstring(text)
+        key = root.find("keyframe/key[@name='initial']")
+        values = key.get('qpos').split()
+        for address, value in rest.items():
+            values[address] = repr(float(value))
+        before = file_sha256(folder / 'scene.xml')
+        key.set('qpos', ' '.join(values))
+        ET.indent(root, '  ')
+        (folder / 'scene.xml').write_text(ET.tostring(root, encoding='unicode') + '\n')
+        replace_hashes(folder, {before: file_sha256(folder / 'scene.xml')})
+        changed += 1
+        print(f'{folder.name}: moved {moved * 1000:.3f} mm before rest ({seconds:.1f} s)', flush=True)
+    index_release()
+    pin_asset_release()
     print(f'{changed} scenes now start at rest')
 
 
@@ -309,24 +420,36 @@ def letters(args):
     require_unfrozen()
     changed = 0
     for folder in cases():
-        text = (folder/'scene.xml').read_text(); root = ET.fromstring(text); model = compile_scene(folder)
+        text = (folder / 'scene.xml').read_text()
+        root = ET.fromstring(text)
+        model = compile_scene(folder)
         elements = {e.get('name'): e for e in geom_elements(root) if e.get('name')}
         turned = 0
         for g in range(model.ngeom):
             name = model.geom(g).name or ''
-            if not ITEM_PRINT.fullmatch(name): continue
-            matrix = np.zeros(9); mujoco.mju_quat2Mat(matrix, model.geom_quat[g]); matrix = matrix.reshape(3, 3)
-            if abs(matrix[2, 2]) < .5 and matrix[2, 1] < -.5:
-                quat = np.zeros(4); mujoco.mju_mulQuat(quat, model.geom_quat[g], np.array([0., 0., 0., 1.]))
+            if not ITEM_PRINT.fullmatch(name):
+                continue
+            matrix = np.zeros(9)
+            mujoco.mju_quat2Mat(matrix, model.geom_quat[g])
+            matrix = matrix.reshape(3, 3)
+            if abs(matrix[2, 2]) < 0.5 and matrix[2, 1] < -0.5:
+                quat = np.zeros(4)
+                mujoco.mju_mulQuat(quat, model.geom_quat[g], np.array([0.0, 0.0, 0.0, 1.0]))
                 element = elements[name]
-                for key in ('euler', 'axisangle', 'xyaxes', 'zaxis'): element.attrib.pop(key, None)
-                element.set('quat', ' '.join(number(v) for v in quat)); turned += 1
-        if not turned: continue
-        before = file_sha256(folder/'scene.xml')
-        ET.indent(root, '  '); (folder/'scene.xml').write_text(ET.tostring(root, encoding='unicode')+'\n')
-        replace_hashes(folder, {before: file_sha256(folder/'scene.xml')}); changed += 1
+                for key in ('euler', 'axisangle', 'xyaxes', 'zaxis'):
+                    element.attrib.pop(key, None)
+                element.set('quat', ' '.join(number(v) for v in quat))
+                turned += 1
+        if not turned:
+            continue
+        before = file_sha256(folder / 'scene.xml')
+        ET.indent(root, '  ')
+        (folder / 'scene.xml').write_text(ET.tostring(root, encoding='unicode') + '\n')
+        replace_hashes(folder, {before: file_sha256(folder / 'scene.xml')})
+        changed += 1
         print(f'{folder.name}: {turned} letters turned upright', flush=True)
-    index_release(); pin_asset_release()
+    index_release()
+    pin_asset_release()
     print(f'{changed} scenes changed')
 
 
@@ -337,16 +460,23 @@ def codes(args):
     codes are kept, so running this again changes nothing."""
     require_unfrozen()
     import secrets
+
     from roboteam.tasks.dial import alphabet
-    path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
-    private = release.setdefault('private', {'scope': 'Evaluator-only values. Never copied into a run\'s public files.'})
+
+    path = BENCHMARK / 'release.json'
+    release = json.loads(path.read_text())
+    private = release.setdefault(
+        'private', {'scope': 'Evaluator-only values. Never copied into a run\'s public files.'}
+    )
     stored = private.setdefault('dial_codes', {})
     for case in release['families']['dial']['policy']:
-        if case['id'] in stored: continue
-        task = json.loads((ROOT/case['directory']/'task.json').read_text())
+        if case['id'] in stored:
+            continue
+        task = json.loads((ROOT / case['directory'] / 'task.json').read_text())
         stored[case['id']] = [secrets.choice(alphabet(task)) for _ in task['dials']]
-    path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
-    index_release(); pin_asset_release()
+    path.write_text(json.dumps(release, indent=2, ensure_ascii=False) + '\n')
+    index_release()
+    pin_asset_release()
     print(f'{len(stored)} Dial codes')
 
 
@@ -362,10 +492,17 @@ def camera_mounts(model, names):
     for name in names:
         c = model.camera(name).id
         if int(model.cam_bodyid[c]) or int(model.cam_mode[c]) != int(mujoco.mjtCamLight.mjCAMLIGHT_FIXED):
-            raise ValueError('Camera is not fixed in the world: '+name)
-        mounts.append({'id': name, 'frame': 'world', 'position_m': model.cam_pos[c].tolist(),
-                       'quaternion_wxyz': model.cam_quat[c].tolist(),
-                       'vertical_fov_deg': float(model.cam_fovy[c]), 'fixed_world': True})
+            raise ValueError('Camera is not fixed in the world: ' + name)
+        mounts.append(
+            {
+                'id': name,
+                'frame': 'world',
+                'position_m': model.cam_pos[c].tolist(),
+                'quaternion_wxyz': model.cam_quat[c].tolist(),
+                'vertical_fov_deg': float(model.cam_fovy[c]),
+                'fixed_world': True,
+            }
+        )
     return mounts
 
 
@@ -374,8 +511,10 @@ def with_camera_mounts(public, mounts):
     task materials."""
     result = {}
     for key, value in public.items():
-        if key == 'static_camera_mounts': continue
-        if key == 'family_materials': result['static_camera_mounts'] = mounts
+        if key == 'static_camera_mounts':
+            continue
+        if key == 'family_materials':
+            result['static_camera_mounts'] = mounts
         result[key] = value
     result.setdefault('static_camera_mounts', mounts)
     return result
@@ -391,42 +530,70 @@ def public(args):
     A Relay public task also gets its cameras' mounts, read from the compiled scene; the
     other task types' public tasks already carry their camera calibration."""
     require_unfrozen()
-    import shutil, tempfile
+    import shutil
+    import tempfile
+
     from roboteam.tasks.task_types import prepare
-    path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
+
+    path = BENCHMARK / 'release.json'
+    release = json.loads(path.read_text())
     for task_type_name, task_type in release['families'].items():
         for case in task_type['policy']:
-            folder = ROOT/case['directory']; target = folder/'public'
+            folder = ROOT / case['directory']
+            target = folder / 'public'
             with tempfile.TemporaryDirectory(prefix='rf-public-') as temporary:
-                run = Path(temporary)/'run'; prepare(case['id'], run)
-                received = json.loads((run/'public/inputs/task.json').read_text())
-                materials = {p.name: p for p in sorted((run/'public/inputs/family').iterdir()) if p.name != 'skill.md'}
-                staged = Path(temporary)/'public'; staged.mkdir()
+                run = Path(temporary) / 'run'
+                prepare(case['id'], run)
+                received = json.loads((run / 'public/inputs/task.json').read_text())
+                materials = {
+                    p.name: p
+                    for p in sorted((run / 'public/inputs/family').iterdir())
+                    if p.name != 'skill.md'
+                }
+                staged = Path(temporary) / 'public'
+                staged.mkdir()
                 # A run may adapt a material to itself (a Dial camera calibration to its image
                 # size), so each listed material comes from its released file, not the run's copy.
                 released = case.get('public_files', {})
                 for name, source in materials.items():
-                    shutil.copyfile(ROOT/released[name]['path'] if name in released else source, staged/name)
-                if target.exists(): shutil.rmtree(target)
+                    shutil.copyfile(
+                        ROOT / released[name]['path'] if name in released else source, staged / name
+                    )
+                if target.exists():
+                    shutil.rmtree(target)
                 shutil.copytree(staged, target)
-            for name in RUN_ONLY: received.pop(name, None)
+            for name in RUN_ONLY:
+                received.pop(name, None)
             from roboteam.tasks.public import clean
+
             received = clean(received)
             if task_type_name == 'relay':
-                received = with_camera_mounts(received, camera_mounts(compile_scene(folder), received['cameras']))
-            (target/'task.json').write_text(json.dumps(received, indent=2, ensure_ascii=False)+'\n')
+                received = with_camera_mounts(
+                    received, camera_mounts(compile_scene(folder), received['cameras'])
+                )
+            (target / 'task.json').write_text(json.dumps(received, indent=2, ensure_ascii=False) + '\n')
             for stale in ('public-task.json',):
-                if (folder/stale).exists(): (folder/stale).unlink()
-            case['public_projection'] = {'path': str((target/'task.json').relative_to(ROOT)), 'sha256': file_sha256(target/'task.json')}
-            case['public_files'] = {name: {'path': str((target/name).relative_to(ROOT)), 'sha256': file_sha256(target/name)} for name in sorted(materials)}
+                if (folder / stale).exists():
+                    (folder / stale).unlink()
+            case['public_projection'] = {
+                'path': str((target / 'task.json').relative_to(ROOT)),
+                'sha256': file_sha256(target / 'task.json'),
+            }
+            case['public_files'] = {
+                name: {'path': str((target / name).relative_to(ROOT)), 'sha256': file_sha256(target / name)}
+                for name in sorted(materials)
+            }
             print(f"{case['id']}: {len(materials)} materials", flush=True)
-    path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
-    index_release(); pin_asset_release()
+    path.write_text(json.dumps(release, indent=2, ensure_ascii=False) + '\n')
+    index_release()
+    pin_asset_release()
 
 
 def require_unfrozen():
-    if json.loads((BENCHMARK/'release.json').read_text()).get('frozen'):
-        raise SystemExit('The release is frozen; physics, scenes and task files no longer change (docs/benchmark/physics.md)')
+    if json.loads((BENCHMARK / 'release.json').read_text()).get('frozen'):
+        raise SystemExit(
+            'The release is frozen; physics, scenes and task files no longer change (docs/benchmark/physics.md)'
+        )
 
 
 def freeze(args):
@@ -436,16 +603,23 @@ def freeze(args):
     validation = Path(args.validation)
     report = json.loads(validation.read_text())
     if not report.get('passed'):
-        raise SystemExit('Freeze only after a passing physics validation (scripts/release/validate_physics.py)')
+        raise SystemExit(
+            'Freeze only after a passing physics validation (scripts/release/validate_physics.py)'
+        )
     if check(args):
         raise SystemExit('A scene does not carry the release physics')
     index_release()
-    path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
-    release['frozen'] = {'release_id': release['release_id'], 'date': time.strftime('%Y-%m-%d'),
-                         'physics_validation': validation.name}
-    path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
+    path = BENCHMARK / 'release.json'
+    release = json.loads(path.read_text())
+    release['frozen'] = {
+        'release_id': release['release_id'],
+        'date': time.strftime('%Y-%m-%d'),
+        'physics_validation': validation.name,
+    }
+    path.write_text(json.dumps(release, indent=2, ensure_ascii=False) + '\n')
     pin_asset_release()
     from scripts.site import site_data
+
     site_data.tasks()  # the page's task index records the release hash, which this changed
     print(json.dumps(release['frozen']))
 
@@ -463,10 +637,15 @@ def main(argv=None):
     sub.add_parser('letters').set_defaults(run=letters)
     sub.add_parser('codes').set_defaults(run=codes)
     sub.add_parser('public').set_defaults(run=public)
-    step = sub.add_parser('settle'); step.add_argument('--cases', nargs='*'); step.set_defaults(run=settle)
+    step = sub.add_parser('settle')
+    step.add_argument('--cases', nargs='*')
+    step.set_defaults(run=settle)
     sub.add_parser('check').set_defaults(run=check)
-    frozen = sub.add_parser('freeze'); frozen.set_defaults(run=freeze)
-    frozen.add_argument('--validation', required=True, help='A passing runs/engineering/validate-physics/<time>.json')
+    frozen = sub.add_parser('freeze')
+    frozen.set_defaults(run=freeze)
+    frozen.add_argument(
+        '--validation', required=True, help='A passing runs/engineering/validate-physics/<time>.json'
+    )
     args = parser.parse_args(argv)
     return args.run(args) or 0
 

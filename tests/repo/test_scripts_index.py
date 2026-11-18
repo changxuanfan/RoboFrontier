@@ -10,12 +10,15 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class ScriptsIndexTests(unittest.TestCase):
     def tracked_scripts(self):
-        names = subprocess.run(['git', 'ls-files', 'scripts'], capture_output=True, text=True, cwd=ROOT,
-                               check=True).stdout.split()
-        return {Path(n).relative_to('scripts') for n in names if Path(n).name not in ('README.md', '__init__.py')}
+        names = subprocess.run(
+            ['git', 'ls-files', 'scripts'], capture_output=True, text=True, cwd=ROOT, check=True
+        ).stdout.split()
+        return {
+            Path(n).relative_to('scripts') for n in names if Path(n).name not in ('README.md', '__init__.py')
+        }
 
     def test_every_script_is_indexed_and_every_index_entry_exists(self):
-        index = (ROOT/'scripts/README.md').read_text()
+        index = (ROOT / 'scripts/README.md').read_text()
         listed = set(re.findall(r'\| `([A-Za-z0-9_]+\.(?:py|js|sh|sbatch))`', index))
         scripts = {path.name for path in self.tracked_scripts()}
         self.assertEqual(sorted(scripts - listed), [], 'add these scripts to scripts/README.md')
@@ -25,7 +28,11 @@ class ScriptsIndexTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             for name in sorted(n for n in self.tracked_scripts() if n.suffix == '.py'):
                 with self.subTest(script=str(name)):
-                    py_compile.compile(str(ROOT/'scripts'/name), cfile=str(Path(temporary)/(name.name+'c')), doraise=True)
+                    py_compile.compile(
+                        str(ROOT / 'scripts' / name),
+                        cfile=str(Path(temporary) / (name.name + 'c')),
+                        doraise=True,
+                    )
 
 
 if __name__ == '__main__':

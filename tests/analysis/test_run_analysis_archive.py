@@ -3,11 +3,11 @@
 import hashlib
 import io
 import json
-from pathlib import Path
 import tarfile
 import tempfile
 import unittest
 import zlib
+from pathlib import Path
 
 from roboteam.analysis.archive import Run
 

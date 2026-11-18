@@ -7,21 +7,31 @@ the original frozen runner from the original source checkout. The same trial and
 same native sessions continue; no physical call is replayed, no delegate is reforked,
 and the recovery is never repeated automatically (docs/runs/continuation.md#claude-task-recovery).
 """
+
 import argparse
 import fcntl
 import hashlib
 import json
 import os
-from pathlib import Path
 import sqlite3
 import subprocess
 import sys
 import time
+from pathlib import Path
 
+from roboteam.harness.shared.recovery import (
+    RecoveryBlocked,
+    readonly,
+    validate_physical_restore,
+)
+from roboteam.harness.shared.recovery import (
+    ledger as _ledger,
+)
+from roboteam.harness.shared.recovery import (
+    lock_free as _lock_free,
+)
 from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run import segments as run_segments
-from roboteam.harness.shared.recovery import (RecoveryBlocked, ledger as _ledger, lock_free as _lock_free, readonly,
-                                                 validate_physical_restore)
 from roboteam.runtime.run.setup import verify_inputs, write_json
 from roboteam.runtime.world.store import RuntimeStore
 
@@ -29,42 +39,55 @@ from roboteam.runtime.world.store import RuntimeStore
 # limit, STOP, budget close) and launch errors are never recovered here.
 RECOVERABLE_REASONS = ('dispatch_paused', 'session_error', 'session_unknown')
 REASON = 'manual recovery after the Claude host closed with its world paused'
-FAILED_SETUP = ('Manual recovery: native delegate setup never started; its robots returned to the parent. '
-                'No fork was repeated.')
+FAILED_SETUP = (
+    'Manual recovery: native delegate setup never started; its robots returned to the parent. '
+    'No fork was repeated.'
+)
 
 
 def _batch(run):
     folder = run.parent.parent
-    batch = json.loads((folder/'batch.json').read_text())
+    batch = json.loads((folder / 'batch.json').read_text())
     from roboteam.launch.claude_prepare import BATCH_SCHEMA
+
     if batch.get('schema') != BATCH_SCHEMA:
         raise RecoveryBlocked('Run is not part of a Claude batch')
     jobs = [i for i, job in enumerate(batch['jobs']) if Path(job['run_directory']).resolve() == run]
-    if len(jobs) != 1: raise RecoveryBlocked('Run is not uniquely listed in its batch')
+    if len(jobs) != 1:
+        raise RecoveryBlocked('Run is not uniquely listed in its batch')
     return folder, jobs[0]
 
 
 def live_sessions(threads, processes=None):
     """Native CLI processes still naming one of these sessions (a live host must not be doubled)."""
     if processes is None:
-        processes = subprocess.run(['ps', '-Ao', 'pid=,command='], capture_output=True, text=True, check=True).stdout
+        processes = subprocess.run(
+            ['ps', '-Ao', 'pid=,command='], capture_output=True, text=True, check=True
+        ).stdout
     found = []
     for line in processes.splitlines():
-        if 'claude' not in line: continue
-        if any(thread in line for thread in threads): found.append(line.split(None, 1)[0])
+        if 'claude' not in line:
+            continue
+        if any(thread in line for thread in threads):
+            found.append(line.split(None, 1)[0])
     return found
 
 
 def unstarted_reviews(store):
     """Delegations held for review whose children never started: no gate opened, no call made."""
     from roboteam.runtime.tools.delegation import Delegations
+
     batches = []
     for batch in Delegations(store).batches().values():
-        if batch['status'] != 'needs_review': continue
+        if batch['status'] != 'needs_review':
+            continue
         actors = [child['actor'] for child in batch['children']]
-        if any(child.get('start_status') != 'pending' or child.get('status') == 'active' for child in batch['children']):
+        if any(
+            child.get('start_status') != 'pending' or child.get('status') == 'active'
+            for child in batch['children']
+        ):
             raise RecoveryBlocked('A delegation under review had started a child; review it by hand')
-        marks = ','.join('?'*len(actors))
+        marks = ','.join('?' * len(actors))
         if store.db.execute(f'SELECT 1 FROM calls WHERE actor IN ({marks}) LIMIT 1', actors).fetchone():
             raise RecoveryBlocked('A delegate under review made a call; review it by hand')
         batches.append(batch)
@@ -77,21 +100,42 @@ def fail_unstarted_reviews(store):
     The same record `Delegations.fail_creating` leaves before a segment, for a batch whose
     native setup deadline passed. Its fork may exist on disk; it is kept and never resumed."""
     from roboteam.runtime.tools.delegation import Delegations
-    delegations = Delegations(store); failed = []
+
+    delegations = Delegations(store)
+    failed = []
     with store.transaction():
-        batches = unstarted_reviews(store); owners = delegations.owners()
+        batches = unstarted_reviews(store)
+        owners = delegations.owners()
         for batch in batches:
             for child in batch['children']:
-                child.update(status='finished', outcome='failed', start_status='not_started',
-                             returned_at=time.time(), reason=FAILED_SETUP)
-                for robot in child['robots']: owners[robot] = batch['parent']
-                store.update_agent(child['actor'], delegation_state='finished', work_state='available',
-                                   ready=False, next_check=None)
-            batch.update(status='finished', outcome='failed', reason=FAILED_SETUP,
-                         review_reason=batch.get('reason')); delegations.save(batch)
-            event = {'event': 'delegation_failed', 'id': batch['id'],
-                     'robots': [r for child in batch['children'] for r in child['robots']], 'reason': FAILED_SETUP}
-            store.signal(batch['parent'], event); store.event('DELEGATION_FAILED', 'Meta', event)
+                child.update(
+                    status='finished',
+                    outcome='failed',
+                    start_status='not_started',
+                    returned_at=time.time(),
+                    reason=FAILED_SETUP,
+                )
+                for robot in child['robots']:
+                    owners[robot] = batch['parent']
+                store.update_agent(
+                    child['actor'],
+                    delegation_state='finished',
+                    work_state='available',
+                    ready=False,
+                    next_check=None,
+                )
+            batch.update(
+                status='finished', outcome='failed', reason=FAILED_SETUP, review_reason=batch.get('reason')
+            )
+            delegations.save(batch)
+            event = {
+                'event': 'delegation_failed',
+                'id': batch['id'],
+                'robots': [r for child in batch['children'] for r in child['robots']],
+                'reason': FAILED_SETUP,
+            }
+            store.signal(batch['parent'], event)
+            store.event('DELEGATION_FAILED', 'Meta', event)
             failed.append(batch['id'])
         store.put('robot_owners', owners)
     return failed
@@ -101,12 +145,12 @@ def inspect(run, source, *, processes=None, own=False):
     """Read-only eligibility. `own`: the caller holds this run's recovery lock."""
     run, source = Path(run).resolve(), Path(source).resolve()
     folder, index = _batch(run)
-    previous = run/'private/state/control/recovery.json'
+    previous = run / 'private/state/control/recovery.json'
     if previous.exists():
         record = json.loads(previous.read_text())
         # An attempt that stopped at a check before changing the run may be tried again;
         # one that prepared the segment, or is still running, never is.
-        if not own and not _lock_free(previous.parent/'recovery.lock'):
+        if not own and not _lock_free(previous.parent / 'recovery.lock'):
             raise RecoveryBlocked('A recovery of this run is in progress')
         if record.get('prepared'):
             raise RecoveryBlocked('This run was already recovered once; never repeat it automatically')
@@ -121,16 +165,30 @@ def inspect(run, source, *, processes=None, own=False):
     if not _lock_free(run_layout.path(run, 'engineering_lock')):
         raise RecoveryBlocked('The original Claude runner still holds this run')
     with readonly(run) as store:
-        if store.get('integrity_valid') is not True: raise RecoveryBlocked('Run integrity is not valid')
+        if store.get('integrity_valid') is not True:
+            raise RecoveryBlocked('Run integrity is not valid')
         lifecycle, physics = store.get('lifecycle'), store.get('physics_state')
-        if not store.get('dispatch_paused'): raise RecoveryBlocked('Dispatch is not paused')
+        if not store.get('dispatch_paused'):
+            raise RecoveryBlocked('Dispatch is not paused')
         live = not run_segments.owner_released(run)
         if live and (lifecycle != 'running' or physics != 'running'):
             raise RecoveryBlocked('A live world must be running and paused')
         if not live and (lifecycle != 'interrupted' or physics != 'stopped'):
             raise RecoveryBlocked('A closed world must be sealed as interrupted')
-        unsettled = sorted({row[0] for row in store.db.execute("SELECT id FROM calls WHERE status IN ('accepted','running','uncertain')")}
-                           | {row[0] for row in store.db.execute("SELECT id FROM actions WHERE status NOT IN ('completed','failed')")})
+        unsettled = sorted(
+            {
+                row[0]
+                for row in store.db.execute(
+                    "SELECT id FROM calls WHERE status IN ('accepted','running','uncertain')"
+                )
+            }
+            | {
+                row[0]
+                for row in store.db.execute(
+                    "SELECT id FROM actions WHERE status NOT IN ('completed','failed')"
+                )
+            }
+        )
         # A live world must settle everything before it is sealed. A world that closed by itself
         # (its host was lost) leaves its unfinished actions to the next segment, which fails them
         # without replay (run_segments.prepare_retry).
@@ -140,27 +198,49 @@ def inspect(run, source, *, processes=None, own=False):
         if any(b['status'] == 'creating' for b in delegations.values()):
             raise RecoveryBlocked('A delegation is still being created')
         reviews = [b['id'] for b in unstarted_reviews(store)]
-        threads = sorted({json.loads(value)['thread_id'] for (value,) in store.db.execute('SELECT value FROM agents')
-                          if json.loads(value).get('thread_id')})
+        threads = sorted(
+            {
+                json.loads(value)['thread_id']
+                for (value,) in store.db.execute('SELECT value FROM agents')
+                if json.loads(value).get('thread_id')
+            }
+        )
         hosts = live_sessions(threads, processes)
-        if hosts: raise RecoveryBlocked('A native session of this run is still live: pid '+', '.join(hosts))
-        if store.get('start_at') is None: raise RecoveryBlocked('Run never started')
+        if hosts:
+            raise RecoveryBlocked('A native session of this run is still live: pid ' + ', '.join(hosts))
+        if store.get('start_at') is None:
+            raise RecoveryBlocked('Run never started')
         remaining = run_segments.remaining_s(run, store)
-        if remaining < run_segments.MIN_REMAINING_S: raise RecoveryBlocked('Less than a minute of trial time is left')
+        if remaining < run_segments.MIN_REMAINING_S:
+            raise RecoveryBlocked('Less than a minute of trial time is left')
         _, frame, sim_s, pose = run_segments._last_frame(run, store.get('segment', 0))
         holds = store.get('arm_holds') or {}
-        if any(not 0 <= sim_s-hold.get('sim_s', -1e9) <= run_segments.HOLD_MAX_AGE_S for hold in holds.values()):
+        if any(
+            not 0 <= sim_s - hold.get('sim_s', -1e9) <= run_segments.HOLD_MAX_AGE_S for hold in holds.values()
+        ):
             raise RecoveryBlocked('A recorded grasp is too old to restore safely')
         changed = verify_inputs(run, source_root=source)
-        if changed: raise RecoveryBlocked('Frozen inputs changed: '+', '.join(changed[:3]))
-        return {'run': str(run), 'batch': str(folder), 'job_reason': job['reason'], 'world_live': live,
-                'source': str(source),
-                'segment': store.get('segment', 0)+1, 'frame': frame, 'sim_s': sim_s,
-                'pose_sha256': hashlib.sha256(pose.tobytes()).hexdigest(), 'held_arms': sorted(holds),
-                'ledger_sha256': _ledger(store.db, unsettled), 'role_threads': threads, 'failed_setups': reviews,
-                'interrupted': [] if live else unsettled,
-                'remaining_s': remaining, 'robot_owners': store.get('robot_owners'),
-                'restore': 'Approximate: last recorded qpos, zero velocity, recent completed grasp holds'}
+        if changed:
+            raise RecoveryBlocked('Frozen inputs changed: ' + ', '.join(changed[:3]))
+        return {
+            'run': str(run),
+            'batch': str(folder),
+            'job_reason': job['reason'],
+            'world_live': live,
+            'source': str(source),
+            'segment': store.get('segment', 0) + 1,
+            'frame': frame,
+            'sim_s': sim_s,
+            'pose_sha256': hashlib.sha256(pose.tobytes()).hexdigest(),
+            'held_arms': sorted(holds),
+            'ledger_sha256': _ledger(store.db, unsettled),
+            'role_threads': threads,
+            'failed_setups': reviews,
+            'interrupted': [] if live else unsettled,
+            'remaining_s': remaining,
+            'robot_owners': store.get('robot_owners'),
+            'restore': 'Approximate: last recorded qpos, zero velocity, recent completed grasp holds',
+        }
 
 
 RUNNER = """import json, os, platform, sys
@@ -184,80 +264,147 @@ print(json.dumps(result, default=str))
 def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Popen):
     run, source, python = Path(run).resolve(), Path(source).resolve(), Path(python).absolute()
     from roboteam.runtime.sandbox.access import mode
-    scratch = Path(scratch).resolve(); info = scratch.stat()
-    access = json.loads((run/'private/inputs/policy-access.json').read_text())
-    if (not scratch.is_dir() or info.st_uid != os.getuid() or info.st_mode & 0o077
-            or mode(access['filesystem'], scratch) != 'deny'):
+
+    scratch = Path(scratch).resolve()
+    info = scratch.stat()
+    access = json.loads((run / 'private/inputs/policy-access.json').read_text())
+    if (
+        not scratch.is_dir()
+        or info.st_uid != os.getuid()
+        or info.st_mode & 0o077
+        or mode(access['filesystem'], scratch) != 'deny'
+    ):
         raise RecoveryBlocked('Recovery scratch must be private and denied by the frozen policy')
-    control = run/'private/state/control'; control.mkdir(parents=True, exist_ok=True)
-    with (control/'recovery.lock').open('a+') as lock:
+    control = run / 'private/state/control'
+    control.mkdir(parents=True, exist_ok=True)
+    with (control / 'recovery.lock').open('a+') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         plan = inspect(run, source, own=True)  # this process now holds the recovery lock
-        status_path = control/'recovery.json'
+        status_path = control / 'recovery.json'
         earlier = [json.loads(status_path.read_text())] if status_path.exists() else []
         earlier = (earlier[0].pop('earlier_attempts', []) + earlier) if earlier else []
-        record = {**plan, 'earlier_attempts': earlier, 'schema': 'roboteam.claude-task-recovery.v1', 'phase': 'sealing' if plan['world_live'] else 'validating',
-                  'pid': os.getpid(), 'at': time.time()}
+        record = {
+            **plan,
+            'earlier_attempts': earlier,
+            'schema': 'roboteam.claude-task-recovery.v1',
+            'phase': 'sealing' if plan['world_live'] else 'validating',
+            'pid': os.getpid(),
+            'at': time.time(),
+        }
         write_json(status_path, record)
         try:
-            sealed_report = run_segments.output_dir(run, plan['segment']-1)/'seal.json'
+            sealed_report = run_segments.output_dir(run, plan['segment'] - 1) / 'seal.json'
             if not plan['world_live'] and not sealed_report.exists():
                 # The world closed by itself before its seal finished: record that seal now (no
                 # world is started and nothing is replayed; run_seal.seal_run on a free lock).
-                if seal is None: from roboteam.runtime.world.seal import seal_run as seal
-                store = RuntimeStore(run/'private/state/runtime.sqlite')
-                try: record['seal'] = seal(store, 0)
-                finally: store.close()
+                if seal is None:
+                    from roboteam.runtime.world.seal import seal_run as seal
+                store = RuntimeStore(run / 'private/state/runtime.sqlite')
+                try:
+                    record['seal'] = seal(store, 0)
+                finally:
+                    store.close()
                 again = inspect(run, source, own=True)
-                if again['ledger_sha256'] != plan['ledger_sha256'] or again['interrupted'] != plan['interrupted']:
+                if (
+                    again['ledger_sha256'] != plan['ledger_sha256']
+                    or again['interrupted'] != plan['interrupted']
+                ):
                     raise RecoveryBlocked('Call ledger changed while sealing the closed world')
             if plan['world_live']:
                 # The paused world is closed by its own shutdown; never killed, never replayed.
-                if seal is None: from roboteam.runtime.world.seal import seal_run as seal
-                store = RuntimeStore(run/'private/state/runtime.sqlite')
-                try: record['seal'] = seal(store, 60)
-                finally: store.close()
-                if not run_segments.owner_released(run): raise RecoveryBlocked('The world did not release its lock')
+                if seal is None:
+                    from roboteam.runtime.world.seal import seal_run as seal
+                store = RuntimeStore(run / 'private/state/runtime.sqlite')
+                try:
+                    record['seal'] = seal(store, 60)
+                finally:
+                    store.close()
+                if not run_segments.owner_released(run):
+                    raise RecoveryBlocked('The world did not release its lock')
                 sealed = inspect(run, source, own=True)
-                if sealed['ledger_sha256'] != plan['ledger_sha256']: raise RecoveryBlocked('Call ledger changed while sealing')
+                if sealed['ledger_sha256'] != plan['ledger_sha256']:
+                    raise RecoveryBlocked('Call ledger changed while sealing')
                 plan = {**sealed, 'world_live': True}
-                record.update(plan, phase='validating', earlier_attempts=earlier); write_json(status_path, record)
+                record.update(plan, phase='validating', earlier_attempts=earlier)
+                write_json(status_path, record)
             record['physical_check'] = validate_physical_restore(run, source, python, scratch, plan)
             again = inspect(run, source, own=True)
-            if {k: v for k, v in again.items() if k != 'world_live'} != {k: v for k, v in plan.items() if k != 'world_live'}:
+            if {k: v for k, v in again.items() if k != 'world_live'} != {
+                k: v for k, v in plan.items() if k != 'world_live'
+            }:
                 raise RecoveryBlocked('Task changed during validation')
-            backup = scratch/('runtime-before-segment-%d-%d.sqlite' % (plan['segment'], time.time_ns()//1000000))
+            backup = scratch / (
+                'runtime-before-segment-%d-%d.sqlite' % (plan['segment'], time.time_ns() // 1000000)
+            )
             backup.touch(mode=0o600, exist_ok=False)
-            with readonly(run) as old, sqlite3.connect(backup) as destination: old.db.backup(destination)
+            with readonly(run) as old, sqlite3.connect(backup) as destination:
+                old.db.backup(destination)
             record['backup'] = str(backup)
-            store = RuntimeStore(run/'private/state/runtime.sqlite')
+            store = RuntimeStore(run / 'private/state/runtime.sqlite')
             try:
-                record['prepared'] = True; write_json(status_path, record)
-                store.event('MANUAL_TASK_RECOVERY', 'Meta', {'reason': REASON, 'harness': 'claude',
-                                                            'plan': {k: plan[k] for k in ('segment', 'frame', 'sim_s', 'pose_sha256',
-                                                                                          'failed_setups', 'remaining_s', 'role_threads')}})
+                record['prepared'] = True
+                write_json(status_path, record)
+                store.event(
+                    'MANUAL_TASK_RECOVERY',
+                    'Meta',
+                    {
+                        'reason': REASON,
+                        'harness': 'claude',
+                        'plan': {
+                            k: plan[k]
+                            for k in (
+                                'segment',
+                                'frame',
+                                'sim_s',
+                                'pose_sha256',
+                                'failed_setups',
+                                'remaining_s',
+                                'role_threads',
+                            )
+                        },
+                    },
+                )
                 record['failed_setups'] = fail_unstarted_reviews(store)
                 run_segments.prepare_retry(run, store, REASON, manual=True, source_root=source)
                 if _ledger(store.db, plan['interrupted']) != plan['ledger_sha256']:
                     raise RecoveryBlocked('Original call ledger changed during preparation')
                 record['robot_owners'] = store.get('robot_owners')
-            finally: store.close()
-            record['phase'] = 'host_started'; write_json(status_path, record)
-            log_path = run/'private/logs/recovery-runner.log'
+            finally:
+                store.close()
+            record['phase'] = 'host_started'
+            write_json(status_path, record)
+            log_path = run / 'private/logs/recovery-runner.log'
             with log_path.open('a') as log:
                 # The frozen runner and physics from the run's checkout.
-                host = launcher([str(python), '-I', '-c', RUNNER, str(source), plan['batch'], str(run)],
-                                cwd=source, stdout=log, stderr=log, stdin=subprocess.DEVNULL)
-                record['host_pid'] = host.pid; write_json(status_path, record)
+                host = launcher(
+                    [str(python), '-I', '-c', RUNNER, str(source), plan['batch'], str(run)],
+                    cwd=source,
+                    stdout=log,
+                    stderr=log,
+                    stdin=subprocess.DEVNULL,
+                )
+                record['host_pid'] = host.pid
+                write_json(status_path, record)
                 code = host.wait()
             with readonly(run) as final:
                 resumed = any(s.get('index') == plan['segment'] for s in (final.get('segments') or []))
                 lifecycle = final.get('lifecycle')
             result = json.loads(run_layout.path(run, 'engineering_status').read_text())
-            complete = code == 0 and resumed and result.get('status') == 'finished' and run_segments.owner_released(run)
-            record.update(phase='closed' if complete else 'needs_review', host_exit_code=code, segment_started=resumed,
-                          lifecycle=lifecycle, result_status=result.get('status'), result_reason=result.get('reason'),
-                          finished_at=time.time())
+            complete = (
+                code == 0
+                and resumed
+                and result.get('status') == 'finished'
+                and run_segments.owner_released(run)
+            )
+            record.update(
+                phase='closed' if complete else 'needs_review',
+                host_exit_code=code,
+                segment_started=resumed,
+                lifecycle=lifecycle,
+                result_status=result.get('status'),
+                result_reason=result.get('reason'),
+                finished_at=time.time(),
+            )
             write_json(status_path, record)
             return record
         except BaseException as error:
@@ -270,16 +417,37 @@ def submit_durable(args):
     """Run this same recovery as a one-shot macOS launchd job with Interactive priority, so it
     outlives the terminal or agent session that started it (roboteam.launch.local.mac)."""
     from roboteam.launch.local import mac as durable
+
     run = Path(args.run_dir).resolve()
     # Absolute paths: the job starts in this checkout, not in the caller's directory.
-    argv = ['--run-dir', run, '--source-root', Path(args.source_root).resolve(), '--python', Path(args.python).absolute(),
-            '--scratch', Path(args.scratch).resolve(), '--execute']
+    argv = [
+        '--run-dir',
+        run,
+        '--source-root',
+        Path(args.source_root).resolve(),
+        '--python',
+        Path(args.python).absolute(),
+        '--scratch',
+        Path(args.scratch).resolve(),
+        '--execute',
+    ]
     tag = hashlib.sha256(str(run).encode()).hexdigest()[:16]
     stamp = time.strftime('%Y%m%dT%H%M%S')
-    folder = run/'private/state/control'/('recovery-durable-'+stamp)
-    command = [str(Path(sys.executable).absolute()), '-m', 'roboteam.harness.claude.recover_task', *argv, '--foreground']
-    plist = durable.job('org.roboteam.recovery.%s.%s' % (tag, stamp), command, folder,
-                        Path(__file__).resolve().parents[3], durable.passed_environment())
+    folder = run / 'private/state/control' / ('recovery-durable-' + stamp)
+    command = [
+        str(Path(sys.executable).absolute()),
+        '-m',
+        'roboteam.harness.claude.recover_task',
+        *argv,
+        '--foreground',
+    ]
+    plist = durable.job(
+        'org.roboteam.recovery.%s.%s' % (tag, stamp),
+        command,
+        folder,
+        Path(__file__).resolve().parents[3],
+        durable.passed_environment(),
+    )
     return durable.bootstrap(plist, folder, {'run': str(run), 'recovery': True})
 
 
@@ -290,24 +458,32 @@ def main(argv=None):
     parser.add_argument('--python', type=Path, default=Path(sys.executable))
     parser.add_argument('--scratch', type=Path)
     parser.add_argument('--execute', action='store_true')
-    parser.add_argument('--foreground', action='store_true',
-                        help='On macOS, run --execute in this process instead of a launchd job (the default)')
+    parser.add_argument(
+        '--foreground',
+        action='store_true',
+        help='On macOS, run --execute in this process instead of a launchd job (the default)',
+    )
     args = parser.parse_args(argv)
     try:
         if args.execute and sys.platform == 'darwin' and not args.foreground:
-            if not args.scratch: parser.error('--execute requires --scratch')
+            if not args.scratch:
+                parser.error('--execute requires --scratch')
             inspect(args.run_dir, args.source_root)  # refuse before submitting
             print(json.dumps({'eligible': True, 'submitted': submit_durable(args)}, default=str))
             return
         if args.execute:
-            if not args.scratch: parser.error('--execute requires --scratch')
+            if not args.scratch:
+                parser.error('--execute requires --scratch')
             result = execute(args.run_dir, args.source_root, args.python, args.scratch)
-        else: result = inspect(args.run_dir, args.source_root)
+        else:
+            result = inspect(args.run_dir, args.source_root)
         print(json.dumps({'eligible': True, **result}, default=str))
-        if args.execute and result['phase'] != 'closed': raise SystemExit(1)
+        if args.execute and result['phase'] != 'closed':
+            raise SystemExit(1)
     except (RecoveryBlocked, OSError, ValueError) as error:
         print(json.dumps({'eligible': False, 'reason': str(error), 'automatic_redispatch': False}))
         raise SystemExit(2)
 
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    main()

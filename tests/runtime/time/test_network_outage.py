@@ -1,13 +1,14 @@
 """A local run's world pauses while its model API is unreachable; no real network is used."""
+
 import os
 import time
 import unittest
 from unittest.mock import patch
 
 from roboteam.runtime.time import outage as network_outage
+from roboteam.runtime.time.clock import BudgetGuard, protocol
 from roboteam.runtime.time.egress_pause import WorldPause
 from roboteam.runtime.time.outage import OutageMonitor, monitor_for
-from roboteam.runtime.time.clock import BudgetGuard, protocol
 from runtime.time import test_active_time as active
 
 ACTIVE = active.ACTIVE
@@ -16,7 +17,7 @@ ACTIVE = active.ACTIVE
 class OutageMonitorTests(unittest.TestCase):
     def test_pauses_after_three_failures_and_resumes_after_one_success(self):
         answers = iter([True, False, False, False, True])
-        monitor = OutageMonitor(('api.example',), lambda hosts: next(answers), clock=lambda: 7.)
+        monitor = OutageMonitor(('api.example',), lambda hosts: next(answers), clock=lambda: 7.0)
         self.assertEqual([monitor.step() for _ in range(5)], [False, False, False, True, False])
 
     def test_a_probe_that_never_succeeded_never_pauses(self):
@@ -26,70 +27,134 @@ class OutageMonitorTests(unittest.TestCase):
         self.assertEqual(monitor.take_notes()[0][0], 'OUTAGE_PROBE_UNAVAILABLE')
 
     def test_a_hung_or_raising_probe_counts_as_failed(self):
-        def hang(hosts): time.sleep(5); return True
-        monitor = OutageMonitor(('api.example',), hang, timeout_s=.05); monitor.armed = True
-        self.assertFalse(monitor.step()); self.assertEqual(monitor.failures, 1)
-        monitor.probe = lambda hosts: 1/0; monitor.step()
+        def hang(hosts):
+            time.sleep(5)
+            return True
+
+        monitor = OutageMonitor(('api.example',), hang, timeout_s=0.05)
+        monitor.armed = True
+        self.assertFalse(monitor.step())
+        self.assertEqual(monitor.failures, 1)
+        monitor.probe = lambda hosts: 1 / 0
+        monitor.step()
         self.assertEqual(monitor.failures, 2)
 
     def test_local_policy_runs_probe_their_harness_hosts(self):
         task = {'execution_readiness': 'prepared_policy_trial', 'run_protocol': {'clock': ACTIVE}}
         with patch.dict(os.environ, {network_outage.SWITCH: 'on'}):
-            os.environ.pop('SLURM_JOB_ID', None); os.environ.pop('ROBOTEAM_EGRESS_PAUSE_FILE', None)
+            os.environ.pop('SLURM_JOB_ID', None)
+            os.environ.pop('ROBOTEAM_EGRESS_PAUSE_FILE', None)
             self.assertEqual(monitor_for(task, {'harness': 'claude'}).hosts, ('api.anthropic.com',))
-            self.assertEqual(monitor_for(task, {'harness': 'codex'}).hosts, ('chatgpt.com', 'auth.openai.com'))
+            self.assertEqual(
+                monitor_for(task, {'harness': 'codex'}).hosts, ('chatgpt.com', 'auth.openai.com')
+            )
             # A Slurm job with direct egress probes too; one with an egress pause does not.
-            with patch.dict(os.environ, {'SLURM_JOB_ID': '1'}): self.assertIsNotNone(monitor_for(task, {'harness': 'codex'}))
-            with patch.dict(os.environ, {'ROBOTEAM_EGRESS_PAUSE_FILE': '/x'}): self.assertIsNone(monitor_for(task, {'harness': 'codex'}))
+            with patch.dict(os.environ, {'SLURM_JOB_ID': '1'}):
+                self.assertIsNotNone(monitor_for(task, {'harness': 'codex'}))
+            with patch.dict(os.environ, {'ROBOTEAM_EGRESS_PAUSE_FILE': '/x'}):
+                self.assertIsNone(monitor_for(task, {'harness': 'codex'}))
         with patch.dict(os.environ, {network_outage.SWITCH: 'off'}):
             self.assertIsNone(monitor_for(task, {'harness': 'codex'}))
 
     def test_a_model_entry_base_url_names_the_host_probed(self):
-        import json, tempfile
+        import json
+        import tempfile
         from pathlib import Path
+
         with tempfile.TemporaryDirectory() as run:
-            (Path(run)/'private/inputs').mkdir(parents=True)
-            (Path(run)/'private/inputs/claude.json').write_text(json.dumps({'model_entry': {'base_url': 'https://api.example.org/v1'}}))
+            (Path(run) / 'private/inputs').mkdir(parents=True)
+            (Path(run) / 'private/inputs/claude.json').write_text(
+                json.dumps({'model_entry': {'base_url': 'https://api.example.org/v1'}})
+            )
             self.assertEqual(network_outage.model_hosts(run, 'claude'), ('api.example.org',))
             self.assertEqual(network_outage.model_hosts(run, 'codex'), ('chatgpt.com', 'auth.openai.com'))
 
 
 class ProbeTests(unittest.TestCase):
     """Local sockets only: a tunnel that accepts TCP but has no route behind it."""
+
     def serve(self, handle, tls=None):
-        import socket, threading
-        server = socket.create_server(('127.0.0.1', 0)); self.addCleanup(server.close)
+        import socket
+        import threading
+
+        server = socket.create_server(('127.0.0.1', 0))
+        self.addCleanup(server.close)
+
         def loop():
             while True:
-                try: connection, _ = server.accept()
-                except OSError: return
-                threading.Thread(target=handle, args=(connection if tls is None else tls.wrap_socket(connection, server_side=True),),
-                                 daemon=True).start()
+                try:
+                    connection, _ = server.accept()
+                except OSError:
+                    return
+                threading.Thread(
+                    target=handle,
+                    args=(connection if tls is None else tls.wrap_socket(connection, server_side=True),),
+                    daemon=True,
+                ).start()
+
         threading.Thread(target=loop, daemon=True).start()
         return server.getsockname()[1]
 
     def test_a_tunnel_that_accepts_tcp_without_a_route_fails_the_https_probe(self):
         import socket
-        for name, handle in (('closes', lambda c: c.close()), ('silent', lambda c: (time.sleep(2), c.close()))):
+
+        for name, handle in (
+            ('closes', lambda c: c.close()),
+            ('silent', lambda c: (time.sleep(2), c.close())),
+        ):
             with self.subTest(tunnel=name):
                 port = self.serve(handle)
                 connect = socket.create_connection
-                with patch.object(network_outage.socket, 'create_connection',
-                                  side_effect=lambda address, timeout=None: connect(('127.0.0.1', port), timeout)):
-                    self.assertFalse(network_outage.https_probe(('api.example',), timeout=.5))
+                with patch.object(
+                    network_outage.socket,
+                    'create_connection',
+                    side_effect=lambda address, timeout=None: connect(('127.0.0.1', port), timeout),
+                ):
+                    self.assertFalse(network_outage.https_probe(('api.example',), timeout=0.5))
 
     def test_a_verified_https_answer_passes(self):
-        import shutil, ssl, subprocess, tempfile
-        if not shutil.which('openssl'): self.skipTest('openssl unavailable')
-        folder = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, folder)
-        key, cert = folder+'/key.pem', folder+'/cert.pem'
-        subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert,
-                        '-days', '1', '-subj', '/CN=localhost', '-addext', 'subjectAltName=DNS:localhost'],
-                       check=True, capture_output=True)
-        server = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER); server.load_cert_chain(cert, key)
+        import shutil
+        import ssl
+        import subprocess
+        import tempfile
+
+        if not shutil.which('openssl'):
+            self.skipTest('openssl unavailable')
+        folder = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, folder)
+        key, cert = folder + '/key.pem', folder + '/cert.pem'
+        subprocess.run(
+            [
+                'openssl',
+                'req',
+                '-x509',
+                '-newkey',
+                'rsa:2048',
+                '-nodes',
+                '-keyout',
+                key,
+                '-out',
+                cert,
+                '-days',
+                '1',
+                '-subj',
+                '/CN=localhost',
+                '-addext',
+                'subjectAltName=DNS:localhost',
+            ],
+            check=True,
+            capture_output=True,
+        )
+        server = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        server.load_cert_chain(cert, key)
+
         def answer(connection):
-            try: connection.recv(1024); connection.sendall(b'HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n')
-            finally: connection.close()
+            try:
+                connection.recv(1024)
+                connection.sendall(b'HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n')
+            finally:
+                connection.close()
+
         port = self.serve(answer, tls=server)
         client = ssl.create_default_context(cafile=cert)
         self.assertTrue(network_outage.https_probe(('localhost',), timeout=2, context=client, port=port))
@@ -111,42 +176,57 @@ class OutagePauseTests(active.Fixture):
 
     def probe(self, *answers):
         self.answers.extend(answers)
-        for _ in answers: self.monitor.step()
+        for _ in answers:
+            self.monitor.step()
         self.s.pump()
 
     def test_pause_after_three_failed_probes_then_resume_without_replay(self):
-        first = self.s.accept('A', 'move', {'target_m': [.4, 0, .5]}, 'before'); self.s.pump()
+        first = self.s.accept('A', 'move', {'target_m': [0.4, 0, 0.5]}, 'before')
+        self.s.pump()
         self.probe(True, False, False)
-        self.assertTrue(self.s.step_physics()); self.assertEqual(self.events('OUTAGE_PAUSED'), [])
+        self.assertTrue(self.s.step_physics())
+        self.assertEqual(self.events('OUTAGE_PAUSED'), [])
         self.probe(False)
         self.assertEqual(self.s.store.get('physics_state'), 'paused_by_egress')
         self.assertFalse(self.s.step_physics())
         paused = self.events('OUTAGE_PAUSED')[0]
         self.assertEqual((paused['claim'], paused['failed_probes']), ('outage-s0-1', 3))
-        held = self.s.accept('B', 'move', {'target_m': [.4, 0, .5]}, 'during'); self.s.pump()
-        self.assertFalse(held['done'].is_set()); self.assertEqual(len(self.s.world.executed), 1)
+        held = self.s.accept('B', 'move', {'target_m': [0.4, 0, 0.5]}, 'during')
+        self.s.pump()
+        self.assertFalse(held['done'].is_set())
+        self.assertEqual(len(self.s.world.executed), 1)
         active = self.s.policy_budget.active
-        self.s.pump(); self.assertEqual(self.s.policy_budget.active, active)
+        self.s.pump()
+        self.assertEqual(self.s.policy_budget.active, active)
         self.probe(True)
         self.assertEqual(self.events('OUTAGE_RESUMED')[0]['claim'], 'outage-s0-1')
-        self.assertEqual(self.s.store.get('physics_state'), 'running'); self.assertTrue(self.s.step_physics())
+        self.assertEqual(self.s.store.get('physics_state'), 'running')
+        self.assertTrue(self.s.step_physics())
         self.assertEqual([x[1] for x in self.s.world.executed], ['before', 'during'])
         self.assertEqual(self.s.store.get('egress_recovery')['claim'], 'outage-s0-1')
         self.assertFalse(first['done'].is_set())
 
     def test_failed_probes_before_the_pause_are_taken_back(self):
-        guard = self.s.policy_budget; self.ticks(guard, range(31))
-        clock = [100.]; self.monitor.clock = lambda: clock[0]
+        guard = self.s.policy_budget
+        self.ticks(guard, range(31))
+        clock = [100.0]
+        self.monitor.clock = lambda: clock[0]
         self.answers.extend([True, False, False, False])
-        self.monitor.step(); self.monitor.step(); clock[0] = 110.; self.monitor.step(); self.monitor.step()
-        clock[0] = 112.; self.s.pump()
+        self.monitor.step()
+        self.monitor.step()
+        clock[0] = 110.0
+        self.monitor.step()
+        self.monitor.step()
+        clock[0] = 112.0
+        self.s.pump()
         # The first failed probe began at 100; the pause at 112 takes back those 12 s.
-        self.assertEqual(self.events('OUTAGE_PAUSED')[0]['retracted_active_s'], 12.)
+        self.assertEqual(self.events('OUTAGE_PAUSED')[0]['retracted_active_s'], 12.0)
         self.assertEqual(self.s.store.get('active_s'), 18)
 
     def test_operator_pause_survives_the_outage(self):
         self.probe(True, False, False, False)
-        self.s.store.put('dispatch_paused', True); self.s.store.event('DISPATCH_PAUSED', 'Meta', {'reason': 'operator'})
+        self.s.store.put('dispatch_paused', True)
+        self.s.store.event('DISPATCH_PAUSED', 'Meta', {'reason': 'operator'})
         self.probe(True)
         self.assertEqual(self.events('OUTAGE_HELD_FOR_REVIEW')[0]['claim'], 'outage-s0-1')
         self.assertTrue(self.s.store.get('dispatch_paused'))
@@ -163,11 +243,17 @@ class SupervisorOutageTests(unittest.TestCase):
 
     def test_an_outage_pause_is_waited_out_not_sealed(self):
         p = self.running(dispatch_paused=True, physics_state='paused_by_egress')
+
         def tick():
-            if self.now == 10: p.store.data.update(dispatch_paused=False, physics_state='running')
-            if self.now == 12: p.store.data['lifecycle'] = 'ended'; p.host.state = 'idle'
+            if self.now == 10:
+                p.store.data.update(dispatch_paused=False, physics_state='running')
+            if self.now == 12:
+                p.store.data['lifecycle'] = 'ended'
+                p.host.state = 'idle'
+
         result = self.supervisor(p, tick).run()
-        self.assertEqual(result['reason'], 'world_ended'); self.assertGreater(p.cycles, 0)
+        self.assertEqual(result['reason'], 'world_ended')
+        self.assertGreater(p.cycles, 0)
 
 
 if __name__ == '__main__':

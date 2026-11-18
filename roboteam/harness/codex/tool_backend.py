@@ -1,16 +1,17 @@
 """Freeze, fingerprint and exercise the Codex file-tool isolation backend."""
+
 import hashlib
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import sysconfig
 import tempfile
+from pathlib import Path
 
-from roboteam.runtime.sandbox import access as policy_access
-from roboteam.runtime.run.setup import write_json
 from roboteam.harness.shared.tool_worker import SCHEMA
+from roboteam.runtime.run.setup import write_json
+from roboteam.runtime.sandbox import access as policy_access
 
 BACKENDS = ('native', 'landlock-v1')
 
@@ -25,22 +26,39 @@ def selected(model_entry):
 def fingerprint(model_entry):
     if selected(model_entry) == 'native':
         return None
-    files = ('tool_worker.py', 'file_sandbox.py', 'tool_backend.py', 'host/tool_broker.js', 'launch.py',
-             'host/policy_host.js', 'host/preflight.js', 'host/rpc.js',
-             'job_harness.py', 'host/job_gateway.js', 'host/gateway_rpc.js', 'host/borrowed_auth.js',
-             '../shared/tool_worker.py', '../shared/landlock.py', '../../runtime/sandbox/access.py')
+    files = (
+        'tool_worker.py',
+        'file_sandbox.py',
+        'tool_backend.py',
+        'host/tool_broker.js',
+        'launch.py',
+        'host/policy_host.js',
+        'host/preflight.js',
+        'host/rpc.js',
+        'job_harness.py',
+        'host/job_gateway.js',
+        'host/gateway_rpc.js',
+        'host/borrowed_auth.js',
+        '../shared/tool_worker.py',
+        '../shared/landlock.py',
+        '../../runtime/sandbox/access.py',
+    )
     digest = hashlib.sha256(b'landlock-v1\0')
     for name in files:
-        digest.update(name.encode()+b'\0'+(Path(__file__).parent/name).read_bytes()+b'\0')
+        digest.update(name.encode() + b'\0' + (Path(__file__).parent / name).read_bytes() + b'\0')
     return digest.hexdigest()
 
 
 def verify_receipt(launch, checked):
     if selected(launch['model_entry']) == 'landlock-v1':
         expected = fingerprint(launch['model_entry'])
-        if (not checked.get('passed') or checked.get('tool_backend') != 'landlock-v1'
-                or not checked.get('broker_tools_verified') or checked.get('tool_backend_sha256') != expected
-                or launch.get('tool_backend_sha256') != expected):
+        if (
+            not checked.get('passed')
+            or checked.get('tool_backend') != 'landlock-v1'
+            or not checked.get('broker_tools_verified')
+            or checked.get('tool_backend_sha256') != expected
+            or launch.get('tool_backend_sha256') != expected
+        ):
             raise ValueError('Codex broker backend changed or was not qualified; rerun preflight')
 
 
@@ -48,7 +66,7 @@ def prepare(run, model_entry):
     if selected(model_entry) == 'native':
         return
     run = Path(run).resolve()
-    path = run/'private/inputs/policy-access.json'
+    path = run / 'private/inputs/policy-access.json'
     access = json.loads(path.read_text())
     if access.get('network') is not False:
         raise ValueError('The Landlock broker does not permit model networking')
@@ -63,43 +81,58 @@ def prepare(run, model_entry):
         temporary = Path(os.environ['TMPDIR']).resolve()
         if not (access.get('policy_env') and temporary == Path('/tmp').resolve()):
             access['filesystem'][str(temporary)] = 'deny'
-    access['filesystem'][str(run/'workspace')] = 'write'
+    access['filesystem'][str(run / 'workspace')] = 'write'
     # Job-local virtualenvs can live beneath denied /tmp or source roots. Allow
     # only interpreter metadata and libraries, never the entire environment or
     # its parent. These grants are frozen before a policy turn can run.
-    runtime_paths = {Path(sys.prefix)/'pyvenv.cfg',
-                     Path(sysconfig.get_path('purelib')), Path(sysconfig.get_path('platlib'))}
-    if model_entry.get('runner_backend') == 'slurm-managed-v1' and os.environ.get('ROBOTEAM_SHARED_DENY_ROOTS'):
-        runtime_paths.update(Path(p) for p in sys.path if p and Path(p).name in ('site-packages', 'dist-packages'))
+    runtime_paths = {
+        Path(sys.prefix) / 'pyvenv.cfg',
+        Path(sysconfig.get_path('purelib')),
+        Path(sysconfig.get_path('platlib')),
+    }
+    if model_entry.get('runner_backend') == 'slurm-managed-v1' and os.environ.get(
+        'ROBOTEAM_SHARED_DENY_ROOTS'
+    ):
+        runtime_paths.update(
+            Path(p) for p in sys.path if p and Path(p).name in ('site-packages', 'dist-packages')
+        )
         runtime_paths.update((Path(sysconfig.get_path('stdlib')), Path(sys.executable).resolve()))
         libdir, library = sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')
         if libdir and library:
-            runtime_paths.add(Path(libdir)/library)
-    private_roots = [run/'private', *policy_access._auth_homes(Path.home())]
+            runtime_paths.add(Path(libdir) / library)
+    private_roots = [run / 'private', *policy_access._auth_homes(Path.home())]
     for runtime_path in runtime_paths:
         if runtime_path.exists():
             runtime_path = runtime_path.resolve()
             if any(runtime_path.is_relative_to(Path(root).resolve()) for root in private_roots):
                 raise ValueError('Keep the Python runtime outside private credential/control directories')
             access['filesystem'][str(runtime_path)] = 'read'
-    (run/'workspace/.tmp').mkdir(exist_ok=True)
+    (run / 'workspace/.tmp').mkdir(exist_ok=True)
     write_json(path, access)
-    write_json(run/'private/inputs/codex-tools.json', {'schema': SCHEMA, 'backend': 'landlock-v1'})
+    write_json(run / 'private/inputs/codex-tools.json', {'schema': SCHEMA, 'backend': 'landlock-v1'})
     # New runs get backend-specific tool instructions before hashes are frozen.
     from roboteam.runtime.run.bootstrap import HARNESS_LINES
-    message = ('Use policy_exec for file reads, shell commands and workspace notes. '
-               'Use policy_image with a path to view permitted PNG/JPEG files. '
-               'Robot observations still return images through robot. '
-               'Delegate work only through robot delegate, never Codex collaboration tools.')
-    for path in (run/'private/inputs/bootstrap').glob('*.md'):
+
+    message = (
+        'Use policy_exec for file reads, shell commands and workspace notes. '
+        'Use policy_image with a path to view permitted PNG/JPEG files. '
+        'Robot observations still return images through robot. '
+        'Delegate work only through robot delegate, never Codex collaboration tools.'
+    )
+    for path in (run / 'private/inputs/bootstrap').glob('*.md'):
         path.write_text(path.read_text().replace(HARNESS_LINES['codex'], message))
 
 
 def execute(run, request, *, timeout=15):
-    return subprocess.run([sys.executable, '-I', '-m', 'roboteam.harness.codex.tool_worker',
-                           '--run-dir', str(run)], input=json.dumps(request),
-                          env={'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'LANG': 'C.UTF-8'},
-                          capture_output=True, text=True, timeout=timeout, close_fds=True)
+    return subprocess.run(
+        [sys.executable, '-I', '-m', 'roboteam.harness.codex.tool_worker', '--run-dir', str(run)],
+        input=json.dumps(request),
+        env={'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'LANG': 'C.UTF-8'},
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        close_fds=True,
+    )
 
 
 def preflight_probe(folder, model_entry=None):
@@ -107,14 +140,15 @@ def preflight_probe(folder, model_entry=None):
     import shlex
     import shutil
     import uuid
-    run = Path(folder)/'broker-probes'/uuid.uuid4().hex
+
+    run = Path(folder) / 'broker-probes' / uuid.uuid4().hex
     for name in ('private/inputs', 'public', 'workspace'):
-        (run/name).mkdir(parents=True)
-    write_json(run/'private/inputs/policy-access.json', policy_access.record(run))
-    (run/'public/task.txt').write_text('broker-public-canary')
-    (run/'private/secret.txt').write_text('broker-private-canary')
+        (run / name).mkdir(parents=True)
+    write_json(run / 'private/inputs/policy-access.json', policy_access.record(run))
+    (run / 'public/task.txt').write_text('broker-public-canary')
+    (run / 'private/secret.txt').write_text('broker-private-canary')
     prepare(run, model_entry or {'tool_backend': 'landlock-v1'})
-    shutil.copyfile(Path(folder)/'colors.png', run/'public/colors.png')
+    shutil.copyfile(Path(folder) / 'colors.png', run / 'public/colors.png')
     script = '''from pathlib import Path
 import json,socket
 r=Path.cwd().parent
@@ -128,9 +162,12 @@ except PermissionError:pass
 else:raise RuntimeError('Unix sockets were available')
 print('BROKER_ISOLATION_OK')
 '''
-    (run/'public/check.py').write_text(script)
-    return {'run_dir': str(run), 'command': shlex.join([sys.executable, str(run/'public/check.py')]),
-            'image': str(run/'public/colors.png')}
+    (run / 'public/check.py').write_text(script)
+    return {
+        'run_dir': str(run),
+        'command': shlex.join([sys.executable, str(run / 'public/check.py')]),
+        'image': str(run / 'public/colors.png'),
+    }
 
 
 def doctor():
@@ -138,14 +175,14 @@ def doctor():
         raise ValueError('landlock-v1 requires Linux')
     with tempfile.TemporaryDirectory(prefix='rf-codex-tools-') as temporary:
         base = Path(temporary).resolve()
-        run = base/'repo/run'
+        run = base / 'repo/run'
         for name in ('private/inputs', 'public', 'workspace'):
-            (run/name).mkdir(parents=True)
-        (run/'public/task.txt').write_text('public')
-        (run/'private/secret.txt').write_text('private-canary')
-        (base/'repo/other.txt').write_text('other-canary')
-        access = policy_access.record(run, checkouts=[base/'repo'])
-        write_json(run/'private/inputs/policy-access.json', access)
+            (run / name).mkdir(parents=True)
+        (run / 'public/task.txt').write_text('public')
+        (run / 'private/secret.txt').write_text('private-canary')
+        (base / 'repo/other.txt').write_text('other-canary')
+        access = policy_access.record(run, checkouts=[base / 'repo'])
+        write_json(run / 'private/inputs/policy-access.json', access)
         prepare(run, {'tool_backend': 'landlock-v1'})
         checks = '''import ctypes,errno,json,os,socket,subprocess,sys
 from pathlib import Path
@@ -170,18 +207,28 @@ checks['environment']=not any(k in os.environ for k in ('CODEX_HOME','OPENAI_API
 print(json.dumps(checks));sys.exit(0 if all(checks.values()) else 1)
 '''
         # The policy can read the checker; it is not in private trusted source.
-        (run/'public/check.py').write_text(checks)
+        (run / 'public/check.py').write_text(checks)
         import shlex
-        result = execute(run, {'tool': 'policy_exec', 'command': shlex.join([sys.executable, str(run/'public/check.py')])})
+
+        result = execute(
+            run,
+            {'tool': 'policy_exec', 'command': shlex.join([sys.executable, str(run / 'public/check.py')])},
+        )
         if result.returncode:
             raise RuntimeError('Landlock/seccomp confinement probe failed: ' + result.stderr[-1200:])
         checks = json.loads(result.stdout)
         if not checks or not all(value is True for value in checks.values()):
             raise RuntimeError('Confinement checks failed')
         from roboteam.harness.codex.file_sandbox import abi
-        return {'backend': 'landlock-v1', 'sandbox_checked': True, 'checks': checks,
-                'landlock_abi': abi(), 'network_isolation': 'seccomp',
-                'backend_sha256': fingerprint({'tool_backend': 'landlock-v1'})}
+
+        return {
+            'backend': 'landlock-v1',
+            'sandbox_checked': True,
+            'checks': checks,
+            'landlock_abi': abi(),
+            'network_isolation': 'seccomp',
+            'backend_sha256': fingerprint({'tool_backend': 'landlock-v1'}),
+        }
 
 
 if __name__ == '__main__':

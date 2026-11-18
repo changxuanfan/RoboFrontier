@@ -1,20 +1,21 @@
 """Opt-in standing-team native CLI/MuJoCo checks using a local scripted endpoint."""
+
 import hashlib
 import http.server
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import tempfile
 import threading
 import unittest
+from pathlib import Path
 
 from harness.claude.test_claude_parallel_physics_smoke import CompactRequests
 from harness.claude.test_claude_standing_team_integration import StandingModel
 from roboteam.launch.claude_batch import run_batch
-from roboteam.runtime.world.store import RuntimeStore
 from roboteam.launch.claude_prepare import prepare_batch
+from roboteam.runtime.world.store import RuntimeStore
 
 
 class PhysicalStandingModel(StandingModel):
@@ -28,12 +29,18 @@ class PhysicalStandingModel(StandingModel):
             with self.steps_lock:
                 if 'A' not in self.observed:
                     self.observed.add('A')
-                    return {'op':'observe','data':{'cameras':['global']},'views':['global']}, 'toolu_observe'
+                    return {
+                        'op': 'observe',
+                        'data': {'cameras': ['global']},
+                        'views': ['global'],
+                    }, 'toolu_observe'
         return super().choose_tool(names, text, blocks, has_result)
 
 
-@unittest.skipUnless(os.environ.get('ROBOTEAM_PHYSICS_STANDING') == '1' and shutil.which('claude'),
-                     'Opt-in requires Claude CLI, current scene assets and a native renderer')
+@unittest.skipUnless(
+    os.environ.get('ROBOTEAM_PHYSICS_STANDING') == '1' and shutil.which('claude'),
+    'Opt-in requires Claude CLI, current scene assets and a native renderer',
+)
 class StandingPhysicsSmokeTests(unittest.TestCase):
     def test_both_systems_run_real_world_mailboxes_images_actions_and_seal(self):
         for system in ('hierarchical', 'decentralized'):
@@ -45,48 +52,68 @@ class StandingPhysicsSmokeTests(unittest.TestCase):
                 PhysicalStandingModel.observed.clear()
                 PhysicalStandingModel.requests.clear()
                 try:
-                    batch = directory/'batch'
+                    batch = directory / 'batch'
                     prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], system=system)
-                    run = batch/'haiku/transport-a04-d1'
-                    launch = run/'private/inputs/claude.json'
+                    run = batch / 'haiku/transport-a04-d1'
+                    launch = run / 'private/inputs/claude.json'
                     data = json.loads(launch.read_text())
-                    data['model_entry'].update(base_url=f'http://127.0.0.1:{server.server_port}', env_key='FAKE_KEY')
+                    data['model_entry'].update(
+                        base_url=f'http://127.0.0.1:{server.server_port}', env_key='FAKE_KEY'
+                    )
                     launch.write_text(json.dumps(data))
-                    manifest = run/'private/inputs/manifest.json'
+                    manifest = run / 'private/inputs/manifest.json'
                     frozen = json.loads(manifest.read_text())
-                    frozen['input_sha256']['private/inputs/claude.json'] = hashlib.sha256(launch.read_bytes()).hexdigest()
+                    frozen['input_sha256']['private/inputs/claude.json'] = hashlib.sha256(
+                        launch.read_bytes()
+                    ).hexdigest()
                     manifest.write_text(json.dumps(frozen))
-                    env = {k:os.environ[k] for k in ('PATH','HOME','LANG','LC_ALL','TMPDIR','MUJOCO_GL') if k in os.environ}
+                    env = {
+                        k: os.environ[k]
+                        for k in ('PATH', 'HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'MUJOCO_GL')
+                        if k in os.environ
+                    }
                     env['FAKE_KEY'] = 'synthetic'
-                    result = run_batch(batch, env, parallel=1, wall_limit_s=20, startup_timeout_s=180,
-                                       startup_interval_s=0)
+                    result = run_batch(
+                        batch, env, parallel=1, wall_limit_s=20, startup_timeout_s=180, startup_interval_s=0
+                    )
                     self.assertFalse(result['scored'])
-                    self.assertIn(result['status'], ('closed','needs_review'))
-                    detail = json.loads((run/'private/state/control/engineering-status.json').read_text())
+                    self.assertIn(result['status'], ('closed', 'needs_review'))
+                    detail = json.loads((run / 'private/state/control/engineering-status.json').read_text())
                     self.assertEqual(detail['reason'], 'wall_limit', detail)
                     self.assertTrue(detail['seal']['sealed'], detail)
                     self.assertEqual(detail['seal']['unresolved_action_ids'], [])
                     self.assertFalse(detail['owner_alive'], detail)
-                    self.assertTrue(any(PhysicalStandingModel.requests), 'No robot image reached the local endpoint')
-                    store = RuntimeStore(run/'private/state/runtime.sqlite')
+                    self.assertTrue(
+                        any(PhysicalStandingModel.requests), 'No robot image reached the local endpoint'
+                    )
+                    store = RuntimeStore(run / 'private/state/runtime.sqlite')
                     try:
-                        agents = {a:v for a,v in store.agents().items() if v['kind'] != 'manager'}
-                        expected = {'A','B','C','D'} | ({'Controller'} if system == 'hierarchical' else set())
+                        agents = {a: v for a, v in store.agents().items() if v['kind'] != 'manager'}
+                        expected = {'A', 'B', 'C', 'D'} | (
+                            {'Controller'} if system == 'hierarchical' else set()
+                        )
                         self.assertEqual(set(agents), expected)
                         self.assertEqual(len({a['thread_id'] for a in agents.values()}), len(expected))
                         self.assertTrue(all(not a['ready'] for a in agents.values()))
-                        self.assertTrue(all('Synthetic standing milestone' in a['note'] for a in agents.values()))
+                        self.assertTrue(
+                            all('Synthetic standing milestone' in a['note'] for a in agents.values())
+                        )
                         actions = list(store.actions().values())
                         self.assertEqual(len(actions), 1, actions)
                         self.assertEqual(actions[0]['arm'], 'A')
                         self.assertEqual(actions[0]['status'], 'completed')
                         self.assertTrue(store.db.execute('SELECT count(*) FROM messages').fetchone()[0])
-                        self.assertTrue(store.db.execute("SELECT count(*) FROM wakes WHERE status IN ('sent','observed')").fetchone()[0])
+                        self.assertTrue(
+                            store.db.execute(
+                                "SELECT count(*) FROM wakes WHERE status IN ('sent','observed')"
+                            ).fetchone()[0]
+                        )
                     finally:
                         store.close()
                     print('Stopped native standing-team evidence retained:', directory, flush=True)
                 finally:
-                    server.shutdown(); server.server_close()
+                    server.shutdown()
+                    server.server_close()
 
 
 if __name__ == '__main__':

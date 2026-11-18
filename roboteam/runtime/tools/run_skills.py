@@ -6,10 +6,11 @@ returns entries and appends an entry or a revision. Earlier text is never change
 removed, which is also the rule a full run's roles follow (the "Run skills" section of
 the Skill). The runtime handles one request at a time, so appends never collide.
 """
+
 import os
-from pathlib import Path
 import re
 import tempfile
+from pathlib import Path
 
 from roboteam.runtime.run import layout as run_layout
 
@@ -26,7 +27,7 @@ def parse(text):
     """(preamble, entries): an entry is the lines from a `## ` heading to the next one."""
     lines = text.splitlines(keepends=True)
     starts = [index for index, line in enumerate(lines) if line.startswith('## ')]
-    preamble = ''.join(lines[:starts[0]] if starts else lines)
+    preamble = ''.join(lines[: starts[0]] if starts else lines)
     entries = [''.join(lines[start:end]) for start, end in zip(starts, starts[1:] + [len(lines)])]
     return preamble, entries
 
@@ -58,8 +59,10 @@ def _write(target, text):
             output.write(text)
         os.replace(temporary, target)
     finally:
-        try: os.unlink(temporary)
-        except FileNotFoundError: pass
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
 
 
 def _entry(entries, number):
@@ -73,23 +76,38 @@ def handle(run, actor, data):
     action = data.get('action')
     if action not in ACTIONS:
         raise ValueError('skills needs action: ' + ', '.join(ACTIONS))
-    allowed = {'headings': set(), 'read': {'entries'}, 'append': {'heading', 'body'},
-               'revise': {'entry', 'heading', 'body'}}[action]
+    allowed = {
+        'headings': set(),
+        'read': {'entries'},
+        'append': {'heading', 'body'},
+        'revise': {'entry', 'heading', 'body'},
+    }[action]
     if set(data) - allowed - {'action'}:
-        raise ValueError('skills %s accepts only: %s' % (action, ', '.join(sorted(allowed)) or 'no other field'))
+        raise ValueError(
+            'skills %s accepts only: %s' % (action, ', '.join(sorted(allowed)) or 'no other field')
+        )
     target = Path(path(run))
     preamble, entries = parse(target.read_text())
     if action == 'headings':
-        return {'entries': [{'entry': number, 'heading': entry.splitlines()[0],
-                             'revisions': [line for line in entry.splitlines() if line.startswith('### ')]}
-                            for number, entry in enumerate(entries, 1)]}
+        return {
+            'entries': [
+                {
+                    'entry': number,
+                    'heading': entry.splitlines()[0],
+                    'revisions': [line for line in entry.splitlines() if line.startswith('### ')],
+                }
+                for number, entry in enumerate(entries, 1)
+            ]
+        }
     if action == 'read':
         selected = data.get('entries')
         if selected is None:
             return {'text': preamble + ''.join(entries)}
         if not isinstance(selected, list) or not selected:
             raise ValueError('entries must be a nonempty list of entry numbers')
-        return {'text': '\n'.join(entries[_entry(entries, number)].rstrip('\n') + '\n' for number in selected)}
+        return {
+            'text': '\n'.join(entries[_entry(entries, number)].rstrip('\n') + '\n' for number in selected)
+        }
     body = _body(data.get('body'))
     heading = _line(data.get('heading'), 'heading')
     if action == 'append':
@@ -102,8 +120,10 @@ def handle(run, actor, data):
         revision = 2 + sum(line.startswith('### rev ') for line in entries[index].splitlines())
         # The runtime states the revision number and the writing role itself.
         if heading.startswith('#'):
-            raise ValueError('For a revision, heading is only what changed, in one line; the tool writes '
-                             '"### rev <n> — <role> —" before it')
+            raise ValueError(
+                'For a revision, heading is only what changed, in one line; the tool writes '
+                '"### rev <n> — <role> —" before it'
+            )
         written = '### rev %d — %s — %s' % (revision, actor, heading)
         last = index == len(entries) - 1
         entries[index] = entries[index].rstrip('\n') + '\n\n' + written + '\n' + body + ('' if last else '\n')

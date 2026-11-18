@@ -4,8 +4,18 @@ launch it, and after every end ask the stop table whether it continues by itself
 module holds the loop between them."""
 
 
-def supervise_run(run, launch, *, continuing, lifecycle, try_continue, final, reason, record,
-                  exited='batch supervisor exited'):
+def supervise_run(
+    run,
+    launch,
+    *,
+    continuing,
+    lifecycle,
+    try_continue,
+    final,
+    reason,
+    record,
+    exited='batch supervisor exited',
+):
     """Run one run until it ends for good. Returns (outcome, value, pending):
 
     - ('refused', why, pending): a continuing batch found the run stopped and it may not continue;
@@ -24,12 +34,15 @@ def supervise_run(run, launch, *, continuing, lifecycle, try_continue, final, re
         if state not in ('prepared', 'resuming'):
             continued, why = try_continue(run, exited)
             record(None, continued, why)
-            if not continued: return 'refused', why, pending
+            if not continued:
+                return 'refused', why, pending
             pending = True
     while True:
         result = launch()
-        if final(result): return 'ended', result, pending
+        if final(result):
+            return 'ended', result, pending
         continued, why = try_continue(run, reason(result))
         record(result, continued, why)
-        if not continued: return 'ended', result, pending
+        if not continued:
+            return 'ended', result, pending
         pending = True

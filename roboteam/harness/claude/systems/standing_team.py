@@ -4,29 +4,38 @@ Every initial role owns an independent native session. Bind the complete team,
 START once, and only then send task prompts. This engineering host never forks a
 role, assigns a robot strategy, replays an uncertain turn or certifies a score.
 """
-from pathlib import Path
+
 import time
 import uuid
+from pathlib import Path
 
 from roboteam.harness.claude.session.budget import BudgetExhausted
 from roboteam.harness.claude.session.session_host import ClaudeSessionHost
 from roboteam.runtime.run.bootstrap import frozen_bootstrap
-from roboteam.runtime.tools.pipeline_client import client_call
-from roboteam.runtime.run.setup import verify_inputs
 from roboteam.runtime.run.cli import execute
+from roboteam.runtime.run.setup import verify_inputs
+from roboteam.runtime.tools.pipeline_client import client_call
 from roboteam.runtime.world.store import RuntimeStore
 
 
 class _TeamStatus:
     """Let the existing supervisor inspect/stop a whole fixed team as one owner."""
+
     def __init__(self, hosts):
         self.hosts = hosts
 
     def observe(self):
         observations = {actor: host.observe() for actor, host in self.hosts.items()}
         states = {value['status'] for value in observations.values()}
-        state = ('unknown' if states - {'idle', 'active', 'error'} else
-                 'error' if 'error' in states else 'active' if 'active' in states else 'idle')
+        state = (
+            'unknown'
+            if states - {'idle', 'active', 'error'}
+            else 'error'
+            if 'error' in states
+            else 'active'
+            if 'active' in states
+            else 'idle'
+        )
         return {'status': state, 'roles': observations}
 
     def recover_capacity(self, store):
@@ -38,29 +47,47 @@ class _TeamStatus:
                 recovering.add(actor)
         errors = {actor for actor, host in self.hosts.items() if host.observe()['status'] == 'error'}
         # Recovery in one role must not hide an unrelated failed role.
-        return (bool(errors) and errors <= recovering and
-                all(h.observe()['status'] in ('idle', 'active', 'error') for h in self.hosts.values()))
+        return (
+            bool(errors)
+            and errors <= recovering
+            and all(h.observe()['status'] in ('idle', 'active', 'error') for h in self.hosts.values())
+        )
 
     def wait(self, timeout=5):
         deadline = time.monotonic() + timeout
         for host in self.hosts.values():
             if hasattr(host, 'wait'):
-                host.wait(timeout=max(0, deadline-time.monotonic()))
+                host.wait(timeout=max(0, deadline - time.monotonic()))
 
 
 class StandingTeamPolicyHost:
     harness = 'claude'
-    def __init__(self, run_dir, model_entry, base_env, ledger, *, turn_budget_usd=None,
-                 host_factory=ClaudeSessionHost, client=client_call, verifier=verify_inputs, resume=False):
+
+    def __init__(
+        self,
+        run_dir,
+        model_entry,
+        base_env,
+        ledger,
+        *,
+        turn_budget_usd=None,
+        host_factory=ClaudeSessionHost,
+        client=client_call,
+        verifier=verify_inputs,
+        resume=False,
+    ):
         self.run = Path(run_dir).resolve()
-        if not Path(ledger.path).resolve().is_relative_to(self.run/'private'):
+        if not Path(ledger.path).resolve().is_relative_to(self.run / 'private'):
             raise ValueError('A run-local shared budget ledger is required')
-        self.store = RuntimeStore(self.run/'private/state/runtime.sqlite')
+        self.store = RuntimeStore(self.run / 'private/state/runtime.sqlite')
         self.hosts = {}
         try:
             cfg = self.store.get('config')
-            if (cfg.get('harness') != self.harness or cfg.get('system') not in ('hierarchical', 'decentralized')
-                    or cfg.get('startup_protocol') != 'direct_team'):
+            if (
+                cfg.get('harness') != self.harness
+                or cfg.get('system') not in ('hierarchical', 'decentralized')
+                or cfg.get('startup_protocol') != 'direct_team'
+            ):
                 raise ValueError('Expected a direct-team Native standing-team engineering run')
             if cfg.get('model') != model_entry.get('model') or cfg.get('effort') != model_entry.get('effort'):
                 raise ValueError('Model entry differs from frozen runtime configuration')
@@ -69,20 +96,33 @@ class StandingTeamPolicyHost:
             # role's session; any other bound or started world is never restarted.
             self.resuming = resume
             if resume:
-                if self.store.get('lifecycle') != 'resuming' or not agents or not all(a['thread_id'] for a in agents.values()):
+                if (
+                    self.store.get('lifecycle') != 'resuming'
+                    or not agents
+                    or not all(a['thread_id'] for a in agents.values())
+                ):
                     raise ValueError('No prepared segment to resume')
-            elif self.store.get('lifecycle') != 'prepared' or not agents or any(a['thread_id'] for a in agents.values()):
+            elif (
+                self.store.get('lifecycle') != 'prepared'
+                or not agents
+                or any(a['thread_id'] for a in agents.values())
+            ):
                 raise ValueError('A previously bound or started world cannot be restarted')
             changed = verifier(self.run)
             if changed:
                 raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
             self.prompts = {a: frozen_bootstrap(self.run, a) for a in agents}
-            self.hosts = {a: host_factory(self.run, a, model_entry, base_env,
-                                          max_budget_usd=turn_budget_usd, budget_ledger=ledger) for a in agents}
+            self.hosts = {
+                a: host_factory(
+                    self.run, a, model_entry, base_env, max_budget_usd=turn_budget_usd, budget_ledger=ledger
+                )
+                for a in agents
+            }
             if any(h.actor != a for a, h in self.hosts.items()):
                 raise ValueError('Native host identity differs from its standing role')
             if resume:
-                for actor, host in self.hosts.items(): host.adopt(agents[actor]['thread_id'])
+                for actor, host in self.hosts.items():
+                    host.adopt(agents[actor]['thread_id'])
             ids = [h.session_id for h in self.hosts.values()]
             if len(set(ids)) != len(ids):
                 raise ValueError('Every initial role needs a distinct native session')
@@ -103,12 +143,17 @@ class StandingTeamPolicyHost:
         if self.bind_attempted:
             raise ValueError('Never repeat standing-team role binding or bootstrap')
         self.bind_attempted = True
-        connection = self.run/'private/state/connections/Meta.json'
+        connection = self.run / 'private/state/connections/Meta.json'
         for actor, host in self.hosts.items():
             if self.store.agent(actor)['thread_id']:
                 raise ValueError('Role was already bound; review instead of rebinding')
-            result = self.client(connection, 'bind', {'actor': actor, 'thread_id': host.session_id},
-                                 'bind-'+uuid.uuid4().hex, log_call_id=False)
+            result = self.client(
+                connection,
+                'bind',
+                {'actor': actor, 'thread_id': host.session_id},
+                'bind-' + uuid.uuid4().hex,
+                log_call_id=False,
+            )
             if not result.get('bound') or self.store.agent(actor)['thread_id'] != host.session_id:
                 raise ValueError('Role binding outcome unknown; review instead of retrying')
         result = self.admin('request-start')
@@ -133,18 +178,28 @@ class StandingTeamPolicyHost:
             raise ValueError('World did not confirm the resumed segment')
         self.bound = True
         for actor, text in reply['messages'].items():
-            if actor in self.hosts: self.hosts[actor].send(text)
+            if actor in self.hosts:
+                self.hosts[actor].send(text)
         return reply
 
     def _valid_observation(self, actor, value):
-        return (isinstance(value, dict) and
-                value.get('thread_id') == self.store.agent(actor)['thread_id'] and
-                value.get('status') in ('active', 'idle', 'error') and
-                isinstance(value.get('turn_id'), str) and bool(value['turn_id']))
+        return (
+            isinstance(value, dict)
+            and value.get('thread_id') == self.store.agent(actor)['thread_id']
+            and value.get('status') in ('active', 'idle', 'error')
+            and isinstance(value.get('turn_id'), str)
+            and bool(value['turn_id'])
+        )
 
     def _pause_role(self, actor):
-        self.admin('session-unavailable', {'actor': actor, 'thread_id': self.hosts[actor].session_id,
-                                           'reason': 'Native standing role state requires review'})
+        self.admin(
+            'session-unavailable',
+            {
+                'actor': actor,
+                'thread_id': self.hosts[actor].session_id,
+                'reason': 'Native standing role state requires review',
+            },
+        )
         self.admin('pause', {'reason': 'Native standing role state unavailable or failed'})
         return False
 
@@ -156,10 +211,22 @@ class StandingTeamPolicyHost:
         value = host.observe()
         if not self._valid_observation(actor, value) or value['status'] == 'error' and not recovering:
             return self._pause_role(actor)
-        self.admin('observe-sessions', {'observations': [{
-            'actor': actor, 'thread_id': value['thread_id'], 'status': value['status'],
-            'turn_id': value['turn_id'], 'observed_at': time.time(), 'source': self.harness + '.host',
-            'turn_status': 'failed' if value['status'] == 'error' else None}]})
+        self.admin(
+            'observe-sessions',
+            {
+                'observations': [
+                    {
+                        'actor': actor,
+                        'thread_id': value['thread_id'],
+                        'status': value['status'],
+                        'turn_id': value['turn_id'],
+                        'observed_at': time.time(),
+                        'source': self.harness + '.host',
+                        'turn_status': 'failed' if value['status'] == 'error' else None,
+                    }
+                ]
+            },
+        )
         return value['status'] != 'error'
 
     def cycle(self):
@@ -197,17 +264,31 @@ class StandingTeamPolicyHost:
                     raise ValueError('Standing role acknowledgement mismatch')
             except BudgetExhausted:
                 # Refused before any launch: the wake was not sent, and the task cap is spent.
-                self.admin('dispatch-result', {'wake_id': claimed['wake_id'], 'outcome': 'cancelled',
-                                               'result': {'error': 'budget_exhausted'}})
+                self.admin(
+                    'dispatch-result',
+                    {
+                        'wake_id': claimed['wake_id'],
+                        'outcome': 'cancelled',
+                        'result': {'error': 'budget_exhausted'},
+                    },
+                )
                 self.admin('pause', {'reason': 'Claude task budget exhausted'})
                 return {'dispatched': sent, 'paused': True}
             except Exception:
-                self.admin('dispatch-result', {'wake_id': claimed['wake_id'], 'outcome': 'uncertain',
-                                               'result': {'error': 'Native role dispatch requires review'}})
+                self.admin(
+                    'dispatch-result',
+                    {
+                        'wake_id': claimed['wake_id'],
+                        'outcome': 'uncertain',
+                        'result': {'error': 'Native role dispatch requires review'},
+                    },
+                )
                 self.admin('pause', {'reason': 'Native role dispatch outcome uncertain'})
                 return {'dispatched': sent, 'paused': True}
-            self.admin('dispatch-result', {'wake_id': claimed['wake_id'], 'outcome': 'sent',
-                                           'result': {'accepted': True}})
+            self.admin(
+                'dispatch-result',
+                {'wake_id': claimed['wake_id'], 'outcome': 'sent', 'result': {'accepted': True}},
+            )
             sent.append(claimed['wake_id'])
         return {'dispatched': sent, 'paused': self.store.get('dispatch_paused', False)}
 
@@ -220,6 +301,7 @@ class StandingTeamPolicyHost:
                 errors.append(type(error).__name__)
         # One absolute deadline for every standing role (runner.STOP_WAIT_S).
         from roboteam.harness.claude.session.runner import STOP_WAIT_S
+
         deadline = time.monotonic() + STOP_WAIT_S
         for host in self.hosts.values():
             try:
@@ -234,5 +316,6 @@ class StandingTeamPolicyHost:
         if any(h.observe()['status'] == 'active' for h in self.hosts.values()):
             raise ValueError('Stop and wait for every standing role before closing')
         for host in self.hosts.values():
-            if hasattr(host, 'close_process'): host.close_process()
+            if hasattr(host, 'close_process'):
+                host.close_process()
         self.store.close()

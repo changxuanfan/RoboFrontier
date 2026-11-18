@@ -11,15 +11,16 @@ harness's credentials. Shell network access and web search are off for both
 harnesses: the repository is public, so the network could reach reference
 solutions, and results would depend on what the web returned that day.
 """
+
+import json
 import os
 import re
-import json
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
-from roboteam.runtime.sandbox import policy_env
 from roboteam.runtime.run import layout as run_layout
+from roboteam.runtime.sandbox import policy_env
 from roboteam.tasks.config import ROOT
 
 NETWORK = False
@@ -29,26 +30,52 @@ HOME_SECRETS = ('.codex', '.claude', '.ssh', '.roboteam', '.config/claude')
 # folders, other Python installations, the system keychain files, and a RunPod pod's /workspace
 # volume, which holds other runs and data (the run's own public/ and workspace/ open below it). /tmp stays open, since
 # shells and tools write there at fixed paths.
-CLOSED_ROOTS = {'darwin': ('/Users', '/Volumes', '/var/tmp', '/var/folders', '/opt', '/usr/local', '/Library/Keychains'),
-                'linux': ('/home', '/root', '/mnt', '/media', '/raid', '/var/tmp', '/dev/shm', '/opt', '/usr/local',
-                          '/workspace')}
+CLOSED_ROOTS = {
+    'darwin': ('/Users', '/Volumes', '/var/tmp', '/var/folders', '/opt', '/usr/local', '/Library/Keychains'),
+    'linux': (
+        '/home',
+        '/root',
+        '/mnt',
+        '/media',
+        '/raid',
+        '/var/tmp',
+        '/dev/shm',
+        '/opt',
+        '/usr/local',
+        '/workspace',
+    ),
+}
 
 
 def _checkouts(repo):
     """Every checkout of this repository: the main one and its git worktrees."""
     try:
-        out = subprocess.run(['git', '-C', str(repo), 'worktree', 'list', '--porcelain'], capture_output=True,
-                             text=True, timeout=30, check=True).stdout
+        out = subprocess.run(
+            ['git', '-C', str(repo), 'worktree', 'list', '--porcelain'],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=True,
+        ).stdout
     except (OSError, subprocess.SubprocessError):
         return [repo]
-    return [Path(line[len('worktree '):]) for line in out.splitlines() if line.startswith('worktree ')] or [repo]
+    return [Path(line[len('worktree ') :]) for line in out.splitlines() if line.startswith('worktree ')] or [
+        repo
+    ]
 
 
 def _auth_homes(home):
     """Credential homes of both harnesses, wherever this host keeps them."""
-    homes = [home/name for name in HOME_SECRETS]
-    for key in ('CODEX_HOME', 'CLAUDE_CONFIG_DIR', 'ROBOTEAM_CLAUDE_HOME', 'ROBOTEAM_CODEX_HOME',
-                'ROBOTEAM_JOB_PRIVATE_ROOT', 'ROBOTEAM_CREDENTIAL_STORE', 'ROBOTEAM_EGRESS_ROOT'):
+    homes = [home / name for name in HOME_SECRETS]
+    for key in (
+        'CODEX_HOME',
+        'CLAUDE_CONFIG_DIR',
+        'ROBOTEAM_CLAUDE_HOME',
+        'ROBOTEAM_CODEX_HOME',
+        'ROBOTEAM_JOB_PRIVATE_ROOT',
+        'ROBOTEAM_CREDENTIAL_STORE',
+        'ROBOTEAM_EGRESS_ROOT',
+    ):
         if os.environ.get(key):
             homes.append(Path(os.environ[key]).expanduser())
     return homes
@@ -58,7 +85,7 @@ def table(run, repo=ROOT, home=None, tmp_dirs=None, checkouts=None):
     run = Path(run).resolve()
     home = Path(home).expanduser().resolve() if home else Path.home().resolve()
     access = {'/': 'read'}
-    for checkout in (checkouts if checkouts is not None else _checkouts(Path(repo))):
+    for checkout in checkouts if checkouts is not None else _checkouts(Path(repo)):
         access[str(Path(checkout).resolve())] = 'deny'
     for path in _auth_homes(home):
         access[str(Path(path).resolve())] = 'deny'
@@ -66,16 +93,19 @@ def table(run, repo=ROOT, home=None, tmp_dirs=None, checkouts=None):
     # that git worktree discovery cannot enumerate. The trusted launcher names
     # these roots; the resulting concrete table is frozen and hashed per run.
     roots = json.loads(os.environ.get('ROBOTEAM_SHARED_DENY_ROOTS', '[]'))
-    if not isinstance(roots, list) or any(not isinstance(p, str) or not Path(p).is_absolute() or p == '/' for p in roots):
+    if not isinstance(roots, list) or any(
+        not isinstance(p, str) or not Path(p).is_absolute() or p == '/' for p in roots
+    ):
         raise ValueError('Shared deny roots must be absolute operator-storage paths')
     for path in roots:
         access[str(Path(path).resolve())] = 'deny'
-    for tmp in (tmp_dirs if tmp_dirs is not None else ('/tmp', os.environ.get('TMPDIR'))):
-        if tmp: access[str(Path(tmp).resolve())] = 'write'
+    for tmp in tmp_dirs if tmp_dirs is not None else ('/tmp', os.environ.get('TMPDIR')):
+        if tmp:
+            access[str(Path(tmp).resolve())] = 'write'
     access[str(run)] = 'read'
-    access[str(run/'private')] = 'deny'
+    access[str(run / 'private')] = 'deny'
     # Prepared runs use the current layout, whose working folder is workspace/.
-    access[str(run/run_layout.PATHS['policy_cwd'])] = 'write'
+    access[str(run / run_layout.PATHS['policy_cwd'])] = 'write'
     return access
 
 
@@ -109,9 +139,9 @@ def closed_table(run, environment, *, home=None, system=None, **kwargs):
             access[path] = 'deny'
     access[str(Path(environment).resolve())] = 'read'
     access[str(run)] = 'deny'
-    access[str(run/'public')] = 'read'
-    access[str(run/'private')] = 'deny'
-    access[str(run/run_layout.PATHS['policy_cwd'])] = 'write'
+    access[str(run / 'public')] = 'read'
+    access[str(run / 'private')] = 'deny'
+    access[str(run / run_layout.PATHS['policy_cwd'])] = 'write'
     return access
 
 
@@ -123,9 +153,11 @@ def system_pythons(folders=('/usr/bin', '/bin', '/usr/sbin')):
     found = set()
     for folder in folders:
         folder = Path(folder)
-        if folder.is_symlink() or not folder.is_dir(): continue
+        if folder.is_symlink() or not folder.is_dir():
+            continue
         for entry in folder.iterdir():
-            if SYSTEM_PYTHON.fullmatch(entry.name): found.add(str(entry))
+            if SYSTEM_PYTHON.fullmatch(entry.name):
+                found.add(str(entry))
     return sorted(found)
 
 
@@ -140,8 +172,10 @@ def require_outside_tmp(run):
     temporary = Path(os.environ['TMPDIR']).resolve() if os.environ.get('TMPDIR') else None
     for name, path in (('the run folder', run), ('TMPDIR', temporary)):
         if path is not None and path != tmp and path.is_relative_to(tmp):
-            raise ValueError('On Linux, keep %s outside /tmp for a run with a policy environment (set '
-                             'slurm.scratch_root and TMPDIR under /var/tmp, for example); found %s' % (name, path))
+            raise ValueError(
+                'On Linux, keep %s outside /tmp for a run with a policy environment (set '
+                'slurm.scratch_root and TMPDIR under /var/tmp, for example); found %s' % (name, path)
+            )
 
 
 def record(run, environment=None, unchecked=False, *, no_environment=False, **kwargs):
@@ -150,16 +184,29 @@ def record(run, environment=None, unchecked=False, *, no_environment=False, **kw
     `no_environment` is a robot_only run: no shell runs, so no Python environment is frozen."""
     environment = None if no_environment else environment or policy_env.selected()
     if environment is None:
-        return {'schema': 'roboteam.policy-access.v1', 'filesystem': table(run, **kwargs),
-                'network': NETWORK, 'web_search': WEB_SEARCH}
+        return {
+            'schema': 'roboteam.policy-access.v1',
+            'filesystem': table(run, **kwargs),
+            'network': NETWORK,
+            'web_search': WEB_SEARCH,
+        }
     manifest = policy_env.verify(environment)
     # scripts/release/check_policy_env.py is what passes this, so it alone may be `unchecked`.
     if not unchecked:
         policy_env.require_checked(environment, manifest)
-    return {'schema': 'roboteam.policy-access.v2', 'filesystem': closed_table(run, environment, **kwargs),
-            'network': NETWORK, 'web_search': WEB_SEARCH,
-            'policy_env': {'root': str(Path(environment).resolve()), 'id': manifest['id'], 'python': manifest['python'],
-                           'tree_sha256': manifest['tree_sha256'], 'variables': policy_env.variables(environment, run)}}
+    return {
+        'schema': 'roboteam.policy-access.v2',
+        'filesystem': closed_table(run, environment, **kwargs),
+        'network': NETWORK,
+        'web_search': WEB_SEARCH,
+        'policy_env': {
+            'root': str(Path(environment).resolve()),
+            'id': manifest['id'],
+            'python': manifest['python'],
+            'tree_sha256': manifest['tree_sha256'],
+            'variables': policy_env.variables(environment, run),
+        },
+    }
 
 
 def mode(access, path):

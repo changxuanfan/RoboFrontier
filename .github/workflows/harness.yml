@@ -1,6 +1,6 @@
 name: Tests
 
-# One offline job on a clean Linux machine: the protocol contract with physics blocked
+# One offline job on a clean Linux machine: formatting and lint (ruff), the protocol contract with physics blocked
 # (check_harness), then every Python and Node test with the scene assets and a virtual display
 # for the simulation's window (MuJoCo renders through GLFW on Mesa's software OpenGL). No model
 # is called; tests of an installed harness CLI skip without one.
@@ -53,6 +53,10 @@ jobs:
         run: |
           python -m pip install uv==0.9.28
           uv sync --locked
+      - name: Formatting and lint
+        run: |
+          uvx ruff@0.17.5 format --check roboteam scripts tests
+          uvx ruff@0.17.5 check roboteam scripts tests
       - name: Restore pinned policy assets
         run: .venv/bin/python -m roboteam.cli bootstrap
       - name: Protocol contract (physics blocked)

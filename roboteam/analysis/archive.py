@@ -13,12 +13,12 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
 import re
 import tarfile
 import tempfile
 import zipfile
 import zlib
+from pathlib import Path
 
 
 def default_cache_dir():
@@ -49,8 +49,15 @@ def tar_index(path, cache_dir=None):
     with open(path, 'rb') as stream:
         edges.update(stream.read(65536))
         if st.st_size > 65536:
-            stream.seek(max(65536, st.st_size - 65536)); edges.update(stream.read())
-    ident = '%s|%d|%d|%d|%s' % (Path(path).resolve(), st.st_size, st.st_mtime_ns, st.st_ino, edges.hexdigest())
+            stream.seek(max(65536, st.st_size - 65536))
+            edges.update(stream.read())
+    ident = '%s|%d|%d|%d|%s' % (
+        Path(path).resolve(),
+        st.st_size,
+        st.st_mtime_ns,
+        st.st_ino,
+        edges.hexdigest(),
+    )
     p = cache / (hashlib.sha1(ident.encode()).hexdigest()[:16] + '.jsonl')
     if not p.exists():
         tmp = p.with_suffix('.tmp.%d' % os.getpid())
@@ -92,8 +99,8 @@ class Run:
             pre = rest.rstrip('/') + '/'
             self.fh = open(C, 'rb')
             with open(tar_index(C, cache_dir)) as idx:
-                for l in idx:
-                    n, o, s = json.loads(l)
+                for line in idx:
+                    n, o, s = json.loads(line)
                     if n.startswith(pre):
                         self.files[n[len(pre) :]] = (o, s)
         elif c.endswith('.zip'):

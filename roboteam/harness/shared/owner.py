@@ -7,15 +7,32 @@ where there is no GPU) two. The owner runs in its own process group.
 
     python -m roboteam.harness.shared.owner env   # the owner environment, as JSON
 """
+
 import json
 import os
 import sys
 
-PASSED = ('PATH', 'HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'DISPLAY', 'MUJOCO_GL', 'PYOPENGL_PLATFORM',
-          'LIBGL_ALWAYS_SOFTWARE', 'GALLIUM_DRIVER', 'CUDA_VISIBLE_DEVICES', 'MUJOCO_EGL_DEVICE_ID',
-          'PYTHONPATH', 'DYLD_LIBRARY_PATH', 'LD_LIBRARY_PATH',
-          # What doctor's render probe passes, so a world renders where doctor said it would.
-          'NVIDIA_VISIBLE_DEVICES', 'NVIDIA_DRIVER_CAPABILITIES', '__EGL_VENDOR_LIBRARY_FILENAMES')
+PASSED = (
+    'PATH',
+    'HOME',
+    'LANG',
+    'LC_ALL',
+    'TMPDIR',
+    'DISPLAY',
+    'MUJOCO_GL',
+    'PYOPENGL_PLATFORM',
+    'LIBGL_ALWAYS_SOFTWARE',
+    'GALLIUM_DRIVER',
+    'CUDA_VISIBLE_DEVICES',
+    'MUJOCO_EGL_DEVICE_ID',
+    'PYTHONPATH',
+    'DYLD_LIBRARY_PATH',
+    'LD_LIBRARY_PATH',
+    # What doctor's render probe passes, so a world renders where doctor said it would.
+    'NVIDIA_VISIBLE_DEVICES',
+    'NVIDIA_DRIVER_CAPABILITIES',
+    '__EGL_VENDOR_LIBRARY_FILENAMES',
+)
 THREADS = {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'LP_NUM_THREADS': '2'}
 
 
@@ -26,12 +43,20 @@ def environment(base=None):
 
 
 def command(run, python=None):
-    return [python or sys.executable, '-m', 'roboteam.runtime.world.pipeline', '--run-dir', str(run), '--hidden']
+    return [
+        python or sys.executable,
+        '-m',
+        'roboteam.runtime.world.pipeline',
+        '--run-dir',
+        str(run),
+        '--hidden',
+    ]
 
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
-    if argv != ['env']: raise SystemExit('usage: python -m roboteam.harness.shared.owner env')
+    if argv != ['env']:
+        raise SystemExit('usage: python -m roboteam.harness.shared.owner env')
     print(json.dumps(environment()))
 
 

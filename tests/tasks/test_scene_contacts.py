@@ -1,6 +1,8 @@
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
+
 import mujoco
+
 from roboteam.tasks.evaluate import Monitor
 
 BOX_ON_TABLE = '''<mujoco><option timestep="0.002"/><worldbody>
@@ -11,9 +13,11 @@ BOX_ON_TABLE = '''<mujoco><option timestep="0.002"/><worldbody>
 
 def settled(sleep):
     model = mujoco.MjModel.from_xml_string(BOX_ON_TABLE)
-    if sleep: model.opt.enableflags |= int(mujoco.mjtEnableBit.mjENBL_SLEEP)
+    if sleep:
+        model.opt.enableflags |= int(mujoco.mjtEnableBit.mjENBL_SLEEP)
     data = mujoco.MjData(model)
-    for _ in range(1500): mujoco.mj_step(model, data)
+    for _ in range(1500):
+        mujoco.mj_step(model, data)
     return SimpleNamespace(m=model, d=data)
 
 
@@ -24,7 +28,7 @@ class SceneContactTests(unittest.TestCase):
         self.assertEqual(monitor.d.ncon, 0)
         contacts = Monitor.scene_contacts(monitor)
         self.assertGreater(len(contacts), 0)
-        self.assertTrue(all(float(c.dist) <= .0002 for c in contacts))
+        self.assertTrue(all(float(c.dist) <= 0.0002 for c in contacts))
 
     def test_a_world_without_sleep_reads_its_own_contacts(self):
         monitor = settled(sleep=False)
@@ -35,9 +39,10 @@ class SceneContactTests(unittest.TestCase):
     def test_contacts_follow_the_current_pose(self):
         monitor = settled(sleep=True)
         Monitor.scene_contacts(monitor)
-        monitor.d.qpos[2] += .2
-        monitor.d.time += .002
+        monitor.d.qpos[2] += 0.2
+        monitor.d.time += 0.002
         self.assertEqual(len(Monitor.scene_contacts(monitor)), 0)
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

@@ -2,66 +2,133 @@
 
 No external inference, API keys, robot world or benchmark scoring is involved.
 """
+
 import argparse
 import base64
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 import os
-from pathlib import Path
 import subprocess
 import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 from PIL import Image
+
 from roboteam.harness.codex.launch import launch_config
-from roboteam.runtime.run.setup import write_json
 from roboteam.runtime.run.cli import fork_provenance
+from roboteam.runtime.run.setup import write_json
 
 
 def check(output):
-    output=Path(output).absolute();output.mkdir(parents=True,exist_ok=True)
-    requests=[]
+    output = Path(output).absolute()
+    output.mkdir(parents=True, exist_ok=True)
+    requests = []
+
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self,*args):pass
+        def log_message(self, *args):
+            pass
+
         def do_POST(self):
-            body=json.loads(self.rfile.read(int(self.headers['Content-Length'])));requests.append(body)
-            image_seen='input_image' in json.dumps(body.get('input'))
-            item=(dict(id='fc_probe',type='function_call',call_id='call_probe',name='probe',arguments='{}',status='completed')
-                  if not image_seen else dict(id='msg_probe',type='message',role='assistant',status='completed',
-                    content=[dict(type='output_text',text='OFFLINE_PROTOCOL_OK',annotations=[])]))
-            response=dict(id='resp_'+str(len(requests)),object='response',created_at=int(time.time()),
-                status='completed',model=body.get('model'),output=[item],
-                usage=dict(input_tokens=10,output_tokens=10,total_tokens=20,input_tokens_details={'cached_tokens':0},output_tokens_details={'reasoning_tokens':0}))
-            self.send_response(200);self.send_header('Content-Type','text/event-stream');self.end_headers()
-            events=[('response.created',{'response':{**response,'status':'in_progress','output':[]}}),
-                    ('response.output_item.added',{'output_index':0,'item':{**item,'status':'in_progress'}}),
-                    ('response.output_item.done',{'output_index':0,'item':item}),
-                    ('response.completed',{'response':response})]
-            for i,(kind,data) in enumerate(events):
-                self.wfile.write(('event: '+kind+'\ndata: '+json.dumps({'type':kind,'sequence_number':i,**data})+'\n\n').encode())
+            body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            requests.append(body)
+            image_seen = 'input_image' in json.dumps(body.get('input'))
+            item = (
+                dict(
+                    id='fc_probe',
+                    type='function_call',
+                    call_id='call_probe',
+                    name='probe',
+                    arguments='{}',
+                    status='completed',
+                )
+                if not image_seen
+                else dict(
+                    id='msg_probe',
+                    type='message',
+                    role='assistant',
+                    status='completed',
+                    content=[dict(type='output_text', text='OFFLINE_PROTOCOL_OK', annotations=[])],
+                )
+            )
+            response = dict(
+                id='resp_' + str(len(requests)),
+                object='response',
+                created_at=int(time.time()),
+                status='completed',
+                model=body.get('model'),
+                output=[item],
+                usage=dict(
+                    input_tokens=10,
+                    output_tokens=10,
+                    total_tokens=20,
+                    input_tokens_details={'cached_tokens': 0},
+                    output_tokens_details={'reasoning_tokens': 0},
+                ),
+            )
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream')
+            self.end_headers()
+            events = [
+                ('response.created', {'response': {**response, 'status': 'in_progress', 'output': []}}),
+                (
+                    'response.output_item.added',
+                    {'output_index': 0, 'item': {**item, 'status': 'in_progress'}},
+                ),
+                ('response.output_item.done', {'output_index': 0, 'item': item}),
+                ('response.completed', {'response': response}),
+            ]
+            for i, (kind, data) in enumerate(events):
+                self.wfile.write(
+                    (
+                        'event: '
+                        + kind
+                        + '\ndata: '
+                        + json.dumps({'type': kind, 'sequence_number': i, **data})
+                        + '\n\n'
+                    ).encode()
+                )
             self.wfile.flush()
-    server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
-    threading.Thread(target=server.serve_forever,daemon=True).start()
+
+    server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
     # A private Codex home, like the sibling checks: test threads never land in the
     # operator's or a batch's home, and that home's config and MCP servers never load.
-    home=output/'codex-home';home.mkdir(mode=0o700,exist_ok=True)
-    previous_home=os.environ.get('CODEX_HOME');os.environ['CODEX_HOME']=str(home)
-    try:return _check(output,server,requests)
+    home = output / 'codex-home'
+    home.mkdir(mode=0o700, exist_ok=True)
+    previous_home = os.environ.get('CODEX_HOME')
+    os.environ['CODEX_HOME'] = str(home)
+    try:
+        return _check(output, server, requests)
     finally:
-        server.shutdown();server.server_close()
-        if previous_home is None:os.environ.pop('CODEX_HOME',None)
-        else:os.environ['CODEX_HOME']=previous_home
+        server.shutdown()
+        server.server_close()
+        if previous_home is None:
+            os.environ.pop('CODEX_HOME', None)
+        else:
+            os.environ['CODEX_HOME'] = previous_home
 
 
-def _check(output,server,requests):
-    p=dict(model='offline-protocol',provider='offline_protocol',effort='high',vision=True,
-        context_window=272000,auto_compact_token_limit=245000,
-        base_url=f'http://127.0.0.1:{server.server_port}',env_key='ROBOTEAM_OFFLINE_STUB_TOKEN')
-    write_json(output/'launch.json',launch_config(p,output))
-    pixels=io.BytesIO();Image.new('RGB',(32,32),'red').save(pixels,format='PNG')
-    write_json(output/'image.json',{'url':'data:image/png;base64,'+base64.b64encode(pixels.getvalue()).decode()})
-    script=r'''
+def _check(output, server, requests):
+    p = dict(
+        model='offline-protocol',
+        provider='offline_protocol',
+        effort='high',
+        vision=True,
+        context_window=272000,
+        auto_compact_token_limit=245000,
+        base_url=f'http://127.0.0.1:{server.server_port}',
+        env_key='ROBOTEAM_OFFLINE_STUB_TOKEN',
+    )
+    write_json(output / 'launch.json', launch_config(p, output))
+    pixels = io.BytesIO()
+    Image.new('RGB', (32, 32), 'red').save(pixels, format='PNG')
+    write_json(
+        output / 'image.json',
+        {'url': 'data:image/png;base64,' + base64.b64encode(pixels.getvalue()).decode()},
+    )
+    script = r'''
 const fs=require('fs'),{CodexRpc}=require(process.argv[1]+'/roboteam/harness/codex/host/rpc');
 const out=process.argv[2],launch=JSON.parse(fs.readFileSync(out+'/launch.json'));
 process.env.ROBOTEAM_OFFLINE_STUB_TOKEN='local-stub-no-credential';
@@ -83,20 +150,34 @@ fs.writeFileSync(out+'/native.json',JSON.stringify({parent:a.thread.id,status:re
 for(const f of forks)await rpc.call('thread/archive',{threadId:f.id});await rpc.call('thread/archive',{threadId:a.thread.id});
 }finally{await rpc.close();}})().then(()=>process.exit(0)).catch(e=>{console.error(e.stack);process.exit(1)});
 '''
-    result=subprocess.run(['node','-e',script,str(Path(__file__).resolve().parents[4]),str(output)],
-        capture_output=True,text=True,timeout=40,env=dict(os.environ))
-    (output/'client.log').write_text(result.stdout+result.stderr)
-    if result.returncode:raise RuntimeError(result.stderr[-3000:])
-    native=json.loads((output/'native.json').read_text())
-    proofs=[fork_provenance(native['parent'],f['id']) for f in native['forks']]
-    report=dict(passed=native['tool_calls']==1 and len(requests)==2 and proofs[0]==proofs[1],
-        external_model_calls=0,local_stub_requests=len(requests),native=native,lineage=proofs,
+    result = subprocess.run(
+        ['node', '-e', script, str(Path(__file__).resolve().parents[4]), str(output)],
+        capture_output=True,
+        text=True,
+        timeout=40,
+        env=dict(os.environ),
+    )
+    (output / 'client.log').write_text(result.stdout + result.stderr)
+    if result.returncode:
+        raise RuntimeError(result.stderr[-3000:])
+    native = json.loads((output / 'native.json').read_text())
+    proofs = [fork_provenance(native['parent'], f['id']) for f in native['forks']]
+    report = dict(
+        passed=native['tool_calls'] == 1 and len(requests) == 2 and proofs[0] == proofs[1],
+        external_model_calls=0,
+        local_stub_requests=len(requests),
+        native=native,
+        lineage=proofs,
         image_returned_to_model='input_image' in json.dumps(requests[-1]),
-        scope='Actual installed CLI, local Responses stub; not provider access or Desktop UI acceptance')
-    write_json(output/'report.json',report);return report
+        scope='Actual installed CLI, local Responses stub; not provider access or Desktop UI acceptance',
+    )
+    write_json(output / 'report.json', report)
+    return report
 
 
-if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--output',type=Path,required=True)
-    result=check(parser.parse_args().output);print(json.dumps(result,indent=2))
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path, required=True)
+    result = check(parser.parse_args().output)
+    print(json.dumps(result, indent=2))
     raise SystemExit(0 if result['passed'] else 1)

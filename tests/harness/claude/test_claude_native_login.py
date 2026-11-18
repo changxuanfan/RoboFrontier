@@ -2,47 +2,61 @@ import json
 import tempfile
 import unittest
 import uuid
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from roboteam.harness.claude.session.runner import build_command, build_env, run_turn
 from harness.claude.test_claude_runner import fake_claude
 from roboteam.harness.claude.session.native_home import config_directory
+from roboteam.harness.claude.session.runner import build_command, build_env, run_turn
 from roboteam.launch.claude_prepare import model_entry
 
 
 class NativeLoginTests(unittest.TestCase):
     def test_default_native_login_preserves_the_default_credential_namespace(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); native = root/'.claude'; native.mkdir()
-            selected = {**self.model_entry(native), 'native_config_scope':'default'}
-            env = build_env(selected, {'PATH':'/bin', 'HOME':str(root),
-                'CLAUDE_CONFIG_DIR':'/another/account'}, native)
+            root = Path(tmp)
+            native = root / '.claude'
+            native.mkdir()
+            selected = {**self.model_entry(native), 'native_config_scope': 'default'}
+            env = build_env(
+                selected, {'PATH': '/bin', 'HOME': str(root), 'CLAUDE_CONFIG_DIR': '/another/account'}, native
+            )
             self.assertEqual(env['HOME'], str(root))
             self.assertNotIn('CLAUDE_CONFIG_DIR', env)
 
     def test_default_native_login_rejects_a_different_home(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
-            selected = {**self.model_entry(home), 'native_config_scope':'default'}
+            selected = {**self.model_entry(home), 'native_config_scope': 'default'}
             with self.assertRaises(ValueError):
-                build_env(selected, {'HOME':str(home)}, home)
+                build_env(selected, {'HOME': str(home)}, home)
 
     def test_runtime_verifies_fork_history_in_the_frozen_native_home(self):
         from roboteam.runtime.run.cli import native_fork_provenance
+
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); home = root/'native'; project = home/'projects/task'
+            root = Path(tmp)
+            home = root / 'native'
+            project = home / 'projects/task'
             project.mkdir(parents=True)
-            run = root/'run'; inputs = run/'private/inputs'; inputs.mkdir(parents=True); (run/'workspace').mkdir(parents=True, exist_ok=True)
-            (inputs/'claude.json').write_text(json.dumps({'model_entry':self.model_entry(home)}))
+            run = root / 'run'
+            inputs = run / 'private/inputs'
+            inputs.mkdir(parents=True)
+            (run / 'workspace').mkdir(parents=True, exist_ok=True)
+            (inputs / 'claude.json').write_text(json.dumps({'model_entry': self.model_entry(home)}))
             parent, child = str(uuid.uuid4()), str(uuid.uuid4())
-            row = {'uuid':str(uuid.uuid4()), 'sessionId':parent,
-                   'type':'user', 'message':{'role':'user','content':'public task'}}
-            (project/(parent+'.jsonl')).write_text(json.dumps(row)+'\n')
-            (project/(child+'.jsonl')).write_text(json.dumps({**row,'sessionId':child})+'\n')
-            store = SimpleNamespace(path=run/'private/state/runtime.sqlite',
-                                    get=lambda key:{'harness':'claude'})
+            row = {
+                'uuid': str(uuid.uuid4()),
+                'sessionId': parent,
+                'type': 'user',
+                'message': {'role': 'user', 'content': 'public task'},
+            }
+            (project / (parent + '.jsonl')).write_text(json.dumps(row) + '\n')
+            (project / (child + '.jsonl')).write_text(json.dumps({**row, 'sessionId': child}) + '\n')
+            store = SimpleNamespace(
+                path=run / 'private/state/runtime.sqlite', get=lambda key: {'harness': 'claude'}
+            )
             proof = native_fork_provenance(store, parent, child)
             self.assertEqual(proof['source_thread_id'], parent)
             self.assertEqual(proof['source_ordinal'], 1)
@@ -60,22 +74,40 @@ class NativeLoginTests(unittest.TestCase):
 
     def test_native_history_location_comes_from_frozen_launch(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); home = root / 'native'; home.mkdir()
-            run = root / 'run'; inputs = run / 'private/inputs'; inputs.mkdir(parents=True); (run/'workspace').mkdir(parents=True, exist_ok=True)
+            root = Path(tmp)
+            home = root / 'native'
+            home.mkdir()
+            run = root / 'run'
+            inputs = run / 'private/inputs'
+            inputs.mkdir(parents=True)
+            (run / 'workspace').mkdir(parents=True, exist_ok=True)
             (inputs / 'claude.json').write_text(json.dumps({'model_entry': self.model_entry(home)}))
             self.assertEqual(config_directory(run), home.resolve())
 
     def model_entry(self, home):
-        return {'provider': 'anthropic', 'model': 'claude-haiku-5-5',
-                'effort': 'high', 'auth_mode': 'native_login', 'env_key': None,
-                'native_config_dir': str(home)}
+        return {
+            'provider': 'anthropic',
+            'model': 'claude-haiku-5-5',
+            'effort': 'high',
+            'auth_mode': 'native_login',
+            'env_key': None,
+            'native_config_dir': str(home),
+        }
 
     def test_native_login_uses_explicit_home_without_inheriting_provider_keys(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
-            env = build_env(self.model_entry(home), {'PATH': '/usr/bin:/bin',
-                'HOME': '/actual-user', 'ANTHROPIC_API_KEY': 'other-api-key',
-                'CLAUDE_CODE_OAUTH_TOKEN': 'other-token', 'OPENAI_API_KEY': 'other-key'}, home)
+            env = build_env(
+                self.model_entry(home),
+                {
+                    'PATH': '/usr/bin:/bin',
+                    'HOME': '/actual-user',
+                    'ANTHROPIC_API_KEY': 'other-api-key',
+                    'CLAUDE_CODE_OAUTH_TOKEN': 'other-token',
+                    'OPENAI_API_KEY': 'other-key',
+                },
+                home,
+            )
             self.assertEqual(env['CLAUDE_CONFIG_DIR'], str(home.resolve()))
             self.assertEqual(env['HOME'], '/actual-user')
             self.assertNotIn('ANTHROPIC_API_KEY', env)
@@ -83,8 +115,14 @@ class NativeLoginTests(unittest.TestCase):
             self.assertNotIn('OPENAI_API_KEY', env)
 
     def test_native_login_retains_explicit_ids_and_strict_tool_boundary(self):
-        cmd = build_command('claude-haiku-5-5', 'high', 'robot.json', 'hello',
-                            session_id='assigned-session', auth_mode='native_login')
+        cmd = build_command(
+            'claude-haiku-5-5',
+            'high',
+            'robot.json',
+            'hello',
+            session_id='assigned-session',
+            auth_mode='native_login',
+        )
         self.assertNotIn('--bare', cmd)
         self.assertEqual(cmd[cmd.index('--setting-sources') + 1], '')
         self.assertEqual(cmd[cmd.index('--session-id') + 1], 'assigned-session')
@@ -94,25 +132,46 @@ class NativeLoginTests(unittest.TestCase):
     def test_native_login_rejects_missing_home_and_non_anthropic_endpoint(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
-            for changes in ({'native_config_dir': None}, {'native_config_dir': 'relative'},
-                            {'provider': 'third-party'}, {'base_url': 'https://other.example'}):
+            for changes in (
+                {'native_config_dir': None},
+                {'native_config_dir': 'relative'},
+                {'provider': 'third-party'},
+                {'base_url': 'https://other.example'},
+            ):
                 with self.subTest(changes=changes), self.assertRaises(ValueError):
                     build_env({**self.model_entry(home), **changes}, {'PATH': '/bin'}, home)
 
     def test_native_login_turn_leaves_auth_files_owned_by_native_cli(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); home = root / 'native'; home.mkdir()
-            auth = home / '.credentials.json'; auth.write_text('native-owned sentinel')
-            run = root / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
-            binary = fake_claude(root, '''
+            root = Path(tmp)
+            home = root / 'native'
+            home.mkdir()
+            auth = home / '.credentials.json'
+            auth.write_text('native-owned sentinel')
+            run = root / 'run'
+            (run / 'workspace').mkdir(parents=True, exist_ok=True)
+            binary = fake_claude(
+                root,
+                '''
 assert 'ANTHROPIC_API_KEY' not in os.environ
 assert 'CLAUDE_CODE_OAUTH_TOKEN' not in os.environ
 print(json.dumps({'type':'result','subtype':'success','is_error':False,
                   'session_id':'assigned-session','result':'READY','total_cost_usd':.001}))
-''')
-            record = run_turn(self.model_entry(home), 'claude-haiku-5-5', 'high', None,
-                'Reply READY', run, {'PATH': '/usr/bin:/bin', 'HOME': str(root)},
-                session_id='assigned-session', binary=str(binary), enable_robot=False, timeout=5)
+''',
+            )
+            record = run_turn(
+                self.model_entry(home),
+                'claude-haiku-5-5',
+                'high',
+                None,
+                'Reply READY',
+                run,
+                {'PATH': '/usr/bin:/bin', 'HOME': str(root)},
+                session_id='assigned-session',
+                binary=str(binary),
+                enable_robot=False,
+                timeout=5,
+            )
             self.assertEqual(record['summary']['result_text'], 'READY')
             self.assertEqual(auth.read_text(), 'native-owned sentinel')
             self.assertFalse((run / 'private/harness/config').exists())

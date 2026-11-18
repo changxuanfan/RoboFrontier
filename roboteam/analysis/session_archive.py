@@ -16,14 +16,14 @@ def epoch(s):
 
 def summarize_session_archive(p):
     """Final evaluation, Relay payloads and model-busy spans (merged later) from one package."""
-    O = dict(sessions=0, spans=[], first=None, last=None, calls=0)
+    summary = dict(sessions=0, spans=[], first=None, last=None, calls=0)
     with tarfile.open(p, 'r:gz') as a:
         for m in a:
             a.members = []
             if m.name.endswith('/evaluation.json'):
                 d = json.loads(a.extractfile(m).read())
-                O['eval'] = {k: v for k, v in d.items() if not isinstance(v, (dict, list))}
-                O['payloads'] = {
+                summary['eval'] = {k: v for k, v in d.items() if not isinstance(v, (dict, list))}
+                summary['payloads'] = {
                     k: dict(
                         terminal=v.get('terminal_goal_met'),
                         completed=v.get('completed'),
@@ -31,9 +31,9 @@ def summarize_session_archive(p):
                     )
                     for k, v in (d.get('payloads') or {}).items()
                 }
-                O['violation_kinds'] = [v.get('kind') for v in d.get('violations') or []]
+                summary['violation_kinds'] = [v.get('kind') for v in d.get('violations') or []]
             elif '/sessions/' in m.name and m.name.endswith('.jsonl'):
-                O['sessions'] += 1
+                summary['sessions'] += 1
                 state = None
                 since = None
                 opened = {}
@@ -43,22 +43,22 @@ def summarize_session_archive(p):
                     if not t:
                         continue
                     now = epoch(t.group(1))
-                    O['first'] = now if O['first'] is None else min(O['first'], now)
-                    O['last'] = now if O['last'] is None else max(O['last'], now)
+                    summary['first'] = now if summary['first'] is None else min(summary['first'], now)
+                    summary['last'] = now if summary['last'] is None else max(summary['last'], now)
                     if '"task_started"' in h:
                         state = 'model'
                         since = now
                         opened = {}
                     elif '"task_complete"' in h or '"turn_aborted"' in h:
                         if state == 'model' and since:
-                            O['spans'].append([since, now])
+                            summary['spans'].append([since, now])
                         state = None
                         opened = {}
                     elif '"type":"function_call"' in h or '"type":"custom_tool_call"' in h:
                         c = call_id(raw.decode(errors='ignore'))
-                        O['calls'] += 1
+                        summary['calls'] += 1
                         if state == 'model' and since:
-                            O['spans'].append([since, now])
+                            summary['spans'].append([since, now])
                             state = 'tool'
                         if c:
                             opened[c] = 1
@@ -69,4 +69,4 @@ def summarize_session_archive(p):
                             if not opened and state == 'tool':
                                 state = 'model'
                                 since = now
-    return O
+    return summary

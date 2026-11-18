@@ -1,7 +1,14 @@
 // Initialize Codex state without starting a model turn or making inference requests.
-const {CodexRpc}=require('./rpc');
+const { CodexRpc } = require('./rpc');
 async function main() {
-  const rpc=new CodexRpc(process.argv.slice(2),{stderr:'inherit'});
-  try { await rpc.initialize(); } finally { await rpc.close(); }
+  const rpc = new CodexRpc(process.argv.slice(2), { stderr: 'inherit' });
+  try {
+    await rpc.initialize();
+  } finally {
+    await rpc.close();
+  }
 }
-main().catch(error=>{console.error('Codex initialization failed:',error.message);process.exitCode=1;});
+main().catch((error) => {
+  console.error('Codex initialization failed:', error.message);
+  process.exitCode = 1;
+});

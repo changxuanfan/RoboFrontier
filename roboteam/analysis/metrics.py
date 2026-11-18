@@ -1,6 +1,9 @@
 """Per-run metrics from one extracted JSON. Definitions follow the paper; every rule is stated here."""
 
-import bisect, collections, math
+import bisect
+import collections
+import math
+
 import numpy as np
 
 # Agent choices and host events are not task failures.
@@ -247,7 +250,11 @@ def grasps(A):
     outside it. A grasp that fails for another reason (a stop, an interruption) is not counted
     as failed."""
     attempts = [x for x in A if x.get('type') == 'gripper' and x.get('mode') == 'grasp']
-    failed = sum(1 for x in attempts if x.get('status') == 'failed' and str(x.get('reason') or '').startswith(GRASP_FAILURE))
+    failed = sum(
+        1
+        for x in attempts
+        if x.get('status') == 'failed' and str(x.get('reason') or '').startswith(GRASP_FAILURE)
+    )
     return {'grasps': len(attempts), 'failed': failed}
 
 
@@ -416,9 +423,7 @@ def relay_atomic(d, clk):
             p = owner(f['arm'], f['t'])
             done_on = [s for s in steps if s['p'] == p]
             if done_on:
-                done_on[-1]['failed'].add(
-                    f['kind']
-                )  # carrying to the goal belongs to the last transfer
+                done_on[-1]['failed'].add(f['kind'])  # carrying to the goal belongs to the last transfer
             elif p.startswith('arm:'):
                 later = [s for s in steps if s['t'] >= f['t']]
                 if later:
@@ -540,7 +545,9 @@ def excluded(d):
 
     wall_backstop: the 48 h wall backstop stopped it before its 24 h active-time cutoff
     (clock.BudgetGuard); it needs review, whatever its outcome."""
-    if (d.get('cutoff') or {}).get('wall_backstop') or (d.get('evaluation.json') or {}).get('wall_backstop') is True:
+    if (d.get('cutoff') or {}).get('wall_backstop') or (d.get('evaluation.json') or {}).get(
+        'wall_backstop'
+    ) is True:
         return 'wall_backstop'
     return None
 
@@ -548,7 +555,7 @@ def excluded(d):
 def compute(d):
     s = d['sel']
     T = timing(d)
-    O = dict(
+    summary = dict(
         id=s['id'],
         cutoff=d.get('cutoff'),
         model=s.get('model'),
@@ -565,26 +572,26 @@ def compute(d):
         outcome=outcome(d),
         excluded=excluded(d),
     )
-    O['needs_review'] = O['excluded'] is not None
+    summary['needs_review'] = summary['excluded'] is not None
     H = d.get('host')
-    O['tokens'] = H['tok'] if H else None
-    O['harness'] = H['harness'] if H else None
-    O['messages'] = (d.get('meta') or {}).get('messages')
+    summary['tokens'] = H['tok'] if H else None
+    summary['harness'] = H['harness'] if H else None
+    summary['messages'] = (d.get('meta') or {}).get('messages')
     S = d.get('suite')
     clk = Clock(d)
-    O['has_suite'] = bool(S and S.get('lines'))
-    O['has_actions'] = bool(d.get('actions'))
-    O['clock_ok'] = clk.ok
-    if O['has_suite'] and clk.ok:
+    summary['has_suite'] = bool(S and S.get('lines'))
+    summary['has_actions'] = bool(d.get('actions'))
+    summary['clock_ok'] = clk.ok
+    if summary['has_suite'] and clk.ok:
         fam = s['task_type']
-        O['atomic'] = (
+        summary['atomic'] = (
             relay_atomic if fam == 'relay' else dial_atomic if fam == 'dial' else goals_atomic
         )(d, clk)
     A = d.get('actions') or []
-    O['actions'] = len(A)
-    O['failed_actions_all'] = sum(1 for x in A if x['status'] not in ('completed', None))
-    O['grasp'] = grasps(A)
-    O['reasons'] = collections.Counter(
+    summary['actions'] = len(A)
+    summary['failed_actions_all'] = sum(1 for x in A if x['status'] not in ('completed', None))
+    summary['grasp'] = grasps(A)
+    summary['reasons'] = collections.Counter(
         str(x.get('reason'))[:45] for x in A if x['status'] not in ('completed', None)
     ).most_common(8)
-    return O
+    return summary

@@ -6,9 +6,10 @@ such tests, and bootstrap intervals from resampling the tasks within each task t
 
 `results` maps a condition to `{task: (completed, hours)}`; `types` maps a task to its type.
 """
-from math import comb
+
 import random
 import statistics
+from math import comb
 
 
 def discordant(results, a, b):
@@ -22,7 +23,7 @@ def discordant(results, a, b):
 def mcnemar_exact(only_a, only_b):
     """Two-sided exact McNemar p-value: a binomial test of the two discordant counts at 1/2."""
     n, k = only_a + only_b, min(only_a, only_b)
-    return min(1.0, 2 * sum(comb(n, i) for i in range(k + 1)) / 2 ** n) if n else 1.0
+    return min(1.0, 2 * sum(comb(n, i) for i in range(k + 1)) / 2**n) if n else 1.0
 
 
 def holm(p_values):
@@ -39,8 +40,10 @@ def compare(results, reference, others):
     """Each of `others` against `reference`: discordant counts, raw and Holm-corrected p."""
     counts = [discordant(results, reference, other) for other in others]
     raw = [mcnemar_exact(a, b) for a, b in counts]
-    return [{'condition': other, 'only_reference': a, 'only_condition': b, 'p': p, 'p_holm': q}
-            for other, (a, b), p, q in zip(others, counts, raw, holm(raw))]
+    return [
+        {'condition': other, 'only_reference': a, 'only_condition': b, 'p': p, 'p_holm': q}
+        for other, (a, b), p, q in zip(others, counts, raw, holm(raw))
+    ]
 
 
 def _resample(types, rng):
@@ -60,14 +63,18 @@ def _interval(samples, level):
 def completed_interval(results, types, condition, resamples=20000, level=0.95, seed=0):
     """Bootstrap interval for the number of tasks a condition completes."""
     rng = random.Random(seed)
-    return _interval([sum(results[condition][t][0] for t in _resample(types, rng))
-                      for _ in range(resamples)], level)
+    return _interval(
+        [sum(results[condition][t][0] for t in _resample(types, rng)) for _ in range(resamples)], level
+    )
 
 
 def speedup(results, slow, fast, tasks=None):
     """Median over the tasks both complete of the time of `slow` divided by the time of `fast`."""
-    ratios = [results[slow][t][1] / results[fast][t][1] for t in (tasks or sorted(results[slow]))
-              if results[slow][t][0] and results[fast][t][0]]
+    ratios = [
+        results[slow][t][1] / results[fast][t][1]
+        for t in (tasks or sorted(results[slow]))
+        if results[slow][t][0] and results[fast][t][0]
+    ]
     return statistics.median(ratios) if ratios else None
 
 

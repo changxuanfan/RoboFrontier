@@ -1,10 +1,11 @@
 """Codex launch models: provider, credential variable, wire API and effort."""
+
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
-from roboteam.harness.codex.launch import model_entry, launch_config
+from roboteam.harness.codex.launch import launch_config, model_entry
 
 
 class CodexLaunchProfileTests(unittest.TestCase):
@@ -16,7 +17,9 @@ class CodexLaunchProfileTests(unittest.TestCase):
             self.assertIn('model_providers.kimi.env_key="KIMI_API_KEY"', launch['args'])
             self.assertIn('model_providers.kimi.base_url="https://api.moonshot.cn/v1"', launch['args'])
             self.assertIn('model_providers.kimi.wire_api="responses"', launch['args'])
-            self.assertFalse(json.loads((Path(folder)/'models.json').read_text())['models'][0]['use_responses_lite'])
+            self.assertFalse(
+                json.loads((Path(folder) / 'models.json').read_text())['models'][0]['use_responses_lite']
+            )
 
     def test_the_default_profile_is_gpt_6_1_sol_with_an_api_key(self):
         p = model_entry('sol')

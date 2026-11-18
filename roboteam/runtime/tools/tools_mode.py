@@ -6,9 +6,10 @@ tools. What a role used files for stays available through the robot tool instead
 (public_files.py, run_skills.py). The mode is frozen in the run's run.json; a harness
 without the field is a full run.
 """
+
 import json
-from pathlib import Path
 import re
+from pathlib import Path
 
 FULL, ROBOT_ONLY = 'full', 'robot_only'
 MODES = (FULL, ROBOT_ONLY)
@@ -34,7 +35,7 @@ def receipt_name(model_entry_name, mode):
 
 def of_run(run):
     """The frozen mode of a prepared run."""
-    path = Path(run)/'private/inputs/run.json'
+    path = Path(run) / 'private/inputs/run.json'
     return of(json.loads(path.read_text())) if path.is_file() else FULL
 
 

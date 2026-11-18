@@ -13,6 +13,7 @@ same segment; no continuation is used. See docs/runs/continuation.md#usage-limit
     Codex:       "You've hit your usage limit. ... try again at 3:05 PM." / "... try again in 2 days 4 hours"
                  or a turn error whose codexErrorInfo names usageLimitExceeded
 """
+
 import json
 import re
 import time
@@ -20,23 +21,27 @@ from datetime import datetime, timedelta
 
 # Text that names a plan limit (not a short rate limit).
 # The window's name may be hyphenated: Claude Code says "You've hit your 5-hour limit".
-LIMIT = re.compile(r"(you[\u2019']?ve hit your (?:[\w-]+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|"
-                   r"usageLimitExceeded|weekly limit|session limit)", re.I)
+LIMIT = re.compile(
+    r"(you[\u2019']?ve hit your (?:[\w-]+ )?(?:usage )?limit|usage limit reached|usage[_ ]limit[_ ]exceeded|"
+    r"usageLimitExceeded|weekly limit|session limit)",
+    re.I,
+)
 # When a reset time cannot be read, the world tries again after this long.
-RECHECK_S = 1800.
+RECHECK_S = 1800.0
 # The world resumes this long after the stated reset, as reset times are rounded.
-MARGIN_S = 60.
+MARGIN_S = 60.0
 # A reset the limit has outlasted is tried again this long after the pause begins.
-PAST_RESET_S = 600.
+PAST_RESET_S = 600.0
 # A stated clock time this recent is the current reset, not the same time tomorrow.
-JUST_PASSED_S = 3 * 3600.
+JUST_PASSED_S = 3 * 3600.0
 # A reset further away than this is not believed; the world tries again after RECHECK_S.
-LONGEST_S = 8 * 86400.
+LONGEST_S = 8 * 86400.0
 
 
 def _zone(name):
     try:
         from zoneinfo import ZoneInfo
+
         return ZoneInfo(name)
     except Exception:
         return None
@@ -45,15 +50,28 @@ def _zone(name):
 def _clock(text):
     """(hour, minute) of '3pm', '3:45 pm', '15:05'; None otherwise."""
     found = re.fullmatch(r'(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m\.?)?', text.strip(), re.I)
-    if not found: return None
-    hour, minute, half = int(found.group(1)), int(found.group(2) or 0), (found.group(3) or '').lower().replace('.', '')
-    if half == 'pm' and hour != 12: hour += 12
-    if half == 'am' and hour == 12: hour = 0
-    if not (0 <= hour < 24 and 0 <= minute < 60): return None
+    if not found:
+        return None
+    hour, minute, half = (
+        int(found.group(1)),
+        int(found.group(2) or 0),
+        (found.group(3) or '').lower().replace('.', ''),
+    )
+    if half == 'pm' and hour != 12:
+        hour += 12
+    if half == 'am' and hour == 12:
+        hour = 0
+    if not (0 <= hour < 24 and 0 <= minute < 60):
+        return None
     return hour, minute
 
 
-MONTHS = {m: i + 1 for i, m in enumerate(('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'))}
+MONTHS = {
+    m: i + 1
+    for i, m in enumerate(
+        ('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec')
+    )
+}
 
 
 def _at(when, now, zone):
@@ -64,30 +82,41 @@ def _at(when, now, zone):
     when = re.sub(r'(\d)(st|nd|rd|th)\b', r'\1', when.strip().rstrip('.'), flags=re.I)
     dated = re.fullmatch(r'([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2})(?:,?\s*(\d{4}))?(?:,|\s+at)?\s+(.+)', when)
     if dated:
-        month = MONTHS.get(dated.group(1).lower()); clock = _clock(dated.group(4))
-        if month is None or clock is None: return None
+        month = MONTHS.get(dated.group(1).lower())
+        clock = _clock(dated.group(4))
+        if month is None or clock is None:
+            return None
         year = int(dated.group(3) or local.year)
-        try: moment = datetime(year, month, int(dated.group(2)), *clock, tzinfo=tz)
-        except ValueError: return None
-        if not dated.group(3) and moment.timestamp() < now - 86400: moment = moment.replace(year=year + 1)
+        try:
+            moment = datetime(year, month, int(dated.group(2)), *clock, tzinfo=tz)
+        except ValueError:
+            return None
+        if not dated.group(3) and moment.timestamp() < now - 86400:
+            moment = moment.replace(year=year + 1)
         return moment.timestamp()
     clock = _clock(when)
-    if clock is None: return None
+    if clock is None:
+        return None
     moment = local.replace(hour=clock[0], minute=clock[1], second=0, microsecond=0)
     # A stated time that passed less than JUST_PASSED_S ago is that reset, still under way: a
     # turn sent a minute after "resets 3:20pm" can fail with the same text. Only an older time
     # means the next day.
-    if moment.timestamp() <= now - JUST_PASSED_S: moment += timedelta(days=1)
+    if moment.timestamp() <= now - JUST_PASSED_S:
+        moment += timedelta(days=1)
     return moment.timestamp()
 
 
 def _within(text):
     """Seconds of 'in 2 days 4 hours 3 minutes'; None when nothing is stated."""
-    total, seen = 0., False
+    total, seen = 0.0, False
     for amount, unit in re.findall(r'(\d+)\s*(day|hour|hr|minute|min|second|sec)s?\b', text, re.I):
         seen = True
-        total += int(amount) * {'day': 86400, 'hour': 3600, 'hr': 3600, 'minute': 60, 'min': 60,
-                                'second': 1, 'sec': 1}[unit.lower()]
+        total += (
+            int(amount)
+            * {'day': 86400, 'hour': 3600, 'hr': 3600, 'minute': 60, 'min': 60, 'second': 1, 'sec': 1}[
+                unit.lower()
+            ]
+        )
     return total if seen else None
 
 
@@ -95,7 +124,8 @@ def resets_at(text, now=None):
     """When the limit named in `text` resets (epoch seconds), or None when it is not stated."""
     now = time.time() if now is None else now
     epoch = re.search(r'usage limit reached\|(\d{9,11})', text, re.I)
-    if epoch: return float(epoch.group(1))
+    if epoch:
+        return float(epoch.group(1))
     stated = re.search(r'resets?\s+(?:at\s+)?([^()\n"]+?)\s*(?:\(([\w/+-]+)\))?\s*(?:$|[.\n"])', text, re.I)
     if stated:
         return _at(stated.group(1), now, _zone(stated.group(2)) if stated.group(2) else None)
@@ -113,10 +143,12 @@ def usage_limit(error, now=None):
 
     `error` is the error's text or its structured record (Codex's turn error)."""
     text = error if isinstance(error, str) else json.dumps(error, ensure_ascii=False)
-    if not text or not LIMIT.search(text): return None
+    if not text or not LIMIT.search(text):
+        return None
     now = time.time() if now is None else now
     reset = resets_at(text, now)
-    if reset is not None and not now - JUST_PASSED_S < reset < now + LONGEST_S: reset = None
+    if reset is not None and not now - JUST_PASSED_S < reset < now + LONGEST_S:
+        reset = None
     return {'text': text[:500], 'resets_at': reset}
 
 
@@ -135,6 +167,7 @@ def resume_at(request, now=None):
 def main(argv=None):
     """python -m roboteam.runtime.time.quota TEXT : the recognized limit, as JSON (for the Codex host)."""
     import sys
+
     argv = sys.argv[1:] if argv is None else argv
     print(json.dumps(usage_limit(' '.join(argv))))
 

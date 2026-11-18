@@ -19,9 +19,14 @@ SCENE = '''<mujoco><visual><global offwidth="1280" offheight="800"/></visual><wo
 
 
 def request(model, data, path):
-    return {'state': {'qpos': data.qpos.copy(), 'geom_rgba': model.geom_rgba.copy()},
-            'images': [(model.camera('front').id, str(path))], 'width': 320, 'height': 200,
-            'format': 'PNG', 'save_options': {}}
+    return {
+        'state': {'qpos': data.qpos.copy(), 'geom_rgba': model.geom_rgba.copy()},
+        'images': [(model.camera('front').id, str(path))],
+        'width': 320,
+        'height': 200,
+        'format': 'PNG',
+        'save_options': {},
+    }
 
 
 class RenderWorkerTests(unittest.TestCase):
@@ -30,10 +35,12 @@ class RenderWorkerTests(unittest.TestCase):
         self.folder = Path(self.tmp.name)
         self.model = mujoco.MjModel.from_xml_string(SCENE)
         self.data = mujoco.MjData(self.model)
-        self.data.qpos[:3] = [.1, .05, .2]
+        self.data.qpos[:3] = [0.1, 0.05, 0.2]
         mujoco.mj_forward(self.model, self.data)
-        try: self.worker = RenderWorker(self.model, LINEAR)
-        except RuntimeError as error: self.skipTest(str(error))
+        try:
+            self.worker = RenderWorker(self.model, LINEAR)
+        except RuntimeError as error:
+            self.skipTest(str(error))
 
     def tearDown(self):
         self.worker.close()
@@ -41,18 +48,21 @@ class RenderWorkerTests(unittest.TestCase):
 
     def local_image(self, source_model, source_data, path):
         # As a world starts it (sim/render/cocoa.py), so a saved-window prompt cannot block it on macOS.
-        try: start_glfw()
-        except RuntimeError: self.skipTest('No GLFW here')
+        try:
+            start_glfw()
+        except RuntimeError:
+            self.skipTest('No GLFW here')
         glfw.window_hint(glfw.VISIBLE, False)
         window = glfw.create_window(1280, 800, 'test', None, None)
-        if not window: self.skipTest('No window here')
+        if not window:
+            self.skipTest('No window here')
         glfw.make_context_current(window)
         del source_data, path  # self.job carries the state and the path
         LocalRenderer(mujoco, source_model, LINEAR).render(mujoco, Image, self.job)
         glfw.destroy_window(window)
 
     def test_worker_draws_what_the_owner_would(self):
-        apart, here = self.folder/'worker.png', self.folder/'here.png'
+        apart, here = self.folder / 'worker.png', self.folder / 'here.png'
         self.assertTrue(self.worker.submit(request(self.model, self.data, apart)))
         self.assertTrue(self.worker.wait(30))
         self.job = request(self.model, self.data, here)
@@ -60,29 +70,32 @@ class RenderWorkerTests(unittest.TestCase):
         self.assertTrue(np.array_equal(np.asarray(Image.open(apart)), np.asarray(Image.open(here))))
 
     def test_image_shows_the_capture_moment_not_later_changes(self):
-        path = self.folder/'moment.png'
+        path = self.folder / 'moment.png'
         job = request(self.model, self.data, path)
         self.model.geom_rgba[self.model.geom('box').id] = [0, 1, 0, 1]
         self.data.qpos[0] = 5
         self.assertTrue(self.worker.submit(job))
         self.assertTrue(self.worker.wait(30))
         pixels = np.asarray(Image.open(path)).astype(int)
-        self.assertTrue(((pixels[..., 0] > pixels[..., 1]+60) & (pixels[..., 0] > pixels[..., 2]+60)).any())
+        self.assertTrue(
+            ((pixels[..., 0] > pixels[..., 1] + 60) & (pixels[..., 0] > pixels[..., 2] + 60)).any()
+        )
 
     def test_wait_covers_every_earlier_capture(self):
-        paths = [self.folder/f'{i}.png' for i in range(3)]
-        for path in paths: self.worker.submit(request(self.model, self.data, path))
+        paths = [self.folder / f'{i}.png' for i in range(3)]
+        for path in paths:
+            self.worker.submit(request(self.model, self.data, path))
         self.assertTrue(self.worker.wait(30))
         self.assertTrue(all(path.exists() for path in paths))
 
     def test_death_hands_back_unfinished_captures(self):
         self.worker.process.terminate()
         self.worker.process.join(10)
-        deadline = time.monotonic()+10
-        while not self.worker.closed and time.monotonic() < deadline: time.sleep(.01)
-        job = request(self.model, self.data, self.folder/'gone.png')
+        deadline = time.monotonic() + 10
+        while not self.worker.closed and time.monotonic() < deadline:
+            time.sleep(0.01)
+        job = request(self.model, self.data, self.folder / 'gone.png')
         self.assertFalse(self.worker.submit(job))
-
 
 
 class ObservationLookTests(unittest.TestCase):
@@ -91,7 +104,8 @@ class ObservationLookTests(unittest.TestCase):
 
     def test_the_default_look_draws_the_scene_as_it_is(self):
         self.assertEqual(look_of({}), 'direct')
-        with self.assertRaises(ValueError): look_of({'observation_look': 'other'})
+        with self.assertRaises(ValueError):
+            look_of({'observation_look': 'other'})
         visual = look_model(self.model)
         self.assertTrue(np.array_equal(visual.geom_rgba, self.model.geom_rgba))
         self.assertTrue(np.array_equal(visual.vis.headlight.ambient, self.model.vis.headlight.ambient))
@@ -107,12 +121,18 @@ class ObservationLookTests(unittest.TestCase):
 
     def test_colours_are_lit_in_linear_light(self):
         box = self.model.geom('box').id
-        self.assertTrue(np.allclose(look_model(self.model, LINEAR).geom_rgba[box, :3], self.model.geom_rgba[box, :3] ** 2.2))
+        self.assertTrue(
+            np.allclose(
+                look_model(self.model, LINEAR).geom_rgba[box, :3], self.model.geom_rgba[box, :3] ** 2.2
+            )
+        )
         self.assertEqual(look_model(self.model, LINEAR).geom_rgba[box, 3], 1)
 
     def test_display_keeps_black_white_grey_and_order(self):
         self.assertEqual((int(TO_DISPLAY[0]), int(TO_DISPLAY[255])), (0, 255))
-        self.assertTrue((np.diff(TO_DISPLAY.astype(int)) >= 0).all() and (np.diff(TO_LINEAR.astype(int)) >= 0).all())
+        self.assertTrue(
+            (np.diff(TO_DISPLAY.astype(int)) >= 0).all() and (np.diff(TO_LINEAR.astype(int)) >= 0).all()
+        )
         grey = display(np.full((2, 2, 3), 90, np.uint8), LINEAR)
         self.assertTrue((grey[..., 0] == grey[..., 1]).all() and (grey[..., 1] == grey[..., 2]).all())
         self.assertGreater(int(grey[0, 0, 0]), 90)  # mid tones come out lighter than the renderer wrote them
@@ -120,10 +140,13 @@ class ObservationLookTests(unittest.TestCase):
 
 class LocalRenderWaitTests(unittest.TestCase):
     """The readiness gate without a renderer process: replies are simulated."""
+
     def worker(self):
         import threading
+
         worker = object.__new__(RenderWorker)
-        worker.lock = threading.Lock(); worker.changed = threading.Condition(worker.lock)
+        worker.lock = threading.Lock()
+        worker.changed = threading.Condition(worker.lock)
         worker.pending, worker.failed, worker.local, worker.closed = {}, [], set(), False
         return worker
 
@@ -131,30 +154,38 @@ class LocalRenderWaitTests(unittest.TestCase):
         worker = self.worker()
         worker.pending = {1: {'id': 1}, 2: {'id': 2}}
         with worker.changed:  # capture 1 fails in the worker
-            worker.failed.append(worker.pending.pop(1)); worker.changed.notify_all()
+            worker.failed.append(worker.pending.pop(1))
+            worker.changed.notify_all()
         handed = worker.failed_captures()
         self.assertEqual([r['id'] for r in handed], [1])
         with worker.changed:  # another capture's reply arrives during the owner's local render
-            worker.pending.pop(2); worker.changed.notify_all()
-        self.assertFalse(worker.wait(.05))
+            worker.pending.pop(2)
+            worker.changed.notify_all()
+        self.assertFalse(worker.wait(0.05))
         worker.rendered_locally()
-        self.assertTrue(worker.wait(.05))
+        self.assertTrue(worker.wait(0.05))
 
     def test_a_wait_that_began_before_the_hand_back_still_covers_it(self):
         import threading
+
         worker = self.worker()
         worker.pending = {1: {'id': 1}}
         answers = []
         waiter = threading.Thread(target=lambda: answers.append(worker.wait(5)))
-        waiter.start(); time.sleep(.05)
+        waiter.start()
+        time.sleep(0.05)
         with worker.changed:
-            worker.failed.append(worker.pending.pop(1)); worker.changed.notify_all()
+            worker.failed.append(worker.pending.pop(1))
+            worker.changed.notify_all()
         worker.failed_captures()
-        with worker.changed: worker.changed.notify_all()
-        time.sleep(.05)
+        with worker.changed:
+            worker.changed.notify_all()
+        time.sleep(0.05)
         self.assertEqual(answers, [])
-        worker.rendered_locally(); waiter.join(5)
+        worker.rendered_locally()
+        waiter.join(5)
         self.assertEqual(answers, [True])
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

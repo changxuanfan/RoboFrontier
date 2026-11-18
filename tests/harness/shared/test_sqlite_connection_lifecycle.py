@@ -1,9 +1,10 @@
 """Closing a shared connection must wait for its current transaction to finish."""
-from pathlib import Path
+
 import sqlite3
 import tempfile
 import threading
 import unittest
+from pathlib import Path
 
 from roboteam.harness.claude.session.budget import BudgetLedger
 from roboteam.runtime.world.store import RuntimeStore

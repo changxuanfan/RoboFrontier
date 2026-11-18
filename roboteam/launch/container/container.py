@@ -1,10 +1,9 @@
 """Run native benchmark commands in local Docker volumes, exporting stopped ZIPs."""
+
 import argparse
-from copy import deepcopy
 import hashlib
 import json
 import os
-from pathlib import Path
 import platform
 import shutil
 import subprocess
@@ -12,10 +11,12 @@ import sys
 import tempfile
 import time
 import uuid
+from copy import deepcopy
+from pathlib import Path
 
 from roboteam.configuration import ROOT, validate_configuration
-from roboteam.runtime.run.setup import write_json
 from roboteam.io import file_sha256 as _digest
+from roboteam.runtime.run.setup import write_json
 
 CONTAINER_ROOT = '/opt/RoboTeam'
 # The policy environment's base, a persistent volume outside the checkout: built and checked once
@@ -23,14 +24,25 @@ CONTAINER_ROOT = '/opt/RoboTeam'
 POLICY_BASE = '/opt/roboteam-policy'
 # Outside /tmp, which a run with a policy environment refuses as TMPDIR (runtime.access).
 CONTAINER_TMPDIR = '/var/tmp/roboteam'
-COMMANDS = {'bootstrap', 'config', 'plan', 'prepare', 'doctor', 'preflight', 'run', 'status',
-            'stop', 'collect', 'archive', 'extract'}
+COMMANDS = {
+    'bootstrap',
+    'config',
+    'plan',
+    'prepare',
+    'doctor',
+    'preflight',
+    'run',
+    'status',
+    'stop',
+    'collect',
+    'archive',
+    'extract',
+}
 
 
 def _auth_arguments(arguments):
     native = arguments[1:]
-    valid = (native[:2] in (['codex', 'login'], ['codex', 'logout']) or
-             native == ['claude', 'setup-token'])
+    valid = native[:2] in (['codex', 'login'], ['codex', 'logout']) or native == ['claude', 'setup-token']
     if not valid:
         raise ValueError('Supported auth actions: codex login/logout or claude setup-token')
     return native
@@ -45,22 +57,28 @@ def validate_arguments(arguments):
     if '--config' in arguments or '--result-file' in arguments:
         raise ValueError('Pass the host --config before container; result-file is managed by the wrapper')
     if action in ('build', 'policy-env'):
-        description = {'build': 'Build the committed source image.',
-                       'policy-env': 'Build the policy Python environment in its volume and check its sandbox.'}[action]
-        parser = argparse.ArgumentParser(prog='roboteam container '+action,
-            description=description+' This command accepts no options.')
+        description = {
+            'build': 'Build the committed source image.',
+            'policy-env': 'Build the policy Python environment in its volume and check its sandbox.',
+        }[action]
+        parser = argparse.ArgumentParser(
+            prog='roboteam container ' + action, description=description + ' This command accepts no options.'
+        )
         parser.parse_args(arguments[1:])
     elif action == 'auth':
         if any(value in ('-h', '--help') for value in arguments[1:]):
-            parser = argparse.ArgumentParser(prog='roboteam container auth',
+            parser = argparse.ArgumentParser(
+                prog='roboteam container auth',
                 description='Authenticate native Codex or Claude in persistent private state.',
                 epilog='Supported actions: codex login [options], codex logout [options], '
-                       'or claude setup-token. Native login options are forwarded unchanged.')
+                'or claude setup-token. Native login options are forwarded unchanged.',
+            )
             parser.print_help()
             parser.exit()
         _auth_arguments(arguments)
     else:
         from roboteam.cli import argument_parser
+
         argument_parser(prog='roboteam container').parse_args(arguments)
     return arguments
 
@@ -68,37 +86,50 @@ def validate_arguments(arguments):
 def _toml(config):
     """Encode the validated, secret-free public schema without environment expansion."""
     validate_configuration(config)
+
     def value(item):
         if isinstance(item, bool):
             return str(item).lower()
         return json.dumps(item, ensure_ascii=True, allow_nan=False)
+
     lines = []
     for key, item in config.items():
         if not isinstance(item, dict):
-            lines.append(key+' = '+value(item))
+            lines.append(key + ' = ' + value(item))
     for section, fields in config.items():
         if isinstance(fields, dict):
-            lines.extend(['', '['+section+']'])
-            lines.extend(key+' = '+value(item) for key, item in fields.items())
-    return '\n'.join(lines)+'\n'
+            lines.extend(['', '[' + section + ']'])
+            lines.extend(key + ' = ' + value(item) for key, item in fields.items())
+    return '\n'.join(lines) + '\n'
 
 
 def _settings(arguments, config):
     # Provider/render overrides use the same fully spelled native CLI flags.
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     for option in ('harness', 'model', 'effort', 'render'):
-        parser.add_argument('--'+option)
+        parser.add_argument('--' + option)
     options, _ = parser.parse_known_args(arguments[1:])
     result = deepcopy(config)
     for option in ('harness', 'model', 'effort'):
         if getattr(options, option) is not None:
             result['policy'][option] = getattr(options, option)
-    if options.harness is not None and options.harness != config['policy']['harness'] and options.model is None:
+    if (
+        options.harness is not None
+        and options.harness != config['policy']['harness']
+        and options.model is None
+    ):
         # The host model belongs to the other harness. Select by harness only, as the
         # native CLI does (Claude: the subscription-token model).
         from roboteam.configuration import load_configuration
-        result['policy']['model'] = load_configuration(overrides={'policy': {'harness': options.harness}})['policy']['model']
-    if options.harness is not None and options.harness != config['policy']['harness'] and 'codex_tool_backend' in result.get('runtime', {}):
+
+        result['policy']['model'] = load_configuration(overrides={'policy': {'harness': options.harness}})[
+            'policy'
+        ]['model']
+    if (
+        options.harness is not None
+        and options.harness != config['policy']['harness']
+        and 'codex_tool_backend' in result.get('runtime', {})
+    ):
         # The container is Linux: Codex's tools run under landlock-v1 there, and only Codex has a tool backend.
         result['runtime']['codex_tool_backend'] = 'landlock-v1' if options.harness == 'codex' else 'native'
     if options.render is not None:
@@ -109,22 +140,29 @@ def _settings(arguments, config):
 
 def _volumes(config, root):
     scope = hashlib.sha256(str(Path(root).resolve()).encode()).hexdigest()[:12]
-    prefix = 'roboteam-'+scope+'-'+config['container']['workspace'].lower()
-    return {'runs': prefix+'-runs', 'state': prefix+'-state', 'policy': prefix+'-policy'}
+    prefix = 'roboteam-' + scope + '-' + config['container']['workspace'].lower()
+    return {'runs': prefix + '-runs', 'state': prefix + '-state', 'policy': prefix + '-policy'}
 
 
 def _mounts(volumes):
-    return ['--mount', 'type=volume,src='+volumes['runs']+',dst='+CONTAINER_ROOT+'/runs',
-            '--mount', 'type=volume,src='+volumes['state']+',dst='+CONTAINER_ROOT+'/.roboteam',
-            '--mount', 'type=volume,src='+volumes['policy']+',dst='+POLICY_BASE]
+    return [
+        '--mount',
+        'type=volume,src=' + volumes['runs'] + ',dst=' + CONTAINER_ROOT + '/runs',
+        '--mount',
+        'type=volume,src=' + volumes['state'] + ',dst=' + CONTAINER_ROOT + '/.roboteam',
+        '--mount',
+        'type=volume,src=' + volumes['policy'] + ',dst=' + POLICY_BASE,
+    ]
 
 
 def _ensure_volumes(volumes):
     for name in volumes.values():
-        subprocess.run(['docker', 'volume', 'create', '--driver', 'local', name],
-                       check=True, stdout=subprocess.DEVNULL)
-        result = subprocess.check_output(['docker', 'volume', 'inspect', '--format',
-            '{{json .}}', name], text=True)
+        subprocess.run(
+            ['docker', 'volume', 'create', '--driver', 'local', name], check=True, stdout=subprocess.DEVNULL
+        )
+        result = subprocess.check_output(
+            ['docker', 'volume', 'inspect', '--format', '{{json .}}', name], text=True
+        )
         info = json.loads(result)
         if info['Driver'] != 'local' or info.get('Options'):
             raise ValueError('Use a plain local Docker volume; network/custom volume options are unsupported')
@@ -132,14 +170,23 @@ def _ensure_volumes(volumes):
 
 def _image(config, root):
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
-    image = config['container']['image'] or 'roboteam:'+commit[:12]
+    image = config['container']['image'] or 'roboteam:' + commit[:12]
     return image, commit
 
 
 def _ensure_image(image, commit, root, *, rebuild=False):
-    inspected = subprocess.run(['docker', 'image', 'inspect', '--format',
-        '{{index .Config.Labels "org.opencontainers.image.revision"}}', image],
-        capture_output=True, text=True)
+    inspected = subprocess.run(
+        [
+            'docker',
+            'image',
+            'inspect',
+            '--format',
+            '{{index .Config.Labels "org.opencontainers.image.revision"}}',
+            image,
+        ],
+        capture_output=True,
+        text=True,
+    )
     if inspected.returncode == 0 and not rebuild:
         if inspected.stdout.strip() != commit:
             raise ValueError('Container image source revision differs; rebuild or select the matching image')
@@ -147,13 +194,28 @@ def _ensure_image(image, commit, root, *, rebuild=False):
     if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=root, text=True):
         raise ValueError('Commit tracked changes before building a frozen container image')
     with tempfile.TemporaryDirectory(prefix='rf-build-') as temporary:
-        snapshot = Path(temporary)/'source.tar'
-        subprocess.run(['git', 'archive', '--format=tar', '--output='+str(snapshot), commit], cwd=root, check=True)
+        snapshot = Path(temporary) / 'source.tar'
+        subprocess.run(
+            ['git', 'archive', '--format=tar', '--output=' + str(snapshot), commit], cwd=root, check=True
+        )
         # Building from Git's tracked snapshot excludes .env, auth and run data
         # regardless of what happens to exist in the operator's worktree.
         with snapshot.open('rb') as stream:
-            subprocess.run(['docker', 'build', '--file', 'docker/Dockerfile', '--tag', image,
-                '--label', 'org.opencontainers.image.revision='+commit, '-'], stdin=stream, check=True)
+            subprocess.run(
+                [
+                    'docker',
+                    'build',
+                    '--file',
+                    'docker/Dockerfile',
+                    '--tag',
+                    image,
+                    '--label',
+                    'org.opencontainers.image.revision=' + commit,
+                    '-',
+                ],
+                stdin=stream,
+                check=True,
+            )
 
 
 def _batch_argument(arguments):
@@ -171,9 +233,21 @@ def _frozen_settings(arguments, config, image, volumes):
         return config
     batch = _batch_argument(arguments)
     code = 'import json,sys;print(json.dumps(json.load(open(sys.argv[1]))))'
-    document = subprocess.check_output(['docker', 'run', '--rm', *_mounts(volumes),
-        '--entrypoint', 'python', image, '-c', code,
-        CONTAINER_ROOT+'/'+batch+'/effective-config.json'], text=True)
+    document = subprocess.check_output(
+        [
+            'docker',
+            'run',
+            '--rm',
+            *_mounts(volumes),
+            '--entrypoint',
+            'python',
+            image,
+            '-c',
+            code,
+            CONTAINER_ROOT + '/' + batch + '/effective-config.json',
+        ],
+        text=True,
+    )
     result = json.loads(document)
     validate_configuration(result)
     return result
@@ -181,6 +255,7 @@ def _frozen_settings(arguments, config, image, volumes):
 
 def _credential_environment(config, base):
     from roboteam.cli import _catalog
+
     selected = _catalog(config)['models'][config['policy']['model']]
     if selected.get('transport') == 'loopback_gateway':
         # The container has its own loopback interface: the host's adapter is not there.
@@ -194,26 +269,50 @@ def _credential_environment(config, base):
 
 
 def _command(arguments, config, image, volumes, name, settings_file, environment):
-    command = ['docker', 'run', '--name', name, '--init', '--sig-proxy=false', *_mounts(volumes),
-               '--mount', 'type=bind,src='+str(settings_file)+',dst=/run/roboteam.toml,readonly',
-               '--env', 'CODEX_HOME='+CONTAINER_ROOT+'/.roboteam/subscription',
-               '--env', 'TMPDIR='+CONTAINER_TMPDIR, '--env', 'ROBOTEAM_POLICY_ENV_BASE='+POLICY_BASE,
-               '--env', 'CLAUDE_CONFIG_DIR='+CONTAINER_ROOT+'/.roboteam/claude-auth',
-               '--env', 'OMP_NUM_THREADS=1', '--env', 'OPENBLAS_NUM_THREADS=1']
+    command = [
+        'docker',
+        'run',
+        '--name',
+        name,
+        '--init',
+        '--sig-proxy=false',
+        *_mounts(volumes),
+        '--mount',
+        'type=bind,src=' + str(settings_file) + ',dst=/run/roboteam.toml,readonly',
+        '--env',
+        'CODEX_HOME=' + CONTAINER_ROOT + '/.roboteam/subscription',
+        '--env',
+        'TMPDIR=' + CONTAINER_TMPDIR,
+        '--env',
+        'ROBOTEAM_POLICY_ENV_BASE=' + POLICY_BASE,
+        '--env',
+        'CLAUDE_CONFIG_DIR=' + CONTAINER_ROOT + '/.roboteam/claude-auth',
+        '--env',
+        'OMP_NUM_THREADS=1',
+        '--env',
+        'OPENBLAS_NUM_THREADS=1',
+    ]
     resources = config['container']
     # Docker's default seccomp profile may refuse Landlock; `unconfined` lets the policy sandbox
     # (Landlock and its own seccomp filter) install itself, for either harness.
-    if resources['seccomp_profile'] == 'unconfined' and arguments[0] in ('doctor', 'preflight', 'run', 'policy-env'):
+    if resources['seccomp_profile'] == 'unconfined' and arguments[0] in (
+        'doctor',
+        'preflight',
+        'run',
+        'policy-env',
+    ):
         command.extend(['--security-opt', 'seccomp=unconfined'])
     if resources['memory_gib']:
-        command.append('--memory='+str(resources['memory_gib'])+'g')
+        command.append('--memory=' + str(resources['memory_gib']) + 'g')
     if resources['cpus']:
-        command.append('--cpus='+str(resources['cpus']))
+        command.append('--cpus=' + str(resources['cpus']))
     for key in sorted(environment):
         command.extend(['--env', key])  # Values stay in the process environment.
     if arguments[0] in ('doctor', 'run') and config['render']['device'] == 'nvidia':
         if platform.system() != 'Linux':
-            raise ValueError('NVIDIA Docker execution requires Linux; prepare CPU-rendered tasks for macOS Docker')
+            raise ValueError(
+                'NVIDIA Docker execution requires Linux; prepare CPU-rendered tasks for macOS Docker'
+            )
         command.extend(['--gpus', 'all', '--env', 'NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility'])
     if arguments[0] == 'auth':
         native = _auth_arguments(arguments)
@@ -227,25 +326,37 @@ def _command(arguments, config, image, volumes, name, settings_file, environment
         return [*command, *native[1:]]
     if arguments[0] == 'policy-env':
         # The image forbids uv's Python downloads; the build installs its own pinned Python on purpose.
-        script = ('set -e; root=$(UV_PYTHON_DOWNLOADS=manual python -m scripts.release.build_policy_env --base %s | tail -n 1 | '
-                  'python -c "import json,sys; print(json.load(sys.stdin)[\'root\'])"); '
-                  'python -m scripts.release.check_policy_env "$root" --scratch %s' % (POLICY_BASE, CONTAINER_TMPDIR))
+        script = (
+            'set -e; root=$(UV_PYTHON_DOWNLOADS=manual python -m scripts.release.build_policy_env --base %s | tail -n 1 | '
+            'python -c "import json,sys; print(json.load(sys.stdin)[\'root\'])"); '
+            'python -m scripts.release.check_policy_env "$root" --scratch %s'
+            % (POLICY_BASE, CONTAINER_TMPDIR)
+        )
         return [*command, '--entrypoint', 'sh', image, '-c', script]
-    return [*command, image, '--config', '/run/roboteam.toml',
-            '--result-file', '/tmp/roboteam-result.json', *arguments]
+    return [
+        *command,
+        image,
+        '--config',
+        '/run/roboteam.toml',
+        '--result-file',
+        '/tmp/roboteam-result.json',
+        *arguments,
+    ]
 
 
 def _running(name):
-    result = subprocess.run(['docker', 'inspect', '--format', '{{.State.Running}}', name],
-                            capture_output=True, text=True)
+    result = subprocess.run(
+        ['docker', 'inspect', '--format', '{{.State.Running}}', name], capture_output=True, text=True
+    )
     if result.returncode:
         return None
     return result.stdout.strip() == 'true'
 
 
 def _copy_result(name, output):
-    result = subprocess.run(['docker', 'cp', name+':/tmp/roboteam-result.json', str(output)],
-                            capture_output=True, text=True)
+    result = subprocess.run(
+        ['docker', 'cp', name + ':/tmp/roboteam-result.json', str(output)], capture_output=True, text=True
+    )
     return json.loads(output.read_text()) if result.returncode == 0 else None
 
 
@@ -255,19 +366,24 @@ def _export_archive(name, receipt, destination):
     if not archive:
         return None
     path = Path(archive)
-    if (not path.is_relative_to(CONTAINER_ROOT+'/runs/exports') or path.suffix != '.zip'
-            or '..' in path.parts or not isinstance(expected, str) or len(expected) != 64):
+    if (
+        not path.is_relative_to(CONTAINER_ROOT + '/runs/exports')
+        or path.suffix != '.zip'
+        or '..' in path.parts
+        or not isinstance(expected, str)
+        or len(expected) != 64
+    ):
         raise ValueError('Unexpected container evidence archive reference')
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
-    output = destination/path.name
+    output = destination / path.name
     if output.exists():
         if _digest(output) != expected:
             raise ValueError('A different exported archive already exists: ' + str(output))
         return output
     with tempfile.TemporaryDirectory(prefix='.rf-export-', dir=destination) as temporary:
-        staged = Path(temporary)/path.name
-        subprocess.run(['docker', 'cp', name+':'+str(path), str(staged)], check=True)
+        staged = Path(temporary) / path.name
+        subprocess.run(['docker', 'cp', name + ':' + str(path), str(staged)], check=True)
         if _digest(staged) != expected:
             raise ValueError('Exported archive SHA-256 mismatch')
         with staged.open('rb') as stream:
@@ -283,15 +399,17 @@ def execute(arguments, config, *, root=ROOT):
     restarted. Only stopped ZIP evidence is exported to the host.
     """
     from roboteam.launch.prepare import load_env
+
     arguments = validate_arguments(arguments)
     if shutil.which('docker') is None:
         raise ValueError('Docker CLI is not installed')
-    daemon = subprocess.run(['docker', 'version', '--format', '{{.Server.Version}}'],
-                            capture_output=True, text=True)
+    daemon = subprocess.run(
+        ['docker', 'version', '--format', '{{.Server.Version}}'], capture_output=True, text=True
+    )
     if daemon.returncode or not daemon.stdout.strip():
         raise ValueError('Docker daemon is unavailable; start Docker Desktop or the Linux Docker service')
     root = Path(root).resolve()
-    load_env(root/'.env')
+    load_env(root / '.env')
     config = _settings(arguments, config)
     image, commit = _image(config, root)
     _ensure_image(image, commit, root, rebuild=arguments[0] == 'build')
@@ -304,14 +422,21 @@ def execute(arguments, config, *, root=ROOT):
     if config['container']['workspace'] != launch_workspace:
         raise ValueError('Frozen batch belongs to a different container workspace')
     credentials = {} if arguments[0] == 'auth' else _credential_environment(config, os.environ)
-    name = 'rf-'+uuid.uuid4().hex[:20]
-    record = root/'.roboteam/containers'/config['container']['workspace']/'commands'/(name+'.json')
-    state = {'schema': 'roboteam.container-command.v1', 'container': name, 'image': image,
-             'source_commit': commit, 'volumes': volumes, 'started_at': time.time(),
-             'command': arguments[:3] if arguments[0] == 'auth' else arguments, 'status': 'starting'}
+    name = 'rf-' + uuid.uuid4().hex[:20]
+    record = root / '.roboteam/containers' / config['container']['workspace'] / 'commands' / (name + '.json')
+    state = {
+        'schema': 'roboteam.container-command.v1',
+        'container': name,
+        'image': image,
+        'source_commit': commit,
+        'volumes': volumes,
+        'started_at': time.time(),
+        'command': arguments[:3] if arguments[0] == 'auth' else arguments,
+        'status': 'starting',
+    }
     write_json(record, state)
     with tempfile.TemporaryDirectory(prefix='rf-container-') as temporary:
-        settings = Path(temporary)/'effective.toml'
+        settings = Path(temporary) / 'effective.toml'
         settings.write_text(_toml(config))
         settings.chmod(0o600)
         command = _command(arguments, config, image, volumes, name, settings, credentials)
@@ -326,8 +451,20 @@ def execute(arguments, config, *, root=ROOT):
             # through to the record below so a live container is retained for review.
             try:
                 if arguments[0] == 'run':
-                    subprocess.run(['docker', 'exec', name, 'python', '-m', 'roboteam.cli',
-                        'stop', _batch_argument(arguments)], check=False, timeout=30)
+                    subprocess.run(
+                        [
+                            'docker',
+                            'exec',
+                            name,
+                            'python',
+                            '-m',
+                            'roboteam.cli',
+                            'stop',
+                            _batch_argument(arguments),
+                        ],
+                        check=False,
+                        timeout=30,
+                    )
                 else:
                     subprocess.run(['docker', 'stop', '--time', '30', name], check=False, timeout=45)
             except (subprocess.SubprocessError, OSError, KeyboardInterrupt):
@@ -339,23 +476,35 @@ def execute(arguments, config, *, root=ROOT):
         live = _running(name)
         if live is not False and code == 0:
             code = 2
-        state.update(exit_code=code, interrupted=interrupted, finished_at=time.time(),
-                     status='still_running_needs_review' if live else 'closed' if code == 0 else 'needs_review')
+        state.update(
+            exit_code=code,
+            interrupted=interrupted,
+            finished_at=time.time(),
+            status='still_running_needs_review' if live else 'closed' if code == 0 else 'needs_review',
+        )
         if live:
-            state['note'] = 'Container retained; inspect/stop it. No automatic restart or active database export.'
+            state['note'] = (
+                'Container retained; inspect/stop it. No automatic restart or active database export.'
+            )
         elif live is False:
             try:
-                receipt = _copy_result(name, Path(temporary)/'result.json')
+                receipt = _copy_result(name, Path(temporary) / 'result.json')
                 if receipt:
                     state['result'] = receipt
-                    output = _export_archive(name, receipt, root/'runs/container-exports'/config['container']['workspace'])
+                    output = _export_archive(
+                        name, receipt, root / 'runs/container-exports' / config['container']['workspace']
+                    )
                     if output:
                         state['exported_archive'] = str(output)
                 elif code == 0 and arguments[0] not in ('auth', 'policy-env'):  # these run no CLI command
                     state.update(exit_code=2, status='missing_result_needs_review')
             except (OSError, ValueError, subprocess.SubprocessError) as error:
-                state.update(status='export_failed_needs_review', exit_code=2,
-                             error_type=type(error).__name__, container_retained=True)
+                state.update(
+                    status='export_failed_needs_review',
+                    exit_code=2,
+                    error_type=type(error).__name__,
+                    container_retained=True,
+                )
                 write_json(record, state)
                 raise
             # Native traces/auth remain in their separate persistent volumes.

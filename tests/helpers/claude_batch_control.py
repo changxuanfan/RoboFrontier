@@ -1,4 +1,5 @@
 """What tests read from a Claude batch folder, and the stop request `roboteam stop` makes."""
+
 import fcntl
 import json
 from pathlib import Path
@@ -28,9 +29,13 @@ def batch_state(folder):
     state['runs'] = []
     for run in (Path(job['run_directory']) for job in jobs):
         status = layout.path(run, 'engineering_status')
-        state['runs'].append({'detail': json.loads(status.read_text()) if status.exists() else None,
-                              'claim_record_present': layout.path(run, 'engineering_claim').exists(),
-                              'stop_requested': layout.path(run, 'stop').exists()})
+        state['runs'].append(
+            {
+                'detail': json.loads(status.read_text()) if status.exists() else None,
+                'claim_record_present': layout.path(run, 'engineering_claim').exists(),
+                'stop_requested': layout.path(run, 'stop').exists(),
+            }
+        )
     return state
 
 

@@ -4,6 +4,7 @@ The owner sends the state of the capture moment and the image paths. A caller se
 paths only after `wait` says the files exist. If the process dies, `failed_captures` hands
 back what it did not finish, and the owner renders those itself.
 """
+
 import itertools
 import multiprocessing
 import os
@@ -22,16 +23,20 @@ def _graphics_context():
     """The same backend choice as the owner; a window here is never shown."""
     backend = os.environ.get('MUJOCO_GL', '').lower()
     if backend in ('osmesa', 'egl'):
-        if backend == 'egl': from mujoco.egl import GLContext
-        else: from mujoco.osmesa import GLContext
+        if backend == 'egl':
+            from mujoco.egl import GLContext
+        else:
+            from mujoco.osmesa import GLContext
         context = GLContext(1280, 800)
         context.make_current()
         return context
     from roboteam.sim.render.cocoa import start_glfw
+
     glfw = start_glfw()
     glfw.window_hint(glfw.VISIBLE, False)
     window = glfw.create_window(1280, 800, 'RoboTeam observations', None, None)
-    if not window: raise RuntimeError('GLFW window creation failed')
+    if not window:
+        raise RuntimeError('GLFW window creation failed')
     glfw.make_context_current(window)
     return window
 
@@ -63,12 +68,20 @@ def render_images(mujoco, Image, model, data, scene, options, context, request, 
         rgb = np.empty((height, width, 3), dtype=np.uint8)
         mujoco.mjr_readPixels(rgb, None, viewport, context)
         # The display transform maps each pixel on its own, so it can run before the frame is flipped and reduced.
-        save_observation(Image, display(rgb, look), path, request['format'], request['save_options'], request.get('output_size'))
+        save_observation(
+            Image,
+            display(rgb, look),
+            path,
+            request['format'],
+            request['save_options'],
+            request.get('output_size'),
+        )
 
 
 def _serve(connection, model_bytes, look):
     import mujoco
     from PIL import Image
+
     model = look_model(pickle.loads(model_bytes), look)
     # Held for the life of the process: an EGL or OSMesa context object frees its context when
     # it is collected, and MjrContext then fails (gladLoadGL error).
@@ -81,9 +94,12 @@ def _serve(connection, model_bytes, look):
     mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, context)
     connection.send('ready')
     while True:
-        try: request = connection.recv()
-        except EOFError: return
-        if request is None: return
+        try:
+            request = connection.recv()
+        except EOFError:
+            return
+        if request is None:
+            return
         try:
             apply_state(mujoco, model, data, request['state'], look)
             render_images(mujoco, Image, model, data, scene, options, context, request, look)
@@ -93,7 +109,7 @@ def _serve(connection, model_bytes, look):
 
 
 class RenderWorker:
-    def __init__(self, model, look=DEFAULT_LOOK, ready_timeout_s=120.):
+    def __init__(self, model, look=DEFAULT_LOOK, ready_timeout_s=120.0):
         spawn = multiprocessing.get_context('spawn')
         self.connection, child = spawn.Pipe()
         self.process = spawn.Process(target=_serve, args=(child, pickle.dumps(model), look), daemon=True)
@@ -117,7 +133,8 @@ class RenderWorker:
                 ident, error = self.connection.recv()
                 with self.changed:
                     request = self.pending.pop(ident, None)
-                    if error is not None and request is not None: self.failed.append(request)
+                    if error is not None and request is not None:
+                        self.failed.append(request)
                     self.changed.notify_all()
         except (EOFError, OSError):
             with self.changed:
@@ -129,7 +146,8 @@ class RenderWorker:
     def submit(self, request):
         """Queue one capture; False when the process is gone and the owner must render it."""
         with self.changed:
-            if self.closed: return False
+            if self.closed:
+                return False
             request = dict(request, id=next(self.ids))
             self.pending[request['id']] = request
         try:
@@ -157,8 +175,13 @@ class RenderWorker:
         with self.changed:
             limit = max(set(self.pending) | self.local, default=0)
             return self.changed.wait_for(
-                lambda: not self.failed and not any(ident <= limit for ident in self.pending)
-                and not any(ident <= limit for ident in self.local), timeout_s)
+                lambda: (
+                    not self.failed
+                    and not any(ident <= limit for ident in self.pending)
+                    and not any(ident <= limit for ident in self.local)
+                ),
+                timeout_s,
+            )
 
     def rendered_locally(self):
         with self.changed:
@@ -166,16 +189,20 @@ class RenderWorker:
             self.changed.notify_all()
 
     def close(self):
-        try: self.connection.send(None)
-        except (OSError, ValueError): pass
+        try:
+            self.connection.send(None)
+        except (OSError, ValueError):
+            pass
         self.process.join(10)
-        if self.process.is_alive(): self.process.terminate()
+        if self.process.is_alive():
+            self.process.terminate()
 
 
 class LocalRenderer:
     """The same drawing in the owner's process, for captures the worker did not finish.
 
     It needs a current graphics context and draws to its own offscreen buffer."""
+
     def __init__(self, mujoco, model, look=DEFAULT_LOOK):
         self.look = look
         self.model = look_model(model, look)
@@ -188,4 +215,6 @@ class LocalRenderer:
     def render(self, mujoco, Image, request):
         mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, self.context)
         apply_state(mujoco, self.model, self.data, request['state'], self.look)
-        render_images(mujoco, Image, self.model, self.data, self.scene, self.options, self.context, request, self.look)
+        render_images(
+            mujoco, Image, self.model, self.data, self.scene, self.options, self.context, request, self.look
+        )

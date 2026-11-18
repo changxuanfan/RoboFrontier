@@ -25,3 +25,16 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["roboteam"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = [".", "tests", "tests/helpers"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+# E501: long string literals, URLs and table rows stay on one line; code lines are wrapped by the formatter.
+ignore = ["E501"]

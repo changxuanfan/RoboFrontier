@@ -4,48 +4,65 @@ A newer Linux kernel can exercise the old ruleset masks by limiting only the
 trusted test child's ABI query. Production has no environment/config ABI override.
 This does not replace admission on the actual cluster kernel.
 """
+
 import base64
 import json
 import os
-from pathlib import Path
 import shlex
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-from roboteam.harness.shared.landlock import abi
 from roboteam.harness.shared import tool_worker
+from roboteam.harness.shared.landlock import abi
 
 
 def fixture(base):
-    run = base/'run'
+    run = base / 'run'
     for name in ('private/inputs', 'public', 'workspace/.tmp'):
-        (run/name).mkdir(parents=True)
-    (base/'other-task-secret').write_text('OTHER_TASK_SECRET')
-    (base/'auth.json').write_text('FAKE_CREDENTIAL_CANARY')
-    (run/'private/answer').write_text('PRIVATE_ANSWER')
-    (run/'public/input').write_text('PUBLIC_READ_ONLY_CANARY')
-    (run/'public/input').chmod(0o644)
-    access = {'network': False, 'filesystem': {'/': 'read', str(base): 'deny',
-              str(run/'public'): 'read', str(run/'workspace'): 'write',
-              '/proc': 'deny', '/dev': 'deny', '/tmp': 'deny'}}
-    (run/'private/inputs/policy-access.json').write_text(json.dumps(access))
-    (run/'private/inputs/codex-tools.json').write_text(json.dumps(
-        {'schema': tool_worker.SCHEMA, 'backend': 'landlock-v1'}))
+        (run / name).mkdir(parents=True)
+    (base / 'other-task-secret').write_text('OTHER_TASK_SECRET')
+    (base / 'auth.json').write_text('FAKE_CREDENTIAL_CANARY')
+    (run / 'private/answer').write_text('PRIVATE_ANSWER')
+    (run / 'public/input').write_text('PUBLIC_READ_ONLY_CANARY')
+    (run / 'public/input').chmod(0o644)
+    access = {
+        'network': False,
+        'filesystem': {
+            '/': 'read',
+            str(base): 'deny',
+            str(run / 'public'): 'read',
+            str(run / 'workspace'): 'write',
+            '/proc': 'deny',
+            '/dev': 'deny',
+            '/tmp': 'deny',
+        },
+    }
+    (run / 'private/inputs/policy-access.json').write_text(json.dumps(access))
+    (run / 'private/inputs/codex-tools.json').write_text(
+        json.dumps({'schema': tool_worker.SCHEMA, 'backend': 'landlock-v1'})
+    )
     return run
 
 
 def worker(run, request, version, *, output=None):
-    code = ('import sys;sys.path.insert(0,'+repr(str(Path(tool_worker.__file__).resolve().parents[3]))+');'
-            'from roboteam.harness.shared import landlock as ll;'
-            'assert ll.abi()>='+str(version)+';ll.abi=lambda:'+str(version)+';'
-            'from roboteam.harness.codex.tool_worker import main;main()')
-    return subprocess.run([sys.executable, '-I', '-c', code, '--run-dir', str(run)],
-                          input=json.dumps(request), text=True,
-                          **({'capture_output': True} if output is None else {'stdout': output, 'stderr': subprocess.PIPE}),
-                          env={'PATH': os.environ.get('PATH', '/usr/bin:/bin')}, timeout=20)
+    code = (
+        'import sys;sys.path.insert(0,' + repr(str(Path(tool_worker.__file__).resolve().parents[3])) + ');'
+        'from roboteam.harness.shared import landlock as ll;'
+        'assert ll.abi()>=' + str(version) + ';ll.abi=lambda:' + str(version) + ';'
+        'from roboteam.harness.codex.tool_worker import main;main()'
+    )
+    return subprocess.run(
+        [sys.executable, '-I', '-c', code, '--run-dir', str(run)],
+        input=json.dumps(request),
+        text=True,
+        **({'capture_output': True} if output is None else {'stdout': output, 'stderr': subprocess.PIPE}),
+        env={'PATH': os.environ.get('PATH', '/usr/bin:/bin')},
+        timeout=20,
+    )
 
 
 class FailClosedTests(unittest.TestCase):
@@ -59,9 +76,11 @@ class FailClosedTests(unittest.TestCase):
 class LegacyKernelBoundaryTests(unittest.TestCase):
     def test_abi1_and_abi2_preserve_boundaries_and_workspace_operations(self):
         from roboteam.harness.shared.landlock import abi
+
         for version in (1, 2):
             if abi() < version:
-                with self.subTest(abi=version): self.skipTest('this kernel has Landlock ABI %d' % abi())
+                with self.subTest(abi=version):
+                    self.skipTest('this kernel has Landlock ABI %d' % abi())
                 continue
             with self.subTest(abi=version), tempfile.TemporaryDirectory() as temporary:
                 base = Path(temporary).resolve()
@@ -107,22 +126,22 @@ checks['public_intact']=p.read_text()=='PUBLIC_READ_ONLY_CANARY'
 print(json.dumps(checks))
 assert all(checks.values()),checks
 '''
-                (run/'public/probe.py').write_text(probe)
-                command = shlex.join([str(Path(sys.executable).resolve()), str(run/'public/probe.py')])
+                (run / 'public/probe.py').write_text(probe)
+                command = shlex.join([str(Path(sys.executable).resolve()), str(run / 'public/probe.py')])
                 result = worker(run, {'tool': 'policy_exec', 'command': command}, version)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertTrue(all(json.loads(result.stdout).values()))
-                self.assertEqual((run/'public/input').read_text(), 'PUBLIC_READ_ONLY_CANARY')
-                self.assertEqual((run/'public/input').stat().st_mode & 0o777, 0o644)
-                self.assertEqual((base/'auth.json').read_text(), 'FAKE_CREDENTIAL_CANARY')
+                self.assertEqual((run / 'public/input').read_text(), 'PUBLIC_READ_ONLY_CANARY')
+                self.assertEqual((run / 'public/input').stat().st_mode & 0o777, 0o644)
+                self.assertEqual((base / 'auth.json').read_text(), 'FAKE_CREDENTIAL_CANARY')
 
     def test_legacy_image_reads_reject_private_and_symlink_targets(self):
         with tempfile.TemporaryDirectory() as temporary:
             run = fixture(Path(temporary).resolve())
             image = b'\x89PNG\r\n\x1a\nfixture-image'
-            (run/'public/image.png').write_bytes(image)
-            (run/'workspace/escape').symlink_to(run/'private/answer')
-            good = worker(run, {'tool': 'policy_image', 'path': str(run/'public/image.png')}, 1)
+            (run / 'public/image.png').write_bytes(image)
+            (run / 'workspace/escape').symlink_to(run / 'private/answer')
+            good = worker(run, {'tool': 'policy_image', 'path': str(run / 'public/image.png')}, 1)
             self.assertEqual(good.returncode, 0, good.stderr)
             self.assertEqual(base64.b64decode(json.loads(good.stdout)['data']), image)
             for target in ('escape', '../private/answer'):
@@ -135,13 +154,13 @@ assert all(checks.values()),checks
             run = fixture(Path(temporary).resolve())
             result = worker(run, {'tool': 'policy_exec', 'command': 'echo BAD > touched'}, 0)
             self.assertNotEqual(result.returncode, 0)
-            self.assertFalse((run/'workspace/touched').exists())
+            self.assertFalse((run / 'workspace/touched').exists())
 
     def test_regular_stdout_cannot_bypass_filesystem_open_checks(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
             run = fixture(base)
-            protected = base/'host-log'
+            protected = base / 'host-log'
             protected.write_text('HOST_LOG_CANARY')
             with protected.open('ab') as output:
                 result = worker(run, {'tool': 'policy_exec', 'command': 'echo BAD'}, 1, output=output)

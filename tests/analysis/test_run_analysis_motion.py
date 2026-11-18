@@ -13,10 +13,10 @@ import unittest
 
 import numpy as np
 
+from analysis.test_run_analysis_segments import BASE, Fixture, action, header, snap
 from roboteam.analysis import atomic, extract, motion
 from roboteam.analysis import metrics as M
 from roboteam.analysis.archive import Run
-from analysis.test_run_analysis_segments import BASE, Fixture, action, header, snap
 
 HZ = 30
 
@@ -36,14 +36,30 @@ def write_motion(folder, task, joints, times, states, chunk_frames=60, listed=No
         delta = np.bitwise_xor(bits, np.vstack((prev[None, :], bits[:-1])))
         name = 'chunk-%06d.npz' % n
         with open(folder / name, 'wb') as f:
-            np.savez_compressed(f, base=prev, xor=delta, time_s=times[s : s + chunk_frames],
-                                wall_monotonic_s=times[s : s + chunk_frames])
-        chunks.append(dict(file=name, sha256=hashlib.sha256((folder / name).read_bytes()).hexdigest(),
-                           frames=len(bits), start_sim_s=float(times[s]),
-                           end_sim_s=float(times[min(s + chunk_frames, len(q)) - 1])))
+            np.savez_compressed(
+                f,
+                base=prev,
+                xor=delta,
+                time_s=times[s : s + chunk_frames],
+                wall_monotonic_s=times[s : s + chunk_frames],
+            )
+        chunks.append(
+            dict(
+                file=name,
+                sha256=hashlib.sha256((folder / name).read_bytes()).hexdigest(),
+                frames=len(bits),
+                start_sim_s=float(times[s]),
+                end_sim_s=float(times[min(s + chunk_frames, len(q)) - 1]),
+            )
+        )
         prev = bits[-1].copy()
-    meta = dict(schema='roboteam.motion.v1', nq=q.shape[1], sample_hz=HZ,
-                status='complete' if listed is None else 'recording', chunks=chunks[:listed])
+    meta = dict(
+        schema='roboteam.motion.v1',
+        nq=q.shape[1],
+        sample_hz=HZ,
+        status='complete' if listed is None else 'recording',
+        chunks=chunks[:listed],
+    )
     (folder / 'stream.json').write_text(json.dumps(meta))
 
 
@@ -75,8 +91,15 @@ def transport_log(end=120, objects_final=True):
     for t in sorted({0, 30, 60, end}):
         a = {'g1': 'A_item1'} if t >= 30 else {}
         final = t == end
-        rows.append(snap(float(t), obj if final and objects_final else None, assignments=a,
-                         matched_goals=len(a), total_goals=2))
+        rows.append(
+            snap(
+                float(t),
+                obj if final and objects_final else None,
+                assignments=a,
+                matched_goals=len(a),
+                total_goals=2,
+            )
+        )
     return rows
 
 
@@ -92,8 +115,10 @@ class TransportFromMotionTests(unittest.TestCase):
     def run_with(self, name, log, recordings, events=()):
         f = Fixture(self.tmp, name)
         f.log(log)
-        f.db([action('A', 0, 5), action('A', 25, 29, kind='gripper', mode='release'), action('A', 100, 110)],
-             [(BASE, 'START', {})] + list(events))
+        f.db(
+            [action('A', 0, 5), action('A', 25, 29, kind='gripper', mode='release'), action('A', 100, 110)],
+            [(BASE, 'START', {})] + list(events),
+        )
         for sub, times, states in recordings:
             write_motion(f.dir / 'private/outputs' / sub, TRANSPORT_TASK, free_joints(ITEMS), times, states)
         return f
@@ -122,17 +147,27 @@ class TransportFromMotionTests(unittest.TestCase):
         # Segment 0 recorded on to 110 s and its item fell at 105 s, but segment 1 restored the
         # world at 100 s and the item stayed; a later fall at 150 s is after the 140 s cutoff.
         t0, t1 = frames(0, 110), frames(100, 160)
-        f = self.run_with('t60-seg', transport_log(160),
-                          [('motion', t0, transport_states(t0, fall_at=105)),
-                           ('segments/1/motion', t1, transport_states(t1, fall_at=150))],
-                          [(BASE + 140, 'POLICY_WALL_LIMIT', {'sim_time_s': 140.0})])
+        f = self.run_with(
+            't60-seg',
+            transport_log(160),
+            [
+                ('motion', t0, transport_states(t0, fall_at=105)),
+                ('segments/1/motion', t1, transport_states(t1, fall_at=150)),
+            ],
+            [(BASE + 140, 'POLICY_WALL_LIMIT', {'sim_time_s': 140.0})],
+        )
         S = f.extract('transport')['suite']
         self.assertEqual(S['objects_source'], 'motion')
         self.assertEqual(S['lost'], {})
         # Without the cutoff the 150 s fall in segment 1 counts.
-        g = self.run_with('t60-seg-nocut', transport_log(160),
-                          [('motion', t0, transport_states(t0, fall_at=105)),
-                           ('segments/1/motion', t1, transport_states(t1, fall_at=150))])
+        g = self.run_with(
+            't60-seg-nocut',
+            transport_log(160),
+            [
+                ('motion', t0, transport_states(t0, fall_at=105)),
+                ('segments/1/motion', t1, transport_states(t1, fall_at=150)),
+            ],
+        )
         self.assertAlmostEqual(g.extract('transport')['suite']['lost']['A_item2'], 150.0, places=6)
 
     def test_the_strided_search_finds_the_same_frame_as_a_full_scan(self):
@@ -151,8 +186,10 @@ class TransportFromMotionTests(unittest.TestCase):
         for s in range(0, 121):
             a = {'g1': 'A_item1'} if s >= 30 else {}
             z2 = -0.5 if s >= 76 else 0.8
-            obj = {'A_item1': {'position_m': [0.3, 0.1, 0.8] if s >= 29 else [0, 0, 0.8]},
-                   'A_item2': {'position_m': [0, 0, z2]}}
+            obj = {
+                'A_item1': {'position_m': [0.3, 0.1, 0.8] if s >= 29 else [0, 0, 0.8]},
+                'A_item2': {'position_m': [0, 0, z2]},
+            }
             rows.append(snap(float(s), obj, assignments=a, matched_goals=len(a), total_goals=2))
         f = self.run_with('t1', rows, [('motion', t, transport_states(t, fall_at=75.4))])
         S = f.extract('transport')['suite']
@@ -167,7 +204,10 @@ class TransportFromMotionTests(unittest.TestCase):
         rows = [header('events-10s')]
         for s in sorted(set(range(0, 121, 10)) | {30, 120}):
             a = {'g1': 'A_item1'} if s >= 30 else {}
-            obj = {'A_item1': {'position_m': [0.3, 0.1, 0.8]}, 'A_item2': {'position_m': [0, 0, -0.5 if s >= 80 else 0.8]}}
+            obj = {
+                'A_item1': {'position_m': [0.3, 0.1, 0.8]},
+                'A_item2': {'position_m': [0, 0, -0.5 if s >= 80 else 0.8]},
+            }
             rows.append(snap(float(s), obj, assignments=a, matched_goals=len(a), total_goals=2))
         f = self.run_with('t10', rows, [('motion', t, transport_states(t, fall_at=75.4))])
         S = f.extract('transport')['suite']
@@ -175,16 +215,24 @@ class TransportFromMotionTests(unittest.TestCase):
         self.assertAlmostEqual(S['lost']['A_item2'], 75.4, places=6)
         g = self.run_with('t10-bare', rows, [])
         S = g.extract('transport')['suite']
-        self.assertEqual((S['objects_source'], S['lost'], S.get('objects_unknown')),
-                         ('process log', {'A_item2': 80.0}, None))
+        self.assertEqual(
+            (S['objects_source'], S['lost'], S.get('objects_unknown')),
+            ('process log', {'A_item2': 80.0}, None),
+        )
 
     def test_chunks_missing_from_an_unclosed_index_are_read(self):
         t = frames(0, 120)
         f = Fixture(self.tmp, 'open')
         f.log(transport_log())
         f.db([action('A', 0, 5)], [(BASE, 'START', {})])
-        write_motion(f.dir / 'private/outputs/motion', TRANSPORT_TASK, free_joints(ITEMS), t,
-                     transport_states(t, fall_at=110), listed=40)
+        write_motion(
+            f.dir / 'private/outputs/motion',
+            TRANSPORT_TASK,
+            free_joints(ITEMS),
+            t,
+            transport_states(t, fall_at=110),
+            listed=40,
+        )
         self.assertAlmostEqual(f.extract('transport')['suite']['lost']['A_item2'], 110.0, places=6)
 
     def test_a_recording_inside_a_tar_is_read_in_place(self):
@@ -200,8 +248,10 @@ class TransportFromMotionTests(unittest.TestCase):
 
 
 DIAL_TASK = {'dials': [{'id': 'D01'}, {'id': 'D02'}]}
-DIAL_JOINTS = [dict(id='D01_hinge', body='D01_rotor', type=3, qpos_address=0),
-               dict(id='D02_hinge', body='D02_rotor', type=3, qpos_address=1)]
+DIAL_JOINTS = [
+    dict(id='D01_hinge', body='D01_rotor', type=3, qpos_address=0),
+    dict(id='D02_hinge', body='D02_rotor', type=3, qpos_address=1),
+]
 
 
 def dial_states(times, path):
@@ -213,7 +263,9 @@ def dial_states(times, path):
 
 
 def dial_log(end, every=60):
-    angles = lambda t: snap(float(t), valid_trials=0, display=0, solved=False)
+    def angles(t):
+        return snap(float(t), valid_trials=0, display=0, solved=False)
+
     return [header('events-60s')] + [angles(t) for t in range(0, end + 1, every)]
 
 
@@ -226,18 +278,24 @@ class DialFromMotionTests(unittest.TestCase):
         f.log(dial_log(end))
         f.db([action('A', 0, 5)], [(BASE, 'START', {})] + list(events))
         for sub, times, path in recordings:
-            write_motion(f.dir / 'private/outputs' / sub, DIAL_TASK, DIAL_JOINTS, times, dial_states(times, path))
+            write_motion(
+                f.dir / 'private/outputs' / sub, DIAL_TASK, DIAL_JOINTS, times, dial_states(times, path)
+            )
         return atomic.run_dial_turns(Run(name, f.root))
 
     def test_two_turns_between_60_s_rows_come_from_motion(self):
         # 0 -> 60 at 10 s, 60 -> 180 at 20 s passing 120 without dwelling, 180 -> 240 at 30.5 s
         # for 0.8 s only, then back to 180: two turns.
         t = frames(0, 60)
-        r = self.dial_run('d60', [('motion', t, [(0, 0.0), (10, 60.0), (20, 180.0), (30.5, 240.0), (31.3, 180.0)])])
+        r = self.dial_run(
+            'd60', [('motion', t, [(0, 0.0), (10, 60.0), (20, 180.0), (30.5, 240.0), (31.3, 180.0)])]
+        )
         self.assertEqual(r['source'], 'motion')
         self.assertIsNone(r['unknown'])
         self.assertEqual([k for _, k in r['turns']], [0, 0])
-        np.testing.assert_allclose([s for s, _ in r['turns']], [10.3 - 4 / 60 * 0.3, 20.3 - 4 / 120 * 0.3], atol=1 / HZ)
+        np.testing.assert_allclose(
+            [s for s, _ in r['turns']], [10.3 - 4 / 60 * 0.3, 20.3 - 4 / 120 * 0.3], atol=1 / HZ
+        )
 
     def test_without_a_recording_turns_stay_unknown(self):
         r = self.dial_run('d60-bare', [])
@@ -248,9 +306,15 @@ class DialFromMotionTests(unittest.TestCase):
         # Segment 0 turned dial 0 to 60 at 40 s, after segment 1's restore frame (35 s); segment 1
         # turned it to 120 at 50 s and to 180 at 70 s, after the 65 s cutoff: one turn counts.
         t0, t1 = frames(0, 45), frames(35, 80)
-        r = self.dial_run('d60-seg', [('motion', t0, [(0, 0.0), (40, 60.0)]),
-                                      ('segments/1/motion', t1, [(0, 0.0), (50, 120.0), (70, 180.0)])],
-                          [(BASE + 65, 'POLICY_WALL_LIMIT', {'sim_time_s': 65.0})], end=80)
+        r = self.dial_run(
+            'd60-seg',
+            [
+                ('motion', t0, [(0, 0.0), (40, 60.0)]),
+                ('segments/1/motion', t1, [(0, 0.0), (50, 120.0), (70, 180.0)]),
+            ],
+            [(BASE + 65, 'POLICY_WALL_LIMIT', {'sim_time_s': 65.0})],
+            end=80,
+        )
         self.assertEqual(len(r['turns']), 1)
         self.assertAlmostEqual(r['turns'][0][0], 50.3 - 4 / 120 * 0.3, delta=1 / HZ)
 

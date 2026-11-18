@@ -1,9 +1,10 @@
 """Standing teams start from bound sessions, without a model READY turn."""
+
 import json
-from pathlib import Path
 import tempfile
 import time
 import unittest
+from pathlib import Path
 
 from fake_pipeline import FakeWorld, fake_capture
 from roboteam.runtime.run.setup import prepare_run
@@ -15,18 +16,20 @@ class DirectTeamStartTests(unittest.TestCase):
     def make_service(self, directory, system):
         config = load_run_settings()
         config.update(system=system, startup_protocol='direct_team')
-        run_settings = directory/'run.json'
+        run_settings = directory / 'run.json'
         run_settings.write_text(json.dumps(config))
-        run = prepare_run(directory/'run', run_settings_path=run_settings)
+        run = prepare_run(directory / 'run', run_settings_path=run_settings)
         service = RuntimeService(run, FakeWorld, fake_capture)
         self.addCleanup(service.close)
         counter = 0
+
         def call(actor, op, data=None):
             nonlocal counter
             counter += 1
-            job = service.accept(actor, op, data or {}, 'test-'+str(counter))
+            job = service.accept(actor, op, data or {}, 'test-' + str(counter))
             service.pump()
             return job['result']
+
         return service, call
 
     def test_all_initial_roles_bind_before_one_start_and_ready_is_optional(self):
@@ -34,13 +37,18 @@ class DirectTeamStartTests(unittest.TestCase):
             with self.subTest(system=system), tempfile.TemporaryDirectory() as temporary:
                 service, call = self.make_service(Path(temporary), system)
                 policy = {a: v for a, v in service.store.agents().items() if v['kind'] != 'manager'}
-                self.assertEqual(set(policy), {'Controller', 'A', 'B', 'C', 'D'} if system == 'hierarchical' else {'A', 'B', 'C', 'D'})
+                self.assertEqual(
+                    set(policy),
+                    {'Controller', 'A', 'B', 'C', 'D'} if system == 'hierarchical' else {'A', 'B', 'C', 'D'},
+                )
                 self.assertIn('error', call('A', 'gripper', {'state': 'close', 'wait': False}))
                 self.assertEqual(service.world.executed, [])
                 self.assertIn('error', call('Meta', 'start'))
                 for index, actor in enumerate(policy):
-                    self.assertTrue(call('Meta', 'bind', {'actor': actor, 'thread_id': 'thread-'+actor})['bound'])
-                    if index < len(policy)-1:
+                    self.assertTrue(
+                        call('Meta', 'bind', {'actor': actor, 'thread_id': 'thread-' + actor})['bound']
+                    )
+                    if index < len(policy) - 1:
                         self.assertIn('error', call('Meta', 'start'))
                 before = time.time()
                 self.assertTrue(call('Meta', 'start')['started'])
@@ -53,9 +61,13 @@ class DirectTeamStartTests(unittest.TestCase):
                     self.assertFalse(agent['ready'])
                     self.assertEqual(agent['note'], '')
                     self.assertEqual(agent['work_state'], 'waiting')
-                self.assertEqual(call('A', 'gripper', {'state': 'close', 'wait': False})['execution_status'], 'running')
+                self.assertEqual(
+                    call('A', 'gripper', {'state': 'close', 'wait': False})['execution_status'], 'running'
+                )
                 self.assertTrue(call('B', 'ready')['run_started'])
-                self.assertEqual(call('B', 'gripper', {'state': 'open', 'wait': False})['execution_status'], 'running')
+                self.assertEqual(
+                    call('B', 'gripper', {'state': 'open', 'wait': False})['execution_status'], 'running'
+                )
                 self.assertIn('error', call('Meta', 'start'))
                 self.assertEqual(service.store.get('start_at'), start)
                 if system == 'hierarchical':
@@ -64,25 +76,30 @@ class DirectTeamStartTests(unittest.TestCase):
 
     def test_a_refused_start_gate_leaves_the_run_prepared(self):
         from unittest.mock import patch
+
         for readiness in ('environment_preview_only', 'prepared_policy_trial'):
             with self.subTest(readiness=readiness), tempfile.TemporaryDirectory() as temporary:
                 service, call = self.make_service(Path(temporary), 'decentralized')
                 videos = []
                 service.video_factory = lambda: videos.append(1)
                 for actor in ('A', 'B', 'C', 'D'):
-                    call('Meta', 'bind', {'actor': actor, 'thread_id': 'thread-'+actor})
+                    call('Meta', 'bind', {'actor': actor, 'thread_id': 'thread-' + actor})
                 started = []
                 service.world.start_trial = lambda: started.append(1)
                 service.task['execution_readiness'] = readiness
-                with patch('roboteam.tasks.task_types.validate_frozen_policy',
-                           side_effect=ValueError('Frozen policy release differs')):
+                with patch(
+                    'roboteam.tasks.task_types.validate_frozen_policy',
+                    side_effect=ValueError('Frozen policy release differs'),
+                ):
                     result = call('Meta', 'start')
                 self.assertIn('error', result)
                 self.assertEqual(service.store.get('lifecycle'), 'prepared')
                 self.assertIsNone(service.store.get('start_at'))
                 self.assertNotIn('START', [e['kind'] for e in service.store.events()])
                 self.assertEqual((videos, started), ([], []))
-                self.assertEqual({service.store.agent(a)['work_state'] for a in ('A', 'B', 'C', 'D')} & {'continue'}, set())
+                self.assertEqual(
+                    {service.store.agent(a)['work_state'] for a in ('A', 'B', 'C', 'D')} & {'continue'}, set()
+                )
 
     def test_duplicate_native_session_cannot_bind_two_initial_roles_at_start(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -98,7 +115,7 @@ class DirectTeamStartTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             config = load_run_settings()
             config.update(system='adaptive', startup_protocol='direct_team')
-            path = Path(temporary)/'run.json'
+            path = Path(temporary) / 'run.json'
             path.write_text(json.dumps(config))
             with self.assertRaisesRegex(ValueError, 'standing Workers'):
                 load_run_settings(path)

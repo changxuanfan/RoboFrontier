@@ -1,4 +1,5 @@
 """A batch runs as a background service on plain Linux (RunPod), with or without systemd."""
+
 import json
 import tempfile
 import unittest
@@ -12,16 +13,25 @@ from roboteam.runtime.run import layout as run_layout
 
 class LinuxServiceTests(unittest.TestCase):
     def batch(self, folder):
-        batch = Path(folder)/'batch'; batch.mkdir()
-        (batch/'batch.json').write_text(json.dumps({'status': 'prepared_not_started', 'jobs': [], **run_layout.batch_record()}))
+        batch = Path(folder) / 'batch'
+        batch.mkdir()
+        (batch / 'batch.json').write_text(
+            json.dumps({'status': 'prepared_not_started', 'jobs': [], **run_layout.batch_record()})
+        )
         return batch
 
     def test_without_systemd_a_setsid_daemon_runs_the_foreground_command_once(self):
         started = []
+
         def popen(argv, **kwargs):
-            started.append((argv, kwargs)); return SimpleNamespace(pid=4321)
-        with tempfile.TemporaryDirectory() as folder, patch('sys.platform', 'linux'), \
-                patch.dict('os.environ', {'PATH': '/bin', 'OPENAI_API_KEY': 'secret'}, clear=True):
+            started.append((argv, kwargs))
+            return SimpleNamespace(pid=4321)
+
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch('sys.platform', 'linux'),
+            patch.dict('os.environ', {'PATH': '/bin', 'OPENAI_API_KEY': 'secret'}, clear=True),
+        ):
             batch = self.batch(folder)
             record = linux.submit(batch, popen=popen, use_systemd=False)
             argv, kwargs = started[0]
@@ -37,8 +47,11 @@ class LinuxServiceTests(unittest.TestCase):
 
     def test_with_systemd_a_transient_user_service_is_started(self):
         calls = []
+
         def run(argv, **kwargs):
-            calls.append(argv); return SimpleNamespace(returncode=0, stdout='', stderr='')
+            calls.append(argv)
+            return SimpleNamespace(returncode=0, stdout='', stderr='')
+
         with tempfile.TemporaryDirectory() as folder, patch('sys.platform', 'linux'):
             batch = self.batch(folder)
             record = linux.submit(batch, run=run, use_systemd=True)

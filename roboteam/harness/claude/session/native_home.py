@@ -1,4 +1,5 @@
 """Locate native session history without copying a managed credential store."""
+
 import json
 from pathlib import Path
 
@@ -29,8 +30,10 @@ def history_directory(run, model_entry=None):
     marker = run_layout.path(run, 'collected_sessions')
     if marker.is_file():
         saved = json.loads(marker.read_text())
-        if (saved.get('schema') != 'roboteam.claude-collected-sessions.v1'
-                or saved.get('writers_stopped') is not True):
+        if (
+            saved.get('schema') != 'roboteam.claude-collected-sessions.v1'
+            or saved.get('writers_stopped') is not True
+        ):
             raise ValueError('Invalid collected native session marker')
         return run_layout.path(run, 'harness_config')
     return config_directory(run, model_entry)

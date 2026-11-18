@@ -1,33 +1,74 @@
 """Bounded, asynchronous MP4 encoding and video checks."""
+
 import json
-from pathlib import Path
 import queue
 import shutil
 import subprocess
 import threading
+from pathlib import Path
 
 
 def probe_video(path):
     """Verify headers and decode one frame; not a certification of every frame."""
-    path=Path(path)
-    if not path.is_file():return {'readable':False,'reason':'Video file missing'}
-    ffprobe,ffmpeg=shutil.which('ffprobe'),shutil.which('ffmpeg')
-    if not ffprobe or not ffmpeg:return {'readable':None,'reason':'Video verification tools unavailable'}
+    path = Path(path)
+    if not path.is_file():
+        return {'readable': False, 'reason': 'Video file missing'}
+    ffprobe, ffmpeg = shutil.which('ffprobe'), shutil.which('ffmpeg')
+    if not ffprobe or not ffmpeg:
+        return {'readable': None, 'reason': 'Video verification tools unavailable'}
     try:
-        result=subprocess.run([ffprobe,'-v','error','-select_streams','v:0','-show_entries',
-            'stream=width,height:format=duration','-of','json',str(path)],capture_output=True,timeout=10)
-        if result.returncode:return {'readable':False,'reason':result.stderr.decode(errors='replace')[:400]}
-        info=json.loads(result.stdout);stream=info.get('streams',[{}])[0]
-        width,height=stream.get('width',0),stream.get('height',0)
-        if not width or not height:return {'readable':False,'reason':'No video stream'}
-        decoded=subprocess.run([ffmpeg,'-v','error','-i',str(path),'-frames:v','1',
-            '-f','rawvideo','-pix_fmt','rgb24','pipe:1'],capture_output=True,timeout=10)
-        if decoded.returncode or len(decoded.stdout)!=width*height*3:
-            return {'readable':False,'reason':'First frame could not be decoded'}
-        duration=info.get('format',{}).get('duration')
-        return {'readable':True,'duration_s':float(duration) if duration else None,'width':width,'height':height}
-    except (OSError,ValueError,IndexError,subprocess.TimeoutExpired) as error:
-        return {'readable':None,'reason':str(error)[:400]}
+        result = subprocess.run(
+            [
+                ffprobe,
+                '-v',
+                'error',
+                '-select_streams',
+                'v:0',
+                '-show_entries',
+                'stream=width,height:format=duration',
+                '-of',
+                'json',
+                str(path),
+            ],
+            capture_output=True,
+            timeout=10,
+        )
+        if result.returncode:
+            return {'readable': False, 'reason': result.stderr.decode(errors='replace')[:400]}
+        info = json.loads(result.stdout)
+        stream = info.get('streams', [{}])[0]
+        width, height = stream.get('width', 0), stream.get('height', 0)
+        if not width or not height:
+            return {'readable': False, 'reason': 'No video stream'}
+        decoded = subprocess.run(
+            [
+                ffmpeg,
+                '-v',
+                'error',
+                '-i',
+                str(path),
+                '-frames:v',
+                '1',
+                '-f',
+                'rawvideo',
+                '-pix_fmt',
+                'rgb24',
+                'pipe:1',
+            ],
+            capture_output=True,
+            timeout=10,
+        )
+        if decoded.returncode or len(decoded.stdout) != width * height * 3:
+            return {'readable': False, 'reason': 'First frame could not be decoded'}
+        duration = info.get('format', {}).get('duration')
+        return {
+            'readable': True,
+            'duration_s': float(duration) if duration else None,
+            'width': width,
+            'height': height,
+        }
+    except (OSError, ValueError, IndexError, subprocess.TimeoutExpired) as error:
+        return {'readable': None, 'reason': str(error)[:400]}
 
 
 class Video:
@@ -37,13 +78,49 @@ class Video:
             raise RuntimeError("FFmpeg not installed; install it to use F9 recording")
         self.path = Path(path)
         self.stderr = self.path.with_suffix(".ffmpeg.log").open("w")
-        self.process = subprocess.Popen([executable, "-hide_banner", "-loglevel", "error", "-y",
-            "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{width}x{height}", "-r", str(fps),
-            "-i", "-", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
-            "-tune", "zerolatency", "-g", str(max(1,round(fps))), "-sc_threshold", "0",
-            "-pix_fmt", "yuv420p", "-movflags", "+frag_keyframe+empty_moov+default_base_moof",
-            "-frag_duration", "1000000", "-flush_packets", "1", str(self.path)],
-            stdin=subprocess.PIPE, stderr=self.stderr)
+        self.process = subprocess.Popen(
+            [
+                executable,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgb24",
+                "-s",
+                f"{width}x{height}",
+                "-r",
+                str(fps),
+                "-i",
+                "-",
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "21",
+                "-tune",
+                "zerolatency",
+                "-g",
+                str(max(1, round(fps))),
+                "-sc_threshold",
+                "0",
+                "-pix_fmt",
+                "yuv420p",
+                "-movflags",
+                "+frag_keyframe+empty_moov+default_base_moof",
+                "-frag_duration",
+                "1000000",
+                "-flush_packets",
+                "1",
+                str(self.path),
+            ],
+            stdin=subprocess.PIPE,
+            stderr=self.stderr,
+        )
         self.queue = queue.Queue(maxsize=12)
         self.error = None
         self.dropped = 0
@@ -63,22 +140,27 @@ class Video:
         except (OSError, ValueError) as error:
             self.error = str(error)
         finally:
-            try:self.process.stdin.close()
-            except (OSError,ValueError) as error:self.error=self.error or str(error)
+            try:
+                self.process.stdin.close()
+            except (OSError, ValueError) as error:
+                self.error = self.error or str(error)
 
     def frame(self, pixels, block=False):
         if self.error or self.closed_result is not None:
             return False
         try:
-            if block:self.queue.put(pixels.tobytes(),timeout=10)
-            else:self.queue.put_nowait(pixels.tobytes())
+            if block:
+                self.queue.put(pixels.tobytes(), timeout=10)
+            else:
+                self.queue.put_nowait(pixels.tobytes())
             return True
         except queue.Full:
             self.dropped += 1
             return False
 
     def close(self):
-        if self.closed_result is not None:return self.closed_result
+        if self.closed_result is not None:
+            return self.closed_result
         if self.thread.is_alive():
             try:
                 self.queue.put(None, timeout=3)
@@ -95,9 +177,18 @@ class Video:
         if self.process.returncode:
             self.error = self.error or f"FFmpeg exited {self.process.returncode}"
         self.stderr.close()
-        verification=probe_video(self.path)
-        if verification['readable'] is not True:self.error=self.error or 'Video readability not verified: '+verification.get('reason','unknown')
-        self.closed_result={"path": str(self.path), "frames": self.frames, "dropped_frames": self.dropped,
-            "error": self.error,"encoding_complete":self.process.returncode==0 and self.error is None,
-            **verification,'verification_scope':'Headers and first decoded frame; abrupt loss may discard the unfinished tail.'}
+        verification = probe_video(self.path)
+        if verification['readable'] is not True:
+            self.error = self.error or 'Video readability not verified: ' + verification.get(
+                'reason', 'unknown'
+            )
+        self.closed_result = {
+            "path": str(self.path),
+            "frames": self.frames,
+            "dropped_frames": self.dropped,
+            "error": self.error,
+            "encoding_complete": self.process.returncode == 0 and self.error is None,
+            **verification,
+            'verification_scope': 'Headers and first decoded frame; abrupt loss may discard the unfinished tail.',
+        }
         return self.closed_result

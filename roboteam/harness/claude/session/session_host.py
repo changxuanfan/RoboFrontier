@@ -4,18 +4,24 @@ The supervisor creates one host per role. Native turns are asynchronous so the
 physical owner and deterministic scheduler can keep progressing. Unknown turn
 outcomes are terminal for this host: never issue another turn automatically.
 """
+
 import json
 import os
-from pathlib import Path
 import re
 import sys
 import uuid
+from pathlib import Path
 
-from roboteam.harness.claude.session.runner import PersistentSession, policy_settings, run_turn
-from roboteam.runtime.run.setup import verify_inputs, write_json
 from roboteam.harness.claude.session.recovery import recover
-from roboteam.harness.claude.session.session_recovery import recover_model_loss, recover_network, recover_quota
+from roboteam.harness.claude.session.runner import PersistentSession, policy_settings, run_turn
+from roboteam.harness.claude.session.session_host_base import SessionHost
+from roboteam.harness.claude.session.session_recovery import (
+    recover_model_loss,
+    recover_network,
+    recover_quota,
+)
 from roboteam.runtime.run import layout as run_layout
+from roboteam.runtime.run.setup import verify_inputs, write_json
 
 ACTOR_NAME = re.compile(r'[A-Za-z][A-Za-z0-9_-]{0,63}')
 
@@ -30,15 +36,18 @@ def role_mcp_config(run_dir, actor, python=sys.executable, *, _validated_delegat
         if not _validated_delegate:
             raise ValueError('Role is not in the frozen policy team')
         from roboteam.runtime.world.store import RuntimeStore
+
         path = run / 'private/state/runtime.sqlite'
-        if not path.is_file(): raise ValueError('Runtime state missing')
+        if not path.is_file():
+            raise ValueError('Runtime state missing')
         store = RuntimeStore(path)
         try:
             agent = store.agent(actor)
             # A delegate being created is held by its fork gate until activation.
             if agent['kind'] != 'delegate' or agent.get('delegation_state') not in ('creating', 'active'):
                 raise ValueError('Delegate is not active')
-        finally: store.close()
+        finally:
+            store.close()
     elif roles[actor].get('kind') == 'manager':
         raise ValueError('Role is not in the frozen policy team')
     connection = run / 'private/state/connections' / (actor + '.json')
@@ -48,44 +57,86 @@ def role_mcp_config(run_dir, actor, python=sys.executable, *, _validated_delegat
     target = run_layout.path(run, 'harness_mcp') / (actor + '.json')
     # A model never chooses the actor or a connection path. The server binds it.
     project = Path(__file__).resolve().parents[4]
-    write_json(target, {'mcpServers': {'robot': {
-        # Absolute but not resolved: a virtual environment's python is a link to the base
-        # interpreter, and following it loses the environment that installs this project.
-        # Claude Code does not pass the PYTHONPATH below to the server on every host.
-        'command': os.path.abspath(python),
-        'args': ['-m', 'roboteam.harness.claude.robot_mcp', '--run-dir', str(run), '--connection', str(connection)],
-        'env': {'PYTHONPATH': str(project)},
-    }}})
+    write_json(
+        target,
+        {
+            'mcpServers': {
+                'robot': {
+                    # Absolute but not resolved: a virtual environment's python is a link to the base
+                    # interpreter, and following it loses the environment that installs this project.
+                    # Claude Code does not pass the PYTHONPATH below to the server on every host.
+                    'command': os.path.abspath(python),
+                    'args': [
+                        '-m',
+                        'roboteam.harness.claude.robot_mcp',
+                        '--run-dir',
+                        str(run),
+                        '--connection',
+                        str(connection),
+                    ],
+                    'env': {'PYTHONPATH': str(project)},
+                }
+            }
+        },
+    )
     return target
-
-
-from roboteam.harness.claude.session.session_host_base import SessionHost
 
 
 class ClaudeSessionHost(SessionHost):
     """Claude setup around the shared role lifecycle."""
-    def __init__(self, run_dir, actor, model_entry, base_env, *, python=sys.executable, runner=None, **options):
+
+    def __init__(
+        self, run_dir, actor, model_entry, base_env, *, python=sys.executable, runner=None, **options
+    ):
         runner = runner or (PersistentSession() if policy_settings(Path(run_dir)) is not None else run_turn)
-        mcp = role_mcp_config(run_dir, actor, python,
-                              _validated_delegate=options.get('_validated_delegate', False))
-        super().__init__(run_dir, actor, model_entry, base_env, python=python, runner=runner,
-                         harness='claude', mcp=mcp, session_id=str(uuid.uuid4()), **options)
+        mcp = role_mcp_config(
+            run_dir, actor, python, _validated_delegate=options.get('_validated_delegate', False)
+        )
+        super().__init__(
+            run_dir,
+            actor,
+            model_entry,
+            base_env,
+            python=python,
+            runner=runner,
+            harness='claude',
+            mcp=mcp,
+            session_id=str(uuid.uuid4()),
+            **options,
+        )
 
     def recover_capacity(self, store, now=None):
-        return (recover(self, store, now) or recover_model_loss(self, store) or recover_quota(self, store)
-                or recover_network(self, store))
+        return (
+            recover(self, store, now)
+            or recover_model_loss(self, store)
+            or recover_quota(self, store)
+            or recover_network(self, store)
+        )
 
     def history_available(self):
         from roboteam.harness.claude.session.native_home import history_directory
         from roboteam.harness.claude.systems.provenance import history, transcript_rows
+
         return bool(history(transcript_rows(history_directory(self.run), self.session_id), self.session_id))
 
     def write_summary(self, path, value):
         write_json(path, value)
 
     @classmethod
-    def fork_delegate(cls, run_dir, actor, model_entry, base_env, *, budget_ledger, max_budget_usd, fork_from, gate,
-                      _verifier=verify_inputs, **kwargs):
+    def fork_delegate(
+        cls,
+        run_dir,
+        actor,
+        model_entry,
+        base_env,
+        *,
+        budget_ledger,
+        max_budget_usd,
+        fork_from,
+        gate,
+        _verifier=verify_inputs,
+        **kwargs,
+    ):
         """A host whose first turn forks `fork_from` into this delegate's new session.
 
         The parent is blocked at its pending `delegate` call, so the child's history
@@ -97,29 +148,51 @@ class ClaudeSessionHost(SessionHost):
         """
         from roboteam.harness.claude.systems.fork_setup import ACTOR
         from roboteam.runtime.world.store import RuntimeStore
+
         run = Path(run_dir).resolve()
-        if not isinstance(actor, str) or not ACTOR.fullmatch(actor): raise ValueError('Invalid delegate actor')
-        if budget_ledger is None or not Path(budget_ledger.path).resolve().is_relative_to(run/'private'):
+        if not isinstance(actor, str) or not ACTOR.fullmatch(actor):
+            raise ValueError('Invalid delegate actor')
+        if budget_ledger is None or not Path(budget_ledger.path).resolve().is_relative_to(run / 'private'):
             raise ValueError('A run-local shared budget ledger is required')
-        if _verifier(run): raise ValueError('Frozen inputs changed')
-        launch = json.loads((run/'private/inputs/claude.json').read_text())
+        if _verifier(run):
+            raise ValueError('Frozen inputs changed')
+        launch = json.loads((run / 'private/inputs/claude.json').read_text())
         if launch.get('model_entry') != model_entry:
             raise ValueError('Delegate model entry differs from the frozen launch')
-        store_path = run/'private/state/runtime.sqlite'
-        if not store_path.is_file(): raise ValueError('Runtime state missing')
+        store_path = run / 'private/state/runtime.sqlite'
+        if not store_path.is_file():
+            raise ValueError('Runtime state missing')
         store = RuntimeStore(store_path)
         try:
             config = store.get('config')
-            if (config.get('harness') != 'claude' or config.get('system') != 'adaptive'
-                    or config.get('model') != model_entry.get('model') or config.get('effort') != model_entry.get('effort')
-                    or store.get('lifecycle') != 'running' or store.get('dispatch_paused', False)):
+            if (
+                config.get('harness') != 'claude'
+                or config.get('system') != 'adaptive'
+                or config.get('model') != model_entry.get('model')
+                or config.get('effort') != model_entry.get('effort')
+                or store.get('lifecycle') != 'running'
+                or store.get('dispatch_paused', False)
+            ):
                 raise ValueError('Run or model entry cannot fork a delegate')
             agent = store.agent(actor)
-            if (agent.get('kind') != 'delegate' or agent.get('delegation_state') != 'creating' or agent['thread_id']
-                    or store.agent('Controller')['thread_id'] != fork_from):
+            if (
+                agent.get('kind') != 'delegate'
+                or agent.get('delegation_state') != 'creating'
+                or agent['thread_id']
+                or store.agent('Controller')['thread_id'] != fork_from
+            ):
                 raise ValueError('Delegate is not an uncreated scope of this parent')
-        finally: store.close()
-        host = cls(run, actor, model_entry, base_env, budget_ledger=budget_ledger,
-                   max_budget_usd=max_budget_usd, _validated_delegate=True, **kwargs)
+        finally:
+            store.close()
+        host = cls(
+            run,
+            actor,
+            model_entry,
+            base_env,
+            budget_ledger=budget_ledger,
+            max_budget_usd=max_budget_usd,
+            _validated_delegate=True,
+            **kwargs,
+        )
         host.fork_from, host.gate = fork_from, gate
         return host

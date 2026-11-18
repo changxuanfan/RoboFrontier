@@ -5,6 +5,7 @@ one `claude -p` turn, and summarising its stream-json evidence. A process exit
 or a `result` event only means the model turn ended; task success is decided by
 the runtime and is never inferred here.
 """
+
 import hashlib
 import json
 import os
@@ -20,12 +21,14 @@ import uuid
 import weakref
 from pathlib import Path
 from urllib.parse import urlsplit
-from roboteam.harness.claude.session.session_recovery import api_error, capacity_code, usage_limit_of
-from roboteam.harness.claude.session.native_home import config_directory
+
 from roboteam.harness.claude.session.cost_state import amount, baseline, invocation_cost
+from roboteam.harness.claude.session.native_home import config_directory
+from roboteam.harness.claude.session.session_recovery import api_error, capacity_code, usage_limit_of
+from roboteam.harness.shared.native import PreLaunchCancelled
 from roboteam.launch.results.host_metrics import host_event
-from roboteam.runtime.sandbox import policy_env
 from roboteam.runtime.run import layout as run_layout
+from roboteam.runtime.sandbox import policy_env
 from roboteam.runtime.tools import tools_mode
 
 ENV_PASSTHROUGH = ('PATH', 'LANG', 'LC_ALL', 'TMPDIR')
@@ -94,8 +97,12 @@ def _private_globs(run, table):
     named private gets no pattern for that root, which would close the whole run.
     """
     roots = [Path(p) for p, mode in table.items() if mode == 'deny' and Path(p) in run.parents]
-    return sorted(str(root) + suffix for root in roots if 'private' not in run.relative_to(root).parts
-                  for suffix in ('/**/private', '/**/private/**'))
+    return sorted(
+        str(root) + suffix
+        for root in roots
+        if 'private' not in run.relative_to(root).parts
+        for suffix in ('/**/private', '/**/private/**')
+    )
 
 
 def policy_settings(run_dir):
@@ -107,7 +114,7 @@ def policy_settings(run_dir):
     own configuration) are not sandboxed and keep their access.
     """
     run = Path(run_dir).resolve()
-    path = run/'private/inputs/policy-access.json'
+    path = run / 'private/inputs/policy-access.json'
     if not path.is_file():
         return None
     access = json.loads(path.read_text())
@@ -118,24 +125,36 @@ def policy_settings(run_dir):
     # specific allowRead win, so a folder created during the run is closed too. The private/
     # patterns are matched by the macOS sandbox; Claude Code's Linux sandbox ignores glob
     # patterns, so there Bash keeps the literal list only.
-    sandbox_read = ({'denyRead': sorted(p for p, mode in table.items() if mode == 'deny') + private,
-                     'allowRead': sorted(p for p, mode in table.items() if mode != 'deny' and p != '/')}
-                    if access.get('policy_env') else {'denyRead': hidden + private})
+    sandbox_read = (
+        {
+            'denyRead': sorted(p for p, mode in table.items() if mode == 'deny') + private,
+            'allowRead': sorted(p for p, mode in table.items() if mode != 'deny' and p != '/'),
+        }
+        if access.get('policy_env')
+        else {'denyRead': hidden + private}
+    )
     writable = sorted(p for p, mode in table.items() if mode == 'write')
+
     # Claude rules take absolute paths as //path. acceptEdits accepts edits only inside
     # the working folder and every other edit is refused; these rules also keep hidden
     # paths and the frozen inputs out of reach. Rules follow gitignore matching, where
     # 'path/**' covers only what lies inside path, so each path also gets an exact rule:
     # a hidden file (the repository's .env beside the runs folder) is denied by that one.
     def rules(tool, paths):
-        return [tool+'(//'+p.lstrip('/')+suffix+')' for p in paths for suffix in ('', '/**')]
-    deny = rules('Read', hidden) + rules('Edit', hidden+[str(run/'public')])
+        return [tool + '(//' + p.lstrip('/') + suffix + ')' for p in paths for suffix in ('', '/**')]
+
+    deny = rules('Read', hidden) + rules('Edit', hidden + [str(run / 'public')])
     # Glob rules are matched when a tool runs, so they also cover run folders created later.
     deny += ['%s(//%s)' % (tool, p.lstrip('/')) for tool in ('Read', 'Edit') for p in private]
-    return {'permissions': {'deny': deny},
-            'sandbox': {'enabled': True, 'allowUnsandboxedCommands': False,
-                        'filesystem': {'allowWrite': writable, **sandbox_read},
-                        'network': {'allowedDomains': ['*'] if access.get('network') else []}}}
+    return {
+        'permissions': {'deny': deny},
+        'sandbox': {
+            'enabled': True,
+            'allowUnsandboxedCommands': False,
+            'filesystem': {'allowWrite': writable, **sandbox_read},
+            'network': {'allowedDomains': ['*'] if access.get('network') else []},
+        },
+    }
 
 
 def robot_only(run_dir):
@@ -157,37 +176,57 @@ def confine(run_dir, settings, config_dir):
     rendered now from the same access table; the permission rules are unchanged.
     """
     run = Path(run_dir).resolve()
-    launch = run/'private/inputs/claude.json'
-    mode = (json.loads(launch.read_text()) if launch.is_file() else {}).get('bash_isolation', 'claude-sandbox')
+    launch = run / 'private/inputs/claude.json'
+    mode = (json.loads(launch.read_text()) if launch.is_file() else {}).get(
+        'bash_isolation', 'claude-sandbox'
+    )
     extra = {}
-    if settings is not None and json.loads((run/'private/inputs/policy-access.json').read_text()).get('policy_env'):
+    if settings is not None and json.loads((run / 'private/inputs/policy-access.json').read_text()).get(
+        'policy_env'
+    ):
         # Sourced before each Bash command, so only policy shells get the frozen variables;
         # the CLI keeps its own environment.
-        extra['CLAUDE_ENV_FILE'] = str(run/'public/inputs'/policy_env.SHELL_FILE)
+        extra['CLAUDE_ENV_FILE'] = str(run / 'public/inputs' / policy_env.SHELL_FILE)
     if settings is None or mode == 'claude-sandbox':
         return settings, extra
     if mode != 'landlock-v1':
         raise ValueError('Unknown Bash isolation: ' + str(mode))
     from roboteam.harness.shared import landlock as landlock_shell
-    table = json.loads((run/'private/inputs/policy-access.json').read_text())['filesystem']
-    folder = run_layout.path(run, 'harness_mcp').parent/'bash-isolation'
+
+    table = json.loads((run / 'private/inputs/policy-access.json').read_text())['filesystem']
+    folder = run_layout.path(run, 'harness_mcp').parent / 'bash-isolation'
     folder.mkdir(parents=True, exist_ok=True)
-    rules = folder/'rules.json'
+    rules = folder / 'rules.json'
     # The exact strings Claude Code passes to the prefix to start this run's robot MCP servers.
-    servers = [json.loads(p.read_text())['mcpServers']['robot']
-               for p in sorted(run_layout.path(run, 'harness_mcp').glob('*.json'))]
+    servers = [
+        json.loads(p.read_text())['mcpServers']['robot']
+        for p in sorted(run_layout.path(run, 'harness_mcp').glob('*.json'))
+    ]
     unconfined = [shlex.join([s['command'], *s['args']]) for s in servers]
     # Claude Code sources a snapshot of its shell from its configuration directory first.
-    landlock_shell.write_rules(rules, landlock_shell.allowlist(
-        table, read=[Path(config_dir).resolve()/'shell-snapshots'], write=landlock_shell.DEVICES), unconfined)
-    prefix = folder/'bash-prefix'
-    landlock_shell.write_atomic(prefix, '#!/bin/sh\nexec ' + ' '.join(shlex.quote(str(part)) for part in (
-        sys.executable, '-I', Path(landlock_shell.__file__).resolve(), rules)) + ' "$@"\n', mode=0o755)
+    landlock_shell.write_rules(
+        rules,
+        landlock_shell.allowlist(
+            table, read=[Path(config_dir).resolve() / 'shell-snapshots'], write=landlock_shell.DEVICES
+        ),
+        unconfined,
+    )
+    prefix = folder / 'bash-prefix'
+    landlock_shell.write_atomic(
+        prefix,
+        '#!/bin/sh\nexec '
+        + ' '.join(
+            shlex.quote(str(part))
+            for part in (sys.executable, '-I', Path(landlock_shell.__file__).resolve(), rules)
+        )
+        + ' "$@"\n',
+        mode=0o755,
+    )
     return {**settings, 'sandbox': {'enabled': False}}, {**extra, 'CLAUDE_CODE_SHELL_PREFIX': str(prefix)}
 
 
 def policy_system_prompt(run_dir):
-    path = Path(run_dir)/'private/inputs/bootstrap/system.md'
+    path = Path(run_dir) / 'private/inputs/bootstrap/system.md'
     return path.read_text() if path.is_file() else None
 
 
@@ -196,11 +235,20 @@ def policy_cwd(run_dir):
 
 
 def _oauth_endpoint_allowed(base):
-    if not base: return True  # Claude's default Anthropic endpoint.
+    if not base:
+        return True  # Claude's default Anthropic endpoint.
     try:
-        url=urlsplit(base)
-        return (url.scheme=='https' and url.hostname=='api.anthropic.com' and url.port in (None,443)
-                and not url.username and not url.password and url.path in ('','/') and not url.query and not url.fragment)
+        url = urlsplit(base)
+        return (
+            url.scheme == 'https'
+            and url.hostname == 'api.anthropic.com'
+            and url.port in (None, 443)
+            and not url.username
+            and not url.password
+            and url.path in ('', '/')
+            and not url.query
+            and not url.fragment
+        )
     except ValueError:
         return False
 
@@ -215,12 +263,19 @@ def gate_settings(gate):
     """
     deadline = int(gate['deadline'])
     opened, closed = shlex.quote(str(gate['open'])), shlex.quote(str(gate['closed']))
-    script = (f'while :; do [ -e {opened} ] && exit 0; [ -e {closed} ] && break; '
-              f'[ "$(date +%s)" -lt {deadline} ] || break; sleep 0.1; done; '
-              'echo "Delegate setup has not completed; this tool call was not run." >&2; exit 2')
+    script = (
+        f'while :; do [ -e {opened} ] && exit 0; [ -e {closed} ] && break; '
+        f'[ "$(date +%s)" -lt {deadline} ] || break; sleep 0.1; done; '
+        'echo "Delegate setup has not completed; this tool call was not run." >&2; exit 2'
+    )
     timeout = max(0, deadline - int(time.time())) + 30
-    return {'hooks': {'PreToolUse': [{'matcher': '*', 'hooks': [
-        {'type': 'command', 'command': script, 'timeout': timeout}]}]}}
+    return {
+        'hooks': {
+            'PreToolUse': [
+                {'matcher': '*', 'hooks': [{'type': 'command', 'command': script, 'timeout': timeout}]}
+            ]
+        }
+    }
 
 
 def settings_argument(settings, folder=None):
@@ -235,7 +290,7 @@ def settings_argument(settings, folder=None):
         return text
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
-    path = folder/('settings-' + hashlib.sha256(text.encode()).hexdigest()[:24] + '.json')
+    path = folder / ('settings-' + hashlib.sha256(text.encode()).hexdigest()[:24] + '.json')
     if not path.is_file():
         fd, temporary = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=folder)
         try:
@@ -244,20 +299,39 @@ def settings_argument(settings, folder=None):
                 output.write(text)
             os.replace(temporary, path)
         finally:
-            try: os.unlink(temporary)
-            except FileNotFoundError: pass
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
     return str(path)
 
 
 def settings_folder(run_dir):
     """Where runners keep the settings files of a run's policy turns (private to the harness)."""
-    return run_layout.path(Path(run_dir).resolve(), 'harness_mcp').parent/'policy-settings'
+    return run_layout.path(Path(run_dir).resolve(), 'harness_mcp').parent / 'policy-settings'
 
 
-def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget_usd=None, binary='claude', resume=None,
-                  fork_from=None, enable_robot=True, auth_mode='api_key', prompt_via_stdin=False, settings=None,
-                  system_prompt=None, stream_input=False, gate=None, settings_dir=None, robot_only=False,
-                  managed_settings=None):
+def build_command(
+    model,
+    effort,
+    mcp_config,
+    prompt,
+    session_id=None,
+    max_budget_usd=None,
+    binary='claude',
+    resume=None,
+    fork_from=None,
+    enable_robot=True,
+    auth_mode='api_key',
+    prompt_via_stdin=False,
+    settings=None,
+    system_prompt=None,
+    stream_input=False,
+    gate=None,
+    settings_dir=None,
+    robot_only=False,
+    managed_settings=None,
+):
     """Return argv for one headless turn.
 
     With `settings` (see `policy_settings`) a policy turn gets the bound robot tool plus
@@ -278,28 +352,50 @@ def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget
     if fork_from and not session_id:
         raise ValueError('Fork creation requires an explicit child ID')
     hooks = gate_settings(gate) if gate is not None else None
-    session_flags = (['--resume', fork_from, '--fork-session', '--session-id', session_id] if fork_from else
-                     ['--resume', resume] if resume else ['--session-id', session_id or str(uuid.uuid4())])
+    session_flags = (
+        ['--resume', fork_from, '--fork-session', '--session-id', session_id]
+        if fork_from
+        else ['--resume', resume]
+        if resume
+        else ['--session-id', session_id or str(uuid.uuid4())]
+    )
     mcp_arg = str(mcp_config) if enable_robot else '{"mcpServers":{}}'
-    if auth_mode not in ('api_key','oauth_token','native_login'):
+    if auth_mode not in ('api_key', 'oauth_token', 'native_login'):
         raise ValueError('Unsupported Claude authentication mode')
     # --bare would expose only Bash, Read and Edit, so confined policy turns load no
     # user, project or local settings instead. --bare also skips hooks, so a gated turn
     # does the same.
     if robot_only and (settings is not None or not enable_robot):
         raise ValueError('A robot_only turn has the robot tool and no file or shell settings')
-    isolation = (['--bare'] if auth_mode == 'api_key' and settings is None and hooks is None and not robot_only
-                 else ['--setting-sources', ''])
-    cmd = [binary, '-p'] + isolation + ['--model', model, '--effort', effort] + session_flags + [
-           '--mcp-config', mcp_arg, '--strict-mcp-config']
+    isolation = (
+        ['--bare']
+        if auth_mode == 'api_key' and settings is None and hooks is None and not robot_only
+        else ['--setting-sources', '']
+    )
+    cmd = (
+        [binary, '-p']
+        + isolation
+        + ['--model', model, '--effort', effort]
+        + session_flags
+        + ['--mcp-config', mcp_arg, '--strict-mcp-config']
+    )
     if managed_settings is not None:
         if not isinstance(managed_settings, dict) or set(managed_settings) != {'modelPricing'}:
             raise ValueError('Host-managed model settings may only supply pricing estimates')
         cmd += ['--managed-settings', json.dumps(managed_settings, separators=(',', ':'))]
     if enable_robot and settings is not None:
-        cmd += ['--tools', ','.join(POLICY_TOOLS), '--permission-mode', 'acceptEdits', '--permission-prompts', 'none',
-                '--settings', settings_argument({**settings, **(hooks or {})}, settings_dir),
-                '--allowedTools', *ALLOWED_POLICY_TOOLS]
+        cmd += [
+            '--tools',
+            ','.join(POLICY_TOOLS),
+            '--permission-mode',
+            'acceptEdits',
+            '--permission-prompts',
+            'none',
+            '--settings',
+            settings_argument({**settings, **(hooks or {})}, settings_dir),
+            '--allowedTools',
+            *ALLOWED_POLICY_TOOLS,
+        ]
     else:
         cmd += ['--tools', '', '--permission-mode', 'dontAsk']
         if hooks is not None:
@@ -360,9 +456,11 @@ def require_hidden_token(name='CLAUDE_CODE_OAUTH_TOKEN'):
         return
     holders = environment_holders(name)
     if holders:
-        raise ValueError('%s is in the starting environment of process %s, where a policy shell could read it; '
-                         'unset it in the shell (or job) and keep it in .env, which runs load themselves'
-                         % (name, ', '.join(map(str, holders))))
+        raise ValueError(
+            '%s is in the starting environment of process %s, where a policy shell could read it; '
+            'unset it in the shell (or job) and keep it in .env, which runs load themselves'
+            % (name, ', '.join(map(str, holders)))
+        )
 
 
 def start_cli(cmd, env, **options):
@@ -388,17 +486,17 @@ def bind_gateway_session(model_entry, command, env):
     if model_entry.get('provider') != 'openai_chatgpt_plan':
         return
     flag = '--session-id' if '--session-id' in command else '--resume'
-    session = str(uuid.UUID(command[command.index(flag)+1]))
-    headers = ['X-RoboTeam-Session: '+session]
+    session = str(uuid.UUID(command[command.index(flag) + 1]))
+    headers = ['X-RoboTeam-Session: ' + session]
     if '--fork-session' in command:
-        source = str(uuid.UUID(command[command.index('--resume')+1]))
-        headers.append('X-RoboTeam-Fork-Source: '+source)
+        source = str(uuid.UUID(command[command.index('--resume') + 1]))
+        headers.append('X-RoboTeam-Fork-Source: ' + source)
     env['ANTHROPIC_CUSTOM_HEADERS'] = '\n'.join(headers)
 
 
 def build_env(model_entry, base_env, config_dir):
     """Pass only this model's endpoint and credential; never inherit other providers' keys."""
-    auth_mode=model_entry.get('auth_mode','api_key')
+    auth_mode = model_entry.get('auth_mode', 'api_key')
     key = base_env.get(model_entry.get('env_key')) if model_entry.get('env_key') else None
     if auth_mode != 'native_login' and not key:
         raise ValueError('Missing credential variable: ' + str(model_entry.get('env_key')))
@@ -417,32 +515,39 @@ def build_env(model_entry, base_env, config_dir):
             raise ValueError('Unknown native configuration scope')
         if scope == 'default':
             user_home = base_env.get('HOME')
-            if (not isinstance(user_home, str) or not Path(user_home).is_absolute()
-                    or (Path(user_home)/'.claude').resolve() != home):
-                raise ValueError('Default native login requires HOME matching the frozen configuration directory')
+            if (
+                not isinstance(user_home, str)
+                or not Path(user_home).is_absolute()
+                or (Path(user_home) / '.claude').resolve() != home
+            ):
+                raise ValueError(
+                    'Default native login requires HOME matching the frozen configuration directory'
+                )
         if base_env.get('HOME'):
             env['HOME'] = base_env['HOME']
-        credential_name=None
+        credential_name = None
     elif auth_mode == 'oauth_token':
         if model_entry.get('provider') != 'anthropic' or model_entry['env_key'] != 'CLAUDE_CODE_OAUTH_TOKEN':
             raise ValueError('OAuth token mode is limited to the Anthropic subscription model')
         if not _oauth_endpoint_allowed(model_entry.get('base_url')):
             raise ValueError('OAuth token may only be sent to the Anthropic endpoint')
-        credential_name='CLAUDE_CODE_OAUTH_TOKEN'
+        credential_name = 'CLAUDE_CODE_OAUTH_TOKEN'
     elif auth_mode == 'api_key':
-        credential_name='ANTHROPIC_API_KEY'
+        credential_name = 'ANTHROPIC_API_KEY'
     else:
         raise ValueError('Unsupported Claude authentication mode')
-    env.update({
-        'CLAUDE_CONFIG_DIR': str(config_dir),
-        'DISABLE_TELEMETRY': '1',
-        'DISABLE_ERROR_REPORTING': '1',
-        'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
-        # wait_events can run for 600 seconds; reserve time for transport.
-        'MCP_TOOL_TIMEOUT': '660000',
-        'ENABLE_TOOL_SEARCH': 'false',
-        'ENABLE_CLAUDEAI_MCP_SERVERS': 'false',
-    })
+    env.update(
+        {
+            'CLAUDE_CONFIG_DIR': str(config_dir),
+            'DISABLE_TELEMETRY': '1',
+            'DISABLE_ERROR_REPORTING': '1',
+            'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
+            # wait_events can run for 600 seconds; reserve time for transport.
+            'MCP_TOOL_TIMEOUT': '660000',
+            'ENABLE_TOOL_SEARCH': 'false',
+            'ENABLE_CLAUDEAI_MCP_SERVERS': 'false',
+        }
+    )
     if credential_name is not None:
         env[credential_name] = key
     if auth_mode == 'native_login' and scope == 'default':
@@ -485,23 +590,39 @@ def summarize(lines):
     results = [e for e in events if e.get('type') == 'result']
     result = results[-1] if results else None
     tool_calls = sum(
-        1 for e in events if e.get('type') == 'assistant'
-        for block in (e.get('message') or {}).get('content') or []
-        if isinstance(block, dict) and block.get('type') == 'tool_use')
-    observe_top_ids = {
-        block.get('id') for e in events if e.get('type') == 'assistant'
+        1
+        for e in events
+        if e.get('type') == 'assistant'
         for block in (e.get('message') or {}).get('content') or []
         if isinstance(block, dict) and block.get('type') == 'tool_use'
-        and block.get('name') == ROBOT_TOOL and isinstance(block.get('input'), dict)
-        and block['input'].get('op') == 'observe' and isinstance(block['input'].get('views'), list)
-        and 'top' in block['input']['views'] and isinstance(block.get('id'), str) and block['id']}
-    observe_top_image_results = sum(
-        1 for e in events if e.get('type') == 'user'
+    )
+    observe_top_ids = {
+        block.get('id')
+        for e in events
+        if e.get('type') == 'assistant'
         for block in (e.get('message') or {}).get('content') or []
-        if isinstance(block, dict) and block.get('type') == 'tool_result'
-        and block.get('tool_use_id') in observe_top_ids and not block.get('is_error')
+        if isinstance(block, dict)
+        and block.get('type') == 'tool_use'
+        and block.get('name') == ROBOT_TOOL
+        and isinstance(block.get('input'), dict)
+        and block['input'].get('op') == 'observe'
+        and isinstance(block['input'].get('views'), list)
+        and 'top' in block['input']['views']
+        and isinstance(block.get('id'), str)
+        and block['id']
+    }
+    observe_top_image_results = sum(
+        1
+        for e in events
+        if e.get('type') == 'user'
+        for block in (e.get('message') or {}).get('content') or []
+        if isinstance(block, dict)
+        and block.get('type') == 'tool_result'
+        and block.get('tool_use_id') in observe_top_ids
+        and not block.get('is_error')
         and isinstance(block.get('content'), list)
-        and any(isinstance(item, dict) and item.get('type') == 'image' for item in block['content']))
+        and any(isinstance(item, dict) and item.get('type') == 'image' for item in block['content'])
+    )
     if result is None:
         turn = 'unknown'
     elif result.get('is_error') or result.get('subtype') != 'success':
@@ -533,20 +654,38 @@ def _redact(text, secret):
     if not secret:
         return text
     # JSON escaping can change how a credential appears in the event stream.
-    variants = {secret, json.dumps(secret, ensure_ascii=True)[1:-1],
-                json.dumps(secret, ensure_ascii=False)[1:-1]}
+    variants = {
+        secret,
+        json.dumps(secret, ensure_ascii=True)[1:-1],
+        json.dumps(secret, ensure_ascii=False)[1:-1],
+    }
     for variant in sorted(variants, key=len, reverse=True):
         if variant:
             text = text.replace(variant, '[redacted]')
     return text
 
 
-from roboteam.harness.shared.native import PreLaunchCancelled
-
-
-def run_turn(model_entry, model, effort, mcp_config, prompt, run_dir, base_env,
-             session_id=None, timeout=None, max_budget_usd=None, binary='claude', resume=None, events_name='events.jsonl',
-             cancel_event=None, fork_from=None, enable_robot=True, actor=None, phase='policy', gate=None):
+def run_turn(
+    model_entry,
+    model,
+    effort,
+    mcp_config,
+    prompt,
+    run_dir,
+    base_env,
+    session_id=None,
+    timeout=None,
+    max_budget_usd=None,
+    binary='claude',
+    resume=None,
+    events_name='events.jsonl',
+    cancel_event=None,
+    fork_from=None,
+    enable_robot=True,
+    actor=None,
+    phase='policy',
+    gate=None,
+):
     """Run one turn, persist its raw events under run_dir, and return a status record.
 
     `timeout=None` removes the per-turn deadline; cancellation remains active.
@@ -572,17 +711,34 @@ def run_turn(model_entry, model, effort, mcp_config, prompt, run_dir, base_env,
         # this invocation. Adding historical cost here would enlarge the cap.
         native_limit = float(maximum)
     settings, confined = confine(run_dir, turn_settings(run_dir) if enable_robot else None, config_dir)
-    cmd = build_command(model, effort, mcp_config, prompt, session_id, native_limit, binary, resume,
-                        fork_from=fork_from, enable_robot=enable_robot, auth_mode=model_entry.get('auth_mode','api_key'),
-                        prompt_via_stdin=True, settings=settings, system_prompt=policy_system_prompt(run_dir),
-                        gate=gate, settings_dir=settings_folder(run_dir),
-                        robot_only=enable_robot and robot_only(run_dir), managed_settings=model_entry.get('managed_settings'))
+    cmd = build_command(
+        model,
+        effort,
+        mcp_config,
+        prompt,
+        session_id,
+        native_limit,
+        binary,
+        resume,
+        fork_from=fork_from,
+        enable_robot=enable_robot,
+        auth_mode=model_entry.get('auth_mode', 'api_key'),
+        prompt_via_stdin=True,
+        settings=settings,
+        system_prompt=policy_system_prompt(run_dir),
+        gate=gate,
+        settings_dir=settings_folder(run_dir),
+        robot_only=enable_robot and robot_only(run_dir),
+        managed_settings=model_entry.get('managed_settings'),
+    )
     env = {**build_env(model_entry, base_env, config_dir), **confined}
-    bind_gateway_session(model_entry,cmd,env)
-    launch = run_dir/'private/inputs/claude.json'
+    bind_gateway_session(model_entry, cmd, env)
+    launch = run_dir / 'private/inputs/claude.json'
     frozen = json.loads(launch.read_text()) if launch.is_file() else {}
     if frozen.get('auto_compact_token_limit'):
-        env['CLAUDE_CODE_AUTO_COMPACT_WINDOW'] = str(int(frozen['auto_compact_token_limit'])+CLAUDE_COMPACT_BUFFER)
+        env['CLAUDE_CODE_AUTO_COMPACT_WINDOW'] = str(
+            int(frozen['auto_compact_token_limit']) + CLAUDE_COMPACT_BUFFER
+        )
     cwd = policy_cwd(run_dir)
     raw = evidence / events_name
     # A queued worker may reach this point after its supervisor has stopped it.
@@ -591,15 +747,29 @@ def run_turn(model_entry, model, effort, mcp_config, prompt, run_dir, base_env,
     if cancel_event is not None and cancel_event.is_set():
         raise PreLaunchCancelled('Claude turn cancelled before launch')
     began = time.monotonic()
-    host_event(run_dir, 'cli_turn_started', actor=actor, session_id=session_id or resume,
-               events_name=events_name, phase=phase)
+    host_event(
+        run_dir,
+        'cli_turn_started',
+        actor=actor,
+        session_id=session_id or resume,
+        events_name=events_name,
+        phase=phase,
+    )
     # Spool before launch so timeout polling never has to resume a partial pipe
     # write. The unlinked file is private, and the child inherits its own fd.
     with tempfile.TemporaryFile() as prompt_input:
         prompt_input.write(prompt.encode('utf-8'))
         prompt_input.seek(0)
-        process = start_cli(cmd, env, cwd=cwd, text=True, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, stdin=prompt_input, start_new_session=True)
+        process = start_cli(
+            cmd,
+            env,
+            cwd=cwd,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=prompt_input,
+            start_new_session=True,
+        )
     deadline = None if timeout is None else time.monotonic() + timeout
     while True:
         remaining = None if deadline is None else deadline - time.monotonic()
@@ -640,14 +810,23 @@ def run_turn(model_entry, model, effort, mcp_config, prompt, run_dir, base_env,
         summary.update(total_cost_usd=None, cost_scope='unknown')
     if status in ('timeout', 'cancelled'):
         summary['turn_status'] = 'unknown'
-    duration = time.monotonic()-began
-    host_event(run_dir, 'cli_turn_completed', actor=actor, session_id=summary.get('session_id'),
-               events_name=events_name, phase=phase, duration_s=duration,
-               usage=summary.get('usage'), reported_cost_usd=summary.get('total_cost_usd'),
-               native_session_total_cost_usd=summary.get('native_session_total_cost_usd'),
-               cost_scope=summary.get('cost_scope'),
-               model_usage=summary.get('model_usage'),
-               process=status, exit_code=process.returncode)
+    duration = time.monotonic() - began
+    host_event(
+        run_dir,
+        'cli_turn_completed',
+        actor=actor,
+        session_id=summary.get('session_id'),
+        events_name=events_name,
+        phase=phase,
+        duration_s=duration,
+        usage=summary.get('usage'),
+        reported_cost_usd=summary.get('total_cost_usd'),
+        native_session_total_cost_usd=summary.get('native_session_total_cost_usd'),
+        cost_scope=summary.get('cost_scope'),
+        model_usage=summary.get('model_usage'),
+        process=status,
+        exit_code=process.returncode,
+    )
     return {
         'duration_s': duration,
         'process': status,
@@ -660,13 +839,19 @@ def run_turn(model_entry, model, effort, mcp_config, prompt, run_dir, base_env,
 
 
 def _stop_process(process):
-    if process is None or process.poll() is not None: return
-    try: process.stdin.close()
-    except (OSError, ValueError): pass
-    try: process.wait(timeout=10)
+    if process is None or process.poll() is not None:
+        return
+    try:
+        process.stdin.close()
+    except (OSError, ValueError):
+        pass
+    try:
+        process.wait(timeout=10)
     except subprocess.TimeoutExpired:
-        try: os.killpg(process.pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError): pass  # EPERM: only zombies left (macOS).
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass  # EPERM: only zombies left (macOS).
         process.wait()
 
 
@@ -693,73 +878,160 @@ class PersistentSession:
     over the previous report of the same process (the first turn of a process over
     the native transcript's recorded total, as run_turn does).
     """
+
     def __init__(self, interrupt_grace_s=INTERRUPT_GRACE_S):
         self.interrupt_grace_s = interrupt_grace_s
-        self.process = None; self.events = None; self.stderr = []; self.secret = None
+        self.process = None
+        self.events = None
+        self.stderr = []
+        self.secret = None
         self.reported_total = None
         self.lock = threading.Lock()
         self._finalizer = None
 
     def close(self):
         with self.lock:
-            _stop_process(self.process); self.process = None
+            _stop_process(self.process)
+            self.process = None
 
-    def _start(self, model_entry, model, effort, mcp_config, run_dir, base_env, binary, session_id, resume,
-               fork_from=None, gate=None):
+    def _start(
+        self,
+        model_entry,
+        model,
+        effort,
+        mcp_config,
+        run_dir,
+        base_env,
+        binary,
+        session_id,
+        resume,
+        fork_from=None,
+        gate=None,
+    ):
         config_dir = config_directory(run_dir, model_entry)
         if model_entry.get('auth_mode') != 'native_login':
             config_dir.mkdir(parents=True, exist_ok=True)
         settings, confined = confine(run_dir, turn_settings(run_dir), config_dir)
-        cmd = build_command(model, effort, mcp_config, None, session_id, None, binary, resume, fork_from=fork_from,
-                            auth_mode=model_entry.get('auth_mode', 'api_key'), settings=settings,
-                            system_prompt=policy_system_prompt(run_dir), stream_input=True, gate=gate,
-                            settings_dir=settings_folder(run_dir), robot_only=robot_only(run_dir),
-                            managed_settings=model_entry.get('managed_settings'))
+        cmd = build_command(
+            model,
+            effort,
+            mcp_config,
+            None,
+            session_id,
+            None,
+            binary,
+            resume,
+            fork_from=fork_from,
+            auth_mode=model_entry.get('auth_mode', 'api_key'),
+            settings=settings,
+            system_prompt=policy_system_prompt(run_dir),
+            stream_input=True,
+            gate=gate,
+            settings_dir=settings_folder(run_dir),
+            robot_only=robot_only(run_dir),
+            managed_settings=model_entry.get('managed_settings'),
+        )
         env = {**build_env(model_entry, base_env, config_dir), **confined}
-        bind_gateway_session(model_entry,cmd,env)
-        launch = Path(run_dir)/'private/inputs/claude.json'
+        bind_gateway_session(model_entry, cmd, env)
+        launch = Path(run_dir) / 'private/inputs/claude.json'
         frozen = json.loads(launch.read_text()) if launch.is_file() else {}
         if frozen.get('auto_compact_token_limit'):
-            env['CLAUDE_CODE_AUTO_COMPACT_WINDOW'] = str(int(frozen['auto_compact_token_limit'])+CLAUDE_COMPACT_BUFFER)
+            env['CLAUDE_CODE_AUTO_COMPACT_WINDOW'] = str(
+                int(frozen['auto_compact_token_limit']) + CLAUDE_COMPACT_BUFFER
+            )
         try:
             source = fork_from or resume
             self.reported_total = baseline(config_dir, source) if source else amount(0)
         except ValueError:
             self.reported_total = None
-        self.process = start_cli(cmd, env, cwd=policy_cwd(run_dir), text=True,
-                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                 start_new_session=True, bufsize=1)
+        self.process = start_cli(
+            cmd,
+            env,
+            cwd=policy_cwd(run_dir),
+            text=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=True,
+            bufsize=1,
+        )
         self.events, self.stderr = queue.Queue(), []
         process, events, stderr = self.process, self.events, self.stderr
+
         def read_stdout():
             with process.stdout:
-                for line in process.stdout: events.put(line)
+                for line in process.stdout:
+                    events.put(line)
             events.put(None)
+
         def read_stderr():
             with process.stderr:
-                for line in process.stderr: stderr.append(line); del stderr[:-200]
+                for line in process.stderr:
+                    stderr.append(line)
+                    del stderr[:-200]
+
         threading.Thread(target=read_stdout, daemon=True).start()
         threading.Thread(target=read_stderr, daemon=True).start()
-        if self._finalizer: self._finalizer.detach()
+        if self._finalizer:
+            self._finalizer.detach()
         self._finalizer = weakref.finalize(self, _stop_process, process)
 
     def _write(self, message):
-        self.process.stdin.write(json.dumps(message) + '\n'); self.process.stdin.flush()
+        self.process.stdin.write(json.dumps(message) + '\n')
+        self.process.stdin.flush()
 
-    def __call__(self, model_entry, model, effort, mcp_config, prompt, run_dir, base_env, session_id=None, timeout=None,
-                 max_budget_usd=None, binary='claude', resume=None, events_name='events.jsonl', cancel_event=None,
-                 actor=None, phase='policy', **one_shot):
-        if (max_budget_usd is not None or one_shot.get('enable_robot') is False
-                or policy_settings(run_dir) is None):
+    def __call__(
+        self,
+        model_entry,
+        model,
+        effort,
+        mcp_config,
+        prompt,
+        run_dir,
+        base_env,
+        session_id=None,
+        timeout=None,
+        max_budget_usd=None,
+        binary='claude',
+        resume=None,
+        events_name='events.jsonl',
+        cancel_event=None,
+        actor=None,
+        phase='policy',
+        **one_shot,
+    ):
+        if (
+            max_budget_usd is not None
+            or one_shot.get('enable_robot') is False
+            or policy_settings(run_dir) is None
+        ):
             self.close()
-            return run_turn(model_entry, model, effort, mcp_config, prompt, run_dir, base_env, session_id=session_id,
-                            timeout=timeout, max_budget_usd=max_budget_usd, binary=binary, resume=resume,
-                            events_name=events_name, cancel_event=cancel_event, actor=actor, phase=phase, **one_shot)
+            return run_turn(
+                model_entry,
+                model,
+                effort,
+                mcp_config,
+                prompt,
+                run_dir,
+                base_env,
+                session_id=session_id,
+                timeout=timeout,
+                max_budget_usd=max_budget_usd,
+                binary=binary,
+                resume=resume,
+                events_name=events_name,
+                cancel_event=cancel_event,
+                actor=actor,
+                phase=phase,
+                **one_shot,
+            )
         fork_from, gate = one_shot.pop('fork_from', None), one_shot.pop('gate', None)
         one_shot.pop('enable_robot', None)
-        if one_shot: raise TypeError('Unexpected turn options: ' + ', '.join(sorted(one_shot)))
+        if one_shot:
+            raise TypeError('Unexpected turn options: ' + ', '.join(sorted(one_shot)))
         run_dir = Path(run_dir).resolve()
-        evidence = run_layout.path(run_dir, 'harness_turns'); evidence.mkdir(parents=True, exist_ok=True)
+        evidence = run_layout.path(run_dir, 'harness_turns')
+        evidence.mkdir(parents=True, exist_ok=True)
         if cancel_event is not None and cancel_event.is_set():
             raise PreLaunchCancelled('Claude turn cancelled before launch')
         with self.lock:
@@ -768,12 +1040,31 @@ class PersistentSession:
                 raise ValueError('A fork is the first turn of its process')
             if self.process is None or self.process.poll() is not None:
                 # A new process continues the transcript; only the first turn creates it.
-                self._start(model_entry, model, effort, mcp_config, run_dir, base_env, binary,
-                            session_id, None if session_id else resume, fork_from, gate)
+                self._start(
+                    model_entry,
+                    model,
+                    effort,
+                    mcp_config,
+                    run_dir,
+                    base_env,
+                    binary,
+                    session_id,
+                    None if session_id else resume,
+                    fork_from,
+                    gate,
+                )
             before = self.reported_total
             began = time.monotonic()
-            host_event(run_dir, 'cli_turn_started', actor=actor, session_id=session_id or resume,
-                       events_name=events_name, phase=phase, transport='persistent', pid=self.process.pid)
+            host_event(
+                run_dir,
+                'cli_turn_started',
+                actor=actor,
+                session_id=session_id or resume,
+                events_name=events_name,
+                phase=phase,
+                transport='persistent',
+                pid=self.process.pid,
+            )
             lines, status, interrupted_at = [], None, None
             try:
                 self._write({'type': 'user', 'message': {'role': 'user', 'content': prompt}})
@@ -784,45 +1075,84 @@ class PersistentSession:
                 status = 'process_exited'
             deadline = None if timeout is None else began + timeout
             while status is None:
-                stopping = (cancel_event is not None and cancel_event.is_set()) or (deadline and time.monotonic() >= deadline)
+                stopping = (cancel_event is not None and cancel_event.is_set()) or (
+                    deadline and time.monotonic() >= deadline
+                )
                 if stopping and interrupted_at is None:
                     interrupted_at = time.monotonic()
-                    try: self._write({'type': 'control_request', 'request_id': uuid.uuid4().hex, 'request': {'subtype': 'interrupt'}})
-                    except (OSError, ValueError): pass
+                    try:
+                        self._write(
+                            {
+                                'type': 'control_request',
+                                'request_id': uuid.uuid4().hex,
+                                'request': {'subtype': 'interrupt'},
+                            }
+                        )
+                    except (OSError, ValueError):
+                        pass
                 if interrupted_at and time.monotonic() - interrupted_at > self.interrupt_grace_s:
                     _stop_process(self.process)
                     status = 'cancelled' if cancel_event is not None and cancel_event.is_set() else 'timeout'
                     break
-                try: line = self.events.get(timeout=.25)
-                except queue.Empty: continue
+                try:
+                    line = self.events.get(timeout=0.25)
+                except queue.Empty:
+                    continue
                 if line is None:
-                    status = 'process_exited'; break
+                    status = 'process_exited'
+                    break
                 lines.append(line)
-                try: event = json.loads(line)
-                except ValueError: continue
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    continue
                 if event.get('type') == 'result':
-                    status = 'exited' if interrupted_at is None else (
-                        'cancelled' if cancel_event is not None and cancel_event.is_set() else 'timeout')
+                    status = (
+                        'exited'
+                        if interrupted_at is None
+                        else (
+                            'cancelled' if cancel_event is not None and cancel_event.is_set() else 'timeout'
+                        )
+                    )
             text = _redact(''.join(lines), self.secret)
             raw = evidence / events_name
             fd = os.open(raw, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
             with os.fdopen(fd, 'w') as output:
-                os.fchmod(output.fileno(), 0o600); output.write(text)
+                os.fchmod(output.fileno(), 0o600)
+                output.write(text)
             summary = summarize(text.splitlines())
             invocation_cost(summary, before)
             raw_total = amount(summary.get('native_session_total_cost_usd'))
             self.reported_total = raw_total if raw_total is not None and status == 'exited' else None
-            if status != 'exited': summary['turn_status'] = 'unknown'
+            if status != 'exited':
+                summary['turn_status'] = 'unknown'
             duration = time.monotonic() - began
             # 'exited' with exit code 0 means this turn's result arrived; the process stays up.
             exit_code = 0 if status == 'exited' else self.process.poll()
-            host_event(run_dir, 'cli_turn_completed', actor=actor, session_id=summary.get('session_id'),
-                       events_name=events_name, phase=phase, duration_s=duration, usage=summary.get('usage'),
-                       reported_cost_usd=summary.get('total_cost_usd'),
-                       native_session_total_cost_usd=summary.get('native_session_total_cost_usd'),
-                       cost_scope=summary.get('cost_scope'), model_usage=summary.get('model_usage'),
-                       process=status, exit_code=exit_code, transport='persistent')
-            return {'duration_s': duration, 'process': status, 'exit_code': exit_code, 'transport': 'persistent',
-                    'requested_session_id': session_id or resume, 'summary': summary,
-                    'stderr_tail': _redact(''.join(self.stderr), self.secret)[-1000:],
-                    'events_path': str(raw.relative_to(run_dir))}
+            host_event(
+                run_dir,
+                'cli_turn_completed',
+                actor=actor,
+                session_id=summary.get('session_id'),
+                events_name=events_name,
+                phase=phase,
+                duration_s=duration,
+                usage=summary.get('usage'),
+                reported_cost_usd=summary.get('total_cost_usd'),
+                native_session_total_cost_usd=summary.get('native_session_total_cost_usd'),
+                cost_scope=summary.get('cost_scope'),
+                model_usage=summary.get('model_usage'),
+                process=status,
+                exit_code=exit_code,
+                transport='persistent',
+            )
+            return {
+                'duration_s': duration,
+                'process': status,
+                'exit_code': exit_code,
+                'transport': 'persistent',
+                'requested_session_id': session_id or resume,
+                'summary': summary,
+                'stderr_tail': _redact(''.join(self.stderr), self.secret)[-1000:],
+                'events_path': str(raw.relative_to(run_dir)),
+            }

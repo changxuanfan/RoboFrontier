@@ -1,27 +1,30 @@
 """Opt-in four-way unscored physical smoke; real CLI, synthetic loopback model."""
+
 import hashlib
 import http.server
 import json
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import threading
 import unittest
+from pathlib import Path
 
+from claude_batch_control import batch_state
 from harness.claude.test_claude_physics_smoke import MotionModel
 from roboteam.launch.claude_batch import run_batch
-from claude_batch_control import batch_state
-from roboteam.runtime.world.store import RuntimeStore
 from roboteam.launch.claude_prepare import prepare_batch
+from roboteam.runtime.world.store import RuntimeStore
 
 
 class CompactRequests(list):
     def append(self, body):
         # Keep summaries only: repeated multimodal requests can contain large PNGs.
         def image(value):
-            if isinstance(value, dict): return value.get('type') == 'image' or any(image(v) for v in value.values())
+            if isinstance(value, dict):
+                return value.get('type') == 'image' or any(image(v) for v in value.values())
             return isinstance(value, list) and any(image(v) for v in value)
+
         super().append(image(body.get('messages', [])))
 
 
@@ -29,8 +32,10 @@ class BatchMotionModel(MotionModel):
     requests = CompactRequests()
 
 
-@unittest.skipUnless(os.environ.get('ROBOTEAM_PHYSICS_BATCH') == '1' and shutil.which('claude'),
-                     'Opt-in four-process physics smoke requires Claude CLI and scene assets')
+@unittest.skipUnless(
+    os.environ.get('ROBOTEAM_PHYSICS_BATCH') == '1' and shutil.which('claude'),
+    'Opt-in four-process physics smoke requires Claude CLI and scene assets',
+)
 class ParallelPhysicsSmokeTests(unittest.TestCase):
     def test_four_cases_use_distinct_worlds_and_close(self):
         directory = Path(tempfile.mkdtemp(prefix='claude-parallel-physics-'))
@@ -49,19 +54,34 @@ class ParallelPhysicsSmokeTests(unittest.TestCase):
                 run = Path(job['run_directory'])
                 launch = run / 'private/inputs/claude.json'
                 data = json.loads(launch.read_text())
-                data['model_entry'].update(base_url=f'http://127.0.0.1:{server.server_port}', env_key='FAKE_KEY')
+                data['model_entry'].update(
+                    base_url=f'http://127.0.0.1:{server.server_port}', env_key='FAKE_KEY'
+                )
                 launch.write_text(json.dumps(data))
                 manifest = run / 'private/inputs/manifest.json'
                 frozen = json.loads(manifest.read_text())
-                frozen['input_sha256']['private/inputs/claude.json'] = hashlib.sha256(launch.read_bytes()).hexdigest()
+                frozen['input_sha256']['private/inputs/claude.json'] = hashlib.sha256(
+                    launch.read_bytes()
+                ).hexdigest()
                 manifest.write_text(json.dumps(frozen))
             env = {'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'FAKE_KEY': 'synthetic'}
+
             def launch_batch():
                 try:
-                    outcome.append(run_batch(batch, env, parallel=4, turn_budget_usd=.5,
-                                             total_budget_usd=2, wall_limit_s=20, startup_timeout_s=180))
+                    outcome.append(
+                        run_batch(
+                            batch,
+                            env,
+                            parallel=4,
+                            turn_budget_usd=0.5,
+                            total_budget_usd=2,
+                            wall_limit_s=20,
+                            startup_timeout_s=180,
+                        )
+                    )
                 except Exception as error:
                     failures.append(repr(error))
+
             worker = threading.Thread(target=launch_batch)
             worker.start()
             maximum_live = 0
@@ -71,28 +91,37 @@ class ParallelPhysicsSmokeTests(unittest.TestCase):
                 for item in status['runs']:
                     detail = item.get('detail') or {}
                     pid = detail.get('owner_pid')
-                    if not pid: continue
-                    try: os.kill(pid, 0)
-                    except ProcessLookupError: continue
+                    if not pid:
+                        continue
+                    try:
+                        os.kill(pid, 0)
+                    except ProcessLookupError:
+                        continue
                     live.add(pid)
                 maximum_live = max(maximum_live, len(live))
-                worker.join(.25)
+                worker.join(0.25)
             self.assertFalse(failures, failures)
             self.assertIn(outcome[0]['status'], ('closed', 'needs_review'), outcome[0])
             self.assertEqual(outcome[0]['startup_timeout_s'], 180)
             self.assertFalse(outcome[0]['scored'])
-            self.assertEqual(maximum_live, 4, f'Expected four overlapping physical owners, observed {maximum_live}')
+            self.assertEqual(
+                maximum_live, 4, f'Expected four overlapping physical owners, observed {maximum_live}'
+            )
             self.assertTrue(any(BatchMotionModel.requests), 'No camera image reached synthetic endpoint')
             budget_review = False
             for job in jobs:
                 run = Path(job['run_directory'])
-                detail = json.loads((run/'private/state/control/engineering-status.json').read_text())
-                self.assertEqual(detail['status'], 'needs_review' if detail['budget_review_required'] else 'finished', detail)
+                detail = json.loads((run / 'private/state/control/engineering-status.json').read_text())
+                self.assertEqual(
+                    detail['status'],
+                    'needs_review' if detail['budget_review_required'] else 'finished',
+                    detail,
+                )
                 budget_review |= detail['budget_review_required']
                 self.assertTrue(detail['seal']['sealed'], detail)
                 self.assertFalse(detail['owner_alive'], detail)
                 self.assertEqual(detail['seal']['unresolved_action_ids'], [])
-                state = RuntimeStore(run/'private/state/runtime.sqlite')
+                state = RuntimeStore(run / 'private/state/runtime.sqlite')
                 try:
                     batches = list(state.get('delegations', {}).values())
                     self.assertEqual(len(batches), 1)
@@ -112,7 +141,9 @@ class ParallelPhysicsSmokeTests(unittest.TestCase):
                 shutil.rmtree(directory)
             else:
                 print('Uncertain batch retained for review:', directory)
-            server.shutdown(); server.server_close()
+            server.shutdown()
+            server.server_close()
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

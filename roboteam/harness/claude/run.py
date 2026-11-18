@@ -5,29 +5,30 @@ only in a new segment (runtime/run/segments.py). The batch supervisor
 (roboteam/launch/claude_batch.py) calls run_task for each run. The status, claim and lock
 files keep their layout names (`engineering_*`), which runs already prepared record.
 """
+
 import fcntl
-from functools import partial
 import json
 import math
 import os
-from pathlib import Path
 import subprocess
 import time
+from functools import partial
+from pathlib import Path
 from urllib.parse import urlsplit
 
-from roboteam.harness.claude.systems.single_agent import SingleAgentPolicyHost
-from roboteam.harness.claude.systems.adaptive import AdaptivePolicyHost
 from roboteam.harness.claude.session.budget import BudgetLedger
-from roboteam.runtime.run import layout as run_layout
-from roboteam.harness.claude.session.session_host import ClaudeSessionHost
-from roboteam.harness.claude.session.runner import build_env
 from roboteam.harness.claude.session.native_home import config_directory
+from roboteam.harness.claude.session.runner import build_env
+from roboteam.harness.claude.session.session_host import ClaudeSessionHost
 from roboteam.harness.claude.supervisor import RunSupervisor
+from roboteam.harness.claude.systems.adaptive import AdaptivePolicyHost
+from roboteam.harness.claude.systems.single_agent import SingleAgentPolicyHost
 from roboteam.harness.claude.systems.standing_team import StandingTeamPolicyHost
+from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.bootstrap import STARTUP_TIMEOUT_S
+from roboteam.runtime.run.setup import verify_inputs, write_json
 from roboteam.runtime.time.clock import wall_backstop_s
 from roboteam.runtime.world.seal import seal_run
-from roboteam.runtime.run.setup import verify_inputs, write_json
 from roboteam.tasks.config import ROOT
 
 
@@ -38,7 +39,8 @@ def _ledger(run, total_budget_usd, resuming):
     cap they are settled as unreported, under a cap they become uncertain and block."""
     path = run_layout.path(run, 'budget_ledger')
     if resuming and path.exists():
-        ledger = BudgetLedger(path); ledger.settle_interrupted()
+        ledger = BudgetLedger(path)
+        ledger.settle_interrupted()
         return ledger
     return BudgetLedger.create(path, total_budget_usd)
 
@@ -48,13 +50,18 @@ HOST_STOPS = ('wall_limit', 'stop_requested', 'world_ended', 'wall_backstop')
 
 
 def _positive(value, name, limit):
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 < value <= limit:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or not 0 < value <= limit
+    ):
         raise ValueError('Invalid ' + name)
 
 
 def _concurrent_roles(run, system):
     """The most roles that can hold a budget reservation at once."""
-    roles = json.loads((run/'public/inputs/roles.json').read_text())['roles']
+    roles = json.loads((run / 'public/inputs/roles.json').read_text())['roles']
     if system == 'adaptive':
         # The Controller's turn stays reserved while it waits for its delegates, at most one
         # per arm (delegate scopes hold disjoint robots).
@@ -73,45 +80,66 @@ def _check_shared_budget(run, system, turn_budget_usd, total_budget_usd):
         raise ValueError('A task budget for a multi-role run needs a per-turn budget')
     roles = _concurrent_roles(run, system)
     if roles * turn_budget_usd > total_budget_usd:
-        raise ValueError('Task budget %.4g is below %d concurrent roles x per-turn budget %.4g'
-                         % (total_budget_usd, roles, turn_budget_usd))
+        raise ValueError(
+            'Task budget %.4g is below %d concurrent roles x per-turn budget %.4g'
+            % (total_budget_usd, roles, turn_budget_usd)
+        )
 
 
 def _evaluation_present(run):
     """A finished world requires a readable evaluator result, not task success."""
     try:
-        evaluation=json.loads((run/'private/outputs/evaluation.json').read_text())
+        evaluation = json.loads((run / 'private/outputs/evaluation.json').read_text())
         return isinstance(evaluation, dict) and isinstance(evaluation.get('task_success'), bool)
     except (OSError, ValueError, TypeError):
         return False
 
 
 def _run_protocol(run):
-    task = run/'private/inputs/task.json'
+    task = run / 'private/inputs/task.json'
     return (json.loads(task.read_text()).get('run_protocol') or {}) if task.is_file() else {}
 
 
-def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400, startup_timeout_s=STARTUP_TIMEOUT_S,
-                    poll_s=0.5, owner_factory=subprocess.Popen, policy_factory=SingleAgentPolicyHost,
-                    adaptive_policy_factory=AdaptivePolicyHost, standing_policy_factory=StandingTeamPolicyHost,
-                    clock=time.monotonic, sleep=time.sleep, _verifier=None, _supervisor=None):
+def run_task(
+    run_dir,
+    base_env,
+    *,
+    turn_budget_usd=None,
+    total_budget_usd=None,
+    wall_limit_s=86400,
+    startup_timeout_s=STARTUP_TIMEOUT_S,
+    poll_s=0.5,
+    owner_factory=subprocess.Popen,
+    policy_factory=SingleAgentPolicyHost,
+    adaptive_policy_factory=AdaptivePolicyHost,
+    standing_policy_factory=StandingTeamPolicyHost,
+    clock=time.monotonic,
+    sleep=time.sleep,
+    _verifier=None,
+    _supervisor=None,
+):
     """Run one prepared run and conservatively retain uncertain state.
 
     Optional budgets are best-effort limits based on CLI-reported cost, not billing.
     The caller must authorize model calls before invoking this function.
     """
     for val, name in ((turn_budget_usd, 'per-turn budget'), (total_budget_usd, 'task budget')):
-        if val is not None: _positive(val, name, 1000)
-    for val, name, limit in ((wall_limit_s, 'wall limit', 86400),
-                             (startup_timeout_s, 'startup timeout', 86400),
-                             (poll_s, 'poll interval', 60)):
+        if val is not None:
+            _positive(val, name, 1000)
+    for val, name, limit in (
+        (wall_limit_s, 'wall limit', 86400),
+        (startup_timeout_s, 'startup timeout', 86400),
+        (poll_s, 'poll interval', 60),
+    ):
         _positive(val, name, limit)
     run = Path(run_dir).resolve()
-    harness = json.loads((run/'private/inputs/manifest.json').read_text()).get('harness')
-    if harness != 'claude': raise ValueError('Expected a Claude run')
+    harness = json.loads((run / 'private/inputs/manifest.json').read_text()).get('harness')
+    if harness != 'claude':
+        raise ValueError('Expected a Claude run')
     launch = json.loads((run / 'private/inputs/claude.json').read_text())
     manifest = json.loads((run / 'private/inputs/manifest.json').read_text())
     from roboteam.launch.claude_prepare import LAUNCH_SCHEMA
+
     verifier = _verifier or verify_inputs
     supervisor_type = _supervisor or RunSupervisor
     if launch.get('schema') != LAUNCH_SCHEMA:
@@ -119,25 +147,35 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
     if manifest.get('status') != 'prepared' or manifest.get('harness') != harness:
         raise ValueError('Expected a frozen Claude run')
     changed = verifier(run)
-    if changed: raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
+    if changed:
+        raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
     model_entry = launch['model_entry']
     config = json.loads((run / 'private/inputs/run.json').read_text())
     system = config.get('system')
-    if system not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized') or config.get('harness') != harness:
+    if (
+        system not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized')
+        or config.get('harness') != harness
+    ):
         raise ValueError('Expected a supported Claude run')
     if model_entry.get('auth_mode') != 'native_login' and not base_env.get(model_entry['env_key']):
         raise ValueError('Missing credential variable: ' + model_entry['env_key'])
     if model_entry.get('auth_mode') == 'native_login':
         build_env(model_entry, base_env, config_directory(run, model_entry))
-    if run_layout.path(run, 'stop').exists(): raise ValueError('Run was stopped before launch')
+    if run_layout.path(run, 'stop').exists():
+        raise ValueError('Run was stopped before launch')
     _check_shared_budget(run, system, turn_budget_usd, total_budget_usd)
     # A run continued after an unexpected exit (docs/runs/continuation.md) starts again only
     # from a prepared segment; its claim stays and its sessions are resumed.
     from roboteam.runtime.world.store import RuntimeStore
+
     state_store = RuntimeStore(run / 'private/state/runtime.sqlite')
-    try: resuming = state_store.get('lifecycle') == 'resuming'
-    finally: state_store.close()
-    host_factory = partial(ClaudeSessionHost, max_budget_usd=turn_budget_usd, total_budget_usd=total_budget_usd)
+    try:
+        resuming = state_store.get('lifecycle') == 'resuming'
+    finally:
+        state_store.close()
+    host_factory = partial(
+        ClaudeSessionHost, max_budget_usd=turn_budget_usd, total_budget_usd=total_budget_usd
+    )
     policy = None
     ledger = None
     fresh_ledger = False
@@ -153,92 +191,149 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         # Recheck under the lock; a claim survives crashes and bars all retries.
-        if claim.exists() and not resuming: raise ValueError('Run already claimed; never restart the world')
-        if run_layout.path(run, 'stop').exists(): raise ValueError('Run was stopped before launch')
-        if verifier(run): raise ValueError('Frozen inputs changed before launch')
+        if claim.exists() and not resuming:
+            raise ValueError('Run already claimed; never restart the world')
+        if run_layout.path(run, 'stop').exists():
+            raise ValueError('Run was stopped before launch')
+        if verifier(run):
+            raise ValueError('Frozen inputs changed before launch')
         if system == 'single-agent':
             # The run's persistent ledger, as for every system, so a model restart or a
             # continued segment keeps the costs already spent.
             fresh_ledger = not (resuming and run_layout.path(run, 'budget_ledger').exists())
             ledger = _ledger(run, total_budget_usd, resuming)
             host_factory = partial(ClaudeSessionHost, max_budget_usd=turn_budget_usd, budget_ledger=ledger)
-            policy = policy_factory(run, model_entry, base_env, host_factory=host_factory,
-                                    **({'resume': True} if resuming else {}))
+            policy = policy_factory(
+                run,
+                model_entry,
+                base_env,
+                host_factory=host_factory,
+                **({'resume': True} if resuming else {}),
+            )
         if not resuming:
             with claim.open('x') as out:
                 os.fchmod(out.fileno(), 0o600)
                 json.dump({'claimed_at': time.time(), 'pid': os.getpid(), 'mode': 'run'}, out)
-                out.flush(); os.fsync(out.fileno())
+                out.flush()
+                os.fsync(out.fileno())
         claimed = True
         if system == 'adaptive':
             ledger = _ledger(run, total_budget_usd, resuming)
-            policy = adaptive_policy_factory(run, model_entry, base_env, ledger,
-                                             turn_budget_usd=turn_budget_usd,
-                                             **({'resume': True} if resuming else {}))
+            policy = adaptive_policy_factory(
+                run,
+                model_entry,
+                base_env,
+                ledger,
+                turn_budget_usd=turn_budget_usd,
+                **({'resume': True} if resuming else {}),
+            )
         elif system in ('hierarchical', 'decentralized'):
             ledger = _ledger(run, total_budget_usd, resuming)
-            policy = standing_policy_factory(run, model_entry, base_env, ledger,
-                                              turn_budget_usd=turn_budget_usd,
-                                              **({'resume': True} if resuming else {}))
-        write_json(status, {'status': 'starting', 'claimed_at': time.time(), 'scored': False,
-                            'turn_budget_usd': turn_budget_usd, 'task_budget_usd': total_budget_usd,
-                            'wall_limit_s': wall_limit_s, 'startup_timeout_s': startup_timeout_s})
+            policy = standing_policy_factory(
+                run,
+                model_entry,
+                base_env,
+                ledger,
+                turn_budget_usd=turn_budget_usd,
+                **({'resume': True} if resuming else {}),
+            )
+        write_json(
+            status,
+            {
+                'status': 'starting',
+                'claimed_at': time.time(),
+                'scored': False,
+                'turn_budget_usd': turn_budget_usd,
+                'task_budget_usd': total_budget_usd,
+                'wall_limit_s': wall_limit_s,
+                'startup_timeout_s': startup_timeout_s,
+            },
+        )
         # The owner's environment is the same for both harnesses and carries no credentials.
         from roboteam.harness.shared import owner as physics_owner
+
         owner_env = physics_owner.environment(base_env)
         owner_log = run_layout.path(run, 'owner_log')
         owner_log.parent.mkdir(parents=True, exist_ok=True)
         with owner_log.open('a') as log:
-            owner = owner_factory(physics_owner.command(run),
-                                  cwd=ROOT, env=owner_env, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                                  start_new_session=True)
+            owner = owner_factory(
+                physics_owner.command(run),
+                cwd=ROOT,
+                env=owner_env,
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=log,
+                start_new_session=True,
+            )
         write_json(status, {'status': 'waiting_for_owner', 'owner_pid': owner.pid, 'scored': False})
         deadline = clock() + startup_timeout_s
         connection = run / 'private/state/connections/Meta.json'
         while True:
-            if owner.poll() is not None: raise RuntimeError('Physical owner exited before publishing its connection')
-            if run_layout.path(run, 'stop').exists(): raise RuntimeError('Stop requested during owner startup')
-            if clock() >= deadline: raise TimeoutError('Physical owner startup timed out')
+            if owner.poll() is not None:
+                raise RuntimeError('Physical owner exited before publishing its connection')
+            if run_layout.path(run, 'stop').exists():
+                raise RuntimeError('Stop requested during owner startup')
+            if clock() >= deadline:
+                raise TimeoutError('Physical owner startup timed out')
             info = json.loads(connection.read_text())
             if info.get('url') and policy.store.get('execution_owner_attached'):
                 url = urlsplit(info['url'])
-                if url.scheme != 'http' or url.hostname != '127.0.0.1' or not url.port or url.path or url.query or url.fragment:
+                if (
+                    url.scheme != 'http'
+                    or url.hostname != '127.0.0.1'
+                    or not url.port
+                    or url.path
+                    or url.query
+                    or url.fragment
+                ):
                     raise ValueError('Expected the owner local loopback endpoint')
                 break
             sleep(poll_s)
         write_json(status, {'status': 'running', 'owner_pid': owner.pid, 'scored': False})
-        supervisor = supervisor_type(policy, lambda: owner.poll() is None,
-                                            stop_requested=lambda: run_layout.path(run, 'stop').exists(),
-                                            startup_timeout_s=startup_timeout_s, wall_limit_s=wall_limit_s,
-                                            wall_backstop_s=wall_backstop_s(_run_protocol(run)),
-                                            poll_s=poll_s, clock=clock, sleep=sleep)
+        supervisor = supervisor_type(
+            policy,
+            lambda: owner.poll() is None,
+            stop_requested=lambda: run_layout.path(run, 'stop').exists(),
+            startup_timeout_s=startup_timeout_s,
+            wall_limit_s=wall_limit_s,
+            wall_backstop_s=wall_backstop_s(_run_protocol(run)),
+            poll_s=poll_s,
+            clock=clock,
+            sleep=sleep,
+        )
         result = supervisor.run()
     except Exception as error:
         if not claimed:
             raise
         result = {'reason': 'launch_error', 'error_type': type(error).__name__, 'sealed': False}
         if owner is not None and policy is not None and policy.store.get('execution_owner_attached'):
-            try: result['seal'] = seal_run(policy.store, 30)
-            except Exception as seal_error: result['seal_error_type'] = type(seal_error).__name__
+            try:
+                result['seal'] = seal_run(policy.store, 30)
+            except Exception as seal_error:
+                result['seal_error_type'] = type(seal_error).__name__
         # A still-live owner is not force-killed: its state must be reviewed.
     finally:
         budget_status = None
         budget_review_required = False
         budget = None
         try:
-            if policy is not None: policy.close()
+            if policy is not None:
+                policy.close()
             policy_closed = True
         except Exception:
-            if result is not None: result['policy_close_error'] = True
+            if result is not None:
+                result['policy_close_error'] = True
         if ledger is not None:
             try:
                 # A turn the host cut off itself (wall limit, stop, ended world) has ended; without
                 # a task cap its unknown cost is recorded as unreported, not a reason for review.
-                if result is not None and result.get('reason') in HOST_STOPS: ledger.settle_interrupted()
+                if result is not None and result.get('reason') in HOST_STOPS:
+                    ledger.settle_interrupted()
                 budget = ledger.snapshot()
                 budget_status = budget['status']
-                budget_review_required = (budget_status == 'uncertain' or
-                                          any(row['status'] == 'reserved' for row in budget['reservations']))
+                budget_review_required = budget_status == 'uncertain' or any(
+                    row['status'] == 'reserved' for row in budget['reservations']
+                )
             except Exception:
                 budget_status = 'unavailable'
                 budget_review_required = True
@@ -251,8 +346,14 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
                 budget_review_required = True
         # Nothing was claimed, so the launch may be retried: a ledger this attempt created
         # before its claim (single-agent) would otherwise make every retry fail to create it.
-        discard = not claimed and fresh_ledger and ledger is not None and policy_closed and budget is not None \
+        discard = (
+            not claimed
+            and fresh_ledger
+            and ledger is not None
+            and policy_closed
+            and budget is not None
             and not budget['reservations']
+        )
         if ledger is not None and policy_closed:
             ledger.close()
         if discard:
@@ -260,29 +361,43 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
                 Path(str(ledger.path) + suffix).unlink(missing_ok=True)
         if result is not None:
             if owner is not None and (result.get('seal') or {}).get('sealed') and owner.poll() is None:
-                try: owner.wait(timeout=5)
-                except (subprocess.TimeoutExpired, AttributeError): pass
+                try:
+                    owner.wait(timeout=5)
+                except (subprocess.TimeoutExpired, AttributeError):
+                    pass
             owner_alive = bool(owner and owner.poll() is None)
             video_required = config.get('record_realtime_video', False) is True
             video_readable = (result.get('seal') or {}).get('video', {}).get('readable') is True
             evaluation_required = result.get('reason') == 'world_ended'
             evaluation_present = _evaluation_present(run) if evaluation_required else None
-            closed = ((result.get('seal') or {}).get('sealed') and not owner_alive
-                      and (result.get('seal') or {}).get('unresolved_action_ids') == []
-                      and not result.get('policy_close_error') and not result.get('error_type')
-                      and not result.get('seal_error_type')
-                      and not budget_review_required
-                      and (not video_required or video_readable)
-                      and (not evaluation_required or evaluation_present)
-                      and result.get('reason') in ('world_ended', 'stop_requested', 'wall_limit'))
+            closed = (
+                (result.get('seal') or {}).get('sealed')
+                and not owner_alive
+                and (result.get('seal') or {}).get('unresolved_action_ids') == []
+                and not result.get('policy_close_error')
+                and not result.get('error_type')
+                and not result.get('seal_error_type')
+                and not budget_review_required
+                and (not video_required or video_readable)
+                and (not evaluation_required or evaluation_present)
+                and result.get('reason') in ('world_ended', 'stop_requested', 'wall_limit')
+            )
             # A turn still open after the team finished is recorded (finish_turns_drained), not
             # reviewed: the score was already written at finish, as on Codex.
             # A wall-backstop stop is never a clean closure: its result needs review and is not counted.
-            if result.get('wall_backstop'): closed = False
-            result.update(status='finished' if closed else 'needs_review', owner_alive=owner_alive, scored=False,
-                          budget_status=budget_status, budget_review_required=budget_review_required,
-                          video_required=video_required, evaluation_required=evaluation_required,
-                          evaluation_present=evaluation_present)
+            if result.get('wall_backstop'):
+                closed = False
+            result.update(
+                status='finished' if closed else 'needs_review',
+                owner_alive=owner_alive,
+                scored=False,
+                budget_status=budget_status,
+                budget_review_required=budget_review_required,
+                video_required=video_required,
+                evaluation_required=evaluation_required,
+                evaluation_present=evaluation_present,
+            )
             write_json(status, result)
-        fcntl.flock(lock, fcntl.LOCK_UN); lock.close()
+        fcntl.flock(lock, fcntl.LOCK_UN)
+        lock.close()
     return result

@@ -15,18 +15,19 @@ then relock; --upgrade matters, since compile otherwise keeps a lock's existing 
     uv pip compile --universal --python-version 3.12 --generate-hashes --no-header --upgrade core.in store.in -o all.lock
     uv pip compile --universal --python-version 3.12 --generate-hashes --no-header core.in -c all.lock -o core.lock
 """
+
 import argparse
 import fcntl
 import hashlib
 import json
 import os
-from pathlib import Path
 import platform
 import re
 import shutil
 import stat
 import subprocess
 import sys
+from pathlib import Path
 
 from roboteam.runtime.sandbox import policy_env
 
@@ -36,7 +37,18 @@ CONFIG = policy_env.CONFIG
 PYTHON = policy_env.PYTHON
 identity = policy_env.identity
 UV = ('uvx', '--from', 'uv==0.13.7', 'uv')  # A host's own uv may not know this Python yet.
-FORBIDDEN = ('mujoco', 'pybullet', 'ompl', 'torch', 'tensorflow', 'pinocchio', 'drake', 'python-fcl', 'ikpy', 'isaacgym')
+FORBIDDEN = (
+    'mujoco',
+    'pybullet',
+    'ompl',
+    'torch',
+    'tensorflow',
+    'pinocchio',
+    'drake',
+    'python-fcl',
+    'ikpy',
+    'isaacgym',
+)
 
 
 def names(path):
@@ -67,13 +79,13 @@ def build(base):
     # A shared account's ~/.local packages and pip settings must not reach the build or its manifest.
     os.environ.update(PYTHONNOUSERSITE='1', PIP_CONFIG_FILE=os.devnull)
     base = Path(base).expanduser().resolve()
-    target = base/('policy-env-' + identity())
+    target = base / ('policy-env-' + identity())
     base.mkdir(parents=True, exist_ok=True)
     # Hosts sharing a base build the same identity; one builds, the others wait and
     # then find its valid environment instead of deleting a tree still being built.
-    with open(base/(target.name + '.lock'), 'a') as lock:
+    with open(base / (target.name + '.lock'), 'a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        if (target/policy_env.MANIFEST).is_file():
+        if (target / policy_env.MANIFEST).is_file():
             policy_env.verify(target)
             print('Existing environment is valid:', target)
             return target
@@ -88,42 +100,86 @@ def build(base):
             # Leave no manifest behind, so the next build starts over instead of
             # re-verifying a broken tree forever.
             make_writable(target)
-            (target/policy_env.MANIFEST).unlink(missing_ok=True)
+            (target / policy_env.MANIFEST).unlink(missing_ok=True)
             raise
         return target
 
 
 def install(target):
     """Install the pinned Python, packages and wheel store into the empty target and seal it."""
-    installs = target/'python'
+    installs = target / 'python'
     # Standalone: not the host's Python, so nothing else on the machine affects it.
     run([*UV, 'python', 'install', PYTHON, '--no-bin', '--install-dir', installs])
     folders = [p for p in installs.iterdir() if p.is_dir() and p.name.startswith(PYTHON)]
     if len(folders) != 1:
         raise ValueError('Expected one Python installation, found ' + str(folders))
     python_home = folders[0]
-    python = python_home/'bin/python3'
+    python = python_home / 'bin/python3'
     for marker in python_home.rglob('EXTERNALLY-MANAGED'):
         marker.unlink()  # This Python belongs to the environment; pip may install for the user.
-    run([*UV, 'pip', 'install', '--python', python, '--break-system-packages', '--require-hashes', '-r', CONFIG/'core.lock'])
-    run([python, '-m', 'pip', 'download', '--disable-pip-version-check', '--require-hashes', '--no-deps', '--only-binary', ':all:',
-         '-r', CONFIG/'all.lock', '-d', target/'wheels'])
-    run([python, '-m', 'compileall', '-q', python_home/'lib'], stdout=subprocess.DEVNULL)
-    listed = json.loads(subprocess.check_output([python, '-m', 'pip', 'list', '--format=json', '--disable-pip-version-check']))
+    run(
+        [
+            *UV,
+            'pip',
+            'install',
+            '--python',
+            python,
+            '--break-system-packages',
+            '--require-hashes',
+            '-r',
+            CONFIG / 'core.lock',
+        ]
+    )
+    run(
+        [
+            python,
+            '-m',
+            'pip',
+            'download',
+            '--disable-pip-version-check',
+            '--require-hashes',
+            '--no-deps',
+            '--only-binary',
+            ':all:',
+            '-r',
+            CONFIG / 'all.lock',
+            '-d',
+            target / 'wheels',
+        ]
+    )
+    run([python, '-m', 'compileall', '-q', python_home / 'lib'], stdout=subprocess.DEVNULL)
+    listed = json.loads(
+        subprocess.check_output([python, '-m', 'pip', 'list', '--format=json', '--disable-pip-version-check'])
+    )
     installed = {re.sub(r'[-_.]+', '-', item['name']).lower(): item['version'] for item in listed}
-    wheels = sorted(path.name for path in (target/'wheels').glob('*.whl'))
+    wheels = sorted(path.name for path in (target / 'wheels').glob('*.whl'))
     for name in FORBIDDEN:
-        if name in installed or any(re.sub(r'[-_.]+', '-', wheel).lower().startswith(name + '-') for wheel in wheels):
+        if name in installed or any(
+            re.sub(r'[-_.]+', '-', wheel).lower().startswith(name + '-') for wheel in wheels
+        ):
             raise ValueError('Forbidden package in the policy environment: ' + name)
-    core = names(CONFIG/'core.in')
-    version = subprocess.check_output([python, '-c', 'import platform; print(platform.python_version())'], text=True).strip()
-    manifest = {'schema': policy_env.SCHEMA, 'id': target.name, 'python': version, 'bin': str(python_home.relative_to(target)/'bin'),
-                'platform': [sys.platform, platform.machine()], 'core': core,
-                'store': names(CONFIG/'store.in'), 'packages': {name: installed[name] for name in core},
-                'installed': installed, 'wheels': wheels,
-                'locks_sha256': {name: hashlib.sha256((CONFIG/name).read_bytes()).hexdigest() for name in ('core.lock', 'all.lock')}}
+    core = names(CONFIG / 'core.in')
+    version = subprocess.check_output(
+        [python, '-c', 'import platform; print(platform.python_version())'], text=True
+    ).strip()
+    manifest = {
+        'schema': policy_env.SCHEMA,
+        'id': target.name,
+        'python': version,
+        'bin': str(python_home.relative_to(target) / 'bin'),
+        'platform': [sys.platform, platform.machine()],
+        'core': core,
+        'store': names(CONFIG / 'store.in'),
+        'packages': {name: installed[name] for name in core},
+        'installed': installed,
+        'wheels': wheels,
+        'locks_sha256': {
+            name: hashlib.sha256((CONFIG / name).read_bytes()).hexdigest()
+            for name in ('core.lock', 'all.lock')
+        },
+    }
     manifest['tree_sha256'] = policy_env.tree_sha256(target)
-    (target/policy_env.MANIFEST).write_text(json.dumps(manifest, indent=1) + '\n')
+    (target / policy_env.MANIFEST).write_text(json.dumps(manifest, indent=1) + '\n')
     make_read_only(target)
 
 
@@ -133,7 +189,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
     target = build(args.base)
     size = sum(p.stat().st_size for p in target.rglob('*') if p.is_file() and not p.is_symlink())
-    print(json.dumps({'root': str(target), 'bytes': size, 'tree_sha256': policy_env.load(target)['tree_sha256']}))
+    print(
+        json.dumps(
+            {'root': str(target), 'bytes': size, 'tree_sha256': policy_env.load(target)['tree_sha256']}
+        )
+    )
 
 
 if __name__ == '__main__':

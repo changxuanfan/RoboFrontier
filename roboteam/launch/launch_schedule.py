@@ -1,11 +1,12 @@
 """One monotonic launch gate per supervisor, shared by all task launchers."""
+
 import math
 import threading
 import time
 
 
 class LaunchSchedule:
-    def __init__(self, interval_s=.3, *, clock=time.monotonic, sleep=time.sleep):
+    def __init__(self, interval_s=0.3, *, clock=time.monotonic, sleep=time.sleep):
         if type(interval_s) not in (int, float) or not math.isfinite(interval_s) or interval_s < 0:
             raise ValueError('Startup interval must be finite and nonnegative')
         self.interval_s = interval_s
@@ -26,7 +27,7 @@ class LaunchSchedule:
                 remaining = self._last_launch + self.interval_s - self.clock()
                 if remaining <= 0:
                     break
-                self.sleep(min(remaining, .1))
+                self.sleep(min(remaining, 0.1))
             if stopped():
                 return None
             self._last_launch = self.clock()

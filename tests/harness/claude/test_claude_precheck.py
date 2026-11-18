@@ -3,8 +3,8 @@ import stat
 import sys
 import tempfile
 import unittest
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
 from unittest.mock import patch
 
@@ -46,66 +46,118 @@ def fake_claude(directory, tool_answer='green red', recall_answer='green red'):
 
 class PrecheckTests(unittest.TestCase):
     def setUp(self):
-        self.color_patch=patch.object(pc.preflight_probe,'choose',return_value=('green','red'))
+        self.color_patch = patch.object(pc.preflight_probe, 'choose', return_value=('green', 'red'))
         self.color_patch.start()
         self.addCleanup(self.color_patch.stop)
 
     def test_random_challenge_rejects_a_fixed_green_guess(self):
-        with tempfile.TemporaryDirectory() as tmp, patch.object(pc.preflight_probe,'choose',return_value=('red','blue')):
-            binary=fake_claude(tmp)
-            base={'PATH':'/usr/bin:/bin','ANTHROPIC_API_KEY':'fake-key-not-real'}
-            receipt=pc.run_precheck('haiku',Path(tmp)/'out',.5,base,binary=str(binary))
-            self.assertEqual(receipt['challenge'],'red blue')
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.object(pc.preflight_probe, 'choose', return_value=('red', 'blue')),
+        ):
+            binary = fake_claude(tmp)
+            base = {'PATH': '/usr/bin:/bin', 'ANTHROPIC_API_KEY': 'fake-key-not-real'}
+            receipt = pc.run_precheck('haiku', Path(tmp) / 'out', 0.5, base, binary=str(binary))
+            self.assertEqual(receipt['challenge'], 'red blue')
             self.assertFalse(receipt['passed'])
             self.assertFalse(receipt['checks'][1]['checks']['image_colors_named'])
 
     def test_concurrent_precheck_servers_keep_images_and_counts_separate(self):
         with tempfile.TemporaryDirectory() as tmp:
-            one=Path(tmp)/'one'; two=Path(tmp)/'two'; one.mkdir(); two.mkdir()
-            _,_,server1=pc.setup_run(one,{})
-            _,_,server2=pc.setup_run(two,{})
+            one = Path(tmp) / 'one'
+            two = Path(tmp) / 'two'
+            one.mkdir()
+            two.mkdir()
+            _, _, server1 = pc.setup_run(one, {})
+            _, _, server2 = pc.setup_run(two, {})
             try:
-                url=f'http://127.0.0.1:{server1.server_port}/op'
-                payload=b'{"op":"observe","data":{}}'
-                request=urllib.request.Request(url,data=payload,method='POST')
-                with urllib.request.urlopen(request,timeout=5) as response:
-                    image=json.load(response)['observation']['images']['top']
-                self.assertEqual(Path(image),one/'run/public/observations/top.png')
-                self.assertEqual(pc.request_count(server1),1)
-                self.assertEqual(pc.request_count(server2),0)
-                url=f'http://127.0.0.1:{server2.server_port}/op'
-                with urllib.request.urlopen(urllib.request.Request(url,data=payload,method='POST'),timeout=5) as response:
-                    image=json.load(response)['observation']['images']['top']
-                self.assertEqual(Path(image),two/'run/public/observations/top.png')
-                self.assertEqual(pc.request_count(server1),1)
-                self.assertEqual(pc.request_count(server2),1)
+                url = f'http://127.0.0.1:{server1.server_port}/op'
+                payload = b'{"op":"observe","data":{}}'
+                request = urllib.request.Request(url, data=payload, method='POST')
+                with urllib.request.urlopen(request, timeout=5) as response:
+                    image = json.load(response)['observation']['images']['top']
+                self.assertEqual(Path(image), one / 'run/public/observations/top.png')
+                self.assertEqual(pc.request_count(server1), 1)
+                self.assertEqual(pc.request_count(server2), 0)
+                url = f'http://127.0.0.1:{server2.server_port}/op'
+                with urllib.request.urlopen(
+                    urllib.request.Request(url, data=payload, method='POST'), timeout=5
+                ) as response:
+                    image = json.load(response)['observation']['images']['top']
+                self.assertEqual(Path(image), two / 'run/public/observations/top.png')
+                self.assertEqual(pc.request_count(server1), 1)
+                self.assertEqual(pc.request_count(server2), 1)
                 with self.assertRaises(urllib.error.HTTPError):
-                    urllib.request.urlopen(urllib.request.Request(url,data=b'{"op":"ready","data":{}}',method='POST'),timeout=5)
-                self.assertEqual(pc.request_count(server2),2)
-                self.assertEqual(pc.request_count(server2,observe_only=True),1)
+                    urllib.request.urlopen(
+                        urllib.request.Request(url, data=b'{"op":"ready","data":{}}', method='POST'),
+                        timeout=5,
+                    )
+                self.assertEqual(pc.request_count(server2), 2)
+                self.assertEqual(pc.request_count(server2, observe_only=True), 1)
             finally:
-                for server in (server1,server2): server.shutdown(); server.server_close()
+                for server in (server1, server2):
+                    server.shutdown()
+                    server.server_close()
 
     def test_non_observe_request_does_not_satisfy_visual_check(self):
-        record={'process':'exited','exit_code':0,'summary':{'result_text':'green red',
-            'turn_status':'ended','session_id':'session','malformed_lines':0,'tool_calls':1,
-            'reported_model':'fake','observe_top_calls':1}}
-        result=pc.judge('tool_image',record,0,1,expected_session='session',
-                        expected_answer='green red',observes_before=0,observes_after=0)
+        record = {
+            'process': 'exited',
+            'exit_code': 0,
+            'summary': {
+                'result_text': 'green red',
+                'turn_status': 'ended',
+                'session_id': 'session',
+                'malformed_lines': 0,
+                'tool_calls': 1,
+                'reported_model': 'fake',
+                'observe_top_calls': 1,
+            },
+        }
+        result = pc.judge(
+            'tool_image',
+            record,
+            0,
+            1,
+            expected_session='session',
+            expected_answer='green red',
+            observes_before=0,
+            observes_after=0,
+        )
         self.assertFalse(result['checks']['robot_request_made'])
         self.assertFalse(result['passed'])
 
     def test_observe_without_selected_view_does_not_satisfy_visual_check(self):
-        record={'process':'exited','exit_code':0,'summary':{'result_text':'green red',
-            'turn_status':'ended','session_id':'session','malformed_lines':0,'tool_calls':1,
-            'reported_model':'fake','observe_top_calls':0}}
-        result=pc.judge('tool_image',record,0,1,expected_session='session',
-                        expected_answer='green red',observes_before=0,observes_after=1)
+        record = {
+            'process': 'exited',
+            'exit_code': 0,
+            'summary': {
+                'result_text': 'green red',
+                'turn_status': 'ended',
+                'session_id': 'session',
+                'malformed_lines': 0,
+                'tool_calls': 1,
+                'reported_model': 'fake',
+                'observe_top_calls': 0,
+            },
+        }
+        result = pc.judge(
+            'tool_image',
+            record,
+            0,
+            1,
+            expected_session='session',
+            expected_answer='green red',
+            observes_before=0,
+            observes_after=1,
+        )
         self.assertFalse(result['checks']['image_view_requested'])
         self.assertFalse(result['passed'])
+
     def test_without_confirm_spend_nothing_runs(self):
-        with patch.object(sys, 'argv', ['claude_precheck', '--max-budget-usd', '0.5']), \
-             patch.object(pc, 'run_precheck') as run:
+        with (
+            patch.object(sys, 'argv', ['claude_precheck', '--max-budget-usd', '0.5']),
+            patch.object(pc, 'run_precheck') as run,
+        ):
             self.assertEqual(pc.main(), 2)
             run.assert_not_called()
 
@@ -131,9 +183,9 @@ class PrecheckTests(unittest.TestCase):
 
     def test_colour_substring_does_not_count_as_correct(self):
         with tempfile.TemporaryDirectory() as tmp:
-            binary=fake_claude(tmp,tool_answer='not green')
-            base={'PATH':'/usr/bin:/bin','ANTHROPIC_API_KEY':'fake-key-not-real'}
-            receipt=pc.run_precheck('haiku',Path(tmp)/'out',.5,base,binary=str(binary))
+            binary = fake_claude(tmp, tool_answer='not green')
+            base = {'PATH': '/usr/bin:/bin', 'ANTHROPIC_API_KEY': 'fake-key-not-real'}
+            receipt = pc.run_precheck('haiku', Path(tmp) / 'out', 0.5, base, binary=str(binary))
             self.assertFalse(receipt['passed'])
             self.assertFalse(receipt['checks'][1]['checks']['image_colors_named'])
 
@@ -157,28 +209,53 @@ class PrecheckTests(unittest.TestCase):
 
     def test_optional_fork_requires_distinct_session_and_verified_native_history(self):
         with tempfile.TemporaryDirectory() as tmp:
-            binary=fake_claude(tmp)
-            base={'PATH':'/usr/bin:/bin','ANTHROPIC_API_KEY':'fake-key-not-real'}
-            original=pc.run_turn; forks=[]
-            def runner(*args,**kwargs):
-                if not kwargs.get('fork_from'): return original(*args,**kwargs)
+            binary = fake_claude(tmp)
+            base = {'PATH': '/usr/bin:/bin', 'ANTHROPIC_API_KEY': 'fake-key-not-real'}
+            original = pc.run_turn
+            forks = []
+
+            def runner(*args, **kwargs):
+                if not kwargs.get('fork_from'):
+                    return original(*args, **kwargs)
                 forks.append(kwargs)
-                return {'process':'exited','exit_code':0,'summary':{'session_id':kwargs['session_id'],
-                        'turn_status':'ended','tool_calls':0,'result_text':'green red','malformed_lines':0,
-                        'total_cost_usd':.01,'reported_model':'fake','usage':{}}}
-            def proof(parent,child,config): return {'source_thread_id':parent}
-            with patch.object(pc,'run_turn',runner), patch.object(pc,'fork_provenance',proof):
-                receipt=pc.run_precheck('haiku',Path(tmp)/'pass',.5,base,binary=str(binary),check_fork=True)
-            self.assertTrue(receipt['passed'],receipt)
-            self.assertEqual(len(receipt['checks']),4)
+                return {
+                    'process': 'exited',
+                    'exit_code': 0,
+                    'summary': {
+                        'session_id': kwargs['session_id'],
+                        'turn_status': 'ended',
+                        'tool_calls': 0,
+                        'result_text': 'green red',
+                        'malformed_lines': 0,
+                        'total_cost_usd': 0.01,
+                        'reported_model': 'fake',
+                        'usage': {},
+                    },
+                }
+
+            def proof(parent, child, config):
+                return {'source_thread_id': parent}
+
+            with patch.object(pc, 'run_turn', runner), patch.object(pc, 'fork_provenance', proof):
+                receipt = pc.run_precheck(
+                    'haiku', Path(tmp) / 'pass', 0.5, base, binary=str(binary), check_fork=True
+                )
+            self.assertTrue(receipt['passed'], receipt)
+            self.assertEqual(len(receipt['checks']), 4)
             self.assertTrue(receipt['fork_checked'])
             self.assertFalse(forks[0]['enable_robot'])
-            self.assertNotEqual(forks[0]['session_id'],forks[0]['fork_from'])
-            with patch.object(pc,'run_turn',runner), patch.object(pc,'fork_provenance',side_effect=ValueError('bad prefix')):
-                receipt=pc.run_precheck('haiku',Path(tmp)/'fail',.5,base,binary=str(binary),check_fork=True)
+            self.assertNotEqual(forks[0]['session_id'], forks[0]['fork_from'])
+            with (
+                patch.object(pc, 'run_turn', runner),
+                patch.object(pc, 'fork_provenance', side_effect=ValueError('bad prefix')),
+            ):
+                receipt = pc.run_precheck(
+                    'haiku', Path(tmp) / 'fail', 0.5, base, binary=str(binary), check_fork=True
+                )
             self.assertFalse(receipt['passed'])
-            self.assertEqual(receipt['stopped'],'failed at fork')
+            self.assertEqual(receipt['stopped'], 'failed at fork')
             self.assertFalse(receipt['checks'][-1]['checks']['native_history_prefix'])
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

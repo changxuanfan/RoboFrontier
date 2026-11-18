@@ -3,16 +3,17 @@
 No provider is contacted: the CLI talks to an in-process fake Anthropic endpoint and the
 robot MCP talks to a fake world. The test is skipped when no `claude` binary is installed.
 """
+
 import http.server
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import unittest
+from pathlib import Path
 
 from roboteam.harness.claude.checks import offline_probe as probe
 from roboteam.harness.claude.systems.provenance import fork_provenance
@@ -34,23 +35,55 @@ class RealCliForkTests(unittest.TestCase):
         image = self.run_dir / 'public/observations/top.png'
         image.parent.mkdir(parents=True)
         from PIL import Image
+
         Image.new('RGB', (4, 4), 'red').save(image)
         probe.World.image = image
         self.world = http.server.ThreadingHTTPServer(('127.0.0.1', 0), probe.World)
         self.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), probe.H)
         for server in (self.world, self.server):
             threading.Thread(target=server.serve_forever, daemon=True).start()
-        conn.write_text(json.dumps({'run_id': 'run', 'actor': 'Controller', 'schema_version': 3,
-                                    'url': 'http://127.0.0.1:%d' % self.world.server_port, 'token': 'fake'}))
+        conn.write_text(
+            json.dumps(
+                {
+                    'run_id': 'run',
+                    'actor': 'Controller',
+                    'schema_version': 3,
+                    'url': 'http://127.0.0.1:%d' % self.world.server_port,
+                    'token': 'fake',
+                }
+            )
+        )
         self.mcp = t / 'mcp.json'
-        self.mcp.write_text(json.dumps({'mcpServers': {'robot': {
-            'command': sys.executable, 'args': ['-m', 'roboteam.harness.claude.robot_mcp', '--run-dir', str(self.run_dir),
-                                                '--connection', str(conn)], 'env': {'PYTHONPATH': str(ROOT)}}}}))
-        self.env = {'PATH': os.environ.get('PATH', ''), 'HOME': str(t),
-                    'ANTHROPIC_BASE_URL': 'http://127.0.0.1:%d' % self.server.server_port,
-                    'ANTHROPIC_API_KEY': 'local-fake-key', 'CLAUDE_CONFIG_DIR': str(self.config),
-                    'DISABLE_TELEMETRY': '1', 'DISABLE_ERROR_REPORTING': '1',
-                    'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1'}
+        self.mcp.write_text(
+            json.dumps(
+                {
+                    'mcpServers': {
+                        'robot': {
+                            'command': sys.executable,
+                            'args': [
+                                '-m',
+                                'roboteam.harness.claude.robot_mcp',
+                                '--run-dir',
+                                str(self.run_dir),
+                                '--connection',
+                                str(conn),
+                            ],
+                            'env': {'PYTHONPATH': str(ROOT)},
+                        }
+                    }
+                }
+            )
+        )
+        self.env = {
+            'PATH': os.environ.get('PATH', ''),
+            'HOME': str(t),
+            'ANTHROPIC_BASE_URL': 'http://127.0.0.1:%d' % self.server.server_port,
+            'ANTHROPIC_API_KEY': 'local-fake-key',
+            'CLAUDE_CONFIG_DIR': str(self.config),
+            'DISABLE_TELEMETRY': '1',
+            'DISABLE_ERROR_REPORTING': '1',
+            'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
+        }
 
     def tearDown(self):
         for server in (self.world, self.server):
@@ -59,12 +92,36 @@ class RealCliForkTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def turn(self, *session_flags):
-        command = ['claude', '--bare', '-p', 'Call robot observe tool.', '--model', 'claude-opus-5-5',
-                   '--mcp-config', str(self.mcp), '--strict-mcp-config', '--allowedTools', 'mcp__robot__robot',
-                   '--permission-mode', 'dontAsk', '--tools', '', '--output-format', 'stream-json', '--verbose',
-                   *session_flags]
-        done = subprocess.run(command, cwd=self.run_dir, env=self.env, text=True, capture_output=True,
-                              stdin=subprocess.DEVNULL, timeout=90)
+        command = [
+            'claude',
+            '--bare',
+            '-p',
+            'Call robot observe tool.',
+            '--model',
+            'claude-opus-5-5',
+            '--mcp-config',
+            str(self.mcp),
+            '--strict-mcp-config',
+            '--allowedTools',
+            'mcp__robot__robot',
+            '--permission-mode',
+            'dontAsk',
+            '--tools',
+            '',
+            '--output-format',
+            'stream-json',
+            '--verbose',
+            *session_flags,
+        ]
+        done = subprocess.run(
+            command,
+            cwd=self.run_dir,
+            env=self.env,
+            text=True,
+            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            timeout=90,
+        )
         self.assertEqual(done.returncode, 0, done.stderr[-500:])
 
     def test_forked_transcript_is_proven_and_tampering_is_caught(self):

@@ -1,4 +1,5 @@
 """Frozen per-run policy observation formats."""
+
 from copy import deepcopy
 
 DEFAULT_PROFILE = 'jpeg_1280x800_q90'
@@ -8,8 +9,14 @@ DEFAULT_PROFILE = 'jpeg_1280x800_q90'
 LOW_RESOLUTION_PROFILE = 'jpeg_128x80_q95'
 PROFILES = {
     DEFAULT_PROFILE: {'width': 1280, 'height': 800, 'format': 'JPEG', 'quality': 90, 'extension': '.jpg'},
-    LOW_RESOLUTION_PROFILE: {'width': 128, 'height': 80, 'format': 'JPEG', 'quality': 95, 'extension': '.jpg',
-                             'render_size': [1280, 800]},
+    LOW_RESOLUTION_PROFILE: {
+        'width': 128,
+        'height': 80,
+        'format': 'JPEG',
+        'quality': 95,
+        'extension': '.jpg',
+        'render_size': [1280, 800],
+    },
 }
 
 

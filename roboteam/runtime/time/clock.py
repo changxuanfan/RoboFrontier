@@ -3,25 +3,32 @@
 Uses the existing world, public tools and action-stop path. Only the run budget
 and closure are deterministic; this module never chooses a robot task or motion.
 """
+
 import math
 import time
 
 from roboteam.runtime.run.setup import write_json
 
 # The one trial clock: only time the world runs unpaused counts toward the limit.
-ACTIVE_CLOCK='active_time_v1'
+ACTIVE_CLOCK = 'active_time_v1'
 # Active time: one owner tick more than this after the previous one is a stall (a frozen or
 # sleeping host) and adds nothing. Ticks normally come every few milliseconds.
-STALL_S=5.
+STALL_S = 5.0
 # The accumulated active time is saved at most this often, and at the cutoff and on close.
-PERSIST_S=1.
+PERSIST_S = 1.0
 
 
 def wall_backstop_s(run_protocol):
     """The run's frozen wall backstop (task_types.WALL_BACKSTOP_S), or None."""
-    value=run_protocol.get('wall_backstop_s')
-    if value is None:return None
-    if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or value<=0:
+    value = run_protocol.get('wall_backstop_s')
+    if value is None:
+        return None
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or value <= 0
+    ):
         raise ValueError('Invalid wall backstop')
     return float(value)
 
@@ -29,32 +36,51 @@ def wall_backstop_s(run_protocol):
 def backstop_since(store):
     """Wall time the backstop counts from: START, or an operator's authorized continuation after
     an earlier backstop stop (run_segments.prepare_retry)."""
-    waived=store.get('wall_backstop_waived') or {}
-    return max(store.get('start_at'),waived.get('at') or 0.)
+    waived = store.get('wall_backstop_waived') or {}
+    return max(store.get('start_at'), waived.get('at') or 0.0)
 
 
-def backstop_elapsed(store,wall_now):
+def backstop_elapsed(store, wall_now):
     """Wall seconds the backstop has counted: since backstop_since, less every outage, egress and
     usage-limit pause (egress_pause.WorldPause), the current one included."""
-    since=backstop_since(store);paused=float(store.get('pause_wall_s',0.) or 0.)
-    current=store.get('pause_since_wall')
-    if current is not None:paused+=max(0.,wall_now-max(current,since))
-    return wall_now-since-paused
+    since = backstop_since(store)
+    paused = float(store.get('pause_wall_s', 0.0) or 0.0)
+    current = store.get('pause_since_wall')
+    if current is not None:
+        paused += max(0.0, wall_now - max(current, since))
+    return wall_now - since - paused
 
 
-def protocol(seconds=1200.):
-    return validate_protocol(dict(kind='bounded_policy_trial',authorization='explicit_user_request',
-        wall_limit_s=seconds,clock=ACTIVE_CLOCK,oracle_readiness_claimed=False))
+def protocol(seconds=1200.0):
+    return validate_protocol(
+        dict(
+            kind='bounded_policy_trial',
+            authorization='explicit_user_request',
+            wall_limit_s=seconds,
+            clock=ACTIVE_CLOCK,
+            oracle_readiness_claimed=False,
+        )
+    )
 
 
 def validate_protocol(value):
-    expected={'kind','authorization','wall_limit_s','clock','oracle_readiness_claimed'}
-    if not isinstance(value,dict) or set(value)!=expected:raise ValueError('Explicit bounded policy protocol required')
-    if (value['kind']!='bounded_policy_trial' or value['authorization']!='explicit_user_request'
-            or value['clock']!=ACTIVE_CLOCK or value['oracle_readiness_claimed'] is not False):
+    expected = {'kind', 'authorization', 'wall_limit_s', 'clock', 'oracle_readiness_claimed'}
+    if not isinstance(value, dict) or set(value) != expected:
+        raise ValueError('Explicit bounded policy protocol required')
+    if (
+        value['kind'] != 'bounded_policy_trial'
+        or value['authorization'] != 'explicit_user_request'
+        or value['clock'] != ACTIVE_CLOCK
+        or value['oracle_readiness_claimed'] is not False
+    ):
         raise ValueError('Invalid bounded policy authorization or clock')
-    limit=value['wall_limit_s']
-    if isinstance(limit,bool) or not isinstance(limit,(int,float)) or not math.isfinite(limit) or not 0<limit<=86400:
+    limit = value['wall_limit_s']
+    if (
+        isinstance(limit, bool)
+        or not isinstance(limit, (int, float))
+        or not math.isfinite(limit)
+        or not 0 < limit <= 86400
+    ):
         raise ValueError('Positive finite wall budget required')
     return dict(value)
 
@@ -64,8 +90,12 @@ def counting(store):
 
     A pause by the experiment manager, a Slurm egress pause, a network-outage pause and the
     budget cutoff itself all set dispatch_paused or leave physics not running."""
-    return (store.get('lifecycle')=='running' and store.get('physics_state')=='running'
-            and not store.get('dispatch_paused',False) and not store.get('egress_review_hold',False))
+    return (
+        store.get('lifecycle') == 'running'
+        and store.get('physics_state') == 'running'
+        and not store.get('dispatch_paused', False)
+        and not store.get('egress_review_hold', False)
+    )
 
 
 class BudgetGuard:
@@ -81,13 +111,24 @@ class BudgetGuard:
     way, even while a pause holds the world, but is recorded as `wall_backstop`: needs review and
     not counted. It keeps its own records (POLICY_WALL_BACKSTOP, POLICY_BACKSTOP_CLOSED), so it is
     not a normal end and a continuation can be authorized explicitly (run_segments)."""
-    def __init__(self,run_protocol,grace_s=10.,stall_s=STALL_S,persist_s=PERSIST_S,wall_backstop_s=None):
-        self.protocol=validate_protocol(run_protocol);self.cutoff=None
-        self.cutoff_evaluation=None;self.completed=False;self.grace_s=grace_s
-        self.stall_s=stall_s;self.persist_s=persist_s
-        self.active=None;self.saved=None;self.last_tick=None;self.stalls=0
-        self.wall_backstop_s=wall_backstop_s;self.backstopped=False
-        self.backstop_checked=None
+
+    def __init__(
+        self, run_protocol, grace_s=10.0, stall_s=STALL_S, persist_s=PERSIST_S, wall_backstop_s=None
+    ):
+        self.protocol = validate_protocol(run_protocol)
+        self.cutoff = None
+        self.cutoff_evaluation = None
+        self.completed = False
+        self.grace_s = grace_s
+        self.stall_s = stall_s
+        self.persist_s = persist_s
+        self.active = None
+        self.saved = None
+        self.last_tick = None
+        self.stalls = 0
+        self.wall_backstop_s = wall_backstop_s
+        self.backstopped = False
+        self.backstop_checked = None
 
     @staticmethod
     def after_score(store):
@@ -95,118 +136,202 @@ class BudgetGuard:
         score stays the one recorded then."""
         return bool(store.get('after_score'))
 
-    def backstop_due(self,store,wall_now):
-        if self.wall_backstop_s is None or self.cutoff is not None or self.completed:return False
-        if store.get('lifecycle')!='running' or store.get('start_at') is None:return False
-        return backstop_elapsed(store,wall_now)>=self.wall_backstop_s
+    def backstop_due(self, store, wall_now):
+        if self.wall_backstop_s is None or self.cutoff is not None or self.completed:
+            return False
+        if store.get('lifecycle') != 'running' or store.get('start_at') is None:
+            return False
+        return backstop_elapsed(store, wall_now) >= self.wall_backstop_s
 
-    def backstop_pending(self,service,wall_now=None):
+    def backstop_pending(self, service, wall_now=None):
         """The backstop is due or its stop is under way: it then runs even through a pause."""
-        if self.backstopped:return not self.completed
-        if self.wall_backstop_s is None or self.after_score(service.store):return False
-        wall_now=time.time() if wall_now is None else wall_now
+        if self.backstopped:
+            return not self.completed
+        if self.wall_backstop_s is None or self.after_score(service.store):
+            return False
+        wall_now = time.time() if wall_now is None else wall_now
         # A held world's owner loops fast; the store is read at most once a second here.
-        if self.backstop_checked is not None and 0<=wall_now-self.backstop_checked<1.:return False
-        self.backstop_checked=wall_now
-        return self.backstop_due(service.store,wall_now)
+        if self.backstop_checked is not None and 0 <= wall_now - self.backstop_checked < 1.0:
+            return False
+        self.backstop_checked = wall_now
+        return self.backstop_due(service.store, wall_now)
 
     def interrupt(self):
         """The world was paused outside the tick (egress or outage pause): restart the interval."""
-        self.last_tick=None
+        self.last_tick = None
 
-    def retract(self,service,seconds):
+    def retract(self, service, seconds):
         """Take back up to `seconds` just counted (an outage found only after its failed probes)."""
-        if self.cutoff is not None:return 0.
-        if self.active is None:self.active=self.saved=float(service.store.get('active_s',0.) or 0.)
-        taken=min(max(0.,seconds),self.active);self.active-=taken;self.flush(service.store)
+        if self.cutoff is not None:
+            return 0.0
+        if self.active is None:
+            self.active = self.saved = float(service.store.get('active_s', 0.0) or 0.0)
+        taken = min(max(0.0, seconds), self.active)
+        self.active -= taken
+        self.flush(service.store)
         return taken
 
-    def flush(self,store):
-        if self.active is not None and self.active!=self.saved:
-            store.put('active_s',self.active);self.saved=self.active
+    def flush(self, store):
+        if self.active is not None and self.active != self.saved:
+            store.put('active_s', self.active)
+            self.saved = self.active
 
-    def accumulate(self,service,mono_now):
+    def accumulate(self, service, mono_now):
         """Add the interval since the previous tick when the world ran unpaused at both ends."""
-        store=service.store
-        if self.active is None:self.active=self.saved=float(store.get('active_s',0.) or 0.)
-        running=counting(store)
+        store = service.store
+        if self.active is None:
+            self.active = self.saved = float(store.get('active_s', 0.0) or 0.0)
+        running = counting(store)
         if running and self.last_tick is not None:
-            gap=mono_now-self.last_tick
-            if 0<=gap<=self.stall_s:self.active+=gap
-            elif gap>self.stall_s:
-                self.stalls+=1
-                store.event('ACTIVE_TIME_STALL','Meta',dict(gap_s=gap,active_s=self.active,counted_s=0.))
-        self.last_tick=mono_now if running else None
-        if self.active-self.saved>=self.persist_s:self.flush(store)
+            gap = mono_now - self.last_tick
+            if 0 <= gap <= self.stall_s:
+                self.active += gap
+            elif gap > self.stall_s:
+                self.stalls += 1
+                store.event('ACTIVE_TIME_STALL', 'Meta', dict(gap_s=gap, active_s=self.active, counted_s=0.0))
+        self.last_tick = mono_now if running else None
+        if self.active - self.saved >= self.persist_s:
+            self.flush(store)
 
-    def begin_cutoff(self,service,wall_now,mono_now,backstop=False):
+    def begin_cutoff(self, service, wall_now, mono_now, backstop=False):
         """Score now, pause dispatch, stop the arms; the run closes after the braking grace."""
-        self.cutoff=mono_now;self.backstopped=backstop;cutoff_sim_s=float(service.world.time)
-        self.cutoff_evaluation=service.settled_evaluation()
-        service.store.put('dispatch_paused',True);service.store.put('physics_state','paused_by_user')
-        clock=dict(active_s=self.active,clock=self.protocol['clock'])
+        self.cutoff = mono_now
+        self.backstopped = backstop
+        cutoff_sim_s = float(service.world.time)
+        self.cutoff_evaluation = service.settled_evaluation()
+        service.store.put('dispatch_paused', True)
+        service.store.put('physics_state', 'paused_by_user')
+        clock = dict(active_s=self.active, clock=self.protocol['clock'])
         if backstop:
-            wall=dict(wall_backstop_s=self.wall_backstop_s,wall_since_start_s=backstop_elapsed(service.store,wall_now))
-            service.store.put('wall_backstop',dict(wall,at=wall_now,segment=service.store.get('segment',0)))
-            service.store.event('POLICY_WALL_BACKSTOP','Meta',dict(wall_limit_s=self.protocol['wall_limit_s'],
-                sim_time_s=cutoff_sim_s,**clock,**wall))
+            wall = dict(
+                wall_backstop_s=self.wall_backstop_s,
+                wall_since_start_s=backstop_elapsed(service.store, wall_now),
+            )
+            service.store.put(
+                'wall_backstop', dict(wall, at=wall_now, segment=service.store.get('segment', 0))
+            )
+            service.store.event(
+                'POLICY_WALL_BACKSTOP',
+                'Meta',
+                dict(wall_limit_s=self.protocol['wall_limit_s'], sim_time_s=cutoff_sim_s, **clock, **wall),
+            )
         else:
-            service.store.event('POLICY_WALL_LIMIT','Meta',dict(wall_limit_s=self.protocol['wall_limit_s'],sim_time_s=cutoff_sim_s,**clock))
+            service.store.event(
+                'POLICY_WALL_LIMIT',
+                'Meta',
+                dict(wall_limit_s=self.protocol['wall_limit_s'], sim_time_s=cutoff_sim_s, **clock),
+            )
         from roboteam.runtime.tools.action_batch import cancel_collecting
-        cancel_collecting(service.store,'policy_wall_limit',cutoff_sim_s)
-        for actor in service.policy_roles:
-            service.store.signal(actor,dict(event='policy_wall_limit',text='The trial budget has ended. Stop new work; retain real action outcomes and end this native turn.'))
-        write_json(service.directory/'private/outputs/budget-cutoff.json',dict(
-            protocol=self.protocol,cutoff_unix_s=wall_now,sim_time_s=cutoff_sim_s,
-            active_s=self.active,active_time_stalls=self.stalls,
-            **({'wall_backstop':True,'needs_review':True,'wall_backstop_s':self.wall_backstop_s} if backstop else {}),
-            evaluation=self.cutoff_evaluation))
 
-    def tick(self,service,wall_now=None,mono_now=None):
-        wall_now=time.time() if wall_now is None else wall_now
-        mono_now=time.monotonic() if mono_now is None else mono_now
-        if service.store.get('lifecycle')!='running' or self.completed or self.after_score(service.store):
-            self.last_tick=None;return
+        cancel_collecting(service.store, 'policy_wall_limit', cutoff_sim_s)
+        for actor in service.policy_roles:
+            service.store.signal(
+                actor,
+                dict(
+                    event='policy_wall_limit',
+                    text='The trial budget has ended. Stop new work; retain real action outcomes and end this native turn.',
+                ),
+            )
+        write_json(
+            service.directory / 'private/outputs/budget-cutoff.json',
+            dict(
+                protocol=self.protocol,
+                cutoff_unix_s=wall_now,
+                sim_time_s=cutoff_sim_s,
+                active_s=self.active,
+                active_time_stalls=self.stalls,
+                **(
+                    {'wall_backstop': True, 'needs_review': True, 'wall_backstop_s': self.wall_backstop_s}
+                    if backstop
+                    else {}
+                ),
+                evaluation=self.cutoff_evaluation,
+            ),
+        )
+
+    def tick(self, service, wall_now=None, mono_now=None):
+        wall_now = time.time() if wall_now is None else wall_now
+        mono_now = time.monotonic() if mono_now is None else mono_now
+        if service.store.get('lifecycle') != 'running' or self.completed or self.after_score(service.store):
+            self.last_tick = None
+            return
         if self.cutoff is None:
-            self.accumulate(service,mono_now)
-            if self.active>=self.protocol['wall_limit_s']:self.flush(service.store);self.begin_cutoff(service,wall_now,mono_now)
-            elif self.backstop_due(service.store,wall_now):
-                self.flush(service.store);self.begin_cutoff(service,wall_now,mono_now,backstop=True)
-        if self.cutoff is None:return
-        active=[robot for robot,arm in service.world.arms.items() if arm.job is not None]
-        if active and mono_now-self.cutoff<self.grace_s:return
+            self.accumulate(service, mono_now)
+            if self.active >= self.protocol['wall_limit_s']:
+                self.flush(service.store)
+                self.begin_cutoff(service, wall_now, mono_now)
+            elif self.backstop_due(service.store, wall_now):
+                self.flush(service.store)
+                self.begin_cutoff(service, wall_now, mono_now, backstop=True)
+        if self.cutoff is None:
+            return
+        active = [robot for robot, arm in service.world.arms.items() if arm.job is not None]
+        if active and mono_now - self.cutoff < self.grace_s:
+            return
         if active:
             for robot in active:
-                ident=service.world.arms[robot].job
-                if ident in service.store.actions() and service.store.actions()[ident]['status'] in ('pending','running'):
-                    action=service.store.uncertain_action(ident,'Budget stop did not settle before closure grace expired')
-                    job=service.requests.get(ident)
+                ident = service.world.arms[robot].job
+                if ident in service.store.actions() and service.store.actions()[ident]['status'] in (
+                    'pending',
+                    'running',
+                ):
+                    action = service.store.uncertain_action(
+                        ident, 'Budget stop did not settle before closure grace expired'
+                    )
+                    job = service.requests.get(ident)
                     if job is not None:
-                        service.respond(job,dict(execution_status='uncertain',execution=action,run_ended=True));job['done'].set()
-            service.shutdown=True
+                        service.respond(
+                            job, dict(execution_status='uncertain', execution=action, run_ended=True)
+                        )
+                        job['done'].set()
+            service.shutdown = True
         # Capture before closing the recorder. Grace never starts a new action.
-        images={};capture_error=None
+        images = {}
+        capture_error = None
         try:
-            cameras=[c for c in ('global','global_rear') if c in service.task.get('cameras',[])]
-            if cameras:images=service.capture(cameras)
-        except Exception as error:capture_error=str(error)[:500]
-        unknown=[key for key,a in service.store.actions().items() if a['status'] in ('pending','running','uncertain')]
-        post_stop=service.world.evaluate()
+            cameras = [c for c in ('global', 'global_rear') if c in service.task.get('cameras', [])]
+            if cameras:
+                images = service.capture(cameras)
+        except Exception as error:
+            capture_error = str(error)[:500]
+        unknown = [
+            key
+            for key, a in service.store.actions().items()
+            if a['status'] in ('pending', 'running', 'uncertain')
+        ]
+        post_stop = service.world.evaluate()
         service.world.end_trial()
-        service.store.put('lifecycle','ended');service.store.put('physics_state','finished')
-        reason='wall_backstop' if self.backstopped else 'wall_limit'
-        service.store.put('termination_reason',reason)
-        service.store.event('POLICY_BACKSTOP_CLOSED' if self.backstopped else 'POLICY_BUDGET_CLOSED','Meta',
-                            dict(unresolved_action_ids=unknown,active_robots=active,stopping_overrun_wall_s=mono_now-self.cutoff))
+        service.store.put('lifecycle', 'ended')
+        service.store.put('physics_state', 'finished')
+        reason = 'wall_backstop' if self.backstopped else 'wall_limit'
+        service.store.put('termination_reason', reason)
+        service.store.event(
+            'POLICY_BACKSTOP_CLOSED' if self.backstopped else 'POLICY_BUDGET_CLOSED',
+            'Meta',
+            dict(
+                unresolved_action_ids=unknown,
+                active_robots=active,
+                stopping_overrun_wall_s=mono_now - self.cutoff,
+            ),
+        )
         service.stop_video()
-        result=dict(self.cutoff_evaluation,termination_reason=reason,budget_exhausted=not self.backstopped,
+        result = dict(
+            self.cutoff_evaluation,
+            termination_reason=reason,
+            budget_exhausted=not self.backstopped,
             task_success=bool(self.cutoff_evaluation.get('task_success') and not unknown),
-            budget_wall_limit_s=self.protocol['wall_limit_s'],post_stop_evaluation=post_stop,
-            budget_clock=self.protocol['clock'],budget_active_s=self.active,
+            budget_wall_limit_s=self.protocol['wall_limit_s'],
+            post_stop_evaluation=post_stop,
+            budget_clock=self.protocol['clock'],
+            budget_active_s=self.active,
             # Stopped by wall time, not the active-time limit: not a scored result.
-            **({'wall_backstop':True,'needs_review':True} if self.backstopped else {}),
-            unresolved_action_ids=unknown,stopping_overrun_wall_s=mono_now-self.cutoff,
-            final_observation=images,final_capture_error=capture_error)
-        write_json(service.directory/'private/outputs/evaluation.json',result)
-        service.save_evaluation_evidence('evaluation-window.json');service.export_records()
-        self.completed=True
+            **({'wall_backstop': True, 'needs_review': True} if self.backstopped else {}),
+            unresolved_action_ids=unknown,
+            stopping_overrun_wall_s=mono_now - self.cutoff,
+            final_observation=images,
+            final_capture_error=capture_error,
+        )
+        write_json(service.directory / 'private/outputs/evaluation.json', result)
+        service.save_evaluation_evidence('evaluation-window.json')
+        service.export_records()
+        self.completed = True

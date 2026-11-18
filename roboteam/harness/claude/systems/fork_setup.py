@@ -7,20 +7,27 @@ message as its prompt. Until the runtime activates the batch, a gate holds every
 call of the child (see `runner.gate_settings`). Setup opens it only after the child's
 copied history is verified; nothing here binds, activates or grants a robot.
 """
-from roboteam.harness.claude.session.native_home import history_directory
+
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import time
+from pathlib import Path
 
-from roboteam.harness.claude.systems.provenance import (ForkDiverged, copied_history_length, first_input, fork_provenance,
-                                          history, transcript_rows)
-from roboteam.runtime.tools.delegation import Delegations
+from roboteam.harness.claude.session.native_home import history_directory
+from roboteam.harness.claude.systems.provenance import (
+    ForkDiverged,
+    copied_history_length,
+    first_input,
+    fork_provenance,
+    history,
+    transcript_rows,
+)
+from roboteam.harness.claude.systems.request_identity import matches_binding
 from roboteam.launch.results.host_metrics import host_event
 from roboteam.runtime.run.setup import write_json
-from roboteam.harness.claude.systems.request_identity import matches_binding
+from roboteam.runtime.tools.delegation import Delegations
 
 ACTOR = re.compile(r'Delegate_[a-f0-9]{12}\Z')
 
@@ -45,16 +52,23 @@ def pending_history(store, parent, batch_id, actor, owner, cancel_event=None, ti
         for row in reversed(source):
             msg = row.get('message') or {}
             content = msg.get('content') if isinstance(msg, dict) else None
-            if not isinstance(content, list): continue
+            if not isinstance(content, list):
+                continue
             for item in content:
-                if not isinstance(item, dict) or item.get('type') != 'tool_use': continue
+                if not isinstance(item, dict) or item.get('type') != 'tool_use':
+                    continue
                 data = item.get('input')
-                if (isinstance(data, dict) and data.get('op') == 'delegate'
-                        and item.get('name') == 'mcp__robot__robot'
-                        and (data.get('call_id') == batch_id or matches_binding(
-                            parent.run, batch_id, parent.session_id, row, item))):
+                if (
+                    isinstance(data, dict)
+                    and data.get('op') == 'delegate'
+                    and item.get('name') == 'mcp__robot__robot'
+                    and (
+                        data.get('call_id') == batch_id
+                        or matches_binding(parent.run, batch_id, parent.session_id, row, item)
+                    )
+                ):
                     return source
-        time.sleep(.05)
+        time.sleep(0.05)
     raise ValueError('Pending delegation was not recorded in the native transcript')
 
 
@@ -65,11 +79,16 @@ def _boundary(store, parent_host, batch_id, actor, owner):
     if store.get('lifecycle') != 'running' or store.get('dispatch_paused', False):
         raise ValueError('Run is not active')
     batch = Delegations(store).batch(batch_id)
-    if batch['status'] != 'creating' or batch['claimed_by'] != owner or time.time() >= batch['setup_deadline']:
+    if (
+        batch['status'] != 'creating'
+        or batch['claimed_by'] != owner
+        or time.time() >= batch['setup_deadline']
+    ):
         raise ValueError('Delegation ownership or creation boundary changed')
     if batch['parent'] != 'Controller' or batch['source_thread_id'] != parent_host.session_id:
         raise ValueError('Parent session does not match delegation')
-    if parent_host.observe()['status'] != 'active': raise ValueError('Parent is not at an active tool turn')
+    if parent_host.observe()['status'] != 'active':
+        raise ValueError('Parent is not at an active tool turn')
     call = store.call(batch_id, 'Controller')
     if call['op'] != 'delegate' or call['status'] != 'accepted':
         raise ValueError('Parent delegation tool call is not pending')
@@ -81,9 +100,12 @@ def _boundary(store, parent_host, batch_id, actor, owner):
 
 def fork_gate(run, actor, deadline):
     """The gate of one delegate's first process: marker files and an epoch deadline."""
-    folder = Path(run).resolve()/'private/claude-forks'
-    return {'open': str(folder/(actor+'.gate-open')), 'closed': str(folder/(actor+'.gate-closed')),
-            'deadline': deadline}
+    folder = Path(run).resolve() / 'private/claude-forks'
+    return {
+        'open': str(folder / (actor + '.gate-open')),
+        'closed': str(folder / (actor + '.gate-closed')),
+        'deadline': deadline,
+    }
 
 
 def open_gate(gate):
@@ -99,8 +121,9 @@ def _digest(rows):
     return hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()
 
 
-def create_fork(store, parent_host, batch_id, actor, owner, *, host, prompt, source,
-                cancel_event=None, poll_s=.05):
+def create_fork(
+    store, parent_host, batch_id, actor, owner, *, host, prompt, source, cancel_event=None, poll_s=0.05
+):
     """Start one delegate forked at the pending call and verify its copied history.
 
     `host` is the child's unstarted host (`ClaudeSessionHost.fork_delegate`) and
@@ -109,27 +132,40 @@ def create_fork(store, parent_host, batch_id, actor, owner, *, host, prompt, sou
     claim is left `uncertain`; a fork is never retried. The result grants nothing:
     the child's gate stays closed until setup opens it after activation.
     """
-    if not isinstance(actor, str) or not ACTOR.fullmatch(actor): raise ValueError('Invalid delegate actor')
+    if not isinstance(actor, str) or not ACTOR.fullmatch(actor):
+        raise ValueError('Invalid delegate actor')
     if getattr(host, 'actor', None) != actor or getattr(host, 'fork_from', None) != parent_host.session_id:
         raise ValueError('Delegate host does not fork this parent')
-    if not isinstance(prompt, str) or not prompt.strip(): raise ValueError('A delegate message is required')
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError('A delegate message is required')
     batch = _boundary(store, parent_host, batch_id, actor, owner)
-    if not source: raise ValueError('Parent transcript has no messages')
+    if not source:
+        raise ValueError('Parent transcript has no messages')
     run = Path(parent_host.run).resolve()
     config = history_directory(run)
     digest = _digest(source)
     child = host.session_id
-    claim = run/'private/claude-forks'/(actor+'.json')
+    claim = run / 'private/claude-forks' / (actor + '.json')
     claim.parent.mkdir(parents=True, exist_ok=True)
-    entry = {'status': 'claimed', 'batch_id': batch_id, 'actor': actor, 'owner': owner,
-             'parent_session': parent_host.session_id, 'source_session': parent_host.session_id,
-             'child_session': child, 'parent_history_sha256': digest,
-             'first_input_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
-             'claimed_at': time.time(), 'tool_permissions': 'gated'}
+    entry = {
+        'status': 'claimed',
+        'batch_id': batch_id,
+        'actor': actor,
+        'owner': owner,
+        'parent_session': parent_host.session_id,
+        'source_session': parent_host.session_id,
+        'child_session': child,
+        'parent_history_sha256': digest,
+        'first_input_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
+        'claimed_at': time.time(),
+        'tool_permissions': 'gated',
+    }
     # Durable identity and intent precede the first potentially paid model call.
     with claim.open('x') as out:
         os.fchmod(out.fileno(), 0o600)
-        json.dump(entry, out); out.flush(); os.fsync(out.fileno())
+        json.dump(entry, out)
+        out.flush()
+        os.fsync(out.fileno())
     try:
         _boundary(store, parent_host, batch_id, actor, owner)
         if cancel_event is not None and cancel_event.is_set():
@@ -151,20 +187,32 @@ def create_fork(store, parent_host, batch_id, actor, owner, *, host, prompt, sou
                 raise
             except ValueError:
                 proof = copy = None
-            if proof is not None and first_input(copy[copied_history_length(source, copy):]) == prompt:
+            if proof is not None and first_input(copy[copied_history_length(source, copy) :]) == prompt:
                 break
             if time.time() >= batch['setup_deadline']:
                 raise ValueError('Delegate fork history was not verified before the setup deadline')
             time.sleep(poll_s)
         _boundary(store, parent_host, batch_id, actor, owner)
-        entry.update(status='history_verified_gated', verified_at=time.time(), proof=proof,
-                     fork_seconds=time.monotonic()-began)
+        entry.update(
+            status='history_verified_gated',
+            verified_at=time.time(),
+            proof=proof,
+            fork_seconds=time.monotonic() - began,
+        )
         write_json(claim, entry)
-        host_event(run, 'fork_created', actor=actor, session_id=child, parent=parent_host.session_id,
-                   duration_s=entry['fork_seconds'])
+        host_event(
+            run,
+            'fork_created',
+            actor=actor,
+            session_id=child,
+            parent=parent_host.session_id,
+            duration_s=entry['fork_seconds'],
+        )
         return entry
     except Exception as error:
         entry.update(status='uncertain', error_type=type(error).__name__, completed_at=time.time())
-        try: write_json(claim, entry)
-        except OSError: pass
+        try:
+            write_json(claim, entry)
+        except OSError:
+            pass
         raise

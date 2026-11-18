@@ -9,6 +9,7 @@ linear  The renderer works on a copy of the model whose colours and textures are
         finished image gets one display transform. The pictures are brighter and less heavy.
         The work per image is one table lookup; the conversion is done once per model.
 """
+
 import copy
 
 import numpy as np
@@ -18,15 +19,17 @@ DEFAULT_LOOK = DIRECT
 
 GAMMA = 2.2
 EXPOSURE = 1.12
-SHOULDER = .25  # soft roll-off towards white: x*(1+s)/(1+s*x)
-AMBIENT = .30   # headlight ambient: fill light that reaches every surface
-HEADLIGHT = .16  # headlight diffuse: a weak light from the camera
-UNSET_RGBA = (.5, .5, .5, 1.)  # a geom with this colour takes its colour from its material
+SHOULDER = 0.25  # soft roll-off towards white: x*(1+s)/(1+s*x)
+AMBIENT = 0.30  # headlight ambient: fill light that reaches every surface
+HEADLIGHT = 0.16  # headlight diffuse: a weak light from the camera
+UNSET_RGBA = (0.5, 0.5, 0.5, 1.0)  # a geom with this colour takes its colour from its material
 
-_steps = np.arange(256) / 255.
-TO_LINEAR = np.round(_steps ** GAMMA * 255).astype(np.uint8)
+_steps = np.arange(256) / 255.0
+TO_LINEAR = np.round(_steps**GAMMA * 255).astype(np.uint8)
 _lit = _steps * EXPOSURE
-TO_DISPLAY = np.round(np.clip(_lit * (1 + SHOULDER) / (1 + SHOULDER * _lit), 0, 1) ** (1 / GAMMA) * 255).astype(np.uint8)
+TO_DISPLAY = np.round(
+    np.clip(_lit * (1 + SHOULDER) / (1 + SHOULDER * _lit), 0, 1) ** (1 / GAMMA) * 255
+).astype(np.uint8)
 
 
 def _own_colour(geom_rgba):
@@ -61,8 +64,10 @@ def look_model(model, look=DEFAULT_LOOK):
     for index in range(visual.ntex):
         count = 3 if channels is None else int(channels[index])
         start = visual.tex_adr[index]
-        block = pixels[start:start + visual.tex_height[index] * visual.tex_width[index] * count].reshape(-1, count)
-        block[:, :min(count, 3)] = TO_LINEAR[block[:, :min(count, 3)]]  # alpha stays as it is
+        block = pixels[start : start + visual.tex_height[index] * visual.tex_width[index] * count].reshape(
+            -1, count
+        )
+        block[:, : min(count, 3)] = TO_LINEAR[block[:, : min(count, 3)]]  # alpha stays as it is
     visual.vis.headlight.ambient[:] = AMBIENT
     visual.vis.headlight.diffuse[:] = HEADLIGHT
     return visual

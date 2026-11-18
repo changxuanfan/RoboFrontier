@@ -1,14 +1,16 @@
 """Package the verified content-addressed evidence archive as one portable ZIP."""
+
 import os
-from pathlib import Path, PurePosixPath
 import stat
 import tempfile
 import zipfile
+from pathlib import Path, PurePosixPath
 
 
 def pack(archive, output):
     """Publish a new ZIP atomically, retaining both the collection and sources."""
     from roboteam.launch.results.archive_batch import verify
+
     archive, output = Path(archive).resolve(), Path(output).resolve()
     if output.exists() or output.is_relative_to(archive):
         raise ValueError('ZIP output must be new and outside the archive directory')
@@ -48,9 +50,15 @@ def unpack(source, output):
         for member in members:
             name = PurePosixPath(member.filename)
             mode = member.external_attr >> 16
-            if (not name.parts or name.is_absolute() or '..' in name.parts or
-                    '\\' in member.filename or ':' in name.parts[0] or
-                    stat.S_ISLNK(mode) or member.filename in names):
+            if (
+                not name.parts
+                or name.is_absolute()
+                or '..' in name.parts
+                or '\\' in member.filename
+                or ':' in name.parts[0]
+                or stat.S_ISLNK(mode)
+                or member.filename in names
+            ):
                 raise ValueError('Unsafe or duplicate ZIP member')
             if mode and stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR):
                 raise ValueError('Nonregular ZIP member')
@@ -59,9 +67,10 @@ def unpack(source, output):
             raise ValueError('Expected an evidence archive manifest')
         output.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='.rf-unpack-', dir=output.parent) as temporary:
-            staged = Path(temporary)/'archive'
+            staged = Path(temporary) / 'archive'
             archive.extractall(staged)
             from roboteam.launch.results.archive_batch import verify
+
             report = verify(staged)
             if output.exists():
                 raise FileExistsError(output)

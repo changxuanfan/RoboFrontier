@@ -1,4 +1,5 @@
 """Stable identity for non-secret model launch configuration."""
+
 import hashlib
 import json
 

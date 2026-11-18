@@ -4,20 +4,21 @@ Run with ROBOTEAM_PHYSICS_SMOKE=1; requires the R14 assets and graphics.
 No provider requests or genuine credentials are used. A failed live owner is
 left on disk for inspection rather than deleting its working directory.
 """
+
 import hashlib
 import http.server
 import json
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import threading
 import unittest
+from pathlib import Path
 
 from harness.claude.test_claude_adaptive_integration import StubModel
 from roboteam.harness.claude.run import run_task
-from roboteam.runtime.world.store import RuntimeStore
 from roboteam.launch.claude_prepare import prepare_batch
+from roboteam.runtime.world.store import RuntimeStore
 
 
 class MotionModel(StubModel):
@@ -25,18 +26,23 @@ class MotionModel(StubModel):
 
     def choose_tool(self, names, text, blocks, has_result):
         if names and 'Your current runtime role is Delegate_' in text and not has_result:
-            return {'op':'observe','data':{'cameras':['global']},'views':['global']}, 'toolu_observe'
+            return {'op': 'observe', 'data': {'cameras': ['global']}, 'views': ['global']}, 'toolu_observe'
         if names and has_result:
             ident = blocks[-1].get('tool_use_id')
             if ident == 'toolu_observe':
-                return {'op':'move','data':{'robot':'A','delta_m':[0,0,.005]}}, 'toolu_move'
+                return {'op': 'move', 'data': {'robot': 'A', 'delta_m': [0, 0, 0.005]}}, 'toolu_move'
             if ident == 'toolu_move':
-                return {'op':'return_task','data':{'outcome':'completed','result':'synthetic motion test'}}, 'toolu_return'
-        return super().choose_tool(names,text,blocks,has_result)
+                return {
+                    'op': 'return_task',
+                    'data': {'outcome': 'completed', 'result': 'synthetic motion test'},
+                }, 'toolu_return'
+        return super().choose_tool(names, text, blocks, has_result)
 
 
-@unittest.skipUnless(os.environ.get('ROBOTEAM_PHYSICS_SMOKE') == '1' and shutil.which('claude'),
-                     'Opt-in real physics smoke requires Claude CLI and scene assets')
+@unittest.skipUnless(
+    os.environ.get('ROBOTEAM_PHYSICS_SMOKE') == '1' and shutil.which('claude'),
+    'Opt-in real physics smoke requires Claude CLI and scene assets',
+)
 class PhysicsSmokeTests(unittest.TestCase):
     def test_adaptive_unscored_lifecycle_with_synthetic_model(self):
         directory = Path(tempfile.mkdtemp(prefix='claude-physics-synthetic-'))
@@ -56,14 +62,25 @@ class PhysicsSmokeTests(unittest.TestCase):
             launch.write_text(json.dumps(data))
             manifest = run / 'private/inputs/manifest.json'
             frozen = json.loads(manifest.read_text())
-            frozen['input_sha256']['private/inputs/claude.json'] = hashlib.sha256(launch.read_bytes()).hexdigest()
+            frozen['input_sha256']['private/inputs/claude.json'] = hashlib.sha256(
+                launch.read_bytes()
+            ).hexdigest()
             manifest.write_text(json.dumps(frozen))
             env = {'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'FAKE_KEY': 'synthetic'}
-            result = run_task(run, env, turn_budget_usd=.5, total_budget_usd=2,
-                                     wall_limit_s=15, startup_timeout_s=90, poll_s=.1)
+            result = run_task(
+                run,
+                env,
+                turn_budget_usd=0.5,
+                total_budget_usd=2,
+                wall_limit_s=15,
+                startup_timeout_s=90,
+                poll_s=0.1,
+            )
             self.assertFalse(result['scored'])
             self.assertEqual(result['reason'], 'wall_limit', result)
-            self.assertEqual(result['status'], 'needs_review' if result['budget_review_required'] else 'finished', result)
+            self.assertEqual(
+                result['status'], 'needs_review' if result['budget_review_required'] else 'finished', result
+            )
             self.assertTrue(result['seal']['sealed'], result)
             self.assertFalse(result['owner_alive'], result)
             self.assertEqual(result['seal']['unresolved_action_ids'], [])
@@ -83,18 +100,26 @@ class PhysicsSmokeTests(unittest.TestCase):
                 self.assertEqual(action['arm'], 'A')
             finally:
                 state.close()
+
             def contains_image(value):
-                if isinstance(value,dict):
-                    return value.get('type')=='image' or any(contains_image(v) for v in value.values())
-                return isinstance(value,list) and any(contains_image(v) for v in value)
-            self.assertTrue(any(contains_image(r.get('messages',[])) for r in MotionModel.requests),
-                            'camera image was not returned to the model endpoint')
+                if isinstance(value, dict):
+                    return value.get('type') == 'image' or any(contains_image(v) for v in value.values())
+                return isinstance(value, list) and any(contains_image(v) for v in value)
+
+            self.assertTrue(
+                any(contains_image(r.get('messages', [])) for r in MotionModel.requests),
+                'camera image was not returned to the model endpoint',
+            )
         finally:
-            server.shutdown(); server.server_close()
-            if (result is not None and result.get('owner_alive')) or (result is None and (directory/'batch/opus'/case/'private/logs/owner.log').exists()):
+            server.shutdown()
+            server.server_close()
+            if (result is not None and result.get('owner_alive')) or (
+                result is None and (directory / 'batch/opus' / case / 'private/logs/owner.log').exists()
+            ):
                 print('Possible live owner retained for review:', directory)
             else:
                 shutil.rmtree(directory)
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

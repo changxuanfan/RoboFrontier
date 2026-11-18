@@ -1,4 +1,5 @@
 import unittest
+
 from roboteam.tasks.provenance import environment_logic_manifest
 
 
@@ -11,8 +12,11 @@ class EnvironmentLogicFingerprintTests(unittest.TestCase):
         self.assertEqual(before['schema'], 'roboteam.environment-logic.v2')
         self.assertEqual(before, environment_logic_manifest({evaluator: 'before', 'unrelated.py': 'ignored'}))
         dial = {'family': 'dial'}
-        self.assertNotEqual(environment_logic_manifest({evaluator: 'x', game: 'a'}, dial)['sha256'],
-                            environment_logic_manifest({evaluator: 'x', game: 'b'}, dial)['sha256'])
+        self.assertNotEqual(
+            environment_logic_manifest({evaluator: 'x', game: 'a'}, dial)['sha256'],
+            environment_logic_manifest({evaluator: 'x', game: 'b'}, dial)['sha256'],
+        )
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

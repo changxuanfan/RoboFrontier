@@ -14,6 +14,7 @@ same directory; segment k >= 1 keeps its restore pose in
 private/inputs/segments/<k>/ and its process outputs in
 private/outputs/segments/<k>/ (docs/runs/continuation.md).
 """
+
 import argparse
 import json
 from pathlib import Path
@@ -58,17 +59,21 @@ def manifest_record():
 
 def path(run, key):
     """Absolute path of `key` in this run."""
-    return Path(run)/PATHS[key]
+    return Path(run) / PATHS[key]
 
 
 def for_store(store_path, key):
     """A host path found from the run's runtime database, for code that has only the database."""
     store = Path(store_path)
-    if store.name == 'runtime.sqlite' and store.parent.name == 'state' and store.parent.parent.name == 'private':
+    if (
+        store.name == 'runtime.sqlite'
+        and store.parent.name == 'state'
+        and store.parent.parent.name == 'private'
+    ):
         return path(store.parents[2], key)
     if key != 'admin_log':
-        raise KeyError(key+' has no location next to a standalone runtime database')
-    return store.parent/'admin-client.log'
+        raise KeyError(key + ' has no location next to a standalone runtime database')
+    return store.parent / 'admin-client.log'
 
 
 # A batch folder holds batch.json, effective-config.json, models/ and its
@@ -95,7 +100,7 @@ def batch_record():
 
 def batch_path(batch, key):
     """Absolute path of `key` in this batch."""
-    return Path(batch)/BATCH_PATHS[key]
+    return Path(batch) / BATCH_PATHS[key]
 
 
 def main():

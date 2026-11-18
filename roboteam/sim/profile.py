@@ -11,6 +11,7 @@ docs/benchmark/physics.md). What stays here is how a world steps:
   (forward_after_step): the next step solves its own constraints, so states and scores
   are identical and the step takes less time.
 """
+
 import mujoco
 
 SLEEP = int(mujoco.mjtEnableBit.mjENBL_SLEEP)
@@ -18,17 +19,17 @@ TASK_TYPES = {
     'mosaic': {'sleep': 'always'},
     'transport': {'sleep': 'idle'},
     'dial': {'sleep': 'idle'},
-    'relay': {'sleep': 'idle', 'settle_s': 30.},
+    'relay': {'sleep': 'idle', 'settle_s': 30.0},
 }
-IDLE_BEFORE_SLEEP_S = 2.
+IDLE_BEFORE_SLEEP_S = 2.0
 
 
 class IdleSleep:
     """Objects sleep only after every arm has been idle; any action restores full physics."""
 
-    def __init__(self, world, settle_s=0.):
+    def __init__(self, world, settle_s=0.0):
         self.world = world
-        self.not_before = float(world.data.time)+settle_s
+        self.not_before = float(world.data.time) + settle_s
         self.last_busy = float(world.data.time)
 
     def before_step(self):
@@ -36,7 +37,7 @@ class IdleSleep:
         if any(arm.job is not None for arm in self.world.arms.values()):
             self.last_busy = now
             model.opt.enableflags &= ~SLEEP
-        elif now >= self.not_before and now-self.last_busy >= IDLE_BEFORE_SLEEP_S:
+        elif now >= self.not_before and now - self.last_busy >= IDLE_BEFORE_SLEEP_S:
             model.opt.enableflags |= SLEEP
 
 
@@ -45,8 +46,10 @@ def forward_after_step(world):
     options = world.model.opt
     iterations = options.noslip_iterations
     options.noslip_iterations = 0
-    try: mujoco.mj_forward(world.model, world.data)
-    finally: options.noslip_iterations = iterations
+    try:
+        mujoco.mj_forward(world.model, world.data)
+    finally:
+        options.noslip_iterations = iterations
 
 
 def settings(task_type):
@@ -59,4 +62,4 @@ def attach(world):
     if task_type['sleep'] == 'always':
         world.model.opt.enableflags |= SLEEP
         return None
-    return IdleSleep(world, task_type.get('settle_s', 0.))
+    return IdleSleep(world, task_type.get('settle_s', 0.0))

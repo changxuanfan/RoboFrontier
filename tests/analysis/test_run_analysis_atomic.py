@@ -1,10 +1,10 @@
 """Atomic-step rules on small synthetic runs; no recorded run data."""
 
 import json
-from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from pathlib import Path
 
 from roboteam.analysis import atomic
 from roboteam.analysis import metrics as M
@@ -51,9 +51,7 @@ def record(task_type, actions, **suite_kw):
 
 
 def angle_lines(samples):
-    return [
-        json.dumps(dict(result=dict(sim_time_s=t, private_angles_deg=list(a)))) for t, a in samples
-    ]
+    return [json.dumps(dict(result=dict(sim_time_s=t, private_angles_deg=list(a)))) for t, a in samples]
 
 
 class AtomicStepTests(unittest.TestCase):

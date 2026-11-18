@@ -1,6 +1,15 @@
 """Extract one run's actions, evaluator timeline, tokens and activity spans into a compact JSON."""
 
-import collections, contextlib, json, lzma, os, re, shutil, sqlite3, tempfile, datetime
+import collections
+import contextlib
+import datetime
+import json
+import lzma
+import os
+import re
+import shutil
+import sqlite3
+import tempfile
 from pathlib import Path
 
 from . import motion as trial_motion
@@ -140,7 +149,10 @@ def actions(db, cutoff_unix=None):
     """Actions, run meta and message times; nothing that started after `cutoff_unix`."""
     if db is None:
         return None, None, None
-    within = lambda t: cutoff_unix is None or t is None or t <= cutoff_unix
+
+    def within(t):
+        return cutoff_unix is None or t is None or t <= cutoff_unix
+
     A = []
     for actor, value in db.execute('select actor,value from actions'):
         v = json.loads(value)
@@ -458,7 +470,8 @@ def suite(run, cutoff_sim=None, motion='always'):
     return S
 
 
-TOK = lambda: dict(input=0, cached=0, write=0, output=0)
+def TOK():
+    return dict(input=0, cached=0, write=0, output=0)
 
 
 CLOSERS = ('cli_turn_completed', 'turn/completed', 'robot_tool_completed', 'robot_tool_failed')
@@ -751,7 +764,12 @@ def claude_late_usage(run, H, cutoff_unix=None):
         u = x['usage']
         i, c, w, o = (
             num(u.get(k)) or 0
-            for k in ('input_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens', 'output_tokens')
+            for k in (
+                'input_tokens',
+                'cache_read_input_tokens',
+                'cache_creation_input_tokens',
+                'output_tokens',
+            )
         )
         tot = [tot[0] + i + c + w, tot[1] + c, tot[2] + w, tot[3] + o]
         count += 1
@@ -774,8 +792,8 @@ def _transcripts(run):
         src = 'codex-transcript'
         TS = re.compile(r'"timestamp":"([^"]+)"')
         base = idx.rsplit('/transcripts/', 1)[0] + '/transcripts/'
-        I = json.loads(run.read(idx)).get('threads') or []
-        for th in I:
+        listed = json.loads(run.read(idx)).get('threads') or []
+        for th in listed:
             if str(th.get('actor', '')).startswith('snapshot'):
                 continue
             f = None
@@ -818,9 +836,7 @@ def _transcripts(run):
                             state = 'model'
                             since = t
         return spans, src
-    names = [
-        n for n in run.files if '/projects/' in n and n.endswith('.jsonl') and 'subagents/' not in n
-    ]
+    names = [n for n in run.files if '/projects/' in n and n.endswith('.jsonl') and 'subagents/' not in n]
     if names:
         src = 'claude-native'
         for n in names:
@@ -854,37 +870,37 @@ def extract_run(sel, root, cache_dir=None, motion='always'):
     come from (see MOTION_MODES)."""
     run = Run(sel['k'], root, cache_dir)
     try:
-        O = dict(sel=sel, kind=run.kind, nfiles=len(run.files), parse_errors=[])
+        summary = dict(sel=sel, kind=run.kind, nfiles=len(run.files), parse_errors=[])
         with runtime_db(run) as db:
             cut = trial_cutoff(run, db)
             A, M, msgT = actions(db, cut and cut['unix'])
-        O['cutoff'] = cut
-        O['actions'] = A
-        O['meta'] = M
-        O['msgT'] = msgT
-        O['suite'] = suite(run, cut and cut['sim'], motion)
-        O['host'] = H = host(run, cut and cut['unix'])
+        summary['cutoff'] = cut
+        summary['actions'] = A
+        summary['meta'] = M
+        summary['msgT'] = msgT
+        summary['suite'] = suite(run, cut and cut['sim'], motion)
+        summary['host'] = H = host(run, cut and cut['unix'])
         if H and H['harness'] == 'claude':
             late, count = claude_late_usage(run, H, cut and cut['unix'])
             H['tok_after_results'] = dict(zip(('input', 'cached', 'write', 'output'), late), requests=count)
             for k, v in zip(('input', 'cached', 'write', 'output'), late):
                 H['tok'][k] += v
         sp, src = transcripts(run, cut and cut['unix'])
-        O['spans'] = sp
-        O['span_src'] = src
+        summary['spans'] = sp
+        summary['span_src'] = src
         for b in ('evaluation.json', 'interruption-evaluation.json', 'runtime.json'):
             n = run.find('private/outputs/' + b, 'outputs/' + b)
             if n:
                 try:
-                    O[b] = json.loads(run.read(n))
+                    summary[b] = json.loads(run.read(n))
                 except Exception as e:
-                    O[b] = {'error': repr(e)[:100]}
-                    O['parse_errors'].append(n)
-        ev = O.get('evaluation.json')
+                    summary[b] = {'error': repr(e)[:100]}
+                    summary['parse_errors'].append(n)
+        ev = summary.get('evaluation.json')
         if ev:
-            O['evaluation.json'] = {
+            summary['evaluation.json'] = {
                 k: v for k, v in ev.items() if not isinstance(v, (dict, list)) or k in ('evaluation',)
             }
-        return O
+        return summary
     finally:
         run.close()
