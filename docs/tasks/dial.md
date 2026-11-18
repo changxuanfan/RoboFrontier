@@ -40,8 +40,3 @@ Every new stable valid configuration is a trial, including ones passed through d
 changes do not undo it. Collisions and support losses before the unlock stay recorded as
 process events. `roboteam/tasks/dial.py` holds the feedback state machine;
 `roboteam/tasks/evaluate.py` (`sample_dial`) decides validity.
-
-## Presentation
-
-Videos play Dial at 10× and 30 fps (`speedup` in `benchmark/release.json`), each station looping
-on its own clock.

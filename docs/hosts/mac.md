@@ -1,8 +1,9 @@
 # Running on a Mac
 
-A Mac runs a batch as a user launchd job, so the batch outlives the terminal or agent session
-that started it. [`docs/hosts/examples/mac.toml`](examples/mac.toml) is a starting
-site TOML: copy it to an untracked file (here `site.toml`) and edit it.
+A Mac runs a batch as a user launchd job (launchd is the macOS service manager), so the batch
+outlives the terminal or agent session that started it.
+[`docs/hosts/examples/mac.toml`](examples/mac.toml) is a starting site TOML: copy it to an
+untracked file (here `site.toml`) and edit it.
 
 ## 1. Prerequisites
 
@@ -35,7 +36,7 @@ Fill in only the variable your model reads (`models.json`, `env_key`):
 | Claude `opus` (default), `haiku` | `ANTHROPIC_API_KEY` in `.env` |
 | Claude `opus_subscription`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` in `.env` (from `claude setup-token`) |
 | Codex `sol` (default), `luna` | `OPENAI_API_KEY` in `.env` |
-| Codex `sol_subscription`, `luna_subscription` | No variable: log in once with `CODEX_HOME=~/.roboteam/codex-home codex login` |
+| Codex `sol_subscription`, `luna_subscription` | No variable: log in once with `CODEX_HOME=~/.roboteam/codex-home codex login`, and set `runtime.codex_home_scope = "shared"` in the site TOML |
 
 Keep credentials in `.env`, not exported in the shell. `prepare`, `run` and `continue` load
 `.env` themselves; the launchd job file stores no credential, and the Claude token reaches the
@@ -51,31 +52,31 @@ variable is needed:
 .venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id>
 ```
 
-The check drives each real CLI against a local stub (no model calls) and records a receipt
-beside the build. `prepare` refuses a build that has not passed it. Check again after changing
-a CLI version. Details: [policy environment](policy-environment.md).
+The check drives each installed CLI against a local stub (no model calls) and records a receipt
+beside the build. With one CLI installed, add `--harness claude` or `--harness codex`.
+`prepare` refuses a build that has not passed the check. Check again after changing a CLI
+version. Details: [policy environment](policy-environment.md).
 
 ## 5. Local check and preflight
 
 ```sh
 .venv/bin/roboteam --config site.toml doctor          # CLI, sandbox, renderer; exits 2 on failure
 .venv/bin/roboteam --config site.toml plan            # tasks, model, policy_environment; no model calls
-.venv/bin/roboteam --config site.toml preflight --confirm-spend --max-budget-usd 1   # Claude
-.venv/bin/roboteam --config site.toml preflight --confirm-spend                      # Codex
+.venv/bin/roboteam --config site.toml preflight --confirm-spend --max-budget-usd 1
 ```
 
-`preflight` makes a few paid calls. For Claude it runs the basic and the blocked-parent
-prechecks and writes receipts under `<runs root>/engineering/claude-precheck/` and
-`claude-blocked-precheck/`; for Codex it writes
+`preflight` makes a few paid calls. `--max-budget-usd` is for Claude Code; leave it out for
+Codex. For Claude Code it runs two checks and writes receipts under
+`<runs root>/engineering/claude-precheck/` and `claude-blocked-precheck/`; for Codex it writes
 `<runs root>/engineering/model-compatibility/<model>/report.json`. `run` refuses a batch
 without receipts matching its model and CLI version.
 
 ## 6. Prepare and run
 
-A running batch checks its source for changes and aborts every run, for good, when one appears
-(`INTEGRITY_ABORT`; [continuation](../runs/continuation.md)). Run batches from a checkout nothing edits
-while they run, a detached worktree of `main` outside the repository for example, with the data
-root pointing where the receipts and results belong:
+A running batch checks its source for changes. When a source file changes, it aborts every run
+for good (`INTEGRITY_ABORT`; such a run cannot continue). Run batches from a checkout that
+nothing edits while they run, for example a detached worktree of `main` outside the
+repository, with the runs root pointing where the receipts and results belong:
 
 ```sh
 git worktree add --detach ~/Repos/RoboTeam-run main
@@ -95,7 +96,7 @@ export ROBOTEAM_RUNS_ROOT=~/Repos/RoboTeam/runs
 runs in the current process instead of launchd. `run` refuses a batch that is not freshly
 prepared; `run --continue` picks up a batch whose supervisor died. Each run gets 24 h of
 active time from START and is scored at the cutoff or when the team finishes. A run that stops
-unexpectedly continues by itself once; see [continuation](../runs/continuation.md).
+unexpectedly continues by itself once; see [continuing a stopped run](../runs/continuation.md).
 
 The launchd job:
 
@@ -104,8 +105,8 @@ The launchd job:
 - writes `service.plist`, `metadata.json`, `stdout.log` and `stderr.log` into
   `<batch>/control/durable/` (a continuation into `control/durable/continue-<n>/`).
 
-A network outage and a used-up usage limit pause the run in place and resume it by themselves
-([continuation](../runs/continuation.md#time)).
+A network outage and a used-up usage limit pause the run in place, and it resumes by itself
+([time and pauses](../runs/time.md)).
 
 ## 7. Results
 

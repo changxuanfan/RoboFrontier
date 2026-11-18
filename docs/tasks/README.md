@@ -1,12 +1,14 @@
 # The tasks
 
-Four task types, each at three team sizes and three difficulty levels: 36 tasks, named
-`<task type>-<team size>-l<level>` (`transport-small-l1`, `dial-large-l3`). In the code and the
-file names a task is also called a *case*, and its `scale` holds its team size, arms and workload.
-The release, [`benchmark/release.json`](../../benchmark/release.json) with its
-`release_id`, names every case's scene, public task and task materials by hash; each case lives
-in `benchmark/<task-type>/<case>/`, and each task type's cases are listed in
-`benchmark/<task-type>/catalog.json`.
+Four task types, each at three team sizes (`small`, `medium`, `large`) and three levels (`l1`
+to `l3`): 36 tasks, named `<task type>-<team size>-l<level>`, for example `transport-small-l1`
+and `dial-large-l3`. Team size adds arms and work to divide. Level makes the same job physically
+or visually harder. In the code and the file names a task is also called a *case*.
+
+The release, [`benchmark/release.json`](../../benchmark/release.json), names every case's
+scene, public task and task materials by hash. Each case lives in
+`benchmark/<task type>/<case>/`, and `benchmark/<task type>/catalog.json` lists a task type's
+cases ([the released files](../../benchmark/README.md)).
 
 | Task type | Cases | What the team does | Level 1 → 3 | Guide |
 | --- | --- | --- | --- | --- |
@@ -17,35 +19,40 @@ in `benchmark/<task-type>/<case>/`, and each task type's cases are listed in
 
 ## What every case shares
 
-- **What a policy sees.** The case's public task (`public/task.json`: rules, objective, cameras
+- **What the agents see.** The case's public task (`public/task.json`: rules, objective, cameras
   and their mounts, initial geometry, stock, orders or targets, completion rules), the task
   materials in `public/inputs/task/` (the Mosaic target image; Dial previews, camera
-  calibration and table geometry) and the task guide (`prompts/guides/<task-type>.md`).
-  While running it sees timestamped RGB images from the cameras it asks for, robot
-  proprioception and action feedback. It never sees the scene file, the evaluator or live
-  object state.
+  calibration and table geometry) and the task guide (`prompts/guides/<task type>.md`).
+  While running they see timestamped RGB images from the cameras they ask for, the state of
+  their arms (joint angles, hand pose, gripper opening) and the result of each action. They
+  never see the scene file, the evaluator or the state of objects. The
+  [ground-truth observation](../benchmark/rules.md#ground-truth-observation) setting replaces
+  the images with the simulator's state.
+- **Where it stands.** Each task runs at its own desk in one factory hall. The hall and the
+  desks of the other 35 tasks appear in the images but stand still and collide with nothing.
 - **Physics.** The release physics is written into each scene file, and every action states its
   speed, acceleration or force within the limits of a real Franka Panda ([physics](../benchmark/physics.md)).
   Only robot actuators and real contacts change the world: no resets, welds or state writes.
 - **Time.** 24 hours of active time from START; outages, usage-limit pauses and host sleep do
   not count: when the infrastructure pauses a run, the world, the clock and the agents stop
-  together. The policy is not told the limit ([time](../runs/continuation.md#time)).
+  together. The agents are not told the limit ([time and pauses](../runs/time.md)).
 - **Scoring.** The world is scored when the team calls `finish` or at the 24 h cutoff, after
   every arm is stopped and the world has run 1.5 s with the arms still. The score is the
   terminal outcome (`terminal_outcome_v2`); collisions, drops and other process events are
   recorded beside it and do not veto it. Relay's handover rule is part of its completion
-  ([protocol](../benchmark/rules.md#terminal-outcome)).
+  ([terminal outcome](../benchmark/rules.md#terminal-outcome)).
 - **Continuing.** A stopped run continues as the same trial, never a new attempt
-  ([continuation](../runs/continuation.md)).
+  ([continuing a stopped run](../runs/continuation.md)).
 
 ## Cameras
 
-Every camera is fixed in the world. A task has 14 to 53 of them, in four groups.
+Every camera is fixed in the world. A task has 14 to 53 of them: two at each arm, four
+overviews, and close-ups that depend on the task type.
 
 | Group | Names | What it shows |
 | --- | --- | --- |
 | At the arms | `A_front`, `A_side`, … | Two per arm: the table in front of the arm, and the arm from its side |
-| Overviews | `global`, `global_side`, `global_rear`, `top` | The whole desk from the front, the side, the rear and above |
+| Overviews | `global`, `global_side`, `global_rear`, `top` | The whole desk from the front and from the side; `global_rear` is `global` turned half a turn about the table centre; `top` looks straight down |
 | Transport close-ups | `board_A_close`, …; from Level 2 `plug_close`, `socket_close` | One per target board; one example each of an item's blades and a board's slots |
 | Mosaic close-ups | `assembly_01`, … | The build area, in two to four parts |
 | Relay close-ups | `payload_close`, `payload_01_close`, … | The start area, and each timber where it starts |

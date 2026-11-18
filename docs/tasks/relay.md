@@ -20,8 +20,7 @@ it counts. Final placement in GOAL is free: timbers may touch or stack.
 Tables are 0.8 m high. Arms grasp the red timber, never the pendant, its eyes or shaft.
 
 The public task lists every camera's fixed world position, `wxyz` orientation and vertical field
-of view in `static_camera_mounts`, the form Transport uses; `scripts/release/build_release.py public`
-reads the values from the compiled scene.
+of view in `static_camera_mounts`, as Transport does.
 
 ## Completion
 
@@ -34,9 +33,10 @@ A timber is complete when, at scoring:
 - it has a counted airborne handover (`relay-airborne-handover-v1`), reported as
   `airborne_handover_met`.
 
-The case is complete when every timber is. Each released `task.json` carries the rule under
-`completion`, `roboteam/tasks/relay_goal_fraction.py` measures the fraction and the `Relay` class in
-`roboteam/tasks/evaluate.py` tracks custody, handovers and drops.
+The task is complete when every timber is. The public task's `completion` block carries the
+thresholds (`timber_inside_fraction_min: 0.7`, `required_airborne_handover: true`).
+`roboteam/tasks/relay_goal_fraction.py` measures the fraction, and the `Relay` class in
+`roboteam/tasks/evaluate.py` tracks who holds each timber, its handovers and its drops.
 
 ## Handovers
 
@@ -65,9 +65,4 @@ and recorded as process events; they do not veto the score.
   the drop lift it clear again; only handovers after that lift count.
 
 A continued run keeps each timber's handovers, drops and holders from the moment it stopped
-([continuation](../runs/continuation.md)).
-
-## Presentation
-
-Videos play Relay at 20× and 30 fps (`speedup` in `benchmark/release.json`), each table looping
-on its own clock; neighboring tables in one frame are not synchronized.
+([continuing a stopped run](../runs/continuation.md#known-approximations)).

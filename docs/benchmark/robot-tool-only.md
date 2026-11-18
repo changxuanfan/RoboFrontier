@@ -1,10 +1,10 @@
 # Robot-only runs
 
-`policy.tools = "robot_only"` (or `--tools robot_only`) prepares runs whose policy roles
-have the bound robot tool and nothing else: no shell, no code execution and no file tool. It is
-the comparison for the default `full` mode, where each harness also gives its own file and shell
-tools. Everything else is the same: task inputs, robot operations, physics, scoring, time
-budget, context window and compaction.
+`policy.tools = "robot_only"` (or `--tools robot_only`) prepares runs whose agents have the
+robot tool and nothing else: no shell, no code execution and no file tool. It is the comparison
+for the default `full` mode, where each harness also gives its own file and shell tools.
+Everything else is the same: task inputs, robot operations, physics, scoring, time limit,
+context window and compaction.
 
 ```sh
 .venv/bin/roboteam prepare --output runs/policy/<batch> --harness claude --tools robot_only
@@ -20,17 +20,16 @@ budget, context window and compaction.
 | A returned delegate's report | Claude: inline in `work`; Codex: read the file | inline in `work` on both harnesses |
 | Shell, Python, scripts, scratch files, cropping or measuring images in code | yes | no |
 
-The two operations exist only in a robot-only run; a full run refuses them, and its inputs are
-byte for byte what they were before the mode existed. Every harness's roles receive the same
-first message in a robot-only run.
+The two operations exist only in a robot-only run; a full run refuses them. In a robot-only
+run the roles of both harnesses receive the same first message.
 
 ## How each harness is restricted
 
 - **Claude Code** starts with `--tools ""`, pre-allows only `mcp__robot__robot`, loads no user,
   project or local settings, and keeps the fork gate hook. No file settings are rendered.
-- **Codex** switches its own tools off with the feature flags and model catalog the Landlock tool
-  worker uses, and registers `robot` as the only dynamic tool. `runtime.codex_tool_backend` is
-  `native` on every host, since there is nothing to confine. A robot-only model needs its own
+- **Codex** switches its own tools off with its feature flags and model catalog, and registers
+  `robot` as the only tool. `runtime.codex_tool_backend` is `native` on every host, since there
+  is no shell or file tool to confine. A robot-only model needs its own
   `roboteam preflight --tools robot_only`: the receipt is tied to the launch model and
   is kept beside the full one, under `<model>.robot_only/`.
 
@@ -44,8 +43,9 @@ installed CLIs against a local stub model and read the tool list the model is se
 turn, a fork and a resumed session: it is the robot tool alone, and the harnesses' own tools are
 refused.
 
-## Not supported yet
+## Limits
 
-The Slurm subscription route for Codex (`slurm.auth_mode = "subscription"`) requires the
-`landlock-v1` backend and its job gateway, which expect the file tools; preparation refuses
-that combination with `robot_only`.
+Codex subscription jobs on Slurm (`slurm.auth_mode = "subscription"`) require the `landlock-v1`
+tool backend, which a robot-only run does not use. Preparation refuses that combination.
+`--observation ground_truth` with `robot_only` is refused too: a ground-truth role needs its
+code tools.

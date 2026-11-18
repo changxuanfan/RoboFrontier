@@ -7,6 +7,9 @@ node-local scratch, prepares and runs the batch there, and after the step ends c
 verified evidence ZIP back into the submission folder. Live databases, sessions and temporary
 files never touch shared storage.
 
+Words used here: *staging* is copying the frozen submission onto the node, and *stage-out* is
+copying the results back. *Egress* is the job's outbound network path to the model provider.
+
 [`docs/hosts/examples/slurm.toml`](examples/slurm.toml) is a starting site TOML (36
 runs, Codex subscription): copy it to an untracked file (here `site.toml`) and edit it.
 
@@ -14,8 +17,8 @@ runs, Codex subscription): copy it to an untracked file (here `site.toml`) and e
 
 - A Linux login node and compute nodes that see the same shared storage: the checkout, its
   `.venv`, the harness CLIs and the policy environment. The job installs nothing.
-- `sbatch`, `srun`, `squeue` and `scancel` on `PATH`. On the cluster used here run
-  `module load slurm` first in every shell.
+- `sbatch`, `srun`, `squeue` and `scancel` on `PATH` (on some clusters after
+  `module load slurm`).
 - Slurm process tracking (cgroup) that follows every descendant of a job step, detached CLI
   processes included.
 - Node-local scratch: `SLURM_TMPDIR` or `slurm.scratch_root`. The job accepts only ext2/ext3,
@@ -57,8 +60,6 @@ modes:
   CLI's environment); use a subscription-token model.
 - Secret values never enter the job script, source snapshot, configuration or returned ZIP.
 
-<a id="subscription-jobs"></a>
-
 ### Codex credential store
 
 `slurm.credential_store` names a directory you own with mode 0700, outside every checkout,
@@ -69,7 +70,7 @@ Provision it once:
    `CODEX_HOME=<new empty dir> codex -c 'cli_auth_credentials_store="file"' login`.
 2. Copy only its `auth.json` into the store with mode 0600.
 
-From then on only native Codex inside a job refreshes the login. The job takes a nonblocking
+From then on only Codex inside a job renews the login. The job takes a nonblocking
 `flock` lease, seeds a node-local home from the latest `current.json` generation and writes
 each refresh back atomically. Jobs on the same store are serialized with
 `--dependency=singleton`. A wrong owner, an outside change to the generation or a failed write
@@ -93,10 +94,9 @@ system = "adaptive"
 parallel = 36
 
 [render]
-device = "nvidia"            # set it: "auto" would resolve on the login node, not the GPU node
+device = "nvidia"            # the default "auto" gives "nvidia" when slurm.gpus >= 1, else "cpu"
 
 [runtime]
-codex_tool_backend = "landlock-v1"
 codex_home_scope = "task"    # API mode; "job" with slurm.auth_mode = "subscription"
 codex_home = ""
 
@@ -130,17 +130,17 @@ srun --time=60 --cpus-per-task=4 .venv/bin/python -m scripts.release.check_polic
   /shared/roboteam-env/policy-env-<id> --scratch /var/tmp
 ```
 
-Then, in the shell that runs `slurm-submit`, export the build itself and the shared roots
-policies must not read:
+Then, in the shell that runs `slurm-submit`, export the base folder and the shared folders
+that the agents must not read:
 
 ```sh
-export ROBOTEAM_POLICY_ENV=/shared/roboteam-env/policy-env-<id>
+export ROBOTEAM_POLICY_ENV_BASE=/shared/roboteam-env
 export ROBOTEAM_SHARED_DENY_ROOTS='["/shared"]'
 ```
 
-The job prepares its batch on the node and reads only `ROBOTEAM_POLICY_ENV`;
-`ROBOTEAM_POLICY_ENV_BASE` is not applied there, and without the variable `run` refuses the
-prepared runs. Details: [policy environment](policy-environment.md).
+`sbatch` hands both variables to the job, which prepares its batch on the node. Without
+`ROBOTEAM_POLICY_ENV_BASE` (or `ROBOTEAM_POLICY_ENV`, which names one build) the job's
+preparation refuses. Details: [policy environment](policy-environment.md).
 
 ## 6. Local check and preflight
 
@@ -152,11 +152,7 @@ srun --time=10 --gpus=1 .venv/bin/roboteam --config site.toml doctor   # on a co
 | --- | --- | --- |
 | Codex API | `.venv/bin/roboteam --config site.toml preflight --confirm-spend` on the login node | A passed `<runs root>/engineering/model-compatibility/<model>/report.json`, copied into the submission |
 | Codex subscription | The same command inside an allocation (`srun ...`), which needs node-local scratch and, with the Mac route, the connector running | That report with a `job_gateway_sha256` matching the current job gateway |
-| Claude | `... preflight --confirm-spend --max-budget-usd 1` | Nothing; see the limit below |
-
-**Limit: Claude batches.** The submission carries only the Codex receipt. A Claude job's `run`
-looks for its precheck receipts in the node-local `runs/` and finds none, so `slurm-submit`
-cannot start a Claude batch as it stands.
+| Claude Code | `.venv/bin/roboteam --config site.toml preflight --confirm-spend --max-budget-usd 1` | The two passed receipts for the model and CLI version, copied into the submission |
 
 ## 7. Submit
 
@@ -174,7 +170,8 @@ holds:
 | `launcher/` | The frozen staging code, independent of later checkout edits |
 | `policy-assets.tar.gz` | The verified asset archive |
 | `effective-config.json` | The resolved configuration, without secrets |
-| `provider-report.json` | The Codex compatibility receipt |
+| `provider-report.json` | Codex: the preflight receipt |
+| `claude-precheck.json`, `claude-blocked-precheck.json` | Claude Code: the two preflight receipts |
 | `job.sbatch`, `submission.json` | Job script; commit, file hashes, credential variable name |
 | `queue.json` | The job ID, after `--queue` |
 
@@ -191,7 +188,7 @@ cat runs/submissions/my-batch/status.json          # supervisor JSON, refreshed 
 scancel --signal=USR1 --batch JOB_ID                # orderly stop: STOP markers, seal, collect
 ```
 
-`roboteam status`, `stop` and `continue` do not apply to a submission folder; the batch
+`roboteam status`, `stop` and `continue` do not apply to a submission folder: the batch
 lives on the node. At `stop_warning_s` before the time limit Slurm sends the same USR1. A plain
 `scancel`, node failure, out-of-memory kill or SIGKILL can prevent stage-out.
 
@@ -216,7 +213,7 @@ runs/submissions/my-batch/
     └── stage-out.json          # SHA-256 of every returned file, and the outcome
 ```
 
-When collection fails, `results/` holds the stopped raw run folders and native session JSONL
+When collection fails, `results/` holds the stopped raw run folders and the session JSONL files
 instead (no Codex auth, config or state), marked `needs_review`. Stage-out never deletes the
 node-local folder; if it fails, keep the node-local path it reports and ask the site about
 scratch retention. A collected ZIP is not a claim that runs succeeded: read each run's
@@ -260,14 +257,12 @@ Once the job is `RUNNING`, keep this running on the Mac (from a checkout whose
   on the same route. A stale heartbeat, changed relay instance or an outage longer than the
   grace fences the job: it stops the harness and seals the runs, and a restarted tunnel cannot
   un-fence it. Mac shutdown, logout and network loss are therefore dependencies of this route.
-- `connect --ssh-config FILE` takes a private OpenSSH config for this route only, for example
-  to bind the SSH connection to one interface past a VPN with
+- `connect --ssh-config FILE` takes a private OpenSSH config for this route only. To make the
+  SSH connection leave through one network interface, for example past a VPN, give it
   `ProxyCommand python3 -I /path/proxy.py tcp-pipe --host %h --port %p --interface en0`.
 
 ## Limits
 
-- **Claude batches cannot start through `slurm-submit`** (no precheck receipts in the job; see
-  section 6).
 - **No continuation by hand** of a finished job's runs.
 - **No GPU or renderer fallback.** A missing device or driver mismatch is an error; the CUDA
   device index need not equal the EGL device index.

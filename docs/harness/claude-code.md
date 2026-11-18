@@ -1,11 +1,12 @@
 # Claude Code harness
 
-Every policy role is a native Claude Code session (`claude -p`, continued with `--resume`) with
-the robot tool served over MCP by `roboteam/harness/claude/robot_mcp.py`. All four
-agent systems run: `adaptive`, `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is Claude Code 2.1.316
-(`roboteam/runtime/run/versions.py`); runs turn its self-update off (`DISABLE_AUTOUPDATER`). A run
-starts only with passed precheck receipts for its model and that CLI version
-([Preflight and receipts](#preflight-and-receipts)). What both harnesses share is in the
+In the Claude Code harness every role is a Claude Code session: one `claude -p` process per
+turn, continued with `--resume`. The robot tool is served to each session by an MCP server,
+`roboteam/harness/claude/robot_mcp.py`. All four systems run: `adaptive`, `single-agent`,
+`hierarchical` and `decentralized`. The pinned CLI is Claude Code 2.1.316
+(`roboteam/runtime/run/versions.py`); runs turn its self-update off (`DISABLE_AUTOUPDATER`). A
+run starts only with passed preflight receipts for its model and that CLI version
+([preflight and receipts](#preflight-and-receipts)). What both harnesses share is in the
 [harness overview](README.md); the [Codex guide](codex.md) has the same sections.
 
 ## Install
@@ -17,11 +18,11 @@ model calls:
 npm install --global @anthropic-ai/claude-code@2.1.316
 claude --version
 .venv/bin/roboteam plan --harness claude --level 1 --min-arms --parallel 4
-.venv/bin/roboteam prepare --harness claude --render native \
-  --level 1 --min-arms --parallel 4 --output runs/policy/claude-l1
+.venv/bin/roboteam prepare --harness claude --level 1 --min-arms --parallel 4 \
+  --output runs/policy/claude-l1
 ```
 
-Use `--render native` on macOS, `--render nvidia` or `--render cpu` on Linux. Preparation
+`--render` may be left out: the default picks the renderer for the host. Preparation
 restores pinned assets when needed, freezes the run and starts no world or model session; it
 also freezes the Bash isolation chosen on this host, so prepare on the host that will run the
 batch. The Codex CLI is not needed. [`docs/hosts/examples/mac.toml`](../hosts/examples/mac.toml)
@@ -29,16 +30,12 @@ is a complete Mac example.
 
 ## Authentication
 
-For the experimental GPT model / ChatGPT plan ablation, see
-[Claude Code with ChatGPT plan use](gpt-in-claude-code.md). This is a separate
-loopback protocol adapter, not Claude subscription authentication or a native
-Anthropic-supported non-Claude model route.
-
 Models are the `claude` section of `models.json`; the
 [authentication matrix](README.md#authentication-matrix) lists each one's credential. Put
 credentials in `.env` ([credentials file](README.md#credentials-file)). An API-key model passes
 only its own key and endpoint to the CLI; setting sources and unrelated MCP servers are turned off
-on the command line in every mode.
+on the command line in every mode. The experimental model `sol_chatgpt_plan` runs GPT-6.1 Sol
+through a local adapter and has its own guide: [GPT in Claude Code](gpt-in-claude-code.md).
 
 ### Subscription token
 
@@ -61,7 +58,7 @@ work with this token; Remote Control and claude.ai connectors do not. See
 
 ### Saved login
 
-`haiku_subscription` and `haiku_subscription_directory` use a native Claude Code login. Name its
+`haiku_subscription` and `haiku_subscription_directory` use a login made with Claude Code itself. Name its
 configuration directory in `ROBOTEAM_CLAUDE_HOME` before preparing:
 
 ```sh
@@ -69,7 +66,7 @@ export ROBOTEAM_CLAUDE_HOME="$HOME/.claude"
 claude auth login --claudeai
 claude auth status --json
 .venv/bin/roboteam prepare --harness claude --model haiku_subscription \
-  --render native --cases transport-small-l1 --output runs/policy/haiku-login
+  --cases transport-small-l1 --output runs/policy/haiku-login
 ```
 
 `haiku_subscription` requires `$HOME/.claude` with `CLAUDE_CONFIG_DIR` unset. Claude Code keeps a
@@ -89,16 +86,17 @@ session files are not rewritten, so treat a whole run directory as private.
 
 ## Isolation
 
-Permission rules confine the file tools; a second layer confines Bash. Both come from the run's
-frozen access table (`roboteam/runtime/sandbox/access.py`), which closes the checkout, the home
-directory, other runs and shared storage. Preparation freezes the Bash layer as `bash_isolation`
+Each run freezes an access table (`roboteam/runtime/sandbox/access.py`): the list of folders the
+agents' tools may read or write. It closes the checkout, the home folder, other runs and shared
+storage. Claude Code's permission rules keep the file tools inside it; a second layer keeps the
+Bash tool inside it. Preparation freezes the Bash layer as `bash_isolation`
 in `private/inputs/claude.json`, chosen by `roboteam/harness/shared/landlock.py` (`choose`):
 
 | Host | `bash_isolation` | Mechanism |
 | --- | --- | --- |
 | macOS | `claude-sandbox` | Claude Code's sandbox (Seatbelt) |
 | Linux where `bwrap` and `socat` exist and bubblewrap can create namespaces | `claude-sandbox` | Claude Code's sandbox (bubblewrap) |
-| Other Linux, such as a RunPod pod under Docker's default seccomp profile | `landlock-v1` | Every Bash command runs through `CLAUDE_CODE_SHELL_PREFIX`, which restricts itself with Landlock and seccomp to what the table grants, denies TCP connections and binds, then runs the command with bash |
+| Other Linux, such as a container that forbids user namespaces | `landlock-v1` | Every Bash command runs through `CLAUDE_CODE_SHELL_PREFIX`, which restricts itself with Landlock and seccomp to what the table grants, denies TCP connections and binds, then runs the command with bash |
 
 `landlock-v1` needs Landlock ABI 4 (Linux 6.7) and libseccomp; preparation fails when neither
 mode is available. Landlock does not cover UDP, named Unix sockets or, before ABI 6, signals.
@@ -106,8 +104,7 @@ Without user namespaces `/dev/shm` stays closed, so Python process pools fail in
 shell; other processes stay visible but their environments cannot be read. Only Bash is
 confined: the CLI and the robot MCP are harness processes, and the prefix runs exactly the run's
 own robot MCP command lines unconfined. `tests/harness/claude/test_claude_landlock.py` checks the
-confinement on a Linux host with Landlock. On RunPod, put the Node.js and CLI folders on `PATH`
-([RunPod guide](../hosts/linux.md)).
+confinement on a Linux host with Landlock ([Linux guide](../hosts/linux.md)).
 
 ## Preflight and receipts
 
@@ -124,13 +121,14 @@ Without `--confirm-spend` it makes no call and reports `not_run`. `--max-budget-
 and caps each of the two checks by CLI-reported cost, not provider billing.
 
 1. **Basic** (`harness/claude/checks/preflight.py`): on one session, a text reply; a robot `observe`
-   call for the `top` view whose returned image color (one of six, chosen at random) the model
-   must name; a resumed turn; and a tool-free fork of the idle session that must recall the color
-   and have a matching transcript prefix. Receipt:
+   call that returns an image of two halves in two colors, chosen at random from four, which
+   the model must name; a resumed turn; and a fork of the idle session, without tools, that must
+   recall the colors and whose transcript must start with the parent's. Receipt:
    `<runs_root>/engineering/claude-precheck/<id>/receipt.json`.
 2. **Blocked parent** (`harness/claude/checks/blocked_precheck.py`), run only when the basic one
-   passed: initialize a parent, block it at an image tool call, fork while it is blocked, verify
-   the history prefix, release the parent and check its image answer. Receipt:
+   passed. This is how an `adaptive` Controller creates delegates: start a parent session, hold
+   it at an image tool call, fork it while it waits, check that the fork starts with the parent's
+   history, release the parent and check its image answer. Receipt:
    `<runs_root>/engineering/claude-blocked-precheck/<id>/receipt.json`.
 
 `--smoke-only` runs the basic check without the fork and skips the blocked one; it does not make
@@ -162,39 +160,40 @@ model the provider served.
 inventory, claims each run once, starts an independent physical owner per run and supervises the
 role sessions, at most `batch.parallel` runs at a time. The startup timeout is
 `batch.startup_timeout_s` (600 s). Ctrl-C or SIGTERM stops the batch like `stop`: queued runs do
-not start, active runs stop their model turns and seal. `stop` writes stop markers; check the seal
-and status afterwards. SIGKILL or node loss can leave processes behind: inspect before relaunching.
+not start, and active runs stop their model turns and close their worlds. `stop` writes stop
+markers; check `status` and each run's `seal.json` afterwards. SIGKILL or the loss of a machine
+can leave processes behind: inspect before starting the batch again.
 
-| Status | Meaning |
-| --- | --- |
-| `stopped_before_start` | Stop arrived before the run launched |
-| `stopped` | Stop skipped unstarted runs or sealed active ones |
-| `closed` | Every run closed; says nothing about task success |
-| `needs_review` | Unresolved execution, sealing or cost evidence; overrides normal closure |
-| `claim_without_status_needs_review` | A launch claim exists without a status file |
-| `supervisor_lost_needs_review` | The supervisor was lost; claims stay and replay is refused |
+| Status | Of | Meaning |
+| --- | --- | --- |
+| `stopped_before_start` | A run | The stop arrived before the run started |
+| `closed` | A run | The world closed in order with no unresolved action; says nothing about task success |
+| `needs_review` | A run | Any other end: an unresolved action, a failed close, missing cost or score records, or the wall backstop |
+| `closed` | The batch | Every run closed |
+| `stopped` | The batch | A stop was requested and no run needs review |
+| `needs_review` | The batch | At least one run needs review |
 
 A clean closure after `finish` needs a readable private `evaluation.json` with a boolean
-`task_success` (`false` is a normal unsuccessful run) and drained native turns. `stop_requested`
-and `claim_record_present` are file snapshots; `owner_pid` is not a liveness check. A run that
-reaches the 48 h [wall backstop](../runs/continuation.md#wall-backstop) is stopped, reported
+`task_success` (`false` is a normal unsuccessful run). A run that
+reaches the 48 h [wall backstop](../runs/time.md#wall-backstop) is stopped, reported
 with `ended_by: wall_backstop` and left `needs_review`; if the world has not ended it 150 s after
 the backstop, the supervisor ends it.
 
 ## Sessions and delegation
 
-`ClaudeSessionHost` (`session_host.py`) owns one role's native session: a host-generated session
-ID, a fixed robot MCP connection, one turn at a time, explicit resume and cancellation. An unknown
+`ClaudeSessionHost` (`session/session_host.py`) owns one role's session: a session ID the host
+generates, a fixed connection to the robot MCP server, one turn at a time, explicit resume and
+cancellation. An unknown
 turn outcome never starts another turn automatically. `robot public_image` returns only reference
 images listed by the public task, including `target.reference_image` for Mosaic.
 
-**Adaptive delegate fork.** The host claims the delegation, binds it to the Controller's one
-unanswered `delegate` tool call ([request binding](README.md#new-requests-queries-and-delegation))
-and pins the parent history at that call. Each child is then created by its first turn,
+**Delegate fork (`adaptive`).** The host takes the delegation, matches it to the Controller's
+one unanswered `delegate` tool call ([how](README.md#new-requests-queries-and-delegation))
+and records the parent's history up to that call. Each child is then created by its first turn,
 `--resume CONTROLLER --fork-session --session-id CHILD`, with the frozen delegate message as the
-prompt and the role's ordinary tools; the child UUID is persisted first. Until the batch is
-activated a PreToolUse hook (`runner.gate_settings`) holds every tool call on gate files under
-`private/claude-forks/`, and the runtime refuses robot operations of an inactive delegate. Setup
+prompt and the role's ordinary tools; the child's ID is saved first. Until the delegation is
+activated, a Claude Code hook that runs before every tool call (`runner.gate_settings`) holds
+the child's tool calls, and the runtime refuses robot operations of an inactive delegate. Setup
 verifies that each child's transcript copies the pinned parent history (or its verified compacted
 projection) with no later parent row and that its first input is the delegate message; an
 unrecognized compaction layout fails. It then binds scope, activates the batch and opens the
@@ -211,11 +210,11 @@ host stays refused.
 
 ## Standing teams
 
-`hierarchical` and `decentralized` give every initial role its own native session with the
-same robot MCP, the runtime's mailbox, permissions, action IDs and wake leases. No standing Worker
-is an Adaptive fork.
+`hierarchical` and `decentralized` give every initial role its own session with the
+same robot tool, message delivery, permissions and action IDs. A Worker of these systems is
+never a fork of another session.
 
-| Mode | Initial sessions | Authority |
+| System | Initial sessions | Authority |
 | --- | --- | --- |
 | `hierarchical` | One Controller plus one Worker per arm | Workers move only their own arms; messages route through the Controller, which may propose team finish |
 | `decentralized` | One Worker per arm | Workers move their own arms, message each other and may propose team finish |
@@ -232,15 +231,15 @@ acknowledgement blocks bootstrap; a lost wake acknowledgement marks the wake unc
 dispatch without resending. Stop cancels every role's turn, then seals.
 
 ```sh
-.venv/bin/roboteam prepare --harness claude --system hierarchical --render native \
+.venv/bin/roboteam prepare --harness claude --system hierarchical \
   --level 1 --min-arms --parallel 2 --output runs/policy/claude-standing-l1
 ```
 
 ## Recovery
 
 - **Capacity errors**: bounded same-session resume ([capacity recovery](README.md#capacity-recovery)).
-- **Network outage**: in a run whose clock is `active_time_v1`, a turn that failed within a
-  network-outage or Slurm egress pause (30 s either side) with an `api_error` of
+- **Network outage**: a turn that failed within a
+  [network-outage pause](../runs/time.md#network-outage-pause) (30 s either side) with an `api_error` of
   `connection_failed`, `no_response`, `stream_idle_timeout` or `computer_slept` and no HTTP
   status, or with no stated cause, is resent once per role and pause with `--resume` and the
   frozen `network-resume.md`, after the role's robot work settles and the runtime grants the
@@ -248,7 +247,7 @@ dispatch without resending. Stop cancels every role's turn, then seals.
   type within it, holds the run for review (`NETWORK_CONTINUATION_UNCERTAIN`).
 - **Unexpected stop**: the run continues by itself once
   ([continuation](../runs/continuation.md#when-a-run-continues),
-  [Claude task recovery](../runs/continuation.md#claude-task-recovery)).
+  [Claude task recovery](../runs/recovery.md#claude-task-recovery)).
 - Ordinary nonzero exits, unknown actions, uncertain fork creation and unknown identity need
   review. Nothing replays a physical action.
 
@@ -275,10 +274,9 @@ same 267,000 tokens as Codex.
 ## Evidence and reports
 
 Stopped collection copies every role-bound transcript and its tool-result and sidecar files,
-motion, action, message and wake records and reports; roles come from runtime metadata, so peer
-mode needs no Controller. Real-time MP4 is off by default (`render.record_realtime_video`); with
-it on, FFmpeg and ffprobe are required and sealing checks the stream. See
-[evidence storage](../runs/evidence-storage.md) and
+motion, action, message and wake records and reports. Video recording is off by default
+(`render.record_realtime_video`); with it on, FFmpeg and ffprobe are required and sealing checks
+the stream. See [evidence storage](../runs/evidence-storage.md) and
 [reports](README.md#reports-and-metric-definitions). A reported model name is an observation:
-`all_requested_models_verified` stays false. A prepared run freezes its source beside its inputs;
-prepare again after source changes.
+`all_requested_models_verified` stays false. A prepared run freezes its source beside its
+inputs; prepare again after source changes.

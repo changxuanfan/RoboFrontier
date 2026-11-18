@@ -1,26 +1,23 @@
-# Running on RunPod (plain Linux)
+# Running on Linux
 
-A RunPod pod, or any Linux host without Slurm, runs a batch as a background service started by
-`run --durable`. [`docs/hosts/examples/linux.toml`](examples/linux.toml) is a
-starting site TOML (four level-3 runs, Codex subscription, CPU rendering): copy it to an
-untracked file (here `site.toml`) and edit it.
+A Linux workstation, server or cloud container (for example a RunPod pod) without Slurm runs a
+batch as a background service started by `run --durable`.
+[`docs/hosts/examples/linux.toml`](examples/linux.toml) is a starting site TOML (four level-3
+runs, Codex subscription, CPU rendering): copy it to an untracked file (here `site.toml`) and
+edit it. The commands below keep data under `/workspace`, the persistent volume of a RunPod
+pod; use any persistent folder outside your home folder and `/tmp`.
 
 ## 1. Prerequisites
 
-- A pod with a persistent volume (`/workspace`) and outbound access to GitHub, PyPI, npm and the
-  model API.
-- Linux 6.7 or newer (Landlock ABI 4) with `libseccomp`. A pod forbids user namespaces, so
-  Claude Code's bubblewrap sandbox cannot run and both harnesses use Landlock + seccomp
-  (`landlock-v1`).
+- Persistent storage and outbound access to GitHub, PyPI, npm and the model API.
+- A sandbox for the agents' shell. Where unprivileged user namespaces work, `bwrap` and `socat`
+  let Claude Code use its own bubblewrap sandbox. Otherwise (most cloud containers forbid user
+  namespaces) the host needs Linux 6.7 or newer (Landlock ABI 4) with `libseccomp`, and the
+  runs use this project's `landlock-v1` sandbox. Codex on Linux always uses `landlock-v1`.
 - Python 3.12, [uv](https://docs.astral.sh/uv/) (with `uvx`), Node.js, `ffmpeg`, and the harness
   CLI at its pinned version (`roboteam/runtime/run/versions.py`: Claude Code 2.1.316, Codex
   0.165.0).
-- Put the Node.js and CLI folders on `PATH` in every shell that prepares, runs or checks (on the
-  author's pod `/workspace/tools/node/bin` and `/workspace/tools/npm/bin`):
-
-  ```sh
-  export PATH=/workspace/tools/node/bin:/workspace/tools/npm/bin:$PATH
-  ```
+- The Node.js and CLI folders on `PATH` in every shell that prepares, runs or checks.
 
 ## 2. Install
 
@@ -46,23 +43,23 @@ themselves and the background service is started without them.
 
 ## 4. Site settings
 
-The example already sets these; keep them in your `site.toml`:
+The example sets these; keep them in your `site.toml`:
 
 ```toml
 [render]
-device = "cpu"                       # Mesa llvmpipe; the world limits it to two threads per run
-
-[runtime]
-codex_tool_backend = "landlock-v1"   # the only Codex backend the Linux policy check admits
+device = "cpu"                       # Mesa's software renderer; "nvidia" with an NVIDIA GPU
 
 [paths]
-runs_root = "/workspace/roboteam-runs"   # receipts, exports and caches on the persistent volume
+runs_root = "/workspace/roboteam-runs"   # runs, receipts and exports on persistent storage
 ```
+
+Without `render.device`, the default picks `nvidia` when the host has an NVIDIA GPU and `cpu`
+otherwise. The CPU renderer uses two threads per run.
 
 ## 5. Policy environment
 
-Build it on the pod, outside `/tmp` and the checkout, and name the base in every shell that
-prepares runs:
+Build it on the host, outside `/tmp` and the checkout, and name the base folder in every shell
+that prepares runs:
 
 ```sh
 export ROBOTEAM_POLICY_ENV_BASE=/workspace/roboteam-env
@@ -71,17 +68,17 @@ export ROBOTEAM_POLICY_ENV_BASE=/workspace/roboteam-env
   --scratch /workspace/roboteam-runs
 ```
 
-`prepare` refuses without a checked build. The check passes for both harnesses on a pod (48 CPUs,
-kernel 6.8, Landlock ABI 4), with process pools as a recorded known limit (below). Details:
-[policy environment](policy-environment.md).
+`prepare` refuses without a checked build. With one CLI installed, add `--harness claude` or
+`--harness codex` to the check. Details: [policy environment](policy-environment.md).
 
 ## 6. Local check and preflight
 
 ```sh
 .venv/bin/roboteam --config site.toml doctor
-.venv/bin/roboteam --config site.toml preflight --confirm-spend                      # Codex
-.venv/bin/roboteam --config site.toml preflight --confirm-spend --max-budget-usd 1   # Claude
+.venv/bin/roboteam --config site.toml preflight --confirm-spend
 ```
+
+For Claude Code, add `--max-budget-usd 1`.
 
 Receipts go under `<runs root>/engineering/`; `run` refuses a batch without matching ones.
 
@@ -96,15 +93,17 @@ B=/workspace/roboteam-runs/policy/my-batch
 .venv/bin/roboteam continue $B --durable   # continue stopped runs by hand, in the background
 ```
 
-Without a systemd user manager (RunPod containers have none), `--durable` starts a `setsid`
-daemon in its own session; with one, a transient user service (`roboteam/launch/local/linux.py`).
+With a systemd user manager, `--durable` starts a transient user service. Without one (most
+containers have none), it starts a `setsid` daemon in its own session
+(`roboteam/launch/local/linux.py`).
 `<batch>/control/durable/` holds `service.json`, `stdout.log` and `stderr.log`; a second
 submission of the same batch is refused. Without `--durable`, `run` and `continue` run in the
 current shell and end with it.
 
 Each run gets 24 h of active time from START and is scored at the cutoff or when the team
 finishes. A run that stops unexpectedly continues by itself once; outages and usage limits
-pause it in place ([continuation](../runs/continuation.md)).
+pause it in place ([time and pauses](../runs/time.md),
+[continuing a stopped run](../runs/continuation.md)).
 
 ## 8. Results
 
@@ -120,5 +119,5 @@ Runs stay under the batch folder; when the batch ends it is collected into
 - **Processes stay visible.** Landlock cannot hide other processes from a policy shell; their
   environments cannot be read, traced or signalled.
 - **The access table closes `/workspace`** as a whole; a run's own `public/` and `workspace/`
-  and the policy environment are the only places a policy reaches there.
-- No GPU rendering unless the pod has an NVIDIA GPU and `render.device = "nvidia"`.
+  and the policy environment are the only places the agents reach there
+  ([what the agents can reach](policy-environment.md#what-a-policy-can-reach)).

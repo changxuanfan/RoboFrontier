@@ -38,8 +38,3 @@ public task's `completion` block holds the thresholds:
 
 A placement that is later disturbed stops counting. `roboteam/tasks/evaluate.py`
 (`mosaic_candidates`) implements these checks.
-
-## Presentation
-
-Videos play Mosaic at 30× and 30 fps (`speedup` in `benchmark/release.json`), each station
-looping on its own clock.

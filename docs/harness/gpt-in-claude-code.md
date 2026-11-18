@@ -1,246 +1,248 @@
-# Experimental Claude Code / GPT ablation
+# GPT in Claude Code (optional adapter)
 
-This adapter is RoboTeam code, not an official OpenAI or Anthropic connector.
-Anthropic does not support routing Claude Code to non-Claude models. A passing
-preflight qualifies only the measured combination; it does not establish parity
-with native Codex or native Claude.
+This adapter lets the Claude Code harness run GPT-6.1 Sol. You need it only for one comparison:
+the same model in the other harness. Ordinary Claude Code runs (`opus`) and ordinary Codex runs
+(`sol`) do not use it.
 
-The native Claude Code CLI owns tool execution, persistent sessions, compaction,
-and verified adaptive forks. A loopback adapter translates Anthropic Messages to
-the public OpenAI Responses API. It does not run the Codex agent loop.
-Every upstream inference request selects `gpt-6.1-sol` with high reasoning effort
-and `store: false`, using Responses WebSocket events. Unsupported content is rejected explicitly.
-Completed tool calls are released only after `response.completed`; failed,
-incomplete, interrupted, or wrong-model streams do not emit `message_stop`.
+It is a local process, the *gateway*, that listens on `127.0.0.1`. Claude Code sends it the
+requests it would send to Anthropic's Messages API, and the gateway translates them into
+requests to OpenAI's Responses API and translates the answers back. The Claude Code CLI still
+runs the tools, keeps the sessions, compacts and forks. The gateway does not run Codex's agent
+loop.
 
-## Authentication and trust
+The adapter is RoboTeam code. Anthropic does not support routing Claude Code to models that are
+not Claude. A passed preflight admits runs of this exact combination; it does not make the
+results equivalent to Codex with GPT-6.1 Sol, or to Claude Code with Claude.
 
-Install the optional [adapter dependencies](../../roboteam/harness/adapters/gpt_in_claude/requirements.txt),
-then run the standalone sign-in helper:
+| Limit | |
+| --- | --- |
+| Model | `gpt-6.1-sol` only, at effort `high`, with `store: false`, over the Responses WebSocket interface. There is no fallback to another model, account or credential |
+| OpenAI account | A ChatGPT plan that you authorize for this use (the default), or an OpenAI API key (`--auth-mode openai_api_key`) |
+| Gateway check | Unlike [Claude in Codex](claude-in-codex.md), the harness does not check that the gateway is running before a run. Check it yourself (step 2) |
 
-```sh
-python -m pip install -r roboteam/harness/adapters/gpt_in_claude/requirements.txt
-python roboteam/harness/adapters/gpt_in_claude/auth.py login --credential-file /private/plan/account.json
-```
+## Use it
 
-Follow the printed official OpenAI sign-in link. It registers this self-hosted
-application and requests explicit `chatgpt.tokens.use.direct` permission. It does
-not grant access to existing ChatGPT conversation history. The implementation
-checks state, PKCE, ID-token signature, issuer, audience, expiry, nonce, and granted
-scopes before saving credentials. Credential files must be outside the checkout
-and evidence roots, owner-only on Unix or protected by an equivalent Windows ACL.
+### 1. Install and sign in
 
-For a self-hosted VM, transfer the authorized credential record over SSH, preserve
-the VM's own stable host ID, and let that VM alone own later token refreshes. Do
-not keep two active refreshers sharing rotating credentials. No credential,
-callback code, prompt, image, or tool-result body belongs in transport logs.
-
-The adapter binds only to `127.0.0.1` and requires a random local gateway key.
-Claude Code receives that local key, never the OpenAI OAuth token. In model
-receipts, `auth_mode: api_key` describes this local Messages-client authentication;
-the upstream provider is `openai_chatgpt_plan`, not OpenAI API-key billing.
-The full-mode sandbox must deny access to credentials and loopback connections.
-An authorization or quota failure never switches to an API key, GitHub token,
-another model, or another account.
+The adapter's dependencies are optional and kept out of the benchmark's own environment:
 
 ```sh
-python roboteam/harness/adapters/gpt_in_claude/gateway.py \
-  --credential-file /private/plan/account.json \
-  --key-file /private/plan/gateway-key.json --port 18461 \
-  --log /private/plan/transport-metadata.jsonl
+python3 -m venv .venv-gateway
+.venv-gateway/bin/python -m pip install -r roboteam/harness/adapters/gpt_in_claude/requirements.txt
+mkdir -p -m 700 ~/.roboteam/chatgpt-plan
+.venv-gateway/bin/python roboteam/harness/adapters/gpt_in_claude/auth.py login \
+  --credential-file ~/.roboteam/chatgpt-plan/account.json
 ```
 
-## Experiment model entry and validation
+Follow the printed OpenAI sign-in link. It registers this self-hosted application and asks for
+the `chatgpt.tokens.use.direct` permission. It does not give access to your ChatGPT
+conversation history. Before saving the credential, the helper checks the state, PKCE, the ID
+token's signature, issuer, audience, expiry and nonce, and the granted scopes.
+`auth.py status --credential-file FILE` shows the saved state.
 
-### Explicit API-key handoff
+Keep the credential file outside every checkout and evidence folder, readable by you only.
+`~/.roboteam/` is closed to the agents by the access table. Let one machine own the credential:
+two gateways that refresh the same rotating token will invalidate each other.
 
-`--auth-mode openai_api_key --credential-file /private/api/key.txt` selects OpenAI
-API billing explicitly. The file contains only the API key. This mode never reads
-subscription OAuth credentials or refreshes tokens, and never falls back to another
-credential. It retains the same Responses model, WebSocket transport and native
-Claude harness. Keep API secrets within a host credential deny root; Claude receives
-only the local gateway key. API access and limits need a live preflight.
+To bill an OpenAI API key instead, skip the sign-in, put the key alone in a file and start the
+gateway with `--auth-mode openai_api_key --credential-file FILE`. This mode never reads or
+refreshes a ChatGPT plan credential.
 
-For a stopped subscription experiment, preserve its original frozen model entry and
-session provenance. Run the gateway with `--replay-file` pointing at its existing
-protected replay database, and record the operator-authorized billing handoff
-separately before continuing the same run directories. The model entry name does not
-override the gateway's explicit authentication mode; health and every transport record
-report the actual mode. Validate the encrypted
-history under the new credential before resuming physical work. A rejected history
-is a stop, never permission to discard original reasoning or start a fresh task.
+### 2. Start the gateway
 
-WebSocket diagnostics retain close codes, hashed close reasons, connection age,
-request-send/response-start flags and request finish times. They never retain raw
-peer close reasons, which may contain arbitrary sensitive text. A disconnected
-response still releases no partial tool call and is not silently resubmitted.
+```sh
+.venv-gateway/bin/python roboteam/harness/adapters/gpt_in_claude/gateway.py \
+  --credential-file ~/.roboteam/chatgpt-plan/account.json \
+  --key-file ~/.roboteam/chatgpt-plan/gateway-key.json \
+  --log ~/.roboteam/chatgpt-plan/transport-metadata.jsonl
+curl -s http://127.0.0.1:18461/health
+```
 
-With `--native-session-index /private/native-session-index.json`, an existing root
-session can also replay the native `No response requested.` resume control. The
-host-written, owner-only index binds each session ID to its original transcript.
-Acceptance requires an exact synthetic non-error event in that transcript and no more
-occurrences than the transcript records. A new fork can register dynamically only
-through its private host claim: the claimed parent prefix digest, copied native
-history, child first input and gated setup status must all verify. The parent may
-have advanced since the fork; verification uses the pinned prefix, not its latest
-history. Uncertain claims, altered history and unknown sessions remain rejected.
-Forks additionally require a recorded provider response in the verified lineage.
-A registered root may carry a native control from a cancelled first turn before
-any provider output exists. Transcript flushes get a bounded wait; failure to
-verify still rejects the request. This does not replace original output items.
+| Option | Meaning |
+| --- | --- |
+| `--credential-file` | Required. The saved sign-in, or the API key file with `--auth-mode openai_api_key` |
+| `--key-file` | Required. Holds the local gateway key; created with a random key on first start |
+| `--auth-mode chatgpt_plan\|openai_api_key` | Which OpenAI credential is used, default `chatgpt_plan`. `/health` and every log line report the mode in use |
+| `--port` | Loopback port, default 18461 (the one in `models.json`) |
+| `--log` | A JSONL file with one line of metadata per request |
+| `--replay-file` | Where the gateway keeps the model's original outputs; default `response-replay.sqlite` beside the credential file ([below](#original-outputs-are-replayed-exactly)) |
+| `--native-session-index` | A file, written by the host, that maps session IDs to their transcripts ([below](#sessions-and-forks)) |
+| `--tokens-per-minute N` | For an API project with a token-per-minute limit: admit requests through one queue shared by all sessions ([below](#errors-and-limits)) |
 
-For API projects with a measured token-per-minute limit, `--tokens-per-minute`
-enables one FIFO admission window shared by all native sessions. At a 300k context,
-each dispatched request conservatively reserves 428k tokens (300k input plus the
-model's 128k output capacity) for sixty seconds, with at most four in-flight model
-requests. Completed retries consume no new reservation. Waiting is cancellable,
-does not hold an upstream connection or another native session's lock, and keeps
-the Messages SSE alive. It can slow parallel tasks; it does not change their tools,
-model context, outputs or fork ancestry. Leave room for other consumers of the same
-API project; this process cannot reserve quota against external clients.
+### 3. Give Claude Code the local key
 
-`sol_chatgpt_plan` is a Claude Code model entry. Its local key is supplied as
-`ROBOTEAM_CHATGPT_GATEWAY_KEY`, with the actual OAuth credential retained only
-by the adapter. Full tools, model effort and adaptive system are frozen through
-the ordinary benchmark configuration. The context budget is 300,000 with a
-267,000-token compaction threshold. The host also declares
-`CLAUDE_CODE_MAX_CONTEXT_TOKENS=300000`: an auto-compact override alone is capped
-by the native client's assumed model window (200k for the unknown GPT ID in CLI
-2.1.316). Preflight must report `modelUsage.contextWindow=300000`. A native CLI
-test with a local-only stub checks that 170k does not compact and that compaction
-remains enabled above 267k. A larger account window does not change this budget.
+Claude Code receives only the local gateway key, never the OpenAI credential. Add this line to
+the checkout's `.env`, with the value of `"key"` in the key file:
 
-The host supplies only a managed `modelPricing` table for the otherwise unknown
-GPT model ID. Dollar figures use short-context OpenAI API-equivalent list rates
-for native budget bookkeeping; they are estimates, not subscription invoices,
-and do not enable API-key billing. Long-context pricing and subscription quota
-accounting are separate from these estimates. Actual upstream usage is retained
-in the transport metadata.
+```text
+ROBOTEAM_CHATGPT_GATEWAY_KEY=<the key>
+```
 
-Transport metadata stores only hashes of instructions, tools and input-prefix
-checkpoints, plus upstream usage and any returned cache diagnostics. Local hashes
-identify changes in request history; they do not prove server-side KV-cache reuse.
-Caching keeps the provider's implicit defaults. Measure total cached input divided
-by total input, alongside native compaction records and request-prefix hashes.
+### 4. Preflight, prepare and run
 
-## Exact output replay and cache diagnostics
+```sh
+.venv/bin/roboteam preflight --harness claude --model sol_chatgpt_plan --max-budget-usd 1 --confirm-spend
+.venv/bin/roboteam prepare --harness claude --model sol_chatgpt_plan --level 1 --min-arms \
+  --parallel 4 --output runs/policy/claude-gpt-l1
+.venv/bin/roboteam run runs/policy/claude-gpt-l1
+```
 
-The gateway saves each completed Responses `output` array in an owner-only
-`response-replay.sqlite` beside the credential file, before releasing a tool call
-to Claude Code. This is private protocol state containing original model text,
-tool arguments and encrypted reasoning; it is not a metadata log. Keep the file
-and its SQLite sidecars inside the credential deny root and out of collections,
-archives and version control. Back it up with the corresponding private session
-state if those sessions must be resumed.
+The preflight is the ordinary Claude Code one
+([preflight and receipts](claude-code.md#preflight-and-receipts)), and it must report
+`modelUsage.contextWindow=300000`. Build and check the
+[policy environment](../hosts/policy-environment.md) as for any run. Do not reuse receipts from
+another model.
 
-When Claude Code sends assistant history back, the gateway checks its visible
-projection against that record and restores the original output items. This
-preserves function-argument strings byte for byte, assistant `phase`, item IDs,
-message boundaries, refusal blocks, namespace/call linkage and encrypted reasoning.
-The gateway does not replace those items with reconstructed Messages equivalents.
-The original argument string is also used in tool-call SSE deltas.
+## How it works
 
-Matching first uses the complete preceding input identity. After native compaction
-or a fork changes that prefix, only a uniquely matching stored output projection
-can be restored; the changed binding is recorded in `replay_prefix_changes`.
-Modified, missing or ambiguous history is an explicit protocol error before any
-upstream request. It is never silently repaired, guessed or sent as a lossy
-fallback. In particular, old sessions created before this replay database existed
-cannot regain their original parameter strings or metadata retroactively. Keep
-their evidence, but use a fresh validated native session for this adapter revision.
+### The model entry
 
-The gateway keeps one authenticated WebSocket per native session. After exact
-history verification, an unchanged settings fingerprint and input prefix allow
-`previous_response_id` plus only the new input items. Each fork starts its own
-connection with the complete verified inherited history; parent and child turns
-remain concurrent, including a blocked parent-tool fork. Forks do not share an
-ID across connections or serialize behind their parent. This can incur a cold
-start for a new branch.
+`sol_chatgpt_plan` in the `claude` section of `models.json`:
 
-Connection state commits only after durable original-output storage. An identical
-retry can reuse that completed response without another inference or duplicate
-usage. Cancellation, incomplete responses and ambiguous network failures discard
-connection state and never release a partial tool call. Only an explicit
-`previous_response_not_found` before response creation triggers one bounded full
-history replay. Restart, token rotation, connection lifetime, changed settings and
-compaction rebuild context from verified local history. A response ID is never
-reused on another connection. Native session files and the private replay database
-remain necessary for durable resume; WebSocket state alone is not durable storage.
+| Field | Value |
+| --- | --- |
+| `model`, `effort` | `gpt-6.1-sol`, `high` |
+| `provider` | `openai_chatgpt_plan` |
+| `transport_revision` | `websocket-incremental-v4`; part of the receipt, so a receipt from another adapter revision does not admit a run |
+| `base_url` | `http://127.0.0.1:18461`; plain HTTP is accepted only for this provider and only on loopback |
+| `env_key` | `ROBOTEAM_CHATGPT_GATEWAY_KEY`: the local gateway key, not an OpenAI credential |
+| `context_capacity` | 300,000 |
+| `managed_settings.modelPricing` | Prices for the model ID, which Claude Code does not know |
 
-The comparison ID remains local diagnostic metadata; it is not substituted
-for conversation state and cache controls are not forced on an unsupported route.
-No change of credentials, model or billing route is allowed. Metadata includes
-transport mode, connection generation, reset reason, sent/full input-item counts,
-the actual previous response ID, restored response IDs,
-`input_transformations` (reasoning removals), service tier and the upstream request
-ID. Missing diagnostics remain unknown; they are not reported as cache hits.
-Completed upstream usage remains recorded even when local replay-state persistence
-or delivery fails.
+In receipts, `auth_mode: api_key` describes how Claude Code authenticates to the gateway (with
+the local key). It does not mean OpenAI API-key billing.
 
-Offline checks exercise exact argument/phase round trips, refusal and message
-boundaries, modified/ambiguous histories, concurrent branches and durable restart.
-Pinned native CLI tests use a loopback-only provider fixture for a real tool call,
-resume after gateway restart, a native fork and the 300k compaction boundary. They
-make no OpenAI inference requests. Passing them verifies the transport invariants,
-not an upstream cache hit rate. A live preflight and cache measurement are still
-required before claiming the earlier cache loss is resolved.
-The model's `transport_revision: websocket-incremental-v4` participates in its existing
-fingerprint, so preflight receipts from the older lossy adapter do not qualify
-this revision. Updating code does not start or continue stopped experiments.
+**Context.** The run uses the same 300,000-token window and 267,000-token compaction limit as
+every Codex model. The host also sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=300000`, because Claude
+Code 2.1.316 assumes a 200,000-token window for a model ID it does not know, and that would cap
+the compaction limit.
 
-The host passes the actual native `--session-id`/`--resume` identity and fork source
-through loopback-only `X-RoboTeam-Session` and `X-RoboTeam-Fork-Source`
-headers. These headers never go upstream. The replay database resolves history
-only inside that session and its recorded ancestors; identical plaintext such as
-`READY` in an unrelated session cannot select another session's original output.
-Both one-shot and persistent launches set these headers. A fork's ancestry cannot
-be rebound, and the native transcript/fork provenance checks remain unchanged.
-At a blocked parent-tool fork, Claude Code can append its own `No response
-requested.` assistant control message. This is not a provider output. The adapter
-accepts that exact native control with recorded fork ancestry and, when a native
-session index is configured, a transcript witness and verified host fork claim.
-The control may precede the fork's first restored provider output. It is retained
-as an explicit control and
-records `native_controls`. It does not whitelist arbitrary untracked assistant
-text or alter the native fork provenance checks. A real-CLI local-provider fixture
-tests this blocked-parent path independently of the ordinary idle fork.
+**Cost.** The dollar figures Claude Code reports come from the `modelPricing` table: OpenAI's
+API list rates for short contexts. They are estimates for the benchmark's cost records, not a
+subscription invoice. The usage OpenAI actually reports is kept in the gateway log.
 
-Claude Code may insert a tool schema's declared defaults into persisted arguments
-(for example, Edit adds `replace_all: false`). Each response privately records the
-original advertised schema defaults. Replay accepts only added fields that exactly
-match those declarations, with strict boolean typing; removed fields, changed
-supplied values and undeclared additions are rejected. The upstream output and
-argument string remain unchanged. Metadata identifies responses needing this
-native default completion without logging arguments. The pinned real-CLI test
-executes both Read and Edit before resume and fork.
+### Trust boundaries
 
-Authenticated unsupported requests are read fully and their connections closed.
-The token-count endpoint returns an explicit 404, not an invented token count.
-Temporary 503s allow bounded native retry, and cancellation never closes the
-upstream chunk parser from a competing thread. Structured error codes are retained,
-including admission responses that use `detail` instead of `error`.
+The gateway listens on `127.0.0.1` only and requires the local key. An authorization or quota
+failure never switches to an API key, another model or another account. The agents' sandbox
+must keep them away from the credential files and from loopback connections, as it does in a
+`full` run. No credential, sign-in code, prompt, image or tool result is written to the log.
 
-A `subscription_sharing_usage_limit_exceeded` response creates an owner-only
-`chatgpt-plan-quota.json` hold beside the transport log. It blocks new upstream
-inference across gateway restarts. Review the application's limit in ChatGPT
-settings Usage before deliberately releasing that hold. The code alone does not
-identify a whole-plan limit or a reset time. An explicitly selected new account
-uses separate protected credentials and a separate control/log/hold directory.
+The host passes each session's ID and, for a fork, its source in the headers
+`X-RoboTeam-Session` and `X-RoboTeam-Fork-Source`. They never leave the machine.
 
-Before a benchmark can start, require the ordinary real native CLI preflights:
-text, image returned by a robot tool, resume, verified fork, and blocked-parent
-fork. Do not disable provenance checks or reuse receipts from another model.
-Then prepare the batch and pass the full-tool policy-environment checks. L3 has
-12 distinct cases, including all three Mosaic arm counts.
+### Original outputs are replayed exactly
 
-Official references:
+OpenAI's Responses API expects a conversation's earlier model outputs to come back as they were
+produced: item IDs, argument strings, message boundaries and encrypted reasoning. Claude Code
+keeps history in Messages form, which cannot carry all of that. The gateway therefore saves
+each completed response's `output` array in `response-replay.sqlite` before it releases a tool
+call to Claude Code.
+
+When Claude Code sends assistant history back, the gateway checks the visible part against the
+saved record and sends OpenAI the original items instead of a reconstruction. This keeps
+function-argument strings byte for byte, the assistant `phase`, item IDs, message boundaries,
+refusals and encrypted reasoning. History that was changed, is missing or matches more than one
+record is an error before any request to OpenAI. It is never repaired, guessed or sent in a
+lossy form.
+
+- Matching first uses the whole preceding input. After a compaction or a fork has changed that
+  start, only a stored output that matches uniquely is restored; the change is recorded in
+  `replay_prefix_changes`.
+- A lookup stays inside one session and its recorded ancestors, so identical text in an
+  unrelated session cannot select another session's output.
+- Claude Code may add a tool schema's declared defaults to saved arguments (for example Edit
+  adds `replace_all: false`). The gateway accepts only added fields that match the declared
+  defaults exactly; removed fields, changed values and other additions are rejected.
+
+The replay database holds the model's original text, tool arguments and encrypted reasoning.
+It is private state, not a log. Keep it and its SQLite side files with the credential file, out
+of collections, archives and version control, and back it up with the sessions if they must be
+resumed later. A session created without this database cannot be continued through the
+adapter.
+
+### Sessions and forks
+
+The gateway keeps one authenticated WebSocket per Claude Code session. While the settings and
+the start of the input are unchanged, it sends `previous_response_id` and only the new input
+items. A restart, a rotated token, an expired connection, changed settings or a compaction
+rebuilds the context from the verified local history. A response ID is never reused on another
+connection.
+
+Each fork starts its own connection with the complete inherited history, so a parent and its
+children run at the same time, including a fork taken while the parent waits on a tool call.
+This can cost a cold start for the new branch.
+
+Connection state is committed only after the original output is stored. An identical retry can
+reuse a completed response without another model call. A cancellation, an incomplete response
+or an ambiguous network failure discards the connection state and releases no partial tool
+call. Only an explicit `previous_response_not_found` before a response starts triggers one
+replay of the full history.
+
+When a parent is forked while it waits on a tool call, Claude Code adds its own assistant
+message `No response requested.` to the history. The model never produced it. The gateway
+accepts exactly that message, records it under `native_controls`, and accepts no other
+untracked assistant text. With `--native-session-index`, it also requires the message to be
+present in the session's transcript, and it registers a new fork only when the host's fork
+record verifies: the parent's history up to the fork, the copied history, the child's first
+input and the setup status. An unknown session, an uncertain record or changed history is
+rejected.
+
+### The log
+
+Each request adds one line to the `--log` file: hashes of the instructions, the tools and
+checkpoints of the input; the usage and cache details OpenAI reported; the transport mode, the
+connection generation and the reason for a reset; the numbers of input items sent and in full;
+the previous and restored response IDs; `input_transformations`; the service tier; and the
+authentication mode. For a WebSocket that closed it keeps the close code, a hash of the close
+reason, the connection's age and timing flags, never the raw close reason. Missing cache
+details stay unknown; they are not counted as cache hits. To measure caching, divide total
+cached input by total input.
+
+### Errors and limits
+
+- A response is released only after `response.completed`. A failed, incomplete, interrupted or
+  wrong-model stream produces no `message_stop` and no tool call.
+- Requests that the gateway cannot translate are rejected explicitly. The token-count endpoint
+  returns 404 rather than an invented count. Temporary 503 answers let Claude Code retry.
+- A `subscription_sharing_usage_limit_exceeded` or `insufficient_quota` answer creates a hold
+  file beside the log (`chatgpt-plan-quota.json`, or `openai-api-key-quota.json` in API-key
+  mode). It blocks new model calls, also after a gateway restart, until you remove it. The
+  answer does not say whether the whole plan is used up or when it resets: check the usage page
+  of the account first.
+- `--tokens-per-minute N` admits requests through one first-in, first-out queue shared by all
+  sessions. At a 300,000-token context each request reserves 428,000 tokens (300,000 input plus
+  the model's 128,000 output capacity) for sixty seconds, with at most four requests in flight.
+  A waiting request holds no connection to OpenAI and can be cancelled. This slows parallel
+  runs; it does not change their tools, context, outputs or forks. The gateway cannot reserve
+  quota against other users of the same API project.
+
+## Tests
+
+```sh
+.venv/bin/python -m scripts.dev.run_tests harness.adapters.test_claude_chatgpt_gateway \
+  harness.adapters.test_claude_chatgpt_plan harness.adapters.test_chatgpt_plan_auth \
+  harness.adapters.test_chatgpt_plan_websocket
+```
+
+The tests cover exact round trips of arguments and phases, refusals and message boundaries,
+changed and ambiguous histories, concurrent branches and a restart. With the installed Claude
+Code CLI they also run, against a local stand-in for OpenAI, a real tool call, a resume after a
+gateway restart, a fork, a fork of a waiting parent, and the compaction boundary (no compaction
+at 170,000 tokens, compaction above 267,000). No test contacts OpenAI. They check the
+translation; they do not measure a cache-hit rate.
+
+## References
 
 - [OpenAI plan-use registration](https://developers.openai.com/siwc/token-sharing-open-source/sign-in)
-- [OpenAI inference requirements](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference)
+- [OpenAI inference
+  requirements](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference)
+- [OpenAI self-hosted VM
+  credentials](https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms)
 - [Responses WebSocket continuation](https://developers.openai.com/api/docs/guides/websocket-mode)
 - [Preserve original Responses history](https://developers.openai.com/api/docs/guides/preserved-reasoning)
 - [Prompt cache diagnostics](https://developers.openai.com/api/docs/guides/prompt-caching/diagnostics)
-- [OpenAI self-hosted VM credentials](https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms)
 - [Claude Code gateway protocol](https://code.claude.com/docs/en/llm-gateway-protocol)
 - [Claude Code custom model pricing](https://code.claude.com/docs/en/settings-reference#modelpricing)
-- [Claude Code custom model context windows](https://code.claude.com/docs/en/model-config#correct-the-window-for-a-gateway-or-custom-model-id)
+- [Claude Code custom model context
+  windows](https://code.claude.com/docs/en/model-config#correct-the-window-for-a-gateway-or-custom-model-id)

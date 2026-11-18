@@ -43,8 +43,3 @@ The public task's `completion.acceptance` holds every threshold. In short:
 Every item must be delivered and completed placements must stay in place: a placement that is
 later knocked out stops counting. `roboteam/tasks/evaluate.py` (`placement_candidates`)
 implements these checks.
-
-## Presentation
-
-Factory-hall and simple-background videos play Transport at 20× and 30 fps (`speedup` in
-`benchmark/release.json`). Each station keeps its own clock and loops independently.

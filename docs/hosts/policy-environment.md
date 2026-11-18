@@ -1,9 +1,16 @@
 # Policy Python environment
 
-Policy scripts run in one frozen Python environment, never the host's Python. Every run uses
-one. `roboteam prepare` freezes the build of the current locks and refuses when it is
-missing or has not passed its check. There is no way to prepare a run on the host's Python
-(`ROBOTEAM_POLICY_ENV=off` is refused).
+The agents of a run may write and run Python. Their code runs in one frozen Python
+environment, the *policy environment*, never in the host's Python and never in the benchmark's
+own environment. `roboteam prepare` freezes the build that matches the current lock files and
+refuses when it is missing or has not passed its check. There is no way to prepare such a run
+on the host's Python (`ROBOTEAM_POLICY_ENV=off` is refused). The one exception is a
+[robot-only run](../benchmark/robot-tool-only.md): its agents have no shell, so it freezes no
+environment.
+
+With the environment, each run also freezes an *access table*: the list of folders the agents'
+file tools and shell may read or write ([below](#what-a-policy-can-reach)). The harness's
+*sandbox* enforces it.
 
 Which build `prepare` uses:
 
@@ -15,8 +22,8 @@ Which build `prepare` uses:
 | Neither, on Linux | None: `prepare` refuses |
 
 `roboteam plan` shows the choice as `policy_environment`. A prepared run keeps what it froze.
-On Slurm the job prepares its own batch on the compute node and reads only
-`ROBOTEAM_POLICY_ENV`; see [Slurm](slurm.md#5-policy-environment).
+On Slurm the job prepares its own batch on the compute node from the same two variables; see
+[Slurm](slurm.md#5-policy-environment).
 
 ## Build
 
@@ -58,12 +65,13 @@ filesystem the batch will use:
 .venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id> --scratch <batch location>
 ```
 
-It drives each real CLI with a local stub model in a throwaway run, with the access table and
-variables a real run freezes; no provider is contacted and no credential is used. It prints
-`ok`/`denied` per attempt and exits nonzero on any unexpected result. A pass writes a receipt
-beside the build listing, per harness, the sandbox it ran (Codex's tool backend, Claude Code's
-Bash isolation) and the CLI version on `PATH`. `--harness codex` or `--harness claude` checks one
-harness and adds it to the receipt.
+It drives each installed CLI with a local stub model in a throwaway run, with the access table
+and variables a real run freezes. No provider is contacted and no credential is used. For each
+harness it prints one line with the sandbox it ran, the number of attempts and any difference
+from what is expected, and it exits nonzero on a difference. A pass writes a receipt beside the
+build that lists, per harness, the sandbox (Codex's tool backend, Claude Code's Bash isolation)
+and the CLI version on `PATH`. Without `--harness` it checks both harnesses, so both CLIs must
+be installed; `--harness codex` or `--harness claude` checks one and adds it to the receipt.
 
 `prepare` refuses any harness, sandbox or CLI version the receipt does not list, so check again
 after changing a CLI. The sandbox the check uses:
@@ -73,8 +81,9 @@ after changing a CLI. The sandbox the check uses:
 | macOS | `native` | Claude Code's sandbox (Seatbelt) |
 | Linux | `landlock-v1` | bubblewrap where `bwrap` and `socat` are on `PATH` and namespaces work, else `landlock-v1` |
 
-So on Linux set `runtime.codex_tool_backend = "landlock-v1"`; a Codex run with `native` is
-refused there. Claude's `landlock-v1` needs Landlock ABI 4 and `libseccomp`.
+The default `runtime.codex_tool_backend = "auto"` picks these; a Codex run with `native` set by
+hand is refused on Linux. Claude Code's `landlock-v1` needs Landlock ABI 4 (Linux 6.7) and
+`libseccomp`.
 
 The receipt is per build: on shared storage one pass admits every node that uses that build.
 Nodes should match the one checked (kernel, Landlock ABI, user namespaces).
@@ -117,7 +126,7 @@ a permission profile; Claude Code as file-tool rules plus its Bash isolation.
   programs keep in `/tmp`, including other Claude sessions' files in `/tmp/claude-<uid>`.
   Scripts' temporary files default to `workspace/.tmp`.
 - **`/dev/shm`.** Each Codex command on Linux gets its own empty `/dev/shm`, which needs
-  unprivileged user namespaces. Without them (a RunPod pod), and always for Claude's Landlock
+  unprivileged user namespaces. Without them (most cloud containers), and always for Claude's Landlock
   Bash, `/dev/shm` stays closed, so `multiprocessing.Pool` and `ProcessPoolExecutor` fail;
   threads and plain subprocesses work. The check records this as a known limit.
   When AppArmor restricts unprivileged user namespaces, the worker checks that

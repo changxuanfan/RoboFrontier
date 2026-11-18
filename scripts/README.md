@@ -1,11 +1,13 @@
 # Engineering scripts
 
 Experiments run through the `roboteam` command ([getting started](../docs/getting-started.md),
-[command-line guide](../docs/cli.md)). The scripts here are the engineering commands
-around it, in four folders: `release/`, `analysis/`, `site/` and `dev/`. Run each from the
-repository root as `.venv/bin/python -m scripts.FOLDER.NAME` (for example
-`-m scripts.release.build_release`); `--help` lists its options. None of them calls a model
-provider.
+[command-line guide](../docs/cli.md)). The scripts here are the engineering commands around
+it, in four folders: `release/`, `dev/`, `analysis/` and `site/`. Run each from the repository
+root as a module; `--help` lists its options. None of them calls a model provider.
+
+```sh
+.venv/bin/python -m scripts.release.build_policy_env --help
+```
 
 ## Release: `scripts/release/`
 
@@ -13,8 +15,8 @@ provider.
 
 | Script | Purpose |
 | --- | --- |
-| `build_policy_env.py` | Build the read-only Python environment and offline wheel store for policy scripts, once per host (`--base FOLDER`; `--variant mujoco` builds the one ground_truth runs use) |
-| `check_policy_env.py` | Check a built environment and each harness's sandbox with a local stub model before a batch uses them (`ENVIRONMENT --scratch FOLDER [--harness]`) |
+| `build_policy_env.py` | Build the read-only Python environment that the agents' own code runs in, with its offline package store. Once per host: `--base FOLDER`. `--variant mujoco` builds the environment of ground-truth runs |
+| `check_policy_env.py` | Check a built environment and each harness's sandbox with a local stub model before a batch uses them: `ENVIRONMENT [--scratch FOLDER] [--harness codex\|claude]` |
 
 See [policy environment](../docs/hosts/policy-environment.md).
 
@@ -22,59 +24,67 @@ See [policy environment](../docs/hosts/policy-environment.md).
 
 | Script | Purpose |
 | --- | --- |
-| `build_hall.py` | Build the factory hall that runs load (`benchmark/hall/built`, untracked) from the released scenes and pin its hash in `benchmark/assets.json` |
-| `build_release.py` | Write the release into the released case folders: `physics`, `settle`, `letters`, `codes`, `public`; `check` confirms the scenes carry the release physics. Each step rewrites the hashes in `benchmark/release.json` |
-| `validate_physics.py` | Check the release physics and the Franka limits on the released scenes: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`; results in `runs/engineering/validate-physics/` |
+| `build_release.py` | The steps that wrote the released case folders: `physics`, `letters`, `codes`, `public`, `cameras`, `settle`, and `freeze`. The release is frozen, so every step that writes now refuses. `check` confirms that the scenes carry the release physics |
+| `build_hall.py` | Build the factory hall that runs load (`benchmark/hall/built/`, not in Git) from the released scenes, and pin its hash in `benchmark/assets.json` |
+| `validate_physics.py` | Check the release physics and the Franka limits on the released scenes. Scenarios: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`. Results go to `runs/engineering/validate-physics/` |
 
-See [physics](../docs/benchmark/physics.md) and [benchmark](../benchmark/README.md).
+See [physics](../docs/benchmark/physics.md) and [the released files](../benchmark/README.md).
 
 ## Development: `scripts/dev/`
 
 | Script | Purpose |
 | --- | --- |
-| `run_tests.py` | Run every Python and Node test in parallel, rerunning a failed module alone; CI's `all-tests` job |
-| `check_runtime.py` | Offline checks: fake services, robot and contact physics, Node hosts, syntax and documentation links; `--protocol-only` blocks physics |
-| `verify_evidence_replay.py` | Compare restored evidence with the original: all motion states and events, and sampled renders |
-| `view_batch.py` | Loopback, read-only batch viewer using existing JSON and images only ([viewer](../docs/runs/viewer.md)) |
+| `run_tests.py` | Run every Python test and every `test_*.js` in parallel, and run a failed module once more alone. CI's `all-tests` job |
+| `check_runtime.py` | Offline checks of the runtime: the tests, the Node.js host scenarios, syntax of Python and JavaScript files, and the links in Markdown. `--protocol-only` runs a fixed list of tests with physics blocked |
+| `verify_evidence_replay.py` | Compare restored evidence with the original: every file hash, all motion states and events, and sampled images |
+| `view_batch.py` | A read-only viewer of a batch in the browser, on loopback, from saved JSON and images only ([viewer](../docs/runs/viewer.md)) |
 
 See [testing](../docs/development/testing.md).
 
 ## Analysis: `scripts/analysis/`
 
-These read finished runs; none starts a model or physics.
+These read finished runs. None starts a model or a world, and no run data lives in the
+repository: the data folder, the list of runs and the output paths are arguments.
 
 | Script | Purpose |
 | --- | --- |
-| `run_analysis.py` | Extract archived runs and compute timing, outcomes and atomic-step metrics: `extract`, `compute`, `dial-turns`, `atomic`, `session-archive`. The data root, run list and outputs are arguments; no run data lives in the repository |
-| `paired_tests.py` | Compare conditions task by task from a JSON file of outcomes: exact McNemar tests with Holm's correction, and bootstrap intervals for tasks completed and for speed |
-| `communication_report.py` | Summarize recorded multi-role communication without inferring model intent |
+| `run_analysis.py` | Extract archived runs and compute timing, outcomes and atomic-step metrics: `extract`, `compute`, `dial-turns`, `atomic`, `session-archive` |
+| `paired_tests.py` | Compare conditions task by task from a JSON file of outcomes: exact McNemar tests with Holm's correction, and bootstrap intervals |
+| `communication_report.py` | Summarize the messages the roles of a batch sent each other |
 
 ## Project page: `scripts/site/`
 
 | Script | Purpose |
 | --- | --- |
-| `site_media.py` | Encode task videos for the project page and README with posters and a verified manifest: `encode`, `montage`, `stills`, `explainer` |
-| `site_data.py` | Generate the project page's `site/data/` indexes and the README task gallery: `tasks`, `media`, `readme-gallery` |
+| `site_media.py` | Make the videos and images of the project page and the README: `encode`, `montage`, `stills`, `starts`, `explainer` |
+| `site_data.py` | Generate the project page's `site/data/` files and the README's task gallery: `tasks`, `media`, `readme-gallery` |
 
-## Package commands
+## Commands inside the package
 
-Some lower-level commands live in the package and run as `.venv/bin/python -m MODULE`:
+Some lower-level commands live in the package and run the same way, for example
+`.venv/bin/python -m roboteam.launch.tasks list`.
 
 | Module | Purpose |
 | --- | --- |
-| `roboteam.launch.results.assets` | `doctor`, `init-env` (create `.env` from `.env.example` with mode 0600), `assets`, `setup-assets` (install the asset archive offline), `restore` |
-| `roboteam.launch.tasks` | `list`, `check`, `prepare`, `prepare-batch`: audit released tasks and their inputs, or prepare runs directly |
-| `roboteam.launch.results.archive_batch` | `create`, `verify`, `restore`: the lower-level evidence archive; `restore` rebuilds an extracted archive in its original layout |
-| `roboteam.harness.codex.checks.cli` | Exercise the installed Codex CLI's tools, images and forks against a local stub |
-| `roboteam.harness.adapters.claude_in_codex.gateway`, `.monitor` | The optional loopback gateway that lets Codex drive `claude-opus-5-5`, and its read-only cache monitor ([Claude in Codex](../docs/harness/claude-in-codex.md)) |
-| `roboteam.harness.adapters.gpt_in_claude.gateway`, `.auth` | The optional loopback gateway that lets Claude Code drive `gpt-6.1-sol`, and its ChatGPT sign-in ([GPT in Claude Code](../docs/harness/gpt-in-claude-code.md)) |
+| `roboteam.launch.results.assets` | `doctor` (a report on tools, models and assets), `init-env` (create `.env` from `.env.example` with mode 0600), `assets` and `setup-assets` (pack the asset archive; install one without network access), `restore` |
+| `roboteam.launch.tasks` | `list`, `check`, `prepare`, `prepare-batch`: list the released tasks, check their inputs, or prepare runs directly |
+| `roboteam.launch.results.collect` | The collector behind `roboteam collect` |
+| `roboteam.launch.results.archive_batch` | `create`, `verify`, `restore`: the evidence archive as a folder; `restore` rebuilds the original files from an extracted archive |
+| `roboteam.launch.results.session_archive` | `keep`, `archive`: copy and compress a run's session transcripts ([evidence storage](../docs/runs/evidence-storage.md#session-transcripts)) |
+| `roboteam.launch.results.report` | Write a finished run's `report.json` ([reports](../docs/harness/README.md#reports-and-metric-definitions)) |
+| `roboteam.runtime.run.cli` | Low-level operations on one run, such as `seal` and `export` ([manager runbook](../docs/development/manager-runbook.md)) |
+| `roboteam.runtime.world.fault_injection` | Freeze one failing action into a prepared engineering run ([testing](../docs/development/testing.md#fault-injection)) |
+| `roboteam.harness.claude.recover_task`, `roboteam.harness.codex.recover_task` | Recover one run whose host closed while its world stayed paused ([task recovery](../docs/runs/recovery.md)) |
+| `roboteam.harness.codex.checks.cli`, `.broker`, `.snapshot` | Check the installed Codex CLI's tools, images, forks and tool backend against a local stub ([Codex](../docs/harness/codex.md)) |
+| `roboteam.harness.claude.checks.preflight`, `.blocked_precheck`, `.readiness`, `.offline_probe` | The two Claude Code preflight checks on their own, a comparison of their receipts, and a check against local stubs ([Claude Code](../docs/harness/claude-code.md#preflight-and-receipts)) |
+| `roboteam.harness.codex.desktop_robot_mcp` | The robot tool for threads of the Codex Desktop app ([Codex](../docs/harness/codex.md#codex-desktop-threads-optional)) |
+| `roboteam.launch.slurm.proxy` | The Mac side of a Slurm job's network route ([Slurm](../docs/hosts/slurm.md#10-the-mac-route-mac-ssh)) |
+| `roboteam.harness.adapters.claude_in_codex.gateway`, `.monitor` | The optional local gateway that lets Codex run `claude-opus-5-5`, and its cache monitor ([Claude in Codex](../docs/harness/claude-in-codex.md)) |
+| `roboteam.harness.adapters.gpt_in_claude.gateway`, `.auth` | The optional local gateway that lets Claude Code run `gpt-6.1-sol`, and its sign-in ([GPT in Claude Code](../docs/harness/gpt-in-claude-code.md)) |
 
 The two gateways also run as files, from an environment that has only their own
-`requirements.txt` installed: `python roboteam/harness/adapters/claude_in_codex/gateway.py`.
-They access model providers when listing models or forwarding authenticated requests; the
-ChatGPT sign-in accesses the authorization service only when explicitly invoked.
+`requirements.txt` installed, for example
+`python roboteam/harness/adapters/claude_in_codex/gateway.py`. They contact a model provider
+only when they forward a request; the sign-in contacts OpenAI only when you run it.
 
-`roboteam/harness/codex/host/meta_dispatcher.js` executes frozen Meta operations; it
-is not a task-solving agent.
-
-Do not modify frozen inputs or delete evidence to make a preparation or archive check pass.
+Do not modify frozen inputs or delete evidence to make a preparation or an archive check pass.

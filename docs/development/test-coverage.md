@@ -1,7 +1,8 @@
-# Runtime check coverage
+# What the runtime checker covers
 
-What the offline runtime checker exercises and what it does not establish. It is a description of
-coverage, not a pass record: a pass is the report the checker writes.
+`scripts/dev/check_runtime.py` is an offline check of the runtime: no model provider is
+contacted. This page says what it exercises and what it does not establish. It describes
+coverage; a pass is the report the checker writes.
 
 ```sh
 .venv/bin/python -m scripts.dev.check_runtime --report runs/engineering/full.json
@@ -10,9 +11,10 @@ coverage, not a pass record: a pass is the report the checker writes.
 
 Both modes also run every Node host test (`tests/**/test_*.js` with `node --test`) and the Meta
 dispatcher scenarios (`tests/harness/codex/test_meta_dispatcher.cjs`), check the syntax of every
-JavaScript file and of the inline scripts in `roboteam/runtime/world/dashboard.html`, `docs/development/manager-runbook.md`
-and the tool reference, compile every Python file, and check that every relative link in tracked
-Markdown resolves inside the checkout.
+JavaScript file, of the inline scripts in `roboteam/runtime/world/dashboard.html` and of any
+`javascript` code block in `docs/development/manager-runbook.md` and
+`prompts/guides/collaboration/tools.md`, compile every Python file, and check that every
+relative link in tracked Markdown resolves inside the checkout.
 
 - **Full** discovers every Python test under `tests/`: fake services, robot kinematics, real
   headless MuJoCo contact checks, media codecs, and installed harness CLIs against local stub model
@@ -56,7 +58,8 @@ Markdown resolves inside the checkout.
   and says so in results. Note timestamps are independent of executor state.
 - **Scoring and evidence.** Final and interrupted evaluation stay private under
   `private/outputs/`. Interrupted geometry that meets a goal is not scored as success; evaluation
-  sampling does not restore physics; policy results contain no private object truth. Terminal
+  sampling does not restore physics; in an images run, results given to the policy contain no
+  object state. Terminal
   completion and process events are separate ([terminal outcome](../benchmark/rules.md#terminal-outcome)).
   Completion images are captured only for explicitly selected cameras. Exports happen at
   termination or close, with infrequent integrity checks, not per-second world checkpoints.
@@ -67,13 +70,12 @@ Markdown resolves inside the checkout.
 
 ## What these checks do not establish
 
-They do not establish live multi-agent policy trials, real provider inference, installation on
-another machine or better coordination. A physical reference run shows its own layout and executor
-completing selected work; it is not a general certification of multi-arm swept trajectories.
-Shared user files are not a security sandbox (the policy's access table is: see
+They do not establish that a live team of agents behaves well, that a provider's model works,
+that the project installs on another machine, or that arms never collide on paths the tests did
+not run. Shared user files are not a security sandbox (the policy's access table is: see
 [policy environment](../hosts/policy-environment.md)). Inspecting native state and then sending is
 not atomic. A crashed world is not restored in place; a stopped run continues in a new segment
-from its last recorded frame ([continuation](../runs/continuation.md)).
+from its last recorded frame ([continuing a stopped run](../runs/continuation.md)).
 
 State and evidence boundaries are in [architecture](architecture.md); operating instructions in
 the [manager runbook](manager-runbook.md); how to run the tests in [testing](testing.md).

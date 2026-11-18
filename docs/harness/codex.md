@@ -1,17 +1,18 @@
 # Codex harness
 
-Every policy role is a native Codex app-server thread (`thread/start`, `turn/start`,
-`thread/fork`) with the robot tool as an app-server dynamic tool. All four systems run:
-`adaptive` (the default), `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is
-Codex 0.165.0 (`roboteam/runtime/run/versions.py`). A run starts only with a passed compatibility
-receipt for its model, catalog and CLI version ([Preflight and receipts](#preflight-and-receipts)).
-What both harnesses share is in the [harness overview](README.md); the
+In the Codex harness every role is a thread of the Codex *app-server*, the mode of the Codex
+CLI that other programs drive over JSON-RPC (`thread/start`, `turn/start`, `thread/fork`). The
+robot tool is a tool the app-server adds to each thread. All four systems run: `adaptive` (the
+default), `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is Codex 0.165.0
+(`roboteam/runtime/run/versions.py`). A run starts only with a passed preflight receipt for its
+model, model catalog and CLI version ([preflight and receipts](#preflight-and-receipts)). What
+both harnesses share is in the [harness overview](README.md); the
 [Claude Code guide](claude-code.md) has the same sections.
 
-The harness is `roboteam/harness/codex/`: `launch.py` builds the app-server configuration and
-Codex home, `roboteam/launch/codex_batch.py` prepares and supervises batches, and the Node
-`policy_host.js`, `rpc.js`, `preflight.js` and `initialize.js` drive
-app-server.
+The code is in `roboteam/harness/codex/`: `launch.py` builds the app-server configuration and
+the Codex home (the folder where Codex keeps its sessions and login),
+`roboteam/launch/codex_batch.py` prepares and supervises batches, and the Node.js files under
+`host/` (`policy_host.js`, `rpc.js`, `preflight.js`, `initialize.js`) drive the app-server.
 
 ## Install
 
@@ -22,16 +23,16 @@ model calls:
 npm install --global @openai/codex@0.165.0      # or: npm install --prefix "$PWD/.codex-tools" @openai/codex@0.165.0
 codex --version
 .venv/bin/roboteam plan --level 1 --min-arms --parallel 4
-.venv/bin/roboteam prepare --render native \
-  --level 1 --min-arms --parallel 4 --output runs/policy/codex-l1
+.venv/bin/roboteam prepare --level 1 --min-arms --parallel 4 --output runs/policy/codex-l1
 ```
 
 With a prefix install, put `$PWD/.codex-tools/node_modules/.bin` first on `PATH`; Slurm
-subscription jobs and their preflight refuse to start with another `codex` first on `PATH`. Use
-`--render native` on macOS, `--render nvidia` (the default) or `--render cpu` on Linux; CPU
-rendering needs Mesa OSMesa (`libosmesa6` on Debian-family systems) and is not available on
-macOS. MuJoCo dynamics always run on the CPU. Preparation restores pinned assets when needed,
-freezes the run and starts no world or model session. The Claude CLI is not needed.
+subscription jobs and their preflight refuse to start with another `codex` first on `PATH`.
+`--render` may be left out: the default picks `native` on macOS, `nvidia` on Linux with an
+NVIDIA GPU and `cpu` otherwise. CPU rendering needs Mesa OSMesa (`libosmesa6` on Debian and Ubuntu
+systems) and is not available on macOS. Physics always runs on the CPU. Preparation restores
+pinned assets when needed, freezes the run and starts no world or model session. The Claude CLI
+is not needed.
 
 ## Authentication
 
@@ -44,9 +45,9 @@ provider settings are process-local and never change the user's global Codex con
 (or under `runtime.codex_home`), shared by that run's Controller, snapshots and delegates so fork
 lineage stays readable. Homes are initialized one at a time before any task host starts.
 
-**Claude through the Messages adapter** (`opus_claude_api`) is an experimental ablation: Codex
-talks to a loopback process that holds the Anthropic key and translates the protocol. See
-[Codex with Claude](claude-in-codex.md) before using it; it is not an Anthropic-supported route.
+**Claude through a local adapter** (`opus_claude_api`) is experimental: Codex talks to a local
+process that holds the Anthropic key and translates between the two APIs. See
+[Claude in Codex](claude-in-codex.md) before using it.
 
 **ChatGPT login** (`sol_subscription`, `luna_subscription`, `terra_subscription`, `astra_subscription`)
 uses Codex's own login and needs `runtime.codex_home_scope = "shared"` (task scope refuses these
@@ -70,43 +71,45 @@ codex_home_scope = "shared"
 
 On Slurm, subscription runs use `codex_home_scope = "job"` with `slurm.auth_mode =
 "subscription"` and a private `slurm.credential_store`
-([Slurm subscription jobs](../hosts/slurm.md#subscription-jobs),
+([Slurm credential store](../hosts/slurm.md#codex-credential-store),
 [`docs/hosts/examples/slurm.toml`](../hosts/examples/slurm.toml)).
 
-Every home must lie outside the batch; the access table denies it to the policy. Preparation adds
-command-line overrides that disable every MCP server found in the native and project
-configuration, and the host and preflight check that none is enabled before inference; the user's
-files are not rewritten. A home's location is recorded in each run's `private/harness/codex-home.json`.
+Every home must lie outside the batch; the access table closes it to the agents. Preparation
+adds command-line overrides that switch off every MCP server found in the user's and the
+project's Codex configuration, and the host and preflight check that none is enabled before the
+first model call. The user's files are not rewritten. A home's location is recorded in each
+run's `private/harness/codex-home.json`.
 
 `roboteam doctor` checks the installed CLI version, the sandbox or tool backend and a real
 render. It does not check credentials or call a model.
 
 ## Isolation
 
-The frozen access table (`roboteam/runtime/sandbox/access.py`) closes the checkout, the home
-directory, other runs and shared storage to the policy. `runtime.codex_tool_backend` selects how
-model shell, patch and image tools are confined:
+Each run freezes an access table (`roboteam/runtime/sandbox/access.py`): the list of folders the
+agents' tools may read or write. It closes the checkout, the home folder, other runs and shared
+storage. `runtime.codex_tool_backend` selects how the model's shell, patch and image tools are
+kept inside it. The default `auto` picks by host:
 
-| Host | `codex_tool_backend` | Mechanism |
+| Host | Tool backend | Mechanism |
 | --- | --- | --- |
-| macOS, Linux where Codex's sandbox works | `native` (default) | Codex's own sandbox with named permission profiles; `doctor` runs `codex sandbox` to check it |
-| Linux without namespaces, such as a RunPod pod | `landlock-v1` (set explicitly) | Shell, patch and image handlers are replaced by role-bound `policy_exec` and `policy_image`; each call is a fresh subprocess under the access table, Landlock and seccomp |
+| macOS; any host with `tools = "robot_only"` | `native` | Codex's own sandbox with a named permission profile. `doctor` runs `codex sandbox` to check it |
+| Linux, including Slurm and Docker | `landlock-v1` | Codex's shell, patch and image tools are replaced by the tools `policy_exec` and `policy_image`. Each call runs as a new subprocess that restricts itself to the access table with Landlock and seccomp |
 
-Under `landlock-v1` the subprocess gets no host credentials or inherited descriptors; `/proc` and
-general `/tmp` are denied (temporary files go to `workspace/.tmp`); sockets, io_uring,
-process-memory inspection, cross-process signals and namespace operations are denied; capabilities
-are dropped. Without user namespaces `/dev/shm` stays closed, so Python process pools fail; other
-processes stay visible but their environments cannot be read. The trusted Codex process keeps
-authentication, sessions and robot transport. Subscription runs under this backend use a
-process-local `OpenAI` provider over HTTP/SSE instead of WebSockets. Docker hosts can instead
-allow the native sandbox with `container.seccomp_profile = "unconfined"`
-([Docker](../hosts/docker.md)). [`docs/hosts/examples/linux.toml`](../hosts/examples/linux.toml)
-is a complete RunPod example; put the Node.js and CLI folders on `PATH`
-([RunPod guide](../hosts/linux.md)).
+Under `landlock-v1` the subprocess gets no host credentials and no inherited file descriptors.
+`/proc` is closed; sockets, io_uring, reading another process's memory, signals to other
+processes and namespace operations are refused; capabilities are dropped. `/tmp` stays open and
+each command gets its own empty `/dev/shm`. Where the host forbids user namespaces, `/dev/shm`
+stays closed, so Python process pools fail there; other processes stay visible, but their
+environments cannot be read. The Codex process itself, which the benchmark trusts, keeps the
+login, the sessions and the connection to the robot tool. Subscription runs under this backend
+reach OpenAI over HTTP with server-sent events instead of WebSockets.
+[`docs/hosts/examples/linux.toml`](../hosts/examples/linux.toml) is a complete Linux example
+([Linux guide](../hosts/linux.md)).
 
-A receipt pins the backend; a backend change needs a new preflight and newly prepared batches.
-The installed-CLI broker test, without inference, inspects the model's tool inventory, rejects
-forged native calls and runs fork/resume with eight concurrent roles:
+A receipt records the tool backend; changing the backend needs a new preflight and newly
+prepared batches. This check of the installed CLI, with no model call, inspects the tool list
+the model would get, rejects forged calls to Codex's own tools and runs fork and resume with
+eight roles at once:
 
 ```sh
 .venv/bin/python -m roboteam.harness.codex.checks.broker --output runs/engineering/broker-check
@@ -122,8 +125,9 @@ forged native calls and runs fork/resume with eight concurrent roles:
 Without `--confirm-spend` it makes no call and reports `not_run`. Pass the same `--config` and
 options as for `prepare`. The full check runs image and tool round trips, a manual compaction, and
 a fork whose child inherits history and then uses tools. Receipts:
-`<runs_root>/engineering/model-compatibility/<model>/report.json` (full) and
-`<runs_root>/engineering/model-smoke/<model>/report.json` (smoke). Before each run, the batch
+`<runs root>/engineering/model-compatibility/<model>/report.json` (full) and
+`<runs root>/engineering/model-smoke/<model>/report.json` (smoke). A robot-only or ground-truth
+batch has its own receipt, in `<model>.robot_only/` or `<model>.ground_truth/`. Before each run, the batch
 checks the full receipt against the frozen model, provider address, context, effort, catalog
 hash, CLI version and tool backend, and refuses on any mismatch; a smoke receipt never qualifies a
 run. Local checks of the real CLI against a synthetic Responses service, with no billing:
@@ -144,35 +148,46 @@ run. Local checks of the real CLI against a synthetic Responses service, with no
 
 `run` makes paid calls. It checks the receipt, the frozen configuration and every run's input
 inventory, validates each home's startup configuration without inference, then starts at most
-`batch.parallel` task hosts, 0.3 s apart. The physical owner enforces the cutoff: it bars new
-actions, brakes, evaluates and seals. An ended world never restarts. Each run's status is
+`batch.parallel` runs, 0.3 s apart. The world owner enforces the cutoff: it refuses new
+actions, brakes the arms, scores the task and closes. An ended world never restarts. Each run's status is
 `stopped_before_start`, `closed` (host exited cleanly; says nothing about task success) or
 `needs_review` (any other exit, a stop between segments, or the 48 h
-[wall backstop](../runs/continuation.md#wall-backstop), whose result is not counted). On Slurm, use
+[wall backstop](../runs/time.md#wall-backstop), whose result is not counted). On Slurm, use
 `roboteam slurm-submit` ([Slurm](../hosts/slurm.md)).
 
 ## Sessions and delegation
 
-The host binds real thread IDs and verifies fork lineage by parent ID, source ordinal and history
-hashes. Initial sessions are clean. For an Adaptive delegation the host first forks a snapshot
-thread of the Controller without running a turn, persists its ID, then forks each delegate from
-that snapshot and sends the delegate message after the runtime activates the batch. Each delegate
+The host records each role's thread ID and checks every fork by parent ID, position and history
+hashes. Initial sessions start empty. For an `adaptive` delegation the host first forks a
+*snapshot* thread of the Controller without running a turn and records its ID. It then forks
+each delegate from that snapshot and sends the delegate message once the runtime has activated
+the delegation. Each delegate
 gets its model and effort explicitly on its first turn. Unknown creation, fork or send
 acknowledgements keep their evidence and stop automatic replay.
 
-Do not start a turn by hand in a live run's thread. Codex Desktop's `notLoaded` label does not mean
-an app-server stopped; when auditing with `thread/list`, include the app-server and exec sources.
-Threads that Codex Desktop creates cannot receive the dynamic `robot` tool;
-`python -m roboteam.harness.codex.desktop_robot_mcp` is a global MCP server that gives them
-the same role API by mapping the calling thread (from each call's `_meta`) to its bound role.
-Print its Desktop `config.toml` entry with `--print-config` (add `--runs-root` when runs are not
-under the default runs root) and register it once; the entry sets
-`default_tools_approval_mode = "approve"`.
+Do not start a turn by hand in a live run's thread.
+
+### Codex Desktop threads (optional)
+
+Batches do not need this. A thread that the Codex Desktop app creates cannot receive the
+app-server's `robot` tool. `roboteam/harness/codex/desktop_robot_mcp.py` is an MCP server that
+gives such a thread the same robot tool: it reads the calling thread from each tool call and
+uses the connection of the role that this thread is bound to in a run's database. A thread that
+is bound to no role gets nothing. Print the entry for the Desktop app's `config.toml` and add
+it once:
+
+```sh
+.venv/bin/python -m roboteam.harness.codex.desktop_robot_mcp --print-config
+```
+
+Add `--runs-root DIR` when runs are not under the default runs root. The entry sets
+`default_tools_approval_mode = "approve"`, because a tool call would otherwise wait for a
+person.
 
 ## Standing teams
 
 `hierarchical` and `decentralized` start one thread per initial role, with the same roles,
-routes, single START (`direct_team`) and mailbox as
+message routes, single START and message delivery as
 [Claude Code standing teams](claude-code.md#standing-teams). Delegates and standing Workers add
 model requests inside each run; `batch.parallel` counts runs.
 
@@ -181,14 +196,14 @@ model requests inside each run; `batch.parallel` counts runs.
 - **Capacity errors**: bounded same-session resume ([capacity recovery](README.md#capacity-recovery)).
   Authentication errors, quota exhaustion and ordinary task errors are not retried as capacity
   errors.
-- **Network outage**: as on Claude Code, in a run that counts active time, a turn that failed
-  within 30 s of an egress or network-outage pause is continued once per role and pause with the
-  frozen `network-resume.md`, after the runtime grants the claim (`network-recovery`) and once the
-  role has no robot work in flight. A network or unclassified failure is continued; any other
+- **Network outage**: as on Claude Code, a turn that failed within 30 s of a
+  [network-outage pause](../runs/time.md#network-outage-pause) is continued once per role and
+  pause with the frozen `network-resume.md` message, once the role has no robot action in
+  flight. A network or unclassified failure is continued; any other
   failure in that window, or a second one, holds the run for review.
 - **Unexpected stop**: the run continues by itself once
   ([continuation](../runs/continuation.md#when-a-run-continues),
-  [Codex task recovery](../runs/continuation.md#codex-task-recovery)). A Slurm `job`-scope
+  [Codex task recovery](../runs/recovery.md#codex-task-recovery)). A Slurm `job`-scope
   run never reconnects or replays turns automatically.
 - For an uncertain robot operation, query its original request ID
   ([requests and queries](README.md#new-requests-queries-and-delegation)). Nothing replays a
@@ -204,11 +219,11 @@ The settings do not enlarge the provider's real context.
 ## Evidence and reports
 
 `private/logs/host.jsonl` holds host scheduling, tool and timing events; the native
-`<session-id>.jsonl` transcripts are under the home's `sessions/` directory, with verified copies
-in `private/harness/transcripts/` ([session transcripts](../runs/evidence-storage.md#session-transcripts)).
-Observations are JPEG 1280 x 800 at quality 90 ([observation images](../benchmark/rules.md#observation-images));
-motion is sampled at 60 Hz; real-time MP4 is off
-by default. Collection copies the relevant transcripts without authentication, configuration or
-state databases. Read metrics from stopped evidence in the environment that ran the batch, never
-from a live database across a container or shared mount. On Slurm, `sacct -j JOB_ID
---format=JobID,State,Elapsed,AllocCPUS,MaxRSS,TotalCPU` reports allocation resources.
+`<session-id>.jsonl` transcripts are under the home's `sessions/` directory, with verified
+copies in `private/harness/transcripts/` ([session
+transcripts](../runs/evidence-storage.md#session-transcripts)). Observations are JPEG 1280 × 800
+at quality 90 ([observation images](../benchmark/rules.md#observation-images)). Motion is
+recorded 30 times per simulated second. Video recording is off by default. Collection copies the
+relevant transcripts without authentication, configuration or state databases. Read metrics from
+stopped evidence in the environment that ran the batch, never from a live database across a
+container or shared mount.

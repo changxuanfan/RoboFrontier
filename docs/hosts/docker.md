@@ -1,13 +1,11 @@
 # Running in Docker
 
 `roboteam container ...` runs the unified CLI inside an image built from the committed
-source, with three persistent local Docker volumes: run data, native state, and the policy Python
+source, with three persistent local Docker volumes: run data, harness state, and the policy Python
 environment. Only a stopped, verified evidence ZIP is copied back to the host.
 
 The policy environment is built and checked once per workspace with `container policy-env`
-(step 5); until it has passed, `container prepare` refuses. Checked on Docker Desktop 29.9 on
-macOS with `seccomp_profile = "unconfined"`: both harnesses pass the check under Landlock and a batch
-prepares.
+(step 5); until it has passed, `container prepare` refuses.
 
 ## 1. Prerequisites
 
@@ -28,7 +26,8 @@ Node.js 22, Codex 0.165.0, Claude Code 2.1.316, OSMesa, EGL and `ffmpeg`; it run
 `uv sync --locked` and `roboteam bootstrap`, so the pinned assets are inside.
 It is tagged `roboteam:<commit[:12]>` (or `container.image`) and labelled with the commit;
 an existing image from another commit is refused. `.env`, logins and run data never enter it.
-It has no `bwrap` or `socat`, so Claude Code's Bash uses Landlock + seccomp (`landlock-v1`).
+It has no `bwrap` or `socat`, so both harnesses confine the agents' shell with this project's
+`landlock-v1` sandbox (Landlock and seccomp).
 
 Help for any subcommand works without Docker: `roboteam container prepare --help`.
 
@@ -39,14 +38,11 @@ Help for any subcommand works without Docker: `roboteam container prepare --help
 [render]
 device = "cpu"                       # "nvidia" on a Linux GPU host
 
-[runtime]
-codex_tool_backend = "landlock-v1"   # the only Codex backend the Linux policy check admits
-
 [container]
-workspace = "default"                # names the volume pair
+workspace = "default"                # names the three volumes
 memory_gib = 0                       # 0: no limit beyond Docker's
 cpus = 0.0
-seccomp_profile = "default"          # "unconfined" removes Docker's seccomp filter for Codex doctor/preflight/run
+seccomp_profile = "default"          # "unconfined" removes Docker's seccomp filter (see Limits)
 ```
 
 Pass it before `container` (`roboteam --config docker.toml container ...`); `--config`
@@ -74,8 +70,8 @@ The host's `~/.codex`, `~/.claude` and Keychain are never mounted.
 .venv/bin/roboteam --config docker.toml container policy-env
 .venv/bin/roboteam --config docker.toml container doctor
 .venv/bin/roboteam --config docker.toml container plan
-.venv/bin/roboteam --config docker.toml container preflight --confirm-spend                      # Codex
-.venv/bin/roboteam --config docker.toml container preflight --confirm-spend --max-budget-usd 1   # Claude
+.venv/bin/roboteam --config docker.toml container preflight --confirm-spend                                       # Codex
+.venv/bin/roboteam --config docker.toml container preflight --harness claude --confirm-spend --max-budget-usd 1   # Claude Code
 ```
 
 `policy-env` builds the policy Python environment in its volume (`/opt/roboteam-policy`)
@@ -113,8 +109,9 @@ The volumes, named from the checkout path and `container.workspace`, keep everyt
 
 | Volume | Mounted at | Holds |
 | --- | --- | --- |
-| `roboteam-<id>-<workspace>-runs` | `/opt/RoboTeam/runs` | Batches, motion, asset cache, receipts, collections, ZIPs |
-| `roboteam-<id>-<workspace>-state` | `/opt/RoboTeam/.roboteam` | Per-task Codex homes and sessions, the subscription login, Claude's config |
+| `roboteam-<id>-<workspace>-runs` | `/opt/RoboTeam/runs` | Batches, motion, receipts, collections, ZIPs |
+| `roboteam-<id>-<workspace>-state` | `/opt/RoboTeam/.roboteam` | Each run's Codex home and sessions, the subscription login, Claude Code's configuration |
+| `roboteam-<id>-<workspace>-policy` | `/opt/roboteam-policy` | The policy Python environment and its check receipt |
 
 Do not copy a live SQLite file out of a volume. Deleting a volume deletes its runs; the wrapper
 never does.
@@ -123,8 +120,8 @@ never does.
 
 - **No `continue`** through the wrapper.
 - **Seccomp.** Docker's default seccomp profile can refuse Landlock. `seccomp_profile = "unconfined"`
-  drops it for `policy-env`, `doctor`, `preflight` and `run`, without `--privileged`; the policy
-  shell then installs its own seccomp filter and Landlock rules, as on RunPod.
+  drops it for `policy-env`, `doctor`, `preflight` and `run`, without `--privileged`; the
+  agents' shell then installs its own seccomp filter and Landlock rules.
 - Without user namespaces in the container, `/dev/shm` stays closed to policies, so Python's
   process pools fail there ([policy environment](policy-environment.md)).
 - **Slurm jobs do not use Docker**; they stage onto node-local scratch ([Slurm](slurm.md)).

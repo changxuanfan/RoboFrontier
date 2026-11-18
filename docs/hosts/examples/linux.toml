@@ -1,4 +1,4 @@
-# RunPod or another plain Linux host without a GPU: four level-3 runs on the CPU renderer.
+# A Linux host without Slurm and without a GPU: four level-3 runs on the CPU renderer.
 # Codex with ChatGPT login: log in once to ~/.roboteam/codex-home. Start with
 # `roboteam run BATCH --durable` (a systemd user service, or a setsid daemon).
 schema_version = 11
@@ -21,9 +21,8 @@ cases = ["transport-large-l3", "mosaic-large-l3", "relay-large-l3", "dial-large-
 device = "cpu"
 
 [runtime]
-codex_tool_backend = "landlock-v1"
 codex_home_scope = "shared"
 
 [paths]
-# Keep runs on the pod's persistent volume; the policy can never read it (access table).
+# Keep runs on persistent storage that the access table closes to the agents (/workspace is).
 runs_root = "/workspace/roboteam-runs"

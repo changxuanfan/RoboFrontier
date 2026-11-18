@@ -1,9 +1,15 @@
-# Runtime protocol
+# Rules of a run
 
-The rules every policy run follows between preparation and scoring. Each prepared run freezes
-its inputs, source and protocol identifiers; read a frozen run with the protocol it records.
-Harness-specific behavior is in the [harness guides](../harness/README.md); time and continuation in
-[continuation](../runs/continuation.md).
+The rules every run follows between its start and its score: what the agents are given, what
+they see, how robot requests are identified, and what decides completion. Each prepared run
+freezes its inputs, source and the names of the rules it runs under (`run_protocol` in its
+private task), so read an old run by what it recorded. What differs between the harnesses is
+in the [harness guides](../harness/README.md). Time is in [time and pauses](../runs/time.md),
+and stopped runs in [continuing a stopped run](../runs/continuation.md).
+
+Words used here: the *policy* is the team of agents being measured, and a *role* is one of its
+agents. The *host* is the process that runs the roles' sessions for one run. The *world owner*
+is the process that steps the physics.
 
 ## Start: system prompt, start message, START
 
@@ -16,9 +22,10 @@ Harness-specific behavior is in the [harness guides](../harness/README.md); time
   collaboration guide, its tool, motion-check, communication and adaptive references as the system needs, and
   the task materials, each under its absolute path. The files stay readable on disk. The message
   is at most 400,000 bytes. Only the last line differs between harnesses (how to view images).
-- **START.** Single and Adaptive runs use `direct_controller`; Controller + Worker and
-  Worker-Worker runs use `direct_team`. The host prepares the world, binds every initial role
-  to its own native session, persists one START and then sends each role its start message.
+- **START.** The host prepares the world and gives every initial role its own session. The
+  runtime then records one START, and the host sends each role its start message. The frozen
+  `startup_protocol` names this: `direct_controller` for the `single-agent` and `adaptive`
+  systems, `direct_team` for `hierarchical` and `decentralized`.
   Reading, observing and planning count as task time. A failed or uncertain first delivery is an
   engineering failure for review, never retried in the same world or reported as a task result.
 - **`ready`** is an optional query of the role's robots, run limits and static `robot_facts`. It
@@ -26,30 +33,31 @@ Harness-specific behavior is in the [harness guides](../harness/README.md); time
 - **Time.** The public `task.json` states no time limit (`run_protocol.total_wall_limit_s` and
   `run_protocol.clock` are only in the private task), and the rules ask policies to plan as if
   time were unlimited. The host gives each run 24 hours of active time (`active_time_v1`) and
-  scores it at that cutoff ([how it is counted](../runs/continuation.md#time)).
+  scores it at that cutoff ([how it is counted](../runs/time.md)).
 
-`public/inputs/rules.md` is the one policy contract both harnesses receive; the hosts keep their
-own native tool transports. The CLI, model and harness together are the experimental condition:
-equal rules do not make model context or tool behavior equal.
+`public/inputs/rules.md` is the same text in both harnesses. Each harness still passes the
+robot tool to its model in its own way, so the harness, its CLI version and the model together
+are the experimental condition: equal rules do not make model context or tool behavior equal.
 
 ## Observation images
 
 `render.observation_profile = "jpeg_1280x800_q90"` (the default) makes every observation camera
-produce a 1280 × 800 JPEG at quality 90. `jpeg_128x80_q95` is the low-resolution condition: each image is rendered
-at 1280 × 800 and every 10 × 10 block of pixels is averaged into one before encoding at quality 95. The run's settings
-freeze it as `observation_image_profile`, and the public task states the format and resolution.
-When a published camera calibration names an image size, the run gets a copy at the observation
-resolution and the published file stays as it is. Video recording has its own resolution.
+produce a 1280 × 800 JPEG at quality 90. `jpeg_128x80_q95` is the low-resolution condition: each
+image is rendered at 1280 × 800 and every 10 × 10 block of pixels is averaged into one before
+encoding at quality 95. The run's settings freeze it as `observation_image_profile`, and the
+public task states the format and resolution. When a published camera calibration names an image
+size, the run gets a copy at the observation resolution and the published file stays as it is.
+Video recording has its own resolution.
 
 A released task runs at its desk in the factory hall (`roboteam/sim/hall/world.py`). The hall
-and the other 35 desks, each at its task's start, stand still around the desk and take no part in
-collisions, so the motion is the same with and without them. Images are drawn from a copy of the
-world's model (`roboteam/sim/render/look.py`): colours and textures are converted to linear light,
-the hall's key light casts hard shadows, and each image gets one display transform. An image draws
-only the hall shapes that can show in it or shade it. The result is the image that drawing all of
-them gives: in some views a handful of pixels differ by one level out of 255, from antialiasing.
-The arms on the other desks are drawn from simplified meshes. An image takes 10 to 40 ms on a laptop GPU. The live view and the recording are drawn the
-same way.
+and the other 35 desks, each at its task's start, stand still around the desk and take no part
+in collisions, so the motion is the same with and without them. Images are drawn from a copy of
+the world's model (`roboteam/sim/render/look.py`): colours and textures are converted to linear
+light, the hall's key light casts hard shadows, and each image gets one display transform. An
+image draws only the hall shapes that can show in it or shade it. The result is the image that
+drawing all of them gives: in some views a handful of pixels differ by one level out of 255,
+from antialiasing. The arms on the other desks are drawn from simplified meshes. An image takes
+10 to 40 ms on a laptop GPU. The live view and the recording are drawn the same way.
 
 ## Ground-truth observation
 
@@ -75,8 +83,9 @@ What a role gets:
   exact targets, mechanism, completion rule), and `scene.xml` with its `assets/`, the task's
   MuJoCo scene. The factory hall is not included. The public `task.json` names the folder as
   `ground_truth`.
-- **A simulator**: the `mujoco` variant of the [policy Python environment](../hosts/policy-environment.md#the-mujoco-variant),
-  the ordinary environment plus the `mujoco` package at the benchmark's own version.
+- **A simulator**: the `mujoco` variant of the [policy Python
+  environment](../hosts/policy-environment.md#the-mujoco-variant), the ordinary environment plus
+  the `mujoco` package at the benchmark's own version.
 
 What it does not get:
 
@@ -97,11 +106,11 @@ flag, the count of valid trials, each module's support and clearance, and the vi
 never gives the code or which dial is right.
 
 `ground_truth` with `tools = "robot_only"` is refused: the role needs its code tools. A
-ground_truth run freezes `"observation": "ground_truth"` in `private/inputs/run.json`; an images
-run's frozen settings are what they always were. Codex keeps a separate preflight receipt,
-`<model>.ground_truth/`. The prompt passages that differ are marked in the templates with
-`<!-- observation:images -->` and `<!-- observation:ground_truth -->`
-(`roboteam/runtime/tools/observation_mode.py`). Tests: `tests/runtime/tools/test_ground_truth.py`,
+ground_truth run freezes `"observation": "ground_truth"` in `private/inputs/run.json`. Codex
+keeps a separate preflight receipt, `<model>.ground_truth/`. The prompt passages that differ are
+marked in the templates with `<!-- observation:images -->` and `<!-- observation:ground_truth
+-->` (`roboteam/runtime/tools/observation_mode.py`). Tests:
+`tests/runtime/tools/test_ground_truth.py`,
 `tests/launch/test_observation_mode_configuration.py` and
 `tests/runtime/sandbox/test_policy_env_variant.py`.
 
@@ -112,10 +121,10 @@ returns it. To query an earlier physical action, send a new request
 `{"op":"job","data":{"call_id":"ACTION_ID"}}` with no outer `call_id`: the query gets its own ID
 and `data.call_id` names the action. To retry a request whose result is uncertain, resend it under
 its original outer ID with exactly the same operation and data. Never replay an uncertain physical
-action under a new ID. How the Claude host binds IDs to native tool calls is in
+action under a new ID. How the Claude Code host matches these IDs to the CLI's own tool calls is in
 [new requests, queries and delegation](../harness/README.md#new-requests-queries-and-delegation).
 
-A blocking action that is still running after 600 s returns as pending under its original ID (an
+A blocking action that is still running after 600 s returns as pending under its original ID (a
 harness may give up on a tool call sooner); the action keeps running and `job` follows it.
 
 ## Robot tool error feedback
@@ -144,8 +153,10 @@ node --test tests/harness/codex/test_tool_errors.js
 
 ## IK failure detail
 
-A `move`, `check_motion` candidate or `action_batch` member whose pose has no verified IK
-solution is rejected before execution with its `error` and an `ik_detail`:
+Inverse kinematics (IK) finds the joint angles that put the hand at a requested pose. The hand's
+reference point is the tool centre point (TCP). A `move`, `check_motion` candidate or
+`action_batch` member whose pose has no verified IK solution is rejected before execution with
+its `error` and an `ik_detail`:
 
 | Field | Meaning |
 | --- | --- |
@@ -160,8 +171,8 @@ home-orientation solve runs only after a rejection (`roboteam/sim/robot_control.
 
 ## Terminal outcome
 
-Policy runs declare `terminal_outcome_v2` in the frozen run protocol. The task's final conditions
-decide completion:
+A run is scored by the state of the world at its end (`terminal_outcome_v2` in the frozen
+`run_protocol`). The task's final conditions decide completion:
 
 - **Transport and Mosaic:** the geometric, release, stability and assignment predicates of each
   goal.
@@ -191,9 +202,10 @@ count of physical drops. Transport, Mosaic and Dial have no validated general dr
 absent metric means not measured, not zero. Dial's red-operation support violations are detected
 only before unlock.
 
-## SQLite writer contention
+## Database write contention
 
-The run store uses SQLite WAL with a 30-second busy timeout. A non-nested `BEGIN IMMEDIATE` that
+Each run keeps its state in one SQLite database (`private/state/runtime.sqlite`) in WAL mode with
+a 30-second busy timeout. A non-nested `BEGIN IMMEDIATE` that
 returns plain `SQLITE_BUSY` is tried at most four times, 0.25 s apart, about 120.75 s in all.
 Warnings go to standard logging, not the contested database, with elapsed time, attempts and
 outcome. Nested savepoints, errors inside a transaction, commits, extended busy codes and other

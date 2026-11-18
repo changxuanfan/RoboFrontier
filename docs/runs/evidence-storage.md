@@ -1,11 +1,14 @@
-# Experiment evidence: collection, compression and restore
+# Evidence: collection, archive and restore
 
-Collection and archiving work the same for both harnesses. They make no model calls, advance no
-physics and change no score, and they never delete the original batch.
+*Evidence* is everything a run leaves: the model sessions, the images, the recorded motion, the
+records of calls and actions, and the score. *Collecting* a stopped batch copies its evidence
+into one portable folder with file hashes. *Archiving* packs that folder into a ZIP. Both work
+the same for both harnesses. They make no model calls, advance no physics and change no score,
+and they never delete the original batch.
 
 | Form | Purpose | Written during a run? |
 | --- | --- | --- |
-| Batch folder and native session homes | Execution, motion capture, provenance | Yes, by their owning processes |
+| Batch folder and the harness's session folders | The run itself: records, motion, sessions | Yes, by the processes that own them |
 | Collection (`<runs root>/exports/<batch>-<hash>/`) | Portable stopped copy with task/session mappings and file hashes | No; refused while a writer lives |
 | Evidence ZIP (beside the collection) | Deduplicated, compressed, reversible archive | No |
 | Extracted archive | Compressed objects and the archive manifest | Not usable as sessions or motion |
@@ -87,13 +90,12 @@ Ship a dataset with the source revision that made it, so the matching restore to
 ```text
 runs/restored/MY_BATCH/
   collection.json                     # Models, roles, sessions and file hashes
-  sessions/<model>/<case>/          # Associated native session JSONL
+  sessions/<model>/<case>/          # The sessions of each run, as JSONL
   batch/<model>/<case>/
     public/observations/              # JPEG observations
     private/
       inputs/                         # Frozen scene, assets, source and settings
-      evidence/                       # Claude CLI turn events, when present
-      harness/                         # Harness config and transcript copies
+      harness/                        # Harness configuration, transcripts and, for Claude Code, turn events
       state/                          # Runtime database and related evidence
       outputs/
         motion/                       # stream.json, chunks, events and source/
@@ -143,13 +145,17 @@ removing any source.
   line with object poses every 10 simulated seconds and at the end. Continuous fields
   (accumulated `*_s` seconds, `samples`, raw Dial angles, speeds and clearances, Relay
   `timber_inside_fraction`) appear only in snapshots. Each Dial trial is written with its event.
-  On 600 simulated seconds of moving arms this is about 2.6 MB per simulated hour for
-  `transport-large-l3` and 20 MB for `mosaic-large-l3`.
+  While arms move, the file grows by roughly 3 MB per simulated hour for `transport-large-l3`
+  and 20 MB for `mosaic-large-l3`.
 
-Other values the run settings accept: `events-1s` and `events-60s` (snapshots every 1 or 60 s; with
-`events-60s` a scene that records motion leaves poses out of all but the last snapshot, and
-`roboteam.analysis.motion_query.object_poses` reads them from the recording), and `full`
-(a complete snapshot every 0.1 s).
+`process_log` accepts four values:
+
+| Value | What is written |
+| --- | --- |
+| `events-10s` (default) | Events as they happen, and a snapshot every 10 simulated seconds |
+| `events-1s` | The same events with a snapshot every second; Dial trials are not written as separate lines |
+| `events-60s` | The same with a snapshot every 60 s. A scene that records motion leaves object poses out of all but the last snapshot; `roboteam.analysis.motion_query.object_poses` reads them from the recording |
+| `full` | One snapshot line with object poses every 0.1 s; no header and no event lines |
 
 ## Session transcripts
 

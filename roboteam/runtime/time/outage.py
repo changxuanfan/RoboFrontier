@@ -5,7 +5,7 @@ Runs that count active time (run_protocol clock active_time_v1) and have no Slur
 model names (its `upstream_host` or `base_url`), or their harness's default hosts, from the world process with a verified HTTPS request (a bare TCP connect succeeds through a
 local VPN tunnel whose route is gone). After `FAILURES` consecutive failed probes the world pauses as for a
 Slurm egress outage; the first successful probe resumes it. Slurm runs keep their egress
-pause. See docs/runs/continuation.md#time.
+pause. See docs/runs/time.md#network-outage-pause.
 
 The probe runs on its own thread and only sets flags; the world's owner thread reads them and
 writes every record. A probe that never succeeds (no direct route, as on a Slurm node or in a

@@ -10,20 +10,21 @@ State and evidence boundaries are in the [architecture](architecture.md).
 ## Keep the policy's inputs clean
 
 Initial roles start in clean, independent sessions. Never fork an engineering conversation that
-contains Oracle solutions, earlier trials' answers or private object positions into a policy
-session. Adaptive delegates inherit only their own Controller's history. Public inputs never
-include reference code, private grasp coordinates, truth logs or Oracle routes; a test that
-derives a grasp or route from simulator truth is Oracle evidence and stays out of policy inputs.
+contains solutions, earlier trials' answers or private object positions into a policy session.
+Adaptive delegates inherit only their own Controller's history. Public inputs never include
+reference code, private grasp coordinates or logs of simulator state. A grasp or route derived
+from simulator state stays out of policy inputs; the only run that gives a policy simulator
+state is one prepared with `--observation ground_truth`.
 
 ## Operate a batch
 
-Follow the [unified CLI](../cli.md):
+Follow the [command-line guide](../cli.md):
 
 ```sh
 .venv/bin/roboteam bootstrap
-.venv/bin/roboteam doctor --render native
-.venv/bin/roboteam plan --render native --level 1 --min-arms --parallel 4
-.venv/bin/roboteam prepare --render native --level 1 --min-arms --parallel 4 --output runs/policy/NEW
+.venv/bin/roboteam doctor
+.venv/bin/roboteam plan --level 1 --min-arms --parallel 4
+.venv/bin/roboteam prepare --level 1 --min-arms --parallel 4 --output runs/policy/NEW
 .venv/bin/roboteam preflight --confirm-spend      # paid; Claude Code also needs --max-budget-usd
 .venv/bin/roboteam run runs/policy/NEW
 .venv/bin/roboteam status runs/policy/NEW
@@ -36,7 +37,7 @@ Follow the [unified CLI](../cli.md):
    or shared-filesystem boundary; a live process or lock alone does not show healthy progress.
 4. `stop` requests a stop; read the seal and `needs_review` fields afterwards.
 5. A run that stopped unexpectedly continues by itself once; continue others with
-   `roboteam continue` only when asked ([continuation](../runs/continuation.md)).
+   `roboteam continue` only when asked ([continuing a stopped run](../runs/continuation.md)).
 
 The task limit is 24 h of active time from START, scored at the cutoff. Do not shorten it for a
 test in the public task; use `batch.task_wall_limit_s` in a new batch or an engineering stop. A
@@ -55,12 +56,13 @@ stop is not a success and not a physical checkpoint.
 - **Integrity.** Inputs are checked at launch, START, finish and periodically; a changed input
   invalidates the run, pauses scheduling and stops known actions. A lost physical owner is never
   replaced by a new world for the same run.
-- **Delegates.** The Controller chooses `delegate` scopes. Codex forks a snapshot of the Controller
-  and then each delegate; Claude Code forks each delegate from the blocked Controller at the
-  pending call and holds its tools until activation ([Claude delegate fork](../harness/claude-code.md#sessions-and-delegation)).
-  Lineage is verified before authority is granted; unknown creation or wrong lineage becomes
-  `needs_review` and is never reforked automatically. `native_setup_timeout_s` (120 s) bounds fork
-  setup, not the delegate's work.
+- **Delegates.** The Controller chooses `delegate` scopes. Codex forks a snapshot of the
+  Controller and then each delegate; Claude Code forks each delegate from the blocked Controller
+  at the pending call and holds its tools until activation ([Claude delegate
+  fork](../harness/claude-code.md#sessions-and-delegation)). Lineage is verified before
+  authority is granted; unknown creation or wrong lineage becomes `needs_review` and is never
+  reforked automatically. `native_setup_timeout_s` (120 s) bounds fork setup, not the delegate's
+  work.
 - **Handback.** `return_task` writes the delegate's report atomically, then commits the handback and
   a short notification; the Controller reads the full report on demand. A delegate seen idle or
   failed before handback produces one notice to its Controller; it does not release authority.
