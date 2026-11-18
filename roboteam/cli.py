@@ -11,12 +11,13 @@ import sys
 import tempfile
 
 from .configuration import ROOT, TOPOLOGIES, load_configuration, rendering_environment, runs_root
-from .runtime import policy_env, layout as run_layout
+from roboteam.runtime.sandbox import policy_env
+from roboteam.runtime.run import layout as run_layout
 from .tasks.config import startup_protocol
 
 
 def _receipt_name(policy):
-    from .runtime.tool_mode import receipt_name
+    from roboteam.runtime.tools.tool_mode import receipt_name
     return receipt_name(policy['profile'], policy.get('tool_mode', 'full'))
 
 
@@ -53,7 +54,7 @@ def _catalog_file(config):
 
 def _policy_environment():
     """What `prepare` would freeze for policy scripts, without changing anything."""
-    from .runtime.policy_env import ENV_VAR, default_root, selected
+    from roboteam.runtime.sandbox.policy_env import ENV_VAR, default_root, selected
     try:
         root = selected() if os.environ.get(ENV_VAR) else default_root()
     except ValueError as error:
@@ -62,7 +63,7 @@ def _policy_environment():
 
 
 def plan(config):
-    from roboteam.batch.prepare import select_cases
+    from roboteam.launch.prepare import select_cases
     selection = config['selection']
     selected = select_cases(selection['families'] or None, selection['cases'] or None,
                             selection['level'] or None, selection['min_arms'])
@@ -78,13 +79,13 @@ def plan(config):
 
 
 def prepare(output, config):
-    from roboteam.batch.handoff import setup_assets
-    from roboteam.batch.prepare import load_env
-    from .runtime.setup import write_json
+    from roboteam.launch.results.assets import setup_assets
+    from roboteam.launch.prepare import load_env
+    from roboteam.runtime.run.setup import write_json
     policy, selection = config['policy'], config['selection']
     load_env(ROOT/'.env')
     plan(config)  # Reject invalid model and selection before any installation.
-    from .runtime import versions
+    from roboteam.runtime.run import versions
     pinned = versions.require(policy['engine'])
     policy_env.require_private_route(config)
     output = Path(output).resolve()
@@ -103,7 +104,7 @@ def prepare(output, config):
         harness['tool_mode'] = policy['tool_mode']
     with _catalog_file(config) as catalog:
         if policy['engine'] == 'claude':
-            from roboteam.batch.claude_prepare import prepare_batch as prepare_claude
+            from roboteam.launch.claude_prepare import prepare_batch as prepare_claude
             result = prepare_claude(output, [policy['profile']], families=selection['families'] or None,
                                    cases=selection['cases'] or None, catalog=catalog,
                                    level=selection['level'] or None, min_arms=selection['min_arms'],
@@ -114,7 +115,7 @@ def prepare(output, config):
                                    render_device=config['render']['device'],
                                    tool_mode=policy.get('tool_mode', 'full'))
         else:
-            from roboteam.batch.codex_batch import prepare_batch as prepare_codex
+            from roboteam.launch.codex_batch import prepare_batch as prepare_codex
             result = prepare_codex(output, [policy['profile']], families=selection['families'] or None,
                                    cases=selection['cases'] or None, config=catalog,
                                    level=selection['level'] or None, min_arms=selection['min_arms'],
@@ -140,20 +141,20 @@ def prepare(output, config):
 
 def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=None):
     """Explicit paid connectivity check; preparation and planning never call it."""
-    from roboteam.batch.prepare import load_env
+    from roboteam.launch.prepare import load_env
     load_env(ROOT/'.env')
     policy = config['policy']
     if not confirm_spend:
         return {'status': 'not_run', 'model_calls': 0,
                 'reason': 'Add --confirm-spend to authorize real provider calls',
                 'engine': policy['engine'], 'profile': policy['profile']}
-    from .runtime.diagnostics import require_runtime
+    from roboteam.runtime.run.diagnostics import require_runtime
     require_runtime(config, render=False)
     with _catalog_file(config) as catalog:
         if policy['engine'] == 'claude':
             if max_budget_usd is None:
                 raise ValueError('Claude preflight requires an explicit --max-budget-usd estimate')
-            from roboteam.engines.claude.preflight import run_precheck
+            from roboteam.harness.claude.checks.preflight import run_precheck
             import uuid
             output = runs_root()/'engineering/claude-precheck'/uuid.uuid4().hex
             report = run_precheck(policy['profile'], output, max_budget_usd, dict(os.environ),
@@ -161,7 +162,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             if smoke_only or not report.get('passed'):
                 return report
             # The blocked-parent fork check: a run needs both receipts, as a Codex run needs its one.
-            from roboteam.engines.claude.claude_blocked_precheck import run_blocked_precheck
+            from roboteam.harness.claude.checks.blocked_precheck import run_blocked_precheck
             blocked_output = runs_root()/'engineering/claude-blocked-precheck'/uuid.uuid4().hex
             blocked = run_blocked_precheck(policy['profile'], blocked_output, max_budget_usd,
                                            dict(os.environ), catalog=catalog)
@@ -169,10 +170,10 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
                     'blocked_precheck': {'passed': blocked['passed'], 'checks': blocked['checks'],
                                          'error_type': blocked['error_type'],
                                          'receipt': str(blocked_output/'receipt.json')}}
-        from roboteam.engines.codex.launch import profile, launch_config, initialize_codex_home
+        from roboteam.harness.codex.launch import profile, launch_config, initialize_codex_home
         selected = profile(policy['profile'], catalog)
         if config['runtime']['codex_home_scope'] == 'job':
-            from .batch.slurm_job import subscription_environment, _local_storage
+            from roboteam.launch.slurm.job import subscription_environment, _local_storage
             # Explicitly authorized live preflight, inside an allocation, with
             # its own local credential owner and no physical task START.
             scratch = config['slurm']['scratch_root'] or os.environ.get('SLURM_TMPDIR')
@@ -181,7 +182,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             _local_storage(scratch)
             with tempfile.TemporaryDirectory(prefix='rf-pf-', dir=scratch) as temporary:
                 with subscription_environment(config, temporary, on_failure=lambda: None):
-                    command = [sys.executable, '-m', 'roboteam.batch.codex_batch', 'preflight', '--models', policy['profile'],
+                    command = [sys.executable, '-m', 'roboteam.launch.codex_batch', 'preflight', '--models', policy['profile'],
                                '--model-config', str(catalog)]
                     if smoke_only:
                         command.append('--smoke-only')
@@ -192,7 +193,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
         key = selected.get('env_key')
         if key and not os.environ.get(key):
             raise ValueError('Missing credential environment variable: ' + key)
-        from roboteam.engines.codex.launch import gateway_environment
+        from roboteam.harness.codex.launch import gateway_environment
         env = gateway_environment(selected, dict(os.environ))
         if config['runtime']['codex_home_scope'] == 'task':
             if selected['provider'] == 'openai':
@@ -200,7 +201,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             fingerprint = hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest()[:20]
             home = ROOT/'.roboteam/preflight'/fingerprint
         else:
-            from roboteam.engines.codex.launch import codex_home
+            from roboteam.harness.codex.launch import codex_home
             home = Path(config['runtime']['codex_home']).expanduser().resolve() if config['runtime']['codex_home'] else codex_home(env)
         home.mkdir(parents=True, exist_ok=True, mode=0o700)
         env['CODEX_HOME'] = str(home)
@@ -208,7 +209,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
                       /_receipt_name(policy))
         folder.mkdir(parents=True, exist_ok=True)
         initialize_codex_home(launch_config(selected, folder), folder, env=env)
-        command = [sys.executable, '-m', 'roboteam.batch.codex_batch', 'preflight', '--models', policy['profile'],
+        command = [sys.executable, '-m', 'roboteam.launch.codex_batch', 'preflight', '--models', policy['profile'],
                    '--model-config', str(catalog)]
         if smoke_only:
             command.append('--smoke-only')
@@ -235,14 +236,14 @@ def _frozen_configuration(batch):
 def run(batch, *, continuing=False):
     """Run a prepared batch. `continuing` picks up a batch whose supervisor died: a run that
     had started continues in its next segment when its stop allows it, and unstarted runs start
-    (docs/running/continuation.md)."""
+    (docs/runs/continuation.md)."""
     config = _frozen_configuration(batch)
     # Receipts and exports are where the batch's configuration put them, as for prepare.
     os.environ.setdefault('ROBOTEAM_RUNS_ROOT', str(runs_root(config)))
     if config['policy']['engine'] == 'claude':
         # Both engines need passed compatibility receipts; Codex checks its own per run.
-        from .engines.claude.claude_readiness import require_ready
-        from .engines.claude.runner import require_hidden_token
+        from roboteam.harness.claude.checks.readiness import require_ready
+        from roboteam.harness.claude.session.runner import require_hidden_token
         frozen = [json.loads((Path(job['run_directory'])/'private/inputs/claude.json').read_text())
                   for job in json.loads((Path(batch)/'batch.json').read_text()).get('jobs', [])]
         # Each run's frozen profile, effort included, must match a receipt, as Codex checks per run.
@@ -251,13 +252,13 @@ def run(batch, *, continuing=False):
         # Seatbelt and Landlock keep other processes' environments unreadable; bubblewrap does not.
         if any(item.get('bash_isolation') == 'claude-sandbox' for item in frozen):
             require_hidden_token()
-    from .runtime.diagnostics import require_runtime
-    from .runtime import versions
+    from roboteam.runtime.run.diagnostics import require_runtime
+    from roboteam.runtime.run import versions
     require_runtime(config)
     document = json.loads((Path(batch)/'batch.json').read_text())
     # Every run uses a policy environment and the closed access table, except a robot_only
     # run: its roles have no shell or file tool, so there is nothing for either to confine.
-    from .runtime import tool_mode
+    from roboteam.runtime.tools import tool_mode
     for job in document.get('jobs', []):
         if tool_mode.of_run(job['run_directory']) == tool_mode.ROBOT_ONLY:
             continue
@@ -272,13 +273,13 @@ def run(batch, *, continuing=False):
     os.environ.clear()
     os.environ.update(environment)
     if config['policy']['engine'] == 'claude':
-        from .batch.claude_batch import run_until_signal
+        from roboteam.launch.claude_batch import run_until_signal
         state = run_until_signal(batch, dict(os.environ), parallel=config['batch']['parallel'],
                           startup_interval_s=config['batch']['startup_interval_s'],
                           startup_timeout_s=config['batch']['startup_timeout_s'],
                           wall_limit_s=config['batch']['task_wall_limit_s'], continuing=continuing)
     else:
-        from roboteam.batch.codex_batch import run_batch
+        from roboteam.launch.codex_batch import run_batch
         run_batch(batch, config['batch']['parallel'], continuing=continuing)
         state = json.loads((Path(batch)/'batch.json').read_text())
     result = {'batch': str(Path(batch).resolve()), 'status': state['status']}
@@ -324,7 +325,7 @@ def _with_live_runs(batch, state):
 
 
 def continue_runs(batch, cases=None):
-    """Continue stopped runs of a batch by hand, as the same trials (docs/running/continuation.md).
+    """Continue stopped runs of a batch by hand, as the same trials (docs/runs/continuation.md).
 
     Any stop but an integrity abort may be continued, as often as needed: after an
     unexpected stop, an operator's STOP, the finish, the cutoff or the wall backstop. A
@@ -332,8 +333,8 @@ def continue_runs(batch, cases=None):
     run (default: every run that may continue) gets its next segment; the batch then runs
     them like `run --continue`. Returns what was prepared and what was not, with why."""
     os.environ.setdefault('ROBOTEAM_RUNS_ROOT', str(runs_root(_frozen_configuration(batch))))
-    from .runtime import segments
-    from .runtime.setup import write_json
+    from roboteam.runtime.run import segments
+    from roboteam.runtime.run.setup import write_json
     batch = Path(batch).resolve()
     config = _frozen_configuration(batch)
     engine = config['policy']['engine']
@@ -345,7 +346,7 @@ def continue_runs(batch, cases=None):
         unknown = set(cases) - {job['case_id'] for job in jobs}
         if unknown: raise ValueError('Not in this batch: '+', '.join(sorted(unknown)))
         jobs = [job for job in jobs if job['case_id'] in cases]
-    from .runtime.store import RuntimeStore
+    from roboteam.runtime.world.store import RuntimeStore
     def eligible(job, prepare=False):
         run = Path(job['run_directory'])
         store = RuntimeStore(run/'private/state/runtime.sqlite')
@@ -381,14 +382,14 @@ def continue_runs(batch, cases=None):
 
 
 def collect(batch, output):
-    from roboteam.batch.collect import collect_batch
+    from roboteam.launch.results.collect import collect_batch
     collect_batch(Path(batch), Path(output))
     return Path(output).resolve()
 
 
 def archive_collection(collection, output):
-    from roboteam.batch.archive_policy_batch import create
-    from .batch.archive import pack
+    from roboteam.launch.results.archive_batch import create
+    from roboteam.launch.results.archive import pack
     output = Path(output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.rf-archive-', dir=output.parent) as temporary:
@@ -428,7 +429,7 @@ def argument_parser(*, prog=None):
             p.add_argument('--max-budget-usd', type=float)
     sub.add_parser('bootstrap', help='Restore and verify pinned policy assets; never calls a model')
     for name in ('run', 'continue', 'status', 'stop'):
-        p = sub.add_parser(name, help='Continue stopped runs by hand, as the same trials (docs/running/continuation.md)'
+        p = sub.add_parser(name, help='Continue stopped runs by hand, as the same trials (docs/runs/continuation.md)'
                            if name == 'continue' else None)
         p.add_argument('batch', type=Path)
         if name == 'continue':
@@ -443,7 +444,7 @@ def argument_parser(*, prog=None):
         if name == 'run':
             p.add_argument('--continue', dest='continuing', action='store_true',
                            help='Continue a batch whose supervisor died; a started run continues by itself once '
-                                '(docs/running/continuation.md)')
+                                '(docs/runs/continuation.md)')
     p = sub.add_parser('collect', help='Collect stopped native sessions, motion and evidence')
     p.add_argument('batch', type=Path)
     p.add_argument('--output', type=Path, required=True)
@@ -463,19 +464,19 @@ def main(argv=None):
     args = parser.parse_args(argv)
     def emit(value):
         if args.result_file:
-            from .runtime.setup import write_json
+            from roboteam.runtime.run.setup import write_json
             write_json(args.result_file, value)
         _print(value)
     try:
         if args.command == 'container':
-            from .batch.container import execute, validate_arguments
+            from roboteam.launch.container.container import execute, validate_arguments
             # Resolve help and invalid syntax before configuration, Docker or auth.
             arguments = validate_arguments(args.arguments)
             report = execute(arguments, load_configuration(args.config, host='container'))
             emit(report)
             return report['exit_code']
         if args.command == 'bootstrap':
-            from roboteam.batch.handoff import setup_assets
+            from roboteam.launch.results.assets import setup_assets
             emit(setup_assets())
             return 0
         if args.command in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
@@ -497,7 +498,7 @@ def main(argv=None):
             elif args.command == 'plan':
                 emit(plan(config))
             elif args.command == 'doctor':
-                from .runtime.diagnostics import inspect_runtime
+                from roboteam.runtime.run.diagnostics import inspect_runtime
                 report = inspect_runtime(config)
                 emit(report)
                 return 0 if report['passed'] else 2
@@ -507,13 +508,13 @@ def main(argv=None):
                 emit(report)
                 return 0 if report.get('passed') else 2
             elif args.command == 'slurm-submit':
-                from roboteam.batch.prepare import load_env
-                from .batch.slurm_job import submit
+                from roboteam.launch.prepare import load_env
+                from roboteam.launch.slurm.job import submit
                 load_env(ROOT/'.env')
                 emit(submit(config, args.output, queue=args.queue))
             else:
                 # New runs use the frozen policy Python environment by default (policy_env.default_root).
-                from .runtime.policy_env import ENV_VAR, apply_default
+                from roboteam.runtime.sandbox.policy_env import ENV_VAR, apply_default
                 if config['policy'].get('tool_mode', 'full') == 'robot_only':
                     # No shell runs in a robot_only run, so it freezes no Python environment.
                     os.environ[ENV_VAR] = 'off'
@@ -525,11 +526,11 @@ def main(argv=None):
             if report['prepared']:
                 if args.durable or (sys.platform == 'darwin' and not args.foreground):
                     if args.foreground: raise ValueError('--durable and --foreground are exclusive')
-                    if sys.platform == 'darwin': from .batch.mac import submit as submit_durable
-                    else: from .batch.linux import submit as submit_durable
+                    if sys.platform == 'darwin': from roboteam.launch.local.mac import submit as submit_durable
+                    else: from roboteam.launch.local.linux import submit as submit_durable
                     report['service'] = submit_durable(args.batch, continuing=True)
                 else:
-                    from roboteam.batch.prepare import load_env
+                    from roboteam.launch.prepare import load_env
                     load_env(ROOT/'.env')
                     report['result'] = run(args.batch, continuing=True)
             emit(report)
@@ -537,20 +538,20 @@ def main(argv=None):
             # On macOS a batch, a continuation included, runs under launchd with ProcessType=Interactive
             # by default, so it outlives the terminal or agent session that started it.
             if args.foreground: raise ValueError('--durable and --foreground are exclusive')
-            # On Linux (a RunPod pod) --durable starts a background service (batch/linux.py).
-            if sys.platform == 'darwin': from .batch.mac import submit as submit_durable
-            else: from .batch.linux import submit as submit_durable
+            # On Linux (a RunPod pod) --durable starts a background service (launch/local/linux.py).
+            if sys.platform == 'darwin': from roboteam.launch.local.mac import submit as submit_durable
+            else: from roboteam.launch.local.linux import submit as submit_durable
             emit(submit_durable(args.batch, continuing=args.continuing))
         elif args.command == 'run':
-            from roboteam.batch.prepare import load_env
+            from roboteam.launch.prepare import load_env
             load_env(ROOT/'.env')
             emit(run(args.batch, continuing=args.continuing))
         elif args.command == 'status':
             # Read the supervisor's atomic snapshot, never open a writer's SQLite.
             snapshot = run_layout.batch_path(args.batch, 'engineering_status')
             state = _with_live_runs(args.batch, json.loads((snapshot if snapshot.is_file() else args.batch/'batch.json').read_text()))
-            if sys.platform == 'darwin': from .batch.mac import service_state
-            else: from .batch.linux import service_state
+            if sys.platform == 'darwin': from roboteam.launch.local.mac import service_state
+            else: from roboteam.launch.local.linux import service_state
             durable = service_state(args.batch)
             emit({**state, 'durable': durable} if durable else state)
         elif args.command == 'stop':
@@ -571,7 +572,7 @@ def main(argv=None):
                 checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
             emit({'archive': str(archive), 'archive_sha256': checksum})
         elif args.command == 'extract':
-            from .batch.archive import unpack
+            from roboteam.launch.results.archive import unpack
             emit(unpack(args.archive, args.output))
         return 0
     except (ValueError, OSError, KeyError) as error:

@@ -46,7 +46,7 @@ RELAY_RECOVERY_RULE = ('A timber may be dropped, pushed or dragged. If an arm th
 
 # A policy run counts its wall limit as active running time (clock.BudgetGuard): only time
 # the world is running unpaused counts; host stalls, pauses and network outages do not.
-from roboteam.runtime.clock import ACTIVE_CLOCK as ACTIVE_TIME_CLOCK
+from roboteam.runtime.time.clock import ACTIVE_CLOCK as ACTIVE_TIME_CLOCK
 # Active time does not end a hung run, so a run also stops once this much wall time has
 # passed since START (clock.BudgetGuard). A run stopped this way needs review and is not
 # counted.
@@ -113,8 +113,8 @@ def freeze_public(task, directory, public, root=ROOT):
     """Give a run its case's public task and family materials, as the release wrote them.
 
     `public` is replaced by the case's public/task.json, keeping only this run's own
-    protocol and image profile (scripts/build_release.py public). The materials go to public/inputs/family/,
-    with the family skill from prompts/skills."""
+    protocol and image profile (scripts/release/build_release.py public). The materials go to public/inputs/family/,
+    with the task guide from prompts/guides."""
     if task.get('execution_readiness') != READINESS:
         return None
     root, directory = Path(root), Path(directory)
@@ -131,7 +131,7 @@ def freeze_public(task, directory, public, root=ROOT):
     for name, source in case['public_files'].items():
         if Path(name).name != name or sha(root/source['path']) != source['sha256']:
             raise ValueError('Invalid/changed public family file: '+name)
-    sources['skill.md'] = root/'prompts/skills'/family_name/'SKILL.md'
+    sources['skill.md'] = root/'prompts/guides'/(family_name+'.md')
     for name, source in sorted(sources.items()):
         shutil.copyfile(source, family_dir/name)
         hashes['public/inputs/family/'+name] = sha(source)
@@ -148,7 +148,7 @@ def freeze_public(task, directory, public, root=ROOT):
 def prepare(case_id, directory, harness=None, private_puzzle_path=None, wall_limit_s=86400):
     """Prepare only; simulator, role sessions and model inference stay stopped."""
     import tempfile
-    from ..runtime.setup import prepare_run
+    from roboteam.runtime.run.setup import prepare_run
     task = policy_task(case_id, wall_limit_s=wall_limit_s)
     with tempfile.TemporaryDirectory(prefix='roboteam-policy-') as temporary:
         path = Path(temporary)/'task.json'

@@ -7,7 +7,7 @@ from ..io import ROOT
 
 DEFAULT_CASE = 'transport-a04-d1'  # The smallest released case; tests and bare prepare_run use it.
 # The policy runtime's settings; a batch sets the engine, topology, model and effort over them.
-DEFAULT_HARNESS = ROOT / 'configs/harness.json'
+DEFAULT_HARNESS = ROOT / 'roboteam/runtime/run/defaults.json'
 # The lead role: the one agent of a single-agent or adaptive run, and the lead of a hierarchical team.
 CONTROLLER = 'Controller'
 
@@ -22,15 +22,15 @@ def execution_timing(config):
 
 
 def action_limits():
-    """The arm and hand limits every action is checked against (physics/franka_limits.py)."""
-    from ..physics.franka_limits import describe
+    """The arm and hand limits every action is checked against (sim/franka_limits.py)."""
+    from roboteam.sim.franka_limits import describe
     return describe()
 
 # The shared execution code, keyed by the names it had before the package layout, so
 # the fingerprint of unchanged code stays the same.
-CONTROL_FILES={'robot_control.py':'physics/robot_control.py','sim.py':'physics/kinematics.py',
-               'motion_check.py':'physics/motion_check.py','task_config.py':'tasks/config.py','pipeline.py':'runtime/pipeline.py',
-               'physics_profile.py':'physics/profile.py'}
+CONTROL_FILES={'robot_control.py':'sim/robot_control.py','sim.py':'sim/kinematics.py',
+               'motion_check.py':'sim/motion_check.py','task_config.py':'tasks/config.py','pipeline.py':'runtime/world/pipeline.py',
+               'physics_profile.py':'sim/profile.py'}
 
 
 def physical_control_fingerprint(source_hashes,config):
@@ -42,7 +42,7 @@ def physical_control_fingerprint(source_hashes,config):
 
 def panda_control_profile(config):
     """Declared current adapter subset; not a complete real-hardware driver."""
-    from ..physics.robot_control import hand_position_profile
+    from roboteam.sim.robot_control import hand_position_profile
     return {'hand_position_servo':hand_position_profile(),'limits':action_limits(),
             'supported_arm_modes':['cartesian_pose_target','joint_position_target'],
             'supported_hand_modes':['aperture_move','force_setpoint_grasp'],
@@ -52,7 +52,7 @@ def panda_control_profile(config):
             'not_supported':['independent_joint_or_cartesian_velocity_mode','joint_torque_or_arm_wrench_control',
                 'agent_configurable_impedance','gripper_homing','agent_tcp_or_load_model_calibration',
                 'agent_collision_threshold_configuration','measured_contact_forces_or_external_wrench_feedback'],
-            'limits_origin':'The published Franka Panda and Hand limits (physics/franka_limits.py); every action states its own speed, acceleration or force.',
+            'limits_origin':'The published Franka Panda and Hand limits (sim/franka_limits.py); every action states its own speed, acceleration or force.',
             'hardware_adapter_validated':False,'grasp_force_is_measured':False,
             'simulation_parameters_mutable_by_policy':False,
             'software_tools':'IK, motion screening and synchronized submission are software capabilities, not extra physical actuators.'}
@@ -88,7 +88,7 @@ def startup_protocol(topology):
 
 def load_harness(path=None):
     c = json.loads(Path(path or DEFAULT_HARNESS).read_text())
-    from ..physics.observation_image import DEFAULT_PROFILE
+    from roboteam.sim.render.image import DEFAULT_PROFILE
     c.setdefault('observation_image_profile', DEFAULT_PROFILE)
     if c['manager'] != 'Meta':
         raise ValueError('The manager role is Meta')
@@ -96,7 +96,7 @@ def load_harness(path=None):
         raise ValueError('Unknown topology')
     if c.get('engine','codex') not in ('codex','claude'):
         raise ValueError('Unknown policy engine')
-    from ..runtime.tool_mode import of as tool_mode
+    from roboteam.runtime.tools.tool_mode import of as tool_mode
     tool_mode(c)
     if c.get('startup_protocol') not in ('direct_controller', 'direct_team'):
         raise ValueError('Unknown startup protocol')

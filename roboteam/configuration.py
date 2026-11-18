@@ -8,7 +8,7 @@ from .io import ROOT
 
 DEFAULT = ROOT / 'roboteam.toml'
 SCHEMA_VERSION = 11
-# The model profile of each engine when none is named (configs/models.json); both use an API key.
+# The model profile of each engine when none is named (models.json); both use an API key.
 DEFAULT_PROFILES = {'codex': 'sol', 'claude': 'opus'}
 TOPOLOGIES = ('adaptive', 'single-agent', 'hierarchical', 'decentralized')
 SCHEMA = {
@@ -89,7 +89,7 @@ def load_configuration(path=None, overrides=None, *, host=None):
         # A robot_only role has no file or shell tool to confine, so no tool worker is used.
         linux = linux and result['policy']['tool_mode'] != 'robot_only'
         # Codex's own sandbox on macOS; on Linux the tool worker under Landlock and seccomp,
-        # the backend scripts/check_policy_env.py checks there.
+        # the backend scripts/release/check_policy_env.py checks there.
         runtime['codex_tool_backend'] = 'landlock-v1' if linux and result['policy']['engine'] == 'codex' else 'native'
     validate_configuration(result)
     return result
@@ -137,7 +137,7 @@ def validate_configuration(config):
     choice('policy', 'engine', ('codex', 'claude'))
     choice('policy', 'topology', TOPOLOGIES)
     choice('policy', 'effort', ('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
-    from .runtime.tool_mode import MODES, ROBOT_ONLY
+    from roboteam.runtime.tools.tool_mode import MODES, ROBOT_ONLY
     choice('policy', 'tool_mode', MODES)
     robot_only = config['policy']['tool_mode'] == ROBOT_ONLY
     from re import fullmatch
@@ -200,7 +200,7 @@ def validate_configuration(config):
         raise ValueError('slurm.egress_wait_s must be between 1 and 3600')
     if slurm['egress_mode'] == 'mac-ssh':
         path = Path(slurm['egress_root'])
-        # Claude reads its token from .env inside the job (slurm_job.execute) and needs only the route.
+        # Claude reads its token from .env inside the job (launch/slurm/job.py execute) and needs only the route.
         routed = slurm['auth_mode'] == 'subscription' or config['policy']['engine'] == 'claude'
         if not routed or not path.is_absolute() or '..' in path.parts:
             raise ValueError('Mac egress requires subscription mode or Claude, and an absolute private egress_root')
@@ -245,11 +245,11 @@ def rendering_environment(device, system, base):
     return env
 
 
-MODELS = ROOT/'configs/models.json'
+MODELS = ROOT/'models.json'
 
 
 def model_catalog(engine, path=None):
-    """One engine's model catalog: its section of configs/models.json, or a file holding
+    """One engine's model catalog: its section of models.json, or a file holding
     only that section (a run's frozen copy, or one written for a batch)."""
     import json
     document = json.loads(Path(path or MODELS).read_text())

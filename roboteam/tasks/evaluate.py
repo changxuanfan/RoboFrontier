@@ -78,7 +78,7 @@ class Monitor:
         from .contact_episodes import ContactEpisodes
         self.contact_episodes = ContactEpisodes()
         self.motion_overlap_s=0.;self.any_motion_s=0.;self.robot_motion_s=0.;self.max_moving=0
-        # A continued segment appends to the same process log (docs/running/continuation.md).
+        # A continued segment appends to the same process log (docs/runs/continuation.md).
         self.log=Path(log_path).open('a' if append else 'w') if log_path else None;self.active=True
         self.log_format=log_format;self.snapshot_interval=PROCESS_LOG_FORMATS[log_format];self.last_event=None;self.logged_trials=0;self.final_logged=False
         if self.log and log_format!='full':
@@ -110,12 +110,12 @@ class Monitor:
         """A continued segment's evaluator takes over the Dial record at its restore frame.
 
         Trials, BEST and success are episode history, carried in the bound restore record
-        (docs/running/continuation.md). A configuration already counted and held at that
+        (docs/runs/continuation.md). A configuration already counted and held at that
         frame stays the same trial while it is held on; leaving and re-entering counts again.
         Blue support ready at that frame stays qualified, and red knobs held there are not new
         contacts, so the restart neither re-counts a held input nor records a violation.
         """
-        from ..runtime.segments import current_restore
+        from roboteam.runtime.run.segments import current_restore
         # Red contacts present at the first sample are carried, not new (sample_dial).
         self.previous_red=None
         found=current_restore(self.w.directory) if getattr(self.w,'directory',None) is not None else None
@@ -496,9 +496,9 @@ class Relay:
 
         A timber held at the restore frame is re-established as airborne by the ordinary
         lift check, with the custody and drop state it had at that frame
-        (docs/running/continuation.md).
+        (docs/runs/continuation.md).
         """
-        from ..runtime.segments import current_restore
+        from roboteam.runtime.run.segments import current_restore
         directory=getattr(self.mon.w,'directory',None)
         found=current_restore(directory) if directory is not None else None
         record=found[0].get('evaluator',{}).get('relay_payloads') if found else None

@@ -1,6 +1,6 @@
 """Object positions and dial angles of a run's trial, read from its motion recording.
 
-Every world process records qpos at 30 Hz (`roboteam.media.motion_recording`): the first in
+Every world process records qpos at 30 Hz (`roboteam.sim.motion_recording`): the first in
 `outputs/motion`, each continuation segment in `outputs/segments/<n>/motion`. The files are read
 through `archive.Run`, so recordings inside a tar or zip are read in place.
 

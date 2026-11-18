@@ -1,0 +1,2 @@
+# Optional: the Codex / Claude loopback gateway (roboteam/harness/adapters/claude_in_codex/gateway.py). Not a core dependency.
+anthropic>=2.8,<3

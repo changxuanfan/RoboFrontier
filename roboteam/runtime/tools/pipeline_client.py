@@ -1,0 +1,151 @@
+"""Role-bound tool client with durable requests and receipt acknowledgements."""
+import argparse
+import fcntl
+import json
+import re
+from pathlib import Path
+import sys
+import time
+import urllib.error
+import urllib.request
+import uuid
+from roboteam.runtime.run.setup import write_json
+from roboteam.runtime.world.sqlite_busy import MAX_BEGIN_WAIT_SECONDS
+from roboteam.runtime.tools.tool_errors import CallIdConflict, conflict_error, is_conflict_error, uncertain_error
+
+
+# Allow the server to finish its bounded SQLite acquisition before its normal
+# 40-second response slice expires; explicit caller timeouts are unchanged.
+DEFAULT_HTTP_TIMEOUT_SECONDS = 45 + MAX_BEGIN_WAIT_SECONDS
+# A waiting robot action may take longer than an engine lets one tool call last (Claude Code
+# gives up at 660 s); after this long the call returns the action as still pending, under its
+# original call_id, for both engines alike. The action keeps running; `job` follows it.
+RETURN_PENDING_AFTER_S = 600.
+
+
+def client_call(connection_path, op, data, call_id=None, timeout=DEFAULT_HTTP_TIMEOUT_SECONDS, log_call_id=True,
+                return_pending_after_s=RETURN_PENDING_AFTER_S):
+    connection_path=Path(connection_path).resolve()
+    cfg=json.loads(connection_path.read_text())
+    if cfg.get('schema_version')!=3:
+        raise ValueError('Unsupported connection file: prepare the run with this code')
+    state_dir=connection_path.parent.parent/'client-state'/cfg['actor']
+    state_dir.mkdir(parents=True,exist_ok=True)
+    lock=(state_dir/'client.lock').open('a+')
+    try:
+        fcntl.flock(lock,fcntl.LOCK_EX)
+        if op=='pending':
+            return {'pending':[json.loads(p.read_text())['body'] for p in state_dir.glob('*.json')
+                               if p.name!='receipt.json' and json.loads(p.read_text()).get('result') is None
+                               and not json.loads(p.read_text()).get('rejection')]}
+        if not cfg.get('url'):
+            raise ValueError('Execution service not started; client never starts one automatically')
+        call_id=call_id or uuid.uuid4().hex
+        if not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',call_id):
+            raise ValueError('Use a simple call ID, not a path')
+        path=state_dir/(call_id+'.json')
+        if path.exists():
+            saved=json.loads(path.read_text());body=saved['body']
+            if body['op']!=op or body['data']!=data:
+                raise CallIdConflict(call_id)
+            if is_conflict_error(saved.get('rejection'),call_id):
+                raise CallIdConflict(call_id)
+            if saved.get('result') is not None:return saved['result']
+        else:
+            receipt_path=state_dir/'receipt.json'
+            receipt=json.loads(receipt_path.read_text()).get('delivery_id') if receipt_path.exists() else None
+            body={'schema_version':3,'run_id':cfg['run_id'],'actor':cfg['actor'],
+                  'call_id':call_id,'op':op,'data':data,'ack_delivery':receipt}
+            write_json(path,{'body':body,'result':None});path.chmod(0o600)
+        # Protect durable state, not network/robot duration. Independent calls
+        # from one Controller must be able to overlap on different arms.
+        fcntl.flock(lock,fcntl.LOCK_UN)
+        if log_call_id:print('call_id='+call_id,file=sys.stderr,flush=True)
+        request=urllib.request.Request(cfg['url']+'/op',json.dumps(body,allow_nan=False,ensure_ascii=False).encode(),
+                    headers={'Content-Type':'application/json','X-Token':cfg['token']})
+        # The service's wait deadline belongs to this original call, not each
+        # HTTP slice. Reusing it does not register a new wait or reset its clock.
+        wait_deadline=time.monotonic()+float(data.get('timeout_s',30))+timeout if op=='wait_events' else None
+        return_by=time.monotonic()+return_pending_after_s if return_pending_after_s is not None else None
+        while True:
+            try:
+                with urllib.request.urlopen(request,timeout=timeout) as response:result=json.load(response)
+            except urllib.error.HTTPError as error:
+                # Only this explicit server rejection proves the new request was
+                # rejected. A timeout, arbitrary 409 or malformed body does not.
+                if error.code == 409 and error.headers.get_content_type() == 'application/json':
+                    try:
+                        detail=json.loads(error.read(16385))
+                    except (ValueError, OSError):
+                        detail=None
+                    if is_conflict_error(detail,call_id):
+                        fcntl.flock(lock,fcntl.LOCK_EX)
+                        write_json(path,{'body':body,'result':None,'rejection':conflict_error(call_id)})
+                        path.chmod(0o600)
+                        raise CallIdConflict(call_id) from None
+                raise
+            if result.get('execution_status')!='pending':
+                break
+            if op=='delegate':continue  # preserve the parent's fork boundary; original request only
+            # The server slices HTTP waits at 40 s; a slow valid action may
+            # span several slices. Reuse the durable ID, never resubmit motion.
+            if op in ('move','gripper','action_batch') and data.get('wait',True):
+                if return_by is not None and time.monotonic()>=return_by:
+                    result={**result,'returned_while_pending':True,
+                            'note':'The action is still running under this call_id; query it with job, data.call_id = this call_id.'}
+                    break
+                continue
+            if op!='wait_events' or time.monotonic()>=wait_deadline:break
+        fcntl.flock(lock,fcntl.LOCK_EX)
+        if result.get('execution_status') not in ('pending','running'):
+            write_json(path,{'body':body,'result':result});path.chmod(0o600)
+        if result.get('delivery_id'):
+            receipt=state_dir/'receipt.json';write_json(receipt,{'delivery_id':result['delivery_id']});receipt.chmod(0o600)
+        return result
+    finally:
+        fcntl.flock(lock,fcntl.LOCK_UN);lock.close()
+
+
+def answer(connection, op, data, call_id, quiet=True):
+    """One request as the command line answers it: (exit status, the JSON it prints)."""
+    try:
+        return 0, json.dumps(client_call(connection, op, data, call_id, log_call_id=not quiet), ensure_ascii=False)
+    except CallIdConflict:
+        return 1, json.dumps(conflict_error(call_id), ensure_ascii=False)
+    except (ValueError, OSError, urllib.error.URLError):
+        return 1, json.dumps(uncertain_error(call_id), ensure_ascii=False)
+
+
+def serve(connection):
+    """Answer requests for one role, one JSON line each, until stdin closes.
+
+    A request is {"call_id", "op", "data"}; the answer is {"status", "output"}, where output
+    is what one `pipeline_client` command would print and status its exit status. The Codex
+    host keeps one such process per role, so a robot call costs no Python start-up."""
+    for line in sys.stdin:
+        if not line.strip(): continue
+        try:
+            request = json.loads(line)
+            status, output = answer(connection, request['op'], request.get('data') or {}, request['call_id'])
+        except (ValueError, KeyError, TypeError):
+            status, output = 1, json.dumps(uncertain_error(None), ensure_ascii=False)
+        sys.stdout.write(json.dumps({'status': status, 'output': output}, ensure_ascii=False)+'\n'); sys.stdout.flush()
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--connection',type=Path,required=True)
+    p.add_argument('--serve',action='store_true',help='Answer JSON-line requests on stdin until it closes')
+    p.add_argument('--call-id')
+    p.add_argument('--quiet',action='store_true',help='JSON stdout only; errors still include the original call ID')
+    p.add_argument('op',nargs='?')
+    p.add_argument('--data',default='{}')
+    args=p.parse_args()
+    if args.serve:return serve(args.connection)
+    if args.op is None:p.error('op is required')
+    call_id=args.call_id or uuid.uuid4().hex
+    status,output=answer(args.connection,args.op,json.loads(args.data),call_id,quiet=args.quiet)
+    print(output)
+    if status:raise SystemExit(status)
+
+if __name__=='__main__':main()
