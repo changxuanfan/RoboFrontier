@@ -10,8 +10,8 @@ media:  site/data/media.json, every video set (Oracle, then one per model) with 
     .venv/bin/python -m scripts.site.site_data media SET=BASE_URL=MANIFEST [...] [--film VIDEO POSTER]
     .venv/bin/python -m scripts.site.site_data readme-gallery
 
-A set's BASE_URL is where its files are published (its media repository's Pages site), or a
-relative path such as `_media/oracle/` for a local preview.
+A set's BASE_URL is where its files are published (its folder on the media repository's Pages
+site), or a relative path such as `_media/oracle/` for a local preview.
 """
 
 import argparse

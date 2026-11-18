@@ -32,9 +32,10 @@ placeholder value.
 `oracle`. A set shows "soon" until `data/media.json` lists it under the same key. The hero and
 the Tasks grid play the first published set that has the task, models before the Oracle.
 
-Videos live in one public media repository per set, served by its own GitHub Pages
-(`RoboTeam-media-<set>`), so the main repository stays small. `media.json` lists every file
-URL, size, duration and SHA-256. Every set uses the task ids as file names.
+Videos live in one public media repository, `RoboTeam-media`, served by its own GitHub Pages,
+so the main repository stays small. Each set is one folder there, named by the set's key, and
+every set uses the task ids as file names. `media.json` lists every file URL, size, duration
+and SHA-256.
 
 How each Oracle recording was made (which were operator-assisted, which scene revision) is
 stated wherever Oracle videos appear; the facts are in
@@ -42,8 +43,8 @@ stated wherever Oracle videos appear; the facts are in
 
 ## Results data
 
-Results are not kept in this repository. The page fetches them from the data repository
-(`RESULTS_URL` in `assets/js/site.js`):
+Results are not kept in this repository. The page fetches `results.json` from the media
+repository (`RESULTS_URL` in `assets/js/site.js`):
 
 ```json
 {"schema": "roboteam.site-results.v1",

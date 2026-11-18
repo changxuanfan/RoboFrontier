@@ -37,8 +37,8 @@ const SOURCES = [
   {key: 'glm-5.3-flash', label: 'glm-5.3-flash', about: 'glm-5.3-flash in Codex with the adaptive system.'},
   {key: 'oracle', label: 'Oracle', about: 'The Oracle: gpt-6.1-sol in Codex as a single agent, given the ground-truth position of every object instead of camera images. Some recordings were operator-assisted or made on earlier scene revisions; each video says which.'},
 ];
-// Results are published apart from the code, in the data repository.
-const RESULTS_URL = 'https://changxuanfan.github.io/RoboTeam-data/results.json';
+// Results are published apart from the code, in the media repository.
+const RESULTS_URL = 'https://changxuanfan.github.io/RoboTeam-media/results.json';
 
 const state = {tasks: null, media: null, results: null, source: 'oracle', taskType: 'all', view: 'front', explainType: 'transport'};
 
