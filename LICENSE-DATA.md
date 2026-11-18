@@ -12,7 +12,7 @@ The source code is licensed separately under the MIT License ([`LICENSE`](LICENS
 
 - Task, scene and environment data: the released tasks in `benchmark/`.
 - Rendered media: the README and project-page images in `docs/media/` and `site/`,
-  benchmark previews, the factory hall textures in `assets/robo_factory/`, and the videos
+  benchmark previews, the factory hall textures in `benchmark/hall/`, and the videos
   published from this project (Oracle recordings and the Factory tour).
 
 Code, including scripts, tests, the project page code in `site/` and the HTML
@@ -25,10 +25,10 @@ These keep their own licenses and are not relicensed here:
 | Material | Where | License |
 | --- | --- | --- |
 | Franka Emika Panda model from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie), fetched into `vendor/` and embedded in scene files | `benchmark/**/scene.xml`, `vendor/` | Apache License 2.0 |
-| Barlow Condensed font | `assets/robo_factory/fonts/` | SIL Open Font License 1.1 ([`OFL.txt`](assets/robo_factory/fonts/OFL.txt)) |
-| Space Grotesk Bold (film titles) | `assets/robo_factory/fonts/` | SIL Open Font License 1.1 ([`OFL-SpaceGrotesk.txt`](assets/robo_factory/fonts/OFL-SpaceGrotesk.txt)) |
-| JetBrains Mono Medium (film labels) | `assets/robo_factory/fonts/` | SIL Open Font License 1.1 ([`OFL-JetBrainsMono.txt`](assets/robo_factory/fonts/OFL-JetBrainsMono.txt)) |
-| Poly Haven `concrete_floor_02` texture | `assets/robo_factory/source/polyhaven/` | CC0 1.0 ([`LICENSE.txt`](assets/robo_factory/source/polyhaven/LICENSE.txt)) |
+| Barlow Condensed font | `benchmark/hall/fonts/` | SIL Open Font License 1.1 ([`OFL.txt`](benchmark/hall/fonts/OFL.txt)) |
+| Space Grotesk Bold (film titles) | `benchmark/hall/fonts/` | SIL Open Font License 1.1 ([`OFL-SpaceGrotesk.txt`](benchmark/hall/fonts/OFL-SpaceGrotesk.txt)) |
+| JetBrains Mono Medium (film labels) | `benchmark/hall/fonts/` | SIL Open Font License 1.1 ([`OFL-JetBrainsMono.txt`](benchmark/hall/fonts/OFL-JetBrainsMono.txt)) |
+| Poly Haven `concrete_floor_02` texture | `benchmark/hall/source/polyhaven/` | CC0 1.0 ([`LICENSE.txt`](benchmark/hall/source/polyhaven/LICENSE.txt)) |
 
 ## Attribution
 

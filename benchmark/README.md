@@ -2,7 +2,7 @@
 
 The released RoboTeam benchmark: four task families with nine cases each. Every policy run
 selects its case from [`release.json`](release.json); the [task guides](../docs/tasks/README.md)
-describe the tasks and their scoring, and [physics](../docs/physics.md) the physics every scene
+describe the tasks and their scoring, and [physics](../docs/benchmark/physics.md) the physics every scene
 carries.
 
 | Family | Cases | What the robots do |
@@ -29,9 +29,11 @@ benchmark/
       public/*              the family materials a run receives (Mosaic target pattern, Dial
                             previews, table geometry and camera calibration)
       assets/               meshes and textures, restored from the pinned asset archive (not in Git)
+  assets.json               the pinned asset archive and its inventory, restored by `roboteam bootstrap`
+  hall/                     the factory hall: layout.json, fonts/, textures/, source/
 ```
 
-`scripts/build_release.py` writes the release in place: the physics into every scene
+`scripts/release/build_release.py` writes the release in place: the physics into every scene
 (`physics`), each scene's start at rest (`settle`), the Transport letters (`letters`), the Dial
 codes (`codes`) and the public files (`public`); `check` confirms the scenes carry the physics.
 Each step rewrites the hashes in `release.json` and its `release_id`. Nothing at run time
@@ -39,4 +41,9 @@ rebuilds or patches these files. `frozen` is empty until the release is frozen, 
 validation and the platform checks; after that nothing here changes.
 
 `assets/` is not in Git: `roboteam bootstrap` restores it from the archive pinned in
-[`../configs/policy-assets.json`](../configs/policy-assets.json) and checks every file's SHA-256.
+[`assets.json`](assets.json) and checks every file's SHA-256.
+
+[`hall/`](hall) is the factory hall the cases stand in when they are shown together: `layout.json`
+(its appearance, layout and shared visual resources, read by `roboteam/sim/hall/build.py`), the
+fonts, the Poly Haven source textures and the authored exterior texture. It is not a task family
+and no run reads it.
