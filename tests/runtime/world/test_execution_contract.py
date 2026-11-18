@@ -3,7 +3,6 @@
 Protocol tests use actual robot geometry but a synthetic executor; physical
 slow-motion/contact checks live separately in test_gripper_physics.
 """
-import copy
 import json
 from pathlib import Path
 import tempfile
@@ -19,7 +18,7 @@ from roboteam.runtime.world.pipeline import World
 from roboteam.sim.robot_control import matrix_quat
 from roboteam.runtime.run.setup import prepare_run
 from roboteam.runtime.world.service import RuntimeService
-from roboteam.tasks.config import ROOT, load_run_settings, startup_protocol
+from roboteam.tasks.config import load_run_settings, startup_protocol
 from motion import filled
 
 

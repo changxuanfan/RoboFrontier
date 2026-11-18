@@ -1,7 +1,4 @@
-"""The Relay task contract: its instructions and Goal acceptance, defined once.
-
-The geometry stays in the released workstation folders.
-"""
+"""The Relay rules and completion contract as the released tasks carry them, for evaluator fixtures."""
 from copy import deepcopy
 
 RULE_REVISION = 'relay-timber-goal-70pct-v1'

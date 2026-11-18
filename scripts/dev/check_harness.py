@@ -41,8 +41,6 @@ def documentation_links(root, documents):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--report',type=Path)
-    p.add_argument('--skill-validator',type=Path)
-    p.add_argument('--skill-python',default=sys.executable,help='Interpreter with the optional validator dependencies installed')
     p.add_argument('--protocol-only',action='store_true',help='Run explicit non-physics contracts; prohibit physics-world creation/stepping')
     args=p.parse_args()
     guard=None
@@ -90,13 +88,9 @@ def main():
     tracked=subprocess.run(['git','ls-files','-z','*.md'],capture_output=True,text=True,cwd=ROOT).stdout.split('\0')
     documents=[ROOT/name for name in tracked if name]
     broken_links=documentation_links(ROOT,documents)
-    validator=None
-    if args.skill_validator:
-        validator=subprocess.run([args.skill_python,str(args.skill_validator),str(ROOT/'prompts/guides/collaboration')],capture_output=True,text=True)
-        print(validator.stdout,end='');print(validator.stderr,end='',file=sys.stderr)
     dispatcher_count=re.search(r'^PASS: (\d+) dispatcher scenarios:',node.stdout,re.MULTILINE)
     dispatcher_passed=node.returncode==0 and dispatcher_count is not None
-    passed=result.wasSuccessful() and dispatcher_passed and all(node_tests.values()) and all(s['passed'] for s in js_syntax) and ui.returncode==0 and runbook.returncode==0 and tool_docs.returncode==0 and not broken_links and (validator is None or validator.returncode==0)
+    passed=result.wasSuccessful() and dispatcher_passed and all(node_tests.values()) and all(s['passed'] for s in js_syntax) and ui.returncode==0 and runbook.returncode==0 and tool_docs.returncode==0 and not broken_links
     report={'checked_at':datetime.now(ZoneInfo('Asia/Hong_Kong')).isoformat(),'passed':passed,
             'scope':('Protocol-only engineering: FakeWorld/HTTP, private scoring on synthetic records, frozen inputs and encoder recovery. Physics creation/stepping prohibited; no native sessions, model inference or GUI.' if args.protocol_only else 'Offline engineering; FakeWorld/HTTP, robot kinematics/contacts, source/evidence verification and FFmpeg regressions. Installed native CLIs may run against synthetic loopback model endpoints in isolated test sessions. No real provider inference, GUI or model task-solving qualification.'),
             'physics_entrypoints_blocked':args.protocol_only,
@@ -108,7 +102,6 @@ def main():
             'runbook_script_syntax':{'passed':runbook.returncode==0,'error':runbook.stderr or None},
             'tool_example_script_syntax':{'passed':tool_docs.returncode==0,'error':tool_docs.stderr or None},
             'documentation_links':{'passed':not broken_links,'broken':broken_links},
-            'skill_format':{'checked':validator is not None,'passed':validator.returncode==0 if validator else None,'interpreter':args.skill_python if validator else None},
             'compiled_modules':compilation,
             'source_sha256':{str(f.relative_to(ROOT)):hashlib.sha256(f.read_bytes()).hexdigest() for f in (ROOT/'roboteam').rglob('*.py')},
             'not_verified':['new live multi-agent MuJoCo policy trial','new live Codex adapter roundtrip','coordination/parallelism improvement']}

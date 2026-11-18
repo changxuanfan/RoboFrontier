@@ -3,13 +3,13 @@ import multiprocessing
 import os
 from pathlib import Path
 import signal
-import sys
 import tempfile
 import threading
 import time
 import unittest
 
-from roboteam.launch.claude_batch import run_batch, status_batch, stop_batch
+from roboteam.launch.claude_batch import run_batch
+from claude_batch_control import batch_state, request_stop
 
 
 class BatchTests(unittest.TestCase):
@@ -96,7 +96,6 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(counts, {'active':0, 'maximum':2, 'total':4})
         self.assertEqual(state['status'], 'closed')
         self.assertEqual([x['status'] for x in state['jobs']], ['closed']*4)
-        self.assertEqual(len(status_batch(self.root)['runs']), 4)
         with self.assertRaisesRegex(ValueError, 'never restart'): self.run_case(runner)
 
     def test_startup_timeout_is_validated_and_passed_to_every_run(self):
@@ -133,7 +132,7 @@ class BatchTests(unittest.TestCase):
         def runner(*args, **kwargs): entered.set(); finish.wait(3); return {'status':'finished', 'reason':'stop_requested'}
         thread = threading.Thread(target=lambda: outcome.append(self.run_case(runner, parallel=1)))
         thread.start(); self.assertTrue(entered.wait(3))
-        self.assertTrue(stop_batch(self.root)['stop_requested'])
+        request_stop(self.root)
         finish.set(); thread.join(3); self.assertFalse(thread.is_alive())
         self.assertEqual(outcome[0]['status'], 'stopped')
         self.assertEqual([j['status'] for j in outcome[0]['jobs']], ['closed'] + ['stopped_before_start']*3)
@@ -165,7 +164,7 @@ class BatchTests(unittest.TestCase):
             process.join(10)
             self.assertFalse(process.is_alive())
             self.assertEqual(process.exitcode,0)
-            state=status_batch(self.root)
+            state=batch_state(self.root)
             self.assertEqual(state['status'],'stopped')
             self.assertEqual(state['startup_timeout_s'],321)
             self.assertEqual([j['status'] for j in state['jobs']],
@@ -190,7 +189,7 @@ class BatchTests(unittest.TestCase):
         self.assertFalse((self.root/'control/engineering-claim.json').exists())
         batch = json.loads((self.root/'batch.json').read_text()); batch['jobs'][0]['run_directory'] = '/tmp/outside'
         (self.root/'batch.json').write_text(json.dumps(batch))
-        with self.assertRaisesRegex(ValueError, 'run directory'): stop_batch(self.root)
+        with self.assertRaisesRegex(ValueError, 'run directory'): request_stop(self.root)
         self.assertFalse((self.root/'control/STOP').exists())
 
     def test_missing_third_party_credential_or_endpoint_blocks_entire_batch(self):
@@ -223,12 +222,6 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(result['status'], 'closed')
         self.assertFalse(result['scored'])
         self.assertEqual(len(calls), len(self.jobs))
-
-    def test_stale_running_status_is_not_claimed_to_be_live(self):
-        (self.root/'control/engineering-status.json').write_text(json.dumps({'status': 'running'}))
-        (self.root/'control/engineering-supervisor.lock').touch()
-        self.assertEqual(status_batch(self.root)['status'], 'supervisor_lost_needs_review')
-        self.assertFalse(status_batch(self.root)['supervisor_live'])
 
     def test_real_supervisor_process_loss_preserves_claim_and_does_not_replay(self):
         self._assert_supervisor_loss(publish_starting=True)
@@ -264,20 +257,18 @@ class BatchTests(unittest.TestCase):
         try:
             self.assertTrue(entered.wait(10), 'Test supervisor did not start its fake job')
             self.assertTrue(publication.wait(10), 'Test did not reach its publication boundary')
-            self.assertTrue(status_batch(self.root)['supervisor_live'])
+            self.assertTrue(batch_state(self.root)['supervisor_live'])
             process.terminate()
             process.join(10)
             self.assertFalse(process.is_alive())
-            status = status_batch(self.root)
-            self.assertEqual(status['status'], 'supervisor_lost_needs_review')
+            status = batch_state(self.root)
             self.assertFalse(status['supervisor_live'])
             self.assertTrue((self.root/'control/engineering-claim.json').exists())
             self.assertEqual(status['jobs'][0]['status'], 'starting' if publish_starting else 'queued')
             self.assertTrue(status['runs'][0]['claim_record_present'])
             self.assertTrue(all(not run['claim_record_present'] for run in status['runs'][1:]))
-            self.assertTrue(stop_batch(self.root)['stop_requested'])
-            stopped = status_batch(self.root)
-            self.assertEqual(stopped['status'], 'supervisor_lost_needs_review')
+            request_stop(self.root)
+            stopped = batch_state(self.root)
             self.assertTrue(stopped['stop_requested'])
             self.assertTrue(all(item['stop_requested'] for item in stopped['runs']))
             with self.assertRaisesRegex(ValueError, 'never restart'):
@@ -288,17 +279,15 @@ class BatchTests(unittest.TestCase):
                 process.join(10)
             process.close()
 
-    def test_claim_without_status_needs_review_and_cannot_restart(self):
+    def test_claim_without_status_cannot_restart(self):
         (self.root/'control/engineering-claim.json').write_text('{}')
-        self.assertEqual(status_batch(self.root)['status'], 'claim_without_status_needs_review')
         with self.assertRaisesRegex(ValueError, 'never restart'):
             self.run_case(lambda *a, **k: self.fail('unexpected launch'))
 
     def test_stop_before_launch_is_visible_and_blocks_launch(self):
-        self.assertFalse(status_batch(self.root)['stop_requested'])
-        stop_batch(self.root)
-        self.assertEqual(status_batch(self.root)['status'], 'stopped_before_start')
-        self.assertTrue(status_batch(self.root)['stop_requested'])
+        self.assertFalse(batch_state(self.root)['stop_requested'])
+        request_stop(self.root)
+        self.assertTrue(batch_state(self.root)['stop_requested'])
         with self.assertRaisesRegex(ValueError, 'stopped before launch'):
             self.run_case(lambda *a, **k: self.fail('unexpected launch'))
         self.assertFalse((self.root/'control/engineering-claim.json').exists())
@@ -310,7 +299,7 @@ class BatchTests(unittest.TestCase):
             return {'status':'needs_review', 'reason':'owner_unavailable'}
         thread = threading.Thread(target=lambda: outcome.append(self.run_case(runner, parallel=1)))
         thread.start(); self.assertTrue(entered.wait(3))
-        stop_batch(self.root); finish.set(); thread.join(3)
+        request_stop(self.root); finish.set(); thread.join(3)
         self.assertFalse(thread.is_alive())
         self.assertEqual(outcome[0]['status'], 'needs_review')
         self.assertEqual(outcome[0]['jobs'][1]['status'], 'stopped_before_start')

@@ -21,7 +21,7 @@ from roboteam.harness.claude.session.runner import run_turn
 from roboteam.tasks.task_types import ROOT
 from roboteam.launch.prepare import load_env
 from roboteam.launch.claude_prepare import model_entry
-from roboteam.harness.claude.checks.preflight import MIN_TURN_BUDGET, PROMPTS, World, claude_version, setup_run
+from roboteam.harness.claude.checks.preflight import MIN_TURN_BUDGET, PROMPTS, claude_version, setup_run
 
 
 def _cost(record, allowance):

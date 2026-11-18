@@ -372,16 +372,6 @@ def request_fingerprints(request):
             'reasoning_effort':request['reasoning']['effort']}
 
 
-def upstream_error(document):
-    if not isinstance(document,dict):
-        return {'code':None,'param':None,'message':'OpenAI returned a non-object error'}
-    error=document.get('error')
-    if isinstance(error,dict):
-        return {'code':error.get('code'),'param':error.get('param'),
-                'message':str(error.get('message') or 'Upstream request failed')}
-    return {'code':None,'param':None,'message':str(document.get('detail') or 'Upstream request failed')}
-
-
 def response_metadata(result):
     """Allow only documented diagnostic fields; never copy provider payload bodies to logs."""
     diagnostics = result.get('prompt_cache_diagnostics')
@@ -509,42 +499,6 @@ def to_responses(payload, effort='high', replay=None, session_id=None, fork_sour
         if payload.get(field) not in (None, []):
             raise ProtocolError('Sampling or stop overrides are not supported by ChatGPT plan use: ' + field)
     return request
-
-
-def events(response):
-    data = []
-    for raw in response:
-        line = raw.decode('utf-8').rstrip('\r\n')
-        if not line:
-            if data:
-                text = '\n'.join(data)
-                if text != '[DONE]':
-                    yield json.loads(text)
-                data = []
-        elif line.startswith('data:'):
-            data.append(line[5:].lstrip(' '))
-    if data:
-        raise ProtocolError('Truncated Responses SSE event')
-
-
-def completed_response(response, cancelled=None):
-    completed = None
-    for event in events(response):
-        if cancelled is not None and cancelled.is_set():
-            raise ConnectionResetError('Client disconnected before completion')
-        kind = event.get('type')
-        if kind in ('error', 'response.failed', 'response.incomplete'):
-            error = upstream_error({'error':event.get('error') or (event.get('response') or {}).get('error')})
-            raise UpstreamError(error['code'] or kind, error['param'])
-        if kind == 'response.completed':
-            if completed is not None:
-                raise ProtocolError('Duplicate completion event')
-            completed = event['response']
-    if completed is None or completed.get('status') != 'completed':
-        raise ProtocolError('Responses stream ended without response.completed')
-    if completed.get('model') != MODEL:
-        raise ProtocolError('Upstream returned a different model')
-    return completed
 
 
 def to_message(response):

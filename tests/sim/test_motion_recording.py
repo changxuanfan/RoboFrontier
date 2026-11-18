@@ -1,7 +1,6 @@
 import hashlib,json,tempfile,unittest
 from pathlib import Path
-from unittest.mock import patch
-import mujoco,numpy as np
+import numpy as np
 from roboteam.sim.motion_recording import MotionWriter,MotionReader
 from roboteam.sim.workstation import Workstation
 from roboteam.tasks.task_types import ROOT,resolve_case

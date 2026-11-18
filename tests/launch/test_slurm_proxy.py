@@ -1,7 +1,6 @@
 """Authenticated relay transport, latching loss and frozen isolation boundaries."""
 import argparse
 import asyncio
-import base64
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os

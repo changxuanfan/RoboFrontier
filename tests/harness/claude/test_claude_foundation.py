@@ -6,7 +6,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from roboteam.launch.claude_prepare import doctor, plan, model_entry
-from roboteam.harness.claude.robot_mcp import RobotBridge, handle
+from roboteam.harness.claude.robot_mcp import RobotBridge
+from roboteam.harness.shared.robot_mcp import handle
 
 
 class ClaudeFoundationTests(unittest.TestCase):
@@ -159,7 +160,7 @@ class ClaudeFoundationTests(unittest.TestCase):
     def test_every_policy_runtime_op_is_exposed_and_admin_ops_are_not(self):
         # Codex forwards any op to the runtime; Claude's bridge must allow the same policy set.
         import re
-        from roboteam.harness.claude.robot_mcp import POLICY_OPS
+        from roboteam.runtime.tools.robot_ops import POLICY_OPS
         source = (Path(__file__).parents[3] / 'roboteam/runtime/world/service.py').read_text()
         ops = set(re.findall(r"op == '([a-z_]+)'", source))
         ops |= {o for group in re.findall(r"op in \(([^)]*)\)", source) for o in re.findall(r"'([a-z_]+)'", group)}

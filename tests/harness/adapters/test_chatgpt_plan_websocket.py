@@ -1,4 +1,3 @@
-import copy
 from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
@@ -160,7 +159,7 @@ class WebSocketStateTests(unittest.TestCase):
 
     def test_failed_persistence_never_commits_connection_state(self):
         with self.assertRaises(OSError):
-            with self.transport.exchange(self.request(),threading.Event(),{}) as result:
+            with self.transport.exchange(self.request(),threading.Event(),{}):
                 raise OSError('fixture storage failure')
         self.assertIsNone(self.transport.channels['parent'].response_id)
         self.assertTrue(self.sockets[0].closed)

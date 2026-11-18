@@ -70,14 +70,12 @@ class ProbeTests(unittest.TestCase):
 
     def test_a_tunnel_that_accepts_tcp_without_a_route_fails_the_https_probe(self):
         import socket
-        from functools import partial
         for name, handle in (('closes', lambda c: c.close()), ('silent', lambda c: (time.sleep(2), c.close()))):
             with self.subTest(tunnel=name):
                 port = self.serve(handle)
                 connect = socket.create_connection
                 with patch.object(network_outage.socket, 'create_connection',
                                   side_effect=lambda address, timeout=None: connect(('127.0.0.1', port), timeout)):
-                    self.assertTrue(network_outage.tcp_probe(('api.example',), timeout=.5))
                     self.assertFalse(network_outage.https_probe(('api.example',), timeout=.5))
 
     def test_a_verified_https_answer_passes(self):

@@ -178,7 +178,6 @@ class FrozenReleaseTests(unittest.TestCase):
     def test_the_release_is_frozen_with_its_own_id(self):
         # build_release.index_release recomputes release_id from every case file and refuses a
         # change once frozen; here the record and the files must agree.
-        import sys
         from scripts.release import build_release
         release = read(ROOT/RELEASE)
         self.assertTrue(release['frozen'])

@@ -13,7 +13,6 @@ EXCLUDE_REASON = (
     'Stop did not settle',
 )
 REGRESS_MIN_S = 5.0  # a goal lost for less than this is evaluator flicker, not a misplaced item
-OBJECT_REASON = ('grasp', 'opening')
 
 
 def merge(x):

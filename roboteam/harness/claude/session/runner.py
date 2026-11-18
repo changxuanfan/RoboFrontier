@@ -20,7 +20,7 @@ import uuid
 import weakref
 from pathlib import Path
 from urllib.parse import urlsplit
-from roboteam.harness.claude.session.recovery import api_error, capacity_code, usage_limit_of
+from roboteam.harness.claude.session.session_recovery import api_error, capacity_code, usage_limit_of
 from roboteam.harness.claude.session.native_home import config_directory
 from roboteam.harness.claude.session.cost_state import amount, baseline, invocation_cost
 from roboteam.launch.results.host_metrics import host_event

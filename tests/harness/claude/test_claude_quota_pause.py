@@ -1,6 +1,5 @@
 """A Claude turn that failed on the plan's usage limit pauses the world until the reset and is
 then continued once in the same session (runtime/time/quota.py); the Codex host does the same."""
-import json
 import os
 import time
 import unittest

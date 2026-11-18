@@ -33,7 +33,7 @@ def fixture(base, name):
 
 class WorkerRequestTests(unittest.TestCase):
     def test_apparmor_restriction_is_checked_before_entering_a_namespace(self):
-        from roboteam.harness.codex import tool_worker
+        from roboteam.harness.shared import tool_worker
         with patch.object(Path, 'exists', return_value=True), \
                 patch.object(Path, 'read_text', return_value='1\n'), \
                 patch.object(tool_worker.os, 'unshare', create=True) as unshare:
@@ -43,7 +43,7 @@ class WorkerRequestTests(unittest.TestCase):
 
     @unittest.skipUnless(hasattr(os, 'CLONE_NEWUSER'), 'Linux namespaces only')
     def test_unrestricted_apparmor_keeps_the_native_namespace_attempt(self):
-        from roboteam.harness.codex import tool_worker
+        from roboteam.harness.shared import tool_worker
         for exists, value in ((False, ''), (True, '0\n')):
             with self.subTest(exists=exists), patch.object(Path, 'exists', return_value=exists), \
                     patch.object(Path, 'read_text', return_value=value), \
@@ -54,7 +54,7 @@ class WorkerRequestTests(unittest.TestCase):
 
     def test_any_command_the_broker_admits_reaches_the_worker_whole_however_it_is_escaped(self):
         import io
-        from roboteam.harness.codex import tool_worker
+        from roboteam.harness.shared import tool_worker
         # JSON.stringify escapes these as the broker sends them: newline as two bytes, control as six.
         for command in ('a\n'*60000, '\x01'*131000, 'x'*131000):
             data = json.dumps({'tool': 'policy_exec', 'command': command}).encode()

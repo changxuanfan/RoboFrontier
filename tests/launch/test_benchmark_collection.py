@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from roboteam.launch.results.collect import collect_batch, digest
+from roboteam.launch.results.collect import collect_batch
 from roboteam.launch.results.archive_batch import create, verify
 
 

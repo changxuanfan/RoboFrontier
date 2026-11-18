@@ -87,7 +87,7 @@ class DelegationTests(unittest.TestCase):
         self.call('Controller','gripper',{'robot':'A','state':'open','wait':False})
         self.assertIn('error',self.delegate()['result'])
         self.service.world.complete('A');self.service.pump()
-        pending=self.service.accept('Controller','gripper',{'robot':'A','state':'open'},'queued')
+        self.service.accept('Controller','gripper',{'robot':'A','state':'open'},'queued')
         with self.assertRaises(ValueError):
             self.d.create('Controller','direct',[{'robots':['A'],'goal':'x','done_when':'y'}])
         self.service.pump();self.assertIn('A',self.service.world.running)

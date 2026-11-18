@@ -25,19 +25,6 @@ UNARMED_GIVE_UP = 12
 SWITCH = 'ROBOTEAM_OUTAGE_PROBE'
 
 
-def tcp_probe(hosts, timeout=TIMEOUT_S):
-    """True when every host accepts a TCP connection on port 443.
-
-    Not used by default: a local VPN tunnel accepts every TCP connection itself, so this
-    stays true while the route to the API is gone."""
-    for host in hosts:
-        try:
-            socket.create_connection((host, 443), timeout=timeout).close()
-        except OSError:
-            return False
-    return True
-
-
 def https_probe(hosts, timeout=TIMEOUT_S, context=None, port=443):
     """True when every host completes a verified TLS handshake and answers an HTTP request.
 

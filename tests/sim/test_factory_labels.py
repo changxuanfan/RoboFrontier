@@ -1,5 +1,5 @@
 import unittest
-from roboteam.sim.hall.labels import place_label, overlaps, region_title
+from roboteam.sim.hall.labels import place_label, region_title
 
 
 class LabelPlacementTests(unittest.TestCase):

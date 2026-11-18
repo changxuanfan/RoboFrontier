@@ -1,7 +1,6 @@
 """Synthetic caches only: never read the operator's login or contact a provider."""
 import base64
 import json
-import os
 from pathlib import Path
 import tempfile
 import time

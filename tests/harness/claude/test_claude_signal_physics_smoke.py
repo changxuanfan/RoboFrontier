@@ -14,7 +14,7 @@ import time
 import unittest
 
 from harness.claude.test_claude_physics_smoke import MotionModel
-from roboteam.launch.claude_batch import status_batch
+from claude_batch_control import batch_state
 from roboteam.launch.claude_prepare import prepare_batch
 
 
@@ -60,7 +60,7 @@ class SignalPhysicsSmokeTests(unittest.TestCase):
                 process=subprocess.Popen(cmd,env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=log)
                 deadline=time.monotonic()+90
                 while time.monotonic()<deadline and process.poll() is None:
-                    state=status_batch(batch)
+                    state=batch_state(batch)
                     details=[item['detail'] or {} for item in state['runs']]
                     if all(item.get('status')=='running' for item in details) and MotionModel.requests: break
                     time.sleep(.1)
@@ -71,7 +71,7 @@ class SignalPhysicsSmokeTests(unittest.TestCase):
                 process.send_signal(signal.SIGTERM)
                 process.wait(timeout=60)
                 self.assertEqual(process.returncode,0,(directory/'supervisor.log').read_text()[-3000:])
-            state=status_batch(batch)
+            state=batch_state(batch)
             self.assertFalse(state['supervisor_live'],state)
             budget_review=False
             for item,owner_pid in zip(state['runs'],owner_pids):

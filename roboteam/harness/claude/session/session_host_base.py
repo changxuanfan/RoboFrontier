@@ -1,5 +1,4 @@
 """Shared role lifecycle, accounting and conservative recovery for native CLI harnesses."""
-import json
 import math
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -9,7 +8,8 @@ import time
 import uuid
 from roboteam.runtime.run.setup import write_json
 from roboteam.harness.shared.native import PreLaunchCancelled
-from roboteam.harness.claude.session.session_recovery import MAX_CAPACITY_RETRIES, recover, recover_model_loss, recover_network, recover_quota
+from roboteam.harness.claude.session.session_recovery import recover, recover_model_loss, recover_network, recover_quota
+from roboteam.runtime.run.bootstrap import MAX_CAPACITY_RETRIES
 from roboteam.runtime.run import layout as run_layout
 
 class SessionHost:

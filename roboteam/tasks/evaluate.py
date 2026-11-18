@@ -1,5 +1,4 @@
 """Private process and goal evaluation. Nothing here is a policy observation."""
-from collections import deque
 import json,math
 from pathlib import Path
 import mujoco,numpy as np
@@ -74,7 +73,7 @@ class Monitor:
         self.geoms={n:self.descendant_geoms(self.m.body(n).id) for n in self.names}
         self.geom_object=np.full(self.m.ngeom,-1,int)
         for i,n in enumerate(self.names):self.geom_object[self.geoms[n]]=i
-        self.contact_pairs=[];self.self_contact_pairs=[];self.first_collisions={};self.violations=[];self.next_sample=-1;self.next_log=-1;self.last_time=None;self.max_sample_gap=0.;self.samples=0;self.max_active=0;self.overlap_s=0.;self.holding_s=0.;self.previous_sample=None
+        self.self_contact_pairs=[];self.first_collisions={};self.violations=[];self.next_sample=-1;self.next_log=-1;self.last_time=None;self.max_sample_gap=0.;self.samples=0;self.max_active=0;self.overlap_s=0.;self.holding_s=0.;self.previous_sample=None
         from .contact_episodes import ContactEpisodes
         self.contact_episodes = ContactEpisodes()
         self.motion_overlap_s=0.;self.any_motion_s=0.;self.robot_motion_s=0.;self.max_moving=0
@@ -85,9 +84,9 @@ class Monitor:
             # Self-describing header; 'full' logs keep their original line-per-snapshot form.
             self.log.write(json.dumps(dict(schema='roboteam.suite-process.v2',format=log_format,snapshot_interval_s=self.snapshot_interval,
                 sample_interval_s=.02,continuous_fields=sorted(CONTINUOUS_FIELDS)+['*_s']))+'\n');self.log.flush()
-        self.result_cache={};self.goal_since=None;self.since=np.full((len(self.task['goals']),len(self.names)),np.nan)
+        self.result_cache={};self.since=np.full((len(self.task['goals']),len(self.names)),np.nan)
         if self.task_type=='dial':
-            self.dials=self.task['dials'];n=len(self.dials);self.blue={};self.red={};self.module_geoms=[];self.blue_qualification=[SupportQualification() for _ in range(n)];self.dial_ready=[False]*n;self.previous_red=set();self.unsupported_since={}
+            self.dials=self.task['dials'];n=len(self.dials);self.blue={};self.red={};self.module_geoms=[];self.blue_qualification=[SupportQualification() for _ in range(n)];self.previous_red=set();self.unsupported_since={}
             for i,a in enumerate(self.dials):
                 name=a['id']
                 if self.task['level']>1:
@@ -100,7 +99,7 @@ class Monitor:
             if secret is None:raise ValueError('Private dial code must be explicitly supplied to evaluator')
             from .dial import from_task
             self.game=from_task(self.task,secret)
-            self.minimum_clearance=np.full(n,math.inf);self.blue_gaps=np.zeros(n);self.blue_max_gaps=np.zeros(n);self.last_dial_angles=None
+            self.minimum_clearance=np.full(n,math.inf)
             self.carried_trials=0
             if append:self.continue_dial_record()
         if self.task_type=='relay':
@@ -283,7 +282,7 @@ class Monitor:
                                      strict_task_success=complete and not self.violations,
                                      scoring_version='terminal_outcome_v2')
     def sample_dial(self,dt):
-        n=len(self.dials);supporters=[];ready=[];clear=[];red=set();pairs,dist=self.contacts()
+        supporters=[];ready=[];clear=[];red=set();pairs,dist=self.contacts()
         for i,a in enumerate(self.dials):
             if self.task['level']==1:support=set();ok=True;c=math.inf
             else:
@@ -310,7 +309,7 @@ class Monitor:
                     if key not in self.unsupported_since:self.unsupported_since[key]=self.d.time
                     if self.d.time-self.unsupported_since[key]>.05:self.violation('driven_red_without_support',key=self.dials[i]['id']+'/'+robot)
                 else:self.unsupported_since.pop(key,None)
-        self.dial_ready=ready;self.previous_red=red;eligible=all(ready);red_ready=None
+        self.previous_red=red;eligible=all(ready);red_ready=None
         spec=self.task.get('mechanism',{}).get('feedback')
         if spec and spec.get('require_red_grasp'):
             red_ready=[]
@@ -401,7 +400,6 @@ def placement_candidates(mon,positions,stable):
     task=mon.task;m,d=mon.m,mon.d;goals=task['goals'];out=np.zeros((len(goals),len(mon.names)),bool)
     side=task['cube_size_m'];tol=.0003
     for i,g in enumerate(goals):
-        target=np.asarray(g['position_m'])
         if task['family']=='transport':
             board=d.body(g['board']);br=board.xmat.reshape(3,3);bv=mon.velocity(board.id)
             if np.linalg.norm(bv[3:])>.01 or np.linalg.norm(bv[:3])>.1:continue
@@ -418,7 +416,6 @@ def placement_candidates(mon,positions,stable):
                 mechanism=task['mechanism'];spacing=mechanism['blade_spacing_m'];opening=np.asarray(mechanism['slot_opening_m'])/2;depth=mechanism['slot_depth_m'];valid=True
                 for blade in (0,1):
                     gid=m.geom(o['id']+f'_blade{blade}').id;center=br.T@(d.geom_xpos[gid]-board.xpos);rot=br.T@d.geom_xmat[gid].reshape(3,3);extent=abs(rot)@m.geom_size[gid]
-                    expected=np.array([(-1 if blade==0 else 1)*spacing/2,local[1]])
                     # 180-degree placement swaps the two identical blades.
                     nearest=min((np.array([-spacing/2,local[1]]),np.array([spacing/2,local[1]])),key=lambda q:np.linalg.norm(center[:2]-q))
                     if np.any(abs(center[:2]-nearest)+extent[:2]>opening+tol) or center[2]+extent[2]>.0005 or center[2]-extent[2]<-depth-tol:valid=False;break
@@ -515,7 +512,7 @@ class Relay:
         global_ground=self.supported_payloads(False,False) if stacking else set()
         goal_ground=self.supported_payloads(True,False,{name for name,inside in inside_flags.items() if inside}) if stacking else set()
         for ident,state in self.states.items():
-            a=state['assembly'];support=mon.bilateral(state['rod_geoms'],positive_force=True);all_g=state['all_geoms'];external=self.environment_contact(all_g) or ident in global_ground;on_table=ident in goal_ground if stacking else external;inside=inside_flags[ident]
+            support=mon.bilateral(state['rod_geoms'],positive_force=True);all_g=state['all_geoms'];external=self.environment_contact(all_g) or ident in global_ground;on_table=ident in goal_ground if stacking else external;inside=inside_flags[ident]
             clear=mon.bottom(all_g)>self.table+.002 and ident not in global_ground
             if not state['airborne'] and mon.bottom(state['rod_geoms'])>self.table+.025:
                 if len(support)<2:mon.violation('unsupported_initial_lift',key=ident)
@@ -545,7 +542,7 @@ class Relay:
                     if state['gap_since'] is None:state['gap_since']=t
                 else:state['gap_since']=None
                 # A handover happens in the air: the timber is clear of the table, held
-                # neither by it nor through other cargo (task_types.RELAY_HANDOVER_DEFINITION).
+                # neither by it nor through other cargo (the handover rule in task_types.py).
                 off_table=clear and not external
                 if not state['dropped']:
                     fresh=support-state['custody']
@@ -584,7 +581,7 @@ class Relay:
                 if state['dropped']:
                     if support-state['custody']:
                         # A receiver that picks a dropped timber up voids its handovers
-                        # (RELAY_RECOVERY_RULE): none counts, earlier or later, until the team
+                        # (the recovery rule in task_types.py): none counts, earlier or later, until the team
                         # that held it at the drop lifts it again and hands it over.
                         mon.violation('receiver_recovered_drop',key=ident);state['valid_from']=None
                     if len(support&state['custody'])>=2 and clear:

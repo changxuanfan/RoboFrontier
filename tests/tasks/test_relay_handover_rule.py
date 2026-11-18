@@ -7,7 +7,7 @@ from unittest.mock import patch
 import numpy as np
 
 from roboteam.runtime.run import segments as run_segments
-from roboteam.tasks.relay import final_task
+from relay_contract import final_task
 from roboteam.tasks.task_types import RELAY_HANDOVER_RULE, policy_task
 from tests.tasks.test_relay_goal_support import GoalSupportTests
 
@@ -100,7 +100,7 @@ class Scenario:
 
 
 class AirborneHandoverTests(unittest.TestCase):
-    """Every handover happens off the table (task_types.RELAY_HANDOVER_DEFINITION)."""
+    """Every handover happens off the table (the handover rule in task_types.py)."""
     def test_a_regrasp_of_a_timber_resting_on_the_goal_table_is_not_a_handover(self):
         s = Scenario().lifted()
         s.run({'A', 'B'}, .1, grounded=True).run({'A', 'B', 'C'}, .3).run({'B', 'C'}, .1).run(set(), .1)
@@ -157,7 +157,7 @@ class AirborneHandoverTests(unittest.TestCase):
 
 
 class DropRecoveryTests(unittest.TestCase):
-    """A receiver that picks up a dropped timber voids its handovers (task_types.RELAY_RECOVERY_RULE)."""
+    """A receiver that picks up a dropped timber voids its handovers (the recovery rule in task_types.py)."""
     def handed_over_then_dropped(self):
         s = Scenario(inside=False).lifted()
         s.run({'A', 'B', 'C'}, .3).run({'B', 'C'}, .1)

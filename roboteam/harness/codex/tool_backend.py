@@ -10,8 +10,7 @@ import tempfile
 
 from roboteam.runtime.sandbox import access as policy_access
 from roboteam.runtime.run.setup import write_json
-from roboteam.tasks.config import ROOT
-from roboteam.harness.codex.tool_worker import SCHEMA
+from roboteam.harness.shared.tool_worker import SCHEMA
 
 BACKENDS = ('native', 'landlock-v1')
 

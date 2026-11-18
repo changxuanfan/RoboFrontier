@@ -5,7 +5,6 @@ native fork lineage and completed-child/fork-again rounds. It does not qualify
 Linux kernel confinement, GPU rendering or genuine model behavior/capacity.
 """
 import base64
-from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -19,7 +18,7 @@ import unittest
 from unittest.mock import patch
 
 from roboteam.runtime.sandbox import access as policy_access
-from roboteam.harness.codex.job_harness import build_manifest, harness
+from roboteam.harness.codex.job_harness import harness
 from roboteam.harness.codex.launch import launch_config, model_entry
 from roboteam.harness.codex.tool_backend import prepare as prepare_tools
 from roboteam.runtime.run.setup import write_json

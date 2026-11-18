@@ -2,12 +2,8 @@
 
 The unified CLI (`roboteam prepare|run|continue|status|stop`) uses these; a batch runs
 under roboteam/launch/claude_batch.py."""
-import argparse
-import hashlib
-import secrets
 import sys
 import time
-import json
 import os
 from pathlib import Path
 import shutil

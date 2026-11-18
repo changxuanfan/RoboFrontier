@@ -1,5 +1,4 @@
 """The hand driver: encoder position tracking and force-mode isolation."""
-import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest

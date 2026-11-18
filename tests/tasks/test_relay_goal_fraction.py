@@ -5,7 +5,7 @@ import numpy as np
 import mujoco
 
 from roboteam.tasks.relay_goal_fraction import clipped_fraction, timber_fraction
-from roboteam.tasks.relay import final_task
+from relay_contract import final_task
 from tests.tasks.test_relay_goal_support import GoalSupportTests
 
 HANDOVER = dict(senders=['A', 'B'], receivers=['B', 'C'], airborne=True)

@@ -1,5 +1,5 @@
 """Infrastructure pauses retain one world and settle original calls once."""
-import json,os,sys,tempfile,time,unittest
+import os,sys,tempfile,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 from fake_pipeline import FakeWorld,fake_capture
@@ -30,7 +30,7 @@ class EgressPauseTests(unittest.TestCase):
         atomic(self.marker,{'schema':'roboteam.egress-pause.v1','job_id':'123','instance':'a'*32,'claim':'fixture','at':time.time()})
         self.service.pump()
     def test_pause_freezes_world_and_holds_new_actions_then_resumes_original_once(self):
-        first=self.call('A','gripper',{'state':'close','wait':False},'original')
+        self.call('A','gripper',{'state':'close','wait':False},'original')
         world=self.service.world;self.service.step_physics();sim=world.time
         self.pause()
         for _ in range(20):self.service.step_physics()

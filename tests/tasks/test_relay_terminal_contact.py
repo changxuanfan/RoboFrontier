@@ -4,7 +4,7 @@ import unittest
 
 from roboteam.tasks.task_types import ROOT, RELEASE, read
 from roboteam.tasks.public import public_task, validate as validate_task
-from roboteam.tasks.relay import is_current
+from relay_contract import is_current
 
 
 class RelayTerminalContactTests(unittest.TestCase):

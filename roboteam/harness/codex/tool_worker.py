@@ -1,5 +1,7 @@
 """Codex entry point to the shared isolated file worker."""
-from roboteam.harness.shared.tool_worker import *
+import sys
+
+from roboteam.harness.shared.tool_worker import main
 
 if __name__ == '__main__':
     try:

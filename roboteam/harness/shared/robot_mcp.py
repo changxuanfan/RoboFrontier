@@ -1,5 +1,4 @@
 """Experimental role-bound MCP stdio server; not yet qualified for scored runs."""
-import argparse
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import json
@@ -18,7 +17,7 @@ from roboteam.launch.results.host_metrics import host_event
 # One description for every harness's robot tool (harness/shared/robot_tool.json).
 TOOL = json.loads((Path(__file__).resolve().with_name('robot_tool.json')).read_text())
 # Administrative methods are never made available through the policy connection.
-from roboteam.runtime.tools.robot_ops import POLICY_OPS, check_request
+from roboteam.runtime.tools.robot_ops import check_request
 
 
 class RobotBridge:

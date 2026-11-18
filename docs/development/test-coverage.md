@@ -12,8 +12,7 @@ Both modes also run every Node host test (`tests/**/test_*.js` with `node --test
 dispatcher scenarios (`tests/harness/codex/test_meta_dispatcher.cjs`), check the syntax of every
 JavaScript file and of the inline scripts in `roboteam/runtime/world/dashboard.html`, `docs/development/manager-runbook.md`
 and the tool reference, compile every Python file, and check that every relative link in tracked
-Markdown resolves inside the checkout. `--skill-validator PATH --skill-python PYTHON` adds an
-external Skill format check; valid formatting does not show better coordination.
+Markdown resolves inside the checkout.
 
 - **Full** discovers every Python test under `tests/`: fake services, robot kinematics, real
   headless MuJoCo contact checks, media codecs, and installed harness CLIs against local stub model

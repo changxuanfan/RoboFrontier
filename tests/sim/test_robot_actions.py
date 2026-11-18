@@ -136,7 +136,7 @@ class StopProtocolTests(unittest.TestCase):
         self.count+=1;j=self.service.accept(actor,op,data or {},identity or f'c{self.count}');self.service.pump();return j
 
     def test_stop_ownership_original_id_and_other_arm_continues(self):
-        a=self.call('A','move',{'target_m':[.4,0,.7],'wait':False},'moving-a')
+        self.call('A','move',{'target_m':[.4,0,.7],'wait':False},'moving-a')
         self.call('B','move',{'target_m':[.4,.65,.7],'wait':False},'moving-b')
         self.assertIn('error',self.call('A','stop',{'robot':'B','call_id':'moving-b'})['result'])
         self.assertIn('error',self.call('Controller','stop',{'call_id':'moving-a'})['result'])

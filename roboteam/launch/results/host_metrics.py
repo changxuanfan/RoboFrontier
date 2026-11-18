@@ -262,7 +262,6 @@ def _union(intervals):
 
 def claude_pricing():
     """List prices from the Claude section of models.json, for estimates only."""
-    from roboteam.tasks.config import ROOT
     from roboteam.configuration import model_catalog
     return model_catalog('claude').get('pricing') or {}
 

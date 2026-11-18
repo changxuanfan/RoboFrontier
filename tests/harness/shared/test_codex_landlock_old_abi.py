@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import patch
 
 from roboteam.harness.shared.landlock import abi
-from roboteam.harness.codex import tool_worker
+from roboteam.harness.shared import tool_worker
 
 
 def fixture(base):

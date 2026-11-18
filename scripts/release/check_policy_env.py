@@ -322,7 +322,7 @@ def check_harness(name, environment, scratch, mode):
 
 def private_shared_memory_possible():
     """Whether a command here can get an empty /dev/shm of its own, as a Codex command does."""
-    probe = 'from roboteam.harness.codex.tool_worker import private_shared_memory as p; p()'
+    probe = 'from roboteam.harness.shared.tool_worker import private_shared_memory as p; p()'
     return subprocess.run([sys.executable, '-c', probe], cwd=ROOT, capture_output=True, timeout=60).returncode == 0
 
 

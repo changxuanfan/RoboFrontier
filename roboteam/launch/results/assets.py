@@ -68,8 +68,6 @@ def export_assets(source, output, root=ROOT):
     sources={}
     for name,checksum in expected.items():
         path=source/name
-        if not path.is_file() and name.startswith('configs/'):
-            path=source/'runs/state-assets'/checksum
         if not path.is_file() or digest(path)!=checksum:
             raise ValueError('Missing/changed source asset: '+name)
         sources[name]=path

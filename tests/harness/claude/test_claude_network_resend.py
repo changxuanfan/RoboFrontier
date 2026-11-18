@@ -6,7 +6,7 @@ import json
 import time
 import unittest
 
-from roboteam.harness.claude.session import recovery
+from roboteam.harness.claude.session import session_recovery as recovery
 from roboteam.harness.claude.session.runner import summarize
 from roboteam.harness.claude.session.session_host import ClaudeSessionHost
 from roboteam.runtime.time.egress_pause import WorldPause

@@ -45,7 +45,7 @@ class CapacityRecoveryTests(unittest.TestCase):
         self.fail_turn()
         self.assertTrue(self.host.recover_capacity(self.store, now=0))
         self.assertEqual(len(self.calls), 1)
-        from roboteam.harness.claude.session.recovery import capacity_delay
+        from roboteam.harness.claude.session.session_recovery import capacity_delay
         delay = capacity_delay(0, self.host.session_id)
         self.assertTrue(10 <= delay < 15)
         self.assertTrue(self.host.recover_capacity(self.store, now=delay-.01))

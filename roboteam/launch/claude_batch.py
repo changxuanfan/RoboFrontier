@@ -118,47 +118,6 @@ def _preflight(jobs, env, verifier, continuing=False, budgets=(None, None)):
         build_env(model_entry, env, home)
 
 
-def status_batch(folder):
-    folder = Path(folder).resolve()
-    jobs = _jobs(folder)
-    state_file = _b(folder, 'engineering_status')
-    state = json.loads(state_file.read_text()) if state_file.exists() else {'status': 'not_started'}
-    lock_path = _b(folder, 'engineering_lock')
-    live = False
-    if lock_path.exists():
-        with lock_path.open('r') as lock:
-            try:
-                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                live = True
-            else:
-                fcntl.flock(lock, fcntl.LOCK_UN)
-    state['supervisor_live'] = live
-    state['stop_requested'] = _b(folder, 'stop').exists()
-    if not state_file.exists() and _b(folder, 'engineering_claim').exists():
-        state['status'] = 'starting' if live else 'claim_without_status_needs_review'
-    elif not state_file.exists() and _b(folder, 'stop').exists():
-        state['status'] = 'stopped_before_start'
-    if state.get('status') == 'running' and not live:
-        state['status'] = 'supervisor_lost_needs_review'
-    state['runs'] = []
-    for job in jobs:
-        run = Path(job['run_directory'])
-        path = _r(run, 'engineering_status')
-        state['runs'].append({'model_entry': job['model_entry'], 'case_id': job['case_id'],
-                              'detail': json.loads(path.read_text()) if path.exists() else None,
-                              'claim_record_present': _r(run, 'engineering_claim').exists(),
-                              'stop_requested': _r(run, 'stop').exists()})
-    return state
-
-
-def stop_batch(folder):
-    folder = Path(folder).resolve()
-    jobs = _jobs(folder)  # Validate every path before changing any stop marker.
-    _stop_all(folder, jobs)
-    return {'stop_requested': True, 'jobs': len(jobs), 'note': 'Request only; inspect status and sealing outcome.'}
-
-
 def run_until_signal(folder, base_env, **options):
     """run_batch with SIGINT and SIGTERM turned into an orderly batch stop (as `roboteam stop`):
     active runs stop and seal, queued runs do not start, and this process returns."""

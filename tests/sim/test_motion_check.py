@@ -1,7 +1,6 @@
 """Headless kinematics only: no World construction, physics step, renderer or GUI."""
 import copy
 import json
-from pathlib import Path
 import unittest
 from unittest.mock import patch
 import xml.etree.ElementTree as ET

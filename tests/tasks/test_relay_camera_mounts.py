@@ -1,6 +1,5 @@
 """Relay publishes its cameras' mounts, and they are the poses MuJoCo renders from."""
 from pathlib import Path
-import sys
 import tempfile
 import unittest
 

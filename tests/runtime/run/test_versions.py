@@ -1,6 +1,4 @@
 """Runs use the pinned harness and library versions and refuse others."""
-import re
-import subprocess
 import unittest
 from types import SimpleNamespace
 

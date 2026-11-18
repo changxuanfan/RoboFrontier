@@ -3,7 +3,6 @@ import time
 
 from roboteam.runtime.run import layout as run_layout
 
-from roboteam.runtime.run.bootstrap import MAX_CAPACITY_RETRIES
 EXHAUSTED_REASON = 'Model capacity recovery attempts exhausted'
 BASE_DELAY_SECONDS = 10
 MAX_DELAY_SECONDS = 60

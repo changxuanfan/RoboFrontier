@@ -1,1 +1,1 @@
-"""Codex CLI harness: launch configuration, batch runner and the Node policy host."""
+"""The Codex harness: launch configuration, the job-scoped process, tool backend, recovery and the Node host."""

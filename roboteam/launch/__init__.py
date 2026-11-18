@@ -1,1 +1,1 @@
-"""Preparing, supervising, collecting and archiving batches on Mac, Slurm and containers."""
+"""Preparing, running, collecting and archiving batches on macOS, Linux, Slurm and Docker."""

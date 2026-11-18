@@ -11,7 +11,6 @@ never contacts a model provider and never stops, pauses or changes a run.
 import argparse
 import json
 from pathlib import Path
-import sys
 import time
 
 # The one price table (USD per million tokens). Estimates only, never a provider invoice.

@@ -138,7 +138,7 @@ class PandaArm:
         self.grasp_hold_velocity_bias=float(self.grip_position_parameters[1][2])
         self.grasp_force_ceiling=min(-float(self._source_grip_position_parameters[3][0]),float(self._source_grip_position_parameters[3][1]))
         self.grasp_drive_force=0.
-        self.grasp_phase=None;self.grasp_force_started=None;self.grasp_contact_width=None
+        self.grasp_phase=None;self.grasp_force_started=None
         finger_dofs=[model.jnt_dofadr[model.joint(self.name+'_'+s).id] for s in ('finger_joint1','finger_joint2')]
         self.grasp_motor_mass=float(np.sum(model.dof_M0[finger_dofs]));self.grasp_passive_damping=float(np.sum(model.dof_damping[finger_dofs]))
         self.grasp_settling=deque()
@@ -300,7 +300,7 @@ class PandaArm:
                 # not remain saturated while another robot perturbs the load.
                 self.set_force_drive()
                 self.grasp_drive_force=min(previous_drive,self.drive_target())
-                self.grasp_phase='force' if retained else 'approach';self.grasp_contact_width=self.grip_initial_width if retained else None
+                self.grasp_phase='force' if retained else 'approach'
                 self.grasp_force_started=now-.4*self.grasp_drive_force/self.drive_target() if retained else None
                 self.data.ctrl[self.grip]=-self.grasp_drive_force
                 self.gripper=self.width_to_grip(self.grip_initial_width)
@@ -343,7 +343,7 @@ class PandaArm:
             for destination,value in zip((self.model.actuator_gainprm,self.model.actuator_biasprm,self.model.actuator_ctrlrange,self.model.actuator_forcerange),self.grip_position_parameters):
                 destination[self.grip]=value
         self.grasp_force=None;self.grasp_width=None;self.grasp_confirmed=False
-        self.grasp_phase=None;self.grasp_force_started=None;self.grasp_contact_width=None
+        self.grasp_phase=None;self.grasp_force_started=None
         self.gripper=self.width_to_grip(width);self.grip_goal=self.gripper
         self.data.ctrl[self.grip]=self.gripper
 
@@ -443,7 +443,7 @@ class PandaArm:
         fingers=[self.data.joint(self.name+'_'+s) for s in ('finger_joint1','finger_joint2')]
         width=self.grip_min+sum(float(j.qpos[0]) for j in fingers)
         if self.grasp_phase in ('force','hold') and width<self.grasp_width-self.grasp_epsilon[0] and min(float(j.qvel[0]) for j in fingers)<-.05:
-            self.grasp_phase='approach';self.grasp_confirmed=False;self.grasp_drive_force=0.;self.grasp_force_started=None;self.grasp_contact_width=None;self.grasp_settling.clear()
+            self.grasp_phase='approach';self.grasp_confirmed=False;self.grasp_drive_force=0.;self.grasp_force_started=None;self.grasp_settling.clear()
         if self.grasp_phase=='approach':
             damping=min(2*self.drive_target()/self.grip_speed,self.grasp_motor_mass/self.model.opt.timestep)
             self.model.actuator_biasprm[self.grip,2]=-damping
@@ -504,7 +504,7 @@ class PandaArm:
             stationary=fingers_settled
             valid=width>self.grip_min+.001 and self.grasp_width-self.grasp_epsilon[0]<width<self.grasp_width+self.grasp_epsilon[1]
             if stationary and valid and self.grasp_phase=='approach':
-                self.grasp_phase='force';self.grasp_force_started=now;self.grasp_contact_width=width;self.grasp_settling.clear();self.stable=0
+                self.grasp_phase='force';self.grasp_force_started=now;self.grasp_settling.clear();self.stable=0
                 stationary=False
             reached=stationary and (not valid or self.grasp_drive_force>=self.drive_target()-1e-3)
             reason=None if valid else 'Grasp stopped outside expected object-width tolerance'

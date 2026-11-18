@@ -32,7 +32,7 @@ import tempfile
 
 SCHEMA = 'roboteam.landlock-rules.v1'
 CREATE_RULESET, ADD_RULE, RESTRICT_SELF = 444, 445, 446  # Same number on x86_64 and arm64.
-PATH_BENEATH, NET_PORT = 1, 2
+PATH_BENEATH = 1
 PR_SET_NO_NEW_PRIVS = 38
 EXECUTE, WRITE_FILE, READ_FILE, READ_DIR = 1 << 0, 1 << 1, 1 << 2, 1 << 3
 MAKE_REG, MAKE_SOCK = 1 << 8, 1 << 9

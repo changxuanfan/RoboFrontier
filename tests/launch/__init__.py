@@ -1,1 +1,1 @@
-"""Batch tests."""
+"""Launch tests."""

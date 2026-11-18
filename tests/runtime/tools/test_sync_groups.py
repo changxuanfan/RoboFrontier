@@ -177,7 +177,7 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(a['result']['execution_status'],'failed');self.assertEqual(s.world.executed,[])
 
     def test_refused_shutdown_keeps_a_forming_group(self):
-        s=self.service();a=self.call(s,'A','action_batch',self.part('A'))
+        s=self.service();self.call(s,'A','action_batch',self.part('A'))
         self.call(s,'C','move',{'delta_m':[0,0,.01],'wait':False})
         self.assertIn('Resolve execution',self.call(s,'Meta','shutdown')['result']['error'])
         from roboteam.runtime.tools.action_batch import groups

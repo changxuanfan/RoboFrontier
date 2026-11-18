@@ -5,16 +5,13 @@ The server owns physics/GL. Policy clients never mutate model/data directly.
 from __future__ import annotations
 import argparse
 import copy
-import hashlib
 import json
 import os
-import queue
 import secrets
 import threading
 import time
 import uuid
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -24,17 +21,15 @@ from PIL import Image
 
 from roboteam.io import ROOT
 from roboteam.configuration import runs_root
-from roboteam.sim.kinematics import RobotIK
 from roboteam.sim.live_video import Video
 
 from roboteam.tasks.config import load_task, action_limits, panda_control_profile
 from roboteam.sim.robot_control import PandaArm
-from roboteam.tasks.scene import camera_names
-from roboteam.sim.render.image import DEFAULT_PROFILE, observation_profile, reduced_size, render_size, save_observation
+from roboteam.sim.render.image import DEFAULT_PROFILE, observation_profile, reduced_size, render_size
 from roboteam.sim.render.look import look_of
 from roboteam.runtime.tools.tool_errors import CallIdConflict, conflict_error
 from roboteam.runtime.world.service import RuntimeService
-from roboteam.sim.motion_check import CONTROL_DT, TRACKING_LIMIT, RobotGeometry, prepare_check, state_id
+from roboteam.sim.motion_check import RobotGeometry, prepare_check, state_id
 
 def atomic_json(path, value):
     from roboteam.runtime.run.setup import write_json

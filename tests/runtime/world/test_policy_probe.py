@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
-import time
 import unittest
 
 from fake_pipeline import FakeWorld,fake_capture

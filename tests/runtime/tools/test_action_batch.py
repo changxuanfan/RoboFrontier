@@ -123,7 +123,7 @@ class BatchTests(unittest.TestCase):
         root=Path(self.tmp.name)/'worker';root.mkdir();run=prepare_run(root/'run')
         s=RuntimeService(run,FakeWorld,fake_capture)
         s.store.put('lifecycle','running');s.store.put('physics_state','running')
-        job=s.accept('A','action_batch',{'actions':[{'robot':None,'op':'gripper','parameters':{'state':'open'}}]},'b1');s.pump()
+        s.accept('A','action_batch',{'actions':[{'robot':None,'op':'gripper','parameters':{'state':'open'}}]},'b1');s.pump()
         self.assertEqual(s.store.call('b1')['status'],'accepted')
         s.close()  # must not raise
         store=RuntimeStore(run/'private/state/runtime.sqlite')
@@ -158,7 +158,7 @@ class BatchTests(unittest.TestCase):
         self.assertFalse(Scheduler(self.s.store).execution_blocks_wake('Controller'))
 
     def test_blocking_and_unknown_batch_still_block_continuation(self):
-        j=self.call('Controller','action_batch',{**self.data,'wait':True})
+        self.call('Controller','action_batch',{**self.data,'wait':True})
         self.assertTrue(Scheduler(self.s.store).execution_blocks_wake('Controller'))
         ident=next(iter(self.s.store.actions()))
         self.s.store.uncertain_action(ident,'lost acknowledgement')

@@ -7,11 +7,11 @@ from pathlib import Path
 import shutil
 import tempfile
 import threading
-import time
 import unittest
 
 from harness.claude.test_claude_physics_smoke import MotionModel
-from roboteam.launch.claude_batch import run_batch, status_batch
+from roboteam.launch.claude_batch import run_batch
+from claude_batch_control import batch_state
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.launch.claude_prepare import prepare_batch
 
@@ -66,7 +66,7 @@ class ParallelPhysicsSmokeTests(unittest.TestCase):
             worker.start()
             maximum_live = 0
             while worker.is_alive():
-                status = status_batch(batch)
+                status = batch_state(batch)
                 live = set()
                 for item in status['runs']:
                     detail = item.get('detail') or {}

@@ -1,5 +1,1 @@
-"""Offline analysis of archived benchmark runs: extraction, timing, outcomes and atomic steps.
-
-Code only. Run data stays outside the repository; every entry point takes data locations as
-arguments (see `scripts/analysis/run_analysis.py`).
-"""
+"""Offline analysis of archived runs; code only, the run data stays outside the repository."""

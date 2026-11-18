@@ -4,7 +4,6 @@ This module deliberately does not launch worlds, admit scored batches, or
 support adaptive delegation. A caller owns the world process and final seal.
 """
 from pathlib import Path
-import time
 import uuid
 
 from roboteam.harness.claude.systems.dispatch import ClaudeDispatcher

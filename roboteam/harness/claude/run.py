@@ -12,7 +12,6 @@ import math
 import os
 from pathlib import Path
 import subprocess
-import sys
 import time
 from urllib.parse import urlsplit
 

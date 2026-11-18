@@ -3,7 +3,6 @@ import io
 import json
 import os
 from pathlib import Path
-from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 

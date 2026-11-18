@@ -283,7 +283,7 @@ def relay(force=40.):
     carry it and set it down. The timber must not move when a receiver closes, drop, or
     slide in a hand."""
     with task_dir() as folder:
-        b = Bench('relay-a08-d1', folder); m, d = b.model, b.data; P = 'payload_01'; width = .045
+        b = Bench('relay-a08-d1', folder); P = 'payload_01'; width = .045
         def rotz(angle): c, s = math.cos(angle), math.sin(angle); return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1.]])
         def frames(stations, arms):
             """The two equivalent top-down jaw frames on the timber at each station; take the one

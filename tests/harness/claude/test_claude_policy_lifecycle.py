@@ -8,7 +8,6 @@ import unittest
 
 from fake_pipeline import FakeWorld, fake_capture
 from roboteam.harness.claude.systems.single_agent import SingleAgentPolicyHost
-from roboteam.runtime.tools.pipeline_client import client_call
 from roboteam.runtime.run.setup import prepare_run
 from roboteam.runtime.world.service import RuntimeService
 

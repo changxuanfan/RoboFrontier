@@ -48,7 +48,7 @@ def prepare_batch(output, task_types=None, run_settings=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
-    listing = commands.add_parser('list')
+    commands.add_parser('list')
     check = commands.add_parser('check')
     check.add_argument('--assets', action='store_true', help='Verify every released workstation asset hash')
     setup = commands.add_parser('prepare')

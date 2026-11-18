@@ -202,7 +202,6 @@ def flat_name(item, names):
 
 class Conversation:
     """Group Responses input items into alternating Messages turns."""
-    CALLS = ('function_call', 'custom_tool_call')
 
     def __init__(self):
         self.messages, self.assistant, self.open_calls = [], None, []

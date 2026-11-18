@@ -7,7 +7,6 @@ was running is recorded as interrupted, and the trial resumes with downtime excl
 A world whose host disappears closes by itself.
 """
 import json
-import os
 from pathlib import Path
 import signal
 import subprocess
@@ -17,7 +16,6 @@ import time
 import unittest
 
 from roboteam.runtime.tools.pipeline_client import client_call
-from roboteam.runtime.run.layout import path as run_path
 from roboteam.runtime.run.segments import motion_dirs, output_dir, owner_released, prepare_retry, retry_eligibility
 from roboteam.runtime.run.setup import verify_inputs
 from roboteam.runtime.world.store import RuntimeStore

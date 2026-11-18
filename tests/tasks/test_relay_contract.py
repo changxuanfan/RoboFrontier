@@ -1,14 +1,9 @@
 """Goal acceptance and the task metadata agree."""
-from copy import deepcopy
 import unittest
-from unittest.mock import patch
-from pathlib import Path
-import json
-import tempfile
 import numpy as np
 import mujoco
 
-from roboteam.tasks.relay import final_task, is_current
+from relay_contract import final_task
 from tests.tasks import test_relay_goal_support as support_fixture
 
 
@@ -28,15 +23,6 @@ class RelayContractTests(unittest.TestCase):
             state.update(airborne=True, landed=True, transitions=[dict(senders=['A','B'], receivers=['C','D'], airborne=True)])
         data.time=10
         return model,data,relay
-
-    def test_metadata_is_final_idempotent_and_keeps_geometry(self):
-        _,_,relay=self.world();task=relay.mon.task;original=deepcopy(task)
-        self.assertEqual(final_task(task),task)
-        self.assertEqual(task,original)
-        self.assertTrue(is_current(task))
-        self.assertNotIn('max_timber_release_gap_m',task['completion'])
-        self.assertEqual(task['completion']['max_release_gap_m'],.03)
-        self.assertFalse(any('R17' in r or '20mm' in r for r in task['rules']))
 
     def test_real_grounded_stack_completes_without_velocity_or_duration_gate(self):
         _,_,relay=self.world();relay.sample()

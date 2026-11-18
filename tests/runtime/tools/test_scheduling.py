@@ -3,7 +3,8 @@ import tempfile
 import unittest
 from roboteam.runtime.world.store import RuntimeStore
 from team_settings import load_run_settings
-from roboteam.runtime.tools.scheduling import Scheduler, FakeSessionAdapter, dispatch_once
+from roboteam.runtime.tools.scheduling import Scheduler
+from fake_session import FakeSessionAdapter, dispatch_once
 
 class SchedulingTests(unittest.TestCase):
     def setUp(self):

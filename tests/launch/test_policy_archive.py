@@ -18,7 +18,6 @@ def collection(source,session):
 
 class PolicyArchiveTest(unittest.TestCase):
     def test_change_after_initial_validation_is_rejected(self):
-        import hashlib
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);source=root/'source'
             (source/'batch').mkdir(parents=True);(source/'sessions').mkdir()
@@ -81,7 +80,6 @@ class PolicyArchiveTest(unittest.TestCase):
             image = b'jpeg bytes \x00\xff'; uri = b'data:image/jpeg;base64,' + base64.b64encode(image)
             raw = b'{"image":"' + uri + b'","again":"' + uri + b'"}\n'
             session = source/'sessions/a/abc.jsonl'; session.write_bytes(raw)
-            import hashlib
             (source/'batch/batch.json').write_text(json.dumps({'status':'closed','jobs':[{'status':'closed'}]}))
             (source/'batch/motion.npz').write_bytes(b'motion\x00')
             (source/'batch/large.bin').write_bytes(b'unchanged-state\x00'*(160000))

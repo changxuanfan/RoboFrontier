@@ -5,7 +5,7 @@ import shutil
 import unittest
 
 from roboteam.io import ROOT
-from roboteam.harness.claude import robot_mcp
+from roboteam.harness.shared import robot_mcp
 from roboteam.harness.codex import desktop_robot_mcp
 
 
