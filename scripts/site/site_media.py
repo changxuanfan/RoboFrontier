@@ -8,8 +8,9 @@ montage: one 1920 x 1080 video per task type, a 3 x 3 grid of its nine tasks (ro
 explainer: the README benchmark figure: per task type, its largest team at Levels 1-3, with what
          each level changes. IMAGES holds initial-state renders named <case>-top.jpg and
          <case>-global.jpg (the retired task atlas made them).
-stills:  README images: montage posters with a play badge and a 400-px thumbnail of every
-         task.
+stills:  README images: montage posters with a play badge.
+starts:  every released task at its start, drawn as a run draws its images: the project
+         page's start images and the README's task thumbnails.
 
 Sources is a JSON file: {"set": "oracle", "tasks": {"<case>": {"front": path, "side": path}}}.
 Run from the repository root:
@@ -17,6 +18,7 @@ Run from the repository root:
     .venv/bin/python -m scripts.site.site_media encode SOURCES OUT
     .venv/bin/python -m scripts.site.site_media montage OUT/manifest.json TASK_TYPE OUT_MP4
     .venv/bin/python -m scripts.site.site_media stills OUT/manifest.json MONTAGE_DIR docs/media/readme
+    .venv/bin/python -m scripts.site.site_media starts site/assets/atlas docs/media/readme/tasks
     .venv/bin/python -m scripts.site.site_media explainer IMAGES docs/media/readme/benchmark.jpg
 """
 
@@ -363,8 +365,7 @@ def explainer(atlas, out, width=1800):
 
 
 def stills(manifest_path, montages, out):
-    """README images: montage posters (with play badges), 36 task thumbnails."""
-    from PIL import Image
+    """README images: montage posters (with play badges)."""
 
     manifest_path, out = Path(manifest_path), Path(out)
     (out / 'tasks').mkdir(parents=True, exist_ok=True)
@@ -372,13 +373,45 @@ def stills(manifest_path, montages, out):
         poster = out / (montage.stem + '.jpg')
         grab(montage, 45, poster, 1600)
         play_badge(poster, 0.12)
-    manifest = json.loads(manifest_path.read_text())
-    for case, views in manifest['tasks'].items():
-        thumb = out / 'tasks' / f'{case}.jpg'
-        Image.open(manifest_path.parent / views['front']['poster']).convert('RGB').resize((400, 225)).save(
-            thumb, quality=78, optimize=True
-        )
     return sorted(str(p.relative_to(out)) for p in out.rglob('*') if p.suffix in ('.jpg', '.webp'))
+
+
+def starts(atlas, thumbnails, views=('global',)):
+    """Every released task at its start, drawn as a run draws its images: `atlas`/<case>-<view>.jpg
+    (640 x 400) for the project page and `thumbnails`/<case>.jpg (400 x 250) for the README."""
+    import tempfile
+
+    import mujoco
+    import numpy as np
+    from PIL import Image
+
+    from roboteam.runtime.world.pipeline import World
+    from roboteam.sim.render.worker import LocalRenderer, _graphics_context
+    from roboteam.tasks.task_types import RELEASE, ROOT, prepare, read
+
+    atlas, thumbnails = Path(atlas), Path(thumbnails)
+    graphics = _graphics_context()
+    written = []
+    for task_type in read(ROOT / RELEASE)['task_types'].values():
+        for case in task_type['policy']:
+            with tempfile.TemporaryDirectory(prefix='rf-starts-') as temporary:
+                run = Path(temporary) / 'run'
+                prepare(case['id'], run)
+                world = World(run, json.loads((run / 'private/inputs/task.json').read_text()))
+                renderer = LocalRenderer(mujoco, world.model)
+                for view in views:
+                    rgb = renderer.frame(mujoco, world, world.model.camera(view).id, 1280, 800)
+                    image = Image.fromarray(np.ascontiguousarray(rgb[::-1]))
+                    target = atlas / f"{case['id']}-{view}.jpg"
+                    image.resize((640, 400), Image.LANCZOS).save(target, quality=84, optimize=True)
+                    written.append(str(target))
+                    if view == views[0]:
+                        image.resize((400, 250), Image.LANCZOS).save(
+                            thumbnails / f"{case['id']}.jpg", quality=80, optimize=True
+                        )
+                renderer.context.free()
+    del graphics
+    return written
 
 
 def main(argv=None):
@@ -398,12 +431,18 @@ def main(argv=None):
     s.add_argument('manifest')
     s.add_argument('montages')
     s.add_argument('out')
+    t = sub.add_parser('starts')
+    t.add_argument('atlas')
+    t.add_argument('thumbnails')
+    t.add_argument('--views', nargs='+', default=['global'])
     x = sub.add_parser('explainer')
     x.add_argument('atlas')
     x.add_argument('out')
     args = parser.parse_args(argv)
     if args.command == 'encode':
         encode(args.sources, args.out, args.workers)
+    elif args.command == 'starts':
+        print(len(starts(args.atlas, args.thumbnails, args.views)), 'images')
     elif args.command == 'explainer':
         print(explainer(args.atlas, args.out))
     elif args.command == 'stills':

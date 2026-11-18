@@ -26,7 +26,7 @@ together, such as passing timbers or building a picture from hundreds of cubes.
 | | |
 | --- | --- |
 | **Real time** | The world advances with the clock and never waits for an agent. It runs in MuJoCo with a 2 ms physics step. |
-| **Vision only** | Agents get RGB images from fixed cameras (1280 × 800) and the state of the arms. They never receive object positions, depth or contacts. |
+| **Vision only** | Agents get RGB images from fixed cameras (1280 × 800) and the state of the arms. They never receive object positions, depth or contacts. Every task runs at its own desk in one factory hall, with the desks of the other 35 tasks around it. |
 | **One robot tool** | Arms move only through one tool with simple commands: move an arm to a pose, or open, close or grasp with a gripper. Every failed motion or grasp is visible. |
 | **Code tools** | Unless a condition removes them, agents also have a shell, file editing and their own Python code, inside a sandbox that keeps them away from the simulator and the evaluator. |
 | **Long runs** | A run ends when the agents declare the task done or after 24 hours of active time. Agents may fail and retry. |
@@ -184,7 +184,7 @@ hand the Claude token to the CLI on a pipe, so no policy shell can read it.
 ### 4. Choose what to run
 
 Defaults are in [`roboteam.toml`](roboteam.toml): Codex with `sol` (`--harness claude` selects `opus`), the adaptive
-protocol, all 36 tasks, and a renderer picked for the host. Change them with options or a
+system, all 36 tasks, and a renderer picked for the host. Change them with options or a
 small TOML of your own, passed before the command (`roboteam --config site.toml ...`);
 [`docs/hosts/examples/`](docs/hosts/examples) has one for the Mac, RunPod and Slurm.
 
@@ -194,6 +194,19 @@ small TOML of your own, passed before the command (`roboteam --config site.toml 
 ```
 
 `plan` lists each task, its arms and the model, and makes no model calls.
+
+The conditions of the paper are these settings:
+
+| Condition | Options |
+| --- | --- |
+| Agent system | `--system adaptive`, `single-agent`, `hierarchical` or `decentralized` |
+| Harness and model | `--harness codex` or `claude`, `--model` with an entry of [`models.json`](models.json) |
+| Robot tool only | `--tools robot_only` |
+| Low resolution | `render.observation_profile = "jpeg_128x80_q95"` in your TOML |
+| Oracle | `--harness codex --model sol --system single-agent --observation ground_truth` |
+
+The Oracle gets the ground-truth state of every object instead of camera images
+([rules](docs/benchmark/rules.md)).
 
 ### 5. Build and check the policy environment
 

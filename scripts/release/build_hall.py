@@ -6,6 +6,7 @@ The folder is not tracked. It ships in the asset archive, so every host loads th
 benchmark/assets.json pins it by the hash of its hall.json.
 """
 
+import argparse
 import json
 
 from roboteam.io import ROOT, file_sha256
@@ -13,6 +14,8 @@ from roboteam.sim.hall.flat import BUILT, build_hall
 
 
 def main():
+    # Parsed first, so that asking for --help never starts a build.
+    argparse.ArgumentParser(description=__doc__.splitlines()[0]).parse_args()
     hall = build_hall()
     path = ROOT / 'benchmark/assets.json'
     config = json.loads(path.read_text())

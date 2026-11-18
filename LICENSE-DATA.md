@@ -26,8 +26,8 @@ These keep their own licenses and are not relicensed here:
 | --- | --- | --- |
 | Franka Emika Panda model from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie), fetched into `vendor/` and embedded in scene files | `benchmark/**/scene.xml`, `vendor/` | Apache License 2.0 |
 | Barlow Condensed font | `benchmark/hall/fonts/` | SIL Open Font License 1.1 ([`OFL.txt`](benchmark/hall/fonts/OFL.txt)) |
-| Space Grotesk Bold (film titles) | `benchmark/hall/fonts/` | SIL Open Font License 1.1 ([`OFL-SpaceGrotesk.txt`](benchmark/hall/fonts/OFL-SpaceGrotesk.txt)) |
-| JetBrains Mono Medium (film labels) | `benchmark/hall/fonts/` | SIL Open Font License 1.1 ([`OFL-JetBrainsMono.txt`](benchmark/hall/fonts/OFL-JetBrainsMono.txt)) |
+| Space Grotesk Bold (titles in the project page's images) | `benchmark/hall/fonts/` | SIL Open Font License 1.1 ([`OFL-SpaceGrotesk.txt`](benchmark/hall/fonts/OFL-SpaceGrotesk.txt)) |
+| JetBrains Mono Medium (labels in the project page's images) | `benchmark/hall/fonts/` | SIL Open Font License 1.1 ([`OFL-JetBrainsMono.txt`](benchmark/hall/fonts/OFL-JetBrainsMono.txt)) |
 | Poly Haven `concrete_floor_02` texture | `benchmark/hall/source/polyhaven/` | CC0 1.0 ([`LICENSE.txt`](benchmark/hall/source/polyhaven/LICENSE.txt)) |
 
 ## Attribution

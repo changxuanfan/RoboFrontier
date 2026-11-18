@@ -84,7 +84,13 @@ class World:
         from roboteam.sim.hall.world import check_hall, has_desk, load_world, task_geoms
 
         # A released task runs at its desk in the hall. Any other scene (tools and tests build these) runs by itself.
-        released = (folder / 'workstation.json').exists() and has_desk(self.task.get('id'))
+        from roboteam.sim.hall.world import hall_facts
+
+        workstation = (folder / 'workstation.json').exists()
+        if workstation and hall_facts() is None:
+            # Never fall back to the task scene alone: its images would differ from every other run's.
+            raise ValueError('The built hall is missing (benchmark/hall/built); run `roboteam bootstrap`')
+        released = workstation and has_desk(self.task.get('id'))
         self.hall = check_hall() if released else None
         if released:
             self.model, self.task_scene = load_world(self.xml, self.task['id'])
