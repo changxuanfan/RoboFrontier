@@ -2,11 +2,11 @@
 schema_version = 11
 
 [policy]
-engine = "codex"                     # codex | claude
-profile = "sol"                      # A profile of models.json; a Claude run without one uses "opus"
+harness = "codex"                    # codex | claude
+model = "sol"                        # An entry of models.json; a Claude run without one uses "opus"
 effort = "high"
-topology = "adaptive"                # adaptive | single-agent | hierarchical | decentralized
-tool_mode = "full"                   # full | robot_only (the robot tool alone: no shell, code execution or file tools)
+system = "adaptive"                  # adaptive | single-agent | hierarchical | decentralized
+tools = "full"                       # full | robot_only (the robot tool alone: no shell, code execution or file tools)
 
 [batch]
 parallel = 36
@@ -15,7 +15,7 @@ task_wall_limit_s = 86400.0           # From persisted START, independently per 
 startup_timeout_s = 600.0
 
 [selection]
-families = []                        # Empty selects all four released families
+task_types = []                      # Empty selects all four released task types
 cases = []                           # Empty selects every matching released case
 level = 0                            # 0 selects all levels; otherwise 1, 2 or 3
 min_arms = false

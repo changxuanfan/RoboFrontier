@@ -1,4 +1,4 @@
-"""A waiting action that outlasts an engine's tool-call limit returns as pending."""
+"""A waiting action that outlasts an harness's tool-call limit returns as pending."""
 import json
 import tempfile
 import threading

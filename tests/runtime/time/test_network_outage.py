@@ -32,24 +32,24 @@ class OutageMonitorTests(unittest.TestCase):
         monitor.probe = lambda hosts: 1/0; monitor.step()
         self.assertEqual(monitor.failures, 2)
 
-    def test_local_policy_runs_probe_their_engine_hosts(self):
+    def test_local_policy_runs_probe_their_harness_hosts(self):
         task = {'execution_readiness': 'prepared_policy_trial', 'run_protocol': {'clock': ACTIVE}}
         with patch.dict(os.environ, {network_outage.SWITCH: 'on'}):
             os.environ.pop('SLURM_JOB_ID', None); os.environ.pop('ROBOTEAM_EGRESS_PAUSE_FILE', None)
-            self.assertEqual(monitor_for(task, {'engine': 'claude'}).hosts, ('api.anthropic.com',))
-            self.assertEqual(monitor_for(task, {'engine': 'codex'}).hosts, ('chatgpt.com', 'auth.openai.com'))
+            self.assertEqual(monitor_for(task, {'harness': 'claude'}).hosts, ('api.anthropic.com',))
+            self.assertEqual(monitor_for(task, {'harness': 'codex'}).hosts, ('chatgpt.com', 'auth.openai.com'))
             # A Slurm job with direct egress probes too; one with an egress pause does not.
-            with patch.dict(os.environ, {'SLURM_JOB_ID': '1'}): self.assertIsNotNone(monitor_for(task, {'engine': 'codex'}))
-            with patch.dict(os.environ, {'ROBOTEAM_EGRESS_PAUSE_FILE': '/x'}): self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
+            with patch.dict(os.environ, {'SLURM_JOB_ID': '1'}): self.assertIsNotNone(monitor_for(task, {'harness': 'codex'}))
+            with patch.dict(os.environ, {'ROBOTEAM_EGRESS_PAUSE_FILE': '/x'}): self.assertIsNone(monitor_for(task, {'harness': 'codex'}))
         with patch.dict(os.environ, {network_outage.SWITCH: 'off'}):
-            self.assertIsNone(monitor_for(task, {'engine': 'codex'}))
+            self.assertIsNone(monitor_for(task, {'harness': 'codex'}))
 
-    def test_a_profile_base_url_names_the_host_probed(self):
+    def test_a_model_entry_base_url_names_the_host_probed(self):
         import json, tempfile
         from pathlib import Path
         with tempfile.TemporaryDirectory() as run:
             (Path(run)/'private/inputs').mkdir(parents=True)
-            (Path(run)/'private/inputs/claude.json').write_text(json.dumps({'profile': {'base_url': 'https://api.example.org/v1'}}))
+            (Path(run)/'private/inputs/claude.json').write_text(json.dumps({'model_entry': {'base_url': 'https://api.example.org/v1'}}))
             self.assertEqual(network_outage.model_hosts(run, 'claude'), ('api.example.org',))
             self.assertEqual(network_outage.model_hosts(run, 'codex'), ('chatgpt.com', 'auth.openai.com'))
 

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from harness.claude.test_claude_session_host import make_run, PROFILE
+from harness.claude.test_claude_session_host import make_run, MODEL_ENTRY
 from roboteam.harness.claude.session.session_host import ClaudeSessionHost
 from roboteam.harness.claude.session.runner import summarize
 from roboteam.harness.claude.session.budget import BudgetLedger
@@ -25,12 +25,12 @@ class CapacityRecoveryTests(unittest.TestCase):
                 'capacity_error_code': 'rate_limit' if fail else None, 'malformed_lines': 0,
                 'total_cost_usd': None}}
         self.runner = runner
-        self.host = ClaudeSessionHost(self.run, 'Controller', PROFILE, {}, runner=runner)
+        self.host = ClaudeSessionHost(self.run, 'Controller', MODEL_ENTRY, {}, runner=runner)
         self.store = RuntimeStore(self.run/'private/state/runtime.sqlite')
         cfg = json.loads((Path(__file__).resolve().parents[3]/'roboteam/runtime/run/defaults.json').read_text())
-        cfg.update(engine='claude'); self.store.initialize('run', cfg, ['A'])
+        cfg.update(harness='claude'); self.store.initialize('run', cfg, ['A'])
         self.store.update_agent('Controller', ready=True, thread_id=self.host.session_id); self.store.start()
-        native = self.run/'private/engine/config/projects/local'/(self.host.session_id+'.jsonl')
+        native = self.run/'private/harness/config/projects/local'/(self.host.session_id+'.jsonl')
         native.parent.mkdir(parents=True)
         native.write_text(json.dumps({'uuid':'u1','sessionId':self.host.session_id,
                                       'message':{'role':'user','content':'task'}})+'\n')
@@ -107,7 +107,7 @@ class CapacityRecoveryTests(unittest.TestCase):
         for capped in (True, False):
             ledger = BudgetLedger.create(self.run/('capped.sqlite' if capped else 'uncapped.sqlite'), 1 if capped else None)
             try:
-                host = ClaudeSessionHost(self.run, 'Controller', PROFILE, {}, runner=self.runner,
+                host = ClaudeSessionHost(self.run, 'Controller', MODEL_ENTRY, {}, runner=self.runner,
                                          budget_ledger=ledger, max_budget_usd=.2 if capped else None)
                 self.failures = 100
                 host.send('task'); value = host.wait(3)
@@ -157,10 +157,10 @@ class ModelLossTests(unittest.TestCase):
             return {'process': 'exited', 'exit_code': 0, 'summary': {
                 'session_id': kw.get('resume') or kw['session_id'], 'turn_status': 'ended',
                 'result_subtype': 'success', 'malformed_lines': 0, 'total_cost_usd': .01}}
-        self.host = ClaudeSessionHost(self.run, 'Controller', PROFILE, {}, runner=runner)
+        self.host = ClaudeSessionHost(self.run, 'Controller', MODEL_ENTRY, {}, runner=runner)
         self.store = RuntimeStore(self.run/'private/state/runtime.sqlite')
         cfg = json.loads((Path(__file__).resolve().parents[3]/'roboteam/runtime/run/defaults.json').read_text())
-        cfg.update(engine='claude'); self.store.initialize('run', cfg, ['A'])
+        cfg.update(harness='claude'); self.store.initialize('run', cfg, ['A'])
         self.store.update_agent('Controller', ready=True, thread_id=self.host.session_id); self.store.start()
 
     def tearDown(self):

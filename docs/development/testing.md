@@ -8,7 +8,7 @@ uv sync --locked
 .venv/bin/roboteam bootstrap
 ```
 
-Node.js is needed for the Node host tests. Tests that drive an installed engine CLI run it against
+Node.js is needed for the Node host tests. Tests that drive an installed harness CLI run it against
 a local stub model and skip when the CLI is absent.
 
 ## Every test, in parallel
@@ -73,7 +73,7 @@ too to keep the network-outage probe and desktop notifications out of test runs.
 
 ## Skips and opt-in tests
 
-A test skips, rather than fails, when what it needs is absent: an engine CLI, Linux or a Landlock
+A test skips, rather than fails, when what it needs is absent: an harness CLI, Linux or a Landlock
 ABI, the restored scene assets, or ignored local data (finished runs). Read the skipped count in the report; a skipped test is not a pass.
 
 These environment variables turn on longer tests that need a native CLI or local data:
@@ -87,7 +87,7 @@ These environment variables turn on longer tests that need a native CLI or local
 
 ## Filesystems
 
-Keep test databases, engine homes, temporary executables and fixture outputs on one local
+Keep test databases, harness homes, temporary executables and fixture outputs on one local
 filesystem. Never open an active SQLite database across a Docker or network-filesystem boundary.
 In a Linux container, give the tests writable local temporary folders and a writable bytecode
 location. Linux CPU and Mesa results do not cover NVIDIA EGL, real Slurm allocations or

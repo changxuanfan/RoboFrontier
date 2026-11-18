@@ -8,20 +8,20 @@ import time
 import unittest
 from unittest.mock import patch
 
-from roboteam.harness.codex.job_engine import build_manifest
+from roboteam.harness.codex.job_harness import build_manifest
 from roboteam.runtime.run.setup import write_json
 
 
 class JobManifestTests(unittest.TestCase):
     def test_pause_admission_refuses_historical_runtimes_without_physics_freeze(self):
-        with patch.dict(os.environ,{'ROBOTEAM_EGRESS_PAUSE_FILE':str(self.root/'engine/EGRESS_PAUSED')}):
+        with patch.dict(os.environ,{'ROBOTEAM_EGRESS_PAUSE_FILE':str(self.root/'harness/EGRESS_PAUSED')}):
             with self.assertRaisesRegex(ValueError,'frozen on this runtime'):
                 self.build()
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix='rfe-', dir='/tmp')
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).resolve()
-        self.private, self.store = self.root/'engine', self.root/'credentials'
+        self.private, self.store = self.root/'harness', self.root/'credentials'
         self.jobs = []
         for i in range(2):
             run = self.root/'runs'/str(i)
@@ -32,7 +32,7 @@ class JobManifestTests(unittest.TestCase):
                 '/proc': 'deny', '/dev': 'deny'}})
             write_json(run/'private/inputs/codex.json', {'model': 'gpt-6-luna', 'provider': 'managed', 'effort': 'high',
                 'model_catalog': str(run/'private/inputs/models.json'), 'tool_backend': 'landlock-v1',
-                'profile': {'provider': 'openai', 'runner_backend': 'slurm-managed-v1'},
+                'model_entry': {'provider': 'openai', 'runner_backend': 'slurm-managed-v1'},
                 'args': ['-c', 'model="gpt-6-luna"', '-c', 'default_permissions="roboteam"',
                          '-c', 'permissions.roboteam.filesystem={"/"="read"}',
                          '-c', 'model_catalog_json='+json.dumps(str(run/'private/inputs/models.json'))]})
@@ -41,7 +41,7 @@ class JobManifestTests(unittest.TestCase):
     def build(self):
         return build_manifest(self.jobs, self.private/'control', self.private, self.store)
 
-    def test_shared_engine_has_independent_profiles_and_no_union_default(self):
+    def test_shared_harness_has_independent_model_entries_and_no_union_default(self):
         manifest = self.build()
         self.assertEqual(len({t['permissions'] for t in manifest['tasks']}), 2)
         self.assertIn('default_permissions="rf_closed"', manifest['args'])
@@ -73,9 +73,9 @@ class JobManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'frozen deny table'):
                 self.build()
 
-    @patch('roboteam.harness.codex.job_engine.require_pinned_cli', lambda env=None: None)
+    @patch('roboteam.harness.codex.job_harness.require_pinned_cli', lambda env=None: None)
     def test_proxy_loss_terminates_only_the_owned_native_process_group(self):
-        from roboteam.harness.codex.job_engine import engine
+        from roboteam.harness.codex.job_harness import harness
         self.private.mkdir(mode=0o700)
         native = subprocess.Popen
         def start(args, **options):
@@ -84,18 +84,18 @@ class JobManifestTests(unittest.TestCase):
             return native([sys.executable,'-c',code],**options)
         env={**os.environ,'ROBOTEAM_JOB_PRIVATE_ROOT':str(self.private),
              'ROBOTEAM_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
-        with patch('roboteam.harness.codex.job_engine.subprocess.Popen',side_effect=start):
+        with patch('roboteam.harness.codex.job_harness.subprocess.Popen',side_effect=start):
             with self.assertRaisesRegex(RuntimeError,'did not close cleanly'):
-                with engine(self.jobs,env=env,timeout_s=3) as (manifest,process):
+                with harness(self.jobs,env=env,timeout_s=3) as (manifest,process):
                     (self.private/'EGRESS_ERROR').touch()
                     deadline=time.monotonic()+3
                     while process.poll() is None and time.monotonic()<deadline:time.sleep(.05)
                     self.assertIsNotNone(process.poll())
 
-    @patch('roboteam.harness.codex.job_engine.require_pinned_cli', lambda env=None: None)
-    def test_a_zombie_only_engine_group_does_not_abort_cleanup(self):
-        # macOS answers killpg with EPERM once only zombies remain in the engine's group.
-        from roboteam.harness.codex import job_engine
+    @patch('roboteam.harness.codex.job_harness.require_pinned_cli', lambda env=None: None)
+    def test_a_zombie_only_harness_group_does_not_abort_cleanup(self):
+        # macOS answers killpg with EPERM once only zombies remain in the harness's group.
+        from roboteam.harness.codex import job_harness
         self.private.mkdir(mode=0o700)
         native = subprocess.Popen
         def start(args, **options):
@@ -106,10 +106,10 @@ class JobManifestTests(unittest.TestCase):
         env={**os.environ,'ROBOTEAM_JOB_PRIVATE_ROOT':str(self.private),
              'ROBOTEAM_CREDENTIAL_STORE':str(self.store),'CODEX_HOME':str(self.private/'codex')}
         exported = []
-        with patch('roboteam.harness.codex.job_engine.subprocess.Popen',side_effect=start), \
-                patch('roboteam.harness.codex.job_engine.os.killpg',side_effect=PermissionError(1,'Operation not permitted')) as killpg, \
-                patch('roboteam.harness.codex.job_engine.export_sessions',side_effect=lambda *a: exported.append(a)):
-            with job_engine.engine(self.jobs,env=env,timeout_s=3) as (manifest,process):
+        with patch('roboteam.harness.codex.job_harness.subprocess.Popen',side_effect=start), \
+                patch('roboteam.harness.codex.job_harness.os.killpg',side_effect=PermissionError(1,'Operation not permitted')) as killpg, \
+                patch('roboteam.harness.codex.job_harness.export_sessions',side_effect=lambda *a: exported.append(a)):
+            with job_harness.harness(self.jobs,env=env,timeout_s=3) as (manifest,process):
                 pass
         killpg.assert_called()
         self.assertEqual(process.returncode, 0)

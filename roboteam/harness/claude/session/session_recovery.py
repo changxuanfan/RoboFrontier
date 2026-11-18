@@ -129,7 +129,7 @@ def recover_model_loss(host, store):
         busy = busy or bool(store.db.execute("SELECT 1 FROM calls WHERE actor=? AND status='accepted' LIMIT 1",
                                             (host.actor,)).fetchone())
         if busy: return True
-        restart = store.claim_model_restart(host.actor, getattr(host, 'engine', 'claude'), MAX_MODEL_RESTARTS)
+        restart = store.claim_model_restart(host.actor, getattr(host, 'harness', 'claude'), MAX_MODEL_RESTARTS)
         if restart is None:
             return False
         host.cli_lost = False

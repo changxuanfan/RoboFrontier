@@ -13,7 +13,7 @@ from roboteam.runtime.run import segments as run_segments
 from roboteam.runtime.run.layout import path as run_path
 from roboteam.runtime.run.segments import MIN_REMAINING_S, process_summary, retry_eligibility
 from roboteam.runtime.world.store import RuntimeStore
-from harness.shared.test_engine_parity import prepared
+from harness.shared.test_harness_parity import prepared
 
 
 class EligibilityTests(unittest.TestCase):
@@ -253,7 +253,7 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(run_segments.current_restore(self.run)[0]['evaluator']['valid_trials'], 65)
         self.assertEqual(run_segments.verify_inputs(self.run), [])
 
-    def test_other_families_keep_their_restore_record(self):
+    def test_other_task_types_keep_their_restore_record(self):
         self.assertNotIn('evaluator', run_segments.prepare_retry(self.run, self.store, 'host exit code 1'))
 
     def test_a_delegation_still_being_created_fails_and_returns_its_arms(self):

@@ -35,9 +35,9 @@ class PhysicalStandingModel(StandingModel):
 @unittest.skipUnless(os.environ.get('ROBOTEAM_PHYSICS_STANDING') == '1' and shutil.which('claude'),
                      'Opt-in requires Claude CLI, current scene assets and a native renderer')
 class StandingPhysicsSmokeTests(unittest.TestCase):
-    def test_both_topologies_run_real_world_mailboxes_images_actions_and_seal(self):
-        for topology in ('hierarchical', 'decentralized'):
-            with self.subTest(topology=topology):
+    def test_both_systems_run_real_world_mailboxes_images_actions_and_seal(self):
+        for system in ('hierarchical', 'decentralized'):
+            with self.subTest(system=system):
                 directory = Path(tempfile.mkdtemp(prefix='claude-standing-physics-'))
                 server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), PhysicalStandingModel)
                 threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -46,11 +46,11 @@ class StandingPhysicsSmokeTests(unittest.TestCase):
                 PhysicalStandingModel.requests.clear()
                 try:
                     batch = directory/'batch'
-                    prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], topology=topology)
+                    prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], system=system)
                     run = batch/'haiku/transport-a04-d1'
                     launch = run/'private/inputs/claude.json'
                     data = json.loads(launch.read_text())
-                    data['profile'].update(base_url=f'http://127.0.0.1:{server.server_port}', env_key='FAKE_KEY')
+                    data['model_entry'].update(base_url=f'http://127.0.0.1:{server.server_port}', env_key='FAKE_KEY')
                     launch.write_text(json.dumps(data))
                     manifest = run/'private/inputs/manifest.json'
                     frozen = json.loads(manifest.read_text())
@@ -71,7 +71,7 @@ class StandingPhysicsSmokeTests(unittest.TestCase):
                     store = RuntimeStore(run/'private/state/runtime.sqlite')
                     try:
                         agents = {a:v for a,v in store.agents().items() if v['kind'] != 'manager'}
-                        expected = {'A','B','C','D'} | ({'Controller'} if topology == 'hierarchical' else set())
+                        expected = {'A','B','C','D'} | ({'Controller'} if system == 'hierarchical' else set())
                         self.assertEqual(set(agents), expected)
                         self.assertEqual(len({a['thread_id'] for a in agents.values()}), len(expected))
                         self.assertTrue(all(not a['ready'] for a in agents.values()))

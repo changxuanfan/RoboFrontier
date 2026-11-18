@@ -46,9 +46,9 @@ def _jobs(folder):
     if not isinstance(jobs, list) or not jobs: raise ValueError('Batch has no jobs')
     seen = set()
     for job in jobs:
-        name, case = job.get('profile'), job.get('case_id')
+        name, case = job.get('model_entry'), job.get('case_id')
         if not isinstance(name, str) or not ID.fullmatch(name) or not isinstance(case, str) or not ID.fullmatch(case):
-            raise ValueError('Invalid profile or case name')
+            raise ValueError('Invalid model or case name')
         expected = (folder / name / case).resolve()
         if not expected.is_relative_to(folder) or Path(job['run_directory']).resolve() != expected or expected in seen:
             raise ValueError('Unexpected or duplicate run directory')
@@ -84,7 +84,7 @@ def _run_once_continued(runner, run_dir, base_env, continuing=False, **options):
         run_dir, lambda: runner(run_dir, base_env, **options), continuing=continuing, lifecycle=lifecycle,
         try_continue=lambda run, why: try_continue(run, why),
         final=lambda r: r.get('status') == 'finished' or r.get('reason') in FINAL,
-        reason=lambda r: 'engine run ended: ' + str(r.get('reason')), record=record, exited='batch process exited')
+        reason=lambda r: 'harness run ended: ' + str(r.get('reason')), record=record, exited='batch process exited')
     if outcome == 'refused':
         return {'status': 'needs_review', 'reason': 'not_continued', 'segments': segments}
     result['segments'] = segments
@@ -99,23 +99,23 @@ def _preflight(jobs, env, verifier, continuing=False, budgets=(None, None)):
         changed = verifier(run)
         if changed: raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
         launch = json.loads((run / 'private/inputs/claude.json').read_text())
-        config = json.loads((run / 'private/inputs/harness.json').read_text())
-        profile = launch['profile']
-        if (launch.get('schema') != LAUNCH_SCHEMA or config.get('engine') != 'claude'
-                or config.get('topology') not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized') or config.get('model') != profile.get('model')
-                or config.get('effort') != profile.get('effort')):
-            raise ValueError('Run does not match its Claude launch profile')
-        _check_shared_budget(run, config['topology'], *budgets)
-        if profile.get('auth_mode') != 'native_login' and not env.get(profile.get('env_key')):
+        config = json.loads((run / 'private/inputs/run.json').read_text())
+        model_entry = launch['model_entry']
+        if (launch.get('schema') != LAUNCH_SCHEMA or config.get('harness') != 'claude'
+                or config.get('system') not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized') or config.get('model') != model_entry.get('model')
+                or config.get('effort') != model_entry.get('effort')):
+            raise ValueError('Run does not match its Claude launch model')
+        _check_shared_budget(run, config['system'], *budgets)
+        if model_entry.get('auth_mode') != 'native_login' and not env.get(model_entry.get('env_key')):
             raise ValueError('Missing provider credential variable')
-        if profile.get('provider') != 'anthropic' and not profile.get('base_url'):
+        if model_entry.get('provider') != 'anthropic' and not model_entry.get('base_url'):
             raise ValueError('Third-party provider base URL is missing')
         # Validate authentication for every job before claiming or launching any.
         # The returned environment is deliberately discarded and never logged.
-        home = config_directory(run, profile)
-        if profile.get('auth_mode') == 'native_login' and home.is_relative_to(run.parents[1]):
+        home = config_directory(run, model_entry)
+        if model_entry.get('auth_mode') == 'native_login' and home.is_relative_to(run.parents[1]):
             raise ValueError('Keep the native authentication home outside the evidence batch')
-        build_env(profile, env, home)
+        build_env(model_entry, env, home)
 
 
 def status_batch(folder):
@@ -145,7 +145,7 @@ def status_batch(folder):
     for job in jobs:
         run = Path(job['run_directory'])
         path = _r(run, 'engineering_status')
-        state['runs'].append({'profile': job['profile'], 'case_id': job['case_id'],
+        state['runs'].append({'model_entry': job['model_entry'], 'case_id': job['case_id'],
                               'detail': json.loads(path.read_text()) if path.exists() else None,
                               'claim_record_present': _r(run, 'engineering_claim').exists(),
                               'stop_requested': _r(run, 'stop').exists()})
@@ -218,7 +218,7 @@ def run_batch(folder, base_env, *, parallel, turn_budget_usd=None, total_budget_
                      'started_at': time.time(), 'parallel': parallel, 'scored': False,
                      'turn_budget_usd': turn_budget_usd, 'task_budget_usd': total_budget_usd, 'wall_limit_s': wall_limit_s,
                      'startup_timeout_s': startup_timeout_s,
-                     'jobs': [{'profile': j['profile'], 'case_id': j['case_id'], 'status': 'queued'} for j in jobs]}
+                     'jobs': [{'model_entry': j['model_entry'], 'case_id': j['case_id'], 'status': 'queued'} for j in jobs]}
             positions = list(range(len(jobs)))
         write_json(state_path, state)
         next_job = 0

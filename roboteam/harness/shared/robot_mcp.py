@@ -15,7 +15,7 @@ from roboteam.runtime.tools.tool_errors import CallIdConflict, conflict_error, u
 from roboteam.harness.shared.identity import fingerprint
 from roboteam.launch.results.host_metrics import host_event
 
-# One description for every engine's robot tool (harness/shared/robot_tool.json).
+# One description for every harness's robot tool (harness/shared/robot_tool.json).
 TOOL = json.loads((Path(__file__).resolve().with_name('robot_tool.json')).read_text())
 # Administrative methods are never made available through the policy connection.
 from roboteam.runtime.tools.robot_ops import POLICY_OPS, check_request
@@ -186,7 +186,7 @@ class RobotBridge:
         for name in data['names']:
             if not isinstance(name, str) or name not in allowed:
                 raise ValueError('Image is not in the frozen public task')
-            # Family references are relative to inputs; the generated robot
+            # Task type references are relative to inputs; the generated robot
             # layout uses the run-relative public/inputs/ prefix.
             path = ((self.run / name) if name.startswith('public/inputs/') else (root / name)).resolve()
             if not path.is_relative_to(root) or not path.is_file():

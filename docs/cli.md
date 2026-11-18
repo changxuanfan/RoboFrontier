@@ -1,6 +1,6 @@
 # Unified command-line configuration
 
-The `roboteam` command plans, prepares, checks, runs and collects batches for both engines.
+The `roboteam` command plans, prepares, checks, runs and collects batches for both harnesses.
 Run it from this checkout's editable installation (`.venv/bin/roboteam`). Global options go
 before the subcommand: `--config FILE` (a partial TOML) and `--result-file FILE` (write the
 command's result as JSON).
@@ -21,9 +21,9 @@ command's result as JSON).
 | `container` | The same commands in Docker volumes ([Docker](hosts/docker.md)) |
 
 `config`, `plan`, `prepare`, `doctor`, `preflight` and `slurm-submit` accept the selection
-options `--engine {codex,claude}`, `--profile`, `--effort`, `--topology`,
-`--tool-mode {full,robot_only}`, `--parallel`,
-`--render {nvidia,cpu,native}`, `--level {1,2,3}`, `--min-arms`, `--cases` and `--families`.
+options `--harness {codex,claude}`, `--model`, `--effort`, `--system`,
+`--tools {full,robot_only}`, `--parallel`,
+`--render {nvidia,cpu,native}`, `--level {1,2,3}`, `--min-arms`, `--cases` and `--task-types`.
 
 ## Installation
 
@@ -34,9 +34,9 @@ uv sync --locked
 ```
 
 `bootstrap` downloads the pinned policy asset archive if needed, checks its SHA-256 and restores
-every referenced file with hash checks, reusing files that are already correct. Install the CLI of the engine you will use at its pinned
+every referenced file with hash checks, reusing files that are already correct. Install the CLI of the harness you will use at its pinned
 version (`roboteam/runtime/run/versions.py`: Codex 0.165.0, Claude Code 2.1.316); `prepare` and
-`run` refuse others ([engine setup](harness/README.md#shared-setup)).
+`run` refuse others ([harness setup](harness/README.md#shared-setup)).
 
 ## Defaults and precedence
 
@@ -52,22 +52,22 @@ TOML. The `schema_version` is 11, the only one read; a partial TOML may omit it.
 ```
 
 The default plan selects all 36 released cases with Codex `sol` (gpt-6.1-sol) at effort high, the adaptive
-topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time per run.
+system, 36 runs at once, 0.3 s between host launches, and 24 h of active time per run.
 
 | Setting | Meaning |
 | --- | --- |
-| `policy.engine` | `codex` or `claude` |
-| `policy.profile` | Entry in the engine's section of `models.json`. Defaults: `sol` for Codex, `opus` for Claude. |
+| `policy.harness` | `codex` or `claude` |
+| `policy.model` | Entry in the harness's section of `models.json`. Defaults: `sol` for Codex, `opus` for Claude. |
 | `policy.effort` | Requested reasoning effort; must match the preflight receipt |
-| `policy.topology` | `adaptive`, `single-agent`, `hierarchical` or `decentralized` |
-| `policy.tool_mode` | `full` (default) or `robot_only`: the robot tool alone ([robot-only runs](benchmark/robot-tool-only.md)) |
+| `policy.system` | `adaptive`, `single-agent`, `hierarchical` or `decentralized` |
+| `policy.tools` | `full` (default) or `robot_only`: the robot tool alone ([robot-only runs](benchmark/robot-tool-only.md)) |
 | `batch.parallel` | Runs at once, 1 to 36 |
 | `batch.startup_interval_s` | Gap between host launches (0.3 s); never between robot calls |
 | `batch.task_wall_limit_s` | Active time per run, 86,400 s ([how it is counted](runs/continuation.md#time)); at most 86,400 for Claude Code |
 | `batch.startup_timeout_s` | Owner readiness timeout (600 s) |
-| `selection.families` / `cases` | Filters on `benchmark/release.json`; empty selects all |
+| `selection.task_types` / `cases` | Filters on `benchmark/release.json`; empty selects all |
 | `selection.level` | 0 for every level, else 1, 2 or 3 |
-| `selection.min_arms` | The smallest arm count in each selected family |
+| `selection.min_arms` | The smallest arm count in each selected task type |
 | `render.device` | `nvidia` (Linux EGL), `cpu` (Linux OSMesa) or `native` (macOS) |
 | `render.observation_profile` | `jpeg_1280x800_q90` (default) or `jpeg_128x80_q95` (the low-resolution condition) |
 | `render.record_realtime_video` | Live MP4 recording, off by default |
@@ -91,8 +91,8 @@ prepared batch.
 | Path | What it is |
 | --- | --- |
 | `roboteam.toml` | The defaults for new runs |
-| `models.json` | Every selectable model profile, one section per engine (`engines.codex`, `engines.claude`, which also holds Claude transcript prices). A run freezes its engine's section |
-| `roboteam/runtime/run/defaults.json` | The policy runtime's settings (topology, startup protocol, timeouts, check intervals, motion and video rates, and optionally `observation_look`); no speeds or forces, which every action states. A batch sets the engine, topology, model and effort over it |
+| `models.json` | Every selectable model, one section per harness (`harnesses.codex`, `harnesses.claude`, which also holds Claude transcript prices). A run freezes its harness's section |
+| `roboteam/runtime/run/defaults.json` | The policy runtime's settings (system, startup protocol, timeouts, check intervals, motion and video rates, and optionally `observation_look`); no speeds or forces, which every action states. A batch sets the harness, system, model and effort over it |
 | `roboteam/runtime/sandbox/policy-env/` | The policy Python environment's inputs (`core.in`, `store.in`) and locks (`core.lock`, `all.lock`) |
 | `roboteam/harness/adapters/*/requirements.txt` | The optional dependencies of the two model adapters: `claude_in_codex` (opus-5.5 in Codex) and `gpt_in_claude` (gpt-6.1-sol in Claude Code) |
 | `benchmark/assets.json` | The pinned policy asset archive and its inventory, restored by `roboteam bootstrap` |
@@ -100,7 +100,7 @@ prepared batch.
 
 Credentials belong in the ignored `.env` or the environment, never in these files. Choosing a
 model name alone does not establish provider compatibility: a run needs passed preflight
-receipts for its profile.
+receipts for its model.
 
 ## Startup in all four modes
 
@@ -125,17 +125,17 @@ libraries are not installed by `uv sync`.
 
 ## Models, credentials and preflight
 
-Each profile names its credential variable ([authentication matrix](harness/README.md#authentication-matrix)).
+Each model names its credential variable ([authentication matrix](harness/README.md#authentication-matrix)).
 `.env` is read as literal values; a variable already in the environment wins.
 
 ```sh
 .venv/bin/roboteam preflight --confirm-spend                 # Codex, full
 .venv/bin/roboteam preflight --confirm-spend --smoke-only    # Codex, does not qualify a run
-.venv/bin/roboteam preflight --engine claude --max-budget-usd 1 --confirm-spend
+.venv/bin/roboteam preflight --harness claude --max-budget-usd 1 --confirm-spend
 ```
 
 Without `--confirm-spend` no model is called and the result is `not_run`. Receipts go under
-`<runs_root>/engineering/`; `run` refuses a batch whose profile, catalog or CLI version does not
+`<runs_root>/engineering/`; `run` refuses a batch whose model, catalog or CLI version does not
 match a passed receipt. Details: [Codex](harness/codex.md#preflight-and-receipts) and
 [Claude Code](harness/claude-code.md#preflight-and-receipts).
 

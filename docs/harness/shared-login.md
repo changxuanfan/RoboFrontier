@@ -18,7 +18,7 @@ What the attachment does:
 - If the owning job ends, unexpired access still works but cannot be renewed. Check that the
   access lasts the whole planned run before START.
 
-The store and both engine homes stay closed in every run's access table. The second batch has
+The store and both harness homes stay closed in every run's access table. The second batch has
 its own runs, ledgers, sessions and worlds; it reads nothing from the first.
 
 Tests: `tests/launch/test_slurm_auth.py`, `tests/harness/codex/test_codex_borrowed_auth.js` and

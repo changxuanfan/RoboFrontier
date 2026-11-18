@@ -10,15 +10,15 @@ from roboteam.runtime.run.cli import execute
 
 
 class ClaudeDispatcher:
-    engine = 'claude'
-    def __init__(self, store, host, owner=None, *, engine='claude'):
-        self.engine = engine
+    harness = 'claude'
+    def __init__(self, store, host, owner=None, *, harness='claude'):
+        self.harness = harness
         self.store = store
         self.host = host
-        self.owner = owner or self.engine + '-meta-' + uuid.uuid4().hex
+        self.owner = owner or self.harness + '-meta-' + uuid.uuid4().hex
         cfg = store.get('config')
-        if cfg.get('engine') != self.engine or cfg.get('topology') != 'single-agent':
-            raise ValueError('Only an engine=claude single-agent run is supported; adaptive is not qualified')
+        if cfg.get('harness') != self.harness or cfg.get('system') != 'single-agent':
+            raise ValueError('Only an harness=claude single-agent run is supported; adaptive is not qualified')
         if host.actor != 'Controller':
             raise ValueError('Expected the bound Controller host')
         if store.agent('Controller')['thread_id'] != host.session_id:
@@ -40,7 +40,7 @@ class ClaudeDispatcher:
             return None
         item = {'actor': 'Controller', 'thread_id': observation['thread_id'],
                 'status': state, 'turn_id': observation['turn_id'], 'observed_at': time.time(),
-                'source': self.engine + '.host', 'turn_status': 'failed' if state == 'error' else None}
+                'source': self.harness + '.host', 'turn_status': 'failed' if state == 'error' else None}
         self.admin('observe-sessions', {'observations': [item]})
         return None if recovering and state == 'error' else item
 

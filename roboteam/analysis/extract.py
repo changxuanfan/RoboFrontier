@@ -478,7 +478,7 @@ def host(run, cutoff_unix=None):
         return None
     H = dict(
         path=n,
-        engine=None,
+        harness=None,
         first=None,
         last=None,
         tok=TOK(),
@@ -541,7 +541,7 @@ def host(run, cutoff_unix=None):
             H['cycles'][b] = H['cycles'].get(b, 0) + 1
             continue
         if ev == 'thread/tokenUsage/updated':
-            H['engine'] = 'codex'
+            H['harness'] = 'codex'
             t = e.get('thread_id')
             v = e.get('token_usage') or {}
             tot = v.get('total')
@@ -597,10 +597,10 @@ def host(run, cutoff_unix=None):
             H['rows'] += 1
             add(at, *d)
         elif ev == 'cli_turn_started':
-            H['engine'] = 'claude'
+            H['harness'] = 'claude'
             started[e.get('events_name')] = (at, e.get('actor'))
         elif ev == 'cli_turn_completed':
-            H['engine'] = 'claude'
+            H['harness'] = 'claude'
             k = e.get('events_name')
             if k and k in seen:
                 continue
@@ -769,7 +769,7 @@ def transcripts(run, cutoff_unix=None):
 def _transcripts(run):
     spans = []
     src = None
-    idx = run.find('private/engine/transcripts/index.json', 'engine/transcripts/index.json')
+    idx = run.find('private/harness/transcripts/index.json', 'harness/transcripts/index.json')
     if idx:
         src = 'codex-transcript'
         TS = re.compile(r'"timestamp":"([^"]+)"')
@@ -864,7 +864,7 @@ def extract_run(sel, root, cache_dir=None, motion='always'):
         O['msgT'] = msgT
         O['suite'] = suite(run, cut and cut['sim'], motion)
         O['host'] = H = host(run, cut and cut['unix'])
-        if H and H['engine'] == 'claude':
+        if H and H['harness'] == 'claude':
             late, count = claude_late_usage(run, H, cut and cut['unix'])
             H['tok_after_results'] = dict(zip(('input', 'cached', 'write', 'output'), late), requests=count)
             for k, v in zip(('input', 'cached', 'write', 'output'), late):

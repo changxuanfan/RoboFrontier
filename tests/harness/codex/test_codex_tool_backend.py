@@ -91,9 +91,9 @@ class ConfigurationTests(unittest.TestCase):
             self.assertEqual(mode(access, prefix), 'deny')
             self.assertEqual(mode(access, run/'private/secret'), 'deny')
     def test_receipt_cannot_qualify_a_different_backend_or_changed_source(self):
-        profile = {'tool_backend': 'landlock-v1'}
-        digest = tool_backend.fingerprint(profile)
-        launch = {'profile':profile,'tool_backend_sha256':digest}
+        model_entry = {'tool_backend': 'landlock-v1'}
+        digest = tool_backend.fingerprint(model_entry)
+        launch = {'model_entry':model_entry,'tool_backend_sha256':digest}
         receipt = {'passed':True,'broker_tools_verified':True,'tool_backend':'landlock-v1','tool_backend_sha256':digest}
         tool_backend.verify_receipt(launch, receipt)
         for key, value in [('passed',False),('broker_tools_verified',False),('tool_backend','native'),('tool_backend_sha256','old')]:
@@ -107,7 +107,7 @@ class ConfigurationTests(unittest.TestCase):
         expected = 'landlock-v1' if sys.platform.startswith('linux') else 'native'
         self.assertEqual(load_configuration()['runtime']['codex_tool_backend'], expected)
         self.assertEqual(load_configuration(host='slurm')['runtime']['codex_tool_backend'], 'landlock-v1')
-        claude = load_configuration(overrides={'policy': {'engine': 'claude'}}, host='slurm')
+        claude = load_configuration(overrides={'policy': {'harness': 'claude'}}, host='slurm')
         self.assertEqual(claude['runtime']['codex_tool_backend'], 'native')
         with self.assertRaises(ValueError):
             load_configuration(overrides={'runtime': {'codex_tool_backend': 'unconfined'}})
@@ -115,20 +115,20 @@ class ConfigurationTests(unittest.TestCase):
     def test_broker_removes_native_handlers_and_pins_subagent_metadata(self):
         with tempfile.TemporaryDirectory() as temporary:
             out = Path(temporary)
-            profile = dict(model='test', provider='openai', effort='high', context_window=300000,
+            model_entry = dict(model='test', provider='openai', effort='high', context_window=300000,
                            auto_compact_token_limit=267000, tool_backend='landlock-v1', use_cached_model_metadata=False)
-            launch = launch_config(profile, out)
+            launch = launch_config(model_entry, out)
             self.assertIn('agents.enabled=false', launch['args'])
             self.assertIn('features.shell_tool=false', launch['args'])
             self.assertEqual(launch['provider'], 'roboteam_openai_http')
-            self.assertEqual(launch['profile']['provider'], 'openai')
+            self.assertEqual(launch['model_entry']['provider'], 'openai')
             self.assertIn('model_providers.roboteam_openai_http.requires_openai_auth=true', launch['args'])
             self.assertIn('model_providers.roboteam_openai_http.supports_websockets=false', launch['args'])
             self.assertNotIn('sandbox_mode="danger-full-access"', launch['args'])
             model = json.loads((out/'models.json').read_text())['models'][0]
             self.assertIsNone(model['apply_patch_tool_type'])
             self.assertEqual(model['multi_agent_version'], 'disabled')
-            self.assertEqual(launch['tool_backend_sha256'], tool_backend.fingerprint(profile))
+            self.assertEqual(launch['tool_backend_sha256'], tool_backend.fingerprint(model_entry))
 
 
 @unittest.skipUnless(sys.platform.startswith('linux') and abi() >= 1, 'Linux Landlock required')

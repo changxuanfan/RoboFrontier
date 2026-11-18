@@ -15,7 +15,7 @@ ACTIVE_BACKSTOP_S = 60.
 ACTIVE_CLOSE_WAIT_S = 120.
 
 
-class CentralizedSupervisor:
+class RunSupervisor:
     def __init__(self, policy, owner_alive, *, stop_requested=lambda: False,
                  startup_timeout_s=STARTUP_TIMEOUT_S, wall_limit_s=86400, poll_s=1,
                  seal_timeout_s=30, finish_turn_grace_s=30,

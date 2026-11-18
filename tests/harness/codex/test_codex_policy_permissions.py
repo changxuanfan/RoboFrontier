@@ -91,7 +91,7 @@ await rpc.close();})().catch(e=>{console.error(e.stack);process.exit(1);});'''
 
 @unittest.skipUnless(shutil.which('codex') and shutil.which('node'), 'Codex CLI or node is not installed')
 class AppServerPermissionTests(unittest.TestCase):
-    def test_profile_applies_to_policy_and_forked_threads(self):
+    def test_model_entry_applies_to_policy_and_forked_threads(self):
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp).resolve(); repo, home = t / 'repo', t / 'home'
             run, other = repo / 'runs/batch/profile/case-a', repo / 'runs/batch/profile/case-b'

@@ -26,14 +26,14 @@ from roboteam.harness.claude.session.cost_state import amount, baseline, invocat
 from roboteam.launch.results.host_metrics import host_event
 from roboteam.runtime.sandbox import policy_env
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.tools import tool_mode
+from roboteam.runtime.tools import tools_mode
 
 ENV_PASSTHROUGH = ('PATH', 'LANG', 'LC_ALL', 'TMPDIR')
 ROBOT_TOOL = 'mcp__robot__robot'
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
 # Runs with a frozen access table (roboteam/runtime/sandbox/access.py) give policy turns the
 # same working tools as the Codex route: files, shell and the bound robot tool. Web
-# tools stay off on both engines.
+# tools stay off on both harnesses.
 POLICY_TOOLS = ('Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep')
 # Write and Edit are not pre-allowed: acceptEdits accepts edits inside the working
 # folder, and with permission prompts off every other edit is refused.
@@ -139,8 +139,8 @@ def policy_settings(run_dir):
 
 
 def robot_only(run_dir):
-    """Whether this run's policy turns keep the robot tool alone (runtime/tools/tool_mode.py)."""
-    return tool_mode.of_run(run_dir) == tool_mode.ROBOT_ONLY
+    """Whether this run's policy turns keep the robot tool alone (runtime/tools/tools_mode.py)."""
+    return tools_mode.of_run(run_dir) == tools_mode.ROBOT_ONLY
 
 
 def turn_settings(run_dir):
@@ -170,12 +170,12 @@ def confine(run_dir, settings, config_dir):
         raise ValueError('Unknown Bash isolation: ' + str(mode))
     from roboteam.harness.shared import landlock as landlock_shell
     table = json.loads((run/'private/inputs/policy-access.json').read_text())['filesystem']
-    folder = run_layout.path(run, 'engine_mcp').parent/'bash-isolation'
+    folder = run_layout.path(run, 'harness_mcp').parent/'bash-isolation'
     folder.mkdir(parents=True, exist_ok=True)
     rules = folder/'rules.json'
     # The exact strings Claude Code passes to the prefix to start this run's robot MCP servers.
     servers = [json.loads(p.read_text())['mcpServers']['robot']
-               for p in sorted(run_layout.path(run, 'engine_mcp').glob('*.json'))]
+               for p in sorted(run_layout.path(run, 'harness_mcp').glob('*.json'))]
     unconfined = [shlex.join([s['command'], *s['args']]) for s in servers]
     # Claude Code sources a snapshot of its shell from its configuration directory first.
     landlock_shell.write_rules(rules, landlock_shell.allowlist(
@@ -251,7 +251,7 @@ def settings_argument(settings, folder=None):
 
 def settings_folder(run_dir):
     """Where runners keep the settings files of a run's policy turns (private to the harness)."""
-    return run_layout.path(Path(run_dir).resolve(), 'engine_mcp').parent/'policy-settings'
+    return run_layout.path(Path(run_dir).resolve(), 'harness_mcp').parent/'policy-settings'
 
 
 def build_command(model, effort, mcp_config, prompt, session_id=None, max_budget_usd=None, binary='claude', resume=None,
@@ -383,9 +383,9 @@ def start_cli(cmd, env, **options):
         os.close(read)
 
 
-def bind_gateway_session(profile, command, env):
+def bind_gateway_session(model_entry, command, env):
     """Bind loopback replay state to the same native IDs used by the CLI."""
-    if profile.get('provider') != 'openai_chatgpt_plan':
+    if model_entry.get('provider') != 'openai_chatgpt_plan':
         return
     flag = '--session-id' if '--session-id' in command else '--resume'
     session = str(uuid.UUID(command[command.index(flag)+1]))
@@ -396,23 +396,23 @@ def bind_gateway_session(profile, command, env):
     env['ANTHROPIC_CUSTOM_HEADERS'] = '\n'.join(headers)
 
 
-def build_env(profile, base_env, config_dir):
-    """Pass only this profile's endpoint and credential; never inherit other providers' keys."""
-    auth_mode=profile.get('auth_mode','api_key')
-    key = base_env.get(profile.get('env_key')) if profile.get('env_key') else None
+def build_env(model_entry, base_env, config_dir):
+    """Pass only this model's endpoint and credential; never inherit other providers' keys."""
+    auth_mode=model_entry.get('auth_mode','api_key')
+    key = base_env.get(model_entry.get('env_key')) if model_entry.get('env_key') else None
     if auth_mode != 'native_login' and not key:
-        raise ValueError('Missing credential variable: ' + str(profile.get('env_key')))
-    if profile.get('provider') not in (None, 'anthropic') and not profile.get('base_url'):
-        raise ValueError('Non-Anthropic profiles require an explicit base URL before launch')
+        raise ValueError('Missing credential variable: ' + str(model_entry.get('env_key')))
+    if model_entry.get('provider') not in (None, 'anthropic') and not model_entry.get('base_url'):
+        raise ValueError('Non-Anthropic models require an explicit base URL before launch')
     env = {name: base_env[name] for name in ENV_PASSTHROUGH if name in base_env}
     if auth_mode == 'native_login':
-        home = config_directory('.', profile)
+        home = config_directory('.', model_entry)
         if home != Path(config_dir).resolve():
-            raise ValueError('Native login directory differs from the selected profile')
+            raise ValueError('Native login directory differs from the selected model')
         config_dir = home
-        if not _oauth_endpoint_allowed(profile.get('base_url')):
+        if not _oauth_endpoint_allowed(model_entry.get('base_url')):
             raise ValueError('Native login may only use the Anthropic endpoint')
-        scope = profile.get('native_config_scope', 'directory')
+        scope = model_entry.get('native_config_scope', 'directory')
         if scope not in ('default', 'directory'):
             raise ValueError('Unknown native configuration scope')
         if scope == 'default':
@@ -424,9 +424,9 @@ def build_env(profile, base_env, config_dir):
             env['HOME'] = base_env['HOME']
         credential_name=None
     elif auth_mode == 'oauth_token':
-        if profile.get('provider') != 'anthropic' or profile['env_key'] != 'CLAUDE_CODE_OAUTH_TOKEN':
-            raise ValueError('OAuth token mode is limited to the Anthropic subscription profile')
-        if not _oauth_endpoint_allowed(profile.get('base_url')):
+        if model_entry.get('provider') != 'anthropic' or model_entry['env_key'] != 'CLAUDE_CODE_OAUTH_TOKEN':
+            raise ValueError('OAuth token mode is limited to the Anthropic subscription model')
+        if not _oauth_endpoint_allowed(model_entry.get('base_url')):
             raise ValueError('OAuth token may only be sent to the Anthropic endpoint')
         credential_name='CLAUDE_CODE_OAUTH_TOKEN'
     elif auth_mode == 'api_key':
@@ -449,16 +449,16 @@ def build_env(profile, base_env, config_dir):
         # An explicitly set CLAUDE_CONFIG_DIR selects a different credential
         # namespace even when its path equals the native default directory.
         env.pop('CLAUDE_CONFIG_DIR', None)
-    if profile.get('base_url'):
-        env['ANTHROPIC_BASE_URL'] = profile['base_url']
-    if profile.get('provider') == 'openai_chatgpt_plan' and 'context_capacity' in profile:
-        capacity = profile['context_capacity']
+    if model_entry.get('base_url'):
+        env['ANTHROPIC_BASE_URL'] = model_entry['base_url']
+    if model_entry.get('provider') == 'openai_chatgpt_plan' and 'context_capacity' in model_entry:
+        capacity = model_entry['context_capacity']
         if type(capacity) is not int or not 100000 <= capacity <= 1000000:
             raise ValueError('ChatGPT plan context_capacity must be an integer from 100000 to 1000000')
         # The auto-compact window is capped by the native client's model window.
         # A GPT ID is unknown to Claude Code and otherwise defaults to 200k.
         env['CLAUDE_CODE_MAX_CONTEXT_TOKENS'] = str(capacity)
-    if profile.get('managed_settings'):
+    if model_entry.get('managed_settings'):
         env['CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST'] = '1'
     if base_env.get('ROBOTEAM_EGRESS_INSTANCE'):
         # A managed allocation route (roboteam/launch/slurm/proxy.py) is the CLI's only way out.
@@ -544,7 +544,7 @@ def _redact(text, secret):
 from roboteam.harness.shared.native import PreLaunchCancelled
 
 
-def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
+def run_turn(model_entry, model, effort, mcp_config, prompt, run_dir, base_env,
              session_id=None, timeout=None, max_budget_usd=None, binary='claude', resume=None, events_name='events.jsonl',
              cancel_event=None, fork_from=None, enable_robot=True, actor=None, phase='policy', gate=None):
     """Run one turn, persist its raw events under run_dir, and return a status record.
@@ -555,10 +555,10 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
     outcomes through the runtime before treating a task as finished.
     """
     run_dir = Path(run_dir).resolve()
-    evidence = run_layout.path(run_dir, 'engine_turns')
+    evidence = run_layout.path(run_dir, 'harness_turns')
     evidence.mkdir(parents=True, exist_ok=True)
-    config_dir = config_directory(run_dir, profile)
-    if profile.get('auth_mode') != 'native_login':
+    config_dir = config_directory(run_dir, model_entry)
+    if model_entry.get('auth_mode') != 'native_login':
         config_dir.mkdir(parents=True, exist_ok=True)
     before = baseline(config_dir, fork_from or resume)
     native_limit = max_budget_usd
@@ -573,12 +573,12 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
         native_limit = float(maximum)
     settings, confined = confine(run_dir, turn_settings(run_dir) if enable_robot else None, config_dir)
     cmd = build_command(model, effort, mcp_config, prompt, session_id, native_limit, binary, resume,
-                        fork_from=fork_from, enable_robot=enable_robot, auth_mode=profile.get('auth_mode','api_key'),
+                        fork_from=fork_from, enable_robot=enable_robot, auth_mode=model_entry.get('auth_mode','api_key'),
                         prompt_via_stdin=True, settings=settings, system_prompt=policy_system_prompt(run_dir),
                         gate=gate, settings_dir=settings_folder(run_dir),
-                        robot_only=enable_robot and robot_only(run_dir), managed_settings=profile.get('managed_settings'))
-    env = {**build_env(profile, base_env, config_dir), **confined}
-    bind_gateway_session(profile,cmd,env)
+                        robot_only=enable_robot and robot_only(run_dir), managed_settings=model_entry.get('managed_settings'))
+    env = {**build_env(model_entry, base_env, config_dir), **confined}
+    bind_gateway_session(model_entry,cmd,env)
     launch = run_dir/'private/inputs/claude.json'
     frozen = json.loads(launch.read_text()) if launch.is_file() else {}
     if frozen.get('auto_compact_token_limit'):
@@ -623,7 +623,7 @@ def run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env,
             break
         except subprocess.TimeoutExpired:
             continue
-    secret = base_env.get(profile.get('env_key')) if profile.get('env_key') else None
+    secret = base_env.get(model_entry.get('env_key')) if model_entry.get('env_key') else None
     stdout = _redact(stdout, secret)
     # Evidence can contain model output and private task observations.
     fd = os.open(raw, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -704,19 +704,19 @@ class PersistentSession:
         with self.lock:
             _stop_process(self.process); self.process = None
 
-    def _start(self, profile, model, effort, mcp_config, run_dir, base_env, binary, session_id, resume,
+    def _start(self, model_entry, model, effort, mcp_config, run_dir, base_env, binary, session_id, resume,
                fork_from=None, gate=None):
-        config_dir = config_directory(run_dir, profile)
-        if profile.get('auth_mode') != 'native_login':
+        config_dir = config_directory(run_dir, model_entry)
+        if model_entry.get('auth_mode') != 'native_login':
             config_dir.mkdir(parents=True, exist_ok=True)
         settings, confined = confine(run_dir, turn_settings(run_dir), config_dir)
         cmd = build_command(model, effort, mcp_config, None, session_id, None, binary, resume, fork_from=fork_from,
-                            auth_mode=profile.get('auth_mode', 'api_key'), settings=settings,
+                            auth_mode=model_entry.get('auth_mode', 'api_key'), settings=settings,
                             system_prompt=policy_system_prompt(run_dir), stream_input=True, gate=gate,
                             settings_dir=settings_folder(run_dir), robot_only=robot_only(run_dir),
-                            managed_settings=profile.get('managed_settings'))
-        env = {**build_env(profile, base_env, config_dir), **confined}
-        bind_gateway_session(profile,cmd,env)
+                            managed_settings=model_entry.get('managed_settings'))
+        env = {**build_env(model_entry, base_env, config_dir), **confined}
+        bind_gateway_session(model_entry,cmd,env)
         launch = Path(run_dir)/'private/inputs/claude.json'
         frozen = json.loads(launch.read_text()) if launch.is_file() else {}
         if frozen.get('auto_compact_token_limit'):
@@ -746,29 +746,29 @@ class PersistentSession:
     def _write(self, message):
         self.process.stdin.write(json.dumps(message) + '\n'); self.process.stdin.flush()
 
-    def __call__(self, profile, model, effort, mcp_config, prompt, run_dir, base_env, session_id=None, timeout=None,
+    def __call__(self, model_entry, model, effort, mcp_config, prompt, run_dir, base_env, session_id=None, timeout=None,
                  max_budget_usd=None, binary='claude', resume=None, events_name='events.jsonl', cancel_event=None,
                  actor=None, phase='policy', **one_shot):
         if (max_budget_usd is not None or one_shot.get('enable_robot') is False
                 or policy_settings(run_dir) is None):
             self.close()
-            return run_turn(profile, model, effort, mcp_config, prompt, run_dir, base_env, session_id=session_id,
+            return run_turn(model_entry, model, effort, mcp_config, prompt, run_dir, base_env, session_id=session_id,
                             timeout=timeout, max_budget_usd=max_budget_usd, binary=binary, resume=resume,
                             events_name=events_name, cancel_event=cancel_event, actor=actor, phase=phase, **one_shot)
         fork_from, gate = one_shot.pop('fork_from', None), one_shot.pop('gate', None)
         one_shot.pop('enable_robot', None)
         if one_shot: raise TypeError('Unexpected turn options: ' + ', '.join(sorted(one_shot)))
         run_dir = Path(run_dir).resolve()
-        evidence = run_layout.path(run_dir, 'engine_turns'); evidence.mkdir(parents=True, exist_ok=True)
+        evidence = run_layout.path(run_dir, 'harness_turns'); evidence.mkdir(parents=True, exist_ok=True)
         if cancel_event is not None and cancel_event.is_set():
             raise PreLaunchCancelled('Claude turn cancelled before launch')
         with self.lock:
-            self.secret = base_env.get(profile.get('env_key')) if profile.get('env_key') else None
+            self.secret = base_env.get(model_entry.get('env_key')) if model_entry.get('env_key') else None
             if fork_from and self.process is not None and self.process.poll() is None:
                 raise ValueError('A fork is the first turn of its process')
             if self.process is None or self.process.poll() is not None:
                 # A new process continues the transcript; only the first turn creates it.
-                self._start(profile, model, effort, mcp_config, run_dir, base_env, binary,
+                self._start(model_entry, model, effort, mcp_config, run_dir, base_env, binary,
                             session_id, None if session_id else resume, fork_from, gate)
             before = self.reported_total
             began = time.monotonic()

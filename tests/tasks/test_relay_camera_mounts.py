@@ -7,7 +7,7 @@ import unittest
 import mujoco
 import numpy as np
 
-from roboteam.tasks.families import ROOT, RELEASE, read, prepare
+from roboteam.tasks.task_types import ROOT, RELEASE, read, prepare
 
 from scripts.release import build_release
 

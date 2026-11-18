@@ -1,4 +1,4 @@
-"""Codex with Claude through the loopback Messages adapter: profile rules and the real CLI.
+"""Codex with Claude through the loopback Messages adapter: model rules and the real CLI.
 
 The native test drives the installed Codex CLI through `roboteam/harness/adapters/claude_in_codex/gateway.py`
 (run by a Python that has the optional `anthropic` SDK) against a local stand-in for the
@@ -18,7 +18,7 @@ import unittest
 from unittest import mock
 
 from roboteam.harness.codex import launch
-from roboteam.harness.codex.launch import launch_config, profile
+from roboteam.harness.codex.launch import launch_config, model_entry
 from roboteam.runtime.time import outage
 
 from anthropic_upstream_fixture import AnthropicStub, text, thinking, tool_use, usage
@@ -44,13 +44,13 @@ def catalog(folder, **fields):
              'env_key': 'LOCAL_GATEWAY_KEY', 'effort': 'high', 'vision': True, 'context_capacity': 1000000}
     entry.update(fields)
     path.write_text(json.dumps({'context_window': 300000, 'auto_compact_token_limit': 267000,
-                                'profiles': {'p': {k: v for k, v in entry.items() if v is not None}}}))
+                                'models': {'p': {k: v for k, v in entry.items() if v is not None}}}))
     return path
 
 
 class LoopbackProfileTests(unittest.TestCase):
-    def test_checked_in_profile_selects_one_model_through_the_local_adapter(self):
-        p = profile('opus_claude_api')
+    def test_checked_in_model_entry_selects_one_model_through_the_local_adapter(self):
+        p = model_entry('opus_claude_api')
         self.assertEqual((p['model'], p['effort'], p['vision'], p['provider']),
                          ('claude-opus-5-5', 'high', True, 'claude_gateway'))
         self.assertEqual((p['context_window'], p['auto_compact_token_limit'], p['context_capacity']),
@@ -76,9 +76,9 @@ class LoopbackProfileTests(unittest.TestCase):
                       '"ANTHROPIC_AUTH_TOKEN"]', started['args'])
         self.assertNotIn('Authorization', json.dumps(started))
 
-    def test_plain_http_is_limited_to_the_marked_literal_loopback_profile(self):
+    def test_plain_http_is_limited_to_the_marked_literal_loopback_model_entry(self):
         with tempfile.TemporaryDirectory() as folder:
-            self.assertEqual(profile('p', catalog(folder))['model'], 'claude-opus-5-5')
+            self.assertEqual(model_entry('p', catalog(folder))['model'], 'claude-opus-5-5')
             for fields in ({'base_url': 'http://example.com:18470/v1'}, {'base_url': 'http://127.0.0.1.example.com:18470/v1'},
                            {'base_url': 'http://localhost:18470/v1'}, {'base_url': 'http://127.0.0.1/v1'},
                            {'base_url': 'http://127.0.0.1:18470/v1?key=x'}, {'base_url': 'http://user:pw@127.0.0.1:18470/v1'},
@@ -89,20 +89,20 @@ class LoopbackProfileTests(unittest.TestCase):
                            {'transport': None}, {'transport': None, 'provider': 'kimi'},
                            {'provider': 'openai'}):
                 with self.subTest(fields=fields), self.assertRaises(ValueError):
-                    profile('p', catalog(folder, **fields))
+                    model_entry('p', catalog(folder, **fields))
 
-    def test_other_profiles_keep_https_and_their_catalog_defaults(self):
+    def test_other_model_entries_keep_https_and_their_catalog_defaults(self):
         from roboteam.configuration import model_catalog
-        for name, entry in model_catalog('codex')['profiles'].items():
+        for name, entry in model_catalog('codex')['models'].items():
             if name == 'opus_claude_api':
                 continue
-            with self.subTest(profile=name):
+            with self.subTest(model_entry=name):
                 self.assertNotIn('transport', entry)
                 self.assertFalse(str(entry.get('base_url', 'https://')).startswith('http://'))
         with tempfile.TemporaryDirectory() as folder:
-            launch_config(profile('kimi'), Path(folder))
+            launch_config(model_entry('kimi'), Path(folder))
             model = json.loads((Path(folder)/'models.json').read_text())['models'][0]
-            self.assertNotIn('shell_environment_policy', json.dumps(launch_config(profile('luna'), Path(folder))['args']))
+            self.assertNotIn('shell_environment_policy', json.dumps(launch_config(model_entry('luna'), Path(folder))['args']))
         self.assertTrue(model['support_verbosity'])
 
     def test_codex_never_receives_the_upstream_credential(self):
@@ -133,7 +133,7 @@ class LoopbackProfileTests(unittest.TestCase):
             launch.require_gateway(p)
             launch.require_gateway({'provider': 'kimi', 'base_url': 'https://unused.invalid'})
             for changed in ({'transport_revision': 'messages-adapter-v0'}, {'model': 'claude-opus-5'}):
-                with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, 'not this profile'):
+                with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, 'not this model'):
                     launch.require_gateway({**p, **changed})
         finally:
             server.shutdown()
@@ -144,16 +144,16 @@ class LoopbackProfileTests(unittest.TestCase):
     def test_outage_probe_watches_the_upstream_api_not_the_loopback_port(self):
         with tempfile.TemporaryDirectory() as run:
             (Path(run)/'private/inputs').mkdir(parents=True)
-            (Path(run)/'private/inputs/codex.json').write_text(json.dumps({'profile': profile('opus_claude_api')}))
+            (Path(run)/'private/inputs/codex.json').write_text(json.dumps({'model_entry': model_entry('opus_claude_api')}))
             self.assertEqual(outage.model_hosts(run, 'codex'), ('api.anthropic.com',))
 
-    def test_container_and_slurm_entries_refuse_a_host_loopback_profile(self):
+    def test_container_and_slurm_entries_refuse_a_host_loopback_model_entry(self):
         from roboteam.launch.container import container
         from roboteam.launch.slurm import job as slurm_job
-        chosen = {'profiles': {'opus_claude_api': {'transport': 'loopback_gateway', 'env_key': 'K'}}}
+        chosen = {'models': {'opus_claude_api': {'transport': 'loopback_gateway', 'env_key': 'K'}}}
         with mock.patch('roboteam.cli._catalog', return_value=chosen):
             with self.assertRaisesRegex(ValueError, 'not in a container'):
-                container._credential_environment({'policy': {'profile': 'opus_claude_api'}}, {'K': 'v'})
+                container._credential_environment({'policy': {'model': 'opus_claude_api'}}, {'K': 'v'})
         self.assertIn("'loopback_gateway'", Path(slurm_job.__file__).read_text())
 
 
@@ -265,7 +265,7 @@ class NativeCliThroughGatewayTests(unittest.TestCase):
         self.assertTrue(started, gateway.stderr.read() if gateway.poll() is not None else 'gateway did not start')
         self.gateway_port = json.loads(started)['listening'][1]
         local_key = json.loads((private/'gateway-key.json').read_text())['key']
-        selected = {**profile('opus_claude_api'), 'base_url': 'http://127.0.0.1:%d/v1' % self.gateway_port}
+        selected = {**model_entry('opus_claude_api'), 'base_url': 'http://127.0.0.1:%d/v1' % self.gateway_port}
         launch.require_gateway(selected)
         # A frozen access table as in a prepared run: workspace writable, shell network off.
         run = out/'run'

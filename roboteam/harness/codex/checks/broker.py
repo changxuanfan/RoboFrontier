@@ -73,11 +73,11 @@ def check(output):
             self.wfile.flush()
     server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
     threading.Thread(target=server.serve_forever,daemon=True).start()
-    profile=dict(model='offline-broker',provider='offline_protocol',effort='high',vision=True,
+    model_entry=dict(model='offline-broker',provider='offline_protocol',effort='high',vision=True,
         context_window=300000,auto_compact_token_limit=267000,tool_backend='landlock-v1',
         use_cached_model_metadata=False,base_url=f'http://127.0.0.1:{server.server_port}',
         env_key='ROBOTEAM_OFFLINE_STUB_TOKEN')
-    launch=launch_config(profile,output,run_dir=Path(probe['run_dir']))
+    launch=launch_config(model_entry,output,run_dir=Path(probe['run_dir']))
     launch.update(tool_probe=probe,python=sys.executable)
     write_json(output/'launch.json',launch)
     try:

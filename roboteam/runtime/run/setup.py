@@ -10,14 +10,14 @@ from roboteam.sim.render.image import observation_profile
 from roboteam.sim.render.look import DEFAULT_LOOK, look_of
 from roboteam.tasks.provenance import environment_logic_manifest
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.tools import tool_mode
+from roboteam.runtime.tools import tools_mode
 from roboteam.runtime.run.bootstrap import SKILLS_HEADER, write_bootstraps
-from roboteam.tasks.config import CONTROLLER, ROOT, load_task, load_harness, public_task,physical_control_fingerprint
+from roboteam.tasks.config import CONTROLLER, ROOT, load_task, load_run_settings, public_task,physical_control_fingerprint
 from roboteam.io import write_json
 
 
-# Every roboteam/**/*.py is frozen for each run; these are an engine's other sources.
-ENGINE_SCRIPTS = {
+# Every roboteam/**/*.py is frozen for each run; these are an harness's other sources.
+HARNESS_SCRIPTS = {
     'codex': ('roboteam/harness/codex/host/rpc.js', 'roboteam/harness/codex/host/policy_host.js',
               'roboteam/harness/codex/host/preflight.js', 'roboteam/harness/codex/host/tool_broker.js',
               'roboteam/harness/codex/host/gateway_rpc.js', 'roboteam/harness/codex/host/job_gateway.js', 'roboteam/harness/codex/host/borrowed_auth.js'),
@@ -25,12 +25,12 @@ ENGINE_SCRIPTS = {
 }
 
 
-def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_path=None):
+def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzle_path=None):
     directory = Path(directory).resolve()
     if directory.exists():
         raise ValueError('Choose a new run directory; existing runs are never overwritten')
-    task, cfg = load_task(task_path), load_harness(harness_path)
-    # Freeze the defaults the harness leaves out.
+    task, cfg = load_task(task_path), load_run_settings(run_settings_path)
+    # Freeze the defaults the run settings leave out.
     cfg.setdefault('observation_look', DEFAULT_LOOK)
     look_of(cfg)
     # Letter labels sit beside each robot, as in this run's videos.
@@ -43,7 +43,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         values_allowed=alphabet(task)
         # Every run of a Dial case uses the case's fixed code from the release; an engineering
         # run may name another.
-        from roboteam.tasks.families import dial_code
+        from roboteam.tasks.task_types import dial_code
         puzzle=json.loads(Path(private_puzzle_path).read_text()) if private_puzzle_path else {'code_symbols':dial_code(task['id'])}
         values=puzzle.get('code_symbols')
         if set(puzzle)!={'code_symbols'} or not isinstance(values,list) or len(values)!=n or any(type(x) is not int or x not in values_allowed for x in values):raise ValueError('Expected one configured private nonzero symbol per suite dial')
@@ -60,8 +60,8 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     if puzzle is not None:
         write_json(directory/puzzle_relative,puzzle)
     public = public_task(task)
-    from roboteam.tasks.families import freeze_public
-    family_release = freeze_public(task, directory, public)
+    from roboteam.tasks.task_types import freeze_public
+    task_type_release = freeze_public(task, directory, public)
     from roboteam.tasks.scene import camera_names
     public['cameras'] = camera_names(task)
     for key,name in (('robot_layout_image','robot-layout.png'),('camera_calibration','camera-guide.json')):
@@ -69,7 +69,7 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
         if (directory/'public/inputs'/name).is_file():public[key]=name
     public['observation_image'] = {k: image_profile[k] for k in ('width', 'height', 'format')}
     if 'quality' in image_profile: public['observation_image']['quality'] = image_profile['quality']
-    # Preserve the signed family asset; publish a run-specific calibration copy
+    # Preserve the signed task type asset; publish a run-specific calibration copy
     # only when its original declares an image size. Camera pose/FOV stays fixed.
     calibration_ref = public.get('camera_calibration')
     if calibration_ref:
@@ -80,39 +80,39 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
                 calibration['image_size_pixel'] = [image_profile['width'], image_profile['height']]
                 calibration['source_calibration'] = calibration_ref
                 calibration['scope'] = str(calibration.get('scope', 'Camera calibration')) + '; image size matches this run observation profile'
-                if family_release is not None and calibration_ref == 'family/'+calibration_path.name:
+                if task_type_release is not None and calibration_ref == 'family/'+calibration_path.name:
                     # The policy sees one calibration, sized for this run; the signed
                     # release copy moves to private/ and keeps its recorded hash.
-                    original = directory/'private/inputs/release-family'/calibration_path.name
+                    original = directory/'private/inputs/release-materials'/calibration_path.name
                     original.parent.mkdir()
                     shutil.move(calibration_path, original)
                     calibration['source_calibration'] = str(original.relative_to(directory))
-                    family_release['public_files'][str(original.relative_to(directory))] = \
-                        family_release['public_files'].pop('public/inputs/family/'+calibration_path.name)
+                    task_type_release['public_files'][str(original.relative_to(directory))] = \
+                        task_type_release['public_files'].pop('public/inputs/family/'+calibration_path.name)
                     write_json(calibration_path, calibration)
                 else:
                     derived = directory/'public/inputs/observation-camera-calibration.json'
                     write_json(derived, calibration)
                     public['camera_calibration'] = 'observation-camera-calibration.json'
     write_json(directory/'public/inputs/task.json', public)
-    write_json(directory/'private/inputs/harness.json', cfg)
+    write_json(directory/'private/inputs/run.json', cfg)
     roles = {cfg['manager']: {'kind':'manager'}}
-    if cfg['topology'] == 'hierarchical':
+    if cfg['system'] == 'hierarchical':
         roles[CONTROLLER] = {'kind':'team-controller'}
-    if cfg['topology'] in ('single-agent','adaptive'):
+    if cfg['system'] in ('single-agent','adaptive'):
         roles[CONTROLLER] = {'kind':'controller', 'robots':list(task['arms'])}
     else:
         roles.update({a: {'kind':'worker', 'robot':a} for a in task['arms']})
-    write_json(directory/'public/inputs/roles.json', {'topology':cfg['topology'], 'manager':cfg['manager'], 'roles':roles})
+    write_json(directory/'public/inputs/roles.json', {'system':cfg['system'], 'manager':cfg['manager'], 'roles':roles})
     templates = ROOT/'prompts'
-    # Passages that depend on the role's tools are marked in the templates (tool_mode.render).
-    mode = tool_mode.of(cfg)
-    rules = tool_mode.render((templates/'rules.md').read_text(), mode).replace('{{RUN_DIR}}',str(directory))
+    # Passages that depend on the role's tools are marked in the templates (tools_mode.render).
+    mode = tools_mode.of(cfg)
+    rules = tools_mode.render((templates/'rules.md').read_text(), mode).replace('{{RUN_DIR}}',str(directory))
     (directory/'public/inputs/rules.md').write_text(rules)
     shutil.copytree(templates/'guides/collaboration', directory/'public/inputs/guide')
     for template in sorted((directory/'public/inputs/guide').rglob('*.md')):
         text = template.read_text()
-        rendered = tool_mode.render(text, mode)
+        rendered = tools_mode.render(text, mode)
         if rendered != text: template.write_text(rendered)
     # The run's shared lessons file, inside the policy's only writable folder. Its
     # rules live in the frozen guide, which no role can edit.
@@ -128,12 +128,12 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     for actor, info in roles.items():
         kind = info['kind']
         filename = {'manager':'meta-manager','team-controller':'team-controller','worker':'worker','controller':'single-agent'}[kind]
-        if kind=='controller' and cfg['topology']=='adaptive':filename='adaptive-controller'
+        if kind=='controller' and cfg['system']=='adaptive':filename='adaptive-controller'
         values = {'RUN_DIR':str(directory),'REPO_ROOT':str(ROOT),'PYTHON':str(python), 'ACTOR':actor,
                   'CONNECTION':str(directory/'private/state/connections'/f'{actor}.json'),
-                  'TOPOLOGY':cfg['topology'],
-                  'FINISH_AUTHORITY':'any peer Worker' if cfg['topology']=='decentralized' else CONTROLLER,
-                  'COMMUNICATION_ROUTE':('Coordinate joint commitments and shared resources through '+CONTROLLER+'. Worker-to-Worker business messages are unavailable.' if cfg['topology']=='hierarchical' else 'Negotiate affected commitments and shared resources directly with relevant Workers.')}
+                  'SYSTEM':cfg['system'],
+                  'FINISH_AUTHORITY':'any decentralized Worker' if cfg['system']=='decentralized' else CONTROLLER,
+                  'COMMUNICATION_ROUTE':('Coordinate joint commitments and shared resources through '+CONTROLLER+'. Worker-to-Worker business messages are unavailable.' if cfg['system']=='hierarchical' else 'Negotiate affected commitments and shared resources directly with relevant Workers.')}
         text = (templates/'roles'/f'{filename}.md').read_text()
         for key,value in values.items():
             text = text.replace('{{'+key+'}}',value)
@@ -148,20 +148,20 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     store.close()
     # The Python the policy's scripts use, named by the trusted launcher.
     from roboteam.runtime.sandbox import policy_env
-    if policy_env.selected() is not None and mode != tool_mode.ROBOT_ONLY:
+    if policy_env.selected() is not None and mode != tools_mode.ROBOT_ONLY:
         policy_env.prepare_run(directory, policy_env.selected())
-    # One frozen first message per policy role, sent unchanged by either engine.
+    # One frozen first message per policy role, sent unchanged by either harness.
     write_bootstraps(directory)
-    # What the policy may read and write, rendered by each engine's own sandbox.
+    # What the policy may read and write, rendered by each harness's own sandbox.
     from roboteam.runtime.sandbox.access import record as access_record
     write_json(directory/'private/inputs/policy-access.json',
-               access_record(directory, no_environment=mode == tool_mode.ROBOT_ONLY))
+               access_record(directory, no_environment=mode == tools_mode.ROBOT_ONLY))
     paths = list((ROOT/'roboteam').rglob('*.py'))
     paths += [path for path in (ROOT/'prompts').rglob('*.md') if 'archive' not in path.relative_to(ROOT/'prompts').parts]
-    # Freeze only the policy-host scripts of this run's engine, so editing the other
-    # engine's host never invalidates a prepared batch. Meta's dispatcher serves both.
+    # Freeze only the policy-host scripts of this run's harness, so editing the other
+    # harness's host never invalidates a prepared batch. Meta's dispatcher serves both.
     paths += [ROOT/'roboteam/harness/codex/host/meta_dispatcher.js']
-    paths += [ROOT/name for name in ENGINE_SCRIPTS[cfg.get('engine','codex')]]
+    paths += [ROOT/name for name in HARNESS_SCRIPTS[cfg.get('harness','codex')]]
     paths += [ROOT/'docs/development'/name for name in ('manager-runbook.md','architecture.md','test-coverage.md')]
     source_hashes = {}
     for source in paths:
@@ -185,31 +185,31 @@ def prepare_run(directory, task_path=None, harness_path=None, private_puzzle_pat
     p=directory/'private/inputs/policy-tools.json'
     if p.is_file():
         inputs[str(p.relative_to(directory))]=hashlib.sha256(p.read_bytes()).hexdigest()
-    for folder in ('private/inputs/meta','private/inputs/bootstrap','private/inputs/release-family'):
+    for folder in ('private/inputs/meta','private/inputs/bootstrap','private/inputs/release-materials'):
         for p in sorted((directory/folder).glob('*')):
             if p.is_file():inputs[str(p.relative_to(directory))]=hashlib.sha256(p.read_bytes()).hexdigest()
-    if family_release is not None:
-        p=directory/'private/inputs/family-release.json'
+    if task_type_release is not None:
+        p=directory/'private/inputs/release.json'
         inputs[str(p.relative_to(directory))]=hashlib.sha256(p.read_bytes()).hexdigest()
     logic=environment_logic_manifest(source_hashes,task) if task.get('kind')=='frontier_suite' else None
     write_json(directory/'private/inputs/manifest.json', {'schema_version':3,'run_id':directory.name,
         **run_layout.manifest_record(),
         'task_sha256':hashlib.sha256(packed(task).encode()).hexdigest(),
-        'harness_sha256':hashlib.sha256(packed(cfg).encode()).hexdigest(),
+        'run_settings_sha256':hashlib.sha256(packed(cfg).encode()).hexdigest(),
         'source_sha256':source_hashes,'input_sha256':inputs,
         'physical_control_sha256':physical_control_fingerprint(source_hashes,cfg),
         'environment_logic_sha256':logic['sha256'] if logic else None,
         'environment_logic_provenance':logic,
-        'engine':cfg.get('engine','codex'),
+        'harness':cfg.get('harness','codex'),
         'model_requested':cfg['model'],'effort_requested':cfg['effort'],
-        'family_release':family_release,
+        'task_type_release':task_type_release,
         'observation_contract':task['observation_contract'],
         'manager':'Meta session executes deterministic dispatcher; no independent desktop takeover',
         'isolation':('Role authentication and protocol/integrity checks; policies have the robot tool alone, with no '
                      'shell, code execution or file tool: they read this run\'s public/ folder and extend its shared '
                      'lessons only through that tool'
-                     if mode == tool_mode.ROBOT_ONLY else
-                     'Role authentication and protocol/integrity checks, plus each engine\'s file sandbox: '
+                     if mode == tools_mode.ROBOT_ONLY else
+                     'Role authentication and protocol/integrity checks, plus each harness\'s file sandbox: '
                      + ('policies write only inside workspace/ and /tmp, and read only those, public/, the operating '
                         'system and the frozen Python environment'
                         if json.loads((directory/'private/inputs/policy-access.json').read_text()).get('policy_env') else
@@ -230,10 +230,10 @@ def verify_inputs(directory, *, source_root=None):
         return ['manifest:invalid']
     if manifest.get('schema_version') != 3:
         return ['manifest:unsupported_schema']
-    if not all(isinstance(manifest.get(k),dict) for k in ('source_sha256','input_sha256')) or not all(isinstance(manifest.get(k),str) for k in ('task_sha256','harness_sha256')):
+    if not all(isinstance(manifest.get(k),dict) for k in ('source_sha256','input_sha256')) or not all(isinstance(manifest.get(k),str) for k in ('task_sha256','run_settings_sha256')):
         return ['manifest:invalid']
     changed = []
-    for filename,key in [('task.json','task_sha256'),('harness.json','harness_sha256')]:
+    for filename,key in [('task.json','task_sha256'),('run.json','run_settings_sha256')]:
         try:
             actual=hashlib.sha256(packed(json.loads((directory/'private/inputs'/filename).read_text())).encode()).hexdigest()
         except (OSError,ValueError):

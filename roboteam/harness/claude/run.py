@@ -16,14 +16,14 @@ import sys
 import time
 from urllib.parse import urlsplit
 
-from roboteam.harness.claude.systems.single_agent import CentralizedPolicyHost
+from roboteam.harness.claude.systems.single_agent import SingleAgentPolicyHost
 from roboteam.harness.claude.systems.adaptive import AdaptivePolicyHost
 from roboteam.harness.claude.session.budget import BudgetLedger
 from roboteam.runtime.run import layout as run_layout
 from roboteam.harness.claude.session.session_host import ClaudeSessionHost
 from roboteam.harness.claude.session.runner import build_env
 from roboteam.harness.claude.session.native_home import config_directory
-from roboteam.harness.claude.supervisor import CentralizedSupervisor
+from roboteam.harness.claude.supervisor import RunSupervisor
 from roboteam.harness.claude.systems.standing_team import StandingTeamPolicyHost
 from roboteam.runtime.run.bootstrap import STARTUP_TIMEOUT_S
 from roboteam.runtime.time.clock import wall_backstop_s
@@ -53,26 +53,26 @@ def _positive(value, name, limit):
         raise ValueError('Invalid ' + name)
 
 
-def _concurrent_roles(run, topology):
+def _concurrent_roles(run, system):
     """The most roles that can hold a budget reservation at once."""
     roles = json.loads((run/'public/inputs/roles.json').read_text())['roles']
-    if topology == 'adaptive':
+    if system == 'adaptive':
         # The Controller's turn stays reserved while it waits for its delegates, at most one
         # per arm (delegate scopes hold disjoint robots).
         return 1 + len(roles['Controller']['robots'])
     return sum(1 for info in roles.values() if info['kind'] != 'manager')
 
 
-def _check_shared_budget(run, topology, turn_budget_usd, total_budget_usd):
+def _check_shared_budget(run, system, turn_budget_usd, total_budget_usd):
     """Refuse, before any claim, a task cap that concurrent roles could exhaust by reserving.
 
     A turn without its own allowance reserves the whole remainder, so one role would deny
     every other; with an allowance, the roles' reservations together must fit the cap."""
-    if total_budget_usd is None or topology == 'single-agent':
+    if total_budget_usd is None or system == 'single-agent':
         return
     if turn_budget_usd is None:
         raise ValueError('A task budget for a multi-role run needs a per-turn budget')
-    roles = _concurrent_roles(run, topology)
+    roles = _concurrent_roles(run, system)
     if roles * turn_budget_usd > total_budget_usd:
         raise ValueError('Task budget %.4g is below %d concurrent roles x per-turn budget %.4g'
                          % (total_budget_usd, roles, turn_budget_usd))
@@ -93,7 +93,7 @@ def _run_protocol(run):
 
 
 def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, wall_limit_s=86400, startup_timeout_s=STARTUP_TIMEOUT_S,
-                    poll_s=0.5, owner_factory=subprocess.Popen, policy_factory=CentralizedPolicyHost,
+                    poll_s=0.5, owner_factory=subprocess.Popen, policy_factory=SingleAgentPolicyHost,
                     adaptive_policy_factory=AdaptivePolicyHost, standing_policy_factory=StandingTeamPolicyHost,
                     clock=time.monotonic, sleep=time.sleep, _verifier=None, _supervisor=None):
     """Run one prepared run and conservatively retain uncertain state.
@@ -108,30 +108,30 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
                              (poll_s, 'poll interval', 60)):
         _positive(val, name, limit)
     run = Path(run_dir).resolve()
-    engine = json.loads((run/'private/inputs/manifest.json').read_text()).get('engine')
-    if engine != 'claude': raise ValueError('Expected a Claude run')
+    harness = json.loads((run/'private/inputs/manifest.json').read_text()).get('harness')
+    if harness != 'claude': raise ValueError('Expected a Claude run')
     launch = json.loads((run / 'private/inputs/claude.json').read_text())
     manifest = json.loads((run / 'private/inputs/manifest.json').read_text())
     from roboteam.launch.claude_prepare import LAUNCH_SCHEMA
     verifier = _verifier or verify_inputs
-    supervisor_type = _supervisor or CentralizedSupervisor
+    supervisor_type = _supervisor or RunSupervisor
     if launch.get('schema') != LAUNCH_SCHEMA:
         raise ValueError('Expected a run prepared for Claude')
-    if manifest.get('status') != 'prepared' or manifest.get('engine') != engine:
+    if manifest.get('status') != 'prepared' or manifest.get('harness') != harness:
         raise ValueError('Expected a frozen Claude run')
     changed = verifier(run)
     if changed: raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
-    profile = launch['profile']
-    config = json.loads((run / 'private/inputs/harness.json').read_text())
-    topology = config.get('topology')
-    if topology not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized') or config.get('engine') != engine:
+    model_entry = launch['model_entry']
+    config = json.loads((run / 'private/inputs/run.json').read_text())
+    system = config.get('system')
+    if system not in ('single-agent', 'adaptive', 'hierarchical', 'decentralized') or config.get('harness') != harness:
         raise ValueError('Expected a supported Claude run')
-    if profile.get('auth_mode') != 'native_login' and not base_env.get(profile['env_key']):
-        raise ValueError('Missing credential variable: ' + profile['env_key'])
-    if profile.get('auth_mode') == 'native_login':
-        build_env(profile, base_env, config_directory(run, profile))
+    if model_entry.get('auth_mode') != 'native_login' and not base_env.get(model_entry['env_key']):
+        raise ValueError('Missing credential variable: ' + model_entry['env_key'])
+    if model_entry.get('auth_mode') == 'native_login':
+        build_env(model_entry, base_env, config_directory(run, model_entry))
     if run_layout.path(run, 'stop').exists(): raise ValueError('Run was stopped before launch')
-    _check_shared_budget(run, topology, turn_budget_usd, total_budget_usd)
+    _check_shared_budget(run, system, turn_budget_usd, total_budget_usd)
     # A run continued after an unexpected exit (docs/runs/continuation.md) starts again only
     # from a prepared segment; its claim stays and its sessions are resumed.
     from roboteam.runtime.world.store import RuntimeStore
@@ -157,13 +157,13 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
         if claim.exists() and not resuming: raise ValueError('Run already claimed; never restart the world')
         if run_layout.path(run, 'stop').exists(): raise ValueError('Run was stopped before launch')
         if verifier(run): raise ValueError('Frozen inputs changed before launch')
-        if topology == 'single-agent':
-            # The run's persistent ledger, as for every topology, so a model restart or a
+        if system == 'single-agent':
+            # The run's persistent ledger, as for every system, so a model restart or a
             # continued segment keeps the costs already spent.
             fresh_ledger = not (resuming and run_layout.path(run, 'budget_ledger').exists())
             ledger = _ledger(run, total_budget_usd, resuming)
             host_factory = partial(ClaudeSessionHost, max_budget_usd=turn_budget_usd, budget_ledger=ledger)
-            policy = policy_factory(run, profile, base_env, host_factory=host_factory,
+            policy = policy_factory(run, model_entry, base_env, host_factory=host_factory,
                                     **({'resume': True} if resuming else {}))
         if not resuming:
             with claim.open('x') as out:
@@ -171,20 +171,20 @@ def run_task(run_dir, base_env, *, turn_budget_usd=None, total_budget_usd=None, 
                 json.dump({'claimed_at': time.time(), 'pid': os.getpid(), 'mode': 'run'}, out)
                 out.flush(); os.fsync(out.fileno())
         claimed = True
-        if topology == 'adaptive':
+        if system == 'adaptive':
             ledger = _ledger(run, total_budget_usd, resuming)
-            policy = adaptive_policy_factory(run, profile, base_env, ledger,
+            policy = adaptive_policy_factory(run, model_entry, base_env, ledger,
                                              turn_budget_usd=turn_budget_usd,
                                              **({'resume': True} if resuming else {}))
-        elif topology in ('hierarchical', 'decentralized'):
+        elif system in ('hierarchical', 'decentralized'):
             ledger = _ledger(run, total_budget_usd, resuming)
-            policy = standing_policy_factory(run, profile, base_env, ledger,
+            policy = standing_policy_factory(run, model_entry, base_env, ledger,
                                               turn_budget_usd=turn_budget_usd,
                                               **({'resume': True} if resuming else {}))
         write_json(status, {'status': 'starting', 'claimed_at': time.time(), 'scored': False,
                             'turn_budget_usd': turn_budget_usd, 'task_budget_usd': total_budget_usd,
                             'wall_limit_s': wall_limit_s, 'startup_timeout_s': startup_timeout_s})
-        # The owner's environment is the same for both engines and carries no credentials.
+        # The owner's environment is the same for both harnesses and carries no credentials.
         from roboteam.harness.shared import owner as physics_owner
         owner_env = physics_owner.environment(base_env)
         owner_log = run_layout.path(run, 'owner_log')

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from roboteam.launch.claude_prepare import doctor, plan, profile
+from roboteam.launch.claude_prepare import doctor, plan, model_entry
 from roboteam.harness.claude.robot_mcp import RobotBridge, handle
 
 
@@ -15,48 +15,48 @@ class ClaudeFoundationTests(unittest.TestCase):
             root=Path(tmp)
             (root/'.env').write_text('FAKE_KEY=file-secret\nFAKE_BASE=https://file.example/api\n')
             catalog=root/'catalog.json'
-            catalog.write_text(json.dumps({'schema':'roboteam.claude-models.v1','profiles':{
+            catalog.write_text(json.dumps({'schema':'roboteam.claude-models.v1','models':{
                 'fake':{'provider':'fake','model':'model','env_key':'FAKE_KEY',
                         'base_url_env':'FAKE_BASE','effort':'high'}}}))
-            from roboteam.tasks.families import RELEASE
+            from roboteam.tasks.task_types import RELEASE
             release=root/RELEASE; release.parent.mkdir(parents=True)
             release.write_text(json.dumps({'families':{}}))
             with patch.dict('os.environ',{'FAKE_KEY':'environment-secret'},clear=True), \
                  patch('roboteam.launch.claude_prepare.shutil.which',return_value=None):
                 result=doctor(['fake'],root=root,catalog=catalog)
-                self.assertTrue(result['profiles']['fake']['credential_set'])
-                self.assertTrue(result['profiles']['fake']['base_url_configured'])
+                self.assertTrue(result['models']['fake']['credential_set'])
+                self.assertTrue(result['models']['fake']['base_url_configured'])
                 import os
                 self.assertEqual(os.environ['FAKE_KEY'],'environment-secret')
                 self.assertEqual(os.environ['FAKE_BASE'],'https://file.example/api')
                 self.assertNotIn('environment-secret',json.dumps(result))
                 self.assertNotIn('file-secret',json.dumps(result))
-                self.assertFalse(result['profiles']['fake']['live_verified'])
+                self.assertFalse(result['models']['fake']['live_verified'])
                 self.assertEqual(result['recording_tools'],{'ffmpeg':False,'ffprobe':False})
 
     def test_plan_four_minimum_level_one_tasks_without_execution(self):
         result = plan(['kimi'], level=1, min_arms=True, parallel=4)
         self.assertEqual(result['task_count'], 4)
-        self.assertEqual([j['family'] for j in result['jobs']], ['transport', 'mosaic', 'relay', 'dial'])
+        self.assertEqual([j['task_type'] for j in result['jobs']], ['transport', 'mosaic', 'relay', 'dial'])
         self.assertEqual([j['arms'] for j in result['jobs']], [4, 4, 8, 4])
         self.assertEqual(result['model_calls'], 0)
 
     def test_precheck_uses_haiku_and_bench_keeps_opus(self):
-        self.assertEqual(profile('haiku')['model'], 'claude-haiku-5-5')
-        self.assertEqual(profile('opus')['model'], 'claude-opus-5-5')
-        self.assertEqual(profile('haiku')['env_key'], 'ANTHROPIC_API_KEY')
+        self.assertEqual(model_entry('haiku')['model'], 'claude-haiku-5-5')
+        self.assertEqual(model_entry('opus')['model'], 'claude-opus-5-5')
+        self.assertEqual(model_entry('haiku')['env_key'], 'ANTHROPIC_API_KEY')
 
-    def test_kimi_code_is_separate_from_moonshot_profile(self):
-        code = profile('kimi_code')
+    def test_kimi_code_is_separate_from_moonshot_model_entry(self):
+        code = model_entry('kimi_code')
         self.assertEqual(code['model'], 'k3.1-pro')
         self.assertEqual(code['base_url'], 'https://api.kimi.com/coding/')
         self.assertEqual(code['env_key'], 'KIMI_CODE_API_KEY')
-        self.assertNotEqual(code['env_key'], profile('kimi')['env_key'])
+        self.assertNotEqual(code['env_key'], model_entry('kimi')['env_key'])
         self.assertEqual(plan(['kimi_code'], level=1, min_arms=True)['task_count'], 4)
 
     def test_invalid_provider_address_and_parallel_are_rejected(self):
         with patch.dict('os.environ', {'DASHSCOPE_ANTHROPIC_BASE_URL': 'https://secret:pass@example.com'}):
-            with self.assertRaises(ValueError): profile('qwen')
+            with self.assertRaises(ValueError): model_entry('qwen')
         with self.assertRaises(ValueError): plan(['kimi'], parallel=0)
         with self.assertRaises(ValueError): plan(['kimi', 'kimi'])
 

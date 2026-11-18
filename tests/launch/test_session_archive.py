@@ -11,7 +11,7 @@ from roboteam.runtime.run import layout as run_layout
 from roboteam.launch.results import session_archive
 from roboteam.launch.results.host_metrics import native_codex_sessions, native_subagent_calls, open_session
 from roboteam.runtime.world.store import RuntimeStore
-from roboteam.tasks.config import load_harness
+from roboteam.tasks.config import load_run_settings
 from roboteam.launch.results.collect import native_matches, session_name
 
 THREAD = '01a19877-10bc-78a1-8113-bf51f6786dd5'
@@ -22,14 +22,14 @@ def idle(path):
     old = time.time()-3600; os.utime(path, (old, old))
 
 
-def finished_run(root, lifecycle='ended', engine='codex'):
+def finished_run(root, lifecycle='ended', harness='codex'):
     """A run with a bound Controller and a snapshot anchor whose sessions sit in a Codex home."""
     root = Path(root).resolve()
     run = root/'run'; (run/'private/state').mkdir(parents=True); (run/'private/outputs').mkdir()
     (run/'private/inputs').mkdir()
-    (run/'private/inputs/manifest.json').write_text(json.dumps({'engine': engine, **run_layout.manifest_record()}))
+    (run/'private/inputs/manifest.json').write_text(json.dumps({'harness': harness, **run_layout.manifest_record()}))
     store = RuntimeStore(run/'private/state/runtime.sqlite')
-    cfg = load_harness(); cfg['topology'] = 'single-agent'; cfg['engine'] = engine
+    cfg = load_run_settings(); cfg['system'] = 'single-agent'; cfg['harness'] = harness
     store.initialize('run', cfg, ['A'])
     store.update_agent('Controller', thread_id=THREAD)
     store.put('delegations', {'d1': {'snapshot_thread_id': SNAPSHOT}})
@@ -69,7 +69,7 @@ class SessionArchiveTests(unittest.TestCase):
             kept = session_archive.keep_codex(run)
             self.assertEqual((kept['threads'], kept['complete']), (2, True))
             self.assertTrue(all(s.exists() for s in sessions))
-            folder = run/'private/engine/transcripts'
+            folder = run/'private/harness/transcripts'
             self.assertEqual(sorted(p.name for p in folder.glob('*.jsonl')), sorted(s.name for s in sessions))
             index = json.loads((folder/'index.json').read_text())
             self.assertEqual({r['actor'] for r in index['threads']}, {'Controller', 'snapshot:d1'})
@@ -117,7 +117,7 @@ class SessionArchiveTests(unittest.TestCase):
             self.assertEqual((len(manifest['files']), len(manifest['home_sources_removed'])), (2, 2))
             # Repeating is harmless; the run's verified copies remain the record.
             self.assertEqual(session_archive.archive_run(run)['archived'], 0)
-            self.assertTrue(json.loads((run/'private/engine/transcripts/index.json').read_text())['complete'])
+            self.assertTrue(json.loads((run/'private/harness/transcripts/index.json').read_text())['complete'])
             # Collection finds the archived copy and keeps its suffix.
             root, matches = native_matches('codex', run, home, THREAD)
             self.assertEqual(matches, archived)
@@ -127,7 +127,7 @@ class SessionArchiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             run, home, sessions = finished_run(Path(tmp))
             session_archive.keep_codex(run)
-            copy = run/'private/engine/transcripts'/sessions[0].name
+            copy = run/'private/harness/transcripts'/sessions[0].name
             session_archive.compress_verified(copy); copy.unlink()  # stopped before the home was released
             result = session_archive.archive_run(run)
             self.assertEqual((result['archived'], result['home_sources_removed']), (1, 2))
@@ -160,8 +160,8 @@ class SessionArchiveTests(unittest.TestCase):
 
     def test_claude_run_archives_transcripts_in_its_own_config_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run, home, sessions = finished_run(Path(tmp), engine='claude')
-            projects = run_layout.path(run, 'engine_config')/'projects/p'
+            run, home, sessions = finished_run(Path(tmp), harness='claude')
+            projects = run_layout.path(run, 'harness_config')/'projects/p'
             transcript = projects/(THREAD+'.jsonl'); sidecar = projects/THREAD/'subagents/agent-1.jsonl'
             sidecar.parent.mkdir(parents=True); transcript.write_text('{"type": "user"}\n'); sidecar.write_text('{}\n')
             idle(transcript); idle(sidecar)

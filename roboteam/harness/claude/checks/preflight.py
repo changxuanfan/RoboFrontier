@@ -1,10 +1,10 @@
-"""Real Claude precheck for one model profile under an explicit spend cap.
+"""Real Claude precheck for one model under an explicit spend cap.
 
 Without --confirm-spend this only prints the plan and makes no model call.
 Checks: text reply, a local robot tool call whose returned image must be read
 to answer, and a resumed turn on the same explicit session ID. Each check is
 judged from the turn result and robot-stub request count, not from the reply
-alone. A passing receipt covers only this profile, CLI version and cap.
+alone. A passing receipt covers only this model, CLI version and cap.
 """
 from roboteam.harness.claude.session.native_home import history_directory, config_directory
 import argparse
@@ -20,14 +20,14 @@ import uuid
 from pathlib import Path
 
 
-from roboteam.configuration import DEFAULT_PROFILES
+from roboteam.configuration import DEFAULT_MODELS
 from roboteam.harness.shared import preflight_probe
 from roboteam.harness.shared.identity import fingerprint
 from roboteam.harness.claude.session.runner import run_turn
 from roboteam.harness.claude.systems.provenance import fork_provenance
-from roboteam.tasks.families import ROOT
+from roboteam.tasks.task_types import ROOT
 from roboteam.launch.prepare import load_env
-from roboteam.launch.claude_prepare import profile
+from roboteam.launch.claude_prepare import model_entry
 
 MIN_TURN_BUDGET = 0.02
 
@@ -142,12 +142,12 @@ def judge(name, record, requests_before, requests_after, expected_session=None, 
 def run_precheck(name, output, budget, base_env, binary='claude', check_fork=False, *, catalog=None):
     if isinstance(budget,bool) or not isinstance(budget,(int,float)) or not math.isfinite(budget) or budget<=0:
         raise ValueError('Budget must be positive and finite')
-    prof = profile(name, catalog) if catalog is not None else profile(name)
+    prof = model_entry(name, catalog) if catalog is not None else model_entry(name)
     output.mkdir(parents=True, exist_ok=False)
     run, mcp, server = setup_run(output, base_env)
-    receipt = {'schema': 'roboteam.claude-precheck.v1', 'profile': name, 'requested_model': prof['model'],
+    receipt = {'schema': 'roboteam.claude-precheck.v1', 'model_entry': name, 'requested_model': prof['model'],
                'effort': prof['effort'], 'budget_usd': budget, 'claude_version': claude_version(binary),
-               'profile_sha256': fingerprint(prof), 'auth_mode': prof.get('auth_mode', 'api_key'),
+               'model_entry_sha256': fingerprint(prof), 'auth_mode': prof.get('auth_mode', 'api_key'),
                'started_at': time.time(), 'checks': [], 'stopped': None}
     spent = 0.0
     session = str(uuid.uuid4())
@@ -234,15 +234,15 @@ def run_precheck(name, output, budget, base_env, binary='claude', check_fork=Fal
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile', default=DEFAULT_PROFILES['claude'])
+    parser.add_argument('--model', default=DEFAULT_MODELS['claude'])
     parser.add_argument('--max-budget-usd', type=float, required=True)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--check-fork', action='store_true', help='Also run a tool-free native fork and verify transcript history')
     parser.add_argument('--confirm-spend', action='store_true', help='Required: allow real model calls and spend')
     args = parser.parse_args()
     load_env(ROOT / '.env')
-    prof = profile(args.profile)
-    plan = {'profile': args.profile, 'model': prof['model'], 'budget_usd': args.max_budget_usd,
+    prof = model_entry(args.model)
+    plan = {'model_entry': args.model, 'model': prof['model'], 'budget_usd': args.max_budget_usd,
             'checks': [name for name, _ in PROMPTS]+(['fork'] if args.check_fork else []),
             'real_model_calls_if_confirmed': len(PROMPTS)+(1 if args.check_fork else 0)}
     if not args.confirm_spend:
@@ -256,9 +256,9 @@ def main():
         raise SystemExit('Missing credential variable: ' + prof['env_key'])
     stamp = time.strftime('%Y%m%d-%H%M%S')
     from roboteam.configuration import runs_root
-    output = args.output or runs_root() / 'engineering/claude-precheck' / (args.profile + '-' + stamp)
-    receipt = run_precheck(args.profile, Path(output).absolute(), args.max_budget_usd, dict(os.environ), check_fork=args.check_fork)
-    print(json.dumps({k: receipt[k] for k in ('profile', 'requested_model', 'passed', 'total_cost_usd', 'stopped')}
+    output = args.output or runs_root() / 'engineering/claude-precheck' / (args.model + '-' + stamp)
+    receipt = run_precheck(args.model, Path(output).absolute(), args.max_budget_usd, dict(os.environ), check_fork=args.check_fork)
+    print(json.dumps({k: receipt[k] for k in ('model_entry', 'requested_model', 'passed', 'total_cost_usd', 'stopped')}
                      | {'receipt': str(Path(output).absolute() / 'receipt.json')}, indent=2, ensure_ascii=False))
     return 0 if receipt['passed'] else 1
 

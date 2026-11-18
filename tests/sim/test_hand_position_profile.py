@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 import numpy as np
-from roboteam.tasks.config import load_harness
+from roboteam.tasks.config import load_run_settings
 from single_arm_scene import make_world
 from motion import filled
 
@@ -13,12 +13,12 @@ from motion import filled
 class HandPositionProfileTests(unittest.TestCase):
     def setUp(self):
         self.temp=TemporaryDirectory();self.directory=Path(self.temp.name)
-        self.cfg=load_harness()
+        self.cfg=load_run_settings()
 
     def tearDown(self):self.temp.cleanup()
 
     def world(self):
-        return make_world(self.directory,harness=self.cfg)
+        return make_world(self.directory,run_settings=self.cfg)
 
     def command(self,w,op,parameters):
         command=w.validate_action('B',op,filled(op,parameters),self.cfg);w.start_action('B','profile-'+op,command)

@@ -22,7 +22,7 @@ from roboteam.runtime.run.segments import motion_dirs, output_dir, owner_release
 from roboteam.runtime.run.setup import verify_inputs
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.tasks.scene import camera_names
-from harness.shared.test_engine_parity import prepared
+from harness.shared.test_harness_parity import prepared
 
 ROOT = Path(__file__).resolve().parents[3]
 

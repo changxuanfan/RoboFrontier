@@ -154,9 +154,9 @@ https://github.com/user-attachments/assets/f4abfc06-8e7c-433a-bc16-aa3cb9df9641
 | | |
 | --- | --- |
 | **Host** | macOS on Apple silicon, Linux with an NVIDIA GPU or CPU only, a Slurm cluster, a RunPod pod or Docker. Each has a guide in [docs/hosts/](docs/README.md). |
-| **Software** | Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js, `ffmpeg`, and the CLI of the engine you run: Claude Code 2.1.316 (`claude`) or Codex 0.165.0 (`codex`). Other versions are refused. |
+| **Software** | Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js, `ffmpeg`, and the CLI of the harness you run: Claude Code 2.1.316 (`claude`) or Codex 0.165.0 (`codex`). Other versions are refused. |
 | **Linux sandbox** | `bwrap` and `socat` where user namespaces work; otherwise Linux 6.7 or newer (Landlock ABI 4) with `libseccomp`. |
-| **A model account** | A Claude subscription token, or an API key for one of the profiles in [`models.json`](models.json). |
+| **A model account** | A Claude subscription token, or an API key for one of the models in [`models.json`](models.json). |
 
 ### 2. Install
 
@@ -176,21 +176,21 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Fill in only the variable your profile reads: `OPENAI_API_KEY` for Codex's default `sol`
+Fill in only the variable your model reads: `OPENAI_API_KEY` for Codex's default `sol`
 (gpt-6.1-sol), `ANTHROPIC_API_KEY` for Claude Code's default `opus` (claude-opus-5-5), or
-`CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) for a Claude subscription profile. Keep credentials in `.env`, not exported in the shell: runs load it themselves and
+`CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) for a Claude subscription model. Keep credentials in `.env`, not exported in the shell: runs load it themselves and
 hand the Claude token to the CLI on a pipe, so no policy shell can read it.
 
 ### 4. Choose what to run
 
-Defaults are in [`roboteam.toml`](roboteam.toml): Codex with `sol` (`--engine claude` selects `opus`), the adaptive
+Defaults are in [`roboteam.toml`](roboteam.toml): Codex with `sol` (`--harness claude` selects `opus`), the adaptive
 protocol, all 36 tasks, and a renderer picked for the host. Change them with options or a
 small TOML of your own, passed before the command (`roboteam --config site.toml ...`);
 [`docs/hosts/examples/`](docs/hosts/examples) has one for the Mac, RunPod and Slurm.
 
 ```sh
-.venv/bin/roboteam doctor --engine claude                  # CLI version, sandbox, renderer, credentials
-.venv/bin/roboteam plan --engine claude --families relay --level 1
+.venv/bin/roboteam doctor --harness claude                  # CLI version, sandbox, renderer, credentials
+.venv/bin/roboteam plan --harness claude --task-types relay --level 1
 ```
 
 `plan` lists each task, its arms and the model, and makes no model calls.
@@ -208,22 +208,22 @@ check that its sandbox holds:
 
 On macOS that base is the default. On Linux pick one (outside `/tmp`) and set
 `ROBOTEAM_POLICY_ENV_BASE` to it in the shell that prepares runs. The check starts each
-engine's real CLI against a local stub, with no model calls, and tries about 50 things a policy
+harness's real CLI against a local stub, with no model calls, and tries about 50 things a policy
 must and must not be able to do; `prepare` refuses an environment that has not passed it.
 [Policy environment](docs/hosts/policy-environment.md) covers what each platform allows.
 
 ### 6. Preflight, then run
 
 ```sh
-.venv/bin/roboteam preflight --engine claude --confirm-spend --max-budget-usd 1
-.venv/bin/roboteam prepare --engine claude --families relay --level 1 --output runs/policy/claude-relay-l1
+.venv/bin/roboteam preflight --harness claude --confirm-spend --max-budget-usd 1
+.venv/bin/roboteam prepare --harness claude --task-types relay --level 1 --output runs/policy/claude-relay-l1
 .venv/bin/roboteam run runs/policy/claude-relay-l1
 .venv/bin/roboteam status runs/policy/claude-relay-l1
 ```
 
 - `preflight` makes a few small, paid calls to confirm the model and CLI behave as the harness
   needs; a run is refused without its passed receipt.
-- `prepare` freezes the code, the task inputs, the profile and the configuration into a new
+- `prepare` freezes the code, the task inputs, the model and the configuration into a new
   folder. Nothing in it changes afterwards.
 - `run` on macOS hands the batch to launchd and returns, so it outlives the terminal; on Linux
   add `--durable` for the same. Each run has 24 hours of active time from its START and is
@@ -243,7 +243,7 @@ is `paths.runs_root`, default `runs/`). [Getting started](docs/getting-started.m
 | [`benchmark/`](benchmark/README.md) | The 36 released tasks and `release.json` |
 | [`roboteam/`](roboteam) | The package: simulation, robot tool, runtime with its sandbox, the Codex and Claude Code adapters, evaluation and analysis |
 | [`prompts/`](prompts) | Every text an agent reads: rules, roles and guides |
-| [`roboteam.toml`](roboteam.toml), [`models.json`](models.json) | The defaults for new runs and the model profiles ([settings](docs/cli.md#settings-files)) |
+| [`roboteam.toml`](roboteam.toml), [`models.json`](models.json) | The defaults for new runs and the models ([settings](docs/cli.md#settings-files)) |
 | [`scripts/`](scripts/README.md) | Engineering commands: release and policy environment, analysis, project page, tests |
 | [`tests/`](docs/development/testing.md) | The test suite |
 | [`docs/`](docs/README.md) | Guides by topic |
@@ -268,7 +268,7 @@ remaining author list, publication status and paper URL are not finalized.
 ## License
 
 Code is under the [MIT License](LICENSE). Benchmark data and media (task and scene data,
-rendered images, Robo World scene assets and published videos) are under
+rendered images, the factory hall scene assets and published videos) are under
 [CC BY 4.0](LICENSE-DATA.md). Third-party material keeps its own license: the Franka Panda
 model from MuJoCo Menagerie (Apache 2.0), the Barlow Condensed, Space Grotesk and JetBrains
 Mono fonts (OFL 1.1) and a Poly Haven texture (CC0); see [`LICENSE-DATA.md`](LICENSE-DATA.md).

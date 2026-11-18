@@ -2,12 +2,12 @@
 import unittest
 import numpy as np
 from sim.test_motion_check import robot_fixture
-from roboteam.tasks.config import load_harness
+from roboteam.tasks.config import load_run_settings
 
 class JointCoordinationTests(unittest.TestCase):
     def test_unequal_joint_travels_share_progress_and_respect_acceleration(self):
         w=robot_fixture();w.task={};arm=w.arms['A'];start=arm.qref.copy();delta=np.array([.5,.08,-.15,-.12,.10,-.13,.35]);target=start+delta
-        command=arm.validate('move',dict(joint_rad=target.tolist(),joint_speed_rad_s=.5,joint_acceleration_rad_s2=2.),load_harness(),np.full(3,-3.),np.full(3,3.))
+        command=arm.validate('move',dict(joint_rad=target.tolist(),joint_speed_rad_s=.5,joint_acceleration_rad_s2=2.),load_run_settings(),np.full(3,-3.),np.full(3,3.))
         arm.start('segment',command,w.time);previous=arm.velocity.copy();observed=0
         for _ in range(160):
             w.step();progress=(arm.qref-start)/delta

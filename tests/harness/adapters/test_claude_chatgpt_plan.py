@@ -15,7 +15,7 @@ import uuid
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from roboteam.launch.claude_prepare import profile
+from roboteam.launch.claude_prepare import model_entry
 from roboteam.harness.claude.session import runner
 
 from roboteam.harness.adapters.gpt_in_claude import gateway
@@ -25,10 +25,10 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
     def selected(self, endpoint):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary)/'models.json'
-            path.write_text(json.dumps({'schema': 'roboteam.claude-models.v1', 'profiles': {'plan': {
+            path.write_text(json.dumps({'schema': 'roboteam.claude-models.v1', 'models': {'plan': {
                 'provider': 'openai_chatgpt_plan', 'model': 'gpt-6.1-sol', 'effort': 'high',
                 'env_key': 'LOCAL_GATEWAY_KEY', 'base_url': endpoint}}}))
-            return profile('plan', path)
+            return model_entry('plan', path)
 
     def test_plain_http_is_limited_to_literal_loopback(self):
         self.assertEqual(self.selected('http://127.0.0.1:18461')['model'], 'gpt-6.1-sol')
@@ -100,10 +100,10 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:
             with tempfile.TemporaryDirectory() as temporary:
-                profile_value = {'model': gateway.MODEL, 'provider': 'openai_chatgpt_plan',
+                model_entry_value = {'model': gateway.MODEL, 'provider': 'openai_chatgpt_plan',
                                  'context_capacity':300000,'env_key': 'LOCAL_GATEWAY_KEY',
                                  'base_url': f'http://127.0.0.1:{server.server_port}'}
-                env = runner.build_env(profile_value, {'PATH': os.environ['PATH'], 'LOCAL_GATEWAY_KEY': 'local-stub-key'}, temporary)
+                env = runner.build_env(model_entry_value, {'PATH': os.environ['PATH'], 'LOCAL_GATEWAY_KEY': 'local-stub-key'}, temporary)
                 settings = {'sandbox': {'enabled': True, 'allowUnsandboxedCommands': False}}
                 argv = runner.build_command(gateway.MODEL, 'high', json.dumps({'mcpServers': {}}), None,
                                             settings=settings, stream_input=True, system_prompt='Reply READY; do not call tools.')
@@ -319,7 +319,7 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
             from chatgpt_websocket_fixture import ProviderSocket
             server.transport=gateway.WebSocketTransport(server.store,lambda token:ProviderSocket(Connection().reply))
             threading.Thread(target=server.serve_forever,daemon=True).start()
-            selected={**profile('sol_chatgpt_plan'),'base_url':f'http://127.0.0.1:{server.server_port}',
+            selected={**model_entry('sol_chatgpt_plan'),'base_url':f'http://127.0.0.1:{server.server_port}',
                       'env_key':'LOCAL_GATEWAY_KEY'}
             try:
                 translate=gateway.to_responses
@@ -327,7 +327,7 @@ class ChatGPTPlanProfileTests(unittest.TestCase):
                     if kwargs.get('fork_source'):
                         fork_projection.extend(m['content'] for m in payload['messages'] if m['role']=='assistant')
                     return translate(payload,*args,**kwargs)
-                with patch.object(blocked,'profile',return_value=selected),patch.object(preflight.preflight_probe,'choose',return_value=('green','red')),patch.object(gateway,'to_responses',side_effect=capture):
+                with patch.object(blocked,'model_entry',return_value=selected),patch.object(preflight.preflight_probe,'choose',return_value=('green','red')),patch.object(gateway,'to_responses',side_effect=capture):
                     receipt=blocked.run_blocked_precheck('fixture',root/'check',2,
                         {'PATH':os.environ['PATH'],'LOCAL_GATEWAY_KEY':'fixture-key'})
                 self.assertTrue(receipt['passed'],{'receipt':receipt,'fork_projection':fork_projection,'audits':audits})

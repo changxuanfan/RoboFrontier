@@ -3,7 +3,7 @@ import argparse
 import json
 from pathlib import Path
 import hashlib
-from roboteam.tasks.families import ROOT, RELEASE, read, resolve_case, prepare
+from roboteam.tasks.task_types import ROOT, RELEASE, read, resolve_case, prepare
 from roboteam.runtime.run.setup import write_json
 
 
@@ -23,17 +23,17 @@ def check_case_assets(case, root=ROOT):
     return {'checked':len(manifest.get('assets', [])),'missing':missing,'changed':changed}
 
 
-def prepare_batch(output, families=None, harness=None):
+def prepare_batch(output, task_types=None, run_settings=None):
     output=Path(output).resolve();output.mkdir(parents=True,exist_ok=False)
     cases=[c for name,f in read(ROOT/RELEASE)['families'].items()
-           if families is None or name in families for c in f['policy']]
+           if task_types is None or name in task_types for c in f['policy']]
     jobs=[dict(case_id=c['id'],run_directory=str(output/c['id']),status='pending')for c in cases]
     manifest=dict(status='preparing',simulator_started=False,model_calls=0,
         isolation='One run directory, runtime database, connection set and independent service per task',jobs=jobs)
     write_json(output/'batch.json',manifest)
     try:
         for job in jobs:
-            prepare(job['case_id'],job['run_directory'],harness)
+            prepare(job['case_id'],job['run_directory'],run_settings)
             job['status']='prepared'
             write_json(output/'batch.json',manifest)
     except Exception as error:
@@ -54,21 +54,21 @@ def main():
     setup = commands.add_parser('prepare')
     setup.add_argument('case_id')
     setup.add_argument('--output', type=Path, required=True)
-    setup.add_argument('--harness', type=Path)
+    setup.add_argument('--run-settings', type=Path)
     batch = commands.add_parser('prepare-batch',help='Freeze isolated parallel jobs; no model or simulator launch')
     batch.add_argument('--output',type=Path,required=True)
-    batch.add_argument('--families',nargs='+',choices=('transport','mosaic','relay','dial'))
-    batch.add_argument('--harness',type=Path)
+    batch.add_argument('--task-types',nargs='+',choices=('transport','mosaic','relay','dial'))
+    batch.add_argument('--run-settings', type=Path)
     args = parser.parse_args()
     if args.command == 'prepare-batch':
-        print(prepare_batch(args.output,args.families,args.harness))
+        print(prepare_batch(args.output,args.task_types,args.run_settings))
         return
     if args.command == 'prepare':
-        print(prepare(args.case_id, args.output, args.harness))
+        print(prepare(args.case_id, args.output, args.run_settings))
         return
     rows = []; failed = False
-    for family in read(ROOT/RELEASE)['families'].values():
-        for case in family['policy']:
+    for task_type in read(ROOT/RELEASE)['families'].values():
+        for case in task_type['policy']:
             if args.command == 'check':
                 resolve_case(case['id'])
             row=dict(id=case['id'], directory=case['directory'])

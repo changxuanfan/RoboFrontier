@@ -14,11 +14,11 @@ from roboteam.runtime.world.store import RuntimeStore
 
 PARENT='11111111-1111-4111-8111-111111111111'
 PROMPT='Your current runtime role is the delegate.\n'
-PROFILE={'model':'fake','effort':'high','env_key':'FAKE'}
+MODEL_ENTRY={'model':'fake','effort':'high','env_key':'FAKE'}
 
 
 class Parent:
-    session_id=PARENT; binary='claude'; profile=PROFILE; base_env={}
+    session_id=PARENT; binary='claude'; model_entry=MODEL_ENTRY; base_env={}
     def __init__(self,run): self.run=run; self.state='active'
     def observe(self): return {'status':self.state}
 
@@ -28,13 +28,13 @@ class ForkSetupTests(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory(); self.run=Path(self.tmp.name)/'run'
         self.run.mkdir(); (self.run/'workspace').mkdir(); self.store=RuntimeStore(self.run/'private/state/runtime.sqlite')
         cfg=json.loads((Path(__file__).resolve().parents[3]/'roboteam/runtime/run/defaults.json').read_text())
-        cfg.update(engine='claude',topology='adaptive',model='fake',effort='high')
+        cfg.update(harness='claude',system='adaptive',model='fake',effort='high')
         self.store.initialize('run',cfg,['A','B']); self.store.update_agent('Controller',thread_id=PARENT,ready=True)
         self.store.start(); self.store.begin_call('batch','Controller','delegate',{'scopes':[]})
         self.d=Delegations(self.store)
         batch=self.d.create('Controller','batch',getattr(self,'test_scopes',[{'robots':['A'],'goal':'g','done_when':'d'}]))
         self.actor=batch['children'][0]['actor']; self.d.claim('batch','owner')
-        self.parent=Parent(self.run); self.folder=self.run/'private/engine/config/projects/-run'
+        self.parent=Parent(self.run); self.folder=self.run/'private/harness/config/projects/-run'
         self.folder.mkdir(parents=True)
         self.row={'type':'assistant','uuid':'m1','sessionId':PARENT,'message':{'role':'assistant','content':[
             {'type':'tool_use','id':'toolu_delegate','name':'mcp__robot__robot','input':{'op':'delegate','call_id':'batch'}}]}}
@@ -45,7 +45,7 @@ class ForkSetupTests(unittest.TestCase):
             conn=self.run/'private/state/connections'/(child['actor']+'.json'); conn.parent.mkdir(parents=True,exist_ok=True)
             conn.write_text(json.dumps({'schema_version':3,'run_id':'run','actor':child['actor'],'token':'fake'}))
         launch=self.run/'private/inputs/claude.json'; launch.parent.mkdir(parents=True)
-        launch.write_text(json.dumps({'profile':PROFILE}))
+        launch.write_text(json.dumps({'model_entry':MODEL_ENTRY}))
         self.ledger=BudgetLedger.create(self.run/'private/state/budget.sqlite',1)
         self.calls=[]; self.hosts=[]
     def tearDown(self):
@@ -73,7 +73,7 @@ class ForkSetupTests(unittest.TestCase):
         actor=actor or self.actor
         kwargs={'budget_ledger':self.ledger,'max_budget_usd':.1,'fork_from':PARENT,'gate':self.gate(actor),
                 'runner':runner or self.runner,'_verifier':lambda _: [],**kwargs}
-        host=ClaudeSessionHost.fork_delegate(self.run,actor,PROFILE,{},**kwargs)
+        host=ClaudeSessionHost.fork_delegate(self.run,actor,MODEL_ENTRY,{},**kwargs)
         self.hosts.append(host)
         return host
     def source(self):
@@ -200,10 +200,10 @@ class ForkSetupTests(unittest.TestCase):
 
     def test_delegate_host_forks_only_an_uncreated_scope_of_its_parent(self):
         with self.assertRaises(ValueError):
-            ClaudeSessionHost(self.run,self.actor,PROFILE,{})
+            ClaudeSessionHost(self.run,self.actor,MODEL_ENTRY,{})
         with self.assertRaisesRegex(ValueError,'uncreated scope'): self.host(fork_from='other')
-        with self.assertRaisesRegex(ValueError,'profile'):
-            ClaudeSessionHost.fork_delegate(self.run,self.actor,{**PROFILE,'model':'other'},{},budget_ledger=self.ledger,
+        with self.assertRaisesRegex(ValueError,'model'):
+            ClaudeSessionHost.fork_delegate(self.run,self.actor,{**MODEL_ENTRY,'model':'other'},{},budget_ledger=self.ledger,
                                             max_budget_usd=.1,fork_from=PARENT,gate=self.gate(),_verifier=lambda _: [])
         host=self.host(); host.fork_from=None
         with self.assertRaisesRegex(ValueError,'host does not fork'):

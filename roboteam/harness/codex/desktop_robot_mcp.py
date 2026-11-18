@@ -28,7 +28,7 @@ from roboteam.runtime.tools.tool_errors import CallIdConflict, conflict_error, u
 
 ROOT = Path(__file__).resolve().parents[3]
 SERVER = 'roboteam_robot'
-# One description for every engine's robot tool (harness/shared/robot_tool.json).
+# One description for every harness's robot tool (harness/shared/robot_tool.json).
 TOOL = json.loads((Path(__file__).resolve().parents[1]/'shared/robot_tool.json').read_text())
 # Same policy surface as the CLI robot tool; administrative methods stay with Meta.
 from roboteam.runtime.tools.robot_ops import POLICY_OPS, check_request

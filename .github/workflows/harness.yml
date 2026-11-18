@@ -3,7 +3,7 @@ name: Tests
 # One offline job on a clean Linux machine: the protocol contract with physics blocked
 # (check_harness), then every Python and Node test with the scene assets and a virtual display
 # for the simulation's window (MuJoCo renders through GLFW on Mesa's software OpenGL). No model
-# is called; tests of an installed engine CLI skip without one.
+# is called; tests of an installed harness CLI skip without one.
 #
 # A change that touches only documentation, the project page or the licenses does not start it.
 # The two files under those folders that tests read are listed again so they still do.

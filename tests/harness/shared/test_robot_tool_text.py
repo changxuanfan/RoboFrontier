@@ -1,4 +1,4 @@
-"""Every engine serves one robot tool description (harness/shared/robot_tool.json, E2)."""
+"""Every harness serves one robot tool description (harness/shared/robot_tool.json, E2)."""
 import json
 import subprocess
 import shutil

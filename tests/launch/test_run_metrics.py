@@ -123,7 +123,7 @@ class RunMetricTests(unittest.TestCase):
         from datetime import datetime, timezone
         from roboteam.runtime.run import layout as run_layout
         def stamp(at): return datetime.fromtimestamp(at,timezone.utc).isoformat().replace('+00:00','Z')
-        root=run_layout.path(tmp,'engine_config')/'projects/p'
+        root=run_layout.path(tmp,'harness_config')/'projects/p'
         for name,(session,records) in files.items():
             path=root/name;path.parent.mkdir(parents=True,exist_ok=True)
             lines=[]
@@ -276,7 +276,7 @@ class RunEvidenceTests(unittest.TestCase):
             self.assertEqual(native_subagent_calls([claude]), {'Agent': 1})
             self.assertEqual(native_subagent_calls([]), {})
 
-    def test_cache_miss_has_one_definition_for_both_engines(self):
+    def test_cache_miss_has_one_definition_for_both_harnesses(self):
         # The same request: 100 input tokens, 90 read from cache, 9 of the rest written to cache.
         claude = usage('claude', {'input_tokens':1,'cache_read_input_tokens':90,'cache_creation_input_tokens':9,'output_tokens':4})
         codex = usage('codex', {'inputTokens':100,'cachedInputTokens':90,'outputTokens':4})
@@ -293,8 +293,8 @@ class TranscriptCostTests(unittest.TestCase):
     def run_with(self, root, messages):
         from roboteam.runtime.run import layout as run_layout
         run = Path(root)/'run'; (run/'private/inputs').mkdir(parents=True)
-        (run/'private/inputs/manifest.json').write_text(json.dumps({'engine': 'claude', **run_layout.manifest_record()}))
-        projects = run_layout.path(run, 'engine_config')/'projects/p'; (projects/'s/subagents').mkdir(parents=True)
+        (run/'private/inputs/manifest.json').write_text(json.dumps({'harness': 'claude', **run_layout.manifest_record()}))
+        projects = run_layout.path(run, 'harness_config')/'projects/p'; (projects/'s/subagents').mkdir(parents=True)
         lines = [json.dumps({'message': m}) for m in messages]
         (projects/'s.jsonl').write_text('\n'.join(lines[:-1])+'\n')
         (projects/'s/subagents/agent-1.jsonl').write_text(lines[-1]+'\n')

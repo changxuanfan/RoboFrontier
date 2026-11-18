@@ -29,7 +29,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
             for path in sessions.glob('*.jsonl'):
                 (task_sessions/path.name).write_bytes(path.read_bytes())
                 path.write_text('{"wrong_home":true}\n')
-            write(run/'private/engine/codex-home.json', {'codex_home':str(root/'isolated')})
+            write(run/'private/harness/codex-home.json', {'codex_home':str(root/'isolated')})
             self.assertEqual(native_codex_sessions(run,'parent'),[(task_sessions/'parent.jsonl').resolve()])
             report=collect_batch(batch,root/'export')
             self.assertTrue(report['complete'])
@@ -37,7 +37,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
                 self.assertEqual((root/'export'/role['session']).read_bytes(),
                                  (task_sessions/(role['thread_id']+'.jsonl')).read_bytes())
 
-    def make_batch(self, root, engine='codex', kind='controller', status='closed'):
+    def make_batch(self, root, harness='codex', kind='controller', status='closed'):
         batch = root/'source'
         run = batch/'model/demo'
         state = run/'private/state'
@@ -49,13 +49,13 @@ class BenchmarkCollectionTests(unittest.TestCase):
                 ('role', json.dumps({'kind':kind,'thread_id':'parent'})),
                 ('child', json.dumps({'kind':'delegate','thread_id':'child','parent':'role'}))])
         write(run/'private/outputs/evaluation.json', {'task_success':False})
-        write(run/'private/inputs/harness.json', {'engine':engine,'model':'example','topology':'adaptive'})
-        job = {'profile':'model','case_id':'demo','status':status,'run_directory':str(run)}
-        write(batch/'batch.json', {'schema':'roboteam.claude-batch.v2' if engine=='claude' else 'roboteam.cli-benchmark.v1',
-                                 'status':'prepared_not_qualified' if engine=='claude' else status, 'jobs':[job]})
-        if engine=='claude':
+        write(run/'private/inputs/run.json', {'harness':harness,'model':'example','system':'adaptive'})
+        job = {'model_entry':'model','case_id':'demo','status':status,'run_directory':str(run)}
+        write(batch/'batch.json', {'schema':'roboteam.claude-batch.v2' if harness=='claude' else 'roboteam.cli-benchmark.v1',
+                                 'status':'prepared_not_qualified' if harness=='claude' else status, 'jobs':[job]})
+        if harness=='claude':
             write(batch/'control/engineering-status.json', {'status':status,'jobs':[job]})
-            home=run/'private/engine/config'
+            home=run/'private/harness/config'
             sessions=home/'projects/project'; sessions.mkdir(parents=True)
             write(home/'.credentials.json', {'secret':'MUST_NOT_COLLECT'})
         else:
@@ -83,23 +83,23 @@ class BenchmarkCollectionTests(unittest.TestCase):
             root=Path(tmp);batch,run,sessions=self.make_batch(root,'claude')
             write(sessions/'child/subagents/agent-one.jsonl', {'message':'auxiliary'})
             image=base64.b64encode(b'\xff\xd8\xffjpeg').decode()
-            write(run/'private/engine/turns/turn.jsonl', {'content':[{'type':'image','mimeType':'image/jpeg','data':image}]})
+            write(run/'private/harness/turns/turn.jsonl', {'content':[{'type':'image','mimeType':'image/jpeg','data':image}]})
             report=collect_batch(batch,root/'export')
             self.assertTrue(report['complete'])
             self.assertFalse(list((root/'export').rglob('.credentials.json')))
-            self.assertTrue((root/'export/batch/model/demo/private/engine/config/projects/project/child.jsonl').is_file())
+            self.assertTrue((root/'export/batch/model/demo/private/harness/config/projects/project/child.jsonl').is_file())
             self.assertTrue(list((root/'export/sessions').rglob('agent-one.jsonl')))
             create(root/'export',root/'archive');verify(root/'archive',root/'restored')
-            original=run/'private/engine/turns/turn.jsonl'
-            self.assertEqual(original.read_bytes(),(root/'restored/batch/model/demo/private/engine/turns/turn.jsonl').read_bytes())
+            original=run/'private/harness/turns/turn.jsonl'
+            self.assertEqual(original.read_bytes(),(root/'restored/batch/model/demo/private/harness/turns/turn.jsonl').read_bytes())
 
     def test_managed_claude_home_collects_only_bound_native_sessions(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); batch, run, sessions = self.make_batch(root, 'claude')
             home = root / 'shared-native-home'
-            (run / 'private/engine/config').rename(home)
+            (run / 'private/harness/config').rename(home)
             write(home / 'projects/another-project/unrelated.jsonl', {'private': 'UNRELATED_SESSION'})
-            write(run / 'private/inputs/claude.json', {'profile': {
+            write(run / 'private/inputs/claude.json', {'model_entry': {
                 'auth_mode': 'native_login', 'provider': 'anthropic', 'env_key': None,
                 'native_config_dir': str(home)}})
             before = {p.relative_to(home): p.read_bytes() for p in home.rglob('*') if p.is_file()}
@@ -125,8 +125,8 @@ class BenchmarkCollectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); batch, run, _ = self.make_batch(root, 'claude')
             home = batch/'native-auth'
-            (run/'private/engine/config').rename(home)
-            write(run/'private/inputs/claude.json', {'profile': {
+            (run/'private/harness/config').rename(home)
+            write(run/'private/inputs/claude.json', {'model_entry': {
                 'auth_mode':'native_login', 'provider':'anthropic', 'env_key':None,
                 'native_config_dir':str(home)}})
             with self.assertRaisesRegex(ValueError, 'outside'):
@@ -137,8 +137,8 @@ class BenchmarkCollectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);batch,run,_=self.make_batch(root,'claude')
             home=root/'shared-native-home'
-            (run/'private/engine/config').rename(home)
-            write(run/'private/inputs/claude.json',{'profile':{
+            (run/'private/harness/config').rename(home)
+            write(run/'private/inputs/claude.json',{'model_entry':{
                 'auth_mode':'native_login','provider':'anthropic','env_key':None,
                 'native_config_dir':str(home)}})
             with sqlite3.connect(run/'private/state/runtime.sqlite') as conn:
@@ -292,15 +292,15 @@ class BenchmarkCollectionTests(unittest.TestCase):
             (run/'private/linked').symlink_to(root/'home',target_is_directory=True)
             with self.assertRaisesRegex(ValueError,'Symlink inside evidence'):collect_batch(batch,root/'export2')
 
-    def test_36_jobs_keep_same_case_across_profiles_distinct(self):
+    def test_36_jobs_keep_same_case_across_model_entries_distinct(self):
         import shutil
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);batch,run,sessions=self.make_batch(root)
             jobs=[]
             for i in range(36):
-                profile=f'model{i:02d}';dest=batch/profile/'demo'
+                model_entry=f'model{i:02d}';dest=batch/model_entry/'demo'
                 shutil.copytree(run,dest)
-                jobs.append({'profile':profile,'case_id':'demo','status':'closed','run_directory':str(dest)})
+                jobs.append({'model_entry':model_entry,'case_id':'demo','status':'closed','run_directory':str(dest)})
             write(batch/'batch.json',{'schema':'roboteam.cli-benchmark.v1','status':'closed','jobs':jobs})
             report=collect_batch(batch,root/'export')
             self.assertTrue(report['complete']);self.assertEqual(report['job_count'],36)

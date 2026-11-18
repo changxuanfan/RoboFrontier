@@ -19,13 +19,13 @@ from roboteam.runtime.world.pipeline import World
 from roboteam.sim.robot_control import matrix_quat
 from roboteam.runtime.run.setup import prepare_run
 from roboteam.runtime.world.service import RuntimeService
-from roboteam.tasks.config import ROOT, load_harness, startup_protocol
+from roboteam.tasks.config import ROOT, load_run_settings, startup_protocol
 from motion import filled
 
 
 class TerminalServoTests(unittest.TestCase):
     def setUp(self):
-        self.world=robot_fixture();self.arm=self.world.arms['A'];self.cfg=load_harness()
+        self.world=robot_fixture();self.arm=self.world.arms['A'];self.cfg=load_run_settings()
 
     def test_default_action_timeout_allows_more_time_than_previous_15_second_base(self):
         q=self.arm.qref.copy();q[0]+=.2
@@ -145,7 +145,7 @@ class SettleCountTests(unittest.TestCase):
     The world does not step here, so the arm holds still at its goal; each poll time
     stands for one 20 ms simulation tick."""
     def setUp(self):
-        self.world=robot_fixture();self.arm=self.world.arms['A'];self.cfg=load_harness()
+        self.world=robot_fixture();self.arm=self.world.arms['A'];self.cfg=load_run_settings()
 
     def begin(self,op):
         w=self.world;a=self.arm
@@ -195,7 +195,7 @@ class SceneTopologyContractTests(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp=tempfile.TemporaryDirectory();cls.root=Path(cls.tmp.name)
         cls.worlds={}
-        from roboteam.tasks.families import policy_task
+        from roboteam.tasks.task_types import policy_task
         cls.mosaic_task=cls.root/'mosaic-task.json';cls.mosaic_task.write_text(json.dumps(policy_task('mosaic-a04-6x12-d1')))
         for name,task_path in [('transport',None),('mosaic',cls.mosaic_task)]:
             run=prepare_run(cls.root/('geometry-'+name),task_path)
@@ -220,7 +220,7 @@ class SceneTopologyContractTests(unittest.TestCase):
             def request_stop(self,actor,call):
                 assert self.running.pop(actor)==call
                 self.finished.append({'call_id':call,'status':'failed','reason':'stopped_by_agent'})
-        cfg=load_harness();cfg['topology']=mode;cfg['startup_protocol']=startup_protocol(mode)
+        cfg=load_run_settings();cfg['system']=mode;cfg['startup_protocol']=startup_protocol(mode)
         path=self.root/(scene+'-'+mode+'.json');path.write_text(json.dumps(cfg))
         task_path=self.mosaic_task if scene=='mosaic' else None
         run=prepare_run(self.root/(scene+'-'+mode),task_path,path)

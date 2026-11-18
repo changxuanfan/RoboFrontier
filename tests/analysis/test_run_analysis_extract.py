@@ -36,11 +36,11 @@ class TranscriptTests(unittest.TestCase):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
 
     def spans(self, long_arguments):
-        folder = self.root / ('run%d' % long_arguments) / 'private/engine/transcripts'
+        folder = self.root / ('run%d' % long_arguments) / 'private/harness/transcripts'
         folder.mkdir(parents=True)
         (folder / 'a.jsonl').write_text(rollout(long_arguments))
         (folder / 'index.json').write_text(json.dumps(dict(
-            threads=[dict(actor='Controller', file='private/engine/transcripts/a.jsonl')])))
+            threads=[dict(actor='Controller', file='private/harness/transcripts/a.jsonl')])))
         spans, src = extract.transcripts(Run('run%d' % long_arguments, self.root))
         self.assertEqual(src, 'codex-transcript')
         return [round(b - a) for _, a, b in spans]
@@ -79,15 +79,15 @@ class ClaudeTokenTests(unittest.TestCase):
                 dict(at=base + 100, event='cli_turn_completed', events_name='e1', actor='A', session_id='S1',
                      usage=used)]
         (run / 'private/logs/host.jsonl').write_text(''.join(json.dumps(e) + '\n' for e in host))
-        projects = run / 'private/engine/config/projects/p'
+        projects = run / 'private/harness/config/projects/p'
         projects.mkdir(parents=True)
         late = dict(input_tokens=1, cache_read_input_tokens=2, cache_creation_input_tokens=3, output_tokens=4)
         rows = [dict(type='assistant', timestamp=iso(base + 50), sessionId='S1', message=dict(id='m1', usage=used)),
                 dict(type='assistant', timestamp=iso(base + 200), sessionId='S1', message=dict(id='m2', usage=late))]
         (projects / 'S1.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows))
-        d = extract.extract_run(dict(id='r', k='run', family='transport'), root)
+        d = extract.extract_run(dict(id='r', k='run', task_type='transport'), root)
         self.assertEqual(d['host']['tok'], dict(input=41, cached=22, write=8, output=7))
-        with patch.object(run_metrics.run_layout, 'path', lambda r, *a: run / 'private/engine/config'):
+        with patch.object(run_metrics.run_layout, 'path', lambda r, *a: run / 'private/harness/config'):
             ref, _ = run_metrics._claude_usage_after_results(run, {'S1': base + 100}, {'S1': 'A'})
         after = d['host']['tok_after_results']
         self.assertEqual((after['input'], after['output']),

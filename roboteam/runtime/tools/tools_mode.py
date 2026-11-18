@@ -1,9 +1,9 @@
 """Which tools a policy role has in a run.
 
-'full' (the default): the engine's own file and shell tools beside the bound robot
+'full' (the default): the harness's own file and shell tools beside the bound robot
 tool. 'robot_only' leaves the robot tool alone: no shell, no code execution, no file
 tools. What a role used files for stays available through the robot tool instead
-(public_files.py, run_skills.py). The mode is frozen in the run's harness.json; a harness
+(public_files.py, run_skills.py). The mode is frozen in the run's run.json; a harness
 without the field is a full run.
 """
 import json
@@ -19,22 +19,22 @@ _BLOCK = re.compile(r'^<!-- tools:(full|robot_only) -->\n(.*?)^<!-- /tools -->\n
 
 
 def of(config):
-    """The mode of a harness configuration."""
-    mode = (config or {}).get('tool_mode', FULL)
+    """The mode a run's settings name."""
+    mode = (config or {}).get('tools', FULL)
     if mode not in MODES:
         raise ValueError('Unknown tool mode: ' + str(mode))
     return mode
 
 
-def receipt_name(profile_name, mode):
-    """The folder of a profile's Codex preflight receipt. A robot_only launch differs from the
+def receipt_name(model_entry_name, mode):
+    """The folder of a model's Codex preflight receipt. A robot_only launch differs from the
     full one, so it has a receipt of its own and never replaces the full run's."""
-    return profile_name + ('.robot_only' if mode == ROBOT_ONLY else '')
+    return model_entry_name + ('.robot_only' if mode == ROBOT_ONLY else '')
 
 
 def of_run(run):
     """The frozen mode of a prepared run."""
-    path = Path(run)/'private/inputs/harness.json'
+    path = Path(run)/'private/inputs/run.json'
     return of(json.loads(path.read_text())) if path.is_file() else FULL
 
 

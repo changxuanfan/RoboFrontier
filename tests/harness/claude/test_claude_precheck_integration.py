@@ -72,10 +72,10 @@ class PrecheckIntegrationTests(unittest.TestCase):
         PrecheckModel.auth_headers.clear()
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                profile={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
+                model_entry={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
                          'base_url':f'http://127.0.0.1:{server.server_port}'}
                 env={'PATH':os.environ['PATH'],'FAKE_KEY':'synthetic'}
-                with patch.object(claude_precheck,'profile',return_value=profile):
+                with patch.object(claude_precheck,'model_entry',return_value=model_entry):
                     result=claude_precheck.run_precheck('synthetic',Path(tmp)/'out',2,env,check_fork=True)
                 self.assertTrue(result['passed'],result)
                 self.assertEqual([x['name'] for x in result['checks']],['text','tool_image','resume','fork'])
@@ -86,7 +86,7 @@ class PrecheckIntegrationTests(unittest.TestCase):
                 # The native fork carries the parent's complete cost history.
                 # Summed new work must equal that final cumulative counter,
                 # rather than charging inherited usage once per invocation.
-                events=Path(tmp)/'out/run/private/engine/turns/fork.jsonl'
+                events=Path(tmp)/'out/run/private/harness/turns/fork.jsonl'
                 native=[json.loads(line) for line in events.read_text().splitlines()]
                 total=next(row['total_cost_usd'] for row in reversed(native) if row.get('type')=='result')
                 self.assertAlmostEqual(result['total_cost_usd'],total,places=10)

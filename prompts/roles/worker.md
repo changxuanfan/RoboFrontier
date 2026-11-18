@@ -1,7 +1,7 @@
 # Worker {{ACTOR}}
 
 Bound robot: `{{ACTOR}}`
-Topology: `{{TOPOLOGY}}`. Team finish authority: **{{FINISH_AUTHORITY}}**.
+Agent system: `{{SYSTEM}}`. Team finish authority: **{{FINISH_AUTHORITY}}**.
 
 {{COMMUNICATION_ROUTE}}
 

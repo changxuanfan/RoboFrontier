@@ -19,9 +19,9 @@ from harness.claude.test_claude_precheck_integration import PrecheckModel
 class ReadinessTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(); self.root=Path(self.tmp.name)
-        self.profile={'model':'test-model','effort':'high','env_key':'FAKE_KEY','base_url':'https://example.invalid'}
+        self.model_entry={'model':'test-model','effort':'high','env_key':'FAKE_KEY','base_url':'https://example.invalid'}
         self.version='test-cli 1'; parent=str(uuid.uuid4()); child=str(uuid.uuid4())
-        identity={'profile':'test','requested_model':'test-model','profile_sha256':fingerprint(self.profile),
+        identity={'model_entry':'test','requested_model':'test-model','model_entry_sha256':fingerprint(self.model_entry),
                   'claude_version':self.version,'budget_usd':1,'passed':True}
         self.basic={**identity,'schema':'roboteam.claude-precheck.v1','fork_checked':True,'total_cost_usd':.04,
                     'checks':[{'name':name,'passed':True,'checks':{k:True for k in facts},'cost_usd':.01,
@@ -33,13 +33,13 @@ class ReadinessTests(unittest.TestCase):
     def check(self):
         basic=self.root/'basic.json';blocked=self.root/'blocked.json'
         basic.write_text(json.dumps(self.basic));blocked.write_text(json.dumps(self.blocked))
-        return check_receipts('test',basic,blocked,selected=self.profile,version=self.version)
+        return check_receipts('test',basic,blocked,selected=self.model_entry,version=self.version)
     def test_matching_receipts_are_consistent_but_not_formally_qualified(self):
         result=self.check()
         self.assertTrue(result['precheck_evidence_matches'],result)
         self.assertEqual(result['model_calls'],0)
     def test_configuration_cli_missing_check_and_budget_fail_closed(self):
-        for target,key,value in ((self.basic,'profile_sha256','changed'),(self.basic,'claude_version','changed'),
+        for target,key,value in ((self.basic,'model_entry_sha256','changed'),(self.basic,'claude_version','changed'),
                                  (self.basic,'total_cost_usd',.03),(self.blocked,'cost_complete',False),
                                  (self.blocked,'child_session',self.blocked['parent_session'])):
             old=target[key];target[key]=value
@@ -48,7 +48,7 @@ class ReadinessTests(unittest.TestCase):
         del self.basic['checks'][1]['checks']['image_colors_named']
         self.assertFalse(self.check()['precheck_evidence_matches'])
     def test_invalid_receipt_files_do_not_count(self):
-        result=check_receipts('test',self.root/'missing',self.root/'also-missing',selected=self.profile,version=self.version)
+        result=check_receipts('test',self.root/'missing',self.root/'also-missing',selected=self.model_entry,version=self.version)
         self.assertFalse(result['precheck_evidence_matches'])
 
     def test_receipts_without_view_evidence_do_not_match(self):
@@ -59,7 +59,7 @@ class ReadinessTests(unittest.TestCase):
         self.assertFalse(self.check()['precheck_evidence_matches'])
 
     @unittest.skipUnless(shutil.which('claude'),'Claude CLI is not installed')
-    def test_real_cli_synthetic_provider_receipts_match_current_profile(self):
+    def test_real_cli_synthetic_provider_receipts_match_current_model_entry(self):
         server=http.server.ThreadingHTTPServer(('127.0.0.1',0),PrecheckModel)
         threading.Thread(target=server.serve_forever,daemon=True).start()
         try:
@@ -67,8 +67,8 @@ class ReadinessTests(unittest.TestCase):
                       'base_url':f'http://127.0.0.1:{server.server_port}'}
             env={'PATH':os.environ['PATH'],'FAKE_KEY':'synthetic'}
             with patch.object(claude_precheck.preflight_probe,'choose',return_value=('green','red')), \
-                 patch.object(claude_precheck,'profile',return_value=selected), \
-                 patch.object(claude_blocked_precheck,'profile',return_value=selected):
+                 patch.object(claude_precheck,'model_entry',return_value=selected), \
+                 patch.object(claude_blocked_precheck,'model_entry',return_value=selected):
                 basic=claude_precheck.run_precheck('synthetic',self.root/'basic',2,env,check_fork=True)
                 blocked=claude_blocked_precheck.run_blocked_precheck('synthetic',self.root/'blocked',2,env)
             self.assertTrue(basic['passed'],basic)

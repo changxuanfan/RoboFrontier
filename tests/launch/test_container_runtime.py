@@ -110,8 +110,8 @@ class ContainerRuntimeTests(unittest.TestCase):
         self.assertNotIn('--privileged', command)
         self.assertNotIn('--cap-add', command)
         self.assertNotIn('--security-opt', self.command(['prepare'], config))
-        # Both engines' Landlock shells need it where Docker's profile refuses Landlock.
-        config['policy'].update(engine='claude', profile='haiku')
+        # Both harnesses' Landlock shells need it where Docker's model refuses Landlock.
+        config['policy'].update(harness='claude', model='haiku')
         config['runtime']['codex_tool_backend'] = 'native'
         self.assertIn('seccomp=unconfined', self.command(['run', 'runs/policy/batch'], config))
         self.assertIn('seccomp=unconfined', self.command(['policy-env'], config))
@@ -225,15 +225,15 @@ class ContainerRuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Supported auth'):
             self.command(['auth', 'shell', 'something'])
 
-    def test_engine_only_selection_uses_that_engines_default_profile(self):
-        settings = runtime._settings(['plan', '--engine', 'claude'], load_configuration())
-        self.assertEqual(settings['policy']['profile'],
-                         load_configuration(overrides={'policy': {'engine': 'claude'}})['policy']['profile'])
-        self.assertEqual(settings['policy']['profile'], 'opus')
+    def test_harness_only_selection_uses_that_harnesses_default_profile(self):
+        settings = runtime._settings(['plan', '--harness', 'claude'], load_configuration())
+        self.assertEqual(settings['policy']['model'],
+                         load_configuration(overrides={'policy': {'harness': 'claude'}})['policy']['model'])
+        self.assertEqual(settings['policy']['model'], 'opus')
         runtime._credential_environment(settings, {})
-        explicit = runtime._settings(['plan', '--engine', 'claude', '--profile', 'opus_subscription'], load_configuration())
-        self.assertEqual(explicit['policy']['profile'], 'opus_subscription')
-        self.assertEqual(runtime._settings(['plan', '--engine', 'codex'], load_configuration()), load_configuration())
+        explicit = runtime._settings(['plan', '--harness', 'claude', '--model', 'opus_subscription'], load_configuration())
+        self.assertEqual(explicit['policy']['model'], 'opus_subscription')
+        self.assertEqual(runtime._settings(['plan', '--harness', 'codex'], load_configuration()), load_configuration())
 
     def test_invalid_container_options_fail_during_configuration_resolution(self):
         for value in ({'workspace': '../escape'}, {'workspace': 'MixedCase'},

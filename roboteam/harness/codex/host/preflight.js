@@ -5,7 +5,7 @@ const {GatewayRpc}=require('./gateway_rpc');
 const fileTools=require('./tool_broker');
 async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
   const launch=JSON.parse(fs.readFileSync(path.join(folder,'launch.json')));
-  const cwd=launch.profile?.runner_backend==='slurm-managed-v1'
+  const cwd=launch.model_entry?.runner_backend==='slurm-managed-v1'
     ?path.join(launch.tool_probe.run_dir,'workspace'):folder;
   const image=launch.tool_probe?.image??path.join(folder,'colors.png');
   // Written with colors.png by roboteam/harness/shared/preflight_probe.py: random left/right colours.
@@ -108,7 +108,7 @@ async function preflight(folder, Rpc=CodexRpc, {smokeOnly=false}={}) {
 }
 if(require.main===module){
   const folder=path.resolve(process.argv[2]);
-  const jobScoped=JSON.parse(fs.readFileSync(path.join(folder,'launch.json'))).profile?.runner_backend==='slurm-managed-v1';
+  const jobScoped=JSON.parse(fs.readFileSync(path.join(folder,'launch.json'))).model_entry?.runner_backend==='slurm-managed-v1';
   const Rpc=jobScoped?class extends GatewayRpc {constructor(args,callbacks){
     if(!process.env.ROBOTEAM_CODEX_GATEWAY||!process.env.ROBOTEAM_CODEX_TASK)throw new Error('Missing admitted job preflight channel');
     super(process.env.ROBOTEAM_CODEX_GATEWAY,process.env.ROBOTEAM_CODEX_TASK,callbacks);

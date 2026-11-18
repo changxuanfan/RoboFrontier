@@ -6,12 +6,12 @@ environment. Only a stopped, verified evidence ZIP is copied back to the host.
 
 The policy environment is built and checked once per workspace with `container policy-env`
 (step 5); until it has passed, `container prepare` refuses. Checked on Docker Desktop 29.9 on
-macOS with `seccomp_profile = "unconfined"`: both engines pass the check under Landlock and a batch
+macOS with `seccomp_profile = "unconfined"`: both harnesses pass the check under Landlock and a batch
 prepares.
 
 ## 1. Prerequisites
 
-- Docker Desktop on macOS, or a Docker engine on Linux. On macOS the container is Linux in
+- Docker Desktop on macOS, or Docker Engine on Linux. On macOS the container is Linux in
   Docker's VM: CPU rendering only, no Metal.
 - For NVIDIA rendering: Linux, an NVIDIA GPU, host drivers and the NVIDIA container runtime.
 - A host checkout installed with `uv sync --locked`, with no uncommitted tracked
@@ -55,8 +55,8 @@ lowers `batch.parallel`.
 
 ## 4. Credentials
 
-Put the profile's variable in the host `.env` (or the shell). The wrapper forwards only the
-selected profile's `env_key` and `base_url_env`, by name; values never appear in Docker
+Put the model's variable in the host `.env` (or the shell). The wrapper forwards only the
+selected model's `env_key` and `base_url_env`, by name; values never appear in Docker
 arguments, image layers, the TOML or evidence.
 
 ```sh
@@ -65,7 +65,7 @@ arguments, image layers, the TOML or evidence.
 ```
 
 The Codex login goes to the state volume's `/opt/RoboTeam/.roboteam/subscription`
-(file-backed), used by Codex subscription profiles with `runtime.codex_home_scope = "shared"`.
+(file-backed), used by Codex subscription models with `runtime.codex_home_scope = "shared"`.
 The host's `~/.codex`, `~/.claude` and Keychain are never mounted.
 
 ## 5. Policy environment, check and preflight
@@ -79,7 +79,7 @@ The host's `~/.codex`, `~/.claude` and Keychain are never mounted.
 ```
 
 `policy-env` builds the policy Python environment in its volume (`/opt/roboteam-policy`)
-and runs its sandbox check against both engines' real CLIs, with no model calls; runs then use it.
+and runs its sandbox check against both harnesses' real CLIs, with no model calls; runs then use it.
 If the check reports that Landlock is unavailable, Docker's seccomp profile is refusing it: set
 `seccomp_profile = "unconfined"` (Limits). `doctor` checks the CLI, the sandbox and a real
 MuJoCo render context, without authenticating. Receipts land in the runs volume.
@@ -122,7 +122,7 @@ never does.
 ## Limits
 
 - **No `continue`** through the wrapper.
-- **Seccomp.** Docker's default profile can refuse Landlock. `seccomp_profile = "unconfined"`
+- **Seccomp.** Docker's default seccomp profile can refuse Landlock. `seccomp_profile = "unconfined"`
   drops it for `policy-env`, `doctor`, `preflight` and `run`, without `--privileged`; the policy
   shell then installs its own seccomp filter and Landlock rules, as on RunPod.
 - Without user namespaces in the container, `/dev/shm` stays closed to policies, so Python's

@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from roboteam.harness.claude.session.runner import build_command, build_env, gate_settings, run_turn, summarize, ROBOT_TOOL
 
-PROFILE = {'provider': 'kimi', 'model': 'kimi-k3.1-pro', 'env_key': 'KIMI_API_KEY',
+MODEL_ENTRY = {'provider': 'kimi', 'model': 'kimi-k3.1-pro', 'env_key': 'KIMI_API_KEY',
            'base_url': 'https://api.moonshot.cn/anthropic', 'effort': 'high'}
 SECRET = 'sk-test-kimi-secret'
 
@@ -51,7 +51,7 @@ prompt = sys.stdin.buffer.read()
 print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
                   'result':hashlib.sha256(prompt).hexdigest()}))
 ''')
-            record = run_turn(PROFILE, 'm', 'high', None, prompt, bare_run(tmp),
+            record = run_turn(MODEL_ENTRY, 'm', 'high', None, prompt, bare_run(tmp),
                               {'PATH':'/usr/bin:/bin','KIMI_API_KEY':SECRET},
                               binary=str(binary), timeout=5, enable_robot=False)
             self.assertEqual(record['process'], 'exited')
@@ -66,7 +66,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
                 if timer:
                     timer.start()
                 try:
-                    record = run_turn(PROFILE, 'm', 'high', None, 'public context\n' * 25000,
+                    record = run_turn(MODEL_ENTRY, 'm', 'high', None, 'public context\n' * 25000,
                                       bare_run(tmp), {'PATH':'/usr/bin:/bin','KIMI_API_KEY':SECRET},
                                       binary=str(binary), timeout=5 if cancellation else .1,
                                       cancel_event=cancel if cancellation else None, enable_robot=False)
@@ -86,7 +86,7 @@ prompt = sys.stdin.buffer.read()
 print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
                   'result':hashlib.sha256(prompt).hexdigest()}))
 ''')
-            record = run_turn(PROFILE, 'm', 'high', None, prompt, bare_run(tmp),
+            record = run_turn(MODEL_ENTRY, 'm', 'high', None, prompt, bare_run(tmp),
                               {'PATH':'/usr/bin:/bin','KIMI_API_KEY':SECRET},
                               binary=str(binary), timeout=2, cancel_event=threading.Event(),
                               enable_robot=False)
@@ -152,27 +152,27 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             script = gate_settings(gate)['hooks']['PreToolUse'][0]['hooks'][0]['command']
             self.assertEqual(hook().returncode, 2)
 
-    def test_environment_carries_only_own_profile_credential(self):
+    def test_environment_carries_only_own_model_entry_credential(self):
         base = {'PATH': '/bin', 'KIMI_API_KEY': SECRET, 'OPENAI_API_KEY': 'other', 'ANTHROPIC_API_KEY': 'wrong'}
-        env = build_env(PROFILE, base, '/run/config')
+        env = build_env(MODEL_ENTRY, base, '/run/config')
         self.assertEqual(env['ANTHROPIC_API_KEY'], SECRET)
-        self.assertEqual(env['ANTHROPIC_BASE_URL'], PROFILE['base_url'])
+        self.assertEqual(env['ANTHROPIC_BASE_URL'], MODEL_ENTRY['base_url'])
         self.assertNotIn('OPENAI_API_KEY', env)
         self.assertEqual(env['CLAUDE_CONFIG_DIR'], '/run/config')
         with self.assertRaisesRegex(ValueError, 'KIMI_API_KEY'):
-            build_env(PROFILE, {'PATH': '/bin'}, '/run/config')
+            build_env(MODEL_ENTRY, {'PATH': '/bin'}, '/run/config')
 
     def test_only_a_managed_allocation_route_reaches_the_cli(self):
         base = {'PATH': '/bin', 'KIMI_API_KEY': SECRET, 'HTTPS_PROXY': 'http://user-proxy', 'NO_PROXY': 'x'}
-        self.assertNotIn('HTTPS_PROXY', build_env(PROFILE, base, '/run/config'))
-        env = build_env(PROFILE, {**base, 'ROBOTEAM_EGRESS_INSTANCE': 'a'*32, 'ALL_PROXY': 'http://other'}, '/run/config')
+        self.assertNotIn('HTTPS_PROXY', build_env(MODEL_ENTRY, base, '/run/config'))
+        env = build_env(MODEL_ENTRY, {**base, 'ROBOTEAM_EGRESS_INSTANCE': 'a'*32, 'ALL_PROXY': 'http://other'}, '/run/config')
         self.assertEqual((env['HTTPS_PROXY'], env['NO_PROXY']), ('http://user-proxy', 'x'))
         self.assertNotIn('ALL_PROXY', env); self.assertNotIn('ROBOTEAM_EGRESS_INSTANCE', env)
 
     def test_unconfigured_third_party_endpoint_never_launches_cli(self):
-        from roboteam.launch.claude_prepare import profile
+        from roboteam.launch.claude_prepare import model_entry
         with patch.dict('os.environ', {}, clear=True):
-            selected = profile('qwen')
+            selected = model_entry('qwen')
         self.assertIsNone(selected['base_url'])  # Offline inspection is allowed.
         for base_url in (None, ''):
             with self.subTest(base_url=base_url), tempfile.TemporaryDirectory() as tmp:
@@ -184,7 +184,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
                                  tmp, {'DASHSCOPE_API_KEY': 'synthetic-unused'}, session_id='s1')
                     launch.assert_not_called()
 
-    def test_anthropic_profile_can_use_native_default_endpoint(self):
+    def test_anthropic_model_entry_can_use_native_default_endpoint(self):
         selected = {'provider': 'anthropic', 'env_key': 'ANTHROPIC_API_KEY'}
         env = build_env(selected, {'ANTHROPIC_API_KEY': 'synthetic-unused'}, '/run/config')
         self.assertNotIn('ANTHROPIC_BASE_URL', env)
@@ -230,7 +230,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             conn_cfg = run / 'mcp.json'; conn_cfg.write_text('{}')
             binary = fake_claude(tmp, SUCCESS_BODY)
             base = {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET, 'OPENAI_API_KEY': 'other'}
-            record = run_turn(PROFILE, 'kimi-k3.1-pro', 'high', conn_cfg, 'go', run, base, binary=str(binary), timeout=20)
+            record = run_turn(MODEL_ENTRY, 'kimi-k3.1-pro', 'high', conn_cfg, 'go', run, base, binary=str(binary), timeout=20)
             self.assertEqual(record['process'], 'exited')
             self.assertEqual(record['exit_code'], 0)
             self.assertEqual(record['summary']['turn_status'], 'ended')
@@ -250,7 +250,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             cancel = threading.Event()
             timer = threading.Timer(0.3, cancel.set); timer.start()
             try:
-                record = run_turn(PROFILE, 'm', 'high', config, 'go', run,
+                record = run_turn(MODEL_ENTRY, 'm', 'high', config, 'go', run,
                                   {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
                                   binary=str(binary), timeout=10, cancel_event=cancel)
             finally:
@@ -264,14 +264,14 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             run = Path(tmp) / 'run'; (run/'workspace').mkdir(parents=True, exist_ok=True)
             base = {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET}
             binary = fake_claude(tmp, 'time.sleep(.15)\nprint(json.dumps({"type":"result", "subtype":"success", "is_error":False}))\n')
-            record = run_turn(PROFILE, 'm', 'high', None, 'go', run, base,
+            record = run_turn(MODEL_ENTRY, 'm', 'high', None, 'go', run, base,
                               binary=str(binary), enable_robot=False)
             self.assertEqual(record['process'], 'exited')
             self.assertEqual(record['summary']['turn_status'], 'ended')
             binary = fake_claude(tmp, 'time.sleep(30)\n')
             cancel = threading.Event(); timer = threading.Timer(.2, cancel.set); timer.start()
             try:
-                record = run_turn(PROFILE, 'm', 'high', None, 'go', run, base,
+                record = run_turn(MODEL_ENTRY, 'm', 'high', None, 'go', run, base,
                                   binary=str(binary), timeout=None, cancel_event=cancel, enable_robot=False)
             finally:
                 timer.cancel()
@@ -286,7 +286,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             # Not set at the launch check, set at the first poll.
             with patch('roboteam.harness.claude.session.runner.os.killpg', side_effect=PermissionError(1, 'Operation not permitted')), \
                     patch.object(cancel, 'is_set', side_effect=[False] + [True] * 100):
-                record = run_turn(PROFILE, 'm', 'high', None, 'go', bare_run(tmp), {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                record = run_turn(MODEL_ENTRY, 'm', 'high', None, 'go', bare_run(tmp), {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
                                   binary=str(binary), timeout=5, cancel_event=cancel, enable_robot=False)
             self.assertEqual(record['process'], 'cancelled')
             self.assertEqual(record['summary']['turn_status'], 'unknown')
@@ -308,7 +308,7 @@ print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False,
             cancel = threading.Event(); cancel.set()
             with patch('roboteam.harness.claude.session.runner.subprocess.Popen') as spawn:
                 with self.assertRaisesRegex(InterruptedError, 'cancelled before launch'):
-                    run_turn(PROFILE, 'm', 'high', config, 'go', run,
+                    run_turn(MODEL_ENTRY, 'm', 'high', config, 'go', run,
                              {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
                              cancel_event=cancel)
                 spawn.assert_not_called()
@@ -322,7 +322,7 @@ secret = os.environ['ANTHROPIC_API_KEY']
 print(json.dumps({'type':'result', 'subtype':'success', 'is_error':False, 'result':secret}))
 sys.stderr.write(secret + 'x' * 990)
 ''')
-            record = run_turn(PROFILE, 'm', 'high', None, 'go', run,
+            record = run_turn(MODEL_ENTRY, 'm', 'high', None, 'go', run,
                               {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': secret},
                               binary=str(binary), timeout=10, enable_robot=False)
             events = run / record['events_path']
@@ -338,11 +338,11 @@ sys.stderr.write(secret + 'x' * 990)
             conn_cfg = run / 'mcp.json'; conn_cfg.write_text('{}')
             base = {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET}
             failing = fake_claude(tmp, 'print(json.dumps({"type": "result", "subtype": "error_during_execution", "is_error": True}))\nsys.exit(1)\n')
-            record = run_turn(PROFILE, 'm', 'high', conn_cfg, 'go', run, base, binary=str(failing), timeout=20)
+            record = run_turn(MODEL_ENTRY, 'm', 'high', conn_cfg, 'go', run, base, binary=str(failing), timeout=20)
             self.assertEqual(record['summary']['turn_status'], 'failed')
             self.assertIsNone(record['summary']['task_success'])
             hanging = fake_claude(tmp, 'time.sleep(30)\n')
-            record = run_turn(PROFILE, 'm', 'high', conn_cfg, 'go', run, base, binary=str(hanging), timeout=1)
+            record = run_turn(MODEL_ENTRY, 'm', 'high', conn_cfg, 'go', run, base, binary=str(hanging), timeout=1)
             self.assertEqual(record['process'], 'timeout')
             self.assertEqual(record['summary']['turn_status'], 'unknown')
 
@@ -459,7 +459,7 @@ print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 're
     'longest': max(len(a) for a in sys.argv), 'rules': len(settings['permissions']['deny']),
     'mode': oct(os.stat(path).st_mode & 0o777), 'path': path})}))
 ''')
-            record = run_turn(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+            record = run_turn(MODEL_ENTRY, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
                               binary=str(binary), timeout=20)
             self.assertEqual(record['process'], 'exited', record['stderr_tail'])
             seen = json.loads(record['summary']['result_text'])
@@ -468,7 +468,7 @@ print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 're
             self.assertEqual(seen['mode'], '0o600')
             self.assertIn(run/'private', Path(seen['path']).parents)
             # Settings with the same content share one file.
-            run_turn(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+            run_turn(MODEL_ENTRY, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
                      binary=str(binary), timeout=20)
             self.assertEqual(len(list(Path(seen['path']).parent.glob('settings-*.json'))), 1)
 
@@ -486,7 +486,7 @@ print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 're
             session = PersistentSession()
             # The CLI dies between the liveness check and the prompt write.
             with patch.object(PersistentSession, '_write', side_effect=BrokenPipeError(32, 'Broken pipe')):
-                record = session(PROFILE, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
+                record = session(MODEL_ENTRY, 'm', 'high', None, 'go', run, {'PATH': '/usr/bin:/bin', 'KIMI_API_KEY': SECRET},
                                  session_id='11111111-1111-1111-1111-111111111111', binary=str(binary), timeout=5)
             self.assertEqual(record['process'], 'process_exited')
             self.assertEqual(record['exit_code'], 3)

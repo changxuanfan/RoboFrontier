@@ -23,8 +23,8 @@ class JobGateway {
     this.persist=persist;this.rpcFactory=rpcFactory;this.clients=new Set();
     this.recoveryDirectory=recoveryDirectory;
     this.isPaused=isPaused;
-    // A stopped engine can hand its exact persisted thread inventory to a new
-    // engine. Only the trusted manifest supplies this list; task RPC cannot.
+    // A stopped harness can hand its exact persisted thread inventory to a new
+    // harness. Only the trusted manifest supplies this list; task RPC cannot.
     for(const task of this.tasks.values())for(const id of task.resumeThreads||[]){
       if(typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id)||this.owners.has(id))
         throw new Error('Invalid cold-continuation ownership');
@@ -213,8 +213,8 @@ class JobGateway {
   }
   // One task's host died and its native state did not settle: fence that task alone. It
   // keeps its threads (no other task can adopt them), gets no events or tools, and is not
-  // recoverable automatically; every other task keeps the shared engine. A native exit
-  // still fails the whole engine through onExit.
+  // recoverable automatically; every other task keeps the shared harness. A native exit
+  // still fails the whole harness through onExit.
   quarantine(task){
     if(this.failed)return;
     task.state='quarantined';
@@ -223,7 +223,7 @@ class JobGateway {
   }
   fail(){
     if(this.failed)return;this.failed=true;
-    for(const p of this.serverRequests.values())p.reject(new Error('Shared engine stopped'));
+    for(const p of this.serverRequests.values())p.reject(new Error('Shared harness stopped'));
     this.serverRequests.clear();for(const client of this.clients)client.destroy();
     if(this.server?.listening)this.server.close();
   }

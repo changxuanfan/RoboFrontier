@@ -7,7 +7,7 @@ from unittest.mock import patch
 import mujoco
 import numpy as np
 
-from roboteam.tasks.config import load_harness
+from roboteam.tasks.config import load_run_settings
 from single_arm_scene import make_world
 from roboteam.sim.motion_check import prepare_check,state_id
 from sim.test_motion_check import robot_fixture
@@ -16,7 +16,7 @@ from motion import filled, MOVE
 
 class GraspForceTests(unittest.TestCase):
     def setUp(self):
-        self.tmp=tempfile.TemporaryDirectory();self.cfg=load_harness()
+        self.tmp=tempfile.TemporaryDirectory();self.cfg=load_run_settings()
 
     def tearDown(self):self.tmp.cleanup()
 

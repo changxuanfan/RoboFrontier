@@ -63,11 +63,11 @@ def _alive(pid):
         return True
 
 
-def native_matches(engine, run, home, tid):
+def native_matches(harness, run, home, tid):
     """Where one native session is looked up and its transcripts there, plain or archived.
 
     A sealed Codex run carries its own copies; one that never sealed still has them in its home."""
-    if engine == 'claude':
+    if harness == 'claude':
         root = history_directory(run)
         return root, [p for p in session_glob(root/'projects', tid+'.jsonl') if p.parent.parent == root/'projects']
     own = codex_run_transcripts(run, tid)
@@ -133,8 +133,8 @@ def _files(root, tolerated=(), skipped=None):
                 if not tolerate(parent/name, 'symlink'):
                     raise ValueError('Symlink inside evidence; resolve explicitly before collecting: ' + str(parent/name))
                 linked.add(name)
-        # The native configuration (private/engine/config) is collected separately.
-        dirs[:] = sorted(d for d in dirs if d not in linked and not (d == 'config' and parent.name == 'engine'))
+        # The native configuration (private/harness/config) is collected separately.
+        dirs[:] = sorted(d for d in dirs if d not in linked and not (d == 'config' and parent.name == 'harness'))
         # Finder writes .DS_Store into any folder it shows, even during collection;
         # it is desktop metadata, not run evidence.
         for name in sorted(f for f in files if f != '.DS_Store' and f not in linked):
@@ -209,11 +209,11 @@ def collect_batch(batch_path, output):
     if output.exists() or output.is_relative_to(batch_path) or batch_path.is_relative_to(output):
         raise ValueError('Collection output must be new and outside the source batch')
     batch = load(batch_path/'batch.json')
-    engines = {'roboteam.claude-batch.v2': 'claude', 'roboteam.cli-benchmark.v1': 'codex'}
-    if batch.get('schema') not in engines:
+    harnesses = {'roboteam.claude-batch.v2': 'claude', 'roboteam.cli-benchmark.v1': 'codex'}
+    if batch.get('schema') not in harnesses:
         raise ValueError('Unsupported batch schema')
-    engine = engines[batch['schema']]
-    state_path = run_layout.batch_path(batch_path, 'engineering_status') if engine == 'claude' else batch_path/'batch.json'
+    harness = harnesses[batch['schema']]
+    state_path = run_layout.batch_path(batch_path, 'engineering_status') if harness == 'claude' else batch_path/'batch.json'
     state = load(state_path)
     if state.get('status') not in TERMINAL:
         raise ValueError('Collect only a stopped batch; inspect runner status first')
@@ -222,23 +222,23 @@ def collect_batch(batch_path, output):
         raise ValueError('Batch has no jobs')
     marker = run_layout.batch_path(batch_path, 'codex_home_marker')
     batch_home = Path(load(marker)['codex_home']).resolve() if marker.exists() else Path(os.environ.get('CODEX_HOME', Path.home()/'.codex')).resolve()
-    state_jobs = {(j.get('profile'), j.get('case_id')): j for j in state.get('jobs', [])}
+    state_jobs = {(j.get('model_entry'), j.get('case_id')): j for j in state.get('jobs', [])}
     seen = set()
     runs = []
     for job in jobs:
-        case, profile = job.get('case_id'), job.get('profile', '')
-        if not isinstance(case, str) or not ID.fullmatch(case) or profile and (not isinstance(profile, str) or not ID.fullmatch(profile)):
-            raise ValueError('Invalid case/profile identifier')
+        case, model_entry = job.get('case_id'), job.get('model_entry', '')
+        if not isinstance(case, str) or not ID.fullmatch(case) or model_entry and (not isinstance(model_entry, str) or not ID.fullmatch(model_entry)):
+            raise ValueError('Invalid case/model identifier')
         run = Path(job['run_directory']).resolve()
         if not run.is_relative_to(batch_path) or run == batch_path or run in seen:
             raise ValueError('Run must be unique and inside this batch')
         seen.add(run)
-        status = state_jobs.get((job.get('profile'), case), job).get('status')
+        status = state_jobs.get((job.get('model_entry'), case), job).get('status')
         if status not in TERMINAL:
             raise ValueError('Job may still be writing: ' + str(run))
-        if engine == 'claude':
+        if harness == 'claude':
             launch_file = run/'private/inputs/claude.json'
-            selected = load(launch_file).get('profile', {}) if launch_file.is_file() else {}
+            selected = load(launch_file).get('model_entry', {}) if launch_file.is_file() else {}
             auth_home = selected.get('native_config_dir')
             if (selected.get('auth_mode') == 'native_login' and isinstance(auth_home, str)
                     and Path(auth_home).resolve().is_relative_to(batch_path)):
@@ -267,7 +267,7 @@ def collect_batch(batch_path, output):
             rows = []
             for job, run, status in runs:
                 run_marker=run_layout.path(run,'codex_home_marker')
-                native_config=run_layout.path(run,'engine_config').relative_to(run)
+                native_config=run_layout.path(run,'harness_config').relative_to(run)
                 home=Path(load(run_marker)['codex_home']).resolve() if run_marker.is_file() else batch_home
                 issues, roles, snapshot_sessions = [], [], []
                 for path, kind, link in skipped:
@@ -314,13 +314,13 @@ def collect_batch(batch_path, output):
                     if not isinstance(tid, str) or not ID.fullmatch(tid):
                         issues.append(str(actor)+': missing or invalid session id')
                         continue
-                    config = history_directory(run) if engine == 'claude' else run/'private/engine'
-                    _, matches = native_matches(engine, run, home, tid)
+                    config = history_directory(run) if harness == 'claude' else run/'private/harness'
+                    _, matches = native_matches(harness, run, home, tid)
                     native_queries.append((run, home, tid, matches))
                     if len(matches) != 1:
                         issues.append(str(actor)+': expected one native session, found '+str(len(matches)))
                         continue
-                    base = Path('sessions')/job['profile'] if job.get('profile') else Path('sessions')
+                    base = Path('sessions')/job['model_entry'] if job.get('model_entry') else Path('sessions')
                     rel = base/job['case_id']/session_name(tid, matches[0])
                     checksum = copy_stable(matches[0], temporary/rel)
                     hashes[rel.as_posix()] = checksum
@@ -330,14 +330,14 @@ def collect_batch(batch_path, output):
                                   'delegation_state': agent.get('delegation_state'),
                                   'parent': meta.get('delegations',{}).get(agent.get('delegation_id'),{}).get('parent',agent.get('parent')),
                                   'session': rel.as_posix(), 'sha256': checksum})
-                    if engine == 'claude':
+                    if harness == 'claude':
                         original_rel = Path('batch')/run.relative_to(batch_path)/native_config/matches[0].relative_to(config)
                         hashes[original_rel.as_posix()] = copy_stable(matches[0], temporary/original_rel)
                         roles[-1]['native_session'] = original_rel.as_posix()
                     # Native Claude may keep session-linked auxiliary transcripts.
                     # Preserve these too, without copying configuration or auth files.
                     sidecars = session_stem(matches[0])
-                    if engine == 'claude':
+                    if harness == 'claude':
                         native_directories[sidecars] = sorted(_files(sidecars))
                         for extra in native_directories[sidecars]:
                             extra_rel = rel.parent/tid/extra.relative_to(sidecars)
@@ -356,19 +356,19 @@ def collect_batch(batch_path, output):
                     if not isinstance(tid, str) or not ID.fullmatch(tid):
                         issues.append(str(delegation_id)+': invalid snapshot session id')
                         continue
-                    native_root, matches = native_matches(engine, run, home, tid)
+                    native_root, matches = native_matches(harness, run, home, tid)
                     native_queries.append((run, home, tid, matches))
                     if len(matches) != 1:
                         issues.append(str(delegation_id)+': expected one snapshot session, found '+str(len(matches)))
                         continue
-                    base = Path('sessions')/job['profile'] if job.get('profile') else Path('sessions')
+                    base = Path('sessions')/job['model_entry'] if job.get('model_entry') else Path('sessions')
                     rel = base/job['case_id']/session_name(tid, matches[0])
                     checksum = copy_stable(matches[0], temporary/rel)
                     hashes[rel.as_posix()] = checksum
                     native_sources[matches[0]] = checksum
                     snapshot_sessions.append({'delegation_id':delegation_id,'thread_id':tid,
                                               'session':rel.as_posix(),'sha256':checksum})
-                    if engine == 'claude':
+                    if harness == 'claude':
                         native_rel = Path('batch')/run.relative_to(batch_path)/native_config/matches[0].relative_to(native_root)
                         hashes[native_rel.as_posix()] = copy_stable(matches[0], temporary/native_rel)
                         snapshot_sessions[-1]['native_session'] = native_rel.as_posix()
@@ -380,10 +380,10 @@ def collect_batch(batch_path, output):
                             native_sources[extra] = hashes[extra_rel.as_posix()]
                             original_rel = Path('batch')/run.relative_to(batch_path)/native_config/extra.relative_to(native_root)
                             hashes[original_rel.as_posix()] = copy_stable(extra, temporary/original_rel)
-                if engine == 'claude':
+                if harness == 'claude':
                     launch_file = run/'private/inputs/claude.json'
                     launch = load(launch_file) if launch_file.is_file() else {}
-                    if launch.get('profile', {}).get('auth_mode') == 'native_login':
+                    if launch.get('model_entry', {}).get('auth_mode') == 'native_login':
                         relative = Path('batch')/run.relative_to(batch_path)/run_layout.path(run, 'collected_sessions').relative_to(run)
                         marker = temporary/relative
                         if not marker.exists():
@@ -406,15 +406,15 @@ def collect_batch(batch_path, output):
                             issues.append('seal incomplete or physical actions unresolved')
                     except (ValueError, AttributeError):
                         issues.append('seal metadata unreadable')
-                harness = run/'private/inputs/harness.json'
+                run_settings = run/'private/inputs/run.json'
                 try:
-                    cfg = load(harness) if harness.is_file() else {}
+                    cfg = load(run_settings) if run_settings.is_file() else {}
                     if not isinstance(cfg, dict): raise ValueError('Harness must be an object')
                 except ValueError:
                     cfg = {}
                     issues.append('harness metadata unreadable')
-                rows.append({'case_id': job['case_id'], 'profile': job.get('profile'), 'status': status,
-                             'engine': engine, 'topology': cfg.get('topology'), 'model': cfg.get('model'),
+                rows.append({'case_id': job['case_id'], 'model_entry': job.get('model_entry'), 'status': status,
+                             'harness': harness, 'system': cfg.get('system'), 'model': cfg.get('model'),
                              'lifecycle':meta.get('lifecycle'),
                              'run': (Path('batch')/run.relative_to(batch_path)).as_posix(), 'roles': roles,
                              'snapshot_sessions':snapshot_sessions, 'issues': issues})
@@ -431,9 +431,9 @@ def collect_batch(batch_path, output):
                 if sorted(_files(directory)) != initial:
                     raise ValueError('Native auxiliary session inventory changed: '+str(directory))
             for run, home, tid, initial in native_queries:
-                if native_matches(engine, run, home, tid)[1] != initial:
+                if native_matches(harness, run, home, tid)[1] != initial:
                     raise ValueError('Native session lookup changed: '+tid)
-            report = {'schema': 'roboteam.policy-collection.v1', 'engine': engine,
+            report = {'schema': 'roboteam.policy-collection.v1', 'harness': harness,
                       'batch_status': state['status'], 'source_batch': str(batch_path),
                       'writers_stopped': True, 'job_count': len(rows), 'jobs': rows,
                       'complete': not any(row['issues'] for row in rows), 'files': hashes,

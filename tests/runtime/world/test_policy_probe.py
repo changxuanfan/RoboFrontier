@@ -7,7 +7,7 @@ import unittest
 
 from fake_pipeline import FakeWorld,fake_capture
 from roboteam.runtime.time.clock import BudgetGuard,protocol,validate_protocol
-from team_harness import prepare_run
+from team_settings import prepare_run
 from roboteam.runtime.world.service import RuntimeService
 
 

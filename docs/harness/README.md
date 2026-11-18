@@ -1,8 +1,8 @@
-# Policy engines: Codex and Claude Code
+# Policy harnesses: Codex and Claude Code
 
-The two engines run the same released tasks (`benchmark/release.json`) with the same frozen inputs,
+The two harnesses run the same released tasks (`benchmark/release.json`) with the same frozen inputs,
 rules, robot tool text, runtime, START timing, terminal scoring and evidence formats. Each role
-is a native session of the engine's own CLI. The engine guides cover setup and behavior
+is a native session of the harness's own CLI. The harness guides cover setup and behavior
 specific to each CLI.
 
 | Guide | Contents |
@@ -10,7 +10,7 @@ specific to each CLI.
 | [Codex](codex.md) | app-server sessions, Codex homes, tool backends, receipts |
 | [Codex with Claude](claude-in-codex.md) | Experimental loopback Responses-to-Messages adapter, thinking blocks, prompt-cache monitor |
 | [Claude Code](claude-code.md) | `claude -p` sessions over MCP, authentication modes, Bash isolation, prechecks, cost ledger |
-| [Providers](#providers) | Profiles, the authentication matrix, third-party endpoints |
+| [Providers](#providers) | Models, the authentication matrix, third-party endpoints |
 | [Unified CLI](../cli.md) | Configuration and the `roboteam` commands |
 | [Runtime protocol](../benchmark/rules.md) | Observation images, START, terminal scoring, robot tool errors |
 
@@ -23,7 +23,7 @@ itself once; `roboteam continue` continues it by hand
 
 The commands (prepare, run, status, stop, collect) can be driven from a shell or from any
 coding agent; no outer agent is needed, and the outer session's model has no effect on the run.
-The frozen engine and profile select the measured model. The manager prompts
+The frozen harness and model entry select the measured model. The manager prompts
 ([Codex](../development/manager-codex.md), [Claude Code](../development/manager-claude.md)) and
 the [manager runbook](../development/manager-runbook.md) define the manager's authority: engineering
 operations only, never task strategy, robot actions or changed inputs. A manager that injects
@@ -31,7 +31,7 @@ either invalidates the run.
 
 ## Shared setup
 
-Install Python 3.12, uv, Node.js and the CLI of the engine you will use, at the version pinned in
+Install Python 3.12, uv, Node.js and the CLI of the harness you will use, at the version pinned in
 `roboteam/runtime/run/versions.py` (Codex 0.165.0, Claude Code 2.1.316).
 `prepare` and `run` refuse any other version.
 
@@ -47,7 +47,7 @@ New runs use the frozen [policy Python environment](../hosts/policy-environment.
 
 `init-env` creates the Git-ignored `.env` from `.env.example` with mode 600 and refuses to
 overwrite an existing one (by hand: `cp .env.example .env && chmod 600 .env`). Fill in only the
-variables of the profiles you use; the [authentication matrix](#authentication-matrix) names them.
+variables of the models you use; the [authentication matrix](#authentication-matrix) names them.
 The loader reads literal `KEY=value` lines without running shell syntax, and a variable already
 set in the process environment wins. Never put a credential in TOML, a model catalog, a command
 line, a commit or a chat. A remote host needs its own `.env`; SSH does not forward it.
@@ -68,7 +68,7 @@ network access, copy the archive over and run:
 
 | Component | Codex | Claude Code |
 | --- | --- | --- |
-| Profiles | `codex` section of `models.json` | `claude` section of `models.json` |
+| Models | `codex` section of `models.json` | `claude` section of `models.json` |
 | Preparation | `roboteam/launch/codex_batch.py` | `roboteam/launch/claude_prepare.py` |
 | Batch supervision | `roboteam/launch/codex_batch.py` | `roboteam/launch/claude_batch.py`, `harness/claude/supervisor.py` |
 | One policy turn | app-server `turn/start` (`policy_host.js`, `rpc.js`) | `claude -p` (`harness/claude/session/runner.py`, `session_host.py`) |
@@ -81,7 +81,7 @@ network access, copy the archive over and run:
 | Capacity recovery | `policy_host.js` | `harness/claude/session/recovery.py` |
 | Host events | `private/logs/host.jsonl` | `private/logs/host.jsonl` |
 
-Both engines share the robot tool description `roboteam/harness/shared/robot_tool.json`,
+Both harnesses share the robot tool description `roboteam/harness/shared/robot_tool.json`,
 the runtime under `roboteam/runtime/`, the access table `roboteam/runtime/sandbox/access.py`,
 metrics `roboteam/launch/results/host_metrics.py` and reports `roboteam/launch/results/report.py`.
 
@@ -100,7 +100,7 @@ exactly, waiting at most ten seconds for the transcript to catch up, and persist
 under `private/state/claude-tool-bindings/` before forking. Missing or ambiguous evidence rejects
 the delegation.
 
-Delegate creation gives the same result on both engines: the child's history ends at the
+Delegate creation gives the same result on both harnesses: the child's history ends at the
 parent's pending `delegate` call, its first input is the frozen
 `private/inputs/bootstrap/delegate.md` filled in for that child, and it runs no tool before the
 runtime activates the batch. Codex forks a snapshot thread and then each child from it, and
@@ -139,7 +139,7 @@ After every writer has stopped, in the environment that ran the batch:
 
 This writes `RUN_DIR/private/outputs/report.json` with the shared `host_metrics`. For Codex,
 `--codex-home PATH` names the session home; otherwise the report uses the collected session
-mapping, then the run's `private/engine/codex-home.json`, then the environment default.
+mapping, then the run's `private/harness/codex-home.json`, then the environment default.
 
 | Field | Meaning |
 | --- | --- |
@@ -164,23 +164,23 @@ last result, such as a background task waking an idle CLI, are added from the tr
 after it. Model, tool and setup times overlap: do not add them. These are host observations,
 not a provider invoice.
 
-## Engine differences
+## Harness differences
 
 | | Codex | Claude Code |
 | --- | --- | --- |
 | Turn interface | app-server JSON-RPC | one `claude -p` process per turn, `--resume` to continue |
 | Delegate fork | snapshot thread, then `thread/fork`; message sent after activation | first turn is the fork; tools held by a hook until activation |
 | Compaction | at `auto_compact_token_limit` (267,000) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` set to that limit plus Claude Code's 33,000-token buffer |
-| Compatibility receipts | one, per profile | two (basic and blocked-parent), per profile |
+| Compatibility receipts | one, per model | two (basic and blocked-parent), per model |
 | Dollar allowance | none | optional, unset by `roboteam run` |
 | Task limit | `batch.task_wall_limit_s` | the same, at most 86,400 s |
 
 Both freeze `context_window` 300,000 and `auto_compact_token_limit` 267,000 from
-`models.json`. Equal effort names do not mean equal computation across engines.
+`models.json`. Equal effort names do not mean equal computation across harnesses.
 
 ## Offline checks
 
-See [development checks](../development/testing.md). The engine tests are under
+See [development checks](../development/testing.md). The harness tests are under
 `tests/harness/` and `tests/launch/`:
 
 ```sh
@@ -201,20 +201,20 @@ synthetic task is left unfinished, so evaluation must fail) and collection.
 
 ## Providers
 
-### Catalogs and profiles
+### Catalogs and models
 
-Profiles are the `codex` and `claude` sections of `models.json`; a run freezes its
-engine's section as `private/inputs/models.json`. A profile names a model, effort, provider
-endpoint and credential variable. Being in the catalog does not make a profile compatible: its
-preflight receipt does. Each batch has one profile.
+Models are the `codex` and `claude` sections of `models.json`; a run freezes its
+harness's section as `private/inputs/models.json`. A model entry names the provider's model, effort, provider
+endpoint and credential variable. Being in the catalog does not make a model compatible: its
+preflight receipt does. Each batch has one model.
 
 ### Authentication matrix
 
 Defaults: the repository default is Codex `sol` (`gpt-6.1-sol`, effort `high`) with
-`OPENAI_API_KEY`. `--engine claude` with no profile in the user TOML or on the command line
+`OPENAI_API_KEY`. `--harness claude` with no model in the user TOML or on the command line
 selects `opus` (`claude-opus-5-5`) with `ANTHROPIC_API_KEY`.
 
-| Engine | Authentication | Profiles | Credential or setting |
+| Harness | Authentication | Models | Credential or setting |
 | --- | --- | --- | --- |
 | Codex | OpenAI API key | `sol` (default), `luna` | `OPENAI_API_KEY` |
 | Codex | Anthropic API key behind a loopback adapter, experimental | `opus_claude_api` | `ROBOTEAM_CLAUDE_GATEWAY_KEY`, a local key; the Anthropic key stays with the adapter ([setup](claude-in-codex.md)) |
@@ -230,7 +230,7 @@ The catalog is authoritative when this table and it differ.
 
 ### Codex Responses endpoints
 
-The harness writes a process-local provider entry for third-party Codex profiles and never edits
+The harness writes a process-local provider entry for third-party Codex models and never edits
 the global Codex configuration. Its shape, for DeepSeek:
 
 ```toml
@@ -251,7 +251,7 @@ work. See the [Codex configuration reference](https://developers.openai.com/code
 
 ### Claude-compatible endpoints
 
-Each Claude third-party profile carries its Anthropic-compatible `base_url` in the catalog; Qwen
+Each Claude third-party model carries its Anthropic-compatible `base_url` in the catalog; Qwen
 reads it from `DASHSCOPE_ANTHROPIC_BASE_URL`, which must match the account's region. `kimi`
 (Moonshot API) and `kimi_code` (Kimi Code plan) use different keys and endpoints. Check the
 provider's terms for unattended parallel use before a paid check; do not mix coding-plan and
@@ -260,18 +260,18 @@ pay-as-you-go keys.
 ### Local checks and preflight
 
 ```sh
-.venv/bin/roboteam doctor --engine codex --profile kimi --render native
-.venv/bin/roboteam plan --engine codex --profile kimi --level 1 --min-arms --parallel 4
+.venv/bin/roboteam doctor --harness codex --model kimi --render native
+.venv/bin/roboteam plan --harness codex --model kimi --level 1 --min-arms --parallel 4
 ```
 
 `doctor` checks the installed CLI, its sandbox or tool backend and a real render; it calls no
-model and does not check credentials. The paid checks are per engine:
+model and does not check credentials. The paid checks are per harness:
 [Codex preflight](codex.md#preflight-and-receipts), [Claude prechecks](claude-code.md#preflight-and-receipts).
 A changed model, endpoint, effort, catalog or CLI version needs a new receipt.
 
 ### Selection and concurrency
 
-| Selection | Runs per profile |
+| Selection | Runs per model |
 | --- | ---: |
 | `--level 1 --min-arms` | 4 |
 | `--level 1` | 12 |
@@ -281,4 +281,4 @@ Minimum-arm level 1 selects Transport 4, Mosaic 4, Relay 8 and Dial 4 arms (Dial
 dials). `batch.parallel` counts whole runs; delegates, standing Workers and forks add sessions and
 model requests inside each run, so CPU, memory, rendering and the provider's rate limits bound
 throughput, not the setting. Concurrent batches add up. Every run of a Dial case uses the fixed
-code in `benchmark/release.json`, so all profiles face the same puzzles.
+code in `benchmark/release.json`, so all models face the same puzzles.

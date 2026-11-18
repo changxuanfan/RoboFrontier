@@ -25,7 +25,7 @@ class ClaudeDispatchTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = RuntimeStore(Path(self.tmp.name) / 'runtime.sqlite')
         cfg = json.loads((Path(__file__).resolve().parents[3] / 'roboteam/runtime/run/defaults.json').read_text())
-        cfg.update(engine='claude', topology='single-agent', startup_protocol='direct_controller')
+        cfg.update(harness='claude', system='single-agent', startup_protocol='direct_controller')
         self.store.initialize('run', cfg, ['A'])
         self.store.update_agent('Controller', thread_id='test-session')
         self.store.start()
@@ -68,18 +68,18 @@ class ClaudeDispatchTests(unittest.TestCase):
     def test_claude_delegate_binding_is_closed_until_verified(self):
         from roboteam.runtime.run.cli import execute
         import time
-        cfg = self.store.get('config'); cfg['topology'] = 'adaptive'; self.store.put('config', cfg)
+        cfg = self.store.get('config'); cfg['system'] = 'adaptive'; self.store.put('config', cfg)
         with self.assertRaisesRegex(ValueError, 'not yet qualified'):
             execute(self.store, 'delegate-bind', {}, 'test-owner', time.time())
         with self.assertRaisesRegex(ValueError, 'not yet qualified'):
             execute(self.store, 'delegate-snapshot-bind', {}, 'test-owner', time.time())
-        self.assertEqual(execute(self.store, 'snapshot', {}, 'test-owner', time.time())['config']['engine'], 'claude')
+        self.assertEqual(execute(self.store, 'snapshot', {}, 'test-owner', time.time())['config']['harness'], 'claude')
 
-    def test_unqualified_topology_and_wrong_identity_are_rejected(self):
+    def test_unqualified_system_and_wrong_identity_are_rejected(self):
         self.host.session_id = 'other'
         with self.assertRaises(ValueError): ClaudeDispatcher(self.store, self.host)
         self.host.session_id = 'test-session'
-        cfg = self.store.get('config'); cfg['topology'] = 'adaptive'; self.store.put('config', cfg)
+        cfg = self.store.get('config'); cfg['system'] = 'adaptive'; self.store.put('config', cfg)
         with self.assertRaises(ValueError): ClaudeDispatcher(self.store, self.host)
 
 

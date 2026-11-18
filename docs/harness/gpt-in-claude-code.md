@@ -36,7 +36,7 @@ not keep two active refreshers sharing rotating credentials. No credential,
 callback code, prompt, image, or tool-result body belongs in transport logs.
 
 The adapter binds only to `127.0.0.1` and requires a random local gateway key.
-Claude Code receives that local key, never the OpenAI OAuth token. In profile
+Claude Code receives that local key, never the OpenAI OAuth token. In model
 receipts, `auth_mode: api_key` describes this local Messages-client authentication;
 the upstream provider is `openai_chatgpt_plan`, not OpenAI API-key billing.
 The full-mode sandbox must deny access to credentials and loopback connections.
@@ -50,7 +50,7 @@ python roboteam/harness/adapters/gpt_in_claude/gateway.py \
   --log /private/plan/transport-metadata.jsonl
 ```
 
-## Experiment profile and validation
+## Experiment model entry and validation
 
 ### Explicit API-key handoff
 
@@ -61,10 +61,10 @@ credential. It retains the same Responses model, WebSocket transport and native
 Claude harness. Keep API secrets within a host credential deny root; Claude receives
 only the local gateway key. API access and limits need a live preflight.
 
-For a stopped subscription experiment, preserve its original frozen profile and
+For a stopped subscription experiment, preserve its original frozen model entry and
 session provenance. Run the gateway with `--replay-file` pointing at its existing
 protected replay database, and record the operator-authorized billing handoff
-separately before continuing the same run directories. The profile name does not
+separately before continuing the same run directories. The model entry name does not
 override the gateway's explicit authentication mode; health and every transport record
 report the actual mode. Validate the encrypted
 history under the new credential before resuming physical work. A rejected history
@@ -99,9 +99,9 @@ the Messages SSE alive. It can slow parallel tasks; it does not change their too
 model context, outputs or fork ancestry. Leave room for other consumers of the same
 API project; this process cannot reserve quota against external clients.
 
-`sol_chatgpt_plan` is a Claude engine profile. Its local key is supplied as
+`sol_chatgpt_plan` is a Claude Code model entry. Its local key is supplied as
 `ROBOTEAM_CHATGPT_GATEWAY_KEY`, with the actual OAuth credential retained only
-by the adapter. Full tools, model effort and adaptive topology are frozen through
+by the adapter. Full tools, model effort and adaptive system are frozen through
 the ordinary benchmark configuration. The context budget is 300,000 with a
 267,000-token compaction threshold. The host also declares
 `CLAUDE_CODE_MAX_CONTEXT_TOKENS=300000`: an auto-compact override alone is capped
@@ -184,7 +184,7 @@ resume after gateway restart, a native fork and the 300k compaction boundary. Th
 make no OpenAI inference requests. Passing them verifies the transport invariants,
 not an upstream cache hit rate. A live preflight and cache measurement are still
 required before claiming the earlier cache loss is resolved.
-The profile's `transport_revision: websocket-incremental-v4` participates in its existing
+The model's `transport_revision: websocket-incremental-v4` participates in its existing
 fingerprint, so preflight receipts from the older lossy adapter do not qualify
 this revision. Updating code does not start or continue stopped experiments.
 
@@ -229,7 +229,7 @@ uses separate protected credentials and a separate control/log/hold directory.
 
 Before a benchmark can start, require the ordinary real native CLI preflights:
 text, image returned by a robot tool, resume, verified fork, and blocked-parent
-fork. Do not disable provenance checks or reuse receipts from another profile.
+fork. Do not disable provenance checks or reuse receipts from another model.
 Then prepare the batch and pass the full-tool policy-environment checks. L3 has
 12 distinct cases, including all three Mosaic arm counts.
 

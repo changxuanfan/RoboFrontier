@@ -19,7 +19,7 @@ from roboteam.runtime.run.setup import verify_inputs, write_json
 from roboteam.runtime.tools.delegation import Delegations
 from roboteam.tasks.scene import camera_names
 from roboteam.runtime.tools.stop_diagnostics import stop_diagnostics
-from roboteam.runtime.tools import tool_mode
+from roboteam.runtime.tools import tools_mode
 from roboteam.runtime.tools import public_files
 from roboteam.runtime.tools import run_skills
 from roboteam.tasks.config import action_limits, execution_timing
@@ -230,7 +230,7 @@ class RuntimeService:
         if readiness == 'environment_preview_only':
             raise ValueError('This v2 scene is an environment preview. Mechanism-specific evaluation and recording commissioning are required before starting a policy trial.')
         if readiness == 'prepared_policy_trial':
-            from roboteam.tasks.families import validate_frozen_policy
+            from roboteam.tasks.task_types import validate_frozen_policy
             validate_frozen_policy(self.task, self.directory)
 
     def fault_injected(self):
@@ -240,7 +240,7 @@ class RuntimeService:
         store is what remembers that the fault was applied."""
         if not getattr(self, '_fault_injected', False):
             self._fault_injected = self.store.db.execute(
-                "SELECT 1 FROM events WHERE kind='ENGINEERING_FAULT_INJECTED' LIMIT 1").fetchone() is not None
+                "SELECT 1 FROM events WHERE kind='HARNESSERING_FAULT_INJECTED' LIMIT 1").fetchone() is not None
         return self._fault_injected
 
     def stopping_diagnostics(self, action):
@@ -275,7 +275,7 @@ class RuntimeService:
                 'recording': bool(self.video), 'video': self.finished_video,
                 'dispatcher_health':self.store.get('dispatcher_health',{}),
                 'dispatcher_paused': self.store.get('dispatch_paused', False),
-                'delegations':Delegations(self.store).active() if self.config['topology']=='adaptive' else []}
+                'delegations':Delegations(self.store).active() if self.config['system']=='adaptive' else []}
 
     def register_delegates(self, batch):
         """Scoped connections are runtime state, not edits to frozen inputs."""
@@ -293,7 +293,7 @@ class RuntimeService:
     def delegate_report(self, selected):
         """A robot_only Controller has no file tool for a returned delegate's report, so
         `work` with that delegate's ID carries the report itself."""
-        if selected is None or tool_mode.of(self.config) != tool_mode.ROBOT_ONLY:
+        if selected is None or tools_mode.of(self.config) != tools_mode.ROBOT_ONLY:
             return {}
         path = self.directory/'public/results'/(selected+'.json')
         if not path.is_file():
@@ -332,7 +332,7 @@ class RuntimeService:
                 self.respond(job, {'ready': True, 'run_started': self.started,
                     'robot_facts':facts,
                     'controlled_robots':([r for r,o in Delegations(self.store).owners().items() if o==actor]
-                        if self.config['topology']=='adaptive' else list(self.task['arms']) if kind=='controller' else [actor] if kind=='worker' else []),
+                        if self.config['system']=='adaptive' else list(self.task['arms']) if kind=='controller' else [actor] if kind=='worker' else []),
                     'limits': {k: self.config[k] for k in ('min_check_interval_s','max_check_interval_s','motion_check')},
                     'execution_timing':execution_timing(self.config),
                     'cameras': camera_names(self.task), 'action_limits':action_limits(),
@@ -456,7 +456,7 @@ class RuntimeService:
             elif op == 'work':
                 if set(data)-{'delegate_id'}:raise ValueError('work accepts an optional delegate_id')
                 selected=data.get('delegate_id')
-                parent=self.config['topology']=='adaptive' and actor=='Controller'
+                parent=self.config['system']=='adaptive' and actor=='Controller'
                 if selected is not None and not parent:raise ValueError('Only Controller inspects its own delegates')
                 self.respond(job, {'work': self.store.agent(actor),
                                    'execution':self.store.latest_execution(actor),
@@ -467,8 +467,8 @@ class RuntimeService:
                                        'robot_owners':Delegations(self.store).owners()}
                                       if parent else {}),
                                    **self.delegate_report(selected)})
-            elif op in tool_mode.ROBOT_ONLY_OPS:
-                if tool_mode.of(self.config) != tool_mode.ROBOT_ONLY:
+            elif op in tools_mode.ROBOT_ONLY_OPS:
+                if tools_mode.of(self.config) != tools_mode.ROBOT_ONLY:
                     raise ValueError('Unknown tool operation')
                 if op == 'public_file':
                     self.respond(job, {'public_file': public_files.read(self.directory, data)})
@@ -565,7 +565,7 @@ class RuntimeService:
                     inject = getattr(self.world, 'inject_fault', None)
                     injected = inject(robot, job['id'], op) if callable(inject) and not self.fault_injected() else None
                     if injected:
-                        self.store.event('ENGINEERING_FAULT_INJECTED', 'Meta', injected)
+                        self.store.event('HARNESSERING_FAULT_INJECTED', 'Meta', injected)
                         self._fault_injected = True
                 except Exception as error:
                     self.store.uncertain_action(job['id'],'Executor acknowledgement failed: '+str(error),isolate=True)
@@ -621,12 +621,12 @@ class RuntimeService:
             elif op == 'state':
                 self.respond(job, self.snapshot())
             elif op == 'finish':
-                authorized = kind=={'hierarchical':'team-controller','decentralized':'worker','single-agent':'controller','adaptive':'controller'}[self.config['topology']]
+                authorized = kind=={'hierarchical':'team-controller','decentralized':'worker','single-agent':'controller','adaptive':'controller'}[self.config['system']]
                 if not authorized:
                     raise ValueError('Task-team finish proposal required')
                 if any(v['status'] in ('pending','running','uncertain') for v in self.store.actions().values()):
                     raise ValueError('Execution still running or uncertain')
-                if self.config['topology']=='adaptive' and Delegations(self.store).active():
+                if self.config['system']=='adaptive' and Delegations(self.store).active():
                     raise ValueError('Resolve and return outstanding delegations before team finish')
                 if self.store.get('lifecycle') != 'running':
                     raise ValueError('Run is not running')
@@ -793,7 +793,7 @@ class RuntimeService:
                           'execution_diagnostics':self.isolated_diagnostics(action),
                           'note':'Outcome remains unknown; inspect the original action. Never replay it.'}
             self.store.signal(actor, notice)
-            if self.config.get('topology') == 'adaptive' and actor != 'Controller':
+            if self.config.get('system') == 'adaptive' and actor != 'Controller':
                 self.store.signal('Controller', notice)
 
     def poll_motion_check(self):
@@ -817,7 +817,7 @@ class RuntimeService:
         job['done'].set()
 
     def poll_delegations(self):
-        if self.config['topology']!='adaptive':return
+        if self.config['system']!='adaptive':return
         d=Delegations(self.store)
         for job in list(self.requests.values()):
             if job['op']!='delegate' or job['result'] is not None:continue

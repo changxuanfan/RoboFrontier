@@ -11,7 +11,7 @@ from roboteam.runtime.run.setup import prepare_run
 from roboteam.runtime.world.service import RuntimeService
 from roboteam.runtime.tools.delegation import Delegations
 from roboteam.runtime.tools.scheduling import Scheduler
-from roboteam.tasks.config import load_harness, startup_protocol
+from roboteam.tasks.config import load_run_settings, startup_protocol
 
 
 class SyncTests(unittest.TestCase):
@@ -20,8 +20,8 @@ class SyncTests(unittest.TestCase):
         for s in self.services:s.close()
         self.tmp.cleanup()
     def service(self,mode='decentralized'):
-        root=Path(self.tmp.name)/str(len(self.services));root.mkdir();cfg=load_harness();cfg['topology']=mode;cfg['startup_protocol']=startup_protocol(mode)
-        path=root/'cfg.json';path.write_text(json.dumps(cfg));run=prepare_run(root/'run',harness_path=path)
+        root=Path(self.tmp.name)/str(len(self.services));root.mkdir();cfg=load_run_settings();cfg['system']=mode;cfg['startup_protocol']=startup_protocol(mode)
+        path=root/'cfg.json';path.write_text(json.dumps(cfg));run=prepare_run(root/'run',run_settings_path=path)
         s=RuntimeService(run,FakeWorld,fake_capture);self.services.append(s)
         for actor,value in s.store.agents().items():
             if value['kind']=='manager':continue

@@ -87,8 +87,8 @@ def scene_xml(cubes, noslip_iterations=10):
     return root
 
 
-def make_world(directory, cubes=None, harness=None, noslip_iterations=10):
-    """A World over the fixture scene in `directory`; `harness` is frozen as its harness.json.
+def make_world(directory, cubes=None, run_settings=None, noslip_iterations=10):
+    """A World over the fixture scene in `directory`; `harness` is frozen as its run.json.
 
     The arm starts at its home reference and settles for one second, as the generated
     task did, and that settled state becomes the `initial` keyframe."""
@@ -111,8 +111,8 @@ def make_world(directory, cubes=None, harness=None, noslip_iterations=10):
     keyframe = ET.SubElement(root, 'keyframe')
     ET.SubElement(keyframe, 'key', name='initial', qpos=vector(data.qpos), ctrl=vector(data.ctrl))
     (folder/'scene.xml').write_text(ET.tostring(root, encoding='unicode'))
-    if harness is not None:
-        (directory/'private/inputs/harness.json').write_text(json.dumps(harness))
+    if run_settings is not None:
+        (directory/'private/inputs/run.json').write_text(json.dumps(run_settings))
     task = {'kind': 'single_arm_test_scene', 'family': 'transport', 'scene_asset': 'private/inputs/scene/scene.xml', 'arms': {ARM: {}},
             'objects': [{'id': name} for name in cubes]}
     return World(directory, task)

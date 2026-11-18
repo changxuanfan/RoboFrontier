@@ -1,1 +1,1 @@
-"""Model engines that drive the shared runtime: Claude Code and Codex."""
+"""Model harnesses that drive the shared runtime: Claude Code and Codex."""

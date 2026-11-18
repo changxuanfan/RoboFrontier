@@ -1,12 +1,12 @@
 """Private evaluation evidence is saved at close, never sent to policy roles."""
 import json
 import unittest
-from runtime.world import test_centralized as fixture
+from runtime.world import test_single_agent as fixture
 
 
 class PrivateEvaluationTests(unittest.TestCase):
     def setUp(self):
-        self.f=fixture.CentralizedTests();self.f.setUp();self.f.start()
+        self.f=fixture.SingleAgentTests();self.f.setUp();self.f.start()
         self.service=self.f.service;self.run=self.f.run
         self.evidence={'samples':[{'time_s':1.,'objects':{'PRIVATE_CANARY':{'position_m':[1,2,3]}}}]}
         self.service.world.evaluation_evidence=lambda:self.evidence

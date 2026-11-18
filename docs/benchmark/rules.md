@@ -2,20 +2,20 @@
 
 The rules every policy run follows between preparation and scoring. Each prepared run freezes
 its inputs, source and protocol identifiers; read a frozen run with the protocol it records.
-Engine-specific behavior is in the [engine guides](../harness/README.md); time and continuation in
+Harness-specific behavior is in the [harness guides](../harness/README.md); time and continuation in
 [continuation](../runs/continuation.md).
 
 ## Start: system prompt, start message, START
 
 - **System prompt.** `private/inputs/bootstrap/system.md` is the policy role statement followed
   by the run's `public/inputs/rules.md`. Claude Code receives it as `--system-prompt`, Codex as
-  each thread's `baseInstructions`, delegates included. Both engines get the same bytes, and a
+  each thread's `baseInstructions`, delegates included. Both harnesses get the same bytes, and a
   compacted conversation keeps it whole.
 - **Start message.** Each initial role's first message (`private/inputs/bootstrap/<role>.md`)
   carries its other public text inputs in full: `task.json`, `roles.json`, its role file, the
-  Skill, its tool, motion-check, communication and adaptive references as the topology needs, and
-  the family materials, each under its absolute path. The files stay readable on disk. The message
-  is at most 400,000 bytes. Only the last line differs between engines (how to view images).
+  collaboration guide, its tool, motion-check, communication and adaptive references as the system needs, and
+  the task materials, each under its absolute path. The files stay readable on disk. The message
+  is at most 400,000 bytes. Only the last line differs between harnesses (how to view images).
 - **START.** Single and Adaptive runs use `direct_controller`; Controller + Worker and
   Worker-Worker runs use `direct_team`. The host prepares the world, binds every initial role
   to its own native session, persists one START and then sends each role its start message.
@@ -28,7 +28,7 @@ Engine-specific behavior is in the [engine guides](../harness/README.md); time a
   time were unlimited. The host gives each run 24 hours of active time (`active_time_v1`) and
   scores it at that cutoff ([how it is counted](../runs/continuation.md#time)).
 
-`public/inputs/rules.md` is the one policy contract both engines receive; the hosts keep their
+`public/inputs/rules.md` is the one policy contract both harnesses receive; the hosts keep their
 own native tool transports. The CLI, model and harness together are the experimental condition:
 equal rules do not make model context or tool behavior equal.
 
@@ -36,12 +36,12 @@ equal rules do not make model context or tool behavior equal.
 
 `render.observation_profile = "jpeg_1280x800_q90"` (the default) makes every observation camera
 produce a 1280 × 800 JPEG at quality 90. `jpeg_128x80_q95` is the low-resolution condition: each image is rendered
-at 1280 × 800 and every 10 × 10 block of pixels is averaged into one before encoding at quality 95. The run's harness
-freezes it as `observation_image_profile`, and the public task states the format and resolution.
+at 1280 × 800 and every 10 × 10 block of pixels is averaged into one before encoding at quality 95. The run's settings
+freeze it as `observation_image_profile`, and the public task states the format and resolution.
 When a published camera calibration names an image size, the run gets a copy at the observation
 resolution and the published file stays as it is. Video recording has its own resolution.
 
-A run's harness also names the look of its images as `observation_look`
+A run's settings also name the look of its images as `observation_look`
 (`roboteam/sim/render/look.py`). `direct`, the default, writes the scene as MuJoCo draws
 it. `linear` draws from a copy of the world's model whose colours and textures are converted to
 linear light, with fill light added so that a white object comes out white, and gives each image one
@@ -51,7 +51,7 @@ laptop GPU.
 
 ## Robot requests and IDs
 
-For a new robot request on either engine, omit the outer `call_id`; the host generates one and
+For a new robot request on either harness, omit the outer `call_id`; the host generates one and
 returns it. To query an earlier physical action, send a new request
 `{"op":"job","data":{"call_id":"ACTION_ID"}}` with no outer `call_id`: the query gets its own ID
 and `data.call_id` names the action. To retry a request whose result is uncertain, resend it under
@@ -60,7 +60,7 @@ action under a new ID. How the Claude host binds IDs to native tool calls is in
 [new requests, queries and delegation](../harness/README.md#new-requests-queries-and-delegation).
 
 A blocking action that is still running after 600 s returns as pending under its original ID (an
-engine may give up on a tool call sooner); the action keeps running and `job` follows it.
+harness may give up on a tool call sooner); the action keeps running and `job` follows it.
 
 ## Robot tool error feedback
 

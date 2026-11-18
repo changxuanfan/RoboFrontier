@@ -162,7 +162,7 @@ def timing(d):
     limits = []
     other = []
     # Only Codex hosts log liveness cycles; without them a quiet gap of 5 min or more is
-    # taken as a host stop, so the two engines' active times are not measured alike.
+    # taken as a host stop, so the two harnesses' active times are not measured alike.
     stop_src = 'cycles' if cyc else 'gap>=300s'
     for a, b in gaps:
         if cyc:
@@ -500,7 +500,7 @@ def outcome(d):
     """Final state under the paper's rule. Relay requires a qualified handover for every timber."""
     s = d['sel']
     S = d.get('suite')
-    fam = s['family']
+    fam = s['task_type']
     if not S or not S.get('lines'):
         return None
     L = S['last']
@@ -555,7 +555,7 @@ def compute(d):
         model=s.get('model'),
         case=s.get('case'),
         level=s.get('level'),
-        family=s['family'],
+        task_type=s['task_type'],
         batch=s.get('batch'),
         mode=s.get('mode'),
         use=s.get('use'),
@@ -569,7 +569,7 @@ def compute(d):
     O['needs_review'] = O['excluded'] is not None
     H = d.get('host')
     O['tokens'] = H['tok'] if H else None
-    O['engine'] = H['engine'] if H else None
+    O['harness'] = H['harness'] if H else None
     O['messages'] = (d.get('meta') or {}).get('messages')
     S = d.get('suite')
     clk = Clock(d)
@@ -577,7 +577,7 @@ def compute(d):
     O['has_actions'] = bool(d.get('actions'))
     O['clock_ok'] = clk.ok
     if O['has_suite'] and clk.ok:
-        fam = s['family']
+        fam = s['task_type']
         O['atomic'] = (
             relay_atomic if fam == 'relay' else dial_atomic if fam == 'dial' else goals_atomic
         )(d, clk)

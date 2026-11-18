@@ -15,22 +15,22 @@ from roboteam.sim.render.image import (DEFAULT_PROFILE, LOW_RESOLUTION_PROFILE,
                                                     observation_profile, save_observation)
 from roboteam.runtime.world.pipeline import Service
 from roboteam.runtime.run.setup import prepare_run, verify_inputs, write_json
-from roboteam.tasks.config import load_harness
+from roboteam.tasks.config import load_run_settings
 
 
 class ObservationImageTests(unittest.TestCase):
-    def test_frozen_default_and_invalid_profile(self):
+    def test_frozen_default_and_invalid_model_entry(self):
         with self.assertRaises(ValueError): observation_profile({})
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             new = prepare_run(root/'new')
-            cfg = json.loads((new/'private/inputs/harness.json').read_text())
+            cfg = json.loads((new/'private/inputs/run.json').read_text())
             public = json.loads((new/'public/inputs/task.json').read_text())
             self.assertEqual(cfg['observation_image_profile'], DEFAULT_PROFILE)
             self.assertEqual(public['observation_image'], {'width':1280, 'height':800, 'format':'JPEG', 'quality':90})
             self.assertEqual(verify_inputs(new), [])
-            cfg = load_harness(); cfg['observation_image_profile']='not-a-profile';write_json(root/'invalid.json', cfg)
-            with self.assertRaises(ValueError):prepare_run(root/'invalid', harness_path=root/'invalid.json')
+            cfg = load_run_settings(); cfg['observation_image_profile']='not-a-profile';write_json(root/'invalid.json', cfg)
+            with self.assertRaises(ValueError):prepare_run(root/'invalid', run_settings_path=root/'invalid.json')
             self.assertFalse((root/'invalid').exists())
 
     def test_capture_saves_a_valid_image(self):
@@ -130,9 +130,9 @@ class ObservationImageTests(unittest.TestCase):
         self.assertEqual(load_configuration()['render']['observation_profile'],DEFAULT_PROFILE)
         self.assertEqual(load_configuration(overrides={'render':{'observation_profile':LOW_RESOLUTION_PROFILE}})
                          ['render']['observation_profile'],LOW_RESOLUTION_PROFILE)
-        from roboteam.tasks.families import prepare
+        from roboteam.tasks.task_types import prepare
         with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp);cfg=load_harness()
+            root=Path(tmp);cfg=load_run_settings()
             for name in (DEFAULT_PROFILE,LOW_RESOLUTION_PROFILE):
                 cfg['observation_image_profile']=name;write_json(root/(name+'.json'),cfg)
             # (The rules name the run's own folder, which differs between any two runs.)
@@ -141,8 +141,8 @@ class ObservationImageTests(unittest.TestCase):
             for case in ('mosaic-a04-6x12-d3','dial-best5-n04-d3'):
                 sharp=prepare(case,root/case/'sharp',root/(DEFAULT_PROFILE+'.json'))
                 low=prepare(case,root/case/'low',root/(LOW_RESOLUTION_PROFILE+'.json'))
-                self.assertEqual(json.loads((sharp/'private/inputs/harness.json').read_text())['observation_image_profile'],DEFAULT_PROFILE)
-                self.assertEqual(json.loads((low/'private/inputs/harness.json').read_text())['observation_image_profile'],LOW_RESOLUTION_PROFILE)
+                self.assertEqual(json.loads((sharp/'private/inputs/run.json').read_text())['observation_image_profile'],DEFAULT_PROFILE)
+                self.assertEqual(json.loads((low/'private/inputs/run.json').read_text())['observation_image_profile'],LOW_RESOLUTION_PROFILE)
                 before,after=files(sharp),files(low)
                 # The task states the size its images have; a calibration that names a size follows it.
                 task_sharp,task_low=json.loads(before.pop('inputs/task.json')),json.loads(after.pop('inputs/task.json'))
@@ -160,12 +160,12 @@ class ObservationImageTests(unittest.TestCase):
             self.assertIn('camera_calibration',task_low)
 
     def test_dial_calibration_copy_keeps_frozen_original(self):
-        from roboteam.tasks.families import prepare
+        from roboteam.tasks.task_types import prepare
         with tempfile.TemporaryDirectory() as tmp:
             run=prepare('dial-best5-n04-d1',Path(tmp)/'dial')
             public=json.loads((run/'public/inputs/task.json').read_text())
             # The policy sees one calibration sized for this run; the signed original is private.
-            original=json.loads((run/'private/inputs/release-family/camera-calibration.json').read_text())
+            original=json.loads((run/'private/inputs/release-materials/camera-calibration.json').read_text())
             derived=json.loads((run/'public/inputs'/public['camera_calibration']).read_text())
             self.assertEqual(original['image_size_pixel'],[1280,800])
             self.assertEqual(derived['image_size_pixel'],[1280,800])

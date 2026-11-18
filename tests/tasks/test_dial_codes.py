@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from roboteam.tasks.dial import alphabet
-from roboteam.tasks.families import dial_code, prepare, read, ROOT, RELEASE
+from roboteam.tasks.task_types import dial_code, prepare, read, ROOT, RELEASE
 
 
 class DialCodeTests(unittest.TestCase):

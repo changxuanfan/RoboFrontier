@@ -15,18 +15,18 @@ from roboteam.runtime.run.setup import verify_inputs
 from roboteam.runtime.world.store import RuntimeStore
 
 
-class CentralizedPolicyHost:
-    engine = 'claude'
-    def __init__(self, run_dir, profile, base_env, *, host_factory=ClaudeSessionHost,
+class SingleAgentPolicyHost:
+    harness = 'claude'
+    def __init__(self, run_dir, model_entry, base_env, *, host_factory=ClaudeSessionHost,
                  client=client_call, verifier=verify_inputs, resume=False):
         self.run = Path(run_dir).resolve()
         self.store = RuntimeStore(self.run / 'private/state/runtime.sqlite')
         try:
             config = self.store.get('config')
-            if not config or config.get('engine') != self.engine or config.get('topology') != 'single-agent':
+            if not config or config.get('harness') != self.harness or config.get('system') != 'single-agent':
                 raise ValueError('Only single-agent Claude engineering runs are supported')
-            if config.get('model') != profile.get('model') or config.get('effort') != profile.get('effort'):
-                raise ValueError('Profile differs from frozen runtime configuration')
+            if config.get('model') != model_entry.get('model') or config.get('effort') != model_entry.get('effort'):
+                raise ValueError('Model entry differs from frozen runtime configuration')
             # A run continued after an unexpected exit (docs/runs/continuation.md) keeps its session.
             self.resuming = resume
             if resume:
@@ -38,7 +38,7 @@ class CentralizedPolicyHost:
             if changed:
                 raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
             self.prompt = frozen_bootstrap(self.run, 'Controller')
-            self.host = host_factory(self.run, 'Controller', profile, base_env)
+            self.host = host_factory(self.run, 'Controller', model_entry, base_env)
             if resume: self.host.adopt(self.store.agent('Controller')['thread_id'])
             self.client = client
             self.bound = False
@@ -59,7 +59,7 @@ class CentralizedPolicyHost:
         if not result.get('bound') or self.store.agent('Controller')['thread_id'] != self.host.session_id:
             raise ValueError('Role binding outcome unknown; review instead of retrying')
         self.bound = True
-        self.dispatcher = ClaudeDispatcher(self.store, self.host, engine=self.engine)
+        self.dispatcher = ClaudeDispatcher(self.store, self.host, harness=self.harness)
         reply = self.dispatcher.admin('request-start')
         if not reply.get('started'): raise ValueError('Direct START was not confirmed')
         return self.host.send(self.prompt)
@@ -68,7 +68,7 @@ class CentralizedPolicyHost:
         """Resume the prepared segment and send the Controller its frozen resume message."""
         if not self.resuming or self.dispatcher: raise ValueError('Not a prepared segment')
         self.bound = True
-        self.dispatcher = ClaudeDispatcher(self.store, self.host, engine=self.engine)
+        self.dispatcher = ClaudeDispatcher(self.store, self.host, harness=self.harness)
         reply = self.dispatcher.admin('request-resume')
         if not reply.get('resumed'): raise ValueError('World did not confirm the resumed segment')
         return self.host.send(reply['messages']['Controller'])

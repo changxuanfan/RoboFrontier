@@ -17,8 +17,8 @@ def packed(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False)
 
 
-# Native session status is accepted only from the observer of the run's own engine.
-# A run without an `engine` setting is a Codex run.
+# Native session status is accepted only from the observer of the run's own harness.
+# A run without an `harness` setting is a Codex run.
 SESSION_SOURCES = {
     'codex': ('codex.wait_threads', 'codex.app-server'),
     'claude': ('claude.host',),
@@ -109,9 +109,9 @@ class RuntimeStore:
             self.put('physics_state', 'not_started')
             self.put('integrity_valid', True)
             roles = [(config['manager'], 'manager')]
-            if config['topology'] == 'hierarchical':
+            if config['system'] == 'hierarchical':
                 roles.append((CONTROLLER, 'team-controller'))
-            roles += [(CONTROLLER, 'controller')] if config['topology'] in ('single-agent','adaptive') else [(w, 'worker') for w in workers]
+            roles += [(CONTROLLER, 'controller')] if config['system'] in ('single-agent','adaptive') else [(w, 'worker') for w in workers]
             for actor, kind in roles:
                 self.db.execute('INSERT INTO agents VALUES (?,?)', (actor, packed({
                     'kind': kind, 'thread_id': None, 'requested_model': config['model'] if kind!='manager' else None, 'requested_effort': config['effort'] if kind!='manager' else None,
@@ -179,7 +179,7 @@ class RuntimeStore:
                                       next_check=now + after_s if after_s is not None else None,
                                       work_revision=old['work_revision'] + 1)
             self.event('WORK_SAVED', actor, {'state': state, 'note': note, 'next_check': value['next_check']}, now)
-            if state == 'available' and old['work_state'] != 'available' and old['kind'] == 'worker' and self.get('lifecycle') == 'running' and cfg['topology'] == 'hierarchical':
+            if state == 'available' and old['work_state'] != 'available' and old['kind'] == 'worker' and self.get('lifecycle') == 'running' and cfg['system'] == 'hierarchical':
                 self.signal(CONTROLLER, {'event': 'worker_self_reported_available', 'worker': actor,
                                                 'work_revision':value['work_revision'], 'verified_task_completion': False})
             return value
@@ -224,16 +224,16 @@ class RuntimeStore:
                 recipient = self.agent(target)
                 if target == actor or recipient['kind'] == 'manager':
                     raise ValueError('Invalid business recipient')
-            if cfg['topology'] == 'hierarchical' and not (
+            if cfg['system'] == 'hierarchical' and not (
                 sender['kind'] == 'team-controller' and all(self.agent(t)['kind'] == 'worker' for t in to)
                 or sender['kind'] == 'worker' and to == [CONTROLLER]
             ):
-                raise ValueError('Tree topology requires Controller <-> Worker')
-            if cfg['topology']=='adaptive' and not (
+                raise ValueError('Tree system requires Controller <-> Worker')
+            if cfg['system']=='adaptive' and not (
                 actor=='Controller' and all(self.agent(t)['kind']=='delegate' for t in to)
                 or sender['kind']=='delegate' and to==['Controller']):
                 raise ValueError('Adaptive messages use Controller <-> its delegates')
-            if cfg['topology']=='adaptive' and (
+            if cfg['system']=='adaptive' and (
                 sender.get('delegation_state')=='finished' or
                 any(self.agent(t).get('delegation_state')=='finished' for t in to)):
                 raise ValueError('Delegate scope already returned; read its result or create a new scope')
@@ -373,7 +373,7 @@ class RuntimeStore:
 
     def action_robot(self, actor, requested=None):
         kind = self.agent(actor)['kind']
-        if self.get('config')['topology']=='adaptive':
+        if self.get('config')['system']=='adaptive':
             from roboteam.runtime.tools.delegation import Delegations
             if kind not in ('controller','delegate') or requested not in self.get('robots',[]):
                 raise ValueError('Select a robot controlled by this role')
@@ -426,25 +426,25 @@ class RuntimeStore:
                 notice={'event':'arm_execution_unknown','robot':value['arm'],'call_id':call_id,'reason':reason,
                         'note':'Inspect the original action and robot; this robot is reserved, but independent robots may continue. Never replay the original action.'}
                 self.signal(row['actor'],notice)
-                if self.get('config').get('topology')=='adaptive' and row['actor']!='Controller':self.signal('Controller',notice)
+                if self.get('config').get('system')=='adaptive' and row['actor']!='Controller':self.signal('Controller',notice)
             else:
                 self.update_agent(row['actor'],recovery_required=True)
                 self.put('physics_state','recovery_required');self.put('lifecycle','recovery_required')
             self.event('EXECUTION_OUTCOME_UNCERTAIN','Meta',value)
             return value
 
-    def claim_model_restart(self, actor, engine, maximum):
+    def claim_model_restart(self, actor, harness, maximum):
         """Count one restart of a lost model process; None once the run's allowance is used.
 
         The count belongs to the run, not to a role or host process, so every role,
-        both engines and any later segment share one allowance.
+        both harnesses and any later segment share one allowance.
         """
         with self.transaction():
             count = self.get('model_restarts', 0)
             if count >= maximum:
                 return None
             self.put('model_restarts', count+1)
-            self.event('MODEL_RESTARTED', actor, {'engine': engine, 'restart': count+1, 'maximum': maximum})
+            self.event('MODEL_RESTARTED', actor, {'harness': harness, 'restart': count+1, 'maximum': maximum})
             return count+1
 
     def isolate_stopping_action(self, call_id, reason, diagnostics=None):
@@ -465,7 +465,7 @@ class RuntimeStore:
                     'note':'Original action is still stopping; inspect the measurements and call recover_action. Other robots may continue. Never replay it.'}
             self.signal(row['actor'],notice)
             cfg=self.get('config')
-            if cfg.get('topology')=='adaptive' and row['actor']!='Controller':
+            if cfg.get('system')=='adaptive' and row['actor']!='Controller':
                 self.signal('Controller',notice)
             self.event('ARM_RECOVERY_REQUIRED',row['actor'],value)
             return value
@@ -626,13 +626,13 @@ class RuntimeStore:
             return interrupted
 
     def observe_session(self, actor, status, turn_id, observed_at, source, turn_status=None):
-        engine = self.get('config').get('engine', 'codex')
-        if source not in SESSION_SOURCES.get(engine, ()) or status not in ('idle', 'active', 'notLoaded', 'error', 'needsAttention'):
-            raise ValueError('Use an actual native session status observation for engine ' + str(engine))
+        harness = self.get('config').get('harness', 'codex')
+        if source not in SESSION_SOURCES.get(harness, ()) or status not in ('idle', 'active', 'notLoaded', 'error', 'needsAttention'):
+            raise ValueError('Use an actual native session status observation for harness ' + str(harness))
         with self.transaction():
             self.update_agent(actor, session_status=status, session_turn=turn_id,
                               session_turn_status=turn_status, session_observed_at=observed_at)
-            if self.get('config')['topology']=='adaptive':
+            if self.get('config')['system']=='adaptive':
                 from roboteam.runtime.tools.delegation import Delegations
                 Delegations(self).observe_stopped(actor,status,turn_id,observed_at)
             # A changed turn proves activity resumed, not that a particular business request was accepted.

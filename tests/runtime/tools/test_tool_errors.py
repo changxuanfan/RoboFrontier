@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 from roboteam.runtime.tools.pipeline_client import client_call
 from roboteam.runtime.world.store import RuntimeStore
-from team_harness import load_harness
+from team_settings import load_run_settings
 from roboteam.runtime.tools.tool_errors import CallIdConflict, conflict_error
 
 
@@ -20,7 +20,7 @@ class ToolErrorTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         self.store = RuntimeStore(self.root/'runtime.sqlite')
-        self.store.initialize('run', load_harness(), ['A','B'])
+        self.store.initialize('run', load_run_settings(), ['A','B'])
         self.mode = 'normal'
         self.received = []
         test = self

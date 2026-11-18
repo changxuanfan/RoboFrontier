@@ -12,14 +12,14 @@ from fake_pipeline import FakeWorld, fake_capture
 from sim.test_motion_check import robot_fixture
 from roboteam.sim.robot_control import quat_matrix, matrix_quat, rotation_vector, advance_rotation
 from roboteam.sim.motion_check import RobotGeometry, prepare_check, state_id
-from team_harness import prepare_run
+from team_settings import prepare_run
 from roboteam.runtime.world.service import RuntimeService
-from roboteam.tasks.config import load_harness
+from roboteam.tasks.config import load_run_settings
 from motion import filled, MOVE
 
 
 class ActionContractTests(unittest.TestCase):
-    def setUp(self):self.world=robot_fixture();self.cfg=load_harness()
+    def setUp(self):self.world=robot_fixture();self.cfg=load_run_settings()
 
     def test_half_turn_is_not_zero_error_and_negative_quaternion_is_equivalent(self):
         target=np.diag([-1.,-1.,1.])

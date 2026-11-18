@@ -1,4 +1,4 @@
-"""Build a portable static factory background, independent of task workstations."""
+"""Build the factory hall as a portable static background, independent of task workstations."""
 from __future__ import annotations
 
 import hashlib
@@ -703,7 +703,7 @@ class _Builder:
             for x in np.arange(-W/2+2,W/2,4):self.line(b,[x,y,H-1.46],[x,y,H-.15],.008,'steel','roof')
 
     def workstation_dressing(self):
-        """Factory-only furniture fitted to real solid tabletop footprints."""
+        """Hall-only furniture fitted to real solid tabletop footprints."""
         self.workstation_props=[]
         settings=self.cfg.get('workstation_dressing',{})
         if not settings.get('enabled'):return
@@ -713,11 +713,11 @@ class _Builder:
         catalog_path=ROOT/settings['catalog'];catalog=json.loads(catalog_path.read_text())
         if 'families' in catalog:
             # The release itself: one workstation per released case.
-            def facts(family,case_id):
-                listed=json.loads((ROOT/'benchmark'/family/'catalog.json').read_text())['cases']
+            def facts(task_type,case_id):
+                listed=json.loads((ROOT/'benchmark'/task_type/'catalog.json').read_text())['cases']
                 return next({k:c[k] for k in ('level','arms','dials') if k in c} for c in listed if c['id']==case_id)
-            catalog={'cases':[{'family':family,'id':row['id'],'directory':row['directory'],**facts(family,row['id'])}
-                              for family,entry in catalog['families'].items() for row in entry['policy']]}
+            catalog={'cases':[{'family':task_type,'id':row['id'],'directory':row['directory'],**facts(task_type,row['id'])}
+                              for task_type,entry in catalog['families'].items() for row in entry['policy']]}
         self.dressing_catalog_sha256=_hash(catalog_path)
         plan=placements(catalog,self.cfg['regions'],ROOT)
         self.dressing_plan=plan
@@ -788,7 +788,7 @@ class _Builder:
                     footprint_half_m=[.46,.28],top_m=.67,physical=False,placement='Below verified solid tabletop; not a swept-motion certificate'))
         # Region-corner staging islands stay outside all planned robot/load bays.
         for region in self.cfg['regions']:
-            x0,y0,x1,y1=region['bounds_xy_m'];occupied=[p['planning_bounds_xy_m'] for p in plan if p['family']==region['id']]
+            x0,y0,x1,y1=region['bounds_xy_m'];occupied=[p['planning_bounds_xy_m'] for p in plan if p['task_type']==region['id']]
             for index,(x,y) in enumerate(((x0+.7,y0+.65),(x1-.7,y1-.65))):
                 if any(x+.45>a and x-.45<c and y+.38>b and y-.38<d for a,b,c,d in occupied):continue
                 name='staging_'+region['id']+'_'+str(index);b=self.body(name,[x,y,0],category='floor_storage')
@@ -856,7 +856,7 @@ class _Builder:
 
         for region in self.cfg['regions']:
             x0,y0,x1,y1=region['bounds_xy_m']
-            occupied=[p['planning_bounds_xy_m'] for p in getattr(self,'dressing_plan',[]) if p['family']==region['id']]
+            occupied=[p['planning_bounds_xy_m'] for p in getattr(self,'dressing_plan',[]) if p['task_type']==region['id']]
             from roboteam.sim.hall.labels import region_title,bounds,overlaps
             title,half=region_title(region);occupied.append(bounds(title,half))
             for i,(x,y) in enumerate(((x0+.8,(y0+y1)/2),(x1-.8,(y0+y1)/2),((x0+x1)/2,y0+.8),((x0+x1)/2,y1-.8))):
@@ -913,7 +913,7 @@ class _Builder:
     def service_islands(self):
         """Small rolling inspection/rack stations in checked gaps between cells."""
         for region in self.cfg['regions']:
-            planned=[p['planning_bounds_xy_m']for p in self.dressing_plan if p['family']==region['id']]
+            planned=[p['planning_bounds_xy_m']for p in self.dressing_plan if p['task_type']==region['id']]
             xs=sorted({round((a+c)/2,4)for a,b,c,d in planned});ys=sorted({round((b+d)/2,4)for a,b,c,d in planned})
             candidates=[((a+c)/2,(b+d)/2)for a,c in zip(xs,xs[1:])for b,d in zip(ys,ys[1:])]
             added=0
@@ -1006,7 +1006,7 @@ def build_factory(config_path=DEFAULT_CONFIG, output=None, workstation_catalog=N
         workstation_catalog=Path(workstation_catalog).resolve()
         if not workstation_catalog.is_file():raise ValueError('Missing explicit workstation catalog')
         config.setdefault('workstation_dressing',{})['catalog']=str(workstation_catalog)
-    output=Path(output or ROOT/'outputs/robo-factory/scene').resolve();output.mkdir(parents=True,exist_ok=True)
+    output=Path(output or ROOT/'outputs/factory-hall/scene').resolve();output.mkdir(parents=True,exist_ok=True)
     b=config['building'];W,D=b['width_m'],b['depth_m']
     if min(W,D,b['eave_height_m'])<=0:raise ValueError('Building dimensions must be positive')
     for r in config['regions']:

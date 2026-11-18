@@ -1,4 +1,4 @@
-"""Resolve released family inputs and freeze only their permitted public facts.
+"""Resolve released task type inputs and freeze only their permitted public facts.
 
 The release records which scene and reviewed public projection a policy trial uses.
 """
@@ -20,15 +20,15 @@ def read(path):
 def resolve_case(case_id, root=ROOT):
     root = Path(root)
     release = read(root/RELEASE)
-    matches = [(name, family, c) for name, family in release['families'].items()
-               for c in family['policy'] if c['id'] == case_id]
+    matches = [(name, task_type, c) for name, task_type in release['families'].items()
+               for c in task_type['policy'] if c['id'] == case_id]
     if len(matches) != 1:
-        raise ValueError('Case must identify exactly one released family input')
-    name, family, case = matches[0]
+        raise ValueError('Case must identify exactly one released task type input')
+    name, task_type, case = matches[0]
     for path, checksum in case['source_files'].items():
         if sha(root/case['directory']/path) != checksum:
             raise ValueError('Released scene metadata changed: '+case_id+'/'+path)
-    return name, family, case
+    return name, task_type, case
 
 
 # New Relay runs count a timber as complete only after a qualified airborne handover.
@@ -78,7 +78,7 @@ def dial_code(case_id, root=ROOT):
 
 
 def policy_task(case_id, root=ROOT, wall_limit_s=86400):
-    name, family, case = resolve_case(case_id, root=root)
+    name, task_type, case = resolve_case(case_id, root=root)
     task = read(Path(root)/case['directory']/'task.json')
     task['execution_readiness'] = READINESS
     task['run_protocol'] = protocol_for(case, sha(Path(root)/RELEASE), wall_limit_s)
@@ -110,7 +110,7 @@ def validate_policy_task(task, root=ROOT):
 
 
 def freeze_public(task, directory, public, root=ROOT):
-    """Give a run its case's public task and family materials, as the release wrote them.
+    """Give a run its case's public task and task materials, as the release wrote them.
 
     `public` is replaced by the case's public/task.json, keeping only this run's own
     protocol and image profile (scripts/release/build_release.py public). The materials go to public/inputs/family/,
@@ -118,34 +118,34 @@ def freeze_public(task, directory, public, root=ROOT):
     if task.get('execution_readiness') != READINESS:
         return None
     root, directory = Path(root), Path(directory)
-    family_name, _, case = resolve_case(task['id'], root=root)
+    task_type_name, _, case = resolve_case(task['id'], root=root)
     projection = case['public_projection']
     if sha(root/projection['path']) != projection['sha256']:
         raise ValueError('Released public task changed')
     own = {key: public[key] for key in ('observation_image',) if key in public}
     public.clear(); public.update(read(root/projection['path'])); public.update(own)
-    family_dir = directory/'public/inputs/family'
-    family_dir.mkdir()
+    task_type_dir = directory/'public/inputs/family'
+    task_type_dir.mkdir()
     hashes = {}
     sources = {name: root/source['path'] for name, source in case['public_files'].items()}
     for name, source in case['public_files'].items():
         if Path(name).name != name or sha(root/source['path']) != source['sha256']:
-            raise ValueError('Invalid/changed public family file: '+name)
-    sources['skill.md'] = root/'prompts/guides'/(family_name+'.md')
+            raise ValueError('Invalid/changed public task type file: '+name)
+    sources['skill.md'] = root/'prompts/guides'/(task_type_name+'.md')
     for name, source in sorted(sources.items()):
-        shutil.copyfile(source, family_dir/name)
+        shutil.copyfile(source, task_type_dir/name)
         hashes['public/inputs/family/'+name] = sha(source)
-    # The scene's own copy of the Mosaic target image is superseded by the family copy.
+    # The scene's own copy of the Mosaic target image is superseded by the task type copy.
     target_image = directory/'public/inputs/target-pattern.png'
-    if target_image.is_file() and (family_dir/target_image.name).is_file():
+    if target_image.is_file() and (task_type_dir/target_image.name).is_file():
         target_image.unlink()
-    private_release = directory/'private/inputs/family-release.json'
+    private_release = directory/'private/inputs/release.json'
     shutil.copyfile(root/RELEASE, private_release)
-    return dict(release_sha256=sha(private_release), family=family_name, case_id=task['id'],
+    return dict(release_sha256=sha(private_release), task_type=task_type_name, case_id=task['id'],
                 public_files=hashes, public_projection=projection)
 
 
-def prepare(case_id, directory, harness=None, private_puzzle_path=None, wall_limit_s=86400):
+def prepare(case_id, directory, run_settings=None, private_puzzle_path=None, wall_limit_s=86400):
     """Prepare only; simulator, role sessions and model inference stay stopped."""
     import tempfile
     from roboteam.runtime.run.setup import prepare_run
@@ -153,13 +153,13 @@ def prepare(case_id, directory, harness=None, private_puzzle_path=None, wall_lim
     with tempfile.TemporaryDirectory(prefix='roboteam-policy-') as temporary:
         path = Path(temporary)/'task.json'
         path.write_text(json.dumps(task, ensure_ascii=False)+'\n')
-        return prepare_run(directory, path, harness, private_puzzle_path)
+        return prepare_run(directory, path, run_settings, private_puzzle_path)
 
 
 def validate_frozen_policy(task, directory):
     """START checks the actual frozen release and scene, including task metadata."""
     directory = Path(directory)
-    release = directory/'private/inputs/family-release.json'
+    release = directory/'private/inputs/release.json'
     protocol = task['run_protocol']
     if sha(release) != protocol['release_sha256']:
         raise ValueError('Frozen policy release differs')

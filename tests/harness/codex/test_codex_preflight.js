@@ -29,7 +29,7 @@ async function run(opts,mode={},provider='sample') {
   const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-preflight-'));
   try {
     fs.writeFileSync(path.join(folder,'launch.json'),JSON.stringify({args:[],model:'sample',provider,effort:'high',context_window:272000,auto_compact_token_limit:245000,
-      ...(opts?.jobScoped?{profile:{runner_backend:'slurm-managed-v1'},tool_probe:{run_dir:path.join(folder,'bound-run')}}:{})}));
+      ...(opts?.jobScoped?{model_entry:{runner_backend:'slurm-managed-v1'},tool_probe:{run_dir:path.join(folder,'bound-run')}}:{})}));
     fs.writeFileSync(path.join(folder,'probe.json'),JSON.stringify({version:'test',left:'red',right:'blue',
       colors:['blue','green','red','yellow'],prompt:'Name the left and right colors.'}));
     return await preflight(folder,fakeRpc(opts),mode);

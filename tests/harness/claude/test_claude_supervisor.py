@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from roboteam.harness.claude.supervisor import CentralizedSupervisor
+from roboteam.harness.claude.supervisor import RunSupervisor
 
 
 class Store:
@@ -101,7 +101,7 @@ class SupervisorTests(unittest.TestCase):
         policy.now = lambda: self.now
         backstop = patch('roboteam.harness.claude.supervisor.ACTIVE_BACKSTOP_S', 0.)
         backstop.start(); self.addCleanup(backstop.stop)
-        return CentralizedSupervisor(policy, lambda: True, clock=lambda: self.now, wall_clock=lambda: self.now, sleep=tick,
+        return RunSupervisor(policy, lambda: True, clock=lambda: self.now, wall_clock=lambda: self.now, sleep=tick,
                                      poll_s=1, startup_timeout_s=3, wall_limit_s=4, **kwargs)
 
     def test_the_worlds_wall_limit_pause_is_a_normal_end_without_a_reply_drain(self):
@@ -186,7 +186,7 @@ class SupervisorTests(unittest.TestCase):
 
     def test_owner_loss_and_stop_before_binding_still_try_seal(self):
         p = Policy()
-        supervisor = CentralizedSupervisor(p, lambda: False)
+        supervisor = RunSupervisor(p, lambda: False)
         with patch('roboteam.runtime.world.seal.seal_run', return_value={'sealed': True}) as seal:
             result = supervisor.run()
         self.assertEqual(result['reason'], 'owner_unavailable')

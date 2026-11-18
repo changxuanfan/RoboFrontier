@@ -10,9 +10,9 @@ untracked file (here `site.toml`) and edit it.
 - A pod with a persistent volume (`/workspace`) and outbound access to GitHub, PyPI, npm and the
   model API.
 - Linux 6.7 or newer (Landlock ABI 4) with `libseccomp`. A pod forbids user namespaces, so
-  Claude Code's bubblewrap sandbox cannot run and both engines use Landlock + seccomp
+  Claude Code's bubblewrap sandbox cannot run and both harnesses use Landlock + seccomp
   (`landlock-v1`).
-- Python 3.12, [uv](https://docs.astral.sh/uv/) (with `uvx`), Node.js, `ffmpeg`, and the engine
+- Python 3.12, [uv](https://docs.astral.sh/uv/) (with `uvx`), Node.js, `ffmpeg`, and the harness
   CLI at its pinned version (`roboteam/runtime/run/versions.py`: Claude Code 2.1.316, Codex
   0.165.0).
 - Put the Node.js and CLI folders on `PATH` in every shell that prepares, runs or checks (on the
@@ -38,8 +38,8 @@ uv sync --locked
 cp .env.example .env && chmod 600 .env
 ```
 
-Fill in only your profile's variable (`CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`,
-`OPENAI_API_KEY`, ...; see `models.json`). For a Codex subscription profile log in once
+Fill in only your model's variable (`CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`, ...; see `models.json`). For a Codex subscription model log in once
 with `CODEX_HOME=~/.roboteam/codex-home codex login` (the example uses
 `runtime.codex_home_scope = "shared"`). Keep credentials in `.env`, not exported: runs load it
 themselves and the background service is started without them.
@@ -71,7 +71,7 @@ export ROBOTEAM_POLICY_ENV_BASE=/workspace/roboteam-env
   --scratch /workspace/roboteam-runs
 ```
 
-`prepare` refuses without a checked build. The check passes for both engines on a pod (48 CPUs,
+`prepare` refuses without a checked build. The check passes for both harnesses on a pod (48 CPUs,
 kernel 6.8, Landlock ABI 4), with process pools as a recorded known limit (below). Details:
 [policy environment](policy-environment.md).
 

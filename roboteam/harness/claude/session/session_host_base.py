@@ -1,4 +1,4 @@
-"""Shared role lifecycle, accounting and conservative recovery for native CLI engines."""
+"""Shared role lifecycle, accounting and conservative recovery for native CLI harnesses."""
 import json
 import math
 from decimal import Decimal, InvalidOperation
@@ -14,14 +14,14 @@ from roboteam.runtime.run import layout as run_layout
 
 class SessionHost:
     """Own one policy role's CLI turns; lifecycle events are never task results."""
-    def __init__(self, run_dir, actor, profile, base_env, *, python=sys.executable,
+    def __init__(self, run_dir, actor, model_entry, base_env, *, python=sys.executable,
                  binary='claude', turn_timeout=None, max_budget_usd=None, total_budget_usd=None,
                  budget_ledger=None, runner=None, _validated_delegate=False,
-                 max_capacity_retries=MAX_CAPACITY_RETRIES, engine, mcp, session_id):
-        self.engine = engine
+                 max_capacity_retries=MAX_CAPACITY_RETRIES, harness, mcp, session_id):
+        self.harness = harness
         self.run = Path(run_dir).resolve()
         self.actor = actor
-        self.profile = dict(profile)
+        self.model_entry = dict(model_entry)
         self.base_env = dict(base_env)
         self.binary = binary
         self.turn_timeout = turn_timeout
@@ -41,7 +41,7 @@ class SessionHost:
         self.unreported_cost_count = 0
         self.budget_status = 'tracking' if total_budget is not None or budget_ledger is not None else 'not_set'
         if runner is None:
-            raise ValueError('A native engine runner is required')
+            raise ValueError('A native harness runner is required')
         self.runner = runner
         self.mcp = mcp
         self.session_id = session_id
@@ -115,7 +115,7 @@ class SessionHost:
         fork = {'fork_from': self.fork_from, 'gate': self.gate} if previous == 'new' and self.fork_from else {}
         try:
             record = self.runner(
-                self.profile, self.profile['model'], self.profile['effort'], self.mcp,
+                self.model_entry, self.model_entry['model'], self.model_entry['effort'], self.mcp,
                 prompt, self.run, self.base_env,
                 session_id=self.session_id if previous == 'new' else None,
                 resume=self.session_id if previous == 'idle' else None,
@@ -203,7 +203,7 @@ class SessionHost:
                           'source': 'cli_reported_estimate_not_provider_bill'}
             self.last_result = record
             try:
-                self.write_summary(run_layout.path(self.run, 'engine_turns') / f'{self.actor}-{turn_id}-summary.json',
+                self.write_summary(run_layout.path(self.run, 'harness_turns') / f'{self.actor}-{turn_id}-summary.json',
                            {'actor': self.actor, 'session_id': self.session_id, 'turn_id': turn_id,
                             'status': state, 'record': record, 'cost_accounting': accounting})
             except Exception:

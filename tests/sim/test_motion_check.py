@@ -11,7 +11,7 @@ import numpy as np
 
 from roboteam.sim.motion_check import RobotGeometry, prepare_check, robot_state
 from roboteam.runtime.world.pipeline import Arm, World
-from roboteam.tasks.config import ROOT, load_harness
+from roboteam.tasks.config import ROOT, load_run_settings
 from roboteam.sim.render.image import observation_profile
 from motion import filled, MOVE
 
@@ -46,7 +46,7 @@ def robot_fixture(separation=.65,arm_count=2,base_offset=0.):
     ET.SubElement(obj,'geom',type='sphere',size='.03',mass='.1')
     model=mujoco.MjModel.from_xml_string(ET.tostring(root,encoding='unicode'))
     w=World.__new__(World);w.model=model;w.data=mujoco.MjData(model)
-    w.observation_image=observation_profile(load_harness())
+    w.observation_image=observation_profile(load_run_settings())
     w.arms={n:Arm(model,w.data,n,y) for n,y in stations.items()}
     mujoco.mj_kinematics(model,w.data)
     return w
@@ -58,7 +58,7 @@ class MotionCheckTests(unittest.TestCase):
         cls.world=robot_fixture()
 
     def test_description_is_robot_only_and_has_whole_link_geometry(self):
-        result=RobotGeometry(self.world.model,self.world.arms).describe(self.world,load_harness())
+        result=RobotGeometry(self.world.model,self.world.arms).describe(self.world,load_run_settings())
         self.assertEqual(set(result['robots']),{'A','B'})
         self.assertGreater(len(result['robots']['A']['collision_geoms']),10)
         self.assertEqual(len(result['robots']['A']['ik_joint_limits_rad']),7)
@@ -84,7 +84,7 @@ class MotionCheckTests(unittest.TestCase):
 
     def test_ready_facts_follow_model_layout_and_actual_command_bounds(self):
         w=robot_fixture(arm_count=5,base_offset=-1.3)
-        cfg=load_harness();cfg.update(workspace_x_m=[.28,.60],workspace_y_radius_m=.31,workspace_z_m=[.45,.85])
+        cfg=load_run_settings();cfg.update(workspace_x_m=[.28,.60],workspace_y_radius_m=.31,workspace_z_m=[.45,.85])
         facts=w.robot_facts(cfg)
         self.assertEqual(set(facts['robots']),set('ABCDE'))
         for i,(name,arm) in enumerate(w.arms.items()):
@@ -106,15 +106,15 @@ class MotionCheckTests(unittest.TestCase):
                         w.validate_action(name,'move',filled('move',{'target_m':outside.tolist()}),cfg)
 
     def test_ready_facts_need_no_live_state_or_task_objects(self):
-        w=self.world;baseline=w.robot_facts(load_harness())
+        w=self.world;baseline=w.robot_facts(load_run_settings())
         shadow=copy.copy(w);shadow.data=object();shadow.task=object()
         shadow.arms={n:copy.copy(a) for n,a in w.arms.items()}
         for arm in shadow.arms.values():arm.data=object()
-        self.assertEqual(shadow.robot_facts(load_harness()),baseline)
+        self.assertEqual(shadow.robot_facts(load_run_settings()),baseline)
         self.assertNotIn('private_object',json.dumps(baseline))
 
     def test_nominal_parallel_motion_is_read_only_and_ignores_object_truth(self):
-        w=self.world;cfg=load_harness()
+        w=self.world;cfg=load_run_settings()
         params={'motions':[{**MOVE,'actor':a,'delta_m':[.01,0,0]} for a in w.arms],'horizon_s':.4}
         q=w.data.qpos.copy();ctrl=w.data.ctrl.copy();before=robot_state(w)
         # If any physics integration is accidentally added, fail this offline test.
@@ -139,13 +139,13 @@ class MotionCheckTests(unittest.TestCase):
         w.arms['B']=Arm(w.model,w.data,'B',.3)
         mujoco.mj_kinematics(w.model,w.data)
         self.assertGreater(np.linalg.norm(w.data.site_xpos[w.arms['A'].site]-w.data.site_xpos[w.arms['B'].site]),.29)
-        result=next(prepare_check(w,{'motions':[{**MOVE,'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.2},load_harness()))
+        result=next(prepare_check(w,{'motions':[{**MOVE,'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.2},load_run_settings()))
         self.assertEqual(result['assessment'],'conflict')
         self.assertLess(result['closest']['distance_m'],0)
         self.assertEqual(result['closest']['time_after_snapshot_s'],0)
 
     def test_delay_and_partial_horizon_are_explicit(self):
-        result=[r for r in prepare_check(self.world,{'motions':[{**MOVE,'actor':'A','delta_m':[.1,0,0],'start_after_s':.11}],'horizon_s':.3},load_harness()) if r is not None][-1]
+        result=[r for r in prepare_check(self.world,{'motions':[{**MOVE,'actor':'A','delta_m':[.1,0,0],'start_after_s':.11}],'horizon_s':.3},load_run_settings()) if r is not None][-1]
         self.assertEqual(result['nominal_start_after_s']['A'],.12)
         self.assertIn('A',result['unfinished_at_horizon'])
         self.assertIn('between-sample motion',result['not_checked'])
@@ -156,17 +156,17 @@ class MotionCheckTests(unittest.TestCase):
                        {'motions':[{'actor':'missing','delta_m':[0,0,0]}]},
                        {'motions':p['motions']*2}):
             with self.subTest(change=change),self.assertRaises((ValueError,KeyError)):
-                prepare_check(self.world,{**p,**change},load_harness())
+                prepare_check(self.world,{**p,**change},load_run_settings())
         self.world.arms['A'].job='busy'
         try:
             with self.assertRaisesRegex(ValueError,'execution'):
-                prepare_check(self.world,p,load_harness())
+                prepare_check(self.world,p,load_run_settings())
         finally:self.world.arms['A'].job=None
 
     def test_changing_gripper_returns_unknown(self):
         a=self.world.arms['B'];a.job='grip';a.job_op='gripper'
         try:
-            result=next(prepare_check(self.world,{'motions':[{**MOVE,'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.4},load_harness()))
+            result=next(prepare_check(self.world,{'motions':[{**MOVE,'actor':'A','delta_m':[.01,0,0]}],'horizon_s':.4},load_run_settings()))
             self.assertEqual(result['assessment'],'unknown')
         finally:a.job=None
 

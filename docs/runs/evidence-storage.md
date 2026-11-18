@@ -1,6 +1,6 @@
 # Experiment evidence: collection, compression and restore
 
-Collection and archiving work the same for both engines. They make no model calls, advance no
+Collection and archiving work the same for both harnesses. They make no model calls, advance no
 physics and change no score, and they never delete the original batch.
 
 | Form | Purpose | Written during a run? |
@@ -34,12 +34,12 @@ it exits 1 after publishing a collection that needs review.
 - Only registered role, delegation and snapshot sessions are collected, not the whole native
   home; snapshot sessions are listed in `jobs[].snapshot_sessions`. A missing required session
   makes the collection incomplete.
-- Claude collections include each run's `private/engine/config/projects/**/*.jsonl`, auxiliary
-  transcripts, referenced tool results and `private/engine/turns/*.jsonl`, plus a `sessions/` index.
+- Claude collections include each run's `private/harness/config/projects/**/*.jsonl`, auxiliary
+  transcripts, referenced tool results and `private/harness/turns/*.jsonl`, plus a `sessions/` index.
   No other Claude configuration (credentials included) is copied.
 - Unresolved physical requests, missing motion, corrupt chunks or changed source assets become
   explicit issues in `jobs[].issues`.
-- `collection.json` (`roboteam.policy-collection.v1`) records file hashes, models, topology
+- `collection.json` (`roboteam.policy-collection.v1`) records file hashes, models, system
   and session/role associations. `complete: true` means the collection checks passed, not that
   any task succeeded.
 - An existing destination is refused; live writers, unsafe paths or changed files fail
@@ -87,13 +87,13 @@ Ship a dataset with the source revision that made it, so the matching restore to
 ```text
 runs/restored/MY_BATCH/
   collection.json                     # Models, roles, sessions and file hashes
-  sessions/<profile>/<case>/          # Associated native session JSONL
-  batch/<profile>/<case>/
+  sessions/<model>/<case>/          # Associated native session JSONL
+  batch/<model>/<case>/
     public/observations/              # JPEG observations
     private/
       inputs/                         # Frozen scene, assets, source and settings
       evidence/                       # Claude CLI turn events, when present
-      engine/                         # Engine config and transcript copies
+      harness/                         # Harness config and transcript copies
       state/                          # Runtime database and related evidence
       outputs/
         motion/                       # stream.json, chunks, events and source/
@@ -133,7 +133,7 @@ removing any source.
 
 ## Storage settings of policy runs
 
-`roboteam/runtime/run/defaults.json` freezes these into each run's `harness.json`:
+`roboteam/runtime/run/defaults.json` freezes these into each run's `run.json`:
 
 - `motion_hz: 30`: 30 motion states per simulated second. Colour changes are written on the
   physics clock to `motion/events.jsonl`.
@@ -146,16 +146,16 @@ removing any source.
   On 600 simulated seconds of moving arms this is about 2.6 MB per simulated hour for
   `transport-a12-d3` and 20 MB for `mosaic-a08-12x24-d3`.
 
-Other values the harness accepts: `events-1s` and `events-60s` (snapshots every 1 or 60 s; with
+Other values the run settings accept: `events-1s` and `events-60s` (snapshots every 1 or 60 s; with
 `events-60s` a scene that records motion leaves poses out of all but the last snapshot, and
 `roboteam.analysis.motion_query.object_poses` reads them from the recording), and `full`
 (a complete snapshot every 0.1 s).
 
 ## Session transcripts
 
-A Claude run keeps its transcripts in `private/engine/config/projects/`. Codex writes them into
+A Claude run keeps its transcripts in `private/harness/config/projects/`. Codex writes them into
 its home; at the end of every segment the Codex host copies each thread of the run (roles,
-delegates and snapshot anchors) into `private/engine/transcripts/`, verified by SHA-256 and
+delegates and snapshot anchors) into `private/harness/transcripts/`, verified by SHA-256 and
 listed in `index.json`. The host never deletes the home originals, since a continued segment
 resumes those threads. Reports and collection read the run's copies first.
 

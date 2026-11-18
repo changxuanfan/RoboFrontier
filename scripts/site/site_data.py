@@ -1,6 +1,6 @@
 """Generate the project page's data files from the release and encoded media.
 
-tasks:  site/data/tasks.json, the 36 released cases with their public facts (family, level,
+tasks:  site/data/tasks.json, the 36 released cases with their public facts (task type, level,
         arms, workload) and the one-line level differences, from the release and each case's
         public policy task, with the note on each Oracle video from site/data/oracle-videos.json.
 media:  site/data/media.json, every video set (Oracle, then one per model) with its base URL
@@ -26,7 +26,7 @@ PROJECT_PAGE = 'https://changxuanfan.github.io/RoboTeam/'
 SITE = ROOT / 'site/data'
 ORACLE_VIDEOS = ROOT / 'site/data/oracle-videos.json'
 
-FAMILIES = {
+TASK_TYPES = {
     'transport': {'name': 'Transport', 'verb': 'Deliver ordered items to their boards, by handover or staging',
                   'unit': 'targets', 'levels': ['Release on the board', 'Insert blades into fixed blind slots',
                                                 'Insert into a spring-mounted moving board']},
@@ -50,26 +50,26 @@ def oracle_videos():
 
 
 def workload(case):
-    """The family's unit of work for one case, from its released identity."""
-    family, arms = case['family'], case['arm_count']
-    if family == 'transport': return 3 * arms
-    if family == 'mosaic':
+    """The task type's unit of work for one case, from its released identity."""
+    task_type, arms = case['family'], case['arm_count']
+    if task_type == 'transport': return 3 * arms
+    if task_type == 'mosaic':
         rows, cols = map(int, re.search(r'-(\d+)x(\d+)-', case['id']).groups())
         return rows * cols
-    if family == 'relay': return {8: 2, 12: 3, 16: 4}[arms]
+    if task_type == 'relay': return {8: 2, 12: 3, 16: 4}[arms]
     return len(case['dials'])
 
 
 def tasks():
     import tempfile
     from roboteam.tasks.config import public_task
-    from roboteam.tasks.families import RELEASE, freeze_public, policy_task
+    from roboteam.tasks.task_types import RELEASE, freeze_public, policy_task
     payload = (ROOT / RELEASE).read_bytes()
     release = json.loads(payload)
     references = oracle_videos()
     rows = []
-    for family in FAMILIES:
-        for record in release['families'][family]['policy']:
+    for task_type in TASK_TYPES:
+        for record in release['families'][task_type]['policy']:
             # The same rule overlay a new policy run receives.
             task = policy_task(record['id'])
             public = public_task(task)
@@ -79,14 +79,14 @@ def tasks():
                 freeze_public(task, Path(temporary), public)
             case = {'id': public['id'], 'family': public['family'], 'level': public['level'],
                     'arm_count': len(task['arms']), 'dials': public.get('dials')}
-            rows.append({'id': case['id'], 'family': family, 'level': case['level'], 'arms': case['arm_count'],
-                         'workload': workload(case), 'unit': FAMILIES[family]['unit'],
-                         'level_note': FAMILIES[family]['levels'][case['level'] - 1],
+            rows.append({'id': case['id'], 'family': task_type, 'level': case['level'], 'arms': case['arm_count'],
+                         'workload': workload(case), 'unit': TASK_TYPES[task_type]['unit'],
+                         'level_note': TASK_TYPES[task_type]['levels'][case['level'] - 1],
                          'objective': public['objective'], 'rules': public['rules'],
                          'oracle': references[case['id']]})
-    rows.sort(key=lambda r: (list(FAMILIES).index(r['family']), r['arms'], r['workload'], r['level']))
+    rows.sort(key=lambda r: (list(TASK_TYPES).index(r['family']), r['arms'], r['workload'], r['level']))
     document = {'schema': 'roboteam.site-tasks.v1', 'release_sha256': hashlib.sha256(payload).hexdigest(),
-                'families': FAMILIES, 'tasks': rows}
+                'families': TASK_TYPES, 'tasks': rows}
     return write(SITE / 'tasks.json', document)
 
 
@@ -103,19 +103,19 @@ def media(specs, film=None):
     document = {'schema': 'roboteam.site-media-index.v1', 'sets': sets}
     if film:
         document['film'] = {'video': film[0], 'poster': film[1],
-                            'note': 'A tour of Robo World: one moment from each zone, then every family and scale; 3 min 41 s, 1080p. Oracle reference runs, not model results.'}
+                            'note': 'A tour of the factory hall: one moment from each zone, then every task type and scale; 3 min 41 s, 1080p. Oracle reference runs, not model results.'}
     return write(SITE / 'media.json', document)
 
 
 def readme_gallery(page=PROJECT_PAGE, readme=ROOT / 'README.md'):
-    """Fill the README's gallery block: per family a 3 x 3 table of task thumbnails."""
+    """Fill the README's gallery block: per task type a 3 x 3 table of task thumbnails."""
     data = json.loads((SITE / 'tasks.json').read_text())
     blocks = []
-    for family, info in data['families'].items():
-        rows = [t for t in data['tasks'] if t['family'] == family]
-        key = (lambda t: t['workload']) if family == 'dial' else (lambda t: t['arms'])
+    for task_type, info in data['families'].items():
+        rows = [t for t in data['tasks'] if t['family'] == task_type]
+        key = (lambda t: t['workload']) if task_type == 'dial' else (lambda t: t['arms'])
         scales = sorted({key(t) for t in rows})
-        head = ''.join(f'<th>{s} {"dials" if family == "dial" else "arms"}</th>' for s in scales)
+        head = ''.join(f'<th>{s} {"dials" if task_type == "dial" else "arms"}</th>' for s in scales)
         body = []
         for level in (1, 2, 3):
             cells = []

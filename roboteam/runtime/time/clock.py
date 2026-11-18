@@ -18,7 +18,7 @@ PERSIST_S=1.
 
 
 def wall_backstop_s(run_protocol):
-    """The run's frozen wall backstop (task_families.WALL_BACKSTOP_S), or None."""
+    """The run's frozen wall backstop (task_types.WALL_BACKSTOP_S), or None."""
     value=run_protocol.get('wall_backstop_s')
     if value is None:return None
     if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or value<=0:

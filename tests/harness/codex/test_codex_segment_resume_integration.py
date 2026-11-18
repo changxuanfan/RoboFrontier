@@ -24,7 +24,7 @@ from roboteam.runtime.run.layout import path as run_path
 from roboteam.runtime.run.segments import try_continue
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.tasks.scene import camera_names
-from roboteam.tasks.families import ROOT, prepare
+from roboteam.tasks.task_types import ROOT, prepare
 from roboteam.harness.codex.launch import hidden_skills, launch_config
 from harness.codex.test_codex_policy_permissions import STUB
 from runtime.run.test_run_segments_integration import wait_until
@@ -81,12 +81,12 @@ class CodexSegmentResumeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             t = Path(tmp).resolve(); home = t / 'home'; home.mkdir(); (t / 'codex-home').mkdir()
             requests = []
-            # A centralized run: one Controller thread and no delegates.
-            harness = json.loads((ROOT / 'roboteam/runtime/run/defaults.json').read_text())
-            harness.update(engine='codex', topology='single-agent', model=STUB['model'], effort=STUB['effort'],
+            # A single-agent run: one Controller thread and no delegates.
+            run_settings = json.loads((ROOT / 'roboteam/runtime/run/defaults.json').read_text())
+            run_settings.update(harness='codex', system='single-agent', model=STUB['model'], effort=STUB['effort'],
                            record_realtime_video=False)
-            (t / 'harness.json').write_text(json.dumps(harness))
-            run = prepare(CASE, t / 'batch/stub' / CASE, t / 'harness.json', wall_limit_s=900).resolve()
+            (t / 'run.json').write_text(json.dumps(run_settings))
+            run = prepare(CASE, t / 'batch/stub' / CASE, t / 'run.json', wall_limit_s=900).resolve()
             task = json.loads((run / 'private/inputs/task.json').read_text())
             arm, camera = sorted(task['arms'])[0], camera_names(task)[0]
             steps = {BOOTSTRAP: [{'op': 'observe', 'data': {'cameras': [camera]}},

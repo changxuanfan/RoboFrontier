@@ -94,7 +94,7 @@ class CredentialCustodyTests(unittest.TestCase):
                 with BorrowedAccess(self.store,self.root/'borrower'):pass
             self.assertFalse((self.root/'borrower').exists())
 
-    def test_access_only_engine_cannot_write_its_own_refresh_cache(self):
+    def test_access_only_harness_cannot_write_its_own_refresh_cache(self):
         private_json(self.store/'auth.json',self.access_auth())
         with CredentialLease(self.store,self.root/'owner'):
             with self.assertRaisesRegex(CredentialError,'unexpectedly wrote'):

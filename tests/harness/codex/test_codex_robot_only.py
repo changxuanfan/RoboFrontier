@@ -70,7 +70,7 @@ async function turn(id,scenario){
 '''
 
 
-def offline_profile(**extra):
+def offline_model_entry(**extra):
     return dict(model='offline-robot-only', provider='offline_protocol', effort='high', vision=True,
                 context_window=300000, auto_compact_token_limit=267000, use_cached_model_metadata=False,
                 base_url='http://127.0.0.1:1', env_key='ROBOTEAM_OFFLINE_STUB_TOKEN', **extra)
@@ -93,7 +93,7 @@ class LaunchTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_robot_only_switches_codex_tools_off_without_the_tool_worker(self):
-        launch = launch_config(offline_profile(tool_mode='robot_only'), self.folder)
+        launch = launch_config(offline_model_entry(tools='robot_only'), self.folder)
         values = overrides(launch)
         for flag in OFF:
             self.assertIs(values['features.' + flag], False, flag)
@@ -104,25 +104,25 @@ class LaunchTests(unittest.TestCase):
         self.assertEqual(model['multi_agent_version'], 'disabled')
         self.assertTrue(model['node_repl_disabled'])
         self.assertEqual(model['experimental_supported_tools'], [])
-        self.assertEqual((launch['tool_backend'], launch['tool_mode']), ('native', 'robot_only'))
+        self.assertEqual((launch['tool_backend'], launch['tools']), ('native', 'robot_only'))
         self.assertIsNone(launch['tool_backend_sha256'])
 
     def test_a_full_native_launch_is_what_it_was(self):
-        launch = launch_config(offline_profile(), self.folder)
+        launch = launch_config(offline_model_entry(), self.folder)
         values = overrides(launch)
-        self.assertNotIn('tool_mode', launch)
+        self.assertNotIn('tools', launch)
         self.assertNotIn('features.shell_tool', values)
         self.assertNotIn('features.view_image', values)
         self.assertEqual(json.loads((self.folder/'models.json').read_text())['models'][0]['apply_patch_tool_type'], 'freeform')
-        explicit = launch_config(offline_profile(tool_mode='full'), self.folder)
+        explicit = launch_config(offline_model_entry(tools='full'), self.folder)
         self.assertEqual(explicit['args'], launch['args'])
-        self.assertNotIn('tool_mode', explicit)
+        self.assertNotIn('tools', explicit)
 
     def test_robot_only_with_the_tool_worker_is_refused(self):
         with self.assertRaises(ValueError):
-            launch_config(offline_profile(tool_mode='robot_only', tool_backend='landlock-v1'), self.folder)
+            launch_config(offline_model_entry(tools='robot_only', tool_backend='landlock-v1'), self.folder)
         with self.assertRaises(ValueError):
-            launch_config(offline_profile(tool_mode='no_shell'), self.folder)
+            launch_config(offline_model_entry(tools='no_shell'), self.folder)
 
 
 @unittest.skipUnless(shutil.which('codex') and shutil.which('node'), 'Codex CLI or node is not installed')
@@ -179,9 +179,9 @@ class RealCliTests(unittest.TestCase):
             threading.Thread(target=server.serve_forever, daemon=True).start()
             previous = os.environ.get('CODEX_HOME'); os.environ['CODEX_HOME'] = str(home)
             try:
-                profile = offline_profile(tool_mode='robot_only')
-                profile['base_url'] = 'http://127.0.0.1:%d' % server.server_port
-                launch = launch_config(profile, output)
+                model_entry = offline_model_entry(tools='robot_only')
+                model_entry['base_url'] = 'http://127.0.0.1:%d' % server.server_port
+                launch = launch_config(model_entry, output)
                 (output/'launch.json').write_text(json.dumps(launch))
                 scenarios = ['robot', *NATIVE, 'policy_exec', 'policy_image']
                 (output/'scenarios.json').write_text(json.dumps(scenarios))

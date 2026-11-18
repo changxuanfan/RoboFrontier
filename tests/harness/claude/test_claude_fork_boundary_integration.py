@@ -101,11 +101,11 @@ class ForkBoundaryTests(unittest.TestCase):
                 connection = run/'private/state/connections/Controller.json'; connection.parent.mkdir(parents=True)
                 connection.write_text(json.dumps({'run_id':'run','actor':'Controller','schema_version':3,
                     'url':f'http://127.0.0.1:{world.server_port}','token':'fake'}))
-                profile = {'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
+                model_entry = {'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
                            'base_url':f'http://127.0.0.1:{model.server_port}'}
                 env = {'PATH':os.environ.get('PATH',''),'FAKE_KEY':'fake'}
-                config = run/'private/engine/config'
-                host = ClaudeSessionHost(run, 'Controller', profile, env, turn_timeout=90)
+                config = run/'private/harness/config'
+                host = ClaudeSessionHost(run, 'Controller', model_entry, env, turn_timeout=90)
                 host.send('Call robot observe tool.')
                 self.assertTrue(entered.wait(30), 'Parent did not reach the blocked MCP call')
                 # MCP delivery can precede the transcript flush; fork_setup waits the same way.
@@ -120,7 +120,7 @@ class ForkBoundaryTests(unittest.TestCase):
                 def fork(prompt, gate):
                     child = str(uuid.uuid4()); out = {}
                     worker = threading.Thread(target=lambda: out.update(run_turn(
-                        profile, profile['model'], profile['effort'], host.mcp, prompt, run, env, session_id=child,
+                        model_entry, model_entry['model'], model_entry['effort'], host.mcp, prompt, run, env, session_id=child,
                         fork_from=host.session_id, gate=gate, timeout=60, events_name=child+'.jsonl')))
                     worker.start()
                     return child, out, worker

@@ -41,7 +41,7 @@ class Delegations:
 
     def create(self, actor, key, scopes):
         with self.s.transaction():
-            if self.s.get('config')['topology'] != 'adaptive' or actor != 'Controller':
+            if self.s.get('config')['system'] != 'adaptive' or actor != 'Controller':
                 raise ValueError('Only adaptive Controller can delegate')
             if self.s.get('lifecycle') != 'running' or self.s.get('physics_state') != 'running' or self.s.get('dispatch_paused',False):
                 raise ValueError('Delegation requires a running unpaused world')

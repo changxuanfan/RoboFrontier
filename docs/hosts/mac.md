@@ -9,7 +9,7 @@ site TOML: copy it to an untracked file (here `site.toml`) and edit it.
 - macOS on Apple silicon, with the lid kept open (see [Limits](#limits)).
 - Python 3.12, [uv](https://docs.astral.sh/uv/) (its `uvx` builds the policy environment),
   Node.js and `ffmpeg`.
-- The engine CLI at its pinned version, first on `PATH`: Claude Code 2.1.316 (`claude`) or
+- The harness CLI at its pinned version, first on `PATH`: Claude Code 2.1.316 (`claude`) or
   Codex 0.165.0 (`codex`). `roboteam/runtime/run/versions.py` holds the pins, with MuJoCo,
   NumPy and Pillow; `prepare` and `run` refuse any other version.
 
@@ -28,9 +28,9 @@ uv sync --locked
 cp .env.example .env && chmod 600 .env
 ```
 
-Fill in only the variable your profile reads (`models.json`, `env_key`):
+Fill in only the variable your model reads (`models.json`, `env_key`):
 
-| Profile | Credential |
+| Model | Credential |
 | --- | --- |
 | Claude `opus` (default), `haiku` | `ANTHROPIC_API_KEY` in `.env` |
 | Claude `opus_subscription`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` in `.env` (from `claude setup-token`) |
@@ -67,8 +67,8 @@ a CLI version. Details: [policy environment](policy-environment.md).
 `preflight` makes a few paid calls. For Claude it runs the basic and the blocked-parent
 prechecks and writes receipts under `<runs root>/engineering/claude-precheck/` and
 `claude-blocked-precheck/`; for Codex it writes
-`<runs root>/engineering/model-compatibility/<profile>/report.json`. `run` refuses a batch
-without receipts matching its profile and CLI version.
+`<runs root>/engineering/model-compatibility/<model>/report.json`. `run` refuses a batch
+without receipts matching its model and CLI version.
 
 ## 6. Prepare and run
 

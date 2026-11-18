@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from roboteam.harness.claude.session.session_host import ClaudeSessionHost, role_mcp_config
 
-PROFILE = {'model': 'fake-model', 'effort': 'high', 'env_key': 'FAKE_KEY'}
+MODEL_ENTRY = {'model': 'fake-model', 'effort': 'high', 'env_key': 'FAKE_KEY'}
 
 
 def make_run(tmp):
@@ -41,7 +41,7 @@ class SessionHostTests(unittest.TestCase):
                 record = result(kwargs.get('session_id') or kwargs.get('resume'))
                 record['summary']['total_cost_usd'] = next(costs)
                 return record
-            host = ClaudeSessionHost(run, 'Controller', PROFILE, {}, runner=runner)
+            host = ClaudeSessionHost(run, 'Controller', MODEL_ENTRY, {}, runner=runner)
             for _ in range(3):
                 host.send('continue')
                 self.assertEqual(host.wait(3)['status'], 'idle')
@@ -74,7 +74,7 @@ class SessionHostTests(unittest.TestCase):
             def runner(*args, **kwargs):
                 calls.append(kwargs); entered.set(); release.wait(3)
                 return result(kwargs.get('session_id') or kwargs.get('resume'))
-            host = ClaudeSessionHost(run, 'Controller', PROFILE, {}, runner=runner)
+            host = ClaudeSessionHost(run, 'Controller', MODEL_ENTRY, {}, runner=runner)
             first = host.send('bootstrap'); self.assertTrue(entered.wait(2))
             self.assertEqual(host.observe()['status'], 'active')
             with self.assertRaises(ValueError): host.send('overlapping')
@@ -84,7 +84,7 @@ class SessionHostTests(unittest.TestCase):
             self.assertIsNone(calls[0]['timeout'])
             self.assertEqual(calls[1]['resume'], first['threadId'])
             self.assertNotEqual(calls[0]['events_name'], calls[1]['events_name'])
-            self.assertEqual(len(list((run/'private/engine/turns').glob('*-summary.json'))), 2)
+            self.assertEqual(len(list((run/'private/harness/turns').glob('*-summary.json'))), 2)
 
     def test_mismatch_failure_or_missing_evidence_never_allows_resume(self):
         scenarios = [lambda sid: result('different'), lambda sid: result(sid, 'failed', 1),
@@ -94,7 +94,7 @@ class SessionHostTests(unittest.TestCase):
             with self.subTest(response=response), tempfile.TemporaryDirectory() as tmp:
                 run = make_run(tmp)
                 def runner(*args, **kwargs): return response(kwargs['session_id'])
-                host = ClaudeSessionHost(run, 'Controller', PROFILE, {}, runner=runner)
+                host = ClaudeSessionHost(run, 'Controller', MODEL_ENTRY, {}, runner=runner)
                 host.send('start'); self.assertIn(host.wait(3)['status'], ('error', 'unknown'))
                 with self.assertRaises(ValueError): host.send('must not retry')
 
@@ -104,7 +104,7 @@ class SessionHostTests(unittest.TestCase):
             def runner(*args, **kwargs):
                 entered.set(); release.wait(3)
                 return result(kwargs['session_id'])
-            host = ClaudeSessionHost(run, 'Controller', PROFILE, {}, runner=runner)
+            host = ClaudeSessionHost(run, 'Controller', MODEL_ENTRY, {}, runner=runner)
             host.send('start'); self.assertTrue(entered.wait(2)); host.stop(); release.set()
             self.assertEqual(host.wait(3)['status'], 'unknown')
             with self.assertRaises(ValueError): host.send('do not restart')
@@ -113,7 +113,7 @@ class SessionHostTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             run = make_run(tmp)
             def runner(*args, **kwargs): return result(kwargs['session_id'])
-            host = ClaudeSessionHost(run, 'Controller', PROFILE, {}, runner=runner)
+            host = ClaudeSessionHost(run, 'Controller', MODEL_ENTRY, {}, runner=runner)
             with patch('roboteam.harness.claude.session.session_host.write_json', side_effect=OSError('write failed')):
                 host.send('start'); self.assertEqual(host.wait(3)['status'], 'unknown')
             with self.assertRaises(ValueError): host.send('must not retry')
@@ -126,7 +126,7 @@ class SessionHostTests(unittest.TestCase):
                 response = result(kwargs.get('session_id') or kwargs.get('resume'))
                 response['summary']['total_cost_usd'] = [.3, .4, .3][len(calls)-1]
                 return response
-            host = ClaudeSessionHost(run, 'Controller', PROFILE, {}, runner=runner,
+            host = ClaudeSessionHost(run, 'Controller', MODEL_ENTRY, {}, runner=runner,
                                      max_budget_usd=.6, total_budget_usd=1)
             for _ in range(2):
                 host.send('continue'); self.assertEqual(host.wait(3)['status'], 'idle')
@@ -143,7 +143,7 @@ class SessionHostTests(unittest.TestCase):
                 def runner(*args, **kwargs):
                     response = result(kwargs['session_id']); response['summary']['total_cost_usd'] = value
                     return response
-                host = ClaudeSessionHost(run, 'Controller', PROFILE, {}, runner=runner, total_budget_usd=1)
+                host = ClaudeSessionHost(run, 'Controller', MODEL_ENTRY, {}, runner=runner, total_budget_usd=1)
                 host.send('start'); observation = host.wait(3)
                 self.assertEqual(observation['status'], 'unknown')
                 self.assertEqual(observation['budget_status'], 'cost_unknown')
@@ -163,8 +163,8 @@ class SessionHostTests(unittest.TestCase):
                 response=result(kwargs['session_id']); response['summary']['total_cost_usd']=.1
                 return response
             try:
-                a=ClaudeSessionHost(run,'Controller',PROFILE,{},max_budget_usd=.6,budget_ledger=ledger,runner=runner)
-                b=ClaudeSessionHost(run,'A',PROFILE,{},max_budget_usd=.6,budget_ledger=ledger,runner=runner)
+                a=ClaudeSessionHost(run,'Controller',MODEL_ENTRY,{},max_budget_usd=.6,budget_ledger=ledger,runner=runner)
+                b=ClaudeSessionHost(run,'A',MODEL_ENTRY,{},max_budget_usd=.6,budget_ledger=ledger,runner=runner)
                 a.send('start'); b.send('start'); entered.wait(3)
                 self.assertEqual(sorted(allowances), [.4,.6])
                 self.assertEqual(ledger.snapshot()['reserved_usd'], '1.0')
@@ -184,7 +184,7 @@ class SessionHostTests(unittest.TestCase):
                 response['summary']['result_subtype'] = 'error_max_budget_usd'
                 return response
             try:
-                host = ClaudeSessionHost(run, 'Controller', PROFILE, {}, max_budget_usd=.6,
+                host = ClaudeSessionHost(run, 'Controller', MODEL_ENTRY, {}, max_budget_usd=.6,
                                          budget_ledger=ledger, runner=runner)
                 host.send('start')
                 observation=host.wait(3)
@@ -207,7 +207,7 @@ class SessionHostTests(unittest.TestCase):
                 entered.set(); release.wait(3)
                 raise PreLaunchCancelled('no process created')
             try:
-                host=ClaudeSessionHost(run,'Controller',PROFILE,{},max_budget_usd=.6,
+                host=ClaudeSessionHost(run,'Controller',MODEL_ENTRY,{},max_budget_usd=.6,
                                        budget_ledger=ledger,runner=runner)
                 host.send('start'); self.assertTrue(entered.wait(2))
                 self.assertEqual(ledger.snapshot()['reserved_usd'],'0.6')

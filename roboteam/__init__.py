@@ -1,1 +1,1 @@
-"""RoboTeam: multi-arm robot benchmark runtime, task families and native engines."""
+"""RoboTeam: multi-arm robot benchmark runtime, task types and native harnesses."""

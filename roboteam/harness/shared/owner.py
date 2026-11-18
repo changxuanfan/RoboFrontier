@@ -1,4 +1,4 @@
-"""The environment of a run's physics process (the owner), the same for every engine.
+"""The environment of a run's physics process (the owner), the same for every harness.
 
 The owner gets only what it needs to simulate and render: no model credentials, no
 provider settings. Thread counts are fixed so that many parallel runs do not each start a

@@ -141,8 +141,8 @@ class SlurmJobTests(unittest.TestCase):
             '.roboteam/codex/task/sessions/session.jsonl': b'exact native session\n',
             '.roboteam/codex/task/auth.json': b'PRIVATE AUTH',
             '.roboteam/codex/task/state.sqlite': b'private CLI runtime state',
-            'runs/policy/batch/haiku/case/private/engine/config/.credentials.json': b'PRIVATE CLAUDE AUTH',
-            'runs/policy/batch/haiku/case/private/engine/config/projects/project/session.jsonl': b'Claude session',
+            'runs/policy/batch/haiku/case/private/harness/config/.credentials.json': b'PRIVATE CLAUDE AUTH',
+            'runs/policy/batch/haiku/case/private/harness/config/projects/project/session.jsonl': b'Claude session',
         }
         for relative, content in files.items():
             path = source/relative
@@ -156,7 +156,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertFalse(any(p.name == 'auth.json' for p in output.rglob('*')))
         self.assertFalse(any(p.name == 'state.sqlite' for p in output.rglob('*')))
         self.assertFalse(any(p.name == '.credentials.json' for p in output.rglob('*')))
-        self.assertTrue(any(p.name == 'session.jsonl' and 'engine/config' in str(p) for p in output.rglob('*')))
+        self.assertTrue(any(p.name == 'session.jsonl' and 'harness/config' in str(p) for p in output.rglob('*')))
         for name, expected in report['sha256'].items():
             self.assertEqual(slurm.checksum(output/name), expected)
         self.assertTrue((source/'.roboteam/codex/task/auth.json').exists())
@@ -284,9 +284,9 @@ class SlurmJobTests(unittest.TestCase):
         self.assertEqual(self.config['batch']['task_wall_limit_s'], 86400)
 
     def test_subscription_submission_is_one_allocation_serialized_by_credential_stream(self):
-        from roboteam.harness.codex.job_engine import fingerprint
+        from roboteam.harness.codex.job_harness import fingerprint
         self.config = load_configuration(host='slurm', overrides={
-            'policy': {'profile': 'luna_subscription'},
+            'policy': {'model': 'luna_subscription'},
             'runtime': {'codex_home_scope': 'job', 'codex_tool_backend': 'landlock-v1'},
             'slurm': {'auth_mode': 'subscription', 'credential_store': str(self.root/'not-yet-provisioned')}})
         report = self.repo/'runs/engineering/model-compatibility/luna_subscription/report.json'
@@ -307,7 +307,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_subscription_requires_fresh_gateway_qualification_and_private_store(self):
         self.config = load_configuration(host='slurm', overrides={
-            'policy': {'profile': 'luna_subscription'},
+            'policy': {'model': 'luna_subscription'},
             'runtime': {'codex_home_scope': 'job', 'codex_tool_backend': 'landlock-v1'},
             'slurm': {'auth_mode': 'subscription', 'credential_store': str(self.root/'credentials')}})
         report = self.repo/'runs/engineering/model-compatibility/luna_subscription/report.json'
@@ -321,7 +321,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_claude_token_runs_through_the_mac_route_without_a_credential_store(self):
         relay = self.root/'egress'
-        # The submission carries the profile's two precheck receipts, which the job checks again.
+        # The submission carries the model's two precheck receipts, which the job checks again.
         receipts = {}
         for name in ('basic', 'blocked'):
             receipts[name] = self.root/(name+'-receipt.json'); receipts[name].write_text('{"passed": true}')
@@ -329,7 +329,7 @@ class SlurmJobTests(unittest.TestCase):
                       return_value={'basic_receipt': str(receipts['basic']), 'blocked_receipt': str(receipts['blocked'])})
         ready.start(); self.addCleanup(ready.stop)
         self.config = load_configuration(host='slurm', overrides={
-            'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
+            'policy': {'harness': 'claude', 'model': 'haiku_subscription_token'},
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(relay), 'egress_pause_s': 120}})
         # The token must be in the checkout's .env (ignored by Git), never only in the shell.
         with self.assertRaisesRegex(ValueError, 'keep CLAUDE_CODE_OAUTH_TOKEN in'):
@@ -355,7 +355,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_claude_route_admits_egress_and_restores_the_environment(self):
         config = load_configuration(host='slurm', overrides={
-            'policy': {'engine': 'claude', 'profile': 'haiku_subscription_token'},
+            'policy': {'harness': 'claude', 'model': 'haiku_subscription_token'},
             'slurm': {'egress_mode': 'mac-ssh', 'egress_root': str(self.root/'egress')}})
         self.local.mkdir()
         seen = {}
@@ -370,11 +370,11 @@ class SlurmJobTests(unittest.TestCase):
                 patch.dict(os.environ, {'SLURM_JOB_ID': '123'}), patch('roboteam.launch.slurm.proxy.environment', route):
             before = dict(os.environ)
             with slurm.subscription_environment(config, self.local, on_failure=lambda: stops.append(1)):
-                self.assertEqual(Path(seen['private']), (self.local/'engine').resolve())
+                self.assertEqual(Path(seen['private']), (self.local/'harness').resolve())
                 self.assertNotIn('CODEX_HOME', os.environ)
             self.assertEqual(dict(os.environ), before)
         seen['failure']()
-        self.assertTrue((self.local/'engine/EGRESS_ERROR').exists()); self.assertEqual(stops, [1])
+        self.assertTrue((self.local/'harness/EGRESS_ERROR').exists()); self.assertEqual(stops, [1])
 
     def test_source_archive_link_or_path_escape_is_rejected_before_extraction(self):
         archive = self.root/'bad.tar'

@@ -12,7 +12,7 @@ def collection(source,session):
     """A complete collection record for the files now under `source`, with one role session."""
     import hashlib
     files={p.relative_to(source).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in source.rglob('*') if p.is_file()}
-    return {'schema':'roboteam.policy-collection.v1','engine':'codex','complete':True,'writers_stopped':True,'job_count':1,
+    return {'schema':'roboteam.policy-collection.v1','harness':'codex','complete':True,'writers_stopped':True,'job_count':1,
             'files':files,'jobs':[{'roles':[{'session':session,'sha256':files[session]}]}]}
 
 
@@ -52,14 +52,14 @@ class PolicyArchiveTest(unittest.TestCase):
             self.assertEqual(len(objects),1)
             self.assertIn(b'"data":"do not touch"',data)
             # Exercise the public archive/restore path, including a CLI event file.
-            source_dir=root/'collection';(source_dir/'batch/private/engine/turns').mkdir(parents=True)
+            source_dir=root/'collection';(source_dir/'batch/private/harness/turns').mkdir(parents=True)
             (source_dir/'sessions').mkdir()
-            for rel in ('sessions/native.jsonl','batch/private/engine/turns/turn.jsonl'):
+            for rel in ('sessions/native.jsonl','batch/private/harness/turns/turn.jsonl'):
                 (source_dir/rel).write_bytes(raw)
             (source_dir/'batch/batch.json').write_text('{"status":"closed","jobs":[]}')
             (source_dir/'collection.json').write_text(json.dumps(collection(source_dir,'sessions/native.jsonl')))
             create(source_dir,root/'archive');verify(root/'archive',root/'restore')
-            for rel in ('sessions/native.jsonl','batch/private/engine/turns/turn.jsonl'):
+            for rel in ('sessions/native.jsonl','batch/private/harness/turns/turn.jsonl'):
                 self.assertEqual((root/'restore'/rel).read_bytes(),raw)
 
     def test_unknown_encoding_and_interrupted_tail_retained(self):

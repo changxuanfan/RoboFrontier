@@ -4,7 +4,7 @@ from pathlib import Path
 
 from scripts.release import validate_physics as vp
 
-ASSETS = all((Path('benchmark')/family/case/'assets').is_dir() for family, case in
+ASSETS = all((Path('benchmark')/task_type/case/'assets').is_dir() for task_type, case in
              (('transport', 'transport-a04-d1'), ('mosaic', 'mosaic-a04-6x12-d1'), ('relay', 'relay-a08-d2'),
               ('relay', 'relay-a08-d1'), ('dial', 'dial-best5-n04-d1')))
 

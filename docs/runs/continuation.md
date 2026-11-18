@@ -3,7 +3,7 @@
 A run that stops can continue. The continued part is **the same trial**: the same
 run directory, runtime database, workspace and model sessions. Only the physical
 world is new, rebuilt approximately from the last recorded motion frame. Both
-engines and all four agent systems (single-agent, hierarchical, decentralized,
+harnesses and all four agent systems (single-agent, hierarchical, decentralized,
 adaptive) continue the same way. The functions named `segments.*` below are in
 `roboteam/runtime/run/segments.py`.
 
@@ -47,7 +47,7 @@ Everything else continues in place: `private/state/runtime.sqlite` (calls,
 actions, messages, work notes, delegations), `workspace/` (`skills.md` and the
 policy's own files), `public/` (inputs unchanged, observations and results
 appended), the logs, `events.jsonl` and `suite-process.jsonl` (appended, with
-segment boundary events), and `private/engine/` (sessions continue).
+segment boundary events), and `private/harness/` (sessions continue).
 
 ## When a run continues
 
@@ -138,7 +138,7 @@ guard and the Claude supervisor set no limit and no backstop for such a segment.
 5. **Resume.** The host sends `resume`; the world records the segment start and
    the downtime and lifts the pause. The host then sends every role still at
    work the frozen resume message (`private/inputs/bootstrap/resume.md`, the
-   same for both engines) and dispatches as usual.
+   same for both harnesses) and dispatches as usual.
 
 Preparation follows a journal kept in the runtime database: if it stops part
 way (for example the disk fills), calling it again completes the same segment,
@@ -246,7 +246,7 @@ instead of sealing the paused run. The Codex host has no limit of its own.
 
 Active time does not advance while a world is paused or its host is frozen, so it
 alone would never end a run held forever. Policy runs therefore also freeze
-`run_protocol.wall_backstop_s` (172,800 s, `WALL_BACKSTOP_S` in `roboteam/tasks/families.py`;
+`run_protocol.wall_backstop_s` (172,800 s, `WALL_BACKSTOP_S` in `roboteam/tasks/task_types.py`;
 private, like the limit). The backstop counts wall time since START
 (`clock.backstop_elapsed`) **less every outage, egress and usage-limit pause**
 (`pause_wall_s` and the current `pause_since_wall` in the runtime database): such a
@@ -280,8 +280,8 @@ backstop then counts again from that moment.
 
 A run without a Slurm egress pause (a Mac, a RunPod host, or a Slurm job with direct
 egress) has no route watcher to pause its world, so its world owner probes the model
-API hosts (`roboteam/runtime/time/outage.py`): the host of the run's profile
-`base_url` when it has one, else the engine's own, Claude `api.anthropic.com` and
+API hosts (`roboteam/runtime/time/outage.py`): the host of the run's model
+`base_url` when it has one, else the harness's own, Claude `api.anthropic.com` and
 Codex `chatgpt.com` and `auth.openai.com`, all of which must answer. A Slurm job on
 the `mac-ssh` route keeps its egress pause (`slurm.egress_pause_s`, by default as
 long as the wall backstop). A probe is a
@@ -337,7 +337,7 @@ The operator is told at the pause and the resume: a line in
 A short capacity or rate limit (HTTP 429, overloaded) is retried by the host itself in
 the same session, at most 3 times per role (`bootstrap.MAX_CAPACITY_RETRIES`), after
 10, 20 and 40 s plus a jitter, with the frozen `capacity-resume.md`; the same on both
-engines. When the retries are used up, both hosts pause dispatch
+harnesses. When the retries are used up, both hosts pause dispatch
 (`DISPATCH_PAUSED`, "Model capacity recovery attempts exhausted"); the run then ends
 as an unexpected stop and continues by itself once (see the stop table).
 
@@ -389,7 +389,7 @@ The task may recover only if every one of these holds:
 ### Execute
 
 `SCRATCH` must be a private directory (mode 0700) that the task's frozen access
-table denies, for example `$RUN/private/engine/recovery-scratch`.
+table denies, for example `$RUN/private/harness/recovery-scratch`.
 
 ```sh
 python -m roboteam.harness.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" \
@@ -460,7 +460,7 @@ The batch's running gateway must support recovery; a checkout change does not
 alter a running gateway. A gateway without it rejects the read-only capability
 query, and the entrypoint stops before segment preparation, model input or robot
 dispatch.
-Do not restart a shared engine to work around this rejection. A second native
+Do not restart a shared harness to work around this rejection. A second native
 server also cannot take over a thread while the original server holds its writer
 lock; copying sessions to bypass that lock is not this recovery protocol.
 
@@ -473,7 +473,7 @@ runtime, not the synchronized development checkout. `PYTHON` is its interpreter.
 ```sh
 python -m roboteam.harness.codex.recover_task \
   --run-dir "$RUN" \
-  --engine-manifest "$ENGINE/control/manifest.json" \
+  --harness-manifest "$HARNESS/control/manifest.json" \
   --source-root "$SOURCE" \
   --python "$PYTHON"
 ```
@@ -495,7 +495,7 @@ an allocation too short for the remaining budget plus closure time.
 ```sh
 python -m roboteam.harness.codex.recover_task \
   --run-dir "$RUN" \
-  --engine-manifest "$ENGINE/control/manifest.json" \
+  --harness-manifest "$HARNESS/control/manifest.json" \
   --source-root "$SOURCE" \
   --python "$PYTHON" \
   --scratch "$SCRATCH" \
@@ -524,7 +524,7 @@ Time between segments is not active time, and recovery does not grant a fresh
 24 hours. The allocation must cover
 the remaining time. `private/state/control/recovery.json` records the separate
 recovery lifecycle. The batch supervisor waits for recovery ownership to close
-before stopping its engine or collecting evidence. A failed/uncertain recovery
+before stopping its harness or collecting evidence. A failed/uncertain recovery
 requires review; the entrypoint never automatically repeats it.
 
 ### Validation

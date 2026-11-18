@@ -37,7 +37,7 @@ class AdaptiveForkSetup:
     def __init__(self, store, parent, ledger, owner, *, child_budget_usd,
                  fork_factory=create_fork, child_factory=ClaudeSessionHost.fork_delegate):
         cfg = store.get('config')
-        if cfg.get('engine') != 'claude' or cfg.get('topology') != 'adaptive':
+        if cfg.get('harness') != 'claude' or cfg.get('system') != 'adaptive':
             raise ValueError('Expected adaptive Claude runtime')
         if parent.actor != 'Controller' or store.agent('Controller')['thread_id'] != parent.session_id:
             raise ValueError('Parent host does not match runtime')
@@ -82,7 +82,7 @@ class AdaptiveForkSetup:
                 gates[actor]=fork_gate(self.parent.run,actor,batch['setup_deadline'])
                 with self.launch_lock:
                     if self.cancel_event.is_set(): raise ValueError('Fork setup cancelled')
-                    host=self.child_factory(self.parent.run,actor,self.parent.profile,self.parent.base_env,
+                    host=self.child_factory(self.parent.run,actor,self.parent.model_entry,self.parent.base_env,
                                             budget_ledger=self.ledger,max_budget_usd=self.child_budget_usd,
                                             fork_from=self.parent.session_id,gate=gates[actor])
                     self.hosts[actor]=host

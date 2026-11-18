@@ -7,18 +7,18 @@ import unittest
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld, fake_capture
-from team_harness import prepare_run
+from team_settings import prepare_run
 from roboteam.runtime.world.service import RuntimeService
 from roboteam.runtime.world.store import RuntimeStore
-from roboteam.tasks.config import load_harness, startup_protocol
+from roboteam.tasks.config import load_run_settings, startup_protocol
 from roboteam.runtime.tools.scheduling import Scheduler
 
 
 class BatchTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();root=Path(self.tmp.name);self.run=root/'run';self.n=0
-        cfg=load_harness();cfg['topology']='adaptive';cfg['startup_protocol']=startup_protocol('adaptive');p=root/'harness.json';p.write_text(json.dumps(cfg))
-        prepare_run(self.run,harness_path=p);self.s=RuntimeService(self.run,FakeWorld,fake_capture)
+        cfg=load_run_settings();cfg['system']='adaptive';cfg['startup_protocol']=startup_protocol('adaptive');p=root/'run.json';p.write_text(json.dumps(cfg))
+        prepare_run(self.run,run_settings_path=p);self.s=RuntimeService(self.run,FakeWorld,fake_capture)
         self.call('Controller','ready');self.call('Meta','bind',{'actor':'Controller','thread_id':'controller'})
         self.s.store.observe_session('Controller','idle','t1',time.time(),'codex.wait_threads');self.call('Meta','start')
         self.stops=[]

@@ -56,7 +56,7 @@ def main():
         guard=patch.multiple(mujoco,MjModel=NoPhysicsModel,MjData=forbidden,mj_step=forbidden,mj_forward=forbidden)
         guard.start()
         modules=('runtime.tools.test_action_batch','runtime.tools.test_sync_groups','runtime.world.test_pipeline','runtime.tools.test_pipeline_client',
-                 'runtime.world.test_runtime_store','runtime.run.test_run_setup','runtime.tools.test_scheduling','runtime.world.test_centralized','runtime.tools.test_delegation',
+                 'runtime.world.test_runtime_store','runtime.run.test_run_setup','runtime.tools.test_scheduling','runtime.world.test_single_agent','runtime.tools.test_delegation',
                  'runtime.tools.test_delegate_callbacks','tasks.test_private_evaluation','runtime.world.test_run_seal','launch.test_run_report',
                  'sim.test_recording','repo.test_harness_checker','repo.test_policy_batch_viewer')
         suite=unittest.defaultTestLoader.loadTestsFromNames(modules)

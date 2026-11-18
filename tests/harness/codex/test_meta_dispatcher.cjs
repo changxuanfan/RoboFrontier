@@ -190,7 +190,7 @@ async function neutralAdapter() {
     children:[{actor:'D1',robots:['A'],goal:'agent selected goal',done_when:'own evidence'}]};
   const tools={exec_command:async({cmd})=>{
     let value={recorded:true};
-    if(cmd.includes(' snapshot '))value={lifecycle:'running',paused:false,config:{poll_interval_s:0,model:'m',effort:'high',engine:'claude'},
+    if(cmd.includes(' snapshot '))value={lifecycle:'running',paused:false,config:{poll_interval_s:0,model:'m',effort:'high',harness:'claude'},
       agents:{Controller:{kind:'controller',thread_id:'parent'}},delegations:batch.status==='creating'?[batch]:[]};
     else if(cmd.includes(' delegate-claim '))value={delegation:structuredClone(batch)};
     else if(cmd.includes(' delegate-activate '))batch.status='active';
@@ -216,7 +216,7 @@ async function setupDeadline(expired) {
     children:[{actor:'D1',robots:['A'],goal:'g',done_when:'d'}]};
   const tools={exec_command:async({cmd})=>{
     let value={recorded:true};
-    if(cmd.includes(' snapshot '))value={lifecycle:'running',paused:false,config:{poll_interval_s:0,model:'m',effort:'high',engine:'claude'},
+    if(cmd.includes(' snapshot '))value={lifecycle:'running',paused:false,config:{poll_interval_s:0,model:'m',effort:'high',harness:'claude'},
       agents:{Controller:{kind:'controller',thread_id:'parent'}},delegations:batch.status==='creating'?[batch]:[]};
     else if(cmd.includes(' delegate-claim '))value={delegation:structuredClone(batch)};
     else if(cmd.includes(' delegate-activate '))batch.status='active';
@@ -258,5 +258,5 @@ async function networkPause(){
   ()=>delegation({label:true}), ()=>delegation({label:true,titleFailure:true})
  ];
  for(const run of cases)await run();
- console.log(`PASS: ${cases.length} dispatcher scenarios: neutral engine adapter, fork lifecycle, first-result callback, failed-turn evidence, best-effort robot titles, error detail redaction, pinned settings, bounded status retries, visible pause, no finished-role polling`);
+ console.log(`PASS: ${cases.length} dispatcher scenarios: neutral harness adapter, fork lifecycle, first-result callback, failed-turn evidence, best-effort robot titles, error detail redaction, pinned settings, bounded status retries, visible pause, no finished-role polling`);
 })().catch(e=>{console.error(e);process.exit(1)});

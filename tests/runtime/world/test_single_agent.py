@@ -9,16 +9,16 @@ from fake_pipeline import FakeWorld, fake_capture
 from roboteam.runtime.run.setup import prepare_run
 from roboteam.runtime.world.service import RuntimeService
 from roboteam.runtime.world.store import RuntimeStore
-from roboteam.tasks.config import load_harness, startup_protocol
+from roboteam.tasks.config import load_run_settings, startup_protocol
 
 
-class CentralizedTests(unittest.TestCase):
+class SingleAgentTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
-        cfg = load_harness(); cfg['topology'] = 'single-agent'; cfg['startup_protocol'] = startup_protocol('single-agent')
+        cfg = load_run_settings(); cfg['system'] = 'single-agent'; cfg['startup_protocol'] = startup_protocol('single-agent')
         path = root/'config.json'; path.write_text(json.dumps(cfg))
-        self.run = prepare_run(root/'run', harness_path=path)
+        self.run = prepare_run(root/'run', run_settings_path=path)
         self.service = RuntimeService(self.run, FakeWorld, fake_capture)
         self.counter = 0
 
@@ -51,7 +51,7 @@ class CentralizedTests(unittest.TestCase):
     def test_direct_controller_starts_only_after_binding_without_ready_turn(self):
         cfg=dict(self.service.config, startup_protocol='direct_controller')
         path=Path(self.tmp.name)/'direct-config.json';path.write_text(json.dumps(cfg))
-        run=prepare_run(Path(self.tmp.name)/'direct-run',harness_path=path)
+        run=prepare_run(Path(self.tmp.name)/'direct-run',run_settings_path=path)
         service=RuntimeService(run,FakeWorld,fake_capture)
         def call(actor,op,data,ident):
             job=service.accept(actor,op,data,ident);service.pump();return job['result']

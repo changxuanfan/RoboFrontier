@@ -12,7 +12,7 @@ release (docs/benchmark/physics.md):
     collide   two arms driven into each other at full speed: the simulation stays valid
     relay     an airborne two-arm timber handover: no drop, no slide, no push when closing
     dial      a Dial knob grasped and turned: the dial follows the hand
-    timing    the step time of the largest case of each family
+    timing    the step time of the largest case of each task type
 
     python -m scripts.release.validate_physics [SCENARIO ...] [--cases ID ...] [--workers N]
 
@@ -59,12 +59,12 @@ class Bench:
     """One prepared run of a released case and its World."""
 
     def __init__(self, case_id, folder):
-        from roboteam.tasks.families import prepare
+        from roboteam.tasks.task_types import prepare
         from roboteam.runtime.world.pipeline import World
         run = Path(folder)/'run'
         prepare(case_id, run)
         self.task = json.loads((run/'private/inputs/task.json').read_text())
-        self.cfg = json.loads((run/'private/inputs/harness.json').read_text())
+        self.cfg = json.loads((run/'private/inputs/run.json').read_text())
         self.world = World(run, self.task)
         self.model, self.data = self.world.model, self.world.data
         self.step_ms = []
@@ -363,7 +363,7 @@ def timing(case_id):
 
 
 def jobs(selected, cases):
-    from roboteam.tasks.families import read
+    from roboteam.tasks.task_types import read
     release = read(ROOT/'benchmark/release.json')
     ids = [c['id'] for f in release['families'].values() for c in f['policy']]
     if cases: ids = [i for i in ids if i in cases]

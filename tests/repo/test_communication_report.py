@@ -26,7 +26,7 @@ class CommunicationReportTest(unittest.TestCase):
             run = Path(tmp)
             empty_run(run).close()
             (run / 'private/inputs').mkdir(parents=True)
-            (run / 'private/inputs/manifest.json').write_text(json.dumps({'engine': 'claude'}))
+            (run / 'private/inputs/manifest.json').write_text(json.dumps({'harness': 'claude'}))
             (run / 'private/logs').mkdir()
             (run / 'private/logs/host.jsonl').write_text(json.dumps(
                 {'event': 'robot_tool_completed', 'op': 'wait_events', 'actor': 'A', 'duration_s': 2.5})+'\n')

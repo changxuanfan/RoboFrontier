@@ -63,17 +63,17 @@ class PersistentSessionTests(unittest.TestCase):
                 (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
                 (run / 'private/inputs/policy-access.json').write_text(json.dumps(policy_access.record(
                     run, repo=root/'repo', home=root/'home', tmp_dirs=(), checkouts=[root/'repo'])))
-                profile = {'provider': 'anthropic', 'model': 'claude-opus-5-5', 'env_key': 'ANTHROPIC_API_KEY', 'effort': 'high',
+                model_entry = {'provider': 'anthropic', 'model': 'claude-opus-5-5', 'env_key': 'ANTHROPIC_API_KEY', 'effort': 'high',
                            'base_url': 'http://127.0.0.1:%d' % server.server_port}
                 env = {'PATH': os.environ.get('PATH', ''), 'ANTHROPIC_API_KEY': 'local-fake-key'}
-                turn = lambda prompt, n, **kw: session(profile, 'claude-opus-5-5', 'high', '{"mcpServers":{}}', prompt, run, env,
+                turn = lambda prompt, n, **kw: session(model_entry, 'claude-opus-5-5', 'high', '{"mcpServers":{}}', prompt, run, env,
                                                        events_name='turn-%d.jsonl' % n, **kw)
                 first = turn('FIRST', 1, session_id=SESSION); pid = session.process.pid
                 second = turn('SECOND', 2, resume=SESSION)
                 self.assertEqual((first['process'], second['process']), ('exited', 'exited'))
                 self.assertEqual(session.process.pid, pid)  # same CLI process for both turns
                 self.assertEqual({first['summary']['session_id'], second['summary']['session_id']}, {SESSION})
-                self.assertTrue((run / 'private/engine/turns/turn-2.jsonl').is_file())
+                self.assertTrue((run / 'private/harness/turns/turn-2.jsonl').is_file())
                 # The CLI reports the session's cumulative cost; each turn is charged its increase.
                 totals = [float(t['summary']['native_session_total_cost_usd']) for t in (first, second)]
                 self.assertGreater(totals[1], totals[0])
@@ -112,10 +112,10 @@ class PersistentSessionTests(unittest.TestCase):
                 (run / 'private/inputs/manifest.json').write_text(json.dumps(manifest_record()))
                 (run / 'private/inputs/policy-access.json').write_text(json.dumps(policy_access.record(
                     run, repo=root/'repo', home=root/'home', tmp_dirs=(), checkouts=[root/'repo'])))
-                profile = {'provider': 'anthropic', 'model': 'claude-opus-5-5', 'env_key': 'ANTHROPIC_API_KEY', 'effort': 'high',
+                model_entry = {'provider': 'anthropic', 'model': 'claude-opus-5-5', 'env_key': 'ANTHROPIC_API_KEY', 'effort': 'high',
                            'base_url': 'http://127.0.0.1:%d' % server.server_port}
                 env = {'PATH': os.environ.get('PATH', ''), 'ANTHROPIC_API_KEY': 'local-fake-key'}
-                turn = lambda host, prompt, n, **kw: host(profile, 'claude-opus-5-5', 'high', '{"mcpServers":{}}', prompt, run,
+                turn = lambda host, prompt, n, **kw: host(model_entry, 'claude-opus-5-5', 'high', '{"mcpServers":{}}', prompt, run,
                                                           env, events_name='turn-%d.jsonl' % n, **kw)
                 turn(parent, 'PARENT', 1, session_id=SESSION)
                 gate = {'open': run/'gate-open', 'closed': run/'gate-closed', 'deadline': time.time()+60}

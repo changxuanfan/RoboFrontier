@@ -36,15 +36,15 @@ class SignalPhysicsSmokeTests(unittest.TestCase):
         try:
             batch=directory/'batch'
             if four_cases:
-                prepare_batch(batch,['opus'],level=1,min_arms=True,topology='adaptive')
+                prepare_batch(batch,['opus'],level=1,min_arms=True,system='adaptive')
             else:
-                prepare_batch(batch,['opus'],cases=['transport-a04-d1'],topology='adaptive')
+                prepare_batch(batch,['opus'],cases=['transport-a04-d1'],system='adaptive')
             jobs=json.loads((batch/'batch.json').read_text())['jobs']
             self.assertEqual(len(jobs),4 if four_cases else 1)
             for job in jobs:
                 run=Path(job['run_directory'])
                 launch=run/'private/inputs/claude.json'; data=json.loads(launch.read_text())
-                data['profile'].update(base_url=f'http://127.0.0.1:{server.server_port}',env_key='FAKE_KEY')
+                data['model_entry'].update(base_url=f'http://127.0.0.1:{server.server_port}',env_key='FAKE_KEY')
                 launch.write_text(json.dumps(data))
                 manifest=run/'private/inputs/manifest.json'; frozen=json.loads(manifest.read_text())
                 frozen['input_sha256']['private/inputs/claude.json']=hashlib.sha256(launch.read_bytes()).hexdigest()

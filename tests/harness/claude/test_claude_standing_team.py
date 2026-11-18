@@ -17,7 +17,7 @@ from roboteam.launch.claude_prepare import prepare_batch
 
 
 class RoleHost:
-    def __init__(self, run, actor, profile, env, **kwargs):
+    def __init__(self, run, actor, model_entry, env, **kwargs):
         self.actor = actor
         self.session_id = str(uuid.uuid4())
         self.state = 'new'
@@ -53,23 +53,23 @@ class RoleHost:
 
 
 @contextmanager
-def standing_fixture(topology, *, factory=RoleHost, endpoint=None, env=None):
+def standing_fixture(system, *, factory=RoleHost, endpoint=None, env=None):
     with tempfile.TemporaryDirectory(prefix='claude-standing-') as tmp:
         batch = Path(tmp)/'batch'
         # A local fake model and a fake key: nothing to expose (claude_prepare.exposed_api_keys).
         with patch('roboteam.launch.claude_prepare.exposed_api_keys', return_value=[]):
-            prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], topology=topology)
+            prepare_batch(batch, ['haiku'], cases=['transport-a04-d1'], system=system)
         run = batch/'haiku/transport-a04-d1'
         launch = run/'private/inputs/claude.json'
         data = json.loads(launch.read_text())
         if endpoint:
-            data['profile'].update(base_url=endpoint, env_key='FAKE_KEY')
+            data['model_entry'].update(base_url=endpoint, env_key='FAKE_KEY')
             launch.write_text(json.dumps(data))
             manifest = run/'private/inputs/manifest.json'
             frozen = json.loads(manifest.read_text())
             frozen['input_sha256']['private/inputs/claude.json'] = hashlib.sha256(launch.read_bytes()).hexdigest()
             manifest.write_text(json.dumps(frozen))
-        profile = data['profile']
+        model_entry = data['model_entry']
         ledger = BudgetLedger.create(run/'private/state/test-budget.sqlite')
         service = RuntimeService(run, FakeWorld, fake_capture)
         def call(connection, op, data, call_id, **kwargs):
@@ -82,7 +82,7 @@ def standing_fixture(topology, *, factory=RoleHost, endpoint=None, env=None):
                 return job['result']
         policy = None
         try:
-            policy = StandingTeamPolicyHost(run, profile, env or {}, ledger, host_factory=factory, client=call)
+            policy = StandingTeamPolicyHost(run, model_entry, env or {}, ledger, host_factory=factory, client=call)
             with patch('roboteam.runtime.tools.pipeline_client.client_call', call):
                 yield policy, service, call
         finally:
@@ -95,8 +95,8 @@ def standing_fixture(topology, *, factory=RoleHost, endpoint=None, env=None):
 
 class StandingTeamTests(unittest.TestCase):
     def test_a_continued_segment_resumes_every_role_in_its_own_session(self):
-        for topology in ('hierarchical', 'decentralized'):
-            with self.subTest(topology=topology), standing_fixture(topology) as (policy, service, call):
+        for system in ('hierarchical', 'decentralized'):
+            with self.subTest(system=system), standing_fixture(system) as (policy, service, call):
                 policy.bind_and_bootstrap()
                 sessions = {a: h.session_id for a, h in policy.hosts.items()}
                 store = service.store
@@ -104,10 +104,10 @@ class StandingTeamTests(unittest.TestCase):
                 store.put('segment', 1); store.put('lifecycle', 'resuming')
                 store.put('pending_segment', {'segment': 1, 'previous_ended_at': 0., 'restored_sim_s': 4.0,
                                               'interrupted': {'A': ['A-call_1']}})
-                profile = json.loads((policy.run/'private/inputs/claude.json').read_text())['profile']
+                model_entry = json.loads((policy.run/'private/inputs/claude.json').read_text())['model_entry']
                 with self.assertRaisesRegex(ValueError, 'cannot be restarted'):
-                    StandingTeamPolicyHost(policy.run, profile, {}, policy.hosts['A'].ledger, host_factory=RoleHost, client=call)
-                resumed = StandingTeamPolicyHost(policy.run, profile, {}, policy.hosts['A'].ledger,
+                    StandingTeamPolicyHost(policy.run, model_entry, {}, policy.hosts['A'].ledger, host_factory=RoleHost, client=call)
+                resumed = StandingTeamPolicyHost(policy.run, model_entry, {}, policy.hosts['A'].ledger,
                                                  host_factory=RoleHost, client=call, resume=True)
                 try:
                     reply = resumed.resume_segment()
@@ -123,9 +123,9 @@ class StandingTeamTests(unittest.TestCase):
                     resumed.stop(); resumed.close()
 
     def test_all_roles_bind_before_start_and_first_prompt_without_ready(self):
-        for topology in ('hierarchical', 'decentralized'):
-            with self.subTest(topology=topology), standing_fixture(topology) as (policy, service, _):
-                expected = {'A', 'B', 'C', 'D'} | ({'Controller'} if topology == 'hierarchical' else set())
+        for system in ('hierarchical', 'decentralized'):
+            with self.subTest(system=system), standing_fixture(system) as (policy, service, _):
+                expected = {'A', 'B', 'C', 'D'} | ({'Controller'} if system == 'hierarchical' else set())
                 self.assertEqual(set(policy.hosts), expected)
                 self.assertEqual(verify_inputs(policy.run), [])
                 for host in policy.hosts.values():
@@ -151,11 +151,11 @@ class StandingTeamTests(unittest.TestCase):
                     policy.bind_and_bootstrap()
 
     def test_mailbox_wakes_bound_recipient_and_preserves_communication_authority(self):
-        for topology in ('hierarchical', 'decentralized'):
-            with self.subTest(topology=topology), standing_fixture(topology) as (policy, service, call):
+        for system in ('hierarchical', 'decentralized'):
+            with self.subTest(system=system), standing_fixture(system) as (policy, service, call):
                 policy.bind_and_bootstrap()
                 for h in policy.hosts.values(): h.state = 'idle'
-                recipient = 'Controller' if topology == 'hierarchical' else 'B'
+                recipient = 'Controller' if system == 'hierarchical' else 'B'
                 conn = policy.run/'private/state/connections/A.json'
                 sent = call(conn, 'send', {'to':[recipient], 'text':'Measured milestone available'}, 'message-1')
                 self.assertIn('message_id', sent)
@@ -163,7 +163,7 @@ class StandingTeamTests(unittest.TestCase):
                 self.assertTrue(result['dispatched'])
                 self.assertEqual(len(policy.hosts[recipient].prompts), 2)
                 self.assertIn('wake_id=', policy.hosts[recipient].prompts[-1])
-                if topology == 'hierarchical':
+                if system == 'hierarchical':
                     rejected = call(conn, 'send', {'to':['B'], 'text':'wrong route'}, 'message-2')
                     self.assertIn('error', rejected)
                     ctl = policy.run/'private/state/connections/Controller.json'

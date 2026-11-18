@@ -6,8 +6,8 @@ import hashlib
 from ..io import ROOT
 
 DEFAULT_CASE = 'transport-a04-d1'  # The smallest released case; tests and bare prepare_run use it.
-# The policy runtime's settings; a batch sets the engine, topology, model and effort over them.
-DEFAULT_HARNESS = ROOT / 'roboteam/runtime/run/defaults.json'
+# The policy runtime's settings; a batch sets the harness, system, model and effort over them.
+DEFAULT_RUN_SETTINGS = ROOT / 'roboteam/runtime/run/defaults.json'
 # The lead role: the one agent of a single-agent or adaptive run, and the lead of a hierarchical team.
 CONTROLLER = 'Controller'
 
@@ -34,7 +34,7 @@ CONTROL_FILES={'robot_control.py':'sim/robot_control.py','sim.py':'sim/kinematic
 
 
 def physical_control_fingerprint(source_hashes,config):
-    """Compare shared execution, independently of policy model/topology."""
+    """Compare shared execution, independently of policy model/system."""
     code={name:source_hashes['roboteam/'+path] for name,path in CONTROL_FILES.items()}
     value=dict(code=code,action_limits=action_limits(),timing=execution_timing(config))
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
@@ -61,7 +61,7 @@ def panda_control_profile(config):
 def load_task(path=None):
     """A released task (kind frontier_suite); by default the policy task of DEFAULT_CASE."""
     if path is None:
-        from .families import policy_task
+        from .task_types import policy_task
         task = policy_task(DEFAULT_CASE)
     else:
         task = json.loads(Path(path).read_text())
@@ -81,32 +81,32 @@ def public_task(task):
     return project(task)
 
 
-def startup_protocol(topology):
-    """The start protocol a topology uses: standing teams start together, a Controller alone."""
-    return 'direct_team' if topology in ('hierarchical', 'decentralized') else 'direct_controller'
+def startup_protocol(system):
+    """The start protocol a system uses: standing teams start together, a Controller alone."""
+    return 'direct_team' if system in ('hierarchical', 'decentralized') else 'direct_controller'
 
 
-def load_harness(path=None):
-    c = json.loads(Path(path or DEFAULT_HARNESS).read_text())
+def load_run_settings(path=None):
+    c = json.loads(Path(path or DEFAULT_RUN_SETTINGS).read_text())
     from roboteam.sim.render.image import DEFAULT_PROFILE
     c.setdefault('observation_image_profile', DEFAULT_PROFILE)
     if c['manager'] != 'Meta':
         raise ValueError('The manager role is Meta')
-    if c['topology'] not in ('hierarchical','decentralized','single-agent','adaptive'):
-        raise ValueError('Unknown topology')
-    if c.get('engine','codex') not in ('codex','claude'):
-        raise ValueError('Unknown policy engine')
-    from roboteam.runtime.tools.tool_mode import of as tool_mode
-    tool_mode(c)
+    if c['system'] not in ('hierarchical','decentralized','single-agent','adaptive'):
+        raise ValueError('Unknown system')
+    if c.get('harness','codex') not in ('codex','claude'):
+        raise ValueError('Unknown policy harness')
+    from roboteam.runtime.tools.tools_mode import of as tools_mode
+    tools_mode(c)
     if c.get('startup_protocol') not in ('direct_controller', 'direct_team'):
         raise ValueError('Unknown startup protocol')
-    if c['startup_protocol'] == 'direct_controller' and c['topology'] not in ('adaptive', 'single-agent'):
+    if c['startup_protocol'] == 'direct_controller' and c['system'] not in ('adaptive', 'single-agent'):
         raise ValueError('Direct startup requires a single Controller')
-    if c['startup_protocol'] == 'direct_team' and c['topology'] not in ('hierarchical', 'decentralized'):
+    if c['startup_protocol'] == 'direct_team' and c['system'] not in ('hierarchical', 'decentralized'):
         raise ValueError('Direct team startup requires standing Workers')
     for key in ('poll_interval_s','integrity_check_interval_s','session_observation_ttl_s','manager_lease_s','max_batch_messages','max_batch_bytes','max_message_chars','min_check_interval_s','max_check_interval_s','action_timeout_sim_s','video_fps','max_unacknowledged_wakes'):
         if not math.isfinite(float(c[key])) or c[key] <= 0:
-            raise ValueError('Invalid harness limit: ' + key)
+            raise ValueError('Invalid run setting: ' + key)
     if c['min_check_interval_s'] > c['max_check_interval_s']:
         raise ValueError('Invalid check interval range')
     maximum=float(c.get('max_action_timeout_sim_s',600.))

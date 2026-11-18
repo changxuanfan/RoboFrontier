@@ -13,7 +13,7 @@ runs, Codex subscription): copy it to an untracked file (here `site.toml`) and e
 ## 1. Prerequisites
 
 - A Linux login node and compute nodes that see the same shared storage: the checkout, its
-  `.venv`, the engine CLIs and the policy environment. The job installs nothing.
+  `.venv`, the harness CLIs and the policy environment. The job installs nothing.
 - `sbatch`, `srun`, `squeue` and `scancel` on `PATH`. On the cluster used here run
   `module load slurm` first in every shell.
 - Slurm process tracking (cgroup) that follows every descendant of a job step, detached CLI
@@ -47,14 +47,14 @@ modes:
 
 | Mode | What to set | How the job gets it |
 | --- | --- | --- |
-| API key (Codex `sol`, Claude `opus`, third-party profiles) | The profile's `env_key`, e.g. `OPENAI_API_KEY`, in `.env` | `slurm-submit` loads `.env`; `sbatch --export=ALL` hands it to the job |
+| API key (Codex `sol`, Claude `opus`, third-party models) | The model's `env_key`, e.g. `OPENAI_API_KEY`, in `.env` | `slurm-submit` loads `.env`; `sbatch --export=ALL` hands it to the job |
 | Claude subscription token (`opus_subscription`, `haiku_subscription_token`) | `CLAUDE_CODE_OAUTH_TOKEN` in the checkout's `.env`, **not** exported | `slurm-submit` strips it from the `sbatch` environment and records the `.env` path; the job reads it from there and passes it to the CLI on a pipe |
 | Codex subscription (`sol_subscription`) | `slurm.auth_mode = "subscription"` and a credential store (below) | The job takes a lease on the store after allocation |
 
 - A Claude run refuses to start when the token is in a starting environment under bubblewrap:
   unset it in the shell before `slurm-submit`.
-- Claude API-key profiles are refused where bubblewrap runs (a policy shell could read the
-  CLI's environment); use a subscription-token profile.
+- Claude API-key models are refused where bubblewrap runs (a policy shell could read the
+  CLI's environment); use a subscription-token model.
 - Secret values never enter the job script, source snapshot, configuration or returned ZIP.
 
 <a id="subscription-jobs"></a>
@@ -85,9 +85,9 @@ second batch can borrow an existing job's access without refreshing it:
 schema_version = 11
 
 [policy]
-engine = "codex"
-profile = "sol"
-topology = "adaptive"
+harness = "codex"
+model = "sol"
+system = "adaptive"
 
 [batch]
 parallel = 36
@@ -148,9 +148,9 @@ prepared runs. Details: [policy environment](policy-environment.md).
 srun --time=10 --gpus=1 .venv/bin/roboteam --config site.toml doctor   # on a compute node
 ```
 
-| Engine and mode | Preflight | What `slurm-submit` checks |
+| Harness and mode | Preflight | What `slurm-submit` checks |
 | --- | --- | --- |
-| Codex API | `.venv/bin/roboteam --config site.toml preflight --confirm-spend` on the login node | A passed `<runs root>/engineering/model-compatibility/<profile>/report.json`, copied into the submission |
+| Codex API | `.venv/bin/roboteam --config site.toml preflight --confirm-spend` on the login node | A passed `<runs root>/engineering/model-compatibility/<model>/report.json`, copied into the submission |
 | Codex subscription | The same command inside an allocation (`srun ...`), which needs node-local scratch and, with the Mac route, the connector running | That report with a `job_gateway_sha256` matching the current job gateway |
 | Claude | `... preflight --confirm-spend --max-budget-usd 1` | Nothing; see the limit below |
 
@@ -241,15 +241,15 @@ Once the job is `RUNNING`, keep this running on the Mac (from a checkout whose
 
 ```sh
 .venv/bin/python -m roboteam.launch.slurm.proxy connect \
-  --ssh-host CLUSTER_SSH_ALIAS --job-id JOB_ID --engine codex --pause-grace-s 172800 \
+  --ssh-host CLUSTER_SSH_ALIAS --job-id JOB_ID --harness codex --pause-grace-s 172800 \
   --remote-script /CLUSTER/CHECKOUT/roboteam/launch/slurm/proxy.py \
   --remote-python /CLUSTER/CHECKOUT/.venv/bin/python \
   --state-root /var/tmp/USER/roboteam-egress \
   --srun /CLUSTER/SLURM/bin/srun --slurm-conf /CLUSTER/SLURM/slurm.conf
 ```
 
-- `--pause-grace-s` must equal `slurm.egress_pause_s`, and a positive grace needs `--engine`
-  (`claude` or `codex`, the job's engine), which picks the hosts probed during an outage:
+- `--pause-grace-s` must equal `slurm.egress_pause_s`, and a positive grace needs `--harness`
+  (`claude` or `codex`, the job's harness), which picks the hosts probed during an outage:
   `api.anthropic.com`, or `chatgpt.com` and `auth.openai.com`.
 - `--state-root` is the job's `slurm.egress_root`. The command adds a one-CPU relay step to the
   existing allocation; it queues nothing and holds a Mac sleep assertion while connected.
@@ -258,7 +258,7 @@ Once the job is `RUNNING`, keep this running on the Mac (from a checkout whose
   starts. A Claude job uses the same route without a credential store.
 - During an outage the world pauses (physics and dispatch held, time not counted) and resumes
   on the same route. A stale heartbeat, changed relay instance or an outage longer than the
-  grace fences the job: it stops the engine and seals the runs, and a restarted tunnel cannot
+  grace fences the job: it stops the harness and seals the runs, and a restarted tunnel cannot
   un-fence it. Mac shutdown, logout and network loss are therefore dependencies of this route.
 - `connect --ssh-config FILE` takes a private OpenSSH config for this route only, for example
   to bind the SSH connection to one interface past a VPN with
@@ -274,7 +274,7 @@ Once the job is `RUNNING`, keep this running on the Mac (from a checkout whose
 - **Codex on Landlock ABI 1–3** (for example kernel 5.15): seccomp also blocks path truncation
   and `openat2`, and ABI 1 denies cross-directory rename and hard links; replace a file through
   a temporary file in the same folder. Claude's Landlock Bash needs ABI 4.
-- **Codex subscription jobs** never redispatch a host or recreate the shared engine after it
+- **Codex subscription jobs** never redispatch a host or recreate the shared harness after it
   fails; the runs are sealed for review.
 - The Mac route's `egress_root` must stay outside `/tmp`, since policies can read and write
   there; preparation refuses it otherwise.

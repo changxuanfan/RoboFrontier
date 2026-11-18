@@ -1,4 +1,4 @@
-// Bound task transport. Closing this client never terminates the shared engine.
+// Bound task transport. Closing this client never terminates the shared harness.
 const net=require('node:net'),readline=require('node:readline');
 const {RpcError,STARTUP_ACK_MS}=require('./rpc');
 class GatewayRpc {
@@ -21,7 +21,7 @@ class GatewayRpc {
       let m;try{m=JSON.parse(line);}catch{return;}
       if(m.method&&m.id!==undefined) {
         try {
-          if(!onRequest)throw new Error('Unsupported shared engine request');
+          if(!onRequest)throw new Error('Unsupported shared harness request');
           const result=await onRequest(m.method,m.params);this.write({id:m.id,result});
         }catch{this.write({id:m.id,error:{code:-32603,message:'Bound task tool request failed'}});}
       }else if(m.id!==undefined) {

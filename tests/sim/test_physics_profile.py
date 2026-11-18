@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import mujoco
 import numpy as np
 
-from roboteam.sim.profile import FAMILIES, SLEEP, IdleSleep, attach, forward_after_step
+from roboteam.sim.profile import TASK_TYPES, SLEEP, IdleSleep, attach, forward_after_step
 from roboteam.analysis.motion_query import object_poses
 from scripts.release.build_release import (FINGER_FRICTION, MODULE, SURFACE_FRICTION, cases, check_physics, compile_scene,
                                    contact_parameters)
@@ -17,15 +17,15 @@ BOX = '''<mujoco><option timestep="0.002"/><worldbody><geom type="plane" size="1
 <body><freejoint/><geom type="box" size=".03 .03 .03" mass=".1" pos="0 0 .03"/></body></worldbody></mujoco>'''
 
 
-def world(family='transport'):
+def world(task_type='transport'):
     model = mujoco.MjModel.from_xml_string(BOX)
     arm = SimpleNamespace(job=None)
-    return SimpleNamespace(model=model, data=mujoco.MjData(model), arms={'A': arm}, task={'family': family})
+    return SimpleNamespace(model=model, data=mujoco.MjData(model), arms={'A': arm}, task={'family': task_type})
 
 
 class StepSettingsTests(unittest.TestCase):
-    def test_every_family_has_settings(self):
-        self.assertEqual(set(FAMILIES), {'mosaic', 'transport', 'dial', 'relay'})
+    def test_every_task_type_has_settings(self):
+        self.assertEqual(set(TASK_TYPES), {'mosaic', 'transport', 'dial', 'relay'})
 
     def test_attach_changes_no_contact_or_solver_setting(self):
         w = world('dial');before = (w.model.opt.noslip_tolerance, w.model.opt.cone, w.model.geom_friction.copy())
@@ -58,8 +58,8 @@ class StepSettingsTests(unittest.TestCase):
         self.assertEqual(w.model.opt.noslip_iterations, 10)
 
     def test_harness_has_no_physics_settings(self):
-        harness = json.loads(Path('roboteam/runtime/run/defaults.json').read_text())
-        self.assertFalse({'physics_profile', 'gripper_position_servo', 'allowed_tcp_speed_m_s'} & set(harness))
+        run_settings = json.loads(Path('roboteam/runtime/run/defaults.json').read_text())
+        self.assertFalse({'physics_profile', 'gripper_position_servo', 'allowed_tcp_speed_m_s'} & set(run_settings))
 
 
 class ReleaseContactRuleTests(unittest.TestCase):
@@ -95,7 +95,7 @@ class ReleasedScenePhysicsTests(unittest.TestCase):
                 self.assertEqual(check_physics(folder), [])
 
     def test_released_scene_names_match_the_contact_rule(self):
-        # family: (arms, Dial module disks and stems, fingers' collision geoms per arm)
+        # task type: (arms, Dial module disks and stems, fingers' collision geoms per arm)
         expected = {'transport-a08-d1': (8, 0), 'mosaic-a04-6x12-d1': (4, 0), 'relay-a08-d2': (8, 0), 'dial-best5-n04-d2': (8, 8)}
         for folder in cases():
             if folder.name not in expected: continue

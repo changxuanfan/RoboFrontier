@@ -1,8 +1,8 @@
 # Communication contract v0.10
 
-Meta is the experiment manager, outside the task team. In hierarchical mode, Controller coordinates the task and each Worker controls one bound arm. Peer mode has Workers without a Controller.
+Meta is the experiment manager, outside the task team. In hierarchical mode, Controller coordinates the task and each Worker controls one bound arm. Decentralized mode has Workers without a Controller.
 
-Centralized mode has one Controller for all robots and no task teammates. It uses explicit robot selection and the same physical tools; Meta remains outside the policy team. No cross-session task communication is needed in that mode.
+Single-agent mode has one Controller for all robots and no task teammates. It uses explicit robot selection and the same physical tools; Meta remains outside the policy team. No cross-session task communication is needed in that mode.
 
 Adaptive mode routes Controller ↔ active delegates; returned scopes do not receive new work. A runtime assignment authorizes its bounded execution without a separate acceptance round. Coordinate changes to an active scope, and use return_task to hand back results and control. The small completion notice references a saved report; the Controller chooses whether to read it.
 
@@ -10,11 +10,11 @@ Business messages have one format: `to` (explicit recipients), `text` (natural l
 
 In hierarchical mode Controller ↔ Worker is allowed, Worker ↔ Worker is rejected. In decentralized mode Workers may address each other and there is no Controller. Meta cannot send business messages or control a robot. Global/local camera access does not grant access to another role's private mailbox.
 
-Controller relays relevant decisions and readiness so Workers can coordinate without contacting forbidden peers. Peers negotiate only with affected teammates. The message format remains the same in both modes.
+Controller relays relevant decisions and readiness so Workers can coordinate without contacting other Workers. Decentralized Workers negotiate only with affected teammates. The message format remains the same in both modes.
 
-When assigning work or materially changing a commitment, describe the outcome, currently executable scope and earliest remaining prerequisite. On updates, identify previous prerequisites now satisfied, citing the relevant report/observation and its time or message ID; state which restrictions remain and which are replaced. Relay enabling facts with the authorization so recipients can resolve earlier conditions. Ordinary progress messages can be brief. The Skill defines standing local authority; Controller grants joint hierarchical scopes, while peers agree affected commitments directly. Verified conditions within scope can enable continuation without another approval; Agents still decide and call actions.
+When assigning work or materially changing a commitment, describe the outcome, currently executable scope and earliest remaining prerequisite. On updates, identify previous prerequisites now satisfied, citing the relevant report/observation and its time or message ID; state which restrictions remain and which are replaced. Relay enabling facts with the authorization so recipients can resolve earlier conditions. Ordinary progress messages can be brief. The Skill defines standing local authority; Controller grants joint hierarchical scopes, while decentralized Workers agree affected commitments directly. Verified conditions within scope can enable continuation without another approval; Agents still decide and call actions.
 
-An illustrative scope: “Complete the assigned outcome. Prepare locally now; enter resource X once you verify its specified release using the agreed evidence. Continue the authorized next stage yourself; ask again if the reservation or outcome changes.” Controller can grant this; peers can accept it together. If a needed fact is private to another Worker in a hierarchy, Controller relays it. Public observable facts can instead be checked by the authorized executor. Choose the actual scopes, evidence and restrictions from the scene.
+An illustrative scope: “Complete the assigned outcome. Prepare locally now; enter resource X once you verify its specified release using the agreed evidence. Continue the authorized next stage yourself; ask again if the reservation or outcome changes.” Controller can grant this; decentralized Workers can accept it together. If a needed fact is private to another Worker in a hierarchy, Controller relays it. Public observable facts can instead be checked by the authorized executor. Choose the actual scopes, evidence and restrictions from the scene.
 
 Reserve the actual conflicting resource/time and name its release milestone. Do not impose a whole-batch barrier when an item or path release enables another role. A bounded scope can cover subsequent work without per-item approval. Workers may propose extensions while waiting; informational acknowledgements and unchanged idle notices should not displace useful work.
 
@@ -28,7 +28,7 @@ A pause request uses the same addressed message format. The executor reviews it 
 
 Keep changed conditions, remaining constraints, needed decisions and concise evidence. Unchanged status confirmations do not create work. Pending replies block only dependent work; independently authorized work can continue.
 
-Share a run-local lesson when it changes another role's choices, with evidence and applicability limits, or point to its entry in the run's `skills.md`. Hierarchical Workers share through Controller, peers with affected Workers, and adaptive delegates through Controller; routine trials need no separate announcement. A lesson is neither a new authorization nor verified object truth.
+Share a run-local lesson when it changes another role's choices, with evidence and applicability limits, or point to its entry in the run's `skills.md`. Hierarchical Workers share through Controller, decentralized Workers with affected Workers, and adaptive delegates through Controller; routine trials need no separate announcement. A lesson is neither a new authorization nor verified object truth.
 
 Messages and system events share the configured batch byte/count budget; remaining_messages and remaining_events identify items still queued. Oversized notices require a shorter message or an artifact reference. Delivery batches have IDs. The client acknowledges receipt on its next call; this is not business acceptance. Until that receipt, the batch may be redelivered with the same message IDs. Do not repeat accepted physical work because its message appears again. `history` retrieves your own conversation without creating commitments.
 

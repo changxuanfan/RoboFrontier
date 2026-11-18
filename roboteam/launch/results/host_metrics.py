@@ -46,8 +46,8 @@ def session_glob(folder, pattern):
 
 
 def codex_run_transcripts(run, thread):
-    """The run's own copies of a Codex thread (private/engine/transcripts/)."""
-    try: folder = run_layout.path(run, 'engine_transcripts')
+    """The run's own copies of a Codex thread (private/harness/transcripts/)."""
+    try: folder = run_layout.path(run, 'harness_transcripts')
     except KeyError: return []
     return session_glob(folder, '*'+thread+'*.jsonl') if thread and folder.is_dir() else []
 
@@ -143,9 +143,9 @@ def number(value):
     return value if type(value) in (int, float) and math.isfinite(value) and value >= 0 else None
 
 
-def usage(engine, raw, model_usage=None):
+def usage(harness, raw, model_usage=None):
     raw = raw if isinstance(raw, dict) else {}
-    if engine == 'claude':
+    if harness == 'claude':
         # modelUsage is the session's running total, including requests the turn's
         # usage leaves out. Never add the two; export_metrics takes per-turn differences.
         if isinstance(model_usage, dict) and model_usage:
@@ -164,7 +164,7 @@ def usage(engine, raw, model_usage=None):
         cached = number(raw.get('cached_input_tokens', raw.get('cachedInputTokens')))
         uncached = total-cached if total is not None and cached is not None and total >= cached else None
         written = None  # Codex does not separately report cache writes here.
-    # Same definition for both engines: every input token not read from cache.
+    # Same definition for both harnesses: every input token not read from cache.
     # Claude's uncached_input_tokens excludes cache writes, so it is not comparable.
     miss = total-cached if total is not None and cached is not None and total >= cached else None
     return {'input_tokens': total, 'uncached_input_tokens': uncached, 'cache_miss_input_tokens': miss,
@@ -198,7 +198,7 @@ def _claude_usage_after_results(run, reported_until, actors):
     A background task can wake an idle CLI after the host stopped reading its results.
     Fork copies keep their message ids and timestamps but take the child's session id, so
     a copy is reported only if every session holding it with a known result ended later."""
-    try: folder = run_layout.path(run, 'engine_config')/'projects'
+    try: folder = run_layout.path(run, 'harness_config')/'projects'
     except KeyError: folder = None
     entries = {}
     for path in session_glob(folder, '*.jsonl') if folder is not None and folder.is_dir() else []:
@@ -274,7 +274,7 @@ def claude_transcript_cost(run, pricing=None):
     or a stop has none. Each assistant message's usage is priced once (transcripts repeat
     it per content block), main sessions and their sub-agent transcripts alike."""
     pricing = claude_pricing() if pricing is None else pricing
-    try: folder = run_layout.path(run, 'engine_config')/'projects'
+    try: folder = run_layout.path(run, 'harness_config')/'projects'
     except KeyError: return None
     if not folder.is_dir(): return None
     messages = {}
@@ -340,12 +340,12 @@ def simulation_speed(run, sim_s, active_s=None, stalls=None):
             'active_time_stalls': stalls, 'slowest_10min_speed_ratio': None if worst is None else round(worst, 4)}
 
 
-def export_metrics(run, engine):
+def export_metrics(run, harness):
     """Count actual host events, including setup; deduplicate terminal event identities."""
     events = _records(run_layout.path(run, 'host_log'))
     rows, seen = [], set()
     after_results = None
-    if engine == 'claude':
+    if harness == 'claude':
         session_totals, reported_until, actors = {}, {}, {}
         for e in events:
             if e.get('event') != 'cli_turn_completed': continue
@@ -374,10 +374,10 @@ def export_metrics(run, engine):
             tid = e.get('thread_id'); value = e.get('token_usage') or {}
             total, last = value.get('total'), value.get('last')
             if not tid or not isinstance(total, dict) or not isinstance(last, dict): continue
-            normalized = usage(engine, total)
+            normalized = usage(harness, total)
             old = previous.get(tid)
             if old == normalized: continue
-            delta = usage(engine, last) if old is None else _counter_delta(normalized, old)
+            delta = usage(harness, last) if old is None else _counter_delta(normalized, old)
             previous[tid] = normalized
             rows.append({'actor': e.get('actor'), 'session_id': tid, 'phase': 'policy',
                          'usage': delta, 'reported_cost_usd': None, 'duration_s': None, 'ended_at': None})
@@ -392,7 +392,7 @@ def export_metrics(run, engine):
     intervals = [(r['ended_at']-r['duration_s'], r['ended_at']) for r in rows
                  if r['ended_at'] is not None and r['duration_s'] is not None]
     model_seconds = [r['duration_s'] for r in rows if r['phase'] != AFTER_LAST_RESULT]
-    if engine == 'codex':
+    if harness == 'codex':
         completed = [e for e in events if e.get('event') == 'turn/completed']
         intervals = [(e['at']-e['duration_s'], e['at']) for e in completed
                      if number(e.get('at')) is not None and number(e.get('duration_s')) is not None]
@@ -404,13 +404,13 @@ def export_metrics(run, engine):
                           if all(r['usage'][k] is not None for r in selected) else None for k in fields}
     malformed = sum(e.get('event') == 'malformed_evidence' for e in events)
     started = {e.get('events_name') for e in events if e.get('event') == 'cli_turn_started'}
-    unfinished = len(started-seen) if engine == 'claude' else None
+    unfinished = len(started-seen) if harness == 'claude' else None
     # A compaction's tokens appear only in a result's modelUsage, never in the transcript.
     complete = not malformed and not unfinished and not (after_results or {}).get('compactions')
     reported = sum(costs) if costs else None
-    estimate = claude_transcript_cost(run) if engine == 'claude' else None
+    estimate = claude_transcript_cost(run) if harness == 'claude' else None
     cost_complete = bool(rows) and len(costs) == len(rows) and complete
-    return {'schema': 'roboteam.run-metrics.v1', 'engine': engine, 'usage': totals,
+    return {'schema': 'roboteam.run-metrics.v1', 'harness': harness, 'usage': totals,
             'known_usage_subtotals': known_usage,
             'by_actor': by_actor, 'evidence_scope': 'host_observed',
             'cache_hit_rate': totals['cached_input_tokens']/totals['input_tokens']
@@ -425,7 +425,7 @@ def export_metrics(run, engine):
                                               if not cost_complete and estimate and estimate['estimated_cost_usd'] is not None else None),
             'usage_after_last_result': after_results,
             'rows': rows, 'phase_counts': {p: sum(r['phase'] == p for r in rows) for p in sorted({r['phase'] for r in rows})},
-            'row_unit': 'cli_turn' if engine == 'claude' else 'token_usage_update',
+            'row_unit': 'cli_turn' if harness == 'claude' else 'token_usage_update',
             'unfinished_cli_turns': unfinished,
             'tool_call_count': len(tools),
             'tool_seconds_sum': sum(tool_seconds) if tool_seconds and None not in tool_seconds else None,

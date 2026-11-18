@@ -13,7 +13,7 @@ The source code is licensed separately under the MIT License ([`LICENSE`](LICENS
 - Task, scene and environment data: the released tasks in `benchmark/`.
 - Rendered media: the README and project-page images in `docs/media/` and `site/`,
   benchmark previews, the factory hall textures in `benchmark/hall/`, and the videos
-  published from this project (Oracle recordings and the Factory tour).
+  published from this project (Oracle recordings and the factory hall tour).
 
 Code, including scripts, tests, the project page code in `site/` and the HTML
 tools in `assets/`, is under the MIT License.

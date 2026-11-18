@@ -17,9 +17,9 @@ from roboteam.runtime.tools.tool_errors import CallIdConflict, conflict_error, i
 # Allow the server to finish its bounded SQLite acquisition before its normal
 # 40-second response slice expires; explicit caller timeouts are unchanged.
 DEFAULT_HTTP_TIMEOUT_SECONDS = 45 + MAX_BEGIN_WAIT_SECONDS
-# A waiting robot action may take longer than an engine lets one tool call last (Claude Code
+# A waiting robot action may take longer than an harness lets one tool call last (Claude Code
 # gives up at 660 s); after this long the call returns the action as still pending, under its
-# original call_id, for both engines alike. The action keeps running; `job` follows it.
+# original call_id, for both harnesses alike. The action keeps running; `job` follows it.
 RETURN_PENDING_AFTER_S = 600.
 
 

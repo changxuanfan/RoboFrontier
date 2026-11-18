@@ -1,10 +1,10 @@
-"""Engine-neutral benchmark helpers: .env loading and released case selection."""
+"""Harness-neutral benchmark helpers: .env loading and released case selection."""
 import os
 from pathlib import Path
 import re
 import shlex
 
-from roboteam.tasks.families import ROOT, RELEASE, read
+from roboteam.tasks.task_types import ROOT, RELEASE, read
 
 
 def env_file_names(path, *names):
@@ -41,19 +41,19 @@ def load_env(path):
         os.environ.setdefault(key, values[0] if values else '')
 
 
-def select_cases(families=None, cases=None, level=None, min_arms=False):
+def select_cases(task_types=None, cases=None, level=None, min_arms=False):
     """Resolve selection from released task metadata, without creating a world."""
     release=read(ROOT/RELEASE)
-    if families and set(families)-set(release['families']):
-        raise ValueError('Unknown task families')
+    if task_types and set(task_types)-set(release['families']):
+        raise ValueError('Unknown task types')
     selected=[]
-    for name,family in release['families'].items():
-        if families and name not in families:continue
+    for name,task_type in release['families'].items():
+        if task_types and name not in task_types:continue
         rows=[]
-        for case in family['policy']:
+        for case in task_type['policy']:
             task=read(ROOT/case['directory']/'task.json')
             if cases and case['id'] not in cases or level is not None and task['level']!=level:continue
-            rows.append(dict(case_id=case['id'],family=name,level=task['level'],arms=len(task['arms']),
+            rows.append(dict(case_id=case['id'],task_type=name,level=task['level'],arms=len(task['arms']),
                              directory=case['directory']))
         if min_arms and rows:
             minimum=min(row['arms'] for row in rows)

@@ -1,4 +1,4 @@
-"""Command-line entry point shared by native policy engines and evidence tools."""
+"""Command-line entry point shared by native policy harnesses and evidence tools."""
 import argparse
 from contextlib import contextmanager
 import hashlib
@@ -10,15 +10,15 @@ import subprocess
 import sys
 import tempfile
 
-from .configuration import ROOT, TOPOLOGIES, load_configuration, rendering_environment, runs_root
+from .configuration import ROOT, SYSTEMS, load_configuration, rendering_environment, runs_root
 from roboteam.runtime.sandbox import policy_env
 from roboteam.runtime.run import layout as run_layout
 from .tasks.config import startup_protocol
 
 
 def _receipt_name(policy):
-    from roboteam.runtime.tools.tool_mode import receipt_name
-    return receipt_name(policy['profile'], policy.get('tool_mode', 'full'))
+    from roboteam.runtime.tools.tools_mode import receipt_name
+    return receipt_name(policy['model'], policy.get('tools', 'full'))
 
 
 def _print(value):
@@ -28,19 +28,19 @@ def _print(value):
 def _catalog(config):
     policy = config['policy']
     from .configuration import model_catalog
-    catalog = model_catalog(policy['engine'])
-    if policy['profile'] not in catalog['profiles']:
-        raise ValueError('Unknown ' + policy['engine'] + ' profile: ' + policy['profile'])
-    catalog['profiles'][policy['profile']]['effort'] = policy['effort']
-    if policy['engine'] == 'codex':
+    catalog = model_catalog(policy['harness'])
+    if policy['model'] not in catalog['models']:
+        raise ValueError('Unknown ' + policy['harness'] + ' model: ' + policy['model'])
+    catalog['models'][policy['model']]['effort'] = policy['effort']
+    if policy['harness'] == 'codex':
         # New portable batches and their preflight use the same checked-in
         # template, independent of another Desktop session's mutable cache.
-        catalog['profiles'][policy['profile']]['use_cached_model_metadata'] = False
-        catalog['profiles'][policy['profile']]['tool_backend'] = config['runtime'].get('codex_tool_backend', 'native')
-        if policy.get('tool_mode', 'full') != 'full':
-            catalog['profiles'][policy['profile']]['tool_mode'] = policy['tool_mode']
+        catalog['models'][policy['model']]['use_cached_model_metadata'] = False
+        catalog['models'][policy['model']]['tool_backend'] = config['runtime'].get('codex_tool_backend', 'native')
+        if policy.get('tools', 'full') != 'full':
+            catalog['models'][policy['model']]['tools'] = policy['tools']
         if config['runtime']['codex_home_scope'] == 'job':
-            catalog['profiles'][policy['profile']]['runner_backend'] = 'slurm-managed-v1'
+            catalog['models'][policy['model']]['runner_backend'] = 'slurm-managed-v1'
     return catalog
 
 
@@ -65,13 +65,13 @@ def _policy_environment():
 def plan(config):
     from roboteam.launch.prepare import select_cases
     selection = config['selection']
-    selected = select_cases(selection['families'] or None, selection['cases'] or None,
+    selected = select_cases(selection['task_types'] or None, selection['cases'] or None,
                             selection['level'] or None, selection['min_arms'])
     policy = config['policy']
-    model = _catalog(config)['profiles'][policy['profile']]['model']
+    model = _catalog(config)['models'][policy['model']]['model']
     return {'schema': 'roboteam.plan.v1', 'model_calls': 0, 'simulator_started': False,
-            'engine': policy['engine'], 'profile': policy['profile'], 'model': model, 'effort': policy['effort'],
-            'topology': policy['topology'], 'parallel': config['batch']['parallel'],
+            'harness': policy['harness'], 'model_entry': policy['model'], 'model': model, 'effort': policy['effort'],
+            'system': policy['system'], 'parallel': config['batch']['parallel'],
             'startup_interval_s': config['batch']['startup_interval_s'],
             'task_wall_limit_s': config['batch']['task_wall_limit_s'],
             'task_count': len(selected), 'jobs': selected, 'policy_environment': _policy_environment(),
@@ -86,40 +86,40 @@ def prepare(output, config):
     load_env(ROOT/'.env')
     plan(config)  # Reject invalid model and selection before any installation.
     from roboteam.runtime.run import versions
-    pinned = versions.require(policy['engine'])
+    pinned = versions.require(policy['harness'])
     policy_env.require_private_route(config)
     output = Path(output).resolve()
     if output.exists():
         raise ValueError('Choose a new output directory; prepared runs are never overwritten')
     setup_assets()
-    topology = policy['topology']
-    harness = {'topology': topology,
-               'startup_protocol': startup_protocol(topology),
+    system = policy['system']
+    run_settings = {'system': system,
+               'startup_protocol': startup_protocol(system),
                'observation_image_profile': config['render']['observation_profile'],
                'startup_timeout_s': config['batch']['startup_timeout_s'],
                'render_device': config['render']['device'],
                'record_realtime_video': config['render']['record_realtime_video']}
-    # Written only for a robot_only run, so a full run's frozen harness is what it always was.
-    if policy.get('tool_mode', 'full') != 'full':
-        harness['tool_mode'] = policy['tool_mode']
+    # Written only for a robot_only run, so a full run's frozen run settings are what they always were.
+    if policy.get('tools', 'full') != 'full':
+        run_settings['tools'] = policy['tools']
     with _catalog_file(config) as catalog:
-        if policy['engine'] == 'claude':
+        if policy['harness'] == 'claude':
             from roboteam.launch.claude_prepare import prepare_batch as prepare_claude
-            result = prepare_claude(output, [policy['profile']], families=selection['families'] or None,
+            result = prepare_claude(output, [policy['model']], task_types=selection['task_types'] or None,
                                    cases=selection['cases'] or None, catalog=catalog,
                                    level=selection['level'] or None, min_arms=selection['min_arms'],
-                                   topology=topology, record_video=config['render']['record_realtime_video'],
+                                   system=system, record_video=config['render']['record_realtime_video'],
                                    wall_limit_s=config['batch']['task_wall_limit_s'],
                                    observation_image_profile=config['render']['observation_profile'],
                                    startup_timeout_s=config['batch']['startup_timeout_s'],
                                    render_device=config['render']['device'],
-                                   tool_mode=policy.get('tool_mode', 'full'))
+                                   tools=policy.get('tools', 'full'))
         else:
             from roboteam.launch.codex_batch import prepare_batch as prepare_codex
-            result = prepare_codex(output, [policy['profile']], families=selection['families'] or None,
+            result = prepare_codex(output, [policy['model']], task_types=selection['task_types'] or None,
                                    cases=selection['cases'] or None, config=catalog,
                                    level=selection['level'] or None, min_arms=selection['min_arms'],
-                                   wall_limit_s=config['batch']['task_wall_limit_s'], harness_overrides=harness)
+                                   wall_limit_s=config['batch']['task_wall_limit_s'], run_settings_overrides=run_settings)
     batch = json.loads(result.read_text())
     batch['execution'] = {**config['runtime'], 'startup_interval_s': config['batch']['startup_interval_s']}
     batch['versions'] = pinned
@@ -147,31 +147,31 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
     if not confirm_spend:
         return {'status': 'not_run', 'model_calls': 0,
                 'reason': 'Add --confirm-spend to authorize real provider calls',
-                'engine': policy['engine'], 'profile': policy['profile']}
+                'harness': policy['harness'], 'model_entry': policy['model']}
     from roboteam.runtime.run.diagnostics import require_runtime
     require_runtime(config, render=False)
     with _catalog_file(config) as catalog:
-        if policy['engine'] == 'claude':
+        if policy['harness'] == 'claude':
             if max_budget_usd is None:
                 raise ValueError('Claude preflight requires an explicit --max-budget-usd estimate')
             from roboteam.harness.claude.checks.preflight import run_precheck
             import uuid
             output = runs_root()/'engineering/claude-precheck'/uuid.uuid4().hex
-            report = run_precheck(policy['profile'], output, max_budget_usd, dict(os.environ),
+            report = run_precheck(policy['model'], output, max_budget_usd, dict(os.environ),
                                   check_fork=not smoke_only, catalog=catalog)
             if smoke_only or not report.get('passed'):
                 return report
             # The blocked-parent fork check: a run needs both receipts, as a Codex run needs its one.
             from roboteam.harness.claude.checks.blocked_precheck import run_blocked_precheck
             blocked_output = runs_root()/'engineering/claude-blocked-precheck'/uuid.uuid4().hex
-            blocked = run_blocked_precheck(policy['profile'], blocked_output, max_budget_usd,
+            blocked = run_blocked_precheck(policy['model'], blocked_output, max_budget_usd,
                                            dict(os.environ), catalog=catalog)
             return {**report, 'passed': bool(blocked['passed']),
                     'blocked_precheck': {'passed': blocked['passed'], 'checks': blocked['checks'],
                                          'error_type': blocked['error_type'],
                                          'receipt': str(blocked_output/'receipt.json')}}
-        from roboteam.harness.codex.launch import profile, launch_config, initialize_codex_home
-        selected = profile(policy['profile'], catalog)
+        from roboteam.harness.codex.launch import model_entry, launch_config, initialize_codex_home
+        selected = model_entry(policy['model'], catalog)
         if config['runtime']['codex_home_scope'] == 'job':
             from roboteam.launch.slurm.job import subscription_environment, _local_storage
             # Explicitly authorized live preflight, inside an allocation, with
@@ -182,7 +182,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             _local_storage(scratch)
             with tempfile.TemporaryDirectory(prefix='rf-pf-', dir=scratch) as temporary:
                 with subscription_environment(config, temporary, on_failure=lambda: None):
-                    command = [sys.executable, '-m', 'roboteam.launch.codex_batch', 'preflight', '--models', policy['profile'],
+                    command = [sys.executable, '-m', 'roboteam.launch.codex_batch', 'preflight', '--models', policy['model'],
                                '--model-config', str(catalog)]
                     if smoke_only:
                         command.append('--smoke-only')
@@ -209,7 +209,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
                       /_receipt_name(policy))
         folder.mkdir(parents=True, exist_ok=True)
         initialize_codex_home(launch_config(selected, folder), folder, env=env)
-        command = [sys.executable, '-m', 'roboteam.launch.codex_batch', 'preflight', '--models', policy['profile'],
+        command = [sys.executable, '-m', 'roboteam.launch.codex_batch', 'preflight', '--models', policy['model'],
                    '--model-config', str(catalog)]
         if smoke_only:
             command.append('--smoke-only')
@@ -240,15 +240,15 @@ def run(batch, *, continuing=False):
     config = _frozen_configuration(batch)
     # Receipts and exports are where the batch's configuration put them, as for prepare.
     os.environ.setdefault('ROBOTEAM_RUNS_ROOT', str(runs_root(config)))
-    if config['policy']['engine'] == 'claude':
-        # Both engines need passed compatibility receipts; Codex checks its own per run.
+    if config['policy']['harness'] == 'claude':
+        # Both harnesses need passed compatibility receipts; Codex checks its own per run.
         from roboteam.harness.claude.checks.readiness import require_ready
         from roboteam.harness.claude.session.runner import require_hidden_token
         frozen = [json.loads((Path(job['run_directory'])/'private/inputs/claude.json').read_text())
                   for job in json.loads((Path(batch)/'batch.json').read_text()).get('jobs', [])]
-        # Each run's frozen profile, effort included, must match a receipt, as Codex checks per run.
-        for profile in {json.dumps(item['profile'], sort_keys=True) for item in frozen} or {None}:
-            require_ready(config['policy']['profile'], selected=json.loads(profile) if profile else None)
+        # Each run's frozen model, effort included, must match a receipt, as Codex checks per run.
+        for model_entry in {json.dumps(item['model_entry'], sort_keys=True) for item in frozen} or {None}:
+            require_ready(config['policy']['model'], selected=json.loads(model_entry) if model_entry else None)
         # Seatbelt and Landlock keep other processes' environments unreadable; bubblewrap does not.
         if any(item.get('bash_isolation') == 'claude-sandbox' for item in frozen):
             require_hidden_token()
@@ -258,21 +258,21 @@ def run(batch, *, continuing=False):
     document = json.loads((Path(batch)/'batch.json').read_text())
     # Every run uses a policy environment and the closed access table, except a robot_only
     # run: its roles have no shell or file tool, so there is nothing for either to confine.
-    from roboteam.runtime.tools import tool_mode
+    from roboteam.runtime.tools import tools_mode
     for job in document.get('jobs', []):
-        if tool_mode.of_run(job['run_directory']) == tool_mode.ROBOT_ONLY:
+        if tools_mode.of_run(job['run_directory']) == tools_mode.ROBOT_ONLY:
             continue
         access = json.loads((Path(job['run_directory'])/'private/inputs/policy-access.json').read_text())
         if access.get('schema') != 'roboteam.policy-access.v2':
             raise ValueError('Run prepared without a policy environment: '+job['run_directory'])
     pinned = document.get('versions')
-    if pinned != versions.require(config['policy']['engine']):
+    if pinned != versions.require(config['policy']['harness']):
         raise ValueError('This batch was prepared with other program versions: '+json.dumps(pinned))
     environment = {**rendering_environment(config['render']['device'], platform.system(), os.environ),
-                   **versions.ENGINE_ENVIRONMENT[config['policy']['engine']]}
+                   **versions.HARNESS_ENVIRONMENT[config['policy']['harness']]}
     os.environ.clear()
     os.environ.update(environment)
-    if config['policy']['engine'] == 'claude':
+    if config['policy']['harness'] == 'claude':
         from roboteam.launch.claude_batch import run_until_signal
         state = run_until_signal(batch, dict(os.environ), parallel=config['batch']['parallel'],
                           startup_interval_s=config['batch']['startup_interval_s'],
@@ -337,8 +337,8 @@ def continue_runs(batch, cases=None):
     from roboteam.runtime.run.setup import write_json
     batch = Path(batch).resolve()
     config = _frozen_configuration(batch)
-    engine = config['policy']['engine']
-    lock = run_layout.batch_path(batch, 'engineering_lock' if engine == 'claude' else 'supervisor_lock')
+    harness = config['policy']['harness']
+    lock = run_layout.batch_path(batch, 'engineering_lock' if harness == 'claude' else 'supervisor_lock')
     if _lock_held(lock): raise ValueError('The batch is still running; stop it or wait before continuing runs')
     document = json.loads((batch/'batch.json').read_text())
     jobs = document['jobs']
@@ -367,7 +367,7 @@ def continue_runs(batch, cases=None):
             prepared.append(job['case_id'])
     if not prepared: return {'batch': str(batch), 'prepared': [], 'refused': refused}
     # Reopen the batch for exactly these runs; the others keep their final status.
-    if engine == 'claude':
+    if harness == 'claude':
         path = run_layout.batch_path(batch, 'engineering_status')
         state = json.loads(path.read_text())
         for job, entry in zip(document['jobs'], state['jobs']):
@@ -407,17 +407,19 @@ def argument_parser(*, prog=None):
     sub = parser.add_subparsers(dest='command', required=True)
     for name in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
         p = sub.add_parser(name)
-        p.add_argument('--engine', choices=('codex', 'claude'))
-        p.add_argument('--profile')
+        p.add_argument('--harness', choices=('codex', 'claude'), help='Coding-agent harness the agents run in')
+        p.add_argument('--model', help='Model entry of models.json for the harness, such as sol or opus')
         p.add_argument('--effort', choices=('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
-        p.add_argument('--topology', choices=TOPOLOGIES)
-        p.add_argument('--tool-mode', choices=('full', 'robot_only'))
+        p.add_argument('--system', choices=SYSTEMS, help='Agent system')
+        p.add_argument('--tools', choices=('full', 'robot_only'),
+                       help='full: the robot tool and the harness code tools; robot_only: the robot tool alone')
         p.add_argument('--parallel', type=int)
         p.add_argument('--render', choices=('nvidia', 'cpu', 'native'))
         p.add_argument('--level', type=int, choices=(1, 2, 3))
         p.add_argument('--min-arms', action='store_true', default=None)
         p.add_argument('--cases', nargs='+')
-        p.add_argument('--families', nargs='+', choices=('transport', 'mosaic', 'relay', 'dial'))
+        p.add_argument('--task-types', nargs='+', choices=('transport', 'mosaic', 'relay', 'dial'),
+                       help='Task types to select; all four when omitted')
         if name == 'prepare':
             p.add_argument('--output', type=Path, required=True)
         elif name == 'slurm-submit':
@@ -481,9 +483,9 @@ def main(argv=None):
             return 0
         if args.command in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
             overrides = {}
-            for section, fields in (('policy', ('engine', 'profile', 'effort', 'topology', 'tool_mode')),
+            for section, fields in (('policy', ('harness', 'model', 'effort', 'system', 'tools')),
                                     ('batch', ('parallel',)),
-                                    ('selection', ('level', 'min_arms', 'cases', 'families'))):
+                                    ('selection', ('level', 'min_arms', 'cases', 'task_types'))):
                 updates = {field: getattr(args, field) for field in fields if getattr(args, field) is not None}
                 if updates:
                     overrides[section] = updates
@@ -515,7 +517,7 @@ def main(argv=None):
             else:
                 # New runs use the frozen policy Python environment by default (policy_env.default_root).
                 from roboteam.runtime.sandbox.policy_env import ENV_VAR, apply_default
-                if config['policy'].get('tool_mode', 'full') == 'robot_only':
+                if config['policy'].get('tools', 'full') == 'robot_only':
                     # No shell runs in a robot_only run, so it freezes no Python environment.
                     os.environ[ENV_VAR] = 'off'
                 else:

@@ -10,13 +10,13 @@ from roboteam.runtime.run.setup import verify_inputs
 
 
 
-# These tests prepare batches without the engine CLIs installed; the pinned version check
+# These tests prepare batches without the harness CLIs installed; the pinned version check
 # itself is tested in runtime.run.test_versions.
 def setUpModule():
     from unittest.mock import patch
     from roboteam.runtime.run import versions
     global _versions
-    _versions = patch.object(versions, 'engine_version', side_effect=lambda engine, run=None: versions.ENGINES[engine])
+    _versions = patch.object(versions, 'harness_version', side_effect=lambda harness, run=None: versions.HARNESSES[harness])
     _versions.start()
 
 
@@ -25,34 +25,34 @@ def tearDownModule():
 
 
 class UnifiedConfigurationTests(unittest.TestCase):
-    def test_each_engine_defaults_to_its_api_key_profile_without_replacing_explicit_profiles(self):
-        from roboteam.launch.claude_prepare import profile
-        from roboteam.harness.codex.launch import profile as codex_profile
-        config = load_configuration(overrides={'policy': {'engine': 'claude'}})
-        self.assertEqual(config['policy']['profile'], 'opus')
+    def test_each_harness_defaults_to_its_api_key_model_entry_without_replacing_explicit_model_entries(self):
+        from roboteam.launch.claude_prepare import model_entry
+        from roboteam.harness.codex.launch import model_entry as codex_model_entry
+        config = load_configuration(overrides={'policy': {'harness': 'claude'}})
+        self.assertEqual(config['policy']['model'], 'opus')
         self.assertEqual(plan(config)['model'], 'claude-opus-5-5')
-        selected = profile(config['policy']['profile'])
+        selected = model_entry(config['policy']['model'])
         self.assertEqual((selected.get('auth_mode', 'api_key'), selected['env_key']), ('api_key', 'ANTHROPIC_API_KEY'))
-        self.assertEqual(load_configuration()['policy']['profile'], 'sol')
-        self.assertEqual(load_configuration(overrides={'policy': {'engine': 'codex'}})['policy']['profile'], 'sol')
-        selected = codex_profile('sol')
+        self.assertEqual(load_configuration()['policy']['model'], 'sol')
+        self.assertEqual(load_configuration(overrides={'policy': {'harness': 'codex'}})['policy']['model'], 'sol')
+        selected = codex_model_entry('sol')
         self.assertEqual((selected['model'], selected['provider'], selected['env_key']),
                          ('gpt-6.1-sol', 'openai_api', 'OPENAI_API_KEY'))
         for name in ('haiku', 'opus_subscription', 'haiku_subscription', 'haiku_subscription_directory'):
-            with self.subTest(profile=name):
-                explicit = load_configuration(overrides={'policy': {'engine': 'claude', 'profile': name}})
-                self.assertEqual(explicit['policy']['profile'], name)
+            with self.subTest(model_entry=name):
+                explicit = load_configuration(overrides={'policy': {'harness': 'claude', 'model': name}})
+                self.assertEqual(explicit['policy']['model'], name)
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary)/'claude.toml'
-            path.write_text('[policy]\nengine="claude"\n')
-            self.assertEqual(load_configuration(path)['policy']['profile'], 'opus')
-            path.write_text('[policy]\nengine="claude"\nprofile="haiku"\n')
-            self.assertEqual(load_configuration(path)['policy']['profile'], 'haiku')
+            path.write_text('[policy]\nharness="claude"\n')
+            self.assertEqual(load_configuration(path)['policy']['model'], 'opus')
+            path.write_text('[policy]\nharness="claude"\nmodel="haiku"\n')
+            self.assertEqual(load_configuration(path)['policy']['model'], 'haiku')
 
     def test_default_plan_is_offline_and_selects_all_released_tasks(self):
         result = plan(load_configuration())
         self.assertEqual((result['task_count'], result['parallel']), (36, 36))
-        self.assertEqual((result['model'], result['effort'], result['topology']),
+        self.assertEqual((result['model'], result['effort'], result['system']),
                          ('gpt-6.1-sol', 'high', 'adaptive'))
         self.assertEqual((result['startup_interval_s'], result['task_wall_limit_s']), (.3, 86400))
         self.assertEqual(result['model_calls'], 0)
@@ -92,8 +92,8 @@ class UnifiedConfigurationTests(unittest.TestCase):
         cases = [{'batch': {'paralell': 3}}, {'batch': {'parallel': True}},
                  {'batch': {'startup_interval_s': float('nan')}},
                  {'batch': {'startup_interval_s': -.1}}, {'batch': {'task_wall_limit_s': 0}},
-                 {'policy': {'topology': 'adpative'}}, {'policy': {'profile': '../secret'}},
-                 {'selection': {'families': ['dial', 'dial']}},
+                 {'policy': {'system': 'adpative'}}, {'policy': {'model': '../secret'}},
+                 {'selection': {'task_types': ['dial', 'dial']}},
                  {'evidence': {'delete_sources': True}},
                  {'evidence': {'auto_collect': False, 'auto_archive': True}}]
         for overrides in cases:
@@ -132,34 +132,34 @@ class UnifiedConfigurationTests(unittest.TestCase):
             document = json.loads((batch/'batch.json').read_text())
             run = Path(document['jobs'][0]['run_directory'])
             self.assertEqual(verify_inputs(run), [])
-            harness = json.loads((run/'private/inputs/harness.json').read_text())
-            self.assertEqual(harness['startup_timeout_s'], 600)
-            self.assertEqual(harness['startup_protocol'], 'direct_controller')
+            run_settings = json.loads((run/'private/inputs/run.json').read_text())
+            self.assertEqual(run_settings['startup_timeout_s'], 600)
+            self.assertEqual(run_settings['startup_protocol'], 'direct_controller')
             document['execution']['startup_interval_s'] = 0
             (batch/'batch.json').write_text(json.dumps(document))
             with self.assertRaisesRegex(ValueError, 'frozen configuration'):
                 _frozen_configuration(batch)
 
     def test_standing_team_batches_freeze_direct_team_start(self):
-        for topology in ('hierarchical', 'decentralized'):
-            with self.subTest(topology=topology), tempfile.TemporaryDirectory() as temporary:
-                config = load_configuration(overrides={'policy': {'topology': topology},
+        for system in ('hierarchical', 'decentralized'):
+            with self.subTest(system=system), tempfile.TemporaryDirectory() as temporary:
+                config = load_configuration(overrides={'policy': {'system': system},
                     'selection': {'cases': ['transport-a04-d1']}, 'batch': {'parallel': 1}})
                 batch = Path(temporary)/'batch'
                 prepare(batch, config)
                 job = json.loads((batch/'batch.json').read_text())['jobs'][0]
                 run = Path(job['run_directory'])
-                harness = json.loads((run/'private/inputs/harness.json').read_text())
-                self.assertEqual(harness['startup_protocol'], 'direct_team')
+                run_settings = json.loads((run/'private/inputs/run.json').read_text())
+                self.assertEqual(run_settings['startup_protocol'], 'direct_team')
                 roles = json.loads((run/'public/inputs/roles.json').read_text())['roles']
-                self.assertEqual(set(roles), {'Meta', 'Controller', 'A', 'B', 'C', 'D'} if topology == 'hierarchical' else {'Meta', 'A', 'B', 'C', 'D'})
+                self.assertEqual(set(roles), {'Meta', 'Controller', 'A', 'B', 'C', 'D'} if system == 'hierarchical' else {'Meta', 'A', 'B', 'C', 'D'})
                 self.assertEqual(verify_inputs(run), [])
 
     def test_claude_standing_prepare_freezes_role_prompts_and_direct_start(self):
-        for topology in ('hierarchical', 'decentralized'):
-            with self.subTest(topology=topology), tempfile.TemporaryDirectory() as tmp:
+        for system in ('hierarchical', 'decentralized'):
+            with self.subTest(system=system), tempfile.TemporaryDirectory() as tmp:
                 config = load_configuration(overrides={
-                    'policy': {'engine':'claude','profile':'haiku','topology':topology},
+                    'policy': {'harness':'claude','model':'haiku','system':system},
                     'render': {'device':'native'}, 'selection': {'cases':['transport-a04-d1']}})
                 batch = Path(tmp)/'batch'
                 # Preparing only; no key is used (claude_prepare.exposed_api_keys).
@@ -169,11 +169,11 @@ class UnifiedConfigurationTests(unittest.TestCase):
                 self.assertEqual(data['status'], 'prepared_not_started')
                 self.assertEqual(data['model_calls'], 0)
                 run = Path(data['jobs'][0]['run_directory'])
-                harness = json.loads((run/'private/inputs/harness.json').read_text())
-                self.assertEqual(harness['startup_protocol'], 'direct_team')
+                run_settings = json.loads((run/'private/inputs/run.json').read_text())
+                self.assertEqual(run_settings['startup_protocol'], 'direct_team')
                 roles = json.loads((run/'public/inputs/roles.json').read_text())['roles']
                 self.assertEqual(set(roles), {'Meta','A','B','C','D'} |
-                    ({'Controller'} if topology == 'hierarchical' else set()))
+                    ({'Controller'} if system == 'hierarchical' else set()))
                 for actor, value in roles.items():
                     if value['kind'] == 'manager': continue
                     # Each role's frozen first message, shared with the Codex route.

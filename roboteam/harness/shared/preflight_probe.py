@@ -1,6 +1,6 @@
 """The image check shared by the Codex preflight and the Claude precheck.
 
-Both engines see the same kind of image: the policy camera size, split into a
+Both harnesses see the same kind of image: the policy camera size, split into a
 left and a right half of two different colours from a fixed list. The colours
 are random, so a fixed guess fails. Some models misread much smaller images
 (gpt-6-luna read a 256x128 red/blue image as all blue), so the image keeps the

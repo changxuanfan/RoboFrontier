@@ -59,7 +59,7 @@ class Monitor:
     def __init__(self,world,secret=None,log_path=None,log_format='full',append=False):
         # Before anything opens (and would truncate) the process log.
         if log_format not in PROCESS_LOG_FORMATS:raise ValueError('Unknown process log format')
-        self.w=world;self.m=world.model;self.d=world.data;self.task=world.task;self.family=self.task['family'];self.robots=list(world.arms);self.robot_index={r:i for i,r in enumerate(self.robots)}
+        self.w=world;self.m=world.model;self.d=world.data;self.task=world.task;self.task_type=self.task['family'];self.robots=list(world.arms);self.robot_index={r:i for i,r in enumerate(self.robots)}
         self.geom_owner=np.full(self.m.ngeom,-1,dtype=int);self.finger=np.full(self.m.ngeom,-1,dtype=int)
         roots={self.m.body(r+'_link0').id:i for i,r in enumerate(self.robots)}
         for g in range(self.m.ngeom):
@@ -86,7 +86,7 @@ class Monitor:
             self.log.write(json.dumps(dict(schema='roboteam.suite-process.v2',format=log_format,snapshot_interval_s=self.snapshot_interval,
                 sample_interval_s=.02,continuous_fields=sorted(CONTINUOUS_FIELDS)+['*_s']))+'\n');self.log.flush()
         self.result_cache={};self.goal_since=None;self.since=np.full((len(self.task['goals']),len(self.names)),np.nan)
-        if self.family=='dial':
+        if self.task_type=='dial':
             self.dials=self.task['dials'];n=len(self.dials);self.blue={};self.red={};self.module_geoms=[];self.blue_qualification=[SupportQualification() for _ in range(n)];self.dial_ready=[False]*n;self.previous_red=set();self.unsupported_since={}
             for i,a in enumerate(self.dials):
                 name=a['id']
@@ -103,7 +103,7 @@ class Monitor:
             self.minimum_clearance=np.full(n,math.inf);self.blue_gaps=np.zeros(n);self.blue_max_gaps=np.zeros(n);self.last_dial_angles=None
             self.carried_trials=0
             if append:self.continue_dial_record()
-        if self.family=='relay':
+        if self.task_type=='relay':
             self.relay=Relay(self)
             if append:self.relay.continue_record()
     def continue_dial_record(self):
@@ -232,8 +232,8 @@ class Monitor:
             if moving:self.any_motion_s+=dt
             if moving>=2:self.motion_overlap_s+=dt
         self.previous_sample=sample
-        if self.family=='dial':self.sample_dial(dt)
-        elif self.family=='relay':self.relay.sample()
+        if self.task_type=='dial':self.sample_dial(dt)
+        elif self.task_type=='relay':self.relay.sample()
         else:self.sample_goals()
         if self.log:self.log_sample(t)
     def log_sample(self,t,final=False):
@@ -545,7 +545,7 @@ class Relay:
                     if state['gap_since'] is None:state['gap_since']=t
                 else:state['gap_since']=None
                 # A handover happens in the air: the timber is clear of the table, held
-                # neither by it nor through other cargo (task_families.RELAY_HANDOVER_DEFINITION).
+                # neither by it nor through other cargo (task_types.RELAY_HANDOVER_DEFINITION).
                 off_table=clear and not external
                 if not state['dropped']:
                     fresh=support-state['custody']

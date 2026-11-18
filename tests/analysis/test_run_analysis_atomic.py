@@ -32,7 +32,7 @@ def act(arm, kind, t0, t1, status='completed', mode=None, target=None, reason=No
     )
 
 
-def record(family, actions, **suite_kw):
+def record(task_type, actions, **suite_kw):
     suite = dict(
         lines=10,
         goals={},
@@ -47,7 +47,7 @@ def record(family, actions, **suite_kw):
         solved_at=None,
     )
     suite.update(suite_kw)
-    return dict(sel=dict(id='synthetic', family=family), actions=actions, suite=suite)
+    return dict(sel=dict(id='synthetic', task_type=task_type), actions=actions, suite=suite)
 
 
 def angle_lines(samples):

@@ -13,7 +13,7 @@ from roboteam import cli
 from roboteam.configuration import load_configuration
 from roboteam.runtime.run import segments
 from roboteam.runtime.world.store import RuntimeStore
-from harness.shared.test_engine_parity import prepared
+from harness.shared.test_harness_parity import prepared
 
 
 class Reader:
@@ -30,7 +30,7 @@ class ContinueByHandTests(unittest.TestCase):
         self.runs = {}
         for case in ('transport-a04-d1', 'transport-a04-d2'):
             (root/case).mkdir(); self.runs[case] = prepared(root/case, 'codex', case).resolve()
-        config = load_configuration(None, {'policy': {'engine': 'codex'}})
+        config = load_configuration(None, {'policy': {'harness': 'codex'}})
         (self.batch/'effective-config.json').write_text(json.dumps(config))
         digest = hashlib.sha256(json.dumps(config, sort_keys=True, allow_nan=False).encode()).hexdigest()
         self.document = {'status': 'closed', 'effective_configuration_sha256': digest,

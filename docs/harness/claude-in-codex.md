@@ -30,9 +30,9 @@ Neither key is accepted on a command line. The gateway refuses to start with
 to a caller that presents the local key. Keep both files, the log and the state folder under
 `~/.roboteam/`, which the [access table](codex.md#isolation) closes to the policy, and
 out of every checkout and evidence folder. Keep the Anthropic key out of the batch's `.env`
-if you can; if it is there for a Claude Code profile, the harness removes `ANTHROPIC_API_KEY`
+if you can; if it is there for a Claude Code model, the harness removes `ANTHROPIC_API_KEY`
 and `ANTHROPIC_AUTH_TOKEN` from the environment of every Codex process it starts for this
-profile, so Codex holds the local key only.
+model, so Codex holds the local key only.
 
 What a model shell can reach, measured on macOS with the pinned CLI and the native tool
 backend: with the frozen `network: false` permission profile a sandboxed command cannot
@@ -41,7 +41,7 @@ permitted`), and the launch configuration excludes the local key and the Anthrop
 from shell environments. The offline native test asserts both. A run prepared with shell
 network access switched on would make the port reachable; this transport is not meant for
 that configuration. The `landlock-v1` backend denies sockets to its subprocesses but has not
-been exercised with this profile.
+been exercised with this model.
 
 ## Start the gateway
 
@@ -62,7 +62,7 @@ mkdir -p -m 700 ~/.roboteam/secrets ~/.roboteam/codex-claude
 
 | Option | Meaning |
 | --- | --- |
-| `--port` | Loopback port, default 18470 (the one in the checked-in profile) |
+| `--port` | Loopback port, default 18470 (the one in the checked-in model) |
 | `--cache-ttl 5m\|1h` | Prompt-cache lifetime, default `5m`; see [caching](#prompt-caching-and-the-live-monitor) |
 | `--thinking-prefix-mismatch error\|drop_block\|api_default` | What the API does with a replayed thinking block whose history changed, default `error`; see [thinking blocks](#thinking-blocks-compaction-and-forks) |
 | `--compaction-tool-choice none\|auto` | `tool_choice` for a request in which Codex declares no tools, default `none` |
@@ -75,7 +75,7 @@ mkdir -p -m 700 ~/.roboteam/secrets ~/.roboteam/codex-claude
 do not restart it while runs are live: an in-flight request fails, and without `--state-dir`
 a session's next compaction request is refused.
 
-## Profile and launch behavior
+## Model and launch behavior
 
 `opus_claude_api` in the `codex` section of `models.json`:
 
@@ -89,14 +89,14 @@ a session's next compaction request is refused.
 | `upstream_host` | `api.anthropic.com`, the host the [outage probe](../runs/continuation.md#network-outage-pause) watches |
 | `context_capacity` | 1,000,000; the run still uses the catalog's 300,000 window and 267,000 compaction limit |
 
-Plain HTTP is accepted only for a profile that declares `transport: loopback_gateway`, and
-then only for the literal `http://127.0.0.1:PORT`; every other profile still needs HTTPS.
-The profile and its revision are part of the receipt fingerprint, so a receipt from another
-adapter revision does not qualify a run. For this profile only, the harness also:
+Plain HTTP is accepted only for a model that declares `transport: loopback_gateway`, and
+then only for the literal `http://127.0.0.1:PORT`; every other model still needs HTTPS.
+The model and its revision are part of the receipt fingerprint, so a receipt from another
+adapter revision does not qualify a run. For this model only, the harness also:
 
 - checks `GET /healthz` before a preflight or a run and refuses to start unless the listener
   reports this model and transport revision, so the local key is not sent to another process;
-- tells Codex the model accepts images and, as for every non-OpenAI profile, writes the
+- tells Codex the model accepts images and, as for every non-OpenAI model, writes the
   per-run model catalog with the shared tool configuration; it additionally turns off the
   `text.verbosity` request control, an OpenAI-only setting the adapter would reject;
 - excludes the local key from model shells and strips Anthropic credentials from Codex's
@@ -194,7 +194,7 @@ then records `thinking_blocks_dropped` for that request and the monitor shows th
 `api_default` sends neither the field nor the beta header.
 
 A summary written at compaction is the only thing later turns have of the earlier reasoning,
-as on every Codex profile. Codex's own compaction prompt is used unchanged.
+as on every Codex model. Codex's own compaction prompt is used unchanged.
 
 ## Prompt caching and the live monitor
 
@@ -253,7 +253,7 @@ A dip right after each compaction is expected.
 Inside Codex, usage is reported the way the benchmark already reads it: `input_tokens` is
 uncached input plus cache reads plus cache writes, `cached_tokens` is cache reads,
 `cache_write_tokens` is cache writes, and output tokens include thinking. The run report's
-`cache_hit_rate` therefore has the same meaning as for the Claude Code engine.
+`cache_hit_rate` therefore has the same meaning as for the Claude Code harness.
 
 ## Errors and retries
 
@@ -281,7 +281,7 @@ PYTHONPATH=tests:tests/helpers .venv-gateway/bin/python -m unittest harness.adap
 ```
 
 The first command runs in the core environment: translation in both directions, the monitor
-arithmetic, the profile rules and, when `.venv-gateway` (or `ROBOTEAM_GATEWAY_PYTHON`)
+arithmetic, the model rules and, when `.venv-gateway` (or `ROBOTEAM_GATEWAY_PYTHON`)
 has the SDK, the native test. That test drives the installed Codex CLI through the gateway
 against a local stand-in for the Anthropic API: an image attachment, two parallel tool calls
 whose results carry images, reasoning replayed over several turns, a sandboxed shell command,
@@ -300,8 +300,8 @@ then, in the shell that runs the commands:
 curl -s http://127.0.0.1:18470/healthz
 export ROBOTEAM_CLAUDE_GATEWAY_KEY="$(.venv/bin/python -c 'import json,sys; print(json.load(open(sys.argv[1]))["key"])' \
   ~/.roboteam/secrets/codex-claude-gateway-key.json)"
-.venv/bin/roboteam preflight --engine codex --profile opus_claude_api --confirm-spend
-.venv/bin/roboteam prepare --engine codex --profile opus_claude_api --level 1 --min-arms --parallel 4 --output runs/policy/codex-claude-l1
+.venv/bin/roboteam preflight --harness codex --model opus_claude_api --confirm-spend
+.venv/bin/roboteam prepare --harness codex --model opus_claude_api --level 1 --min-arms --parallel 4 --output runs/policy/codex-claude-l1
 .venv/bin/roboteam run runs/policy/codex-claude-l1
 ```
 
@@ -314,7 +314,7 @@ The preflight is the first real contact with the API. It exercises an image and 
 round trip, a manual compaction and a fork whose child inherits history, which are exactly
 the cases above. Read its log lines afterwards: every request `completed`, no
 `thinking_blocks_dropped`, cache reads on the second and later requests. A passed receipt
-qualifies its exact profile, catalog, CLI and tool mode; it is not a context-capacity stress
+qualifies its exact model, catalog, CLI and tool mode; it is not a context-capacity stress
 test and says nothing about long sessions.
 
 ## Not yet established
@@ -325,7 +325,7 @@ test and says nothing about long sessions.
   The offline test compacts by hand in a short session.
 - More than one fork level, forks taken after a compaction of the child, and resume after a
   host restart. The transport is stateless apart from the tool memory, but none was run.
-- The `landlock-v1` and `robot_only` configurations with this profile.
+- The `landlock-v1` and `robot_only` configurations with this model.
 - Comparability: equal effort names do not mean equal computation, the context is capped at
   300,000 tokens although the model accepts more, and Codex's prompts were written for GPT
   models.

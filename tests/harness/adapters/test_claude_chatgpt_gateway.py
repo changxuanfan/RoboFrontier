@@ -23,7 +23,7 @@ def stream(*documents):
 class MessagesBridgeTests(unittest.TestCase):
     def dynamic_fork_fixture(self,root):
         parent,child=str(uuid.uuid4()),str(uuid.uuid4())
-        project=root/'run/private/engine/config/projects/project';project.mkdir(parents=True)
+        project=root/'run/private/harness/config/projects/project';project.mkdir(parents=True)
         control={'type':'text','text':'No response requested.'}
         def row(kind,content,model=None,previous=None):
             result={'type':kind,'uuid':str(uuid.uuid4()),'parentUuid':previous,'sessionId':parent,

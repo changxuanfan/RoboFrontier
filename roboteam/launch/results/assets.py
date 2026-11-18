@@ -14,9 +14,9 @@ import tarfile
 import tempfile
 import urllib.request
 
-from roboteam.tasks.families import ROOT, RELEASE, read
+from roboteam.tasks.task_types import ROOT, RELEASE, read
 from roboteam.launch.prepare import load_env
-from roboteam.harness.codex.launch import profile
+from roboteam.harness.codex.launch import model_entry
 from roboteam.launch.tasks import check_case_assets
 from roboteam.io import file_sha256 as digest
 
@@ -35,8 +35,8 @@ def pinned_asset_release(root, config):
 
 def scene_assets(root=ROOT):
     expected={}
-    for family in read(root/RELEASE)['families'].values():
-        for case in family['policy']:
+    for task_type in read(root/RELEASE)['families'].values():
+        for case in task_type['policy']:
             directory=Path(case['directory'])
             for asset in read(root/directory/'workstation.json').get('assets', []):
                 relative=PurePosixPath(asset['path'])
@@ -190,18 +190,18 @@ def doctor(names, root=ROOT):
             result=subprocess.run([binary,*args],capture_output=True,text=True,timeout=15)
             tools[tool]=dict(available=result.returncode==0,version=(result.stdout or result.stderr).splitlines()[0])
         else:tools[tool]=dict(available=False)
-    profiles={}
+    model_entries={}
     from roboteam.configuration import model_catalog
-    catalog=model_catalog('codex',root/'models.json')['profiles']
+    catalog=model_catalog('codex',root/'models.json')['models']
     for name in names or catalog:
         raw=catalog[name]
         key=raw.get('env_key')
         entry=dict(model=raw['model'],credential_env=key,credential_set=bool(os.environ.get(key)) if key else None)
-        try:profile(name);entry['configuration_valid']=True
+        try:model_entry(name);entry['configuration_valid']=True
         except ValueError as error:entry.update(configuration_valid=False,error=str(error))
-        profiles[name]=entry
-    assets=[check_case_assets(case,root) for family in read(root/RELEASE)['families'].values() for case in family['policy']]
-    return dict(tools=tools,profiles=profiles,task_release_sha256=digest(root/RELEASE),
+        model_entries[name]=entry
+    assets=[check_case_assets(case,root) for task_type in read(root/RELEASE)['families'].values() for case in task_type['policy']]
+    return dict(tools=tools,model_entries=model_entries,task_release_sha256=digest(root/RELEASE),
                 assets=dict(missing=sum(len(a['missing']) for a in assets),changed=sum(len(a['changed']) for a in assets)),
                 panda_manifest_available=(root/'vendor/panda/SOURCE.json').is_file(),
                 note='Read-only readiness report; no network/model/physics test. Credential values are never printed.')
@@ -210,7 +210,7 @@ def doctor(names, root=ROOT):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
-    p=sub.add_parser('doctor');p.add_argument('--models',nargs='+',help='Codex profiles to report; every profile of models.json when omitted')
+    p=sub.add_parser('doctor');p.add_argument('--models',nargs='+',help='Codex models to report; every model of models.json when omitted')
     p=sub.add_parser('assets');p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p=sub.add_parser('restore');p.add_argument('archive',type=Path)
     p=sub.add_parser('setup-assets');p.add_argument('--archive',type=Path,help='Use the pinned release archive from a local path instead of downloading')

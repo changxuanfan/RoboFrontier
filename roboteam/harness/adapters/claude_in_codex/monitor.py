@@ -167,7 +167,7 @@ def batch_names(batch):
         except (OSError, ValueError, KeyError, TypeError):
             continue
         run = marker.parent
-        while run.name in ('engine', 'private'):
+        while run.name in ('harness', 'private'):
             run = run.parent
         owners.setdefault(identity, []).append(run.name)
     for identity, runs in owners.items():

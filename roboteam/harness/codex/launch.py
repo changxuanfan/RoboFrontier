@@ -10,13 +10,13 @@ import time
 import tomllib
 
 from roboteam.runtime.run.setup import write_json
-from roboteam.tasks.families import ROOT, read
+from roboteam.tasks.task_types import ROOT, read
 
 
-def profile(name, config=None):
+def model_entry(name, config=None):
     from roboteam.configuration import model_catalog
     catalog = model_catalog('codex', config)
-    p = deepcopy(catalog['profiles'][name])
+    p = deepcopy(catalog['models'][name])
     p.update(context_window=catalog['context_window'], auto_compact_token_limit=catalog['auto_compact_token_limit'])
     if not p['vision']:
         raise ValueError('This benchmark requires native images; text-only models need a separately declared experiment')
@@ -30,19 +30,19 @@ def profile(name, config=None):
         from urllib.parse import urlsplit
         url = urlsplit(p['base_url'])
         if loopback_gateway(p):
-            # Plain HTTP only for a profile that declares a local protocol adapter, and only to
+            # Plain HTTP only for a model that declares a local protocol adapter, and only to
             # the literal loopback address: the key it sends is that adapter's local key.
             if (url.scheme != 'http' or url.hostname != '127.0.0.1' or not url.port or url.username or url.password
                     or url.query or url.fragment or not p.get('env_key') or 'base_url_env' in p
                     or not p.get('transport_revision')):
-                raise ValueError('A loopback gateway profile needs http://127.0.0.1:PORT, a local key variable '
+                raise ValueError('A loopback gateway model needs http://127.0.0.1:PORT, a local key variable '
                                  'and a transport revision')
         elif 'transport' in p:
             raise ValueError('Unknown model transport: '+str(p['transport']))
         elif url.scheme != 'https' or url.username or url.password or url.query:
             raise ValueError('Use an HTTPS base URL without embedded credentials')
     elif 'transport' in p:
-        raise ValueError('A native OpenAI profile has no separate model transport')
+        raise ValueError('A native OpenAI model entry has no separate model transport')
     return p
 
 
@@ -53,12 +53,12 @@ GATEWAY_UPSTREAM_SECRETS = ('ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN')
 
 
 def loopback_gateway(p):
-    """Whether a profile explicitly routes its model through a local protocol adapter."""
+    """Whether a model entry explicitly routes its model through a local protocol adapter."""
     return p.get('transport') == LOOPBACK_GATEWAY
 
 
 def gateway_environment(p, env):
-    """The environment for Codex: a loopback gateway profile never passes upstream credentials."""
+    """The environment for Codex: a loopback gateway model never passes upstream credentials."""
     if loopback_gateway(p):
         for name in GATEWAY_UPSTREAM_SECRETS:
             env.pop(name, None)
@@ -66,7 +66,7 @@ def gateway_environment(p, env):
 
 
 def require_gateway(p, timeout_s=5):
-    """Refuse to start unless the profile's own adapter, at its frozen revision, is listening.
+    """Refuse to start unless the model's own adapter, at its frozen revision, is listening.
 
     A local check with no credential and no model call. It keeps the local key from being sent
     to some other process on that port, and a changed adapter from reusing an old receipt.
@@ -81,11 +81,11 @@ def require_gateway(p, timeout_s=5):
         with build_opener(ProxyHandler({})).open('http://127.0.0.1:%d/healthz' % url.port, timeout=timeout_s) as response:
             health = json.loads(response.read(65536))
     except (OSError, ValueError) as error:
-        raise ValueError('The model gateway for this profile is not listening on 127.0.0.1:%d; start it first (%s)'
+        raise ValueError('The model gateway for this model is not listening on 127.0.0.1:%d; start it first (%s)'
                          % (url.port, type(error).__name__)) from None
     if not isinstance(health, dict) or health.get('model') != p['model'] \
             or health.get('transport_revision') != p['transport_revision']:
-        raise ValueError('The listener on 127.0.0.1:%d is not this profile\'s gateway (model or transport revision '
+        raise ValueError('The listener on 127.0.0.1:%d is not this model\'s gateway (model or transport revision '
                          'differs)' % url.port)
 
 
@@ -120,10 +120,10 @@ def codex_home(env=None):
 def launch_config(p, folder, run_dir=None):
     from roboteam.harness.codex.tool_backend import selected, fingerprint
     backend = selected(p)
-    # A robot_only role keeps the robot tool alone (runtime/tools/tool_mode.py): Codex's own tools
+    # A robot_only role keeps the robot tool alone (runtime/tools/tools_mode.py): Codex's own tools
     # are switched off exactly as for the tool worker, and no file tools replace them.
-    from roboteam.runtime.tools import tool_mode
-    robot_only = tool_mode.of(p) == tool_mode.ROBOT_ONLY
+    from roboteam.runtime.tools import tools_mode
+    robot_only = tools_mode.of(p) == tools_mode.ROBOT_ONLY
     if robot_only and backend != 'native':
         raise ValueError('A robot_only run has no file tools to confine: use the native tool backend')
     provider = p['provider']
@@ -239,9 +239,9 @@ def launch_config(p, folder, run_dir=None):
             for name,value in frozen['policy_env']['variables'].items():
                 args.extend(['-c','shell_environment_policy.set.'+name+'='+json.dumps(value)])
     return dict(model=p['model'],provider=provider,effort=p['effort'],args=args,
-                profile=p,context_window=p['context_window'],auto_compact_token_limit=p['auto_compact_token_limit'],
+                model_entry=p,context_window=p['context_window'],auto_compact_token_limit=p['auto_compact_token_limit'],
                 tool_backend=backend,tool_backend_sha256=fingerprint(p),model_catalog=str(target.resolve()),
-                **({'tool_mode': tool_mode.ROBOT_ONLY} if robot_only else {}))
+                **({'tools': tools_mode.ROBOT_ONLY} if robot_only else {}))
 
 
 def initialize_codex_home(launch, folder, timeout_s=90, *, env=None):

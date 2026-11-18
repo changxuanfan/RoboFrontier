@@ -3,7 +3,7 @@
 Default: read-only eligibility report. --execute validates an approximate physical
 restore on a private clone, then continues the original ledger and native threads.
 An old gateway, unsettled action, live owner or uncertain admission fails closed.
-No engine restart, token copy, automatic retry or physical call replay is allowed.
+No harness restart, token copy, automatic retry or physical call replay is allowed.
 """
 import argparse
 import fcntl
@@ -21,7 +21,7 @@ import time
 
 from roboteam.runtime.run import segments as run_segments
 from roboteam.harness.shared.recovery import RecoveryBlocked, ledger as _ledger, readonly, validate_physical_restore
-from roboteam.harness.codex.job_engine import task_id
+from roboteam.harness.codex.job_harness import task_id
 from roboteam.runtime.run.layout import path as run_path, batch_path
 from roboteam.runtime.run.setup import write_json
 from roboteam.runtime.world.store import RuntimeStore
@@ -166,13 +166,13 @@ def execute(run, manifest, source, python, scratch, *, allocation_end):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run-dir', type=Path, required=True)
-    parser.add_argument('--engine-manifest', type=Path, required=True)
+    parser.add_argument('--harness-manifest', type=Path, required=True)
     parser.add_argument('--source-root', type=Path, required=True)
     parser.add_argument('--python', type=Path, default=Path(sys.executable))
     parser.add_argument('--scratch', type=Path)
     parser.add_argument('--allocation-end', type=float)
     parser.add_argument('--execute', action='store_true')
-    args = parser.parse_args(); manifest = json.loads(args.engine_manifest.read_text())
+    args = parser.parse_args(); manifest = json.loads(args.harness_manifest.read_text())
     try:
         if args.execute:
             if not args.scratch or not args.allocation_end: parser.error('--execute requires --scratch and --allocation-end')

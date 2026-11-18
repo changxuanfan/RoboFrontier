@@ -213,9 +213,9 @@ class PolicySandboxTests(unittest.TestCase):
             server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Recording)
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
-                profile = {'provider': 'kimi', 'model': 'kimi-k3.1-pro', 'env_key': 'KIMI_API_KEY', 'effort': 'high',
+                model_entry = {'provider': 'kimi', 'model': 'kimi-k3.1-pro', 'env_key': 'KIMI_API_KEY', 'effort': 'high',
                            'base_url': 'http://127.0.0.1:%d' % server.server_port}
-                env = build_env(profile, {'PATH': os.environ.get('PATH', ''), 'KIMI_API_KEY': 'sk-provider-key'},
+                env = build_env(model_entry, {'PATH': os.environ.get('PATH', ''), 'KIMI_API_KEY': 'sk-provider-key'},
                                 t / 'config')
                 command = build_command('kimi-k3.1-pro', 'high', '{"mcpServers":{}}', 'go',
                                         settings=frozen_settings(run, t / 'repo', t / 'home'))

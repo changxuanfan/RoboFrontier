@@ -23,12 +23,12 @@ class BatchTests(unittest.TestCase):
             (run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
                 'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2']},
                 'A1': {'kind': 'worker', 'robot': 'A1'}, 'A2': {'kind': 'worker', 'robot': 'A2'}}}))
-            profile = {'provider': 'anthropic', 'model': 'fake', 'effort': 'high', 'env_key': 'FAKE_KEY'}
+            model_entry = {'provider': 'anthropic', 'model': 'fake', 'effort': 'high', 'env_key': 'FAKE_KEY'}
             (run/'private/inputs/claude.json').write_text(json.dumps({'schema':'roboteam.claude-launch.v2',
-                'profile':profile}))
-            (run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude', 'topology':'single-agent',
+                'model_entry':model_entry}))
+            (run/'private/inputs/run.json').write_text(json.dumps({'harness':'claude', 'system':'single-agent',
                                                                        'model':'fake','effort':'high'}))
-            self.jobs.append({'profile':'fake', 'case_id':case, 'run_directory':str(run), 'status':'draft'})
+            self.jobs.append({'model_entry':'fake', 'case_id':case, 'run_directory':str(run), 'status':'draft'})
         (self.root/'batch.json').write_text(json.dumps({'schema':'roboteam.claude-batch.v2',
             'status':'prepared_not_started', 'jobs':self.jobs}))
         self.env = {'FAKE_KEY':'secret'}
@@ -39,11 +39,11 @@ class BatchTests(unittest.TestCase):
         return run_batch(self.root, self.env, parallel=parallel, turn_budget_usd=.2, total_budget_usd=1, wall_limit_s=5,
                          runner=runner, verifier=lambda _: [], startup_interval_s=0)
 
-    def test_standing_topologies_pass_shared_batch_preflight(self):
-        for job, topology in zip(self.jobs, ('hierarchical', 'decentralized', 'hierarchical', 'decentralized')):
-            path = Path(job['run_directory'])/'private/inputs/harness.json'
+    def test_standing_systems_pass_shared_batch_preflight(self):
+        for job, system in zip(self.jobs, ('hierarchical', 'decentralized', 'hierarchical', 'decentralized')):
+            path = Path(job['run_directory'])/'private/inputs/run.json'
             data = json.loads(path.read_text())
-            data.update(topology=topology, startup_protocol='direct_team')
+            data.update(system=system, startup_protocol='direct_team')
             path.write_text(json.dumps(data))
         seen = []
         def runner(run, *args, **kwargs):
@@ -54,8 +54,8 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(set(seen), {'case0','case1','case2','case3'})
 
     def test_a_task_cap_concurrent_roles_could_exhaust_fails_preflight_before_any_claim(self):
-        path = Path(self.jobs[2]['run_directory'])/'private/inputs/harness.json'
-        data = json.loads(path.read_text()); data.update(topology='decentralized', startup_protocol='direct_team')
+        path = Path(self.jobs[2]['run_directory'])/'private/inputs/run.json'
+        data = json.loads(path.read_text()); data.update(system='decentralized', startup_protocol='direct_team')
         path.write_text(json.dumps(data))
         with self.assertRaisesRegex(ValueError, 'concurrent roles'):
             run_batch(self.root, self.env, parallel=2, turn_budget_usd=.6, total_budget_usd=1, wall_limit_s=5,
@@ -175,7 +175,7 @@ class BatchTests(unittest.TestCase):
             if process.is_alive(): process.kill(); process.join(10)
             process.close()
 
-    def test_failed_run_and_incompatible_profile_are_not_hidden(self):
+    def test_failed_run_and_incompatible_model_entry_are_not_hidden(self):
         def fail(*args, **kwargs): raise RuntimeError('not for user output')
         result = self.run_case(fail)
         self.assertEqual(result['status'], 'needs_review')
@@ -183,9 +183,9 @@ class BatchTests(unittest.TestCase):
         self.assertNotIn('not for user output', json.dumps(result))
 
     def test_preflight_checks_all_before_start_and_rejects_path_escape(self):
-        harness = Path(self.jobs[-1]['run_directory'])/'private/inputs/harness.json'
-        data = json.loads(harness.read_text()); data['topology'] = 'unsupported'; harness.write_text(json.dumps(data))
-        with self.assertRaisesRegex(ValueError, 'Claude launch profile'):
+        run_settings = Path(self.jobs[-1]['run_directory'])/'private/inputs/run.json'
+        data = json.loads(run_settings.read_text()); data['system'] = 'unsupported'; run_settings.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, 'Claude launch model'):
             self.run_case(lambda *a, **k: self.fail('model call'))
         self.assertFalse((self.root/'control/engineering-claim.json').exists())
         batch = json.loads((self.root/'batch.json').read_text()); batch['jobs'][0]['run_directory'] = '/tmp/outside'
@@ -200,7 +200,7 @@ class BatchTests(unittest.TestCase):
                                      ('synthetic', None, 'base URL')):
             with self.subTest(missing=error):
                 data = json.loads(json.dumps(original))
-                data['profile'].update(provider='third-party', env_key='THIRD_PARTY_KEY', base_url=endpoint)
+                data['model_entry'].update(provider='third-party', env_key='THIRD_PARTY_KEY', base_url=endpoint)
                 launch.write_text(json.dumps(data))
                 if key is None: self.env.pop('THIRD_PARTY_KEY', None)
                 else: self.env['THIRD_PARTY_KEY'] = key
@@ -212,9 +212,9 @@ class BatchTests(unittest.TestCase):
 
     def test_adaptive_draft_is_admitted_to_unqualified_claude_batch(self):
         for job in self.jobs:
-            harness = Path(job['run_directory'])/'private/inputs/harness.json'
-            data = json.loads(harness.read_text()); data['topology'] = 'adaptive'
-            harness.write_text(json.dumps(data))
+            run_settings = Path(job['run_directory'])/'private/inputs/run.json'
+            data = json.loads(run_settings.read_text()); data['system'] = 'adaptive'
+            run_settings.write_text(json.dumps(data))
         calls=[]
         def runner(run, *args, **kwargs):
             calls.append(run)
@@ -318,7 +318,7 @@ class BatchTests(unittest.TestCase):
     def test_invalid_oauth_endpoint_rejects_entire_batch_before_claim(self):
         launch = Path(self.jobs[-1]['run_directory'])/'private/inputs/claude.json'
         data = json.loads(launch.read_text())
-        data['profile'].update(auth_mode='oauth_token', env_key='CLAUDE_CODE_OAUTH_TOKEN',
+        data['model_entry'].update(auth_mode='oauth_token', env_key='CLAUDE_CODE_OAUTH_TOKEN',
                                base_url='https://other.example')
         launch.write_text(json.dumps(data))
         self.env['CLAUDE_CODE_OAUTH_TOKEN'] = 'synthetic'

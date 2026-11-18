@@ -3,5 +3,5 @@ import hashlib
 import json
 
 
-def fingerprint(profile):
-    return hashlib.sha256(json.dumps(profile, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+def fingerprint(model_entry):
+    return hashlib.sha256(json.dumps(model_entry, sort_keys=True, separators=(',', ':')).encode()).hexdigest()

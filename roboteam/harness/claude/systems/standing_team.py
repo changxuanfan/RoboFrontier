@@ -49,8 +49,8 @@ class _TeamStatus:
 
 
 class StandingTeamPolicyHost:
-    engine = 'claude'
-    def __init__(self, run_dir, profile, base_env, ledger, *, turn_budget_usd=None,
+    harness = 'claude'
+    def __init__(self, run_dir, model_entry, base_env, ledger, *, turn_budget_usd=None,
                  host_factory=ClaudeSessionHost, client=client_call, verifier=verify_inputs, resume=False):
         self.run = Path(run_dir).resolve()
         if not Path(ledger.path).resolve().is_relative_to(self.run/'private'):
@@ -59,11 +59,11 @@ class StandingTeamPolicyHost:
         self.hosts = {}
         try:
             cfg = self.store.get('config')
-            if (cfg.get('engine') != self.engine or cfg.get('topology') not in ('hierarchical', 'decentralized')
+            if (cfg.get('harness') != self.harness or cfg.get('system') not in ('hierarchical', 'decentralized')
                     or cfg.get('startup_protocol') != 'direct_team'):
                 raise ValueError('Expected a direct-team Native standing-team engineering run')
-            if cfg.get('model') != profile.get('model') or cfg.get('effort') != profile.get('effort'):
-                raise ValueError('Profile differs from frozen runtime configuration')
+            if cfg.get('model') != model_entry.get('model') or cfg.get('effort') != model_entry.get('effort'):
+                raise ValueError('Model entry differs from frozen runtime configuration')
             agents = {a: v for a, v in self.store.agents().items() if v['kind'] != 'manager'}
             # A run continued after an unexpected exit (docs/runs/continuation.md) keeps every
             # role's session; any other bound or started world is never restarted.
@@ -77,7 +77,7 @@ class StandingTeamPolicyHost:
             if changed:
                 raise ValueError('Frozen inputs changed: ' + ', '.join(changed))
             self.prompts = {a: frozen_bootstrap(self.run, a) for a in agents}
-            self.hosts = {a: host_factory(self.run, a, profile, base_env,
+            self.hosts = {a: host_factory(self.run, a, model_entry, base_env,
                                           max_budget_usd=turn_budget_usd, budget_ledger=ledger) for a in agents}
             if any(h.actor != a for a, h in self.hosts.items()):
                 raise ValueError('Native host identity differs from its standing role')
@@ -88,7 +88,7 @@ class StandingTeamPolicyHost:
                 raise ValueError('Every initial role needs a distinct native session')
             self.host = _TeamStatus(self.hosts)
             self.client = client
-            self.owner = self.engine + '-team-' + uuid.uuid4().hex
+            self.owner = self.harness + '-team-' + uuid.uuid4().hex
             self.bind_attempted = False
             self.bound = False
             self.dispatcher = self  # Existing supervisor's admin/seal interface.
@@ -158,7 +158,7 @@ class StandingTeamPolicyHost:
             return self._pause_role(actor)
         self.admin('observe-sessions', {'observations': [{
             'actor': actor, 'thread_id': value['thread_id'], 'status': value['status'],
-            'turn_id': value['turn_id'], 'observed_at': time.time(), 'source': self.engine + '.host',
+            'turn_id': value['turn_id'], 'observed_at': time.time(), 'source': self.harness + '.host',
             'turn_status': 'failed' if value['status'] == 'error' else None}]})
         return value['status'] != 'error'
 

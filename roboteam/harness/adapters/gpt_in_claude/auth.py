@@ -16,7 +16,7 @@ ISSUER = 'https://auth.openai.com'
 RESOURCE = 'https://api.openai.com/v1'
 AUTHORIZE = ISSUER + '/api/accounts/authorize'
 TOKEN = ISSUER + '/api/accounts/oauth/token'
-SCOPES = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
+SCOPES = 'openid model email offline_access resource.invoke chatgpt.tokens.use.direct'
 
 
 def atomic_json(path, document):

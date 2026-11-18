@@ -1,12 +1,12 @@
-# Claude Code engine
+# Claude Code harness
 
 Every policy role is a native Claude Code session (`claude -p`, continued with `--resume`) with
 the robot tool served over MCP by `roboteam/harness/claude/robot_mcp.py`. All four
 agent systems run: `adaptive`, `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is Claude Code 2.1.316
 (`roboteam/runtime/run/versions.py`); runs turn its self-update off (`DISABLE_AUTOUPDATER`). A run
-starts only with passed precheck receipts for its profile and that CLI version
-([Preflight and receipts](#preflight-and-receipts)). What both engines share is in the
-[engine overview](README.md); the [Codex guide](codex.md) has the same sections.
+starts only with passed precheck receipts for its model and that CLI version
+([Preflight and receipts](#preflight-and-receipts)). What both harnesses share is in the
+[harness overview](README.md); the [Codex guide](codex.md) has the same sections.
 
 ## Install
 
@@ -16,8 +16,8 @@ model calls:
 ```sh
 npm install --global @anthropic-ai/claude-code@2.1.316
 claude --version
-.venv/bin/roboteam plan --engine claude --level 1 --min-arms --parallel 4
-.venv/bin/roboteam prepare --engine claude --render native \
+.venv/bin/roboteam plan --harness claude --level 1 --min-arms --parallel 4
+.venv/bin/roboteam prepare --harness claude --render native \
   --level 1 --min-arms --parallel 4 --output runs/policy/claude-l1
 ```
 
@@ -34,9 +34,9 @@ For the experimental GPT model / ChatGPT plan ablation, see
 loopback protocol adapter, not Claude subscription authentication or a native
 Anthropic-supported non-Claude model route.
 
-Profiles are the `claude` section of `models.json`; the
+Models are the `claude` section of `models.json`; the
 [authentication matrix](README.md#authentication-matrix) lists each one's credential. Put
-credentials in `.env` ([credentials file](README.md#credentials-file)). An API-key profile passes
+credentials in `.env` ([credentials file](README.md#credentials-file)). An API-key model passes
 only its own key and endpoint to the CLI; setting sources and unrelated MCP servers are turned off
 on the command line in every mode.
 
@@ -68,21 +68,21 @@ configuration directory in `ROBOTEAM_CLAUDE_HOME` before preparing:
 export ROBOTEAM_CLAUDE_HOME="$HOME/.claude"
 claude auth login --claudeai
 claude auth status --json
-.venv/bin/roboteam prepare --engine claude --profile haiku_subscription \
+.venv/bin/roboteam prepare --harness claude --model haiku_subscription \
   --render native --cases transport-a04-d1 --output runs/policy/haiku-login
 ```
 
 `haiku_subscription` requires `$HOME/.claude` with `CLAUDE_CONFIG_DIR` unset. Claude Code keeps a
 separate credential store whenever `CLAUDE_CONFIG_DIR` is set, even to the same path, so for a
 login made with `CLAUDE_CONFIG_DIR` choose `haiku_subscription_directory` and set
-`ROBOTEAM_CLAUDE_HOME` to that directory. The choice is part of the profile fingerprint;
+`ROBOTEAM_CLAUDE_HOME` to that directory. The choice is part of the model fingerprint;
 receipts do not carry over between the two. The directory is frozen in the run, must lie outside
 the batch, and is never collected: collection copies only the bound transcripts and their
 sidecars. No API key or token variable is passed in this mode.
 
 ### Doctor and redaction
 
-`roboteam doctor --engine claude` checks the installed CLI version and a real render. It
+`roboteam doctor --harness claude` checks the installed CLI version and a real render. It
 does not check credentials or call a model. The runner redacts exact occurrences of the selected
 credential from its event file, summary and stderr tail and writes them owner-only; native
 session files are not rewritten, so treat a whole run directory as private.
@@ -111,12 +111,12 @@ confinement on a Linux host with Landlock. On RunPod, put the Node.js and CLI fo
 
 ## Preflight and receipts
 
-A run needs two passed receipts for its profile, recorded with the installed CLI version and
+A run needs two passed receipts for its model, recorded with the installed CLI version and
 model configuration; `roboteam run` picks the latest of each and refuses on any mismatch
 (`harness/claude/checks/readiness.py`). One command makes both, with real spend:
 
 ```sh
-.venv/bin/roboteam preflight --engine claude --profile opus_subscription \
+.venv/bin/roboteam preflight --harness claude --model opus_subscription \
   --max-budget-usd 1 --confirm-spend
 ```
 
@@ -134,19 +134,19 @@ and caps each of the two checks by CLI-reported cost, not provider billing.
    `<runs_root>/engineering/claude-blocked-precheck/<id>/receipt.json`.
 
 `--smoke-only` runs the basic check without the fork and skips the blocked one; it does not make
-a run eligible. A receipt records CLI version, requested and reported model, profile
+a run eligible. A receipt records CLI version, requested and reported model, model
 fingerprint, cost and per-check results, never credentials. Each check can also be run on its own
 (`--output DIR` chooses the receipt folder), and two receipts can be compared without model calls:
 
 ```sh
-.venv/bin/python -m roboteam.harness.claude.checks.preflight --profile opus --max-budget-usd 0.5 --check-fork --confirm-spend
-.venv/bin/python -m roboteam.harness.claude.checks.blocked_precheck --profile opus --max-budget-usd 1 --confirm-spend
-.venv/bin/python -m roboteam.harness.claude.checks.readiness --profile opus \
+.venv/bin/python -m roboteam.harness.claude.checks.preflight --model opus --max-budget-usd 0.5 --check-fork --confirm-spend
+.venv/bin/python -m roboteam.harness.claude.checks.blocked_precheck --model opus --max-budget-usd 1 --confirm-spend
+.venv/bin/python -m roboteam.harness.claude.checks.readiness --model opus \
   --precheck PATH/receipt.json --blocked-precheck PATH/receipt.json
 .venv/bin/python -m roboteam.harness.claude.checks.offline_probe   # local stubs, no model
 ```
 
-A receipt for one profile says nothing about another, and a matching receipt does not prove which
+A receipt for one model says nothing about another, and a matching receipt does not prove which
 model the provider served.
 
 ## Run, status and stop
@@ -232,7 +232,7 @@ acknowledgement blocks bootstrap; a lost wake acknowledgement marks the wake unc
 dispatch without resending. Stop cancels every role's turn, then seals.
 
 ```sh
-.venv/bin/roboteam prepare --engine claude --topology hierarchical --render native \
+.venv/bin/roboteam prepare --harness claude --system hierarchical --render native \
   --level 1 --min-arms --parallel 2 --output runs/policy/claude-standing-l1
 ```
 
@@ -257,7 +257,7 @@ dispatch without resending. Stop cancels every role's turn, then seals.
 `roboteam run` sets no dollar allowance. Reported cost is kept per turn; missing cost is
 recorded as unreported, not zero. The allowances exist as the `turn_budget_usd` and
 `total_budget_usd` arguments of `roboteam.harness.claude.run.run_task`. With them, every turn
-reserves before launch against one task ledger shared by all roles; a multi-role topology with a
+reserves before launch against one task ledger shared by all roles; a multi-role system with a
 task allowance needs a per-turn allowance, and the most roles that can hold a reservation at once
 times it must fit the task allowance, or the launch is refused. Unknown, invalid or overspent
 cost, or an unresolved reservation, blocks further turns. These are CLI-reported estimates, not

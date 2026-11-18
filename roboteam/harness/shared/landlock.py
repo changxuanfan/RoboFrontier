@@ -57,7 +57,7 @@ def access_for(mode, fs):
     return ACCESS[mode]
 
 
-# What Landlock does not mediate, closed with seccomp for both engines' Linux Landlock shells:
+# What Landlock does not mediate, closed with seccomp for both harnesses' Linux Landlock shells:
 # sockets (an existing named Unix socket, UDP, abstract sockets), signals and tracing of other
 # processes, namespaces and mounts, and metadata changes.
 DENIED_SYSCALLS = (

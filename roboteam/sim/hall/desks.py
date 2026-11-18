@@ -44,9 +44,9 @@ def placements(catalog,regions,root,aisle=1.2,source_overrides=None):
     """Size-aware 3x3 shelves; physical hardware is never scaled."""
     result=[]
     for region in regions:
-        family=region['id'];entries=[];gap=float(region.get('workstation_gap_m',aisle))
+        task_type=region['id'];entries=[];gap=float(region.get('workstation_gap_m',aisle))
         for case in catalog['cases']:
-            if case['family']!=family:continue
+            if case['family']!=task_type:continue
             source=Workstation((source_overrides or {}).get(case['id'],root/case['directory']));m,d=source.model,source.data;source.frame()
             corners=[];table_corners=[]
             for g in range(m.ngeom):
@@ -75,12 +75,12 @@ def placements(catalog,regions,root,aisle=1.2,source_overrides=None):
         x0,y0,x1,y1=region['bounds_xy_m'];total=np.array([sum(widths)+2*gap,sum(heights)+2*gap])
         origin=(np.array([x0+x1,y0+y1])-total)/2
         origin[1]+=float(region.get('workstation_offset_y_m',0.))
-        if np.any(origin<np.array([x0,y0])+.6):raise ValueError('Region too small: '+family)
+        if np.any(origin<np.array([x0,y0])+.6):raise ValueError('Region too small: '+task_type)
         for row in range(3):
             for col in range(3):
                 e=grid[row][col];center=origin+[sum(widths[:col])+col*gap+widths[col]/2,sum(heights[:row])+row*gap+heights[row]/2]
                 shift=center-(e['low']+e['high'])/2;case=e['case']
-                result.append(dict(case_id=case['id'],family=family,source_directory=case['directory'],translation_m=[*shift,0.],yaw_rad=0.,scale=1.,
+                result.append(dict(case_id=case['id'],task_type=task_type,source_directory=case['directory'],translation_m=[*shift,0.],yaw_rad=0.,scale=1.,
                     planning_bounds_xy_m=[*(e['low']+shift),*(e['high']+shift)],table_bounds_xy_m=[*(e['table_low']+shift),*(e['table_high']+shift)],inter_cell_gap_m=gap,planning_scope='Initial physical bounds plus indicative 1m base radius; actual carried-motion swept bounds remain to be checked'))
     return result
 
@@ -180,13 +180,13 @@ def compose(shell,catalog_path,output,table_opening_scale=None,source_overrides=
     for place in plan:
         source=Workstation((source_overrides or {}).get(place['case_id'],root_dir/place['source_directory']));source.frame();m,d=source.model,source.data;amap=assets.import_source(source)
         from roboteam.sim.table_presentation import scale_rectangular_opening_for_render
-        if place['family']=='transport':
+        if place['task_type']=='transport':
             item=next(c for c in catalog['cases'] if c['id']==place['case_id'])
             scale_rectangular_opening_for_render(m,item.get('table_opening_scale',1.) if table_opening_scale is None else table_opening_scale)
             mujoco.mj_kinematics(m,d)
         # Display only: a letter label under a robot base slides out towards the table edge.
         from roboteam.sim.hall.labels import robot_label_moves
-        label_moves=robot_label_moves(m,d,avoid_objects=place['family']!='mosaic')
+        label_moves=robot_label_moves(m,d,avoid_objects=place['task_type']!='mosaic')
         t=np.asarray(place['translation_m']);yaw=place['yaw_rad'];c,s=math.cos(yaw),math.sin(yaw);rotation=np.array([[c,-s,0],[s,c,0],[0,0,1.]])
         prefix=place['case_id']+'__';bodymap={};geommap={};animated=set(source.manifest['motion_recording_contract']['dynamic_bodies'])
         for bid in range(m.nbody):

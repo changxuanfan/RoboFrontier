@@ -7,9 +7,9 @@ import unittest
 
 from fake_pipeline import fake_capture
 from roboteam.runtime.run import segments as run_segments
-from roboteam.tasks import families as task_families
+from roboteam.tasks import task_types as task_types
 from roboteam.runtime.time.clock import BudgetGuard, protocol
-from team_harness import prepare_run
+from team_settings import prepare_run
 from roboteam.runtime.world.service import RuntimeService
 from harness.claude.test_claude_supervisor import Dispatcher, Policy
 from runtime.world.test_policy_probe import BudgetWorld
@@ -101,11 +101,11 @@ class ActiveTimeTests(Fixture):
 
 class SupervisorActiveTimeTests(unittest.TestCase):
     def supervisor(self, policy, sleep, **kwargs):
-        from roboteam.harness.claude.supervisor import CentralizedSupervisor
+        from roboteam.harness.claude.supervisor import RunSupervisor
         self.now = 0
         def tick(seconds): self.now += seconds; sleep()
         policy.now = lambda: self.now
-        return CentralizedSupervisor(policy, lambda: True, clock=lambda: self.now, wall_clock=lambda: self.now, sleep=tick,
+        return RunSupervisor(policy, lambda: True, clock=lambda: self.now, wall_clock=lambda: self.now, sleep=tick,
                                      poll_s=1, startup_timeout_s=3, wall_limit_s=4, **kwargs)
 
     def running(self, **data):
@@ -130,12 +130,12 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         self.root = Path(self.tmp.name).resolve()
 
     def test_runs_freeze_the_active_clock(self):
-        new = task_families.policy_task('transport-a04-d1')
+        new = task_types.policy_task('transport-a04-d1')
         self.assertEqual(new['run_protocol']['clock'], ACTIVE)
-        task_families.validate_policy_task(new)
+        task_types.validate_policy_task(new)
         for changed in ({k: v for k, v in new['run_protocol'].items() if k != 'clock'}, dict(new['run_protocol'], clock='START_wall_time')):
             with self.assertRaises(ValueError):
-                task_families.validate_policy_task(dict(new, run_protocol=changed))
+                task_types.validate_policy_task(dict(new, run_protocol=changed))
         from roboteam.tasks.public import public_task
         self.assertNotIn('run_protocol', public_task(new))
 
@@ -145,7 +145,7 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         store.put('lifecycle', 'running'); return store
 
     def test_continuation_needs_remaining_active_time(self):
-        run = task_families.prepare('transport-a04-d1', self.root/'new'); store = self.store(run)
+        run = task_types.prepare('transport-a04-d1', self.root/'new'); store = self.store(run)
         # Twice the limit has passed on the wall clock, but little of it was active.
         store.put('start_at', time.time() - 2*86400); store.put('active_s', 600.)
         self.assertEqual(run_segments.retry_eligibility(run, store)[1], 'no recorded motion frame')

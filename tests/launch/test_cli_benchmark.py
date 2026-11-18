@@ -10,9 +10,9 @@ from types import SimpleNamespace
 from roboteam.launch.prepare import load_env, select_cases
 from roboteam.launch import codex_batch as benchmark
 from roboteam.launch.codex_batch import prepare_batch
-from roboteam.harness.codex.launch import profile, launch_config
+from roboteam.harness.codex.launch import model_entry, launch_config
 from roboteam.runtime.run.cli import fork_provenance
-from roboteam.tasks.families import prepare
+from roboteam.tasks.task_types import prepare
 from roboteam.runtime.world.service import RuntimeService
 from runtime.world.test_policy_probe import BudgetWorld
 from fake_pipeline import fake_capture
@@ -27,7 +27,7 @@ class CliBenchmarkTests(unittest.TestCase):
             config.write_text(content)
             output = root/'preflight'; output.mkdir()
             with patch.dict(os.environ, {'CODEX_HOME':str(home)}):
-                result = launch_config(profile('luna_subscription'), output)
+                result = launch_config(model_entry('luna_subscription'), output)
             self.assertIn('mcp_servers.personal.enabled=false', result['args'])
             self.assertIn('profiles.other.mcp_servers.extra.enabled=false', result['args'])
             self.assertEqual(config.read_text(), content)
@@ -41,23 +41,23 @@ class CliBenchmarkTests(unittest.TestCase):
             home = root/'dedicated'; home.mkdir(); (home/'config.toml').write_text('[mcp_servers.shared]\ncommand="unused"\n')
             output = user/'repo/runs/preflight'; output.mkdir(parents=True)
             with patch.dict(os.environ, {'CODEX_HOME': str(home)}), patch('pathlib.Path.home', return_value=user):
-                args = ' '.join(launch_config(profile('luna_subscription'), output)['args'])
+                args = ' '.join(launch_config(model_entry('luna_subscription'), output)['args'])
             self.assertIn('mcp_servers.shared.enabled=false', args)
             self.assertNotIn('personal_only', args)
             # When the personal folder is the active home it is still read.
             with patch.dict(os.environ, {'CODEX_HOME': str(user/'.codex')}), patch('pathlib.Path.home', return_value=user):
-                self.assertIn('mcp_servers.personal_only.enabled=false', ' '.join(launch_config(profile('luna_subscription'), output)['args']))
+                self.assertIn('mcp_servers.personal_only.enabled=false', ' '.join(launch_config(model_entry('luna_subscription'), output)['args']))
 
-    def test_profile_selected_standing_workers_use_direct_team_start(self):
+    def test_model_entry_selected_standing_workers_use_direct_team_start(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)
-            catalog=json.loads((benchmark.ROOT/'models.json').read_text())['engines']['codex']
-            catalog['profiles']['luna']['benchmark_topology']='decentralized'
+            catalog=json.loads((benchmark.ROOT/'models.json').read_text())['harnesses']['codex']
+            catalog['models']['luna']['benchmark_system']='decentralized'
             config=root/'models.json';config.write_text(json.dumps(catalog))
             prepared=prepare_batch(root/'batch',['luna'],cases=['transport-a04-d1'],config=config)
             run=Path(json.loads(prepared.read_text())['jobs'][0]['run_directory'])
-            harness=json.loads((run/'private/inputs/harness.json').read_text())
-            self.assertEqual((harness['topology'],harness['startup_protocol']),('decentralized','direct_team'))
+            run_settings=json.loads((run/'private/inputs/run.json').read_text())
+            self.assertEqual((run_settings['system'],run_settings['startup_protocol']),('decentralized','direct_team'))
 
     def test_level_and_minimum_arms_select_four_tasks_without_launch(self):
         expected=['transport-a04-d2','mosaic-a04-6x12-d2','relay-a08-d2','dial-best5-n04-d2']
@@ -68,25 +68,25 @@ class CliBenchmarkTests(unittest.TestCase):
             self.assertEqual(len(select_cases(level=1)),12)
             self.assertEqual(len(select_cases()),36)
             launch.assert_not_called()
-        with self.assertRaisesRegex(ValueError,'Unknown task families'):select_cases(families=['typo'])
+        with self.assertRaisesRegex(ValueError,'Unknown task types'):select_cases(task_types=['typo'])
         with self.assertRaisesRegex(ValueError,'conflicting'):select_cases(cases=[expected[0]],level=1)
 
     def test_context_and_native_vision_are_required(self):
         for name in ('astra_subscription', 'luna', 'deepseek', 'kimi', 'glm'):
-            p=profile(name)
+            p=model_entry(name)
             self.assertEqual((p['context_window'],p['auto_compact_token_limit']),(300000,267000))
         with tempfile.TemporaryDirectory() as tmp:
             file=Path(tmp)/'models.json'
             file.write_text(json.dumps(dict(context_window=400000,auto_compact_token_limit=350000,
-                profiles={'small':dict(model='small',provider='openai',vision=True,context_capacity=128000)})))
-            with self.assertRaisesRegex(ValueError,'capacity'):profile('small',file)
+                models={'small':dict(model='small',provider='openai',vision=True,context_capacity=128000)})))
+            with self.assertRaisesRegex(ValueError,'capacity'):model_entry('small',file)
             file.write_text(json.dumps(dict(context_window=272000,auto_compact_token_limit=245000,
-                profiles={'text':dict(model='text',provider='openai',vision=False,context_capacity=272000)})))
-            with self.assertRaisesRegex(ValueError,'native images'):profile('text',file)
+                models={'text':dict(model='text',provider='openai',vision=False,context_capacity=272000)})))
+            with self.assertRaisesRegex(ValueError,'native images'):model_entry('text',file)
 
     def test_custom_provider_is_scoped_and_has_image_metadata(self):
         with tempfile.TemporaryDirectory() as tmp:
-            launch=launch_config(profile('deepseek'),Path(tmp))
+            launch=launch_config(model_entry('deepseek'),Path(tmp))
             self.assertIn('model_provider="deepseek"',launch['args'])
             model=json.loads((Path(tmp)/'models.json').read_text())['models'][0]
             self.assertIn('image',model['input_modalities'])
@@ -95,13 +95,13 @@ class CliBenchmarkTests(unittest.TestCase):
             self.assertNotIn('experimental_bearer_token',json.dumps(launch))
 
     def test_failed_preflight_cannot_relabel_an_older_pass(self):
-        selected=profile('astra_subscription')
+        selected=model_entry('astra_subscription')
         with tempfile.TemporaryDirectory() as tmp:
             target=Path(tmp)/'runs/engineering/model-compatibility/astra_subscription'
             target.mkdir(parents=True)
-            (target/'report.json').write_text(json.dumps({'passed':True,'profile_sha256':'old'}))
+            (target/'report.json').write_text(json.dumps({'passed':True,'model_entry_sha256':'old'}))
             with patch.object(benchmark,'ROOT',Path(tmp)),patch.object(benchmark,'runs_root',return_value=Path(tmp)/'runs'),\
-                    patch.object(benchmark,'profile',return_value=selected),\
+                    patch.object(benchmark,'model_entry',return_value=selected),\
                     patch.object(benchmark,'launch_config',return_value={}),\
                     patch('sys.argv',['benchmark','preflight','--models','astra_subscription']),\
                     patch.dict(os.environ),\
@@ -117,8 +117,8 @@ class CliBenchmarkTests(unittest.TestCase):
             self.assertEqual((a/'private/inputs/suite-code.json').read_bytes(),(b/'private/inputs/suite-code.json').read_bytes())
             self.assertEqual(batch['model_calls'],0)
             for run in (a,b):
-                cfg=json.loads((run/'private/inputs/harness.json').read_text())
-                self.assertEqual(cfg['engine'],'codex')
+                cfg=json.loads((run/'private/inputs/run.json').read_text())
+                self.assertEqual(cfg['harness'],'codex')
                 self.assertFalse(cfg['record_realtime_video'])
                 self.assertFalse(any('suite-code' in str(p) for p in (run/'public').rglob('*')))
 
@@ -163,7 +163,7 @@ class CliBenchmarkTests(unittest.TestCase):
     def test_launch_works_without_local_model_cache(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'CODEX_HOME':tmp}):
             output=Path(tmp)/'launch'; output.mkdir()
-            launch=launch_config(profile('luna'), output)
+            launch=launch_config(model_entry('luna'), output)
             self.assertEqual(launch['model'],'gpt-6-luna')
             self.assertIn('image',json.loads((output/'models.json').read_text())['models'][0]['input_modalities'])
 
@@ -172,15 +172,15 @@ class CliBenchmarkTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); folder=root/'batch'; run=folder/'astra_subscription'/'case'
             (run/'private/inputs').mkdir(parents=True)
-            launch={'profile':{'provider':'openai'}}
+            launch={'model_entry':{'provider':'openai'}}
             (run/'private/inputs/codex.json').write_text(json.dumps(launch))
             (run/'private/inputs/models.json').write_text('{"models": []}')
             (folder/'batch.json').write_text(json.dumps({'status':'prepared_not_started','jobs':[
-                {'profile':'astra_subscription','run_directory':str(run),'status':'prepared'}]}))
+                {'model_entry':'astra_subscription','run_directory':str(run),'status':'prepared'}]}))
             receipt=root/'runs/engineering/model-compatibility/astra_subscription/report.json'
             receipt.parent.mkdir(parents=True)
-            profile_hash=hashlib.sha256(json.dumps(launch['profile'],sort_keys=True).encode()).hexdigest()
-            receipt.write_text(json.dumps({'passed':True,'profile_sha256':profile_hash,
+            model_entry_hash=hashlib.sha256(json.dumps(launch['model_entry'],sort_keys=True).encode()).hexdigest()
+            receipt.write_text(json.dumps({'passed':True,'model_entry_sha256':model_entry_hash,
                                            'catalog_sha256':'old','codex_version':'old'}))
             with patch.object(benchmark,'ROOT',root),patch.object(benchmark,'runs_root',return_value=root/'runs'),\
                     patch.object(benchmark,'verify_inputs',return_value=[]),\

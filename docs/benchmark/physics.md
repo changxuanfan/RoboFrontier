@@ -23,7 +23,7 @@ how the simulation differs from the real robot, and the current validation statu
 | Hand actuator range | ±280 N | The tendon passes half to each finger: 140 N per finger |
 
 What a scene file cannot hold is in `roboteam/sim/profile.py`: Mosaic objects may always
-sleep (its large scenes would otherwise run below real time); in the other families objects sleep
+sleep (its large scenes would otherwise run below real time); in the other task types objects sleep
 only after every arm has been idle for 2 s, and any action wakes them; Relay settles 30 s before
 anything may sleep, so its hanging weights come to rest. Every scene starts at rest under this
 physics (`build_release.py settle`). Each run writes `private/outputs/effective-physics.json`,
@@ -69,7 +69,7 @@ step settings, and writes `runs/engineering/validate-physics/<time>.json`;
 `tests/sim/test_validation.py` runs a fast part of it. Pass criteria: a held object slips
 less than 2 mm, ends less than 1° turned in the hand and never turns more than 2°; a resting
 object drifts less than 0.2 mm after its first 5 s; a placed cube settles within 1 s; a Dial knob
-follows the hand within 5°; a 20 ms control step of each family's largest case computes in less than 20 ms.
+follows the hand within 5°; a 20 ms control step of each task type's largest case computes in less than 20 ms.
 
 The current run (`runs/engineering/validate-physics/20261111-143742.json`) passes 56 of 77 checks and accepts the other 21 (below):
 
@@ -85,7 +85,7 @@ The current run (`runs/engineering/validate-physics/20261111-143742.json`) passe
 | Two arms driven into each other at full speed | 1 | Pass: the simulation stays valid |
 | Airborne two-arm Relay timber handover at 40 N and 70 N | 2 | 40 N passes (receivers move the timber 0.18 mm when closing, it drops 0.5 mm at release). 70 N fails narrowly: one sender's carry slip is 2.02 mm |
 | Dial knob turned 90° at 0.3 and 1.0 rad/s | 2 | 0.3 rad/s passes (0.45° behind the hand); 1.0 rad/s fails (6.5° behind) |
-| Step time of each family's largest case | 4 | All pass: 1.5–3.9 ms of computation per 20 ms control step while arms move |
+| Step time of each task type's largest case | 4 | All pass: 1.5–3.9 ms of computation per 20 ms control step while arms move |
 
 The wrist-turn, carry and Dial failures share one cause: the NoSlip pass drags a held object at a
 steady rate once the hand turns faster than about 0.5 rad/s. Without NoSlip the turn stays below

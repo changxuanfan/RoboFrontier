@@ -65,7 +65,7 @@ class NativeControls:
         config=parent_path.parents[2]
         if parent_path.parents[1].name!='projects':
             raise ProtocolError('Native fork discovery requires the registered run layout')
-        if config.name!='config' or config.parent.name!='engine' or config.parent.parent.name!='private':
+        if config.name!='config' or config.parent.name!='harness' or config.parent.parent.name!='private':
             raise ProtocolError('Native fork discovery requires the registered run layout')
         run=config.parent.parent.parent
         claim_dir=run/'private/claude-forks'

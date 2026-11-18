@@ -692,7 +692,7 @@ class Gateway(ThreadingHTTPServer):
 
     def client(self):
         # An explicit key and base URL: the SDK then consults no environment variable or
-        # profile, and it never retries by itself (Codex owns retries).
+        # model, and it never retries by itself (Codex owns retries).
         return self.sdk.Anthropic(api_key=self.read_key(), base_url=self.upstream, max_retries=0,
                                   timeout=self.timeout_s)
 

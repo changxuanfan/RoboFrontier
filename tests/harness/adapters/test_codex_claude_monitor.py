@@ -89,10 +89,10 @@ class CacheMonitorTests(unittest.TestCase):
         self.assertEqual(sorted(monitor.summarize(records, now=NOW, by='session')['labels']), ['thread-2', 'thread-codex-abcdef12'])
         with tempfile.TemporaryDirectory() as folder:
             batch, home = Path(folder)/'batch', Path(folder)/'homes/one'
-            (batch/'runs/transport-n04/private/engine').mkdir(parents=True)
+            (batch/'runs/transport-n04/private/harness').mkdir(parents=True)
             home.mkdir(parents=True)
             (home/'installation_id').write_text('abcdef12-3456-7890\n')
-            (batch/'runs/transport-n04/private/engine/codex-home.json').write_text(json.dumps({'codex_home': str(home)}))
+            (batch/'runs/transport-n04/private/harness/codex-home.json').write_text(json.dumps({'codex_home': str(home)}))
             names = monitor.batch_names(batch)
             self.assertEqual(names, {'codex-abcdef12': 'transport-n04'})
             self.assertEqual(list(monitor.summarize(records, now=NOW, names=names)['labels']), ['transport-n04'])

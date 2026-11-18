@@ -112,13 +112,13 @@ def job_id(value):
 
 
 # One table decides which destinations the relay forwards and which hosts the
-# Mac probes for each engine's job, so the two lists cannot drift apart. A route
-# is healthy only while every probe host of its engine completes a TLS handshake.
-ENGINE_ROUTES = {
+# Mac probes for each harness's job, so the two lists cannot drift apart. A route
+# is healthy only while every probe host of its harness completes a TLS handshake.
+HARNESS_ROUTES = {
     'codex': {'domains': ('openai.com', 'chatgpt.com'), 'probe_hosts': ('chatgpt.com', 'auth.openai.com')},
     'claude': {'domains': ('anthropic.com',), 'probe_hosts': ('api.anthropic.com',)},
 }
-ALLOWED_DOMAINS = tuple(domain for route in ENGINE_ROUTES.values() for domain in route['domains'])
+ALLOWED_DOMAINS = tuple(domain for route in HARNESS_ROUTES.values() for domain in route['domains'])
 
 
 def target_allowed(host, port, domains=ALLOWED_DOMAINS):
@@ -127,13 +127,13 @@ def target_allowed(host, port, domains=ALLOWED_DOMAINS):
             and any(host == domain or host.endswith('.'+domain) for domain in domains))
 
 
-def probe_hosts(engine):
-    """Hosts whose TLS reachability decides route health for this engine."""
-    route = ENGINE_ROUTES.get(engine)
+def probe_hosts(harness):
+    """Hosts whose TLS reachability decides route health for this harness."""
+    route = HARNESS_ROUTES.get(harness)
     if route is None:
-        raise EgressError('Unknown relay engine')
+        raise EgressError('Unknown relay harness')
     if not all(target_allowed(host, 443, route['domains']) for host in route['probe_hosts']):
-        raise EgressError('Relay probe hosts must be destinations of the same engine route')
+        raise EgressError('Relay probe hosts must be destinations of the same harness route')
     return route['probe_hosts']
 
 
@@ -688,13 +688,13 @@ class MacRelay:
         self.failure_code = None; self.peak_streams = 0
         self.failure_transport = None
         self.grace_s=grace_s;self.paused_since=None;self.upstream_failed=False
-        # The job's engine decides these hosts (probe_hosts(engine)); they are
+        # The job's harness decides these hosts (probe_hosts(harness)); they are
         # passed explicitly so a Claude route never depends on an OpenAI host.
         self.probe_hosts=tuple(probe_hosts)
         if any(not target_allowed(host,443) for host in self.probe_hosts):
             raise EgressError('Relay probe hosts must be relayed destinations')
         if grace_s and probe is None and not self.probe_hosts:
-            raise EgressError('Short-outage recovery requires the engine probe hosts')
+            raise EgressError('Short-outage recovery requires the harness probe hosts')
         self.probe_dial=probe_dial or self.tls_handshake
         self.probe=probe or self.probe_upstream
 
@@ -705,7 +705,7 @@ class MacRelay:
         return True
 
     async def probe_upstream(self):
-        """True only when every probe host of this engine answers TLS."""
+        """True only when every probe host of this harness answers TLS."""
         results=await asyncio.gather(*(asyncio.wait_for(self.probe_dial(host),3) for host in self.probe_hosts),
                                      return_exceptions=True)
         for result in results:
@@ -918,7 +918,7 @@ async def connect(args):
         process = await asyncio.create_subprocess_exec(*ssh_command(args),
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=log, limit=MAX_FRAME)
         relay = MacRelay(Frames(process.stdout, process.stdin), status=status,grace_s=args.pause_grace_s,
-                         probe_hosts=probe_hosts(args.engine) if args.engine else ())
+                         probe_hosts=probe_hosts(args.harness) if args.harness else ())
         await relay.run()
     finally:
         if process:
@@ -955,8 +955,8 @@ def main(argv=None):
     mac.add_argument('--ssh-config', default='', help='Optional private operator SSH config for this route only')
     mac.add_argument('--job-id', required=True)
     mac.add_argument('--pause-grace-s',type=int,default=0)
-    mac.add_argument('--engine', choices=sorted(ENGINE_ROUTES), default='',
-                     help="The job's engine; chooses the upstream hosts probed during short-outage recovery")
+    mac.add_argument('--harness', choices=sorted(HARNESS_ROUTES), default='',
+                     help="The job's harness; chooses the upstream hosts probed during short-outage recovery")
     mac.add_argument('--state-root', required=True, help='Private durable path on the cluster, outside checkouts')
     mac.add_argument('--remote-script', required=True, help='Published matching roboteam/launch/slurm/proxy.py on the cluster')
     mac.add_argument('--remote-python', default='python3')
@@ -971,8 +971,8 @@ def main(argv=None):
     from roboteam.configuration import MAX_EGRESS_PAUSE_S
     if hasattr(args,'pause_grace_s') and not 0<=args.pause_grace_s<=MAX_EGRESS_PAUSE_S:
         parser.error('pause-grace-s must be between 0 and %d'%MAX_EGRESS_PAUSE_S)
-    if args.command=='connect' and args.pause_grace_s and not args.engine:
-        parser.error('--engine is required with --pause-grace-s')
+    if args.command=='connect' and args.pause_grace_s and not args.harness:
+        parser.error('--harness is required with --pause-grace-s')
     try:
         if args.command == 'tcp-pipe':
             tcp_pipe(args.host, args.port, args.interface)

@@ -3,7 +3,7 @@
 Codex writes transcripts into its shared home. At the end of every segment the
 Codex host calls `keep_codex` (python -m roboteam.launch.results.session_archive keep RUN):
 each thread of the run (roles, delegates, snapshot anchors) is copied into the
-run's private/engine/transcripts/, verified by SHA-256 and listed in index.json.
+run's private/harness/transcripts/, verified by SHA-256 and listed in index.json.
 The host never deletes the originals, because a continued segment resumes
 those threads from the home. Claude keeps its transcripts in the run already.
 
@@ -76,7 +76,7 @@ def _copy_verified(source, target):
 def keep_codex(run, home=None):
     """Copy this run's Codex threads from the shared home into the run, verified; delete nothing."""
     run = Path(run).resolve()
-    folder = run_layout.path(run, 'engine_transcripts')
+    folder = run_layout.path(run, 'harness_transcripts')
     home = _codex_home(run, home)
     _, threads = _meta(run)
     folder.mkdir(parents=True, exist_ok=True)
@@ -166,17 +166,17 @@ def archive_run(run, home=None, min_idle_s=60, final=False):
         raise ValueError('Archive only a finished run; lifecycle is '+str(meta.get('lifecycle')))
     if not final and continuable(run, meta):
         raise ValueError('This run can still be continued; archive it after its last segment or pass --final')
-    engine = json.loads((run/'private/inputs/manifest.json').read_text()).get('engine', 'codex')
+    harness = json.loads((run/'private/inputs/manifest.json').read_text()).get('harness', 'codex')
     host = run_layout.path(run, 'host_process')
     if host.is_file() and _host_alive(json.loads(host.read_text()).get('pid')):
         raise ValueError('A process with the recorded host PID is still live')
-    if engine == 'codex':
+    if harness == 'codex':
         kept = keep_codex(run, home)
         if not kept['complete']:
             raise ValueError('Some Codex threads have no single source; see '+kept['index'])
-        paths = sorted(run_layout.path(run, 'engine_transcripts').glob('*.jsonl'))
+        paths = sorted(run_layout.path(run, 'harness_transcripts').glob('*.jsonl'))
     else:
-        paths = sorted((run_layout.path(run, 'engine_config')/'projects').rglob('*.jsonl'))
+        paths = sorted((run_layout.path(run, 'harness_config')/'projects').rglob('*.jsonl'))
     now = time.time()
     busy = [str(p) for p in paths if now-p.stat().st_mtime < min_idle_s]
     if busy: raise ValueError('Sessions modified in the last %ds; not archiving: %s' % (min_idle_s, busy[:3]))
@@ -188,8 +188,8 @@ def archive_run(run, home=None, min_idle_s=60, final=False):
         manifest['files'].append({**compress_verified(path), 'archived_at': time.time()})
         write_json(manifest_path, manifest)  # recorded before the original goes
         path.unlink()
-    if engine == 'codex':
-        index = json.loads((run_layout.path(run, 'engine_transcripts')/'index.json').read_text())
+    if harness == 'codex':
+        index = json.loads((run_layout.path(run, 'harness_transcripts')/'index.json').read_text())
         for row in index['threads']:
             source = Path(row.get('source', ''))
             if not row.get('verified') or not source.is_file(): continue

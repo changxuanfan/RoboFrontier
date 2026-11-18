@@ -16,7 +16,7 @@ and each run's saved `private/outputs/runtime.json`. Saved state can lag executi
 each snapshot's age and reports missing counts as missing, never as zero or as START. It does
 not prove that a process is alive: use `roboteam status` to supervise.
 
-Each task row shows the profile, family, level, arm count, saved lifecycle, recorded completion
+Each task row shows the model, task type, level, arm count, saved lifecycle, recorded completion
 and the latest saved image (JPEG or PNG). An existing `private/outputs/global-realtime.mp4` is
 streamed with HTTP Range requests; the viewer never records or renders one. Run directories must
 stay inside the selected batch. The JSON it serves leaves out work notes, mail, connection

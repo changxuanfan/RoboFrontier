@@ -7,10 +7,10 @@ const tools=[
   {type:'function',name:'policy_image',description:'View a permitted PNG or JPEG by absolute path or relative to the run workspace. File access is enforced inside the isolated worker.',
    inputSchema:{type:'object',properties:{path:{type:'string'}},required:['path'],additionalProperties:false}}
 ];
-function enabled(launch){return (launch.tool_backend??launch.profile?.tool_backend??'native')==='landlock-v1';}
-// A robot_only run (runtime/tools/tool_mode.py): Codex's own tools are off and no file tools replace them.
-function robotOnly(launch){return (launch.tool_mode??launch.profile?.tool_mode??'full')==='robot_only';}
-function subscription(launch){return (launch.profile?.provider??launch.provider)==='openai';}
+function enabled(launch){return (launch.tool_backend??launch.model_entry?.tool_backend??'native')==='landlock-v1';}
+// A robot_only run (runtime/tools/tools_mode.py): Codex's own tools are off and no file tools replace them.
+function robotOnly(launch){return (launch.tools??launch.model_entry?.tools??'full')==='robot_only';}
+function subscription(launch){return (launch.model_entry?.provider??launch.provider)==='openai';}
 async function admit(rpc,launch){
   if(!enabled(launch)&&!robotOnly(launch))return;
   await requireNoMcpServers(rpc);

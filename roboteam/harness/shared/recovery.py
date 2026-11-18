@@ -1,4 +1,4 @@
-"""What the manual task recoveries of both engines share (harness/claude/recover_task.py,
+"""What the manual task recoveries of both harnesses share (harness/claude/recover_task.py,
 harness/codex/recover_task.py): a read-only view of the runtime database, the call ledger a
 recovery must leave unchanged, a physical-restore check on a private clone, and the batch's
 wait for a recovery in progress."""

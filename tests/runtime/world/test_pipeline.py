@@ -6,7 +6,7 @@ import time
 import unittest
 
 from fake_pipeline import FakeWorld, fake_capture
-from team_harness import prepare_run
+from team_settings import prepare_run
 from roboteam.runtime.world.service import RuntimeService
 from roboteam.runtime.world.store import RuntimeStore
 
@@ -563,10 +563,10 @@ class PipelineTests(unittest.TestCase):
         finally:store.close()
 
     def test_peer_wait_is_addressed_and_has_no_controller(self):
-        from roboteam.tasks.config import load_harness, startup_protocol
-        cfg=load_harness();cfg['topology']='decentralized';cfg['startup_protocol']=startup_protocol('decentralized')
+        from roboteam.tasks.config import load_run_settings, startup_protocol
+        cfg=load_run_settings();cfg['system']='decentralized';cfg['startup_protocol']=startup_protocol('decentralized')
         config=self.path.parent/'peer.json';config.write_text(json.dumps(cfg))
-        run=prepare_run(self.path.parent/'decentralized',harness_path=config)
+        run=prepare_run(self.path.parent/'decentralized',run_settings_path=config)
         service=RuntimeService(run,FakeWorld,fake_capture)
         def call(actor,op,data,key):
             job=service.accept(actor,op,data,key);service.pump();return job
@@ -647,6 +647,6 @@ class PipelineTests(unittest.TestCase):
         self.call('A','move',{'delta_m':[0,0,.01],'wait':False},'later-move')
         self.assertEqual(calls,['first-move'])
         kinds=[e['kind'] for e in self.service.store.events()]
-        self.assertEqual(kinds.count('ENGINEERING_FAULT_INJECTED'),1)
+        self.assertEqual(kinds.count('HARNESSERING_FAULT_INJECTED'),1)
 
 if __name__=='__main__':unittest.main()

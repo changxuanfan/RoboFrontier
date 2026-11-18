@@ -18,9 +18,9 @@ from roboteam.harness.shared import preflight_probe
 from roboteam.harness.claude.systems.provenance import fork_provenance, history, transcript_rows
 from roboteam.harness.shared.identity import fingerprint
 from roboteam.harness.claude.session.runner import run_turn
-from roboteam.tasks.families import ROOT
+from roboteam.tasks.task_types import ROOT
 from roboteam.launch.prepare import load_env
-from roboteam.launch.claude_prepare import profile
+from roboteam.launch.claude_prepare import model_entry
 from roboteam.harness.claude.checks.preflight import MIN_TURN_BUDGET, PROMPTS, World, claude_version, setup_run
 
 
@@ -52,13 +52,13 @@ def _pending_observe(rows):
 def run_blocked_precheck(name, output, budget, base_env, *, binary='claude', wait_s=60, catalog=None):
     if isinstance(budget,bool) or not isinstance(budget,(int,float)) or not math.isfinite(budget) or budget < MIN_TURN_BUDGET*3:
         raise ValueError('Budget must cover three minimum turn allowances')
-    prof = profile(name, catalog) if catalog is not None else profile(name)
+    prof = model_entry(name, catalog) if catalog is not None else model_entry(name)
     output = Path(output)
     output.mkdir(parents=True,exist_ok=False)
     run,mcp,server=setup_run(output,base_env)
     session=str(uuid.uuid4()); child=str(uuid.uuid4())
-    receipt={'schema':'roboteam.claude-blocked-precheck.v1','profile':name,'requested_model':prof['model'],
-             'profile_sha256':fingerprint(prof), 'auth_mode':prof.get('auth_mode','api_key'),
+    receipt={'schema':'roboteam.claude-blocked-precheck.v1','model_entry':name,'requested_model':prof['model'],
+             'model_entry_sha256':fingerprint(prof), 'auth_mode':prof.get('auth_mode','api_key'),
              'claude_version':claude_version(binary),'budget_usd':budget,'started_at':time.time(),
              'parent_session':session,'child_session':child,
              'passed':False,'checks':{},'reported_cost_usd':0,'cost_complete':False,'error_type':None}
@@ -136,23 +136,23 @@ def run_blocked_precheck(name, output, budget, base_env, *, binary='claude', wai
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile',required=True)
+    parser.add_argument('--model',required=True)
     parser.add_argument('--max-budget-usd',type=float,required=True)
     parser.add_argument('--output',type=Path)
     parser.add_argument('--confirm-spend',action='store_true')
     args=parser.parse_args()
-    load_env(ROOT/'.env'); selected=profile(args.profile)
+    load_env(ROOT/'.env'); selected=model_entry(args.model)
     if not args.confirm_spend:
-        print(json.dumps({'status':'not_run','profile':args.profile,'model':selected['model'],
+        print(json.dumps({'status':'not_run','model_entry':args.model,'model':selected['model'],
                           'potential_paid_cli_turns':3,'model_calls':0},indent=2));return 2
     if selected.get('auth_mode') == 'native_login':
         config_directory('.', selected)
     elif not os.environ.get(selected['env_key']):
         raise SystemExit('Missing credential variable: '+selected['env_key'])
     from roboteam.configuration import runs_root
-    output=args.output or runs_root()/'engineering/claude-blocked-precheck'/(args.profile+'-'+time.strftime('%Y%m%d-%H%M%S'))
-    result=run_blocked_precheck(args.profile,output,args.max_budget_usd,dict(os.environ))
-    print(json.dumps({'profile':args.profile,'passed':result['passed'],'checks':result['checks'],
+    output=args.output or runs_root()/'engineering/claude-blocked-precheck'/(args.model+'-'+time.strftime('%Y%m%d-%H%M%S'))
+    result=run_blocked_precheck(args.model,output,args.max_budget_usd,dict(os.environ))
+    print(json.dumps({'model_entry':args.model,'passed':result['passed'],'checks':result['checks'],
                       'error_type':result['error_type'],'receipt':str(output/'receipt.json')},indent=2))
     return 0 if result['passed'] else 1
 

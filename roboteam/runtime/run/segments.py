@@ -416,7 +416,7 @@ def begin_segment(store, now=None):
 
 
 def resume_message(run, actor, record):
-    """The frozen resume text for one role, filled for this segment (the same on both engines)."""
+    """The frozen resume text for one role, filled for this segment (the same on both harnesses)."""
     from roboteam.runtime.run.bootstrap import fill_resume
     return fill_resume(run, actor, record)
 
@@ -497,7 +497,7 @@ def relay_record(run, cutoff=None):
     custody and dropped state as last logged.
 
     A segment's rows run to the restore frame of the next. Handovers are matched by their
-    content, so a carried record is not counted twice. None for other families or an empty log.
+    content, so a carried record is not counted twice. None for other task types or an empty log.
     """
     log = Path(run) / 'private/outputs/suite-process.jsonl'
     if not log.is_file(): return None
@@ -532,7 +532,7 @@ def dial_record(run, cutoff=None):
     physically kept); `cutoff` ends the last one. A segment whose evaluator continued
     the record reports cumulative counts with the carried part beside them; one started
     before that existed counted from zero, so its trials are added. Rows are the Dial
-    results of the shared process log; None for other families or an empty log.
+    results of the shared process log; None for other task types or an empty log.
     """
     log = Path(run) / 'private/outputs/suite-process.jsonl'
     if not log.is_file(): return None

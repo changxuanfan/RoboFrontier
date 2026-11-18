@@ -3,10 +3,10 @@
 schema_version = 11
 
 [policy]
-engine = "codex"
-profile = "sol_subscription"
+harness = "codex"
+model = "sol_subscription"
 effort = "high"
-topology = "adaptive"
+system = "adaptive"
 
 [batch]
 parallel = 36

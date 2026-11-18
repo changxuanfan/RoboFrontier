@@ -1,4 +1,4 @@
-"""A policy environment: its identity, the access table it brings, and each engine's rendering.
+"""A policy environment: its identity, the access table it brings, and each harness's rendering.
 
 scripts/release/check_policy_env.py exercises a real environment through both real CLIs. These
 tests use a small fake environment, so they need neither a build nor a CLI.
@@ -22,8 +22,8 @@ from roboteam.harness.codex.launch import launch_config
 from roboteam.runtime.run.layout import manifest_record
 from scripts.release import check_policy_env
 
-CHECKED = [{'engine': 'codex', 'tool_backend': 'landlock-v1', 'cli': 'codex-cli 0.165.0'},
-           {'engine': 'claude', 'bash_isolation': 'claude-sandbox', 'cli': '2.1.312 (Claude Code)'}]
+CHECKED = [{'harness': 'codex', 'tool_backend': 'landlock-v1', 'cli': 'codex-cli 0.165.0'},
+           {'harness': 'claude', 'bash_isolation': 'claude-sandbox', 'cli': '2.1.312 (Claude Code)'}]
 STUB = dict(model='offline-protocol', provider='offline_protocol', effort='high', vision=True, context_window=272000,
             auto_compact_token_limit=258400, env_key='ROBOTEAM_OFFLINE_STUB_TOKEN', base_url='https://stub.invalid')
 
@@ -115,7 +115,7 @@ class AccessTableTests(Fixture):
         receipt.write_text(passed)
         self.freeze()
 
-    def test_a_check_from_before_engine_combinations_must_be_rerun(self):
+    def test_a_check_from_before_harness_combinations_must_be_rerun(self):
         receipt = policy_env.receipt_path(self.root)
         current = json.loads(receipt.read_text())
         receipt.write_text(json.dumps({key: current[key] for key in ('passed', 'tree_sha256')}))
@@ -125,15 +125,15 @@ class AccessTableTests(Fixture):
                 self.assertRaisesRegex(ValueError, 'does not record.*rerun scripts/release/check_policy_env.py'):
             policy_env.require_combination('codex', 'landlock-v1')
 
-    def test_only_the_engine_sandbox_and_cli_the_check_ran_are_admitted(self):
+    def test_only_the_harness_sandbox_and_cli_the_check_ran_are_admitted(self):
         versions = {'codex': 'codex-cli 0.165.0', 'claude': '2.1.312 (Claude Code)'}
         version = lambda binary, env=None, timeout_s=30: versions[binary]
         with patch.dict(os.environ, {policy_env.ENV_VAR: str(self.root)}), patch.object(policy_env, 'cli_version', version):
             policy_env.require_combination('codex', 'landlock-v1')
             policy_env.require_combination('claude', 'claude-sandbox')
-            for engine, mode in (('codex', 'native'), ('claude', 'landlock-v1')):
+            for harness, mode in (('codex', 'native'), ('claude', 'landlock-v1')):
                 with self.assertRaisesRegex(ValueError, 'has not checked.*' + mode):
-                    policy_env.require_combination(engine, mode)
+                    policy_env.require_combination(harness, mode)
             versions['codex'] = 'codex-cli 0.166.0'
             with self.assertRaisesRegex(ValueError, 'has not checked.*0.166.0'):
                 policy_env.require_combination('codex', 'landlock-v1')
@@ -335,7 +335,7 @@ class PinnedCliTests(unittest.TestCase):
         return {'PATH': folder + ':/usr/bin:/bin'}
 
     def test_only_the_pinned_codex_cli_is_accepted(self):
-        from roboteam.harness.codex.job_engine import ROOT as source, require_pinned_cli
+        from roboteam.harness.codex.job_harness import ROOT as source, require_pinned_cli
         pinned = re.search(r'CODEX_VERSION=(\S+)', (Path(source)/'docker/Dockerfile').read_text()).group(1)
         with tempfile.TemporaryDirectory() as folder:
             require_pinned_cli(self.cli(folder, 'codex-cli ' + pinned))
@@ -346,20 +346,20 @@ class PinnedCliTests(unittest.TestCase):
 
     def test_a_hung_cli_or_an_unpinned_dockerfile_is_refused_clearly(self):
         import time
-        from roboteam.harness.codex import job_engine
+        from roboteam.harness.codex import job_harness
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'codex'
             path.write_text('#!/bin/sh\nsleep 60\n')
             path.chmod(0o755)
             started = time.monotonic()
             with self.assertRaisesRegex(ValueError, 'found none'):
-                job_engine.require_pinned_cli({'PATH': folder + ':/usr/bin:/bin'}, timeout_s=1)
+                job_harness.require_pinned_cli({'PATH': folder + ':/usr/bin:/bin'}, timeout_s=1)
             self.assertLess(time.monotonic() - started, 30)
             (Path(folder)/'docker').mkdir()
             (Path(folder)/'docker/Dockerfile').write_text('FROM ubuntu\nARG CODEX_VERSION\n')
-            with patch.object(job_engine, 'ROOT', Path(folder)), \
+            with patch.object(job_harness, 'ROOT', Path(folder)), \
                     self.assertRaisesRegex(ValueError, 'no longer pins the Codex CLI'):
-                job_engine.require_pinned_cli({'PATH': folder + ':/usr/bin:/bin'})
+                job_harness.require_pinned_cli({'PATH': folder + ':/usr/bin:/bin'})
 
 
 class CheckTests(unittest.TestCase):
@@ -385,7 +385,7 @@ class CheckTests(unittest.TestCase):
                 policy_env.require_combination('claude', 'claude-sandbox')
                 with self.assertRaisesRegex(ValueError, 'has not checked'):
                     policy_env.require_combination('codex', 'landlock-v1')
-        self.assertEqual(record['checked'][0], {'engine': 'claude', 'bash_isolation': 'claude-sandbox', 'cli': 'claude 1.0'})
+        self.assertEqual(record['checked'][0], {'harness': 'claude', 'bash_isolation': 'claude-sandbox', 'cli': 'claude 1.0'})
 
     def test_a_wrapper_failure_counts_even_when_the_script_itself_succeeded(self):
         finished = check_policy_env.policy_env_probe.FINISHED

@@ -52,9 +52,9 @@ class RuntimeDiagnosticTests(unittest.TestCase):
         with patch.object(diagnostics, '_checked', side_effect=lambda command, **options: calls.append(command) or 'version'):
             report = diagnostics._native_probe('codex', 'native', True)
         self.assertEqual(calls, [['codex', '--version']])
-        self.assertEqual(report, {'version': 'version', 'sandbox_checked': False, 'tool_mode': 'robot_only'})
+        self.assertEqual(report, {'version': 'version', 'sandbox_checked': False, 'tools': 'robot_only'})
         seen = []
-        config = {**self.config, 'policy': {**self.config['policy'], 'engine': 'codex', 'tool_mode': 'robot_only'}}
+        config = {**self.config, 'policy': {**self.config['policy'], 'harness': 'codex', 'tools': 'robot_only'}}
         with patch.object(diagnostics, '_native_probe', side_effect=lambda *args: seen.append(args) or {'version': 'v'}):
             self.assertTrue(diagnostics.inspect_runtime(config, render=False)['passed'])
         self.assertEqual(seen[0][2], True)

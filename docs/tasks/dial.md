@@ -12,7 +12,7 @@ input is entirely correct.
 | 2 (`d2`) | Free modules: a second arm holds each blue handle with the module at least 20 mm clear of every support while another turns the red knob | 8, 12, 16 |
 | 3 (`d3`) | As level 2, turned by a single-sided crank against a stiffer spring | 8, 12, 16 |
 
-The table is 0.8 m high and each white disk 0.3 m across. Each case's public task and family
+The table is 0.8 m high and each white disk 0.3 m across. Each case's public task and task type
 materials (previews, camera calibration, `table-geometry.json`) give its table outline, bases,
 panel and cameras.
 

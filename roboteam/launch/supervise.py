@@ -1,6 +1,6 @@
 """What both batch supervisors do for each run (launch/codex_batch.py, launch/claude_batch.py):
 launch it, and after every end ask the stop table whether it continues by itself
-(runtime/run/segments.py). Each engine launches its own host and keeps its own records; this
+(runtime/run/segments.py). Each harness launches its own host and keeps its own records; this
 module holds the loop between them."""
 
 

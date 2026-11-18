@@ -32,9 +32,9 @@ class ClaudeSessionHostIntegrationTests(unittest.TestCase):
                 conn = run / 'private/state/connections/Controller.json'; conn.parent.mkdir(parents=True)
                 conn.write_text(json.dumps({'run_id': 'run', 'actor': 'Controller', 'schema_version': 3,
                                             'url': f'http://127.0.0.1:{world.server_port}', 'token': 'fake'}))
-                profile = {'model': 'claude-opus-5-5', 'effort': 'high', 'env_key': 'FAKE_KEY',
+                model_entry = {'model': 'claude-opus-5-5', 'effort': 'high', 'env_key': 'FAKE_KEY',
                            'base_url': f'http://127.0.0.1:{server.server_port}'}
-                host = ClaudeSessionHost(run, 'Controller', profile,
+                host = ClaudeSessionHost(run, 'Controller', model_entry,
                                          {'PATH': os.environ.get('PATH', ''), 'FAKE_KEY': 'fake'}, turn_timeout=45)
                 host.send('Call robot observe tool.')
                 self.assertEqual(host.wait(60)['status'], 'idle', host.last_result)
@@ -42,7 +42,7 @@ class ClaudeSessionHostIntegrationTests(unittest.TestCase):
                 self.assertGreaterEqual(len(probe.REQUESTS), 2)
                 self.assertIn('"type": "image"', json.dumps(probe.REQUESTS[-1]))
                 cfg = json.loads((Path(__file__).resolve().parents[3] / 'roboteam/runtime/run/defaults.json').read_text())
-                cfg.update(engine='claude', topology='single-agent', startup_protocol='direct_controller')
+                cfg.update(harness='claude', system='single-agent', startup_protocol='direct_controller')
                 store = RuntimeStore(run / 'private/state/runtime.sqlite')
                 try:
                     store.initialize('run', cfg, ['A'])

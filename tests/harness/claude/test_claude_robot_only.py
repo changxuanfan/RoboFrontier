@@ -98,10 +98,10 @@ class CommandTests(unittest.TestCase):
             run = Path(tmp)/'run'; (run/'private/inputs').mkdir(parents=True)
             (run/'private/inputs/policy-access.json').write_text(json.dumps(
                 {'schema': 'roboteam.policy-access.v1', 'filesystem': {str(run/'workspace'): 'write'}, 'network': False}))
-            (run/'private/inputs/harness.json').write_text(json.dumps({'topology': 'adaptive'}))
+            (run/'private/inputs/run.json').write_text(json.dumps({'system': 'adaptive'}))
             self.assertFalse(runner.robot_only(run))
             self.assertIsNotNone(runner.turn_settings(run))
-            (run/'private/inputs/harness.json').write_text(json.dumps({'topology': 'adaptive', 'tool_mode': 'robot_only'}))
+            (run/'private/inputs/run.json').write_text(json.dumps({'system': 'adaptive', 'tools': 'robot_only'}))
             self.assertTrue(runner.robot_only(run))
             self.assertIsNone(runner.turn_settings(run))
             # Still a run with the frozen policy contract: it keeps one CLI process per session.
@@ -240,11 +240,11 @@ class AdaptiveChainTests(unittest.TestCase):
         prepare = base.prepare_run
         prepared = []
 
-        def robot_only_run(directory, harness_path=None, **options):
-            config = json.loads(Path(harness_path).read_text())
-            config['tool_mode'] = 'robot_only'
-            Path(harness_path).write_text(json.dumps(config))
-            run = prepare(directory, harness_path=harness_path, **options)
+        def robot_only_run(directory, run_settings_path=None, **options):
+            config = json.loads(Path(run_settings_path).read_text())
+            config['tools'] = 'robot_only'
+            Path(run_settings_path).write_text(json.dumps(config))
+            run = prepare(directory, run_settings_path=run_settings_path, **options)
             prepared.append(runner.robot_only(run))
             return run
         with mock.patch.object(base, 'prepare_run', robot_only_run):

@@ -14,7 +14,7 @@ provider.
 | Script | Purpose |
 | --- | --- |
 | `build_policy_env.py` | Build the read-only Python environment and offline wheel store for policy scripts, once per host (`--base FOLDER`) |
-| `check_policy_env.py` | Check a built environment and each engine's sandbox with a local stub model before a batch uses them (`ENVIRONMENT --scratch FOLDER [--engine]`) |
+| `check_policy_env.py` | Check a built environment and each harness's sandbox with a local stub model before a batch uses them (`ENVIRONMENT --scratch FOLDER [--harness]`) |
 
 See [policy environment](../docs/hosts/policy-environment.md).
 

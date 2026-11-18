@@ -72,8 +72,8 @@ class Fixture:
     def write(self, name, value):
         (self.dir / 'private/outputs' / name).write_text(json.dumps(value))
 
-    def extract(self, family):
-        return extract.extract_run(dict(id=self.name, k=self.name, family=family), self.root)
+    def extract(self, task_type):
+        return extract.extract_run(dict(id=self.name, k=self.name, task_type=task_type), self.root)
 
 
 def tokens(t, total):
@@ -199,7 +199,7 @@ class SegmentTests(unittest.TestCase):
 
     def test_timing_excludes_segment_downtime_and_classifies_host_stops(self):
         host = {'first': BASE, 'last': BASE + 3600, 'turns': [['A', BASE, BASE + 600], ['A', BASE + 2400, BASE + 3600]]}
-        d = dict(sel=dict(id='x', family='transport'), host=host, meta={},
+        d = dict(sel=dict(id='x', task_type='transport'), host=host, meta={},
                  actions=[], **{'runtime.json': {'segments': [
                      {'started_at': BASE, 'ended_at': BASE + 900}, {'started_at': BASE + 1500}]}})
         T = M.timing(d)

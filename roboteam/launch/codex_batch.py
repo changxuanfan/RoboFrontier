@@ -15,53 +15,53 @@ from roboteam.launch.launch_schedule import LaunchSchedule
 
 from roboteam.launch.prepare import load_env, select_cases
 from roboteam.harness.codex.launch import (codex_home, gateway_environment, initialize_codex_home,
-                                               launch_config, profile, require_gateway)
-from roboteam.tasks.config import DEFAULT_HARNESS
-from roboteam.tasks.families import ROOT, read, prepare
+                                               launch_config, model_entry, require_gateway)
+from roboteam.tasks.config import DEFAULT_RUN_SETTINGS
+from roboteam.tasks.task_types import ROOT, read, prepare
 from roboteam.runtime.run.setup import write_json, verify_inputs
-from roboteam.configuration import DEFAULT_PROFILES, runs_root
+from roboteam.configuration import DEFAULT_MODELS, runs_root
 from roboteam.runtime.run.segments import try_continue, wall_backstopped
 
 
-def prepare_batch(output, names, families=None, cases=None, config=None, level=None, min_arms=False, wall_limit_s=86400, *, harness_overrides=None):
-    if not names or len(set(names))!=len(names):raise ValueError('Choose distinct model profiles')
-    profiles={n:profile(n,config) for n in names}
-    selected=[row['case_id'] for row in select_cases(families,cases,level,min_arms)]
+def prepare_batch(output, names, task_types=None, cases=None, config=None, level=None, min_arms=False, wall_limit_s=86400, *, run_settings_overrides=None):
+    if not names or len(set(names))!=len(names):raise ValueError('Choose distinct models')
+    model_entries={n:model_entry(n,config) for n in names}
+    selected=[row['case_id'] for row in select_cases(task_types,cases,level,min_arms)]
     # A policy environment admits only the tool backend and Codex CLI its check ran.
     from roboteam.runtime.sandbox import policy_env
     from roboteam.harness.codex.tool_backend import selected as tool_backend
-    for p in profiles.values():policy_env.require_combination('codex',tool_backend(p))
+    for p in model_entries.values():policy_env.require_combination('codex',tool_backend(p))
     output=Path(output).absolute();output.mkdir(parents=True,exist_ok=False)
     for name in run_layout.BATCH_FOLDERS:(output/name).mkdir()
     batch=dict(schema='roboteam.cli-benchmark.v1',status='preparing',created_at=time.time(),
-        cwd=str(ROOT),python=sys.executable,context_window=next(iter(profiles.values()))['context_window'],
-        auto_compact_token_limit=next(iter(profiles.values()))['auto_compact_token_limit'],
+        cwd=str(ROOT),python=sys.executable,context_window=next(iter(model_entries.values()))['context_window'],
+        auto_compact_token_limit=next(iter(model_entries.values()))['auto_compact_token_limit'],
         task_wall_limit_s=wall_limit_s,model_calls=0,jobs=[],**run_layout.batch_record())
     write_json(output/'batch.json',batch)
     # Match private Dial instances across model arms of this batch. These are
     # new secrets, never copied from an Oracle or exposed in public inputs.
     puzzles={}
-    from roboteam.tasks.families import dial_code, policy_task
+    from roboteam.tasks.task_types import dial_code, policy_task
     for case in selected:
         task=policy_task(case)
         if task.get('family')=='dial':
             target=output/'private/dial'/(case+'.json')
             write_json(target,{'code_symbols':dial_code(case)})
             puzzles[case]=target
-    for name,p in profiles.items():
-        config_dir=output/'profiles'/name;config_dir.mkdir(parents=True)
-        harness=read(DEFAULT_HARNESS)
-        harness.update(engine='codex',model=p['model'],effort=p['effort'],record_realtime_video=False)
-        if harness_overrides:
-            allowed={'topology','startup_protocol','observation_image_profile','record_realtime_video','startup_timeout_s','render_device','tool_mode'}
-            if set(harness_overrides)-allowed:raise ValueError('Unsupported harness overrides')
-            harness.update(harness_overrides)
-        if not harness_overrides and p.get('benchmark_topology') in ('hierarchical', 'decentralized'):
-            harness.update(topology=p['benchmark_topology'], startup_protocol='direct_team')
-        harness_path=config_dir/'harness.json';write_json(harness_path,harness)
+    for name,p in model_entries.items():
+        config_dir=output/'models'/name;config_dir.mkdir(parents=True)
+        run_settings=read(DEFAULT_RUN_SETTINGS)
+        run_settings.update(harness='codex',model=p['model'],effort=p['effort'],record_realtime_video=False)
+        if run_settings_overrides:
+            allowed={'system','startup_protocol','observation_image_profile','record_realtime_video','startup_timeout_s','render_device','tools'}
+            if set(run_settings_overrides)-allowed:raise ValueError('Unsupported run settings overrides')
+            run_settings.update(run_settings_overrides)
+        if not run_settings_overrides and p.get('benchmark_system') in ('hierarchical', 'decentralized'):
+            run_settings.update(system=p['benchmark_system'], startup_protocol='direct_team')
+        run_settings_path=config_dir/'run.json';write_json(run_settings_path,run_settings)
         for case in selected:
             run=output/name/case
-            prepare(case,run,harness_path,puzzles.get(case),wall_limit_s=wall_limit_s)
+            prepare(case,run,run_settings_path,puzzles.get(case),wall_limit_s=wall_limit_s)
             from roboteam.harness.codex.tool_backend import prepare as prepare_tools
             prepare_tools(run, p)
             launch=launch_config(p,run/'private/inputs',run)
@@ -74,7 +74,7 @@ def prepare_batch(output, names, families=None, cases=None, config=None, level=N
             for file in files:
                 if file.exists():manifest['input_sha256'][str(file.relative_to(run))]=hashlib.sha256(file.read_bytes()).hexdigest()
             write_json(manifest_path,manifest)
-            batch['jobs'].append(dict(profile=name,case_id=case,run_directory=str(run),status='prepared'))
+            batch['jobs'].append(dict(model_entry=name,case_id=case,run_directory=str(run),status='prepared'))
             write_json(output/'batch.json',batch)
     batch['status']='prepared_not_started';write_json(output/'batch.json',batch)
     return output/'batch.json'
@@ -160,21 +160,21 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
     if scope not in ('task','shared','job'):raise ValueError('Unknown Codex home scope')
     if scope=='job':
         if continuing:
-            raise ValueError('A shared-engine job cannot automatically reconnect or replay turns; inspect sealed evidence')
+            raise ValueError('A shared-harness job cannot automatically reconnect or replay turns; inspect sealed evidence')
         if stack is None or not os.environ.get('SLURM_JOB_ID') or not os.environ.get('ROBOTEAM_JOB_PRIVATE_ROOT'):
             raise ValueError('Job scope requires an admitted Slurm credential lease')
     environments={}
     for job in jobs:
         run=Path(job['run_directory']);launch=read(run/'private/inputs/codex.json')
         if verify_inputs(run):raise ValueError('Prepared code/inputs changed; prepare a new batch')
-        key=launch['profile'].get('env_key')
+        key=launch['model_entry'].get('env_key')
         if key and not os.environ.get(key):raise ValueError('Missing credential environment variable: '+key)
-        from roboteam.runtime.tools.tool_mode import receipt_name, of as tool_mode_of
-        receipt=runs_root()/'engineering/model-compatibility'/receipt_name(job['profile'],tool_mode_of(launch['profile']))/'report.json'
-        if not receipt.is_file():raise ValueError('Run benchmark preflight for '+job['profile']+' before scored trials')
+        from roboteam.runtime.tools.tools_mode import receipt_name, of as tools_mode_of
+        receipt=runs_root()/'engineering/model-compatibility'/receipt_name(job['model_entry'],tools_mode_of(launch['model_entry']))/'report.json'
+        if not receipt.is_file():raise ValueError('Run benchmark preflight for '+job['model_entry']+' before scored trials')
         checked=read(receipt)
-        expected=__import__('hashlib').sha256(json.dumps(launch['profile'],sort_keys=True).encode()).hexdigest()
-        if not checked.get('passed') or checked.get('profile_sha256')!=expected:
+        expected=__import__('hashlib').sha256(json.dumps(launch['model_entry'],sort_keys=True).encode()).hexdigest()
+        if not checked.get('passed') or checked.get('model_entry_sha256')!=expected:
             raise ValueError('Model compatibility preflight missing/failed or provider configuration changed')
         from roboteam.harness.shared.preflight_probe import VERSION as PROBE_VERSION
         if checked.get('probe_version')!=PROBE_VERSION:
@@ -186,19 +186,19 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
         from roboteam.harness.codex.tool_backend import selected, verify_receipt
         verify_receipt(launch, checked)
         if scope=='job':
-            from roboteam.harness.codex.job_engine import BACKEND, fingerprint as gateway_fingerprint
-            if (launch['profile'].get('runner_backend') != BACKEND
+            from roboteam.harness.codex.job_harness import BACKEND, fingerprint as gateway_fingerprint
+            if (launch['model_entry'].get('runner_backend') != BACKEND
                     or checked.get('job_gateway_sha256') != gateway_fingerprint()):
                 raise ValueError('Shared job gateway changed or was not qualified; rerun job preflight')
-        env=gateway_environment(launch['profile'], dict(os.environ))
-        require_gateway(launch['profile'])
-        if selected(launch['profile']) == 'landlock-v1' and launch['profile']['provider'] == 'openai':
+        env=gateway_environment(launch['model_entry'], dict(os.environ))
+        require_gateway(launch['model_entry'])
+        if selected(launch['model_entry']) == 'landlock-v1' and launch['model_entry']['provider'] == 'openai':
             for key in ('OPENAI_API_KEY', 'CODEX_API_KEY'):
                 env.pop(key, None)
         if execution.get('codex_home'):env['CODEX_HOME']=execution['codex_home']
         if scope=='task':
-            if launch['profile'].get('provider')=='openai':
-                raise ValueError('Native subscription auth with isolated homes needs qualification; use explicit shared home or an API profile')
+            if launch['model_entry'].get('provider')=='openai':
+                raise ValueError('Native subscription auth with isolated homes needs qualification; use explicit shared home or an API model')
             import hashlib
             key=hashlib.sha256(str(run).encode()).hexdigest()[:20]
             base=Path(execution.get('codex_home') or ROOT/'.roboteam/codex')
@@ -208,7 +208,7 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
             raise ValueError('Keep credential/configuration directories outside collected batch evidence')
         home.mkdir(parents=True,exist_ok=True,mode=0o700)
         borrowed = scope=='job' and env.get('ROBOTEAM_BORROWED_AUTH') == str(Path(env.get('ROBOTEAM_CREDENTIAL_STORE', '/absent'))/'current.json')
-        if launch['profile'].get('provider')=='openai' and not (home/'auth.json').is_file() and not env.get('OPENAI_API_KEY') and not borrowed:
+        if launch['model_entry'].get('provider')=='openai' and not (home/'auth.json').is_file() and not env.get('OPENAI_API_KEY') and not borrowed:
             raise ValueError('No Codex login in '+str(home)+'; run once: CODEX_HOME='+shlex.quote(str(home))+' codex login')
         env['CODEX_HOME']=str(home)
         environments[str(run)]=env
@@ -225,8 +225,8 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
             initialize_codex_home(read(run/'private/inputs/codex.json'),run_layout.path(run,'owner_log').parent,env=env)
             initialized.add(env['CODEX_HOME'])
     if scope=='job':
-        from roboteam.harness.codex.job_engine import engine, task_id
-        manifest, gateway = stack.enter_context(engine(jobs, env=dict(os.environ)))
+        from roboteam.harness.codex.job_harness import harness, task_id
+        manifest, gateway = stack.enter_context(harness(jobs, env=dict(os.environ)))
         for job in jobs:
             run=Path(job['run_directory'])
             environments[str(run)].update(ROBOTEAM_CODEX_GATEWAY=manifest['endpoint'],
@@ -298,7 +298,7 @@ def main():
     os.environ['CODEX_HOME']=str(codex_home())
     p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='command',required=True)
     sub.add_parser('models')
-    a=sub.add_parser('preflight');a.add_argument('--models',nargs='+',default=[DEFAULT_PROFILES['codex']]);a.add_argument('--model-config',type=Path)
+    a=sub.add_parser('preflight');a.add_argument('--models',nargs='+',default=[DEFAULT_MODELS['codex']]);a.add_argument('--model-config',type=Path)
     a.add_argument('--smoke-only',action='store_true',help='Small image/tool round trip; does not qualify scored runs')
     for command in ('plan','prepare'):
         a=sub.add_parser(command)
@@ -306,10 +306,10 @@ def main():
             a.add_argument('--output',type=Path,required=True)
             a.add_argument('--wall-limit-s',type=float,default=86400,help='Per-task seconds after START, including initial model work')
         else:a.add_argument('--parallel',type=int,default=4)
-        a.add_argument('--models',nargs='+',default=[DEFAULT_PROFILES['codex']]);a.add_argument('--families',nargs='+')
+        a.add_argument('--models',nargs='+',default=[DEFAULT_MODELS['codex']]);a.add_argument('--task-types',nargs='+')
         a.add_argument('--cases',nargs='+');a.add_argument('--model-config',type=Path)
         a.add_argument('--level',type=int,choices=(1,2,3))
-        a.add_argument('--min-arms',action='store_true',help='Smallest released arm count within each selected family')
+        a.add_argument('--min-arms',action='store_true',help='Smallest released arm count within each selected task type')
     a=sub.add_parser('continue',help='Continue a batch whose supervisor died (docs/runs/continuation.md)')
     a.add_argument('batch',type=Path);a.add_argument('--parallel',type=int,default=9)
     a=sub.add_parser('run');a.add_argument('batch',type=Path);a.add_argument('--parallel',type=int,default=9)
@@ -321,21 +321,21 @@ def main():
     elif args.command=='plan':
         catalog=model_catalog('codex',args.model_config)
         if not 1<=args.parallel<=36:raise ValueError('Parallel tasks must be 1..36')
-        if not args.models or len(set(args.models))!=len(args.models):raise ValueError('Choose distinct model profiles')
-        rows=select_cases(args.families,args.cases,args.level,args.min_arms)
-        jobs=[dict(profile=name,model=catalog['profiles'][name]['model'],**row) for name in args.models for row in rows]
+        if not args.models or len(set(args.models))!=len(args.models):raise ValueError('Choose distinct models')
+        rows=select_cases(args.task_types,args.cases,args.level,args.min_arms)
+        jobs=[dict(model_entry=name,model=catalog['models'][name]['model'],**row) for name in args.models for row in rows]
         print(json.dumps(dict(model_calls=0,simulator_started=False,parallel=args.parallel,
                               task_count=len(jobs),jobs=jobs),ensure_ascii=False,indent=2))
     elif args.command=='preflight':
         import hashlib
         from roboteam.harness.shared import preflight_probe
         for name in args.models:
-            selected=profile(name,args.model_config)
+            selected=model_entry(name,args.model_config)
             key=selected.get('env_key')
             if key and not os.environ.get(key):raise ValueError('Set '+key+' before live preflight')
             scope='model-smoke' if args.smoke_only else 'model-compatibility'
-            from roboteam.runtime.tools.tool_mode import receipt_name, of as tool_mode_of
-            target=runs_root()/'engineering'/scope/receipt_name(name,tool_mode_of(selected));target.mkdir(parents=True,exist_ok=True)
+            from roboteam.runtime.tools.tools_mode import receipt_name, of as tools_mode_of
+            target=runs_root()/'engineering'/scope/receipt_name(name,tools_mode_of(selected));target.mkdir(parents=True,exist_ok=True)
             write_json(target/'launch.json',launch_config(selected,target))
             # A failed/interrupted new check must not leave an older pass usable
             # under the new provider/model fingerprint.
@@ -355,18 +355,18 @@ def main():
                     environment.pop(key, None)
             job_scoped=selected.get('runner_backend')=='slurm-managed-v1'
             if job_scoped:
-                from roboteam.harness.codex.job_engine import engine, task_id
+                from roboteam.harness.codex.job_harness import harness, task_id
                 if not os.environ.get('SLURM_JOB_ID') or not os.environ.get('ROBOTEAM_JOB_PRIVATE_ROOT'):
                     raise ValueError('Job preflight requires an admitted Slurm credential lease')
                 launch=read(target/'launch.json')
                 jobs=[{'run_directory':launch['tool_probe']['run_dir'],'launch_file':str(target/'launch.json')}]
-                with engine(jobs,env=environment,preflight=True) as (manifest,gateway):
+                with harness(jobs,env=environment,preflight=True) as (manifest,gateway):
                     environment.update(ROBOTEAM_CODEX_GATEWAY=manifest['endpoint'],
                                        ROBOTEAM_CODEX_TASK=task_id(jobs[0]['run_directory']))
                     result=subprocess.run(command,env=environment)
             else:
                 result=subprocess.run(command, env=environment)
-            receipt=read(target/'report.json');receipt['profile_sha256']=hashlib.sha256(json.dumps(selected,sort_keys=True).encode()).hexdigest()
+            receipt=read(target/'report.json');receipt['model_entry_sha256']=hashlib.sha256(json.dumps(selected,sort_keys=True).encode()).hexdigest()
             receipt['probe_version']=preflight_probe.VERSION
             if result.returncode:receipt['passed']=False
             if receipt.get('passed'):
@@ -376,11 +376,11 @@ def main():
                 receipt['tool_backend']=selected_backend(selected)
                 receipt['tool_backend_sha256']=fingerprint(selected)
                 if job_scoped and not args.smoke_only:
-                    from roboteam.harness.codex.job_engine import fingerprint as gateway_fingerprint
+                    from roboteam.harness.codex.job_harness import fingerprint as gateway_fingerprint
                     receipt['job_gateway_sha256']=gateway_fingerprint()
             write_json(target/'report.json',receipt)
             if result.returncode:raise SystemExit(result.returncode)
-    elif args.command=='prepare':print(prepare_batch(args.output,args.models,args.families,args.cases,args.model_config,args.level,args.min_arms,args.wall_limit_s))
+    elif args.command=='prepare':print(prepare_batch(args.output,args.models,args.task_types,args.cases,args.model_config,args.level,args.min_arms,args.wall_limit_s))
     elif args.command=='run':run_batch(args.batch,args.parallel)
     elif args.command=='continue':run_batch(args.batch,args.parallel,continuing=True)
     elif args.command=='status':

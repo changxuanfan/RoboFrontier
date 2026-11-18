@@ -8,16 +8,16 @@ import unittest
 from fake_pipeline import FakeWorld, fake_capture
 from roboteam.runtime.run.setup import prepare_run
 from roboteam.runtime.world.service import RuntimeService
-from roboteam.tasks.config import load_harness
+from roboteam.tasks.config import load_run_settings
 
 
 class DirectTeamStartTests(unittest.TestCase):
-    def make_service(self, directory, topology):
-        config = load_harness()
-        config.update(topology=topology, startup_protocol='direct_team')
-        harness = directory/'harness.json'
-        harness.write_text(json.dumps(config))
-        run = prepare_run(directory/'run', harness_path=harness)
+    def make_service(self, directory, system):
+        config = load_run_settings()
+        config.update(system=system, startup_protocol='direct_team')
+        run_settings = directory/'run.json'
+        run_settings.write_text(json.dumps(config))
+        run = prepare_run(directory/'run', run_settings_path=run_settings)
         service = RuntimeService(run, FakeWorld, fake_capture)
         self.addCleanup(service.close)
         counter = 0
@@ -30,11 +30,11 @@ class DirectTeamStartTests(unittest.TestCase):
         return service, call
 
     def test_all_initial_roles_bind_before_one_start_and_ready_is_optional(self):
-        for topology in ('hierarchical', 'decentralized'):
-            with self.subTest(topology=topology), tempfile.TemporaryDirectory() as temporary:
-                service, call = self.make_service(Path(temporary), topology)
+        for system in ('hierarchical', 'decentralized'):
+            with self.subTest(system=system), tempfile.TemporaryDirectory() as temporary:
+                service, call = self.make_service(Path(temporary), system)
                 policy = {a: v for a, v in service.store.agents().items() if v['kind'] != 'manager'}
-                self.assertEqual(set(policy), {'Controller', 'A', 'B', 'C', 'D'} if topology == 'hierarchical' else {'A', 'B', 'C', 'D'})
+                self.assertEqual(set(policy), {'Controller', 'A', 'B', 'C', 'D'} if system == 'hierarchical' else {'A', 'B', 'C', 'D'})
                 self.assertIn('error', call('A', 'gripper', {'state': 'close', 'wait': False}))
                 self.assertEqual(service.world.executed, [])
                 self.assertIn('error', call('Meta', 'start'))
@@ -58,7 +58,7 @@ class DirectTeamStartTests(unittest.TestCase):
                 self.assertEqual(call('B', 'gripper', {'state': 'open', 'wait': False})['execution_status'], 'running')
                 self.assertIn('error', call('Meta', 'start'))
                 self.assertEqual(service.store.get('start_at'), start)
-                if topology == 'hierarchical':
+                if system == 'hierarchical':
                     self.assertIn('error', call('Controller', 'gripper', {'robot': 'C', 'state': 'close'}))
                 service.close()
 
@@ -74,7 +74,7 @@ class DirectTeamStartTests(unittest.TestCase):
                 started = []
                 service.world.start_trial = lambda: started.append(1)
                 service.task['execution_readiness'] = readiness
-                with patch('roboteam.tasks.families.validate_frozen_policy',
+                with patch('roboteam.tasks.task_types.validate_frozen_policy',
                            side_effect=ValueError('Frozen policy release differs')):
                     result = call('Meta', 'start')
                 self.assertIn('error', result)
@@ -94,14 +94,14 @@ class DirectTeamStartTests(unittest.TestCase):
             self.assertEqual(service.store.get('lifecycle'), 'prepared')
             self.assertIsNone(service.store.get('start_at'))
 
-    def test_direct_team_protocol_is_rejected_for_controller_only_topology(self):
+    def test_direct_team_protocol_is_rejected_for_controller_only_system(self):
         with tempfile.TemporaryDirectory() as temporary:
-            config = load_harness()
-            config.update(topology='adaptive', startup_protocol='direct_team')
-            path = Path(temporary)/'harness.json'
+            config = load_run_settings()
+            config.update(system='adaptive', startup_protocol='direct_team')
+            path = Path(temporary)/'run.json'
             path.write_text(json.dumps(config))
             with self.assertRaisesRegex(ValueError, 'standing Workers'):
-                load_harness(path)
+                load_run_settings(path)
 
 
 if __name__ == '__main__':

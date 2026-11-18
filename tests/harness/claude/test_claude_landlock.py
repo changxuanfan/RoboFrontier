@@ -18,7 +18,7 @@ def tree(base):
     """A host with a repository holding a run, as the access table sees it."""
     repo = base/'repo'; run = repo/'runs/b/p/case'
     for folder in ('src', 'runs/other/private', 'runs/b/p/case/public/inputs', 'runs/b/p/case/private/state',
-                   'runs/b/p/case/private/engine/config/shell-snapshots', 'runs/b/p/case/workspace', 'outside/data'):
+                   'runs/b/p/case/private/harness/config/shell-snapshots', 'runs/b/p/case/workspace', 'outside/data'):
         (repo/folder if folder != 'outside/data' else base/folder).mkdir(parents=True)
     (repo/'src/answer.py').write_text('answer')
     (run/'private/state/truth.json').write_text('truth')
@@ -67,9 +67,9 @@ class AllowlistTests(unittest.TestCase):
                 self.assertFalse(inside and run not in Path(path).parents, path)
                 self.assertFalse(Path(path) == run/'private' or run/'private' in Path(path).parents, path)
             self.assertNotIn(str(repo), rules); self.assertNotIn(str(run), rules)
-            extra = dict(landlock_shell.allowlist(table, read=[run/'private/engine/config/shell-snapshots'],
+            extra = dict(landlock_shell.allowlist(table, read=[run/'private/harness/config/shell-snapshots'],
                                                   write=landlock_shell.DEVICES))
-            self.assertEqual(extra[str(run/'private/engine/config/shell-snapshots')], 'read')
+            self.assertEqual(extra[str(run/'private/harness/config/shell-snapshots')], 'read')
             self.assertEqual(extra['/dev/null'], 'write')
 
     def test_a_link_beside_a_denied_folder_gets_no_rule(self):
@@ -136,7 +136,7 @@ class ConfineTests(unittest.TestCase):
                 replace(source, destination)
             def prepare():
                 try:
-                    _, env = confine(run, settings, run/'private/engine/config')
+                    _, env = confine(run, settings, run/'private/harness/config')
                     prefixes.append(Path(env['CLAUDE_CODE_SHELL_PREFIX']))
                 except Exception as error:
                     errors.append(error)
@@ -158,14 +158,14 @@ class ConfineTests(unittest.TestCase):
             for isolation in (None, 'claude-sandbox'):
                 run = self.prepared(Path(tmp).resolve()/str(isolation), isolation)
                 settings = {'permissions': {'deny': ['x']}, 'sandbox': {'enabled': True}}
-                self.assertEqual(confine(run, settings, run/'private/engine/config'), (settings, {}))
-            self.assertEqual(confine(run, None, run/'private/engine/config'), (None, {}))
+                self.assertEqual(confine(run, settings, run/'private/harness/config'), (settings, {}))
+            self.assertEqual(confine(run, None, run/'private/harness/config'), (None, {}))
 
     def test_a_landlock_run_turns_the_sandbox_off_and_prefixes_bash(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = self.prepared(Path(tmp).resolve(), 'landlock-v1')
             settings = {'permissions': {'deny': ['Read(//x/**)']}, 'sandbox': {'enabled': True}}
-            confined, env = confine(run, settings, run/'private/engine/config')
+            confined, env = confine(run, settings, run/'private/harness/config')
             self.assertEqual(confined['permissions'], settings['permissions'])
             self.assertEqual(confined['sandbox'], {'enabled': False})
             prefix = Path(env['CLAUDE_CODE_SHELL_PREFIX'])
@@ -173,22 +173,22 @@ class ConfineTests(unittest.TestCase):
             self.assertIn(str(Path(landlock_shell.__file__).resolve()), prefix.read_text())
             rules = json.loads((prefix.parent/'rules.json').read_text())
             self.assertEqual(rules['schema'], landlock_shell.SCHEMA)
-            self.assertIn([str(run/'private/engine/config/shell-snapshots'), 'read'], rules['rules'])
+            self.assertIn([str(run/'private/harness/config/shell-snapshots'), 'read'], rules['rules'])
             self.assertEqual(rules['unconfined'], [])
             # Claude Code starts each robot MCP through the prefix too; its exact string runs unconfined.
-            servers = run_layout.path(run, 'engine_mcp'); servers.mkdir(parents=True, exist_ok=True)
+            servers = run_layout.path(run, 'harness_mcp'); servers.mkdir(parents=True, exist_ok=True)
             for actor in ('A', 'Controller'):
                 (servers/(actor+'.json')).write_text(json.dumps({'mcpServers': {'robot': {
                     'command': '/v/bin/python', 'args': ['-m', 'roboteam.harness.claude.robot_mcp', '--connection',
                                                          '/r un/%s.json' % actor], 'env': {}}}}))
-            confine(run, settings, run/'private/engine/config')
+            confine(run, settings, run/'private/harness/config')
             rules = json.loads((prefix.parent/'rules.json').read_text())
             self.assertEqual(rules['unconfined'], [
                 "/v/bin/python -m roboteam.harness.claude.robot_mcp --connection '/r un/A.json'",
                 "/v/bin/python -m roboteam.harness.claude.robot_mcp --connection '/r un/Controller.json'"])
             with self.assertRaisesRegex(ValueError, 'Unknown Bash isolation'):
                 (run/'private/inputs/claude.json').write_text(json.dumps({'bash_isolation': 'none'}))
-                confine(run, settings, run/'private/engine/config')
+                confine(run, settings, run/'private/harness/config')
 
     @unittest.skipUnless(sys.platform == 'darwin', 'macOS keeps Claude Code\'s Seatbelt sandbox')
     def test_macos_keeps_claude_codes_sandbox(self):

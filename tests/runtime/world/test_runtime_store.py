@@ -4,13 +4,13 @@ import threading
 import unittest
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.runtime.world.store import packed
-from roboteam.tasks.config import load_harness, startup_protocol
-import team_harness
+from roboteam.tasks.config import load_run_settings, startup_protocol
+import team_settings
 
 class StoreTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.path=Path(self.tmp.name)/'runtime.sqlite'
-        self.s=RuntimeStore(self.path);self.s.initialize('fake-run',team_harness.load_harness(),['A','B','C'])
+        self.s=RuntimeStore(self.path);self.s.initialize('fake-run',team_settings.load_run_settings(),['A','B','C'])
     def tearDown(self):self.s.close();self.tmp.cleanup()
     def _action(self,call_id,actor,status,**fields):
         value={'action_id':call_id,'arm':'A','type':'move','status':status,'parameters':{},**fields}
@@ -62,7 +62,7 @@ class StoreTests(unittest.TestCase):
         self.assertIsNone(self.s.delivery('A')['delivery_id'])
     def test_peers_can_route_directly_without_a_hidden_controller(self):
         self.s.close();self.s=RuntimeStore(Path(self.tmp.name)/'peer.sqlite')
-        config=load_harness();config['topology']='decentralized';config['startup_protocol']=startup_protocol('decentralized');self.s.initialize('decentralized',config,['A','B'])
+        config=load_run_settings();config['system']='decentralized';config['startup_protocol']=startup_protocol('decentralized');self.s.initialize('decentralized',config,['A','B'])
         self.assertNotIn('Controller',self.s.agents())
         self.s.send('A',['B'],'peer work','peer-key')
         self.assertEqual(self.s.pending('B')['messages'],1)
@@ -80,7 +80,7 @@ class StoreTests(unittest.TestCase):
         for mode in ('hierarchical','decentralized','single-agent'):
             store=RuntimeStore(Path(self.tmp.name)/(mode+'-start.sqlite'))
             try:
-                cfg=load_harness();cfg['topology']=mode;cfg['startup_protocol']=startup_protocol(mode);store.initialize(mode,cfg,['A','B','C'])
+                cfg=load_run_settings();cfg['system']=mode;cfg['startup_protocol']=startup_protocol(mode);store.initialize(mode,cfg,['A','B','C'])
                 policy={a:v for a,v in store.agents().items()if v['kind']!='manager'}
                 for actor in policy:store.update_agent(actor,thread_id='session-'+actor)
                 store.start()

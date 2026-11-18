@@ -42,11 +42,11 @@ filesystem the batch will use:
 It drives each real CLI with a local stub model in a throwaway run, with the access table and
 variables a real run freezes; no provider is contacted and no credential is used. It prints
 `ok`/`denied` per attempt and exits nonzero on any unexpected result. A pass writes a receipt
-beside the build listing, per engine, the sandbox it ran (Codex's tool backend, Claude Code's
-Bash isolation) and the CLI version on `PATH`. `--engine codex` or `--engine claude` checks one
-engine and adds it to the receipt.
+beside the build listing, per harness, the sandbox it ran (Codex's tool backend, Claude Code's
+Bash isolation) and the CLI version on `PATH`. `--harness codex` or `--harness claude` checks one
+harness and adds it to the receipt.
 
-`prepare` refuses any engine, sandbox or CLI version the receipt does not list, so check again
+`prepare` refuses any harness, sandbox or CLI version the receipt does not list, so check again
 after changing a CLI. The sandbox the check uses:
 
 | Host | Codex | Claude Code |
@@ -82,7 +82,7 @@ refuses an environment whose files changed.
 | Closed on macOS | The rest of the run, other runs, every checkout, `/Users`, `/Volumes`, `/var/tmp`, `/var/folders`, `/opt`, `/usr/local`, `/Library/Keychains` |
 | Closed on Linux | The rest of the run, other runs, every checkout, `/home`, `/root`, `/mnt`, `/media`, `/raid`, `/var/tmp`, `/dev/shm`, `/opt`, `/usr/local`, `/workspace` |
 
-The home folder, the engines' credential homes and every path in `ROBOTEAM_SHARED_DENY_ROOTS`
+The home folder, the harnesses' credential homes and every path in `ROBOTEAM_SHARED_DENY_ROOTS`
 (a JSON list of absolute paths, for shared storage) are closed too. A run's own `public/` and
 `workspace/` and the environment stay open beneath a closed folder. Codex renders the table as
 a permission profile; Claude Code as file-tool rules plus its Bash isolation.

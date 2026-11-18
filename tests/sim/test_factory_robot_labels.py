@@ -5,7 +5,7 @@ import mujoco
 import numpy as np
 
 from roboteam.sim.hall.labels import robot_label_moves, ROBOT_LABEL
-from roboteam.tasks.families import ROOT, resolve_case
+from roboteam.tasks.task_types import ROOT, resolve_case
 from roboteam.sim.workstation import Workstation
 
 
@@ -41,7 +41,7 @@ class RobotLabelTests(unittest.TestCase):
         case = resolve_case('mosaic-a04-6x12-d2')[2]
         world = Workstation(ROOT/case['directory']); world.frame()
         expected = robot_label_moves(world.model, world.data, avoid_objects=False)
-        moved = place_robot_labels(world.model, world.data, dict(family='mosaic'))
+        moved = place_robot_labels(world.model, world.data, dict(task_type='mosaic'))
         self.assertEqual(set(moved), set(expected))
         for name, move in expected.items():
             gid = world.model.geom(name).id

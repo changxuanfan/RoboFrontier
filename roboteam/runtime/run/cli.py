@@ -48,9 +48,9 @@ def fork_provenance(parent, child):
 
 
 def native_fork_provenance(store, parent, child):
-    """Dispatch lineage verification to the evidence format of this run's engine."""
-    engine=store.get('config').get('engine','codex')
-    if engine=='claude':
+    """Dispatch lineage verification to the evidence format of this run's harness."""
+    harness=store.get('config').get('harness','codex')
+    if harness=='claude':
         from roboteam.harness.claude.systems.provenance import fork_provenance as claude_provenance
         from roboteam.harness.claude.session.native_home import history_directory
         return claude_provenance(parent,child,history_directory(store.path.parents[2]))
@@ -70,12 +70,12 @@ def execute(store, op, data, owner, now):
                 'egress_review_hold':store.get('egress_review_hold',False),
                 'dispatcher_health':store.get('dispatcher_health',{}),
                 'config':{**{k:cfg[k] for k in ('poll_interval_s','session_observation_ttl_s','model','effort')},
-                          'engine':cfg.get('engine','codex')},
+                          'harness':cfg.get('harness','codex')},
                 'agents':{a:{k:x for k,x in v.items() if k!='note'} for a,v in store.agents().items()},
-                'delegations':Delegations(store).active() if cfg['topology']=='adaptive' else [],
+                'delegations':Delegations(store).active() if cfg['system']=='adaptive' else [],
                 'pending':{a:store.pending(a) for a,v in store.agents().items() if v['kind']!='manager'}}
     if op=='delegate-snapshot-bind':
-        if cfg.get('engine','codex') != 'codex':
+        if cfg.get('harness','codex') != 'codex':
             raise ValueError('Claude adaptive delegation is not yet qualified')
         d=Delegations(store);key=data['id'];thread_id=data['thread_id']
         with store.transaction():
@@ -90,7 +90,7 @@ def execute(store, op, data, owner, now):
         # Matching transcript prefixes alone do not authenticate a native fork.
         # Claude adaptive delegation stays closed until creation and role binding
         # can be verified together by the trusted host.
-        if cfg.get('engine') == 'claude':
+        if cfg.get('harness') == 'claude':
             raise ValueError('Claude adaptive delegation is not yet qualified')
         # Commit identity before reading platform files: a failed check must
         # not erase a native fork that already exists.
@@ -176,7 +176,7 @@ def execute(store, op, data, owner, now):
         return {'recorded':True}
     if op=='model-restart':
         from roboteam.runtime.run.bootstrap import MAX_MODEL_RESTARTS
-        count=store.claim_model_restart(data.get('actor',cfg['manager']),data.get('engine','codex'),MAX_MODEL_RESTARTS)
+        count=store.claim_model_restart(data.get('actor',cfg['manager']),data.get('harness','codex'),MAX_MODEL_RESTARTS)
         return {'allowed':count is not None,'restart':count}
     if op=='network-recovery':
         from roboteam.runtime.tools.scheduling import blocks_model_recovery

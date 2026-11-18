@@ -55,9 +55,9 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
                     'args':['-m','roboteam.harness.claude.robot_mcp','--run-dir',str(run),
                             '--connection',str(run/'private/state/connections/Controller.json')],
                     'env':{'PYTHONPATH':str(ROOT)}}}}))
-                profile={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
+                model_entry={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
                          'base_url':f'http://127.0.0.1:{server.server_port}'}
-                result=run_turn(profile,profile['model'],profile['effort'],mcp,'MOSAIC_IMAGE_CHECK',
+                result=run_turn(model_entry,model_entry['model'],model_entry['effort'],mcp,'MOSAIC_IMAGE_CHECK',
                                 run,{'PATH':os.environ['PATH'],'FAKE_KEY':'synthetic'},timeout=45,max_budget_usd=.5)
                 self.assertEqual(result['summary']['turn_status'],'ended',result)
                 self.assertGreaterEqual(result['summary']['tool_calls'],1,
@@ -96,9 +96,9 @@ class MosaicReferenceIntegrationTests(unittest.TestCase):
                     'args':['-m','roboteam.harness.claude.robot_mcp','--run-dir',str(run),
                             '--connection',str(run/'private/state/connections/Controller.json')],
                     'env':{'PYTHONPATH':str(ROOT)}}}}))
-                profile={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
+                model_entry={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
                          'base_url':f'http://127.0.0.1:{server.server_port}'}
-                result=run_turn(profile,profile['model'],profile['effort'],mcp,'MOSAIC_IMAGE_CHECK',
+                result=run_turn(model_entry,model_entry['model'],model_entry['effort'],mcp,'MOSAIC_IMAGE_CHECK',
                                 run,{'PATH':os.environ['PATH'],'FAKE_KEY':'synthetic'},timeout=45,max_budget_usd=.5)
                 self.assertEqual(result['summary']['turn_status'],'ended',result)
                 self.assertGreaterEqual(result['summary']['tool_calls'],1)

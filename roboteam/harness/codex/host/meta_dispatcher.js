@@ -2,7 +2,7 @@
 // It has no task planner and never selects robot actions or delegation scopes.
 //
 // Native session control goes through one adapter, so the same deterministic loop
-// serves every engine:
+// serves every harness:
 //   observe({threadId,hostId,afterCursor}) -> {thread:{id,status:{type}},latestTurn:{id,status},cursor} | undefined
 //   fork({threadId})                       -> {threadId,sourceThreadId,status:'created'}
 //   send({threadId,model,thinking,prompt}) -> {threadId}
@@ -119,7 +119,7 @@ async function runMetaDispatcher({runDir, python, cwd, tools, adapter = codexAda
       };
       try {
         let sourceThreadId = claimed.source_thread_id;
-        if ((snapshot.config.engine || 'codex') === 'codex') {
+        if ((snapshot.config.harness || 'codex') === 'codex') {
           const anchor = await (createSnapshot || adapter.fork)({threadId:sourceThreadId,timeoutMs:remainingMs()});
           if (!anchor.threadId) throw new Error('Native snapshot response incomplete; creation outcome unknown');
           onEvent({event:'snapshot_created',thread_id:anchor.threadId,id:batch.id,verified:false});

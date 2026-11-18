@@ -48,11 +48,11 @@ class PhysicsSmokeTests(unittest.TestCase):
         result = None
         try:
             base = directory / 'batch'
-            prepare_batch(base, ['opus'], cases=[case], topology='adaptive', record_video=record_video)
+            prepare_batch(base, ['opus'], cases=[case], system='adaptive', record_video=record_video)
             run = base / 'opus' / case
             launch = run / 'private/inputs/claude.json'
             data = json.loads(launch.read_text())
-            data['profile'].update(base_url=f'http://127.0.0.1:{server.server_port}', env_key='FAKE_KEY')
+            data['model_entry'].update(base_url=f'http://127.0.0.1:{server.server_port}', env_key='FAKE_KEY')
             launch.write_text(json.dumps(data))
             manifest = run / 'private/inputs/manifest.json'
             frozen = json.loads(manifest.read_text())

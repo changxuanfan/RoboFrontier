@@ -20,7 +20,7 @@ column 1 toward −X (west). Stock allocations to stations do not restrict which
 | 8 | 12 × 24, 288 | 3.680 × 3.344 m |
 
 The table is 0.8 m high. The palette is cream `#FFF4DA`, navy `#173F73`, coral `#F03F5B` and
-sage `#16A16E`. The public task states the pitch and pocket size; the Mosaic Skill states no
+sage `#16A16E`. The public task states the pitch and pocket size; the Mosaic guide states no
 numbers and says to work the clearance out from the task.
 
 ## Completion

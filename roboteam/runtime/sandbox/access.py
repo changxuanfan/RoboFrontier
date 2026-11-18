@@ -1,14 +1,14 @@
-"""What a policy may read and write on the host, the same for both engines.
+"""What a policy may read and write on the host, the same for both harnesses.
 
 One table, frozen when a run is prepared, maps absolute paths to `read`,
-`write` or `deny`; the more specific path wins. Each engine renders it in its
+`write` or `deny`; the more specific path wins. Each harness renders it in its
 own sandbox: Codex as a named permission profile, Claude Code as settings
 permissions plus its Bash sandbox. The policy may write only its working folder
 (workspace/) and temporary folders, may read its run's public inputs and the
 rest of the machine, and may not read the repository (source, configuration,
 other runs, answers), any checkout of it, its own run's private/ folder or any
-engine's credentials. Shell network access and web search are off for both
-engines: the repository is public, so the network could reach reference
+harness's credentials. Shell network access and web search are off for both
+harnesses: the repository is public, so the network could reach reference
 solutions, and results would depend on what the web returned that day.
 """
 import os
@@ -45,7 +45,7 @@ def _checkouts(repo):
 
 
 def _auth_homes(home):
-    """Credential homes of both engines, wherever this host keeps them."""
+    """Credential homes of both harnesses, wherever this host keeps them."""
     homes = [home/name for name in HOME_SECRETS]
     for key in ('CODEX_HOME', 'CLAUDE_CONFIG_DIR', 'ROBOTEAM_CLAUDE_HOME', 'ROBOTEAM_CODEX_HOME',
                 'ROBOTEAM_JOB_PRIVATE_ROOT', 'ROBOTEAM_CREDENTIAL_STORE', 'ROBOTEAM_EGRESS_ROOT'):

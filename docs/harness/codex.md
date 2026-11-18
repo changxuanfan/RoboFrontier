@@ -1,14 +1,14 @@
-# Codex engine
+# Codex harness
 
 Every policy role is a native Codex app-server thread (`thread/start`, `turn/start`,
-`thread/fork`) with the robot tool as an app-server dynamic tool. All four topologies run:
+`thread/fork`) with the robot tool as an app-server dynamic tool. All four systems run:
 `adaptive` (the default), `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is
 Codex 0.165.0 (`roboteam/runtime/run/versions.py`). A run starts only with a passed compatibility
-receipt for its profile, catalog and CLI version ([Preflight and receipts](#preflight-and-receipts)).
-What both engines share is in the [engine overview](README.md); the
+receipt for its model, catalog and CLI version ([Preflight and receipts](#preflight-and-receipts)).
+What both harnesses share is in the [harness overview](README.md); the
 [Claude Code guide](claude-code.md) has the same sections.
 
-The engine is `roboteam/harness/codex/`: `launch.py` builds the app-server configuration and
+The harness is `roboteam/harness/codex/`: `launch.py` builds the app-server configuration and
 Codex home, `roboteam/launch/codex_batch.py` prepares and supervises batches, and the Node
 `policy_host.js`, `rpc.js`, `preflight.js` and `initialize.js` drive
 app-server.
@@ -35,11 +35,11 @@ freezes the run and starts no world or model session. The Claude CLI is not need
 
 ## Authentication
 
-Profiles are the `codex` section of `models.json`; the
+Models are the `codex` section of `models.json`; the
 [authentication matrix](README.md#authentication-matrix) lists each one's credential. Model and
 provider settings are process-local and never change the user's global Codex configuration.
 
-**API profiles** (`sol`, the default; `luna`; third-party) read their key from `.env`. With the default
+**API models** (`sol`, the default; `luna`; third-party) read their key from `.env`. With the default
 `runtime.codex_home_scope = "task"` each run gets its own Codex home under `.roboteam/codex/`
 (or under `runtime.codex_home`), shared by that run's Controller, snapshots and delegates so fork
 lineage stays readable. Homes are initialized one at a time before any task host starts.
@@ -50,7 +50,7 @@ talks to a loopback process that holds the Anthropic key and translates the prot
 
 **ChatGPT login** (`sol_subscription`, `luna_subscription`, `terra_subscription`, `astra_subscription`)
 uses Codex's own login and needs `runtime.codex_home_scope = "shared"` (task scope refuses these
-profiles). The shared home is `runtime.codex_home`, else `CODEX_HOME`, else
+models). The shared home is `runtime.codex_home`, else `CODEX_HOME`, else
 `~/.roboteam/codex-home`, never the personal `~/.codex`. Log in there once; a batch refuses
 to start without the login:
 
@@ -62,7 +62,7 @@ CODEX_HOME=~/.roboteam/codex-home codex login status
 ```toml
 # Untracked site TOML for a subscription batch
 [policy]
-profile = "sol_subscription"
+model = "sol_subscription"
 
 [runtime]
 codex_home_scope = "shared"
@@ -76,7 +76,7 @@ On Slurm, subscription runs use `codex_home_scope = "job"` with `slurm.auth_mode
 Every home must lie outside the batch; the access table denies it to the policy. Preparation adds
 command-line overrides that disable every MCP server found in the native and project
 configuration, and the host and preflight check that none is enabled before inference; the user's
-files are not rewritten. A home's location is recorded in each run's `private/engine/codex-home.json`.
+files are not rewritten. A home's location is recorded in each run's `private/harness/codex-home.json`.
 
 `roboteam doctor` checks the installed CLI version, the sandbox or tool backend and a real
 render. It does not check credentials or call a model.
@@ -122,9 +122,9 @@ forged native calls and runs fork/resume with eight concurrent roles:
 Without `--confirm-spend` it makes no call and reports `not_run`. Pass the same `--config` and
 options as for `prepare`. The full check runs image and tool round trips, a manual compaction, and
 a fork whose child inherits history and then uses tools. Receipts:
-`<runs_root>/engineering/model-compatibility/<profile>/report.json` (full) and
-`<runs_root>/engineering/model-smoke/<profile>/report.json` (smoke). Before each run, the batch
-checks the full receipt against the frozen profile, provider address, context, effort, catalog
+`<runs_root>/engineering/model-compatibility/<model>/report.json` (full) and
+`<runs_root>/engineering/model-smoke/<model>/report.json` (smoke). Before each run, the batch
+checks the full receipt against the frozen model, provider address, context, effort, catalog
 hash, CLI version and tool backend, and refuses on any mismatch; a smoke receipt never qualifies a
 run. Local checks of the real CLI against a synthetic Responses service, with no billing:
 
@@ -205,7 +205,7 @@ The settings do not enlarge the provider's real context.
 
 `private/logs/host.jsonl` holds host scheduling, tool and timing events; the native
 `<session-id>.jsonl` transcripts are under the home's `sessions/` directory, with verified copies
-in `private/engine/transcripts/` ([session transcripts](../runs/evidence-storage.md#session-transcripts)).
+in `private/harness/transcripts/` ([session transcripts](../runs/evidence-storage.md#session-transcripts)).
 Observations are JPEG 1280 x 800 at quality 90 ([observation images](../benchmark/rules.md#observation-images));
 motion is sampled at 60 Hz; real-time MP4 is off
 by default. Collection copies the relevant transcripts without authentication, configuration or

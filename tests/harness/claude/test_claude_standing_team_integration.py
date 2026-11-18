@@ -32,9 +32,9 @@ class StandingModel(StubModel):
         if not matches:
             return None, None
         actor = matches[0]
-        # Frozen first messages list role files instead of quoting them; the test sets the topology.
-        hierarchical = (getattr(type(self), 'topology', None) == 'hierarchical'
-                        or 'Controller + Worker mode' in messages or 'Team topology: hierarchical' in messages)
+        # Frozen first messages list role files instead of quoting them; the test sets the system.
+        hierarchical = (getattr(type(self), 'system', None) == 'hierarchical'
+                        or 'Controller + Worker mode' in messages or 'Team system: hierarchical' in messages)
         # This is a scripted endpoint, not a model comprehension test. Claude can
         # coalesce wake text and prior tool results in one user message. Advance
         # a bounded per-role script instead of treating the last block as an RPC
@@ -68,18 +68,18 @@ class StandingModel(StubModel):
 
 @unittest.skipUnless(shutil.which('claude'), 'Requires native Claude CLI; synthetic local endpoint only')
 class StandingNativeIntegrationTests(unittest.TestCase):
-    def test_both_native_topologies_use_distinct_sessions_mailboxes_and_resume(self):
+    def test_both_native_systems_use_distinct_sessions_mailboxes_and_resume(self):
         model = http.server.ThreadingHTTPServer(('127.0.0.1', 0), StandingModel)
         threading.Thread(target=model.serve_forever, daemon=True).start()
         env = {k:os.environ[k] for k in ('PATH','HOME','LANG','LC_ALL','TMPDIR') if k in os.environ}
         env['FAKE_KEY'] = 'synthetic'
         try:
-            for topology in ('hierarchical', 'decentralized'):
-                StandingModel.topology = topology
-                with self.subTest(topology=topology), standing_fixture(
-                        topology, factory=ClaudeSessionHost, endpoint=f'http://127.0.0.1:{model.server_port}',
+            for system in ('hierarchical', 'decentralized'):
+                StandingModel.system = system
+                with self.subTest(system=system), standing_fixture(
+                        system, factory=ClaudeSessionHost, endpoint=f'http://127.0.0.1:{model.server_port}',
                         env=env) as (policy, service, _):
-                    recipient = 'Controller' if topology == 'hierarchical' else 'B'
+                    recipient = 'Controller' if system == 'hierarchical' else 'B'
                     idle_at_probe_send = []
                     class World(http.server.BaseHTTPRequestHandler):
                         def log_message(self, *args): pass
@@ -170,19 +170,19 @@ class StandingNativeIntegrationTests(unittest.TestCase):
                         self.assertTrue(service.world.executed)
                         self.assertEqual(service.world.executed[0][0], 'A')
                         for actor, host in policy.hosts.items():
-                            files = list((run_layout.path(policy.run, 'engine_config')/'projects').glob('*/'+host.session_id+'.jsonl'))
+                            files = list((run_layout.path(policy.run, 'harness_config')/'projects').glob('*/'+host.session_id+'.jsonl'))
                             self.assertEqual(len(files), 1, actor)
                             self.assertEqual(agents[actor]['thread_id'], host.session_id)
                         messages = [json.loads(row['recipients']) for row in service.store.db.execute('SELECT recipients FROM messages')]
                         self.assertTrue(messages)
-                        if topology == 'hierarchical':
+                        if system == 'hierarchical':
                             self.assertTrue(all(m == ['Controller'] for m in messages), messages)
                         else:
                             self.assertNotIn('Controller', service.store.agents())
                             self.assertTrue(any(m == ['B'] for m in messages))
                         if os.environ.get('ROBOTEAM_NATIVE_TEST_RECEIPTS') == '1':
                             print('STANDING_NATIVE_RECEIPT '+json.dumps({
-                                'topology':topology, 'bootstrap_wakes':bootstrap_wakes,
+                                'system':system, 'bootstrap_wakes':bootstrap_wakes,
                                 'bootstrap_pending':bootstrap_pending, 'post_idle_wakes':len(resumed),
                                 'idle_at_native_send':idle_at_probe_send, 'recipient_acked':bool(probe_received()),
                                 'same_sessions':{actor:host.session_id for actor,host in policy.hosts.items()} == sessions,

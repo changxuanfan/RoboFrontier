@@ -1,1 +1,1 @@
-"""Pieces both engines use."""
+"""Pieces both harnesses use."""

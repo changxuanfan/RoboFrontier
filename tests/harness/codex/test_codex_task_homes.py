@@ -15,12 +15,12 @@ from roboteam.runtime.run.setup import write_json
 
 
 class CodexTaskHomesTests(unittest.TestCase):
-    def test_job_scope_uses_one_engine_distinct_channels_and_never_redispatches_a_failed_host(self):
-        from roboteam.harness.codex.job_engine import fingerprint as gateway_fingerprint
+    def test_job_scope_uses_one_harness_distinct_channels_and_never_redispatches_a_failed_host(self):
+        from roboteam.harness.codex.job_harness import fingerprint as gateway_fingerprint
         from roboteam.harness.codex.tool_backend import fingerprint as backend_fingerprint
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            folder, private = root/'batch', root/'engine'
+            folder, private = root/'batch', root/'harness'
             home = private/'codex'
             home.mkdir(parents=True)
             (home/'auth.json').write_text('synthetic fixture; never read by this orchestration test')
@@ -30,13 +30,13 @@ class CodexTaskHomesTests(unittest.TestCase):
             jobs = []
             for case in ('one', 'two', 'three'):
                 run = folder/'luna_subscription'/case
-                write_json(run/'private/inputs/codex.json', {'profile': selected, 'args': [], 'tool_backend_sha256': backend})
+                write_json(run/'private/inputs/codex.json', {'model_entry': selected, 'args': [], 'tool_backend_sha256': backend})
                 write_json(run/'private/inputs/models.json', {'models': []})
                 (run/'private/outputs').mkdir(parents=True)
-                jobs.append({'profile': 'luna_subscription', 'case_id': case, 'run_directory': str(run), 'status': 'prepared'})
+                jobs.append({'model_entry': 'luna_subscription', 'case_id': case, 'run_directory': str(run), 'status': 'prepared'})
             catalog = (Path(jobs[0]['run_directory'])/'private/inputs/models.json').read_bytes()
             write_json(root/'runs/engineering/model-compatibility/luna_subscription/report.json', {
-                'passed': True, 'profile_sha256': hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest(),
+                'passed': True, 'model_entry_sha256': hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest(),
                 'catalog_sha256': hashlib.sha256(catalog).hexdigest(), 'codex_version': 'test-cli',
                 'probe_version': preflight_probe.VERSION, 'tool_backend': 'landlock-v1',
                 'broker_tools_verified': True, 'tool_backend_sha256': backend, 'job_gateway_sha256': gateway_sha})
@@ -44,7 +44,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                                            'execution': {'codex_home_scope': 'job', 'startup_interval_s': 0}})
             entered, launched = [], []
             @contextmanager
-            def engine(admitted, *, env):
+            def harness(admitted, *, env):
                 entered.append(admitted)
                 yield {'endpoint': str(private/'s'), 'backend': 'slurm-managed-v1', 'fingerprint': gateway_sha}, None
             def host(*args, **kwargs):
@@ -57,7 +57,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                     patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'), \
                     patch.object(benchmark.subprocess, 'Popen', side_effect=host), \
                     patch.object(benchmark, 'try_continue') as redispatch, \
-                    patch('roboteam.harness.codex.job_engine.engine', side_effect=engine), \
+                    patch('roboteam.harness.codex.job_harness.harness', side_effect=harness), \
                     patch.dict(os.environ, {'SLURM_JOB_ID': 'fixture-only', 'CODEX_HOME': str(home),
                                             'ROBOTEAM_JOB_PRIVATE_ROOT': str(private)}):
                 benchmark.run_batch(folder, 3)
@@ -74,17 +74,17 @@ class CodexTaskHomesTests(unittest.TestCase):
             root = Path(temporary)
             batch = root/'batch'
             selected = {'provider': 'openai_api', 'env_key': 'RF_TEST_KEY'}
-            launch = {'profile': selected, 'args': []}
+            launch = {'model_entry': selected, 'args': []}
             jobs = []
             for case in ('one', 'two', 'three'):
                 run = batch/'luna'/case
                 write_json(run/'private/inputs/codex.json', launch)
                 write_json(run/'private/inputs/models.json', {'models': []})
                 (run/'private/outputs').mkdir(parents=True)
-                jobs.append({'profile': 'luna', 'case_id': case, 'run_directory': str(run), 'status': 'prepared'})
+                jobs.append({'model_entry': 'luna', 'case_id': case, 'run_directory': str(run), 'status': 'prepared'})
             catalog = (Path(jobs[0]['run_directory'])/'private/inputs/models.json').read_bytes()
             write_json(root/'runs/engineering/model-compatibility/luna/report.json', {
-                'passed': True, 'profile_sha256': hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest(),
+                'passed': True, 'model_entry_sha256': hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest(),
                 'catalog_sha256': hashlib.sha256(catalog).hexdigest(), 'codex_version': 'test-cli',
                 'probe_version': preflight_probe.VERSION})
             write_json(batch/'batch.json', {'status': 'prepared_not_started', 'jobs': jobs,
@@ -107,7 +107,7 @@ class CodexTaskHomesTests(unittest.TestCase):
             self.assertEqual(len(set(initialized)), 3)
             self.assertEqual(set(initialized), set(launched))
             for job in jobs:
-                marker = json.loads((Path(job['run_directory'])/'private/engine/codex-home.json').read_text())
+                marker = json.loads((Path(job['run_directory'])/'private/harness/codex-home.json').read_text())
                 home = Path(marker['codex_home'])
                 self.assertTrue(home.is_dir())
                 self.assertFalse(home.is_relative_to(batch))
@@ -123,13 +123,13 @@ class CodexTaskHomesTests(unittest.TestCase):
             batch = root/'batch'
             selected = {'provider': 'openai_api', 'env_key': 'RF_TEST_KEY'}
             run = batch/'luna'/'one'
-            write_json(run/'private/inputs/codex.json', {'profile': selected, 'args': []})
+            write_json(run/'private/inputs/codex.json', {'model_entry': selected, 'args': []})
             write_json(run/'private/inputs/models.json', {'models': []})
             (run/'private/outputs').mkdir(parents=True)
-            jobs = [{'profile': 'luna', 'case_id': 'one', 'run_directory': str(run), 'status': 'prepared'}]
+            jobs = [{'model_entry': 'luna', 'case_id': 'one', 'run_directory': str(run), 'status': 'prepared'}]
             catalog = (run/'private/inputs/models.json').read_bytes()
             write_json(root/'runs/engineering/model-compatibility/luna/report.json', {
-                'passed': True, 'profile_sha256': hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest(),
+                'passed': True, 'model_entry_sha256': hashlib.sha256(json.dumps(selected, sort_keys=True).encode()).hexdigest(),
                 'catalog_sha256': hashlib.sha256(catalog).hexdigest(), 'codex_version': 'test-cli',
                 'probe_version': preflight_probe.VERSION})
             write_json(batch/'batch.json', {'status': 'prepared_not_started', 'jobs': jobs,

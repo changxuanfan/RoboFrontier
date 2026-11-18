@@ -25,7 +25,7 @@ class BlockedPrecheckTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 prof={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
                       'base_url':f'http://127.0.0.1:{server.server_port}'}
-                with patch.object(check,'profile',return_value=prof):
+                with patch.object(check,'model_entry',return_value=prof):
                     result=check.run_blocked_precheck('synthetic',Path(tmp)/'out',2,
                                                        {'PATH':os.environ['PATH'],'FAKE_KEY':'synthetic'})
                 self.assertTrue(result['passed'],result)
@@ -41,7 +41,7 @@ class BlockedPrecheckTests(unittest.TestCase):
                     check.run_blocked_precheck('haiku',Path(tmp)/str(budget),budget,{})
 
     def test_without_spend_confirmation_no_runner_is_called(self):
-        with patch.object(sys,'argv',['blocked-precheck','--profile','haiku','--max-budget-usd','1']), \
+        with patch.object(sys,'argv',['blocked-precheck','--model','haiku','--max-budget-usd','1']), \
              patch.object(check,'run_blocked_precheck') as runner:
             self.assertEqual(check.main(),2)
             runner.assert_not_called()
@@ -58,7 +58,7 @@ class BlockedPrecheckTests(unittest.TestCase):
                     result=real_runner(*args,**kwargs)
                     if kwargs.get('fork_from'): result['summary']['tool_calls']=1
                     return result
-                with patch.object(check,'profile',return_value=prof),patch.object(check,'run_turn',runner):
+                with patch.object(check,'model_entry',return_value=prof),patch.object(check,'run_turn',runner):
                     result=check.run_blocked_precheck('synthetic',Path(tmp)/'out',2,
                                                        {'PATH':os.environ['PATH'],'FAKE_KEY':'synthetic'})
                 self.assertFalse(result['passed'])

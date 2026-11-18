@@ -27,21 +27,21 @@ class DestinationTests(unittest.TestCase):
             self.assertFalse(proxy.target_allowed(host, port), host)
 
 
-class EngineProbeTests(unittest.IsolatedAsyncioTestCase):
-    """Route health follows the hosts the job's own engine uses (B-3)."""
-    def relay(self, engine, failing=()):
+class HarnessProbeTests(unittest.IsolatedAsyncioTestCase):
+    """Route health follows the hosts the job's own harness uses (B-3)."""
+    def relay(self, harness, failing=()):
         dialled = []
         async def probe_dial(host):
             dialled.append(host)
             if host in failing: raise ConnectionRefusedError('fixture')
             return True
-        return proxy.MacRelay(None, grace_s=60, probe_hosts=proxy.probe_hosts(engine), probe_dial=probe_dial), dialled
+        return proxy.MacRelay(None, grace_s=60, probe_hosts=proxy.probe_hosts(harness), probe_dial=probe_dial), dialled
 
     def test_probe_hosts_come_from_the_relayed_destination_table(self):
         self.assertEqual(proxy.probe_hosts('claude'), ('api.anthropic.com',))
         self.assertEqual(set(proxy.probe_hosts('codex')), {'chatgpt.com', 'auth.openai.com'})
-        for engine, route in proxy.ENGINE_ROUTES.items():
-            for host in proxy.probe_hosts(engine):
+        for harness, route in proxy.HARNESS_ROUTES.items():
+            for host in proxy.probe_hosts(harness):
                 self.assertTrue(proxy.target_allowed(host, 443, route['domains']), host)
         with self.assertRaises(proxy.EgressError): proxy.probe_hosts('other')
         with self.assertRaises(proxy.EgressError): proxy.MacRelay(None, grace_s=60)
@@ -57,7 +57,7 @@ class EngineProbeTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(relay.upstream_failed)
         self.assertGreater(len(dialled), 3)
 
-    async def test_codex_route_needs_every_engine_host(self):
+    async def test_codex_route_needs_every_harness_host(self):
         relay, dialled = self.relay('codex')
         self.assertTrue(await relay.probe_upstream())
         self.assertEqual(set(dialled), {'chatgpt.com', 'auth.openai.com'})
@@ -65,24 +65,24 @@ class EngineProbeTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(await self.relay('codex', failing=(host,))[0].probe_upstream(), host)
         self.assertFalse(await self.relay('claude', failing=('api.anthropic.com',))[0].probe_upstream())
 
-    def test_connector_requires_an_engine_for_short_outage_recovery(self):
+    def test_connector_requires_an_harness_for_short_outage_recovery(self):
         base = ['connect', '--ssh-host', 'cluster', '--job-id', '123', '--state-root', '/private/egress',
                 '--remote-script', '/private/helper.py']
         started = []
-        async def connect(args): started.append(args.engine)  # never reaches SSH in this test
+        async def connect(args): started.append(args.harness)  # never reaches SSH in this test
         with patch.object(proxy, 'connect', connect):
-            for extra in (['--pause-grace-s', '120'], ['--pause-grace-s', '120', '--engine', 'other']):
+            for extra in (['--pause-grace-s', '120'], ['--pause-grace-s', '120', '--harness', 'other']):
                 with patch('sys.stderr'), self.assertRaises(SystemExit):
                     proxy.main([*base, *extra])
             self.assertEqual(started, [])
-            self.assertEqual(proxy.main([*base, '--pause-grace-s', '120', '--engine', 'claude']), 0)
+            self.assertEqual(proxy.main([*base, '--pause-grace-s', '120', '--harness', 'claude']), 0)
         self.assertEqual(started, ['claude'])
 
 
 class EnvironmentTests(unittest.TestCase):
     def test_quota_error_publishing_pause_fences_without_clearing_authority(self):
         import errno
-        private=self.root/'engine';private.mkdir(mode=0o700)
+        private=self.root/'harness';private.mkdir(mode=0o700)
         self.config['slurm']['egress_pause_s']=2;self.value.update(state='ready',grace_s=2)
         proxy.atomic(self.path,self.value);write=proxy.atomic
         def quota(path,value):
@@ -96,7 +96,7 @@ class EnvironmentTests(unittest.TestCase):
         self.assertFalse((private/'EGRESS_PAUSED').exists())
 
     def test_short_outage_publishes_pause_and_same_instance_health_clears_only_its_marker(self):
-        private=self.root/'engine';private.mkdir(mode=0o700)
+        private=self.root/'harness';private.mkdir(mode=0o700)
         self.config['slurm']['egress_pause_s']=2
         self.value.update(state='ready',grace_s=2)
         proxy.atomic(self.path,self.value)
@@ -114,7 +114,7 @@ class EnvironmentTests(unittest.TestCase):
 
     def test_quick_pause_resume_pause_publishes_a_rising_pause_id_from_one_watcher(self):
         # B-12: a world that misses the short resume must see the same outage continue.
-        private=self.root/'engine';private.mkdir(mode=0o700)
+        private=self.root/'harness';private.mkdir(mode=0o700)
         self.config['slurm']['egress_pause_s']=2;self.value.update(state='ready',grace_s=2)
         proxy.atomic(self.path,self.value)
         def wait(condition):
@@ -137,7 +137,7 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual(first['schema'],'roboteam.egress-pause.v1')
 
     def test_replaced_instance_fences_even_during_short_outage_grace(self):
-        private=self.root/'engine';private.mkdir(mode=0o700)
+        private=self.root/'harness';private.mkdir(mode=0o700)
         self.config['slurm']['egress_pause_s']=2;self.value.update(state='ready',grace_s=2)
         proxy.atomic(self.path,self.value)
         with patch.dict(os.environ,{'SLURM_JOB_ID':'123','ROBOTEAM_JOB_PRIVATE_ROOT':str(private)}):
@@ -182,7 +182,7 @@ class EnvironmentTests(unittest.TestCase):
         self.assertFalse(self.failure.is_set())
 
     def test_lost_or_replaced_route_is_latched_without_replay(self):
-        private=self.root/'engine';private.mkdir(mode=0o700)
+        private=self.root/'harness';private.mkdir(mode=0o700)
         with patch.dict(os.environ, {'SLURM_JOB_ID':'123','ROBOTEAM_JOB_PRIVATE_ROOT':str(private)}):
             with self.assertRaisesRegex(proxy.EgressError, 'must not be automatically replayed'):
                 with proxy.environment(self.config, on_failure=self.failure.set):

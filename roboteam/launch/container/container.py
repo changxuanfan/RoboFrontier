@@ -86,21 +86,21 @@ def _toml(config):
 def _settings(arguments, config):
     # Provider/render overrides use the same fully spelled native CLI flags.
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
-    for option in ('engine', 'profile', 'effort', 'render'):
+    for option in ('harness', 'model', 'effort', 'render'):
         parser.add_argument('--'+option)
     options, _ = parser.parse_known_args(arguments[1:])
     result = deepcopy(config)
-    for option in ('engine', 'profile', 'effort'):
+    for option in ('harness', 'model', 'effort'):
         if getattr(options, option) is not None:
             result['policy'][option] = getattr(options, option)
-    if options.engine is not None and options.engine != config['policy']['engine'] and options.profile is None:
-        # The host profile belongs to the other engine. Select by engine only, as the
-        # native CLI does (Claude: the subscription-token profile).
+    if options.harness is not None and options.harness != config['policy']['harness'] and options.model is None:
+        # The host model belongs to the other harness. Select by harness only, as the
+        # native CLI does (Claude: the subscription-token model).
         from roboteam.configuration import load_configuration
-        result['policy']['profile'] = load_configuration(overrides={'policy': {'engine': options.engine}})['policy']['profile']
-    if options.engine is not None and options.engine != config['policy']['engine'] and 'codex_tool_backend' in result.get('runtime', {}):
+        result['policy']['model'] = load_configuration(overrides={'policy': {'harness': options.harness}})['policy']['model']
+    if options.harness is not None and options.harness != config['policy']['harness'] and 'codex_tool_backend' in result.get('runtime', {}):
         # The container is Linux: Codex's tools run under landlock-v1 there, and only Codex has a tool backend.
-        result['runtime']['codex_tool_backend'] = 'landlock-v1' if options.engine == 'codex' else 'native'
+        result['runtime']['codex_tool_backend'] = 'landlock-v1' if options.harness == 'codex' else 'native'
     if options.render is not None:
         result['render']['device'] = options.render
     validate_configuration(result)
@@ -181,10 +181,10 @@ def _frozen_settings(arguments, config, image, volumes):
 
 def _credential_environment(config, base):
     from roboteam.cli import _catalog
-    selected = _catalog(config)['profiles'][config['policy']['profile']]
+    selected = _catalog(config)['models'][config['policy']['model']]
     if selected.get('transport') == 'loopback_gateway':
         # The container has its own loopback interface: the host's adapter is not there.
-        raise ValueError('A loopback gateway profile runs on the gateway\'s own host, not in a container')
+        raise ValueError('A loopback gateway model runs on the gateway\'s own host, not in a container')
     result = {}
     for field in ('env_key', 'base_url_env'):
         name = selected.get(field)
@@ -202,7 +202,7 @@ def _command(arguments, config, image, volumes, name, settings_file, environment
                '--env', 'OMP_NUM_THREADS=1', '--env', 'OPENBLAS_NUM_THREADS=1']
     resources = config['container']
     # Docker's default seccomp profile may refuse Landlock; `unconfined` lets the policy sandbox
-    # (Landlock and its own seccomp filter) install itself, for either engine.
+    # (Landlock and its own seccomp filter) install itself, for either harness.
     if resources['seccomp_profile'] == 'unconfined' and arguments[0] in ('doctor', 'preflight', 'run', 'policy-env'):
         command.extend(['--security-opt', 'seccomp=unconfined'])
     if resources['memory_gib']:

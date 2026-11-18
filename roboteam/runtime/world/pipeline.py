@@ -84,8 +84,8 @@ class World:
                 control=arm.width_to_grip(arm.observe()['gripper_width_m'])
                 arm.gripper=control;arm.grip_goal=control;self.data.ctrl[arm.grip]=control
         mujoco.mj_forward(self.model,self.data)
-        hand_cfg=self.directory/'private/inputs/harness.json'
-        # A bare scene without a frozen harness (tools and tests build these) uses the default image profile.
+        hand_cfg=self.directory/'private/inputs/run.json'
+        # A bare scene without frozen run settings (tools and tests build these) uses the default image profile.
         frozen_cfg=json.loads(hand_cfg.read_text()) if hand_cfg.exists() else {'observation_image_profile':DEFAULT_PROFILE}
         from roboteam.sim.profile import attach
         self.physics_profile=attach(self)
@@ -210,18 +210,18 @@ class World:
         if self.task.get('execution_readiness')=='environment_preview_only':
             raise ValueError('This v2 scene is an environment preview. Mechanism-specific evaluation and recording commissioning are required before starting a policy trial.')
         if self.task.get('execution_readiness')=='prepared_policy_trial':
-            from roboteam.tasks.families import validate_frozen_policy
+            from roboteam.tasks.task_types import validate_frozen_policy
             validate_frozen_policy(self.task,self.directory)
         if self.task.get('kind')=='frontier_suite':
             from roboteam.tasks.evaluate import Monitor
             secret=json.loads((self.directory/'private/inputs/suite-code.json').read_text())['code_symbols'] if self.task['family']=='dial' else None
-            frozen=json.loads((self.directory/'private/inputs/harness.json').read_text())
+            frozen=json.loads((self.directory/'private/inputs/run.json').read_text())
             self.suite_sampler=Monitor(self,secret=secret,log_path=self.directory/'private/outputs/suite-process.jsonl',
                                        log_format=frozen.get('process_log','full'),append=self.segment>0)
             source=self.directory/Path(self.task['scene_asset']).parent
             if (source/'workstation.json').exists():
                 from roboteam.sim.motion_recording import MotionWriter
-                # A harness without motion_hz records at 60 Hz.
+                # Run settings without motion_hz record at 60 Hz.
                 hz=frozen.get('motion_hz',60)
                 from roboteam.runtime.run.segments import output_dir
                 folder=output_dir(self.directory,self.segment);folder.mkdir(parents=True,exist_ok=True)
@@ -291,7 +291,7 @@ class Service(RuntimeService):
     def __init__(self,directory,hidden=False):
         self.hidden=hidden;self.obs=0;self.render_worker=None
         self.perf={'world_step_wall_s':0.,'world_steps':0,'capture_wall_s':0.,'captures':0,'pump_wall_s':0.}
-        cfg = json.loads((Path(directory)/'private/inputs/harness.json').read_text())
+        cfg = json.loads((Path(directory)/'private/inputs/run.json').read_text())
         self.observation_image = observation_profile(cfg)
         self.observation_look = look_of(cfg)
         from roboteam.runtime.run.segments import output_dir

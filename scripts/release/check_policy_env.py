@@ -1,10 +1,10 @@
-"""Check a policy environment and each engine's sandbox before a batch uses them.
+"""Check a policy environment and each harness's sandbox before a batch uses them.
 
 Runs each real CLI against a local stub model in a throwaway run, with the access table and
 variables a real run freezes. No provider is contacted and no credential is used. Prints
 ok/denied per attempt and never prints file contents; exits nonzero on any difference. A pass
-on both engines records a receipt beside the environment, which preparing a run requires. The
-receipt lists each engine with the sandbox and CLI version it ran, and preparation refuses any
+on both harnesses records a receipt beside the environment, which preparing a run requires. The
+receipt lists each harness with the sandbox and CLI version it ran, and preparation refuses any
 other combination. Give --scratch where batches will really run, since where a run sits changes
 what can be opened.
 
@@ -43,7 +43,7 @@ MUST_FAIL = ('read_host_shared_memory', 'read_home', 'read_home_file', 'read_peo
 HOST_ONLY = 'ROBOTEAM_PROBE_HOST_ONLY'
 # What the parent-environment probes look for: a subscription credential in any ancestor's
 # environment. The local stub's fake API key stays in the CLI's environment; Claude API-key
-# profiles are refused where the sandbox shows other processes (claude_prepare.prepare_batch).
+# models are refused where the sandbox shows other processes (claude_prepare.prepare_batch).
 CREDENTIALS = ('CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY', 'ROBOTEAM_OFFLINE_STUB_TOKEN')
 CLOSED_FOLDERS = {'darwin': {'read_people': '/Users', 'read_disks': '/Volumes', 'read_system_secrets': '/Library/Keychains', 'read_var_tmp': '/var/tmp'},
                   'linux': {'read_people': '/home', 'read_disks': '/raid', 'read_system_secrets': '/root', 'read_var_tmp': '/var/tmp'}}
@@ -154,7 +154,7 @@ def run_claude(run, command, scratch, seen, shared):
     from roboteam.harness.claude.session.runner import build_command, confine, policy_settings, start_cli
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), claude_stub(command, seen, shared))
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    config = run/'private/engine/config'
+    config = run/'private/harness/config'
     config.mkdir(parents=True, exist_ok=True)
     settings, extra = confine(run, policy_settings(run), config)
     argv = build_command('claude-opus-5-5', 'high', '{"mcpServers":{}}', 'go', auth_mode='oauth_token', settings=settings)
@@ -212,13 +212,13 @@ def run_codex_landlock(run, command, scratch, seen, shared):
     seen.append({'content': done.stdout + done.stderr, 'is_error': done.returncode != 0})
 
 
-ENGINES = {'codex': run_codex_landlock if sys.platform == 'linux' else run_codex, 'claude': run_claude}
+HARNESSES = {'codex': run_codex_landlock if sys.platform == 'linux' else run_codex, 'claude': run_claude}
 
 
 def isolation(name):
     """The sandbox the check runs `name` in, which a run prepared on this host would freeze."""
     if name == 'codex':
-        return 'landlock-v1' if ENGINES['codex'] is run_codex_landlock else 'native'
+        return 'landlock-v1' if HARNESSES['codex'] is run_codex_landlock else 'native'
     from roboteam.harness.shared.landlock import choose
     return choose()
 
@@ -246,7 +246,7 @@ def throwaway_run(scratch, name, environment):
 
 
 def shell_succeeded(seen):
-    """Whether the engine's own shell wrapper returned the command's output and exit code 0.
+    """Whether the harness's own shell wrapper returned the command's output and exit code 0.
 
     A script can succeed while the wrapper around it fails, as when the CLI cannot write
     its working-directory record or capture standard output.
@@ -256,8 +256,8 @@ def shell_succeeded(seen):
             and not any(item.get('is_error') for item in seen))
 
 
-def check_engine(name, environment, scratch, mode):
-    """Run the probe through one engine in sandbox `mode`; returns its results, or raises when it did not report."""
+def check_harness(name, environment, scratch, mode):
+    """Run the probe through one harness in sandbox `mode`; returns its results, or raises when it did not report."""
     run, other = throwaway_run(scratch, name, environment)
     if name == 'claude':
         # Read by claude.runner.confine, as a prepared run's launch record is.
@@ -288,14 +288,14 @@ def check_engine(name, environment, scratch, mode):
                 'shared_tmp': str(shared), 'other_python': other_python, 'listener_port': listener.getsockname()[1],
                 'host_socket': str(shared/'host.sock'), 'udp_port': datagrams.getsockname()[1], 'host_pid': bystander.pid}
     (run/'public/inputs/probe.json').write_text(json.dumps(fixtures))
-    # A here-document in the engine's own shell, which may not take its temporary file from TMPDIR.
+    # A here-document in the harness's own shell, which may not take its temporary file from TMPDIR.
     # Here-documents and the CLI's own records need /tmp, so a closed /tmp fails shell_reports_success.
     command = ("cat > /dev/null <<'EOF'\nx\nEOF\npython %s %s %s"
                % (run/'public/inputs/probe.py', run/'public/inputs/probe.json', run/'workspace'/RESULT))
     (scratch/'cli-home').mkdir(exist_ok=True)
     try:
         seen = []
-        ENGINES[name](run, command, scratch, seen, shared)
+        HARNESSES[name](run, command, scratch, seen, shared)
         if not (run/'workspace'/RESULT).is_file():
             raise ValueError(name + ' did not finish the probe')
         results = json.loads((run/'workspace'/RESULT).read_text())
@@ -327,7 +327,7 @@ def private_shared_memory_possible():
 
 
 def known_limits(name, mode):
-    """The probe items that cannot work for engine `name` in sandbox `mode` on this host."""
+    """The probe items that cannot work for harness `name` in sandbox `mode` on this host."""
     known = KNOWN_LIMITS.get((sys.platform, name), ())
     # Claude's Landlock prefix never makes a private /dev/shm; Codex's worker does where it can.
     if mode == 'landlock-v1' and (name == 'claude' or not private_shared_memory_possible()):
@@ -344,7 +344,7 @@ def differences(results, known=()):
 
 
 def receipt_record(manifest, modes):
-    """What a pass records: each engine with the sandbox and CLI version it ran.
+    """What a pass records: each harness with the sandbox and CLI version it ran.
 
     Per build: host and platform say where it ran, and preparation compares only `checked`.
     """
@@ -356,7 +356,7 @@ def receipt_record(manifest, modes):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('environment', type=Path)
-    parser.add_argument('--engine', choices=sorted(ENGINES), action='append')
+    parser.add_argument('--harness', choices=sorted(HARNESSES), action='append')
     parser.add_argument('--scratch', type=Path, help='Where to put throwaway runs, as a batch would; default beside the environment')
     args = parser.parse_args(argv)
     environment = args.environment.resolve()
@@ -365,31 +365,31 @@ def main(argv=None):
     failed = False
     # Beside the environment, so nothing here sits in a shared temporary folder.
     scratch = Path(tempfile.mkdtemp(prefix='check-', dir=args.scratch or environment.parent)).resolve()
-    names = args.engine or sorted(ENGINES)
+    names = args.harness or sorted(HARNESSES)
     modes = {name: isolation(name) for name in names}
     try:
         for name in names:
-            results = check_engine(name, environment, scratch, modes[name])
+            results = check_harness(name, environment, scratch, modes[name])
             wrong = differences(results, known_limits(name, modes[name]))
-            print(json.dumps({'engine': name, policy_env.ISOLATION[name]: modes[name], 'attempts': len(results), 'differences': wrong}))
+            print(json.dumps({'harness': name, policy_env.ISOLATION[name]: modes[name], 'attempts': len(results), 'differences': wrong}))
             failed = failed or bool(wrong)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     if failed:
         sys.exit(1)
-    # Each entry names its engine, sandbox and CLI version, and preparation asks for its exact
-    # combination; a check of some engines adds them to what an earlier pass of this build recorded.
+    # Each entry names its harness, sandbox and CLI version, and preparation asks for its exact
+    # combination; a check of some harnesses adds them to what an earlier pass of this build recorded.
     receipt = policy_env.receipt_path(environment)
     record = receipt_record(manifest, modes)
-    # Checks of different engines may finish together: merge under a lock, publish atomically.
+    # Checks of different harnesses may finish together: merge under a lock, publish atomically.
     import fcntl
     with open(receipt.with_name(receipt.name + '.lock'), 'a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         try: earlier = json.loads(receipt.read_text())
         except (OSError, ValueError): earlier = {}
-        if (args.engine and earlier.get('schema') == policy_env.RECEIPT_SCHEMA and earlier.get('passed')
+        if (args.harness and earlier.get('schema') == policy_env.RECEIPT_SCHEMA and earlier.get('passed')
                 and earlier.get('tree_sha256') == manifest['tree_sha256']):
-            kept = [item for item in earlier.get('checked', []) if item.get('engine') not in modes]
+            kept = [item for item in earlier.get('checked', []) if item.get('harness') not in modes]
             record['checked'] = sorted(kept + record['checked'], key=lambda item: json.dumps(item, sort_keys=True))
         fd, temporary = tempfile.mkstemp(prefix=receipt.name + '.', suffix='.tmp', dir=receipt.parent)
         with os.fdopen(fd, 'w') as output:

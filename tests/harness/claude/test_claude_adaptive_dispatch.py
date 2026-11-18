@@ -29,7 +29,7 @@ class AdaptiveDispatchTests(unittest.TestCase):
         state=Path(self.tmp.name)/'run/private/state'; state.mkdir(parents=True)
         self.store=RuntimeStore(state/'runtime.sqlite')
         cfg=json.loads((Path(__file__).resolve().parents[3]/'roboteam/runtime/run/defaults.json').read_text())
-        cfg.update(engine='claude',topology='adaptive')
+        cfg.update(harness='claude',system='adaptive')
         self.store.initialize('run',cfg,['A']); self.store.update_agent('Controller',thread_id='parent',ready=True)
         self.store.start(); self.d=Delegations(self.store)
         batch=self.d.create('Controller','batch',[{'robots':['A'],'goal':'g','done_when':'d'}])

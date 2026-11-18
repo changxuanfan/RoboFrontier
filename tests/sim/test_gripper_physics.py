@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from roboteam.tasks.config import load_harness
+from roboteam.tasks.config import load_run_settings
 from single_arm_scene import make_world
 from roboteam.sim.robot_control import matrix_quat,rotation_vector
 from motion import filled
@@ -13,7 +13,7 @@ from motion import filled
 
 class GripperPhysicsTests(unittest.TestCase):
     def setUp(self):
-        self.temp=tempfile.TemporaryDirectory();self.cfg=load_harness()
+        self.temp=tempfile.TemporaryDirectory();self.cfg=load_run_settings()
 
     def tearDown(self):self.temp.cleanup()
 

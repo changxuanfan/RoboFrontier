@@ -17,20 +17,20 @@ from roboteam.runtime.tools.delegation import Delegations
 from roboteam.runtime.run.setup import write_json
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.tasks.config import ROOT
-from roboteam.tasks.families import prepare
-from harness.shared.test_engine_parity import HARNESS
+from roboteam.tasks.task_types import prepare
+from harness.shared.test_harness_parity import RUN_SETTINGS
 
 
 class ClaudeRecoveryTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(); self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).resolve()
-        harness = self.root/'harness.json'
-        harness.write_text(json.dumps(dict(HARNESS, engine='claude', topology='adaptive', startup_protocol='direct_controller')))
+        run_settings = self.root/'run.json'
+        run_settings.write_text(json.dumps(dict(RUN_SETTINGS, harness='claude', system='adaptive', startup_protocol='direct_controller')))
         self.batch = self.root/'batch'
-        self.run = prepare('transport-a04-d1', self.batch/'opus_subscription'/'transport-a04-d1', harness).resolve()
+        self.run = prepare('transport-a04-d1', self.batch/'opus_subscription'/'transport-a04-d1', run_settings).resolve()
         write_json(self.batch/'batch.json', {'schema': 'roboteam.claude-batch.v2', 'jobs': [
-            {'profile': 'opus_subscription', 'case_id': 'transport-a04-d1', 'run_directory': str(self.run)}]})
+            {'model_entry': 'opus_subscription', 'case_id': 'transport-a04-d1', 'run_directory': str(self.run)}]})
         write_json(run_layout.batch_path(self.batch, 'engineering_status'),
                    {'status': 'running', 'jobs': [{'case_id': 'transport-a04-d1', 'status': 'needs_review', 'reason': 'dispatch_paused'}]})
         write_json(run_layout.path(self.run, 'engineering_status'), {'status': 'needs_review', 'reason': 'dispatch_paused'})
@@ -48,7 +48,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         delegations.claim('late-fork', 'meta'); delegations.created('late-fork', self.child, 'unverified-fork', 'meta')
         delegations.uncertain('late-fork', 'Native setup deadline expired', 'meta')
         self.assertTrue(self.store.get('dispatch_paused'))
-        self.scratch = self.run/'private/engine/recovery-scratch'; self.scratch.mkdir(mode=0o700)
+        self.scratch = self.run/'private/harness/recovery-scratch'; self.scratch.mkdir(mode=0o700)
         pose = np.array([.25], dtype=np.float32)
         reader = SimpleNamespace(meta={'case_id': 'fixture', 'source_scene_sha256': 'fixture'},
                                  selected_frames=lambda indices: iter([(0, 1., pose)]))

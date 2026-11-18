@@ -9,7 +9,7 @@ import numpy as np
 
 from roboteam.sim.robot_control import PandaArm
 from roboteam.tasks.evaluate import Monitor
-from roboteam.tasks.families import ROOT
+from roboteam.tasks.task_types import ROOT
 
 
 def relay_world():

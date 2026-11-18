@@ -16,19 +16,19 @@ from roboteam.harness.codex.tool_worker import SCHEMA
 BACKENDS = ('native', 'landlock-v1')
 
 
-def selected(profile):
-    backend = profile.get('tool_backend', 'native')
+def selected(model_entry):
+    backend = model_entry.get('tool_backend', 'native')
     if backend not in BACKENDS:
         raise ValueError('Unknown Codex tool backend: ' + str(backend))
     return backend
 
 
-def fingerprint(profile):
-    if selected(profile) == 'native':
+def fingerprint(model_entry):
+    if selected(model_entry) == 'native':
         return None
     files = ('tool_worker.py', 'file_sandbox.py', 'tool_backend.py', 'host/tool_broker.js', 'launch.py',
              'host/policy_host.js', 'host/preflight.js', 'host/rpc.js',
-             'job_engine.py', 'host/job_gateway.js', 'host/gateway_rpc.js', 'host/borrowed_auth.js',
+             'job_harness.py', 'host/job_gateway.js', 'host/gateway_rpc.js', 'host/borrowed_auth.js',
              '../shared/tool_worker.py', '../shared/landlock.py', '../../runtime/sandbox/access.py')
     digest = hashlib.sha256(b'landlock-v1\0')
     for name in files:
@@ -37,16 +37,16 @@ def fingerprint(profile):
 
 
 def verify_receipt(launch, checked):
-    if selected(launch['profile']) == 'landlock-v1':
-        expected = fingerprint(launch['profile'])
+    if selected(launch['model_entry']) == 'landlock-v1':
+        expected = fingerprint(launch['model_entry'])
         if (not checked.get('passed') or checked.get('tool_backend') != 'landlock-v1'
                 or not checked.get('broker_tools_verified') or checked.get('tool_backend_sha256') != expected
                 or launch.get('tool_backend_sha256') != expected):
             raise ValueError('Codex broker backend changed or was not qualified; rerun preflight')
 
 
-def prepare(run, profile):
-    if selected(profile) == 'native':
+def prepare(run, model_entry):
+    if selected(model_entry) == 'native':
         return
     run = Path(run).resolve()
     path = run/'private/inputs/policy-access.json'
@@ -54,7 +54,7 @@ def prepare(run, profile):
     if access.get('network') is not False:
         raise ValueError('The Landlock broker does not permit model networking')
     access['filesystem'].update({'/proc': 'deny', '/dev': 'deny'})
-    # A run with a policy environment keeps /tmp open, on every engine (policy_access), and
+    # A run with a policy environment keeps /tmp open, on every harness (policy_access), and
     # gets a private /dev/shm (tool_worker), where Python's multiprocessing keeps its locks.
     if access.get('policy_env'):
         access['filesystem']['/dev/shm'] = 'write'
@@ -70,7 +70,7 @@ def prepare(run, profile):
     # its parent. These grants are frozen before a policy turn can run.
     runtime_paths = {Path(sys.prefix)/'pyvenv.cfg',
                      Path(sysconfig.get_path('purelib')), Path(sysconfig.get_path('platlib'))}
-    if profile.get('runner_backend') == 'slurm-managed-v1' and os.environ.get('ROBOTEAM_SHARED_DENY_ROOTS'):
+    if model_entry.get('runner_backend') == 'slurm-managed-v1' and os.environ.get('ROBOTEAM_SHARED_DENY_ROOTS'):
         runtime_paths.update(Path(p) for p in sys.path if p and Path(p).name in ('site-packages', 'dist-packages'))
         runtime_paths.update((Path(sysconfig.get_path('stdlib')), Path(sys.executable).resolve()))
         libdir, library = sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')
@@ -87,13 +87,13 @@ def prepare(run, profile):
     write_json(path, access)
     write_json(run/'private/inputs/codex-tools.json', {'schema': SCHEMA, 'backend': 'landlock-v1'})
     # New runs get backend-specific tool instructions before hashes are frozen.
-    from roboteam.runtime.run.bootstrap import ENGINE_LINES
+    from roboteam.runtime.run.bootstrap import HARNESS_LINES
     message = ('Use policy_exec for file reads, shell commands and workspace notes. '
                'Use policy_image with a path to view permitted PNG/JPEG files. '
                'Robot observations still return images through robot. '
                'Delegate work only through robot delegate, never Codex collaboration tools.')
     for path in (run/'private/inputs/bootstrap').glob('*.md'):
-        path.write_text(path.read_text().replace(ENGINE_LINES['codex'], message))
+        path.write_text(path.read_text().replace(HARNESS_LINES['codex'], message))
 
 
 def execute(run, request, *, timeout=15):
@@ -103,7 +103,7 @@ def execute(run, request, *, timeout=15):
                           capture_output=True, text=True, timeout=timeout, close_fds=True)
 
 
-def preflight_probe(folder, profile=None):
+def preflight_probe(folder, model_entry=None):
     """A fresh non-physical run for the live broker/image compatibility check."""
     import shlex
     import shutil
@@ -114,7 +114,7 @@ def preflight_probe(folder, profile=None):
     write_json(run/'private/inputs/policy-access.json', policy_access.record(run))
     (run/'public/task.txt').write_text('broker-public-canary')
     (run/'private/secret.txt').write_text('broker-private-canary')
-    prepare(run, profile or {'tool_backend': 'landlock-v1'})
+    prepare(run, model_entry or {'tool_backend': 'landlock-v1'})
     shutil.copyfile(Path(folder)/'colors.png', run/'public/colors.png')
     script = '''from pathlib import Path
 import json,socket
@@ -165,8 +165,8 @@ checks['public_intact']=(r/'public/task.txt').read_text()=='public'
 for key,p in [('private',r/'private/secret.txt'),('other_run',r.parent/'other.txt'),('proc',Path('/proc/self/environ'))]:
  denied(key,lambda p=p:p.read_bytes())
 denied('public_write',lambda:(r/'public/illegal').write_text('bad'))
-for key,family,kind in [('unix',socket.AF_UNIX,socket.SOCK_STREAM),('tcp',socket.AF_INET,socket.SOCK_STREAM),('udp',socket.AF_INET,socket.SOCK_DGRAM)]:
- denied(key,lambda family=family,kind=kind:socket.socket(family,kind))
+for key,task type,kind in [('unix',socket.AF_UNIX,socket.SOCK_STREAM),('tcp',socket.AF_INET,socket.SOCK_STREAM),('udp',socket.AF_INET,socket.SOCK_DGRAM)]:
+ denied(key,lambda task type=task type,kind=kind:socket.socket(task type,kind))
 checks['environment']=not any(k in os.environ for k in ('CODEX_HOME','OPENAI_API_KEY','CLAUDE_CODE_OAUTH_TOKEN','BASH_ENV'))
 print(json.dumps(checks));sys.exit(0 if all(checks.values()) else 1)
 '''

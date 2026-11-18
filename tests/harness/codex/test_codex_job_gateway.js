@@ -57,8 +57,8 @@ test('a fenced task never dispatches a turn that was waiting for the network',as
 test('bound transport gives queued model mutations the configured pause grace',async t=>{
   const f=fixture(),folder=fs.mkdtempSync(path.join(os.tmpdir(),'rf-pause-rpc-'));
   t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
-  await f.gateway.listen(path.join(folder,'engine.sock'));
-  const rpc=new GatewayRpc(path.join(folder,'engine.sock'),'task-0',{pauseGraceMs:300});
+  await f.gateway.listen(path.join(folder,'harness.sock'));
+  const rpc=new GatewayRpc(path.join(folder,'harness.sock'),'task-0',{pauseGraceMs:300});
   // fixture already bound this task to its synthetic client.
   f.gateway.tasks.get('task-0').state='new';delete f.gateway.tasks.get('task-0').client;
   await rpc.initialize();
@@ -173,7 +173,7 @@ test('native tools are routed only to the owner and another task cannot answer t
   assert.equal(f.clients[1].events.length,0);
 });
 
-test('shared engine loss fences channels and never retries an uncertain turn',async()=>{
+test('shared harness loss fences channels and never retries an uncertain turn',async()=>{
   const f=fixture(),parent=await f.start(f.clients[0]);
   await f.gateway.request(f.clients[0],'turn/start',{threadId:parent.thread.id,input:[{type:'text',text:'work'}]});
   f.gateway.fail();

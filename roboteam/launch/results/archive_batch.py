@@ -135,7 +135,7 @@ def verify_collection(source, allow_incomplete=False):
     if not report.get('complete') and not allow_incomplete:
         raise ValueError('A complete collection is required; stopped evidence can use --allow-incomplete')
     batch = json.loads((source/'batch'/'batch.json').read_text())
-    state = json.loads(run_layout.batch_path(source/'batch', 'engineering_status').read_text()) if report.get('engine') == 'claude' else batch
+    state = json.loads(run_layout.batch_path(source/'batch', 'engineering_status').read_text()) if report.get('harness') == 'claude' else batch
     terminal = ('closed', 'needs_review', 'stopped', 'stopped_before_start')
     if report.get('writers_stopped') is not True or state.get('status') not in terminal or any(j.get('status') not in terminal for j in state.get('jobs', [])):
         raise ValueError('Evidence writers must be stopped before archival')

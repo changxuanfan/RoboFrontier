@@ -1,15 +1,15 @@
-"""Codex launch profiles: provider, credential variable, wire API and effort."""
+"""Codex launch models: provider, credential variable, wire API and effort."""
 import json
 from pathlib import Path
 import tempfile
 import unittest
 
-from roboteam.harness.codex.launch import profile, launch_config
+from roboteam.harness.codex.launch import model_entry, launch_config
 
 
 class CodexLaunchProfileTests(unittest.TestCase):
-    def test_a_third_party_profile_has_its_own_provider_and_credential(self):
-        p = profile('kimi')
+    def test_a_third_party_model_entry_has_its_own_provider_and_credential(self):
+        p = model_entry('kimi')
         with tempfile.TemporaryDirectory() as folder:
             launch = launch_config(p, Path(folder))
             self.assertEqual((p['model'], p['effort']), ('kimi-k3.1-pro', 'high'))
@@ -19,15 +19,15 @@ class CodexLaunchProfileTests(unittest.TestCase):
             self.assertFalse(json.loads((Path(folder)/'models.json').read_text())['models'][0]['use_responses_lite'])
 
     def test_the_default_profile_is_gpt_6_1_sol_with_an_api_key(self):
-        p = profile('sol')
+        p = model_entry('sol')
         with tempfile.TemporaryDirectory() as folder:
             launch = launch_config(p, Path(folder))
             self.assertEqual((p['model'], p['effort']), ('gpt-6.1-sol', 'high'))
             self.assertIn('model_providers.openai_api.env_key="OPENAI_API_KEY"', launch['args'])
             self.assertIn('model_providers.openai_api.base_url="https://api.openai.com/v1"', launch['args'])
 
-    def test_profile_requires_openai_api_and_high(self):
-        p = profile('luna')
+    def test_model_entry_requires_openai_api_and_high(self):
+        p = model_entry('luna')
         with tempfile.TemporaryDirectory() as folder:
             launch = launch_config(p, Path(folder))
             self.assertEqual((p['model'], p['effort']), ('gpt-6-luna', 'high'))

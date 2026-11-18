@@ -10,22 +10,22 @@ from fake_pipeline import FakeWorld, fake_capture
 from roboteam.runtime.run import bootstrap
 from roboteam.runtime.tools import public_files
 from roboteam.runtime.tools import run_skills
-from roboteam.runtime.tools import tool_mode
+from roboteam.runtime.tools import tools_mode
 from roboteam.runtime.tools.delegation import Delegations
 from roboteam.runtime.tools.robot_ops import check_request
 from roboteam.runtime.world.service import RuntimeService
 from roboteam.runtime.run.setup import prepare_run, verify_inputs
-from roboteam.tasks.config import ROOT, load_harness, startup_protocol
+from roboteam.tasks.config import ROOT, load_run_settings, startup_protocol
 
 PNG = b'\x89PNG\r\n\x1a\n' + b'\0' * 32
 TEMPLATES = [ROOT/'prompts/rules.md', *sorted((ROOT/'prompts/guides/collaboration').rglob('*.md'))]
 
 
-def harness(root, mode=None, engine='codex', topology='adaptive'):
-    cfg = load_harness()
-    cfg.update(topology=topology, startup_protocol=startup_protocol(topology), engine=engine)
-    if mode: cfg['tool_mode'] = mode
-    path = Path(root)/('harness-%s-%s.json' % (engine, mode or 'unset'))
+def run_settings(root, mode=None, harness='codex', system='adaptive'):
+    cfg = load_run_settings()
+    cfg.update(system=system, startup_protocol=startup_protocol(system), harness=harness)
+    if mode: cfg['tools'] = mode
+    path = Path(root)/('harness-%s-%s.json' % (harness, mode or 'unset'))
     path.write_text(json.dumps(cfg))
     return path
 
@@ -33,16 +33,16 @@ def harness(root, mode=None, engine='codex', topology='adaptive'):
 class TemplateTests(unittest.TestCase):
     def test_markers_select_one_wording_and_leave_shared_text(self):
         text = 'a\n<!-- tools:full -->\nfull\n<!-- /tools -->\n<!-- tools:robot_only -->\nrobot\n<!-- /tools -->\nb\n'
-        self.assertEqual(tool_mode.render(text, 'full'), 'a\nfull\nb\n')
-        self.assertEqual(tool_mode.render(text, 'robot_only'), 'a\nrobot\nb\n')
-        with self.assertRaises(ValueError): tool_mode.render('<!-- tools:full -->\nopen\n', 'full')
-        with self.assertRaises(ValueError): tool_mode.render(text, 'other')
+        self.assertEqual(tools_mode.render(text, 'full'), 'a\nfull\nb\n')
+        self.assertEqual(tools_mode.render(text, 'robot_only'), 'a\nrobot\nb\n')
+        with self.assertRaises(ValueError): tools_mode.render('<!-- tools:full -->\nopen\n', 'full')
+        with self.assertRaises(ValueError): tools_mode.render(text, 'other')
 
     def test_checked_in_templates_render_in_both_modes(self):
         marked = 0
         for path in TEMPLATES:
             text = path.read_text()
-            full, robot = tool_mode.render(text, 'full'), tool_mode.render(text, 'robot_only')
+            full, robot = tools_mode.render(text, 'full'), tools_mode.render(text, 'robot_only')
             marked += full != robot
             # What only a robot_only role is told never reaches a full run.
             self.assertNotIn('public_file', full, path)
@@ -52,7 +52,7 @@ class TemplateTests(unittest.TestCase):
                 self.assertNotIn(phrase, robot, (path, phrase))
         self.assertGreaterEqual(marked, 4)
 
-    def test_family_and_role_templates_have_no_tool_wording_to_vary(self):
+    def test_task_type_and_role_templates_have_no_tool_wording_to_vary(self):
         for path in [*(ROOT/'prompts/roles').glob('*.md'), *(ROOT/'prompts/guides').glob('*.md')]:
             self.assertNotIn('<!-- tools:', path.read_text(), path)
 
@@ -67,17 +67,17 @@ class PreparationTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_a_full_run_is_prepared_as_before_the_mode_existed(self):
-        unset = prepare_run(self.root/'unset/run', harness_path=harness(self.root))
-        full = prepare_run(self.root/'full/run', harness_path=harness(self.root, 'full'))
+        unset = prepare_run(self.root/'unset/run', run_settings_path=run_settings(self.root))
+        full = prepare_run(self.root/'full/run', run_settings_path=run_settings(self.root, 'full'))
         for run in (unset, full):
-            self.assertEqual(tool_mode.of_run(run), 'full')
+            self.assertEqual(tools_mode.of_run(run), 'full')
             for path in [run/'public/inputs/rules.md', *sorted((run/'public/inputs/guide').rglob('*.md'))]:
                 source = ROOT/'prompts'/('rules.md' if path.name == 'rules.md' else
                                          Path('guides/collaboration')/path.relative_to(run/'public/inputs/guide'))
-                expected = tool_mode.render(source.read_text(), 'full').replace('{{RUN_DIR}}', str(run))
+                expected = tools_mode.render(source.read_text(), 'full').replace('{{RUN_DIR}}', str(run))
                 self.assertEqual(path.read_text(), expected)
             first = (run/'private/inputs/bootstrap/Controller.md').read_text()
-            self.assertIn(bootstrap.ENGINE_LINES['codex'], first)
+            self.assertIn(bootstrap.HARNESS_LINES['codex'], first)
             self.assertIn('skills.md', first)
             self.assertNotIn('public_file', first)
             self.assertEqual((run/'private/inputs/bootstrap/system.md').read_text(), bootstrap.system_prompt(run))
@@ -91,32 +91,32 @@ class PreparationTests(unittest.TestCase):
             self.assertEqual((unset/'public'/name).read_bytes().replace(str(unset).encode(), b'RUN'),
                              (full/'public'/name).read_bytes().replace(str(full).encode(), b'RUN'), name)
 
-    def test_robot_only_messages_are_the_same_on_both_engines_and_name_no_file_tool(self):
-        runs = {engine: prepare_run(self.root/engine/'run', harness_path=harness(self.root, 'robot_only', engine))
-                for engine in ('codex', 'claude')}
+    def test_robot_only_messages_are_the_same_on_both_harnesses_and_name_no_file_tool(self):
+        runs = {harness: prepare_run(self.root/harness/'run', run_settings_path=run_settings(self.root, 'robot_only', harness))
+                for harness in ('codex', 'claude')}
         texts = {}
-        for engine, run in runs.items():
-            self.assertEqual(tool_mode.of_run(run), 'robot_only')
+        for harness, run in runs.items():
+            self.assertEqual(tools_mode.of_run(run), 'robot_only')
             self.assertEqual(verify_inputs(run), [])
             folder = run/'private/inputs/bootstrap'
-            texts[engine] = {p.name: p.read_text().replace(str(run), 'RUN') for p in sorted(folder.glob('*.md'))}
-            first = texts[engine]['Controller.md']
+            texts[harness] = {p.name: p.read_text().replace(str(run), 'RUN') for p in sorted(folder.glob('*.md'))}
+            first = texts[harness]['Controller.md']
             self.assertTrue(first.rstrip('\n').endswith(bootstrap.ROBOT_ONLY_LINE))
             self.assertIn(bootstrap.READABLE_ROBOT_ONLY, first)
             self.assertIn('## Public files and run skills', first)
-            self.assertIn('is your only tool', texts[engine]['system.md'])
-            self.assertNotIn('use other tools within your permissions', texts[engine]['system.md'])
+            self.assertIn('is your only tool', texts[harness]['system.md'])
+            self.assertNotIn('use other tools within your permissions', texts[harness]['system.md'])
             for name in ('Controller.md', 'system.md', 'delegate.md', 'resume.md', 'model-restart.md'):
                 for phrase in ('grep', 'view_image', 'policy_exec', 'file tools when needed', 'on disk',
                                'workspace/skills.md', 'environment.md', 'pip'):
-                    self.assertNotIn(phrase, texts[engine][name], (name, phrase))
+                    self.assertNotIn(phrase, texts[harness][name], (name, phrase))
             self.assertFalse((run/'public/inputs/environment.md').exists())
             self.assertTrue((run/'workspace/skills.md').read_text().startswith('# Run skills'))
         self.assertEqual(texts['codex'], texts['claude'])
 
     def test_an_unknown_mode_is_refused_before_anything_is_written(self):
         with self.assertRaises(ValueError):
-            prepare_run(self.root/'bad/run', harness_path=harness(self.root, 'no_shell'))
+            prepare_run(self.root/'bad/run', run_settings_path=run_settings(self.root, 'no_shell'))
         self.assertFalse((self.root/'bad/run').exists())
 
 
@@ -126,7 +126,7 @@ class ServiceTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.root = Path(self.tmp.name).resolve()
         self.previous = os.environ.pop('ROBOTEAM_POLICY_ENV', None)
-        self.run = prepare_run(self.root/'run', harness_path=harness(self.root, self.mode))
+        self.run = prepare_run(self.root/'run', run_settings_path=run_settings(self.root, self.mode))
         self.service = RuntimeService(self.run, FakeWorld, fake_capture)
         self.n = 0
         self.call('Controller', 'ready')
@@ -141,7 +141,7 @@ class ServiceTests(unittest.TestCase):
 
     def call(self, actor, op, data=None):
         self.n += 1
-        if actor != 'Meta': check_request(op, data or {})  # As every engine's robot tool does first.
+        if actor != 'Meta': check_request(op, data or {})  # As every harness's robot tool does first.
         job = self.service.accept(actor, op, data or {}, 'c' + str(self.n))
         self.service.pump()
         return job['result']

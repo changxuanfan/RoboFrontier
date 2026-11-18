@@ -16,7 +16,7 @@ Markdown resolves inside the checkout. `--skill-validator PATH --skill-python PY
 external Skill format check; valid formatting does not show better coordination.
 
 - **Full** discovers every Python test under `tests/`: fake services, robot kinematics, real
-  headless MuJoCo contact checks, media codecs, and installed engine CLIs against local stub model
+  headless MuJoCo contact checks, media codecs, and installed harness CLIs against local stub model
   endpoints. Tests whose CLI, platform or ignored data is absent skip; read the skipped count rather
   than counting them as passed.
 - **`--protocol-only`** runs a fixed list of contract modules with MuJoCo model creation and
@@ -31,14 +31,14 @@ external Skill format check; valid formatting does not show better coordination.
   not mistaken for tampering. Work notes, mail and deadlines can be reread from SQLite; restarting
   a physical world in place is rejected, with no implicit reset or replay.
 - **Messages.** Recipients, delivery batches and acknowledgments persist; duplicate requests do
-  not execute twice; each topology's communication authority holds. Mail merges at every
+  not execute twice; each system's communication authority holds. Mail merges at every
   task-role tool boundary, including races around waits, unrelated mail, timeouts, terminal
   returns and executor loss. Empty mail stays quiet; a receive failure neither replays the
   operation nor creates actions.
 - **Robot ownership.** One arm cannot be owned twice; actions on distinct arms run concurrently.
   A Single Controller selects the robot per command, moves independent arms concurrently and is
   not serialized. Pose, joint and gripper admission, stop permissions and routing hold across all
-  four topologies. All four start directly at START; `ready` only queries.
+  four systems. All four start directly at START; `ready` only queries.
 - **Actions and time limits.** Slow actions get deadlines matching their requested travel and
   rates; HTTP polling keeps the original ID. Real headless checks cover opening and rotation past
   long timeouts and holding jaw references after a timeout stop. An unconfirmed stop keeps its

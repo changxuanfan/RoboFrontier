@@ -24,8 +24,8 @@ class ScriptTests(unittest.TestCase):
         self.tmp = Path(self.enterContext(tempfile.TemporaryDirectory()))
         dial_run(self.tmp / 'data', 'good')
         self.runs = self.tmp / 'runs.json'
-        self.runs.write_text(json.dumps([dict(id='good', k='good', family='dial'),
-                                         dict(id='gone', k='no/such/run', family='dial')]))
+        self.runs.write_text(json.dumps([dict(id='good', k='good', task_type='dial'),
+                                         dict(id='gone', k='no/such/run', task_type='dial')]))
 
     def main(self, *argv):
         err = io.StringIO()
@@ -55,7 +55,7 @@ class ScriptTests(unittest.TestCase):
 
     def test_atomic_lists_dial_runs_without_turns(self):
         out = self.tmp / 'extracted'
-        self.runs.write_text(json.dumps([dict(id='good', k='good', family='dial')]))
+        self.runs.write_text(json.dumps([dict(id='good', k='good', task_type='dial')]))
         self.assertEqual(self.main('extract', '--root', self.tmp / 'data', '--runs', self.runs, '--out', out,
                                    '--workers', 1)[0], 0)
         turns = self.tmp / 'turns.json'

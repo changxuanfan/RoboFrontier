@@ -1,6 +1,6 @@
 """Real installed Codex, synthetic OAuth/Responses, no login or provider calls.
 
-Exercises the implemented engine/gateway/Unix transport, native named profiles,
+Exercises the implemented harness/gateway/Unix transport, native named models,
 native fork lineage and completed-child/fork-again rounds. It does not qualify
 Linux kernel confinement, GPU rendering or genuine model behavior/capacity.
 """
@@ -19,8 +19,8 @@ import unittest
 from unittest.mock import patch
 
 from roboteam.runtime.sandbox import access as policy_access
-from roboteam.harness.codex.job_engine import build_manifest, engine
-from roboteam.harness.codex.launch import launch_config, profile
+from roboteam.harness.codex.job_harness import build_manifest, harness
+from roboteam.harness.codex.launch import launch_config, model_entry
 from roboteam.harness.codex.tool_backend import prepare as prepare_tools
 from roboteam.runtime.run.setup import write_json
 from roboteam.launch.slurm.auth import CredentialLease, BorrowedAccess
@@ -39,7 +39,7 @@ def jwt(generation):
 
 @unittest.skipUnless(shutil.which('codex') and shutil.which('node'), 'Native CLI and Node required')
 class NativeGatewayTests(unittest.TestCase):
-    def test_native_refresh_profiles_parallel_tools_fork_return_and_fork_again(self):
+    def test_native_refresh_model_entries_parallel_tools_fork_return_and_fork_again(self):
         state = {'generation': 0, 'refreshes': 0, 'stale': 0, 'requests': 0, 'paths': set()}
         lock = threading.Lock()
         class Handler(BaseHTTPRequestHandler):
@@ -123,7 +123,7 @@ class NativeGatewayTests(unittest.TestCase):
         # Short path also works with macOS's 104-byte Unix socket limit.
         with tempfile.TemporaryDirectory(prefix='rfg-', dir='/tmp') as temporary:
             root = Path(temporary).resolve()
-            private = root/'engine'
+            private = root/'harness'
             private.mkdir(mode=0o700)
             store = root/'credentials'
             store.mkdir(mode=0o700)
@@ -136,7 +136,7 @@ class NativeGatewayTests(unittest.TestCase):
                                CODEX_REFRESH_TOKEN_URL_OVERRIDE=address+'/oauth/token', NO_PROXY='127.0.0.1,localhost')
             jobs = []
             with CredentialLease(store, private/'codex') as lease, patch.dict(os.environ, environment, clear=True):
-                selected = profile('luna_subscription')
+                selected = model_entry('luna_subscription')
                 selected.update(tool_backend='landlock-v1', runner_backend='slurm-managed-v1', use_cached_model_metadata=False)
                 for index in range(38):
                     run = root/'runs'/str(index)
@@ -154,7 +154,7 @@ class NativeGatewayTests(unittest.TestCase):
                     write_json(run/'private/inputs/codex.json', launch)
                     jobs.append({'run_directory': str(run)})
                 try:
-                    with engine(jobs[:36], env=environment, timeout_s=35) as (manifest, process):
+                    with harness(jobs[:36], env=environment, timeout_s=35) as (manifest, process):
                         result = subprocess.run(['node', str(ROOT/'tests/helpers/slurm_gateway_native_client.js'),
                                                  str(private/'control/manifest.json')],
                                                 capture_output=True, text=True, env=environment, timeout=65)
@@ -171,7 +171,7 @@ class NativeGatewayTests(unittest.TestCase):
                                       'ROBOTEAM_JOB_PRIVATE_ROOT':str(borrower),
                                       'ROBOTEAM_BORROWED_AUTH':str(store/'current.json')}
                         with BorrowedAccess(store,borrower/'codex') as reader:
-                            with engine(jobs[36:],env=borrowed_env,timeout_s=35):
+                            with harness(jobs[36:],env=borrowed_env,timeout_s=35):
                                 attached=subprocess.run(['node',str(ROOT/'tests/helpers/slurm_gateway_native_client.js'),
                                                          str(borrower/'control/manifest.json')],
                                                         capture_output=True,text=True,env=borrowed_env,timeout=65)
@@ -181,7 +181,7 @@ class NativeGatewayTests(unittest.TestCase):
                                 self.assertFalse(reader.reconcile())
                             self.assertFalse((borrower/'codex/auth.json').exists())
                         self.assertEqual((private/'codex/auth.json').read_bytes(),before)
-                    exported = [json.loads((Path(job['run_directory'])/'private/engine/gateway-transcripts/index.json').read_text())
+                    exported = [json.loads((Path(job['run_directory'])/'private/harness/gateway-transcripts/index.json').read_text())
                                 for job in jobs[:36]]
                     self.assertEqual(sum(len(row['threads']) for row in exported), 109)
                     self.assertTrue(all(t.get('verified') for row in exported for t in row['threads']))
@@ -203,7 +203,7 @@ class NativeGatewayTests(unittest.TestCase):
                                 target=cold/'codex/sessions'/matches[0].relative_to(private/'codex/sessions')
                                 target.parent.mkdir(parents=True,exist_ok=True)
                                 shutil.copy2(matches[0],target)
-                        with engine(cold_jobs,env=cold_env,timeout_s=35):
+                        with harness(cold_jobs,env=cold_env,timeout_s=35):
                             continued=subprocess.run(['node',str(ROOT/'tests/helpers/slurm_cold_resume_client.js'),
                                                       str(cold/'control/manifest.json')],
                                                      capture_output=True,text=True,env=cold_env,timeout=65)

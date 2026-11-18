@@ -1,12 +1,13 @@
 # The tasks
 
 Four task types, each at three team sizes and three difficulty levels: 36 tasks. In the code and
-the file names a task type is a *family*, a team size a *scale* and a task a *case*. The release, [`benchmark/release.json`](../../benchmark/release.json) with its
-`release_id`, names every case's scene, public task and family materials by hash; each case lives
-in `benchmark/<family>/<case>/`, and each family's cases are listed in
-`benchmark/<family>/catalog.json`.
+the file names a team size is a *scale* and a task a *case*; the released files store the task type
+under the key `family`. The release, [`benchmark/release.json`](../../benchmark/release.json) with its
+`release_id`, names every case's scene, public task and task materials by hash; each case lives
+in `benchmark/<task-type>/<case>/`, and each task type's cases are listed in
+`benchmark/<task-type>/catalog.json`.
 
-| Family | Cases | What the team does | Level 1 → 3 | Guide |
+| Task type | Cases | What the team does | Level 1 → 3 | Guide |
 | --- | --- | --- | --- | --- |
 | Transport | `transport-a04/a08/a12-d1..d3` (4, 8, 12 arms; 12, 24, 36 items) | Deliver each requested cube or cylinder to its place on a destination board | released on the board → both blades in fixed blind slots → the same slots on a spring-supported board | [Transport](transport.md) |
 | Mosaic | `mosaic-a04-6x12`, `a06-9x18`, `a08-12x24`, `d1..d3` (4, 6, 8 arms; 72, 162, 288 cells) | Build a four-color Tulip pattern, one cube per cell | 70 mm pockets → printed lines → no visible grid | [Mosaic](mosaic.md) |
@@ -16,9 +17,9 @@ in `benchmark/<family>/<case>/`, and each family's cases are listed in
 ## What every case shares
 
 - **What a policy sees.** The case's public task (`public/task.json`: rules, objective, cameras
-  and their mounts, initial geometry, stock, orders or targets, completion rules), the family
+  and their mounts, initial geometry, stock, orders or targets, completion rules), the task type
   materials in `public/inputs/family/` (the Mosaic target image; Dial previews, camera
-  calibration and table geometry) and the family Skill (`prompts/guides/<family>.md`).
+  calibration and table geometry) and the task guide (`prompts/guides/<task-type>.md`).
   While running it sees timestamped RGB images from the cameras it asks for, robot
   proprioception and action feedback. It never sees the scene file, the evaluator or live
   object state.

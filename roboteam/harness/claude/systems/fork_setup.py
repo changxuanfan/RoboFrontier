@@ -60,7 +60,7 @@ def pending_history(store, parent, batch_id, actor, owner, cancel_event=None, ti
 
 def _boundary(store, parent_host, batch_id, actor, owner):
     cfg = store.get('config')
-    if cfg.get('engine') != 'claude' or cfg.get('topology') != 'adaptive':
+    if cfg.get('harness') != 'claude' or cfg.get('system') != 'adaptive':
         raise ValueError('Expected an adaptive Claude run')
     if store.get('lifecycle') != 'running' or store.get('dispatch_paused', False):
         raise ValueError('Run is not active')

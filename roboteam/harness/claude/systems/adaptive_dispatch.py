@@ -10,8 +10,8 @@ from roboteam.runtime.run.cli import execute
 class AdaptiveDispatcher:
     def __init__(self, store, setup):
         cfg=store.get('config')
-        self.engine = getattr(setup.parent, 'engine', 'claude')
-        if cfg.get('engine') != self.engine or cfg.get('topology') != 'adaptive':
+        self.harness = getattr(setup.parent, 'harness', 'claude')
+        if cfg.get('harness') != self.harness or cfg.get('system') != 'adaptive':
             raise ValueError('Expected adaptive Claude runtime')
         if setup.store is not store or store.agent('Controller')['thread_id'] != setup.parent.session_id:
             raise ValueError('Setup does not own this runtime and parent')
@@ -52,7 +52,7 @@ class AdaptiveDispatcher:
             self.recovering.add(actor)
             self.admin('observe-sessions', {'observations': [{'actor': actor, 'thread_id': value['thread_id'],
                 'status': 'error', 'turn_id': value['turn_id'], 'observed_at': time.time(),
-                'source': self.engine + '.host', 'turn_status': 'failed'}]})
+                'source': self.harness + '.host', 'turn_status': 'failed'}]})
             return True
         self.recovering.discard(actor)
         if (not isinstance(value,dict) or value.get('thread_id') != agent['thread_id']
@@ -63,7 +63,7 @@ class AdaptiveDispatcher:
             return self.pause('Native role state requires review')
         self.admin('observe-sessions',{'observations':[{'actor':actor,'thread_id':value['thread_id'],
             'status':value['status'],'turn_id':value['turn_id'],'observed_at':time.time(),
-            'source':self.store.get('config')['engine']+'.host','turn_status':None}]})
+            'source':self.store.get('config')['harness']+'.host','turn_status':None}]})
         return True
 
     def observe_team(self):

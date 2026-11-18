@@ -65,13 +65,13 @@ def _stopped_files(root, relative, issues, *, prune_config=True):
             path = parent/name
             if path.is_symlink():
                 issues.append({'path': relative(path), 'issue': 'symlink', 'link': _link_text(path)})
-            elif prune_config and name == 'config' and parent.name == 'engine' and parent.parent.name == 'private':
+            elif prune_config and name == 'config' and parent.name == 'harness' and parent.parent.name == 'private':
                 # A Claude home can contain credentials beside its projects.
                 projects = path/'projects'
                 if projects.is_dir() or projects.is_symlink():
                     yield from (file for file in _stopped_files(projects, relative, issues, prune_config=False)
                                 if file.name.endswith('.jsonl'))
-            elif not (prune_config and name == 'config' and parent.name == 'engine'):
+            elif not (prune_config and name == 'config' and parent.name == 'harness'):
                 kept.append(name)
         dirs[:] = kept
         for name in sorted(files):
@@ -196,12 +196,12 @@ def submit(config, output, *, queue=False, root=ROOT):
     if not config['evidence']['auto_collect'] or not config['evidence']['auto_archive']:
         raise ValueError('Slurm requires automatic collection and ZIP archiving')
     policy = config['policy']
-    selected = _catalog(config)['profiles'][policy['profile']]
+    selected = _catalog(config)['models'][policy['model']]
     if selected.get('transport') == 'loopback_gateway':
-        raise ValueError('A loopback gateway profile runs on the gateway\'s own host, not in a Slurm allocation')
+        raise ValueError('A loopback gateway model runs on the gateway\'s own host, not in a Slurm allocation')
     if subscription:
         if selected.get('provider') != 'openai' or selected.get('env_key'):
-            raise ValueError('Subscription Slurm requires an exact native ChatGPT profile without API keys')
+            raise ValueError('Subscription Slurm requires an exact native ChatGPT model without API keys')
         store = Path(config['slurm']['credential_store']).resolve()
         for excluded in (Path(root).resolve(), Path(output).resolve()):
             if store.is_relative_to(excluded) or excluded.is_relative_to(store):
@@ -211,7 +211,7 @@ def submit(config, output, *, queue=False, root=ROOT):
             for excluded in (Path(root).resolve(), Path(output).resolve(), store):
                 if relay.is_relative_to(excluded) or excluded.is_relative_to(relay):
                     raise ValueError('Keep egress state outside checkouts, submissions and credential directories')
-    elif not selected.get('env_key') or (selected.get('auth_mode') == 'oauth_token' and policy['engine'] != 'claude'):
+    elif not selected.get('env_key') or (selected.get('auth_mode') == 'oauth_token' and policy['harness'] != 'claude'):
         raise ValueError('The Slurm entry supports API credentials and the Claude subscription token only')
     if not subscription and config['slurm'].get('egress_mode') == 'mac-ssh':
         relay = Path(config['slurm']['egress_root']).resolve()
@@ -226,19 +226,19 @@ def submit(config, output, *, queue=False, root=ROOT):
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     # Where preflight wrote it: the configured runs root, else the submitting checkout's runs/.
     receipts = runs_root(config) if runs_root(config) != ROOT/'runs' else root/'runs'
-    from roboteam.runtime.tools.tool_mode import receipt_name
-    receipt = receipts/'engineering/model-compatibility'/receipt_name(policy['profile'], policy.get('tool_mode', 'full'))/'report.json'
-    if policy['engine'] == 'codex' and (not receipt.is_file() or not json.loads(receipt.read_text()).get('passed')):
+    from roboteam.runtime.tools.tools_mode import receipt_name
+    receipt = receipts/'engineering/model-compatibility'/receipt_name(policy['model'], policy.get('tools', 'full'))/'report.json'
+    if policy['harness'] == 'codex' and (not receipt.is_file() or not json.loads(receipt.read_text()).get('passed')):
         raise ValueError('Run the matching explicit provider preflight before preparing a Slurm submission')
     claude_receipts = {}
-    if policy['engine'] == 'claude':
+    if policy['harness'] == 'claude':
         # The job checks them as any Claude run does (harness/claude/checks/readiness.py require_ready), from its own runs/.
         from roboteam.harness.claude.checks.readiness import PRECHECKS, BLOCKED_PRECHECKS, require_ready
-        ready = require_ready(policy['profile'], runs=receipts, selected=selected)
+        ready = require_ready(policy['model'], runs=receipts, selected=selected)
         claude_receipts = {'claude-precheck.json': (Path(ready['basic_receipt']), PRECHECKS),
                            'claude-blocked-precheck.json': (Path(ready['blocked_receipt']), BLOCKED_PRECHECKS)}
     if subscription:
-        from roboteam.harness.codex.job_engine import fingerprint
+        from roboteam.harness.codex.job_harness import fingerprint
         if json.loads(receipt.read_text()).get('job_gateway_sha256') != fingerprint():
             raise ValueError('Run the matching job-gateway subscription preflight before submission')
     # A Claude subscription token never travels in the job's environment: a process keeps its
@@ -272,14 +272,14 @@ def submit(config, output, *, queue=False, root=ROOT):
         files['policy-assets.tar.gz'] = _copy_verified(archive, staged/'policy-assets.tar.gz')
         write_json(staged/'effective-config.json', config)
         files['effective-config.json'] = checksum(staged/'effective-config.json')
-        if policy['engine'] == 'codex':
+        if policy['harness'] == 'codex':
             files['provider-report.json'] = _copy_verified(receipt, staged/'provider-report.json')
         for name, (source, _) in claude_receipts.items():
             files[name] = _copy_verified(source, staged/name)
         (staged/'job.sbatch').write_text(_script(output, python, config['slurm']))
         files['job.sbatch'] = checksum(staged/'job.sbatch')
         write_json(staged/'submission.json', {'schema': 'roboteam.slurm-submission.v1',
-            'commit': commit, 'sha256': files, 'engine': policy['engine'],
+            'commit': commit, 'sha256': files, 'harness': policy['harness'],
             'credential_env': selected.get('env_key'), 'auth_mode': 'subscription' if subscription else 'api',
             **({'credential_file': str(token_file)} if token_file else {}),
             'model_calls_during_preparation': 0,
@@ -319,12 +319,12 @@ def stage(submission, local):
     _extract_source(submission/'source.tar', source)
     asset = source/'runs/asset-cache'/(manifest['sha256']['policy-assets.tar.gz']+'.tar.gz')
     _copy_verified(submission/'policy-assets.tar.gz', asset)
-    if config['policy']['engine'] == 'codex':
-        from roboteam.runtime.tools.tool_mode import receipt_name
+    if config['policy']['harness'] == 'codex':
+        from roboteam.runtime.tools.tools_mode import receipt_name
         receipt = (source/'runs/engineering/model-compatibility'
-                   /receipt_name(config['policy']['profile'], config['policy'].get('tool_mode', 'full'))/'report.json')
+                   /receipt_name(config['policy']['model'], config['policy'].get('tools', 'full'))/'report.json')
         _copy_verified(submission/'provider-report.json', receipt)
-    if config['policy']['engine'] == 'claude':
+    if config['policy']['harness'] == 'claude':
         from roboteam.harness.claude.checks.readiness import PRECHECKS, BLOCKED_PRECHECKS
         for name, folder in (('claude-precheck.json', PRECHECKS), ('claude-blocked-precheck.json', BLOCKED_PRECHECKS)):
             _copy_verified(submission/name, source/'runs'/folder/'submitted/receipt.json')
@@ -357,7 +357,7 @@ def execute(local):
         with subscription_environment(config, local, on_failure=lambda: request_stop(local)):
             # The policy environment under ROBOTEAM_POLICY_ENV_BASE, as `roboteam prepare` picks it.
             from roboteam.runtime.sandbox.policy_env import ENV_VAR, apply_default
-            if config['policy'].get('tool_mode', 'full') == 'robot_only':
+            if config['policy'].get('tools', 'full') == 'robot_only':
                 os.environ[ENV_VAR] = 'off'  # As `roboteam prepare`: no shell, so no Python environment.
             else:
                 apply_default()
@@ -407,7 +407,7 @@ def subscription_environment(config, local, *, on_failure):
     for excluded in (ROOT.resolve(), local):
         if store.is_relative_to(excluded) or excluded.is_relative_to(store):
             raise ValueError('Credential store must be separate from source, scratch and evidence')
-    private = local/'engine'
+    private = local/'harness'
     private.mkdir(mode=0o700, exist_ok=False)
     original = dict(os.environ)
     if config['slurm'].get('egress_mode') == 'mac-ssh':
@@ -449,7 +449,7 @@ def routed_environment(config, local, *, on_failure):
     for excluded in (ROOT.resolve(), local):
         if relay.is_relative_to(excluded) or excluded.is_relative_to(relay):
             raise ValueError('Keep egress state separate from source and scratch')
-    private = local/'engine'
+    private = local/'harness'
     private.mkdir(mode=0o700, exist_ok=False)
     original = dict(os.environ)
     try:
@@ -506,11 +506,11 @@ def _writer_locks(local):
         runs |= {Path(job['run_directory']).resolve() for job in jobs}
     except (OSError, ValueError, KeyError, TypeError):
         pass
-    # Runs live at <profile>/<case>/; also find them when batch.json is missing or unreadable.
+    # Runs live at <model>/<case>/; also find them when batch.json is missing or unreadable.
     if batch.is_dir() and not batch.is_symlink():
-        for profile in batch.iterdir():
-            if profile.is_dir() and not profile.is_symlink():
-                runs |= {case for case in profile.iterdir() if case.is_dir() and not case.is_symlink()}
+        for model_entry in batch.iterdir():
+            if model_entry.is_dir() and not model_entry.is_symlink():
+                runs |= {case for case in model_entry.iterdir() if case.is_dir() and not case.is_symlink()}
     for run in runs:
         if not run.is_relative_to(batch) or run == batch:
             continue

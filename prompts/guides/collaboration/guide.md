@@ -1,6 +1,6 @@
 ---
 name: robot-collaboration
-description: Execute a RoboTeam run as Controller, Worker or adaptive delegate with the bound robot tool, work note and messages; family Skills cover task-specific manipulation.
+description: Execute a RoboTeam run as Controller, Worker or adaptive delegate with the bound robot tool, work note and messages; task guides cover task-specific manipulation.
 ---
 
 # Robot collaboration
@@ -9,11 +9,11 @@ Read [tools](tools.md) before robot operations. Read
 [communication](communication.md) in hierarchical, decentralized and adaptive
 runs, and [bounded forks](adaptive.md) in adaptive runs. Read
 [motion screening](motion-check.md) when you consider `check_motion`.
-The task guide (`task_skill`) covers that family's manipulation.
+The task guide (`task_skill`) covers that task type's manipulation.
 
 ## Roles and lifecycle
 
-Use the current mode. Centralized has one Controller planning and operating all
+Use the current mode. Single-agent has one Controller planning and operating all
 robots, including concurrent actions. Hierarchical has a Controller and standing
 Workers; decentralized has standing Workers negotiating directly. Adaptive has a Controller
 and temporary delegates that execute a bounded scope and promptly hand it back
@@ -25,7 +25,7 @@ At START each Worker may inspect, plan and perform independent local work with i
 robot: work with no unresolved joint commitment or shared resource, not
 everything inside its reach. Coordinate joint commitments through your permitted
 route; accepted restrictions bind until changed. In hierarchical mode the Controller manages joint
-allocation, priorities and reservations; peers negotiate only affected commitments
+allocation, priorities and reservations; decentralized Workers negotiate only affected commitments
 and start uncontested work meanwhile. A request alone is not acceptance. Avoid
 whole-team approval barriers; authorize continuations early, so an observable
 release within scope enables execution without another approval.

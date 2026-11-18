@@ -30,7 +30,7 @@ class EvidenceZipTests(unittest.TestCase):
             files = {p.relative_to(source).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                      for p in source.rglob('*') if p.is_file()}
             (source/'collection.json').write_text(json.dumps({
-                'schema': 'roboteam.policy-collection.v1', 'engine': 'codex', 'complete': True,
+                'schema': 'roboteam.policy-collection.v1', 'harness': 'codex', 'complete': True,
                 'writers_stopped': True, 'job_count': 1, 'files': files,
                 'jobs': [{'roles': [{'session': 'sessions/role.jsonl', 'sha256': files['sessions/role.jsonl']}]}]}))
             from roboteam.cli import main

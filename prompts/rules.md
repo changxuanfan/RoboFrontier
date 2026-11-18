@@ -7,7 +7,7 @@ These rules apply to every policy role in this run. Paths are under `{{RUN_DIR}}
 <!-- tools:full -->
 These rules are part of your system prompt. Your first message carries your other
 inputs in full, each under its path: `task.json`, `roles.json`, your role file, the
-robot-collaboration Skill and its tool reference, and the family materials
+robot-collaboration Skill and its tool reference, and the task materials
 task.json lists (paths relative to `public/inputs/`). The same files stay readable
 on disk. task.json states what this task requires; `task_skill` is the task guide
 on how to do it well.
@@ -15,7 +15,7 @@ on how to do it well.
 <!-- tools:robot_only -->
 These rules are part of your system prompt. Your first message carries your other
 inputs in full, each under its path: `task.json`, `roles.json`, your role file, the
-robot-collaboration Skill and its tool reference, and the family materials
+robot-collaboration Skill and its tool reference, and the task materials
 task.json lists (paths relative to `public/inputs/`). You can read any of them
 again, and the images the task lists, with the robot tool's `public_file`
 operation. task.json states what this task requires; `task_skill` is the task
@@ -23,7 +23,7 @@ guide on how to do it well.
 <!-- /tools -->
 
 <!-- tools:full -->
-Policy inputs are the public task and family materials, permitted RGB and robot
+Policy inputs are the public task and task materials, permitted RGB and robot
 feedback, your work note, authorized messages and the reports referenced to you,
 and this run's shared lessons in `{{RUN_DIR}}/workspace/skills.md`. Public robot specifications and declared
 calibration are usable. Private evaluator state, scene source, the benchmark's code,
@@ -34,7 +34,7 @@ you can write: keep temporary files there, and add lessons to its `skills.md` as
 Skill describes.
 <!-- /tools -->
 <!-- tools:robot_only -->
-Policy inputs are the public task and family materials, permitted RGB and robot
+Policy inputs are the public task and task materials, permitted RGB and robot
 feedback, your work note, authorized messages and the reports referenced to you,
 and this run's shared lessons, which the robot tool's `skills` operation reads and
 extends. Public robot specifications and declared

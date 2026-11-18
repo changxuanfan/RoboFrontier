@@ -2,13 +2,13 @@ from pathlib import Path
 import tempfile
 import unittest
 from roboteam.runtime.world.store import RuntimeStore
-from team_harness import load_harness
+from team_settings import load_run_settings
 from roboteam.runtime.tools.scheduling import Scheduler, FakeSessionAdapter, dispatch_once
 
 class SchedulingTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.path=Path(self.tmp.name)/'runtime.sqlite'
-        self.s=RuntimeStore(self.path);self.s.initialize('fake',load_harness(),['A','B','C'])
+        self.s=RuntimeStore(self.path);self.s.initialize('fake',load_run_settings(),['A','B','C'])
         for actor in ('Controller','A','B','C'):
             self.s.update_agent(actor,ready=True,thread_id='fake-'+actor)
         self.s.start()

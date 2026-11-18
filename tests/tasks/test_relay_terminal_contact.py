@@ -2,7 +2,7 @@
 import json
 import unittest
 
-from roboteam.tasks.families import ROOT, RELEASE, read
+from roboteam.tasks.task_types import ROOT, RELEASE, read
 from roboteam.tasks.public import public_task, validate as validate_task
 from roboteam.tasks.relay import is_current
 

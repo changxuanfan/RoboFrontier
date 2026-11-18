@@ -4,7 +4,7 @@ from unittest.mock import patch
 import mujoco,numpy as np
 from roboteam.sim.motion_recording import MotionWriter,MotionReader
 from roboteam.sim.workstation import Workstation
-from roboteam.tasks.families import ROOT,resolve_case
+from roboteam.tasks.task_types import ROOT,resolve_case
 
 class MotionRecordingTests(unittest.TestCase):
     def setUp(self):

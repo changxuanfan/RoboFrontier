@@ -3,7 +3,7 @@
 
 Data never lives in the repository: pass the data root, the run list and output paths.
 A run list is a JSON array of objects with at least `id` and the archive key `k` (see
-`roboteam.analysis.archive`); `family` (transport, mosaic, relay, dial) and any other
+`roboteam.analysis.archive`); `task_type` (transport, mosaic, relay, dial) and any other
 fields are copied into the outputs.
 
   run_analysis.py extract  --root DATA --runs runs.json --out extracted/
@@ -75,7 +75,7 @@ def _compute(path):
 def _turns(job):
     """(id, turns or None, error or None); None turns without error: not a Dial run."""
     sel, root, cache, motion = job
-    if sel.get('family') not in (None, 'dial'):
+    if sel.get('task_type') not in (None, 'dial'):
         return sel['id'], None, None
     try:
         run = Run(sel['k'], root, cache)
@@ -96,14 +96,14 @@ def _skip_reason(d, turns, have_turns):
         return 'no evaluator rows', True
     if not metrics.Clock(d).ok:
         return 'no sim/wall clock (actions without sim times)', True
-    if d['sel'].get('family') == 'dial':
+    if d['sel'].get('task_type') == 'dial':
         if not have_turns:
             return 'no --dial-turns given', False
         if turns is None:
             return 'no dial turns for this run', True
         if isinstance(turns, dict) and turns.get('unknown'):
             return 'dial turns unknown: ' + turns['unknown'], False
-    return 'family %s has no atomic-step rule' % d['sel'].get('family'), False
+    return 'task type %s has no atomic-step rule' % d['sel'].get('task_type'), False
 
 
 def main(argv=None):
@@ -204,10 +204,10 @@ def main(argv=None):
                 skipped.append(dict(id=path.stem, reason='error: ' + traceback.format_exc()[-300:], missing=True))
                 continue
             if new:
-                out.append(dict(id=rid, family=d['sel'].get('family'), v1=v1.get(rid), **new))
+                out.append(dict(id=rid, task_type=d['sel'].get('task_type'), v1=v1.get(rid), **new))
             else:
                 reason, missing = _skip_reason(d, turns.get(rid), bool(a.dial_turns))
-                skipped.append(dict(id=rid, family=d['sel'].get('family'), reason=reason, missing=missing))
+                skipped.append(dict(id=rid, task_type=d['sel'].get('task_type'), reason=reason, missing=missing))
         _write_atomic(Path(a.out), json.dumps(out, ensure_ascii=False))
         _write_atomic(Path(str(a.out) + '.skipped.json'), json.dumps(skipped, ensure_ascii=False, indent=1))
         for x in skipped:

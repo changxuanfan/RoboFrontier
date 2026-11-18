@@ -10,9 +10,9 @@ import uuid
 from pathlib import Path
 
 from roboteam.harness.shared.identity import fingerprint
-from roboteam.tasks.families import ROOT
+from roboteam.tasks.task_types import ROOT
 from roboteam.launch.prepare import load_env
-from roboteam.launch.claude_prepare import profile
+from roboteam.launch.claude_prepare import model_entry
 from roboteam.harness.claude.checks.preflight import claude_version
 
 BASIC = {
@@ -44,13 +44,13 @@ def _read(path):
 
 def _identity(receipt, name, selected, version, schema):
     return (isinstance(receipt,dict) and receipt.get('schema')==schema and receipt.get('passed') is True
-            and receipt.get('profile')==name and receipt.get('requested_model')==selected['model']
-            and receipt.get('profile_sha256')==fingerprint(selected) and bool(version)
+            and receipt.get('model_entry')==name and receipt.get('requested_model')==selected['model']
+            and receipt.get('model_entry_sha256')==fingerprint(selected) and bool(version)
             and receipt.get('claude_version')==version and _positive_number(receipt.get('budget_usd')))
 
 
 def check_receipts(name, basic_path, blocked_path, *, selected=None, version=None):
-    selected=profile(name) if selected is None else selected
+    selected=model_entry(name) if selected is None else selected
     version=claude_version() if version is None else version
     basic=_read(basic_path); blocked=_read(blocked_path)
     checks={'basic_identity':_identity(basic,name,selected,version,'roboteam.claude-precheck.v1'),
@@ -82,7 +82,7 @@ def check_receipts(name, basic_path, blocked_path, *, selected=None, version=Non
     parent=blocked.get('parent_session') if isinstance(blocked,dict) else None
     child=blocked.get('child_session') if isinstance(blocked,dict) else None
     checks['blocked_sessions']=_uuid(parent) and _uuid(child) and parent!=child
-    return {'profile':name,'requested_model':selected['model'],'claude_version':version,
+    return {'model_entry':name,'requested_model':selected['model'],'claude_version':version,
             'precheck_evidence_matches':all(checks.values()),'checks':checks,
             'model_calls':0,
             'note':'Local receipt consistency only; not proof of provider identity, physical task success or billing.'}
@@ -93,7 +93,7 @@ BLOCKED_PRECHECKS = 'engineering/claude-blocked-precheck'
 
 
 def latest_receipts(name, runs=None):
-    """The newest basic and blocked precheck receipts of a profile on this host, under the runs
+    """The newest basic and blocked precheck receipts of a model on this host, under the runs
     root (configuration.runs_root)."""
     if runs is None:
         from roboteam.configuration import runs_root
@@ -102,7 +102,7 @@ def latest_receipts(name, runs=None):
         found = []
         for path in Path(runs, folder).glob('*/receipt.json'):
             receipt = _read(path)
-            if receipt and receipt.get('schema') == schema and receipt.get('profile') == name:
+            if receipt and receipt.get('schema') == schema and receipt.get('model_entry') == name:
                 found.append((receipt.get('finished_at') or path.stat().st_mtime, path))
         return max(found)[1] if found else None
     return (newest(PRECHECKS, 'roboteam.claude-precheck.v1'),
@@ -110,27 +110,27 @@ def latest_receipts(name, runs=None):
 
 
 def require_ready(name, runs=None, **kwargs):
-    """Refuse a Claude run without passed precheck receipts for this profile, CLI version and
+    """Refuse a Claude run without passed precheck receipts for this model, CLI version and
     model configuration, as a Codex run needs its compatibility receipt."""
     basic, blocked = latest_receipts(name, runs)
     if basic is None or blocked is None:
-        raise ValueError(f'No Claude precheck receipts for {name}; run `roboteam preflight --engine claude '
+        raise ValueError(f'No Claude precheck receipts for {name}; run `roboteam preflight --harness claude '
                          '--confirm-spend --max-budget-usd B` first')
     result = check_receipts(name, basic, blocked, **kwargs)
     if not result['precheck_evidence_matches']:
         failed = sorted(k for k, v in result['checks'].items() if not v)
-        raise ValueError(f'Claude precheck receipts for {name} do not match this CLI and profile: '+', '.join(failed))
+        raise ValueError(f'Claude precheck receipts for {name} do not match this CLI and model: '+', '.join(failed))
     return dict(result, basic_receipt=str(basic), blocked_receipt=str(blocked))
 
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile',required=True)
+    parser.add_argument('--model',required=True)
     parser.add_argument('--precheck',required=True,type=Path)
     parser.add_argument('--blocked-precheck',required=True,type=Path)
     args=parser.parse_args()
     load_env(ROOT/'.env')
-    result=check_receipts(args.profile,args.precheck,args.blocked_precheck)
+    result=check_receipts(args.model,args.precheck,args.blocked_precheck)
     print(json.dumps(result,ensure_ascii=False,indent=2))
     return 0 if result['precheck_evidence_matches'] else 1
 

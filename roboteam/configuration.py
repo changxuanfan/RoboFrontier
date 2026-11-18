@@ -8,14 +8,14 @@ from .io import ROOT
 
 DEFAULT = ROOT / 'roboteam.toml'
 SCHEMA_VERSION = 11
-# The model profile of each engine when none is named (models.json); both use an API key.
-DEFAULT_PROFILES = {'codex': 'sol', 'claude': 'opus'}
-TOPOLOGIES = ('adaptive', 'single-agent', 'hierarchical', 'decentralized')
+# The model of each harness when none is named (models.json); both use an API key.
+DEFAULT_MODELS = {'codex': 'sol', 'claude': 'opus'}
+SYSTEMS = ('adaptive', 'single-agent', 'hierarchical', 'decentralized')
 SCHEMA = {
     'schema_version': int,
-    'policy': dict.fromkeys(('engine', 'profile', 'effort', 'topology', 'tool_mode'), str),
+    'policy': dict.fromkeys(('harness', 'model', 'effort', 'system', 'tools'), str),
     'batch': {'parallel': int, 'startup_interval_s': float, 'task_wall_limit_s': float, 'startup_timeout_s': float},
-    'selection': {'families': list, 'cases': list, 'level': int, 'min_arms': bool},
+    'selection': {'task_types': list, 'cases': list, 'level': int, 'min_arms': bool},
     'render': {'device': str, 'observation_profile': str, 'record_realtime_video': bool},
     'runtime': {'codex_home_scope': str, 'codex_home': str, 'codex_tool_backend': str},
     'evidence': {'auto_collect': bool, 'auto_archive': bool, 'archive_format': str, 'delete_sources': bool},
@@ -71,10 +71,10 @@ def load_configuration(path=None, overrides=None, *, host=None):
     _merge(result, updates)
     if overrides:
         _merge(result, deepcopy(overrides))
-    # An engine chosen without a profile gets that engine's default profile.
-    if ('profile' not in updates.get('policy', {})
-            and 'profile' not in (overrides or {}).get('policy', {})):
-        result['policy']['profile'] = DEFAULT_PROFILES[result['policy']['engine']]
+    # An harness chosen without a model gets that harness's default model.
+    if ('model' not in updates.get('policy', {})
+            and 'model' not in (overrides or {}).get('policy', {})):
+        result['policy']['model'] = DEFAULT_MODELS[result['policy']['harness']]
     # `auto` values are settled here, before anything is frozen: for this host, for the Slurm
     # nodes a submission will run on (host='slurm', from the job's GPU request), or for the
     # Linux container a Docker command starts (host='container', with this host's GPU if any).
@@ -87,10 +87,10 @@ def load_configuration(path=None, overrides=None, *, host=None):
     if runtime['codex_tool_backend'] == 'auto':
         linux = host in ('slurm', 'container') or (host is None and sys.platform.startswith('linux'))
         # A robot_only role has no file or shell tool to confine, so no tool worker is used.
-        linux = linux and result['policy']['tool_mode'] != 'robot_only'
+        linux = linux and result['policy']['tools'] != 'robot_only'
         # Codex's own sandbox on macOS; on Linux the tool worker under Landlock and seccomp,
         # the backend scripts/release/check_policy_env.py checks there.
-        runtime['codex_tool_backend'] = 'landlock-v1' if linux and result['policy']['engine'] == 'codex' else 'native'
+        runtime['codex_tool_backend'] = 'landlock-v1' if linux and result['policy']['harness'] == 'codex' else 'native'
     validate_configuration(result)
     return result
 
@@ -122,7 +122,7 @@ def runs_root(config=None):
     return path if path.is_absolute() else ROOT / path
 
 
-# The longest a route outage may hold a Slurm world: the wall backstop (tasks.families.WALL_BACKSTOP_S).
+# The longest a route outage may hold a Slurm world: the wall backstop (tasks.task_types.WALL_BACKSTOP_S).
 MAX_EGRESS_PAUSE_S = 172800
 
 
@@ -134,15 +134,15 @@ def validate_configuration(config):
         if config[section][field] not in allowed:
             raise ValueError(f'Invalid {section}.{field}: choose from {", ".join(map(str, allowed))}')
 
-    choice('policy', 'engine', ('codex', 'claude'))
-    choice('policy', 'topology', TOPOLOGIES)
+    choice('policy', 'harness', ('codex', 'claude'))
+    choice('policy', 'system', SYSTEMS)
     choice('policy', 'effort', ('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
-    from roboteam.runtime.tools.tool_mode import MODES, ROBOT_ONLY
-    choice('policy', 'tool_mode', MODES)
-    robot_only = config['policy']['tool_mode'] == ROBOT_ONLY
+    from roboteam.runtime.tools.tools_mode import MODES, ROBOT_ONLY
+    choice('policy', 'tools', MODES)
+    robot_only = config['policy']['tools'] == ROBOT_ONLY
     from re import fullmatch
-    if not fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', config['policy']['profile']):
-        raise ValueError('Invalid policy.profile identifier')
+    if not fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', config['policy']['model']):
+        raise ValueError('Invalid policy.model identifier')
     batch = config['batch']
     if type(batch['parallel']) is not int or not 1 <= batch['parallel'] <= 36:
         raise ValueError('batch.parallel must be 1..36')
@@ -151,12 +151,12 @@ def validate_configuration(config):
         if type(value) not in (int, float) or not math.isfinite(value) or value < 0 or (
                 field != 'startup_interval_s' and value == 0):
             raise ValueError('Invalid batch.' + field)
-    if config['policy']['engine'] == 'claude' and batch['task_wall_limit_s'] > 86400:
+    if config['policy']['harness'] == 'claude' and batch['task_wall_limit_s'] > 86400:
         raise ValueError('The current Claude engineering runner supports at most 86400 seconds')
     choice('selection', 'level', (0, 1, 2, 3))
     if type(config['selection']['level']) is not int:
         raise ValueError('selection.level must be an integer')
-    for field in ('families', 'cases'):
+    for field in ('task_types', 'cases'):
         values = config['selection'][field]
         if not all(type(value) is str and value for value in values) or len(set(values)) != len(values):
             raise ValueError('selection.' + field + ' must contain distinct nonempty strings')
@@ -164,12 +164,12 @@ def validate_configuration(config):
     choice('render', 'observation_profile', ('jpeg_1280x800_q90', 'jpeg_128x80_q95'))
     choice('runtime', 'codex_home_scope', ('task', 'shared', 'job'))
     choice('runtime', 'codex_tool_backend', ('native', 'landlock-v1'))
-    if config['policy']['engine'] != 'codex' and config['runtime']['codex_tool_backend'] != 'native':
-        raise ValueError('codex_tool_backend applies only to the Codex engine')
+    if config['policy']['harness'] != 'codex' and config['runtime']['codex_tool_backend'] != 'native':
+        raise ValueError('codex_tool_backend applies only to the Codex harness')
     if robot_only and config['runtime']['codex_tool_backend'] != 'native':
         # landlock-v1 confines policy_exec and policy_image, which a robot_only role does not
         # have; the Slurm subscription route requires that backend and is not supported yet.
-        raise ValueError('policy.tool_mode = "robot_only" uses codex_tool_backend = "native": '
+        raise ValueError('policy.tools = "robot_only" uses codex_tool_backend = "native": '
                          'there are no file or shell tools to confine')
     choice('container', 'seccomp_profile', ('default', 'unconfined'))
     choice('evidence', 'archive_format', ('zip',))
@@ -181,7 +181,7 @@ def validate_configuration(config):
     choice('slurm', 'auth_mode', ('api', 'subscription'))
     subscription = slurm['auth_mode'] == 'subscription'
     if subscription:
-        if (config['policy']['engine'] != 'codex'
+        if (config['policy']['harness'] != 'codex'
                 or config['runtime']['codex_home_scope'] != 'job'
                 or config['runtime']['codex_home']
                 or config['runtime']['codex_tool_backend'] != 'landlock-v1'):
@@ -201,7 +201,7 @@ def validate_configuration(config):
     if slurm['egress_mode'] == 'mac-ssh':
         path = Path(slurm['egress_root'])
         # Claude reads its token from .env inside the job (launch/slurm/job.py execute) and needs only the route.
-        routed = slurm['auth_mode'] == 'subscription' or config['policy']['engine'] == 'claude'
+        routed = slurm['auth_mode'] == 'subscription' or config['policy']['harness'] == 'claude'
         if not routed or not path.is_absolute() or '..' in path.parts:
             raise ValueError('Mac egress requires subscription mode or Claude, and an absolute private egress_root')
     elif slurm['egress_root']:
@@ -248,12 +248,12 @@ def rendering_environment(device, system, base):
 MODELS = ROOT/'models.json'
 
 
-def model_catalog(engine, path=None):
-    """One engine's model catalog: its section of models.json, or a file holding
+def model_catalog(harness, path=None):
+    """One harness's model catalog: its section of models.json, or a file holding
     only that section (a run's frozen copy, or one written for a batch)."""
     import json
     document = json.loads(Path(path or MODELS).read_text())
-    if 'engines' in document:
-        if engine not in document['engines']: raise ValueError('No model catalog for engine: '+str(engine))
-        return document['engines'][engine]
+    if 'harnesses' in document:
+        if harness not in document['harnesses']: raise ValueError('No model catalog for harness: '+str(harness))
+        return document['harnesses'][harness]
     return document

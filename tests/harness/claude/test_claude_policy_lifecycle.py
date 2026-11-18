@@ -7,7 +7,7 @@ import threading
 import unittest
 
 from fake_pipeline import FakeWorld, fake_capture
-from roboteam.harness.claude.systems.single_agent import CentralizedPolicyHost
+from roboteam.harness.claude.systems.single_agent import SingleAgentPolicyHost
 from roboteam.runtime.tools.pipeline_client import client_call
 from roboteam.runtime.run.setup import prepare_run
 from roboteam.runtime.world.service import RuntimeService
@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class Host:
-    def __init__(self, run, actor, profile, base_env):
+    def __init__(self, run, actor, model_entry, base_env):
         self.actor = actor
         self.session_id = 'offline-session'
         self.state = 'new'
@@ -41,10 +41,10 @@ class LifecycleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             cfg = json.loads((ROOT / 'roboteam/runtime/run/defaults.json').read_text())
-            cfg.update(engine='claude', topology='single-agent', model='fake', effort='high')
+            cfg.update(harness='claude', system='single-agent', model='fake', effort='high')
             config_path = root / 'config.json'
             config_path.write_text(json.dumps(cfg))
-            run = prepare_run(root / 'run', harness_path=config_path)
+            run = prepare_run(root / 'run', run_settings_path=config_path)
             service = RuntimeService(run, FakeWorld, fake_capture)
 
             class Handler(http.server.BaseHTTPRequestHandler):
@@ -65,7 +65,7 @@ class LifecycleTests(unittest.TestCase):
                 conn = run / 'private/state/connections' / (actor + '.json')
                 data = json.loads(conn.read_text()); data['url'] = f'http://127.0.0.1:{server.server_port}'
                 conn.write_text(json.dumps(data))
-            host = CentralizedPolicyHost(run, {'model': 'fake', 'effort': 'high'}, {}, host_factory=Host)
+            host = SingleAgentPolicyHost(run, {'model': 'fake', 'effort': 'high'}, {}, host_factory=Host)
             try:
                 host.bind_and_bootstrap()
                 self.assertEqual(service.store.get('lifecycle'), 'running')

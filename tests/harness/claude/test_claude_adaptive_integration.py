@@ -33,7 +33,7 @@ const batch={id:'b',source_thread_id:'parent',status:'creating',claimed_by:null,
 let forks=0,prompt=null;
 const tools={exec_command:async({cmd})=>{
   let value={recorded:true};
-  if(cmd.includes(' snapshot '))value={lifecycle:'running',paused:false,config:{poll_interval_s:0,model:'m',effort:'high',engine:'codex'},
+  if(cmd.includes(' snapshot '))value={lifecycle:'running',paused:false,config:{poll_interval_s:0,model:'m',effort:'high',harness:'codex'},
     agents:{Controller:{kind:'controller',thread_id:'parent'}},delegations:batch.status==='creating'?[batch]:[]};
   else if(cmd.includes(' delegate-claim '))value={delegation:structuredClone(batch)};
   else if(cmd.includes(' delegate-activate '))batch.status='active';
@@ -116,13 +116,13 @@ class AdaptiveIntegrationTests(unittest.TestCase):
     def test_cli_runtime_delegate_fork_and_return(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); config=json.loads((ROOT/'roboteam/runtime/run/defaults.json').read_text())
-            config.update(engine='claude',topology='adaptive',model='claude-opus-5-5',effort='high')
+            config.update(harness='claude',system='adaptive',model='claude-opus-5-5',effort='high')
             config_path=root/'config.json'; config_path.write_text(json.dumps(config))
-            run=prepare_run(root/'run',harness_path=config_path)
+            run=prepare_run(root/'run',run_settings_path=config_path)
             model=http.server.ThreadingHTTPServer(('127.0.0.1',0),StubModel)
-            profile={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
+            model_entry={'model':'claude-opus-5-5','effort':'high','env_key':'FAKE_KEY',
                      'base_url':f'http://127.0.0.1:{model.server_port}'}
-            launch=run/'private/inputs/claude.json'; launch.write_text(json.dumps({'profile':profile}))
+            launch=run/'private/inputs/claude.json'; launch.write_text(json.dumps({'model_entry':model_entry}))
             manifest_path=run/'private/inputs/manifest.json'; manifest=json.loads(manifest_path.read_text())
             for path in (launch,): manifest['input_sha256'][str(path.relative_to(run))]=hashlib.sha256(path.read_bytes()).hexdigest()
             manifest_path.write_text(json.dumps(manifest))
@@ -163,7 +163,7 @@ class AdaptiveIntegrationTests(unittest.TestCase):
                 StubModel.asked.wait(10); time.sleep(1)
                 return result
             def setup(*args,**kwargs): return AdaptiveForkSetup(*args,fork_factory=fork,**kwargs)
-            host=AdaptivePolicyHost(run,profile,env,ledger,turn_budget_usd=.5,setup_factory=setup)
+            host=AdaptivePolicyHost(run,model_entry,env,ledger,turn_budget_usd=.5,setup_factory=setup)
             StubModel.requests.clear(); StubModel.asked.clear(); StubModel.asked_at=None
             try:
                 host.bind_and_bootstrap()
@@ -183,7 +183,7 @@ class AdaptiveIntegrationTests(unittest.TestCase):
                 claims=list((run/'private/claude-forks').glob('*.json')) if (run/'private/claude-forks').exists() else []
                 self.assertEqual(batch['status'],'finished',{'batch':batch,'setup':host.dispatcher.setup_result,
                     'claims':[json.loads(p.read_text()) for p in claims], 'errors':errors,
-                    'transcripts':[(p.name,[(r.get('type'),r.get('message',{}).get('content')) for r in map(json.loads,p.read_text().splitlines()) if r.get('type')=='assistant']) for p in (run/'private/engine/config/projects').glob('*/*.jsonl')]})
+                    'transcripts':[(p.name,[(r.get('type'),r.get('message',{}).get('content')) for r in map(json.loads,p.read_text().splitlines()) if r.get('type')=='assistant']) for p in (run/'private/harness/config/projects').glob('*/*.jsonl')]})
                 self.assertEqual(service.store.get('robot_owners')['A'],'Controller')
                 self.assertEqual(len(host.setup.hosts),1)
                 # No tool-free setup turn: every model request offered the role's tools.

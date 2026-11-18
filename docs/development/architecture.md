@@ -11,8 +11,8 @@ lessons.
 | `roboteam.toml` | Defaults for new runs, validated and frozen at preparation |
 | `benchmark/` | The released cases; `benchmark/release.json` selects every run's inputs |
 | `prompts/` | Shared rules, role prompts and guides |
-| `models.json` | Model profiles, one section per engine |
-| `roboteam/` | Run setup, scheduling, native engine hosts, robot tools, MuJoCo world, IK and scoring |
+| `models.json` | Models, one section per harness |
+| `roboteam/` | Run setup, scheduling, native harness hosts, robot tools, MuJoCo world, IK and scoring |
 | `scripts/` | Engineering commands: policy environment, release, validation, analysis, media |
 | `tests/` | Synthetic contracts, kinematics, physics and native CLI checks |
 | `runs/` | Run evidence and engineering outputs, not in Git (`paths.runs_root`) |
@@ -20,15 +20,15 @@ lessons.
 The command line is `roboteam` ([command-line guide](../cli.md)); the full folder map is
 in [repository layout](repository-layout.md).
 
-## Engines and topologies
+## Harnesses and systems
 
 Codex runs native app-server sessions with dynamic robot tools. Claude Code runs native CLI
 sessions with robot MCP tools. An outer manager (a shell or any coding agent) operates the batch;
 it is not the measured policy and must not supply solutions or private evaluation data. Native
-history, forking and transport stay engine-specific; the shared contracts define authority, robot
+history, forking and transport stay harness-specific; the shared contracts define authority, robot
 actions, permitted observations, scoring and evidence.
 
-| Agent system (`policy.topology`) | Initial policy roles |
+| Agent system (`policy.system`) | Initial policy roles |
 | --- | --- |
 | `adaptive` | One Controller that creates and retires temporary delegates as it decides |
 | `single-agent` | One Controller operates all robots; no delegates |
@@ -37,8 +37,8 @@ actions, permitted observations, scoring and evidence.
 
 The coordinating Controller does not get its Workers' action authority. A Single Controller
 names the robot in each command and can move independent arms concurrently. An Adaptive run may
-alternate between no delegates and several in one task; using none does not change its topology.
-Standing teams bind one native session per initial role. Both engines run all four topologies
+alternate between no delegates and several in one task; using none does not change its system.
+Standing teams bind one native session per initial role. Both harnesses run all four systems
 ([Claude standing teams](../harness/claude-code.md#standing-teams)).
 
 ## START and time
@@ -62,17 +62,17 @@ never copied from a desktop login or another user.
 ```text
 public/inputs/task.json            frozen public task
 public/inputs/rules.md             frozen shared rules (also in the system prompt)
-public/inputs/roles.json           roles and communication topology
+public/inputs/roles.json           roles and agent system
 public/inputs/roles/<role>.md      role instructions
-public/inputs/guide/               the robot-collaboration Skill and its references
-public/inputs/family/              family Skill and materials
+public/inputs/guide/               the robot-collaboration guide and its references
+public/inputs/family/              task guide and materials
 public/inputs/environment.md       the policy environment; policy-env.sh is sourced before each Claude command
 public/observations/               timestamped RGB observations
 public/results/                    reports returned by roles
 workspace/                         the policy's only writable folder and working directory
 workspace/skills.md                the run's shared lessons file
 private/inputs/task.json           full task and scene inputs
-private/inputs/harness.json        engineering parameters
+private/inputs/run.json            run settings
 private/inputs/effective-config.json, manifest.json    resolved settings; format, model and input hashes
 private/inputs/policy-access.json  the frozen access table and environment hash
 private/inputs/bootstrap/          system prompt and start, resume and delegate messages
@@ -87,11 +87,11 @@ private/state/control/             STOP marker, status snapshot, locks
 private/outputs/                   evaluation.json, seal.json, report.json, motion/, events, exports
 private/outputs/segments/<k>/      segment k's own motion, video and evaluation
 private/logs/                      owner, host, server and supervisor logs
-private/engine/                    CLI and MCP configuration, per-turn evidence, transcripts
+private/harness/                    CLI and MCP configuration, per-turn evidence, transcripts
 ```
 
-A batch folder holds `batch.json`, `effective-config.json`, `profiles/`, `control/` (STOP,
-status snapshot, locks, `durable/`), `logs/` and one `<profile>/<case>/` run per selected case.
+A batch folder holds `batch.json`, `effective-config.json`, `models/`, `control/` (STOP,
+status snapshot, locks, `durable/`), `logs/` and one `<model>/<case>/` run per selected case.
 The layouts are defined in `roboteam/runtime/run/layout.py`.
 
 `public` and `private` define the evidence contract; the operating-system boundary is the
@@ -113,7 +113,7 @@ shared filesystem.
 | Role notes, self-reported state, review deadlines | Agent through tools | Material decisions, before ending a turn |
 | Mail, delivery batches, acknowledgments, notices | Harness | Communication events |
 | Call IDs and accepted / running / terminal / unknown outcomes | Execution service | Request and action transitions |
-| Native session observations | Engine driver | Timestamped platform observations |
+| Native session observations | Harness driver | Timestamped platform observations |
 | Images and optional real-time video | Observation and recording service | Requested observations or configured sampling |
 | Exports and summaries | Export and collection code | Closure, failure handling or explicit export |
 | Completion and process events | Independent evaluator | Task-specific sampling and final evaluation |
@@ -127,7 +127,7 @@ experiment with recorded provenance.
 
 ## Observations and actions
 
-At startup a role has its role, the task, the rules, the Skill and the tool reference in its start
+At startup a role has its role, the task, the rules, the collaboration guide and the tool reference in its start
 message. `ready` returns compact static `robot_facts`; `robot_model` gives detailed geometry and
 `observe` proprioception and selected RGB views. Reach bounds are admitted commands, not safe
 regions, current occupancy or task assignments.
@@ -151,7 +151,7 @@ locks protect request and receipt updates, not a whole wait or movement.
 
 ## Scheduling and Adaptive handback
 
-The Skill defines coordination and authority; the harness is not a task planner. Standing roles
+The collaboration guide defines coordination and authority; the runtime is not a task planner. Standing roles
 prepare independently within scope; shared resources and joint commitments need coordination. Meta
 performs engineering setup and fixed platform operations without deciding task strategy.
 
@@ -187,7 +187,7 @@ finish can keep a private `evaluation-window.json`, an interruption `interruptio
 and its window. These are neither policy inputs nor checkpoints. Simulation duration is counted
 from the START simulation time.
 
-The engines own the native session history; host events and robot evidence complement it, and
+The harnesses own the native session history; host events and robot evidence complement it, and
 live session files are append-only. Observations are JPEG 1280 × 800 at quality 90; offline video
 size is independent. Motion keeps actual times, float32 poses, appearance events and lossless
 XOR/ZIP compression; the float64-to-float32 conversion is the one lossy step

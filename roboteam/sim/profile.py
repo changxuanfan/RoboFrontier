@@ -4,7 +4,7 @@ Contacts and solver options are written in each released scene.xml (scripts/rele
 docs/benchmark/physics.md). What stays here is how a world steps:
 
 - Sleep. Mosaic objects never creep, and Mosaic's large scenes stay below real time
-  without sleep, so its objects may always sleep. In the other families objects sleep
+  without sleep, so its objects may always sleep. In the other task types objects sleep
   only after every arm has been idle for two seconds; any action wakes them.
 - Relay settles for 30 s before anything may sleep, so its hanging weights come to rest.
 - After each 20 ms control step the world runs a forward pass without noslip
@@ -14,7 +14,7 @@ docs/benchmark/physics.md). What stays here is how a world steps:
 import mujoco
 
 SLEEP = int(mujoco.mjtEnableBit.mjENBL_SLEEP)
-FAMILIES = {
+TASK_TYPES = {
     'mosaic': {'sleep': 'always'},
     'transport': {'sleep': 'idle'},
     'dial': {'sleep': 'idle'},
@@ -49,14 +49,14 @@ def forward_after_step(world):
     finally: options.noslip_iterations = iterations
 
 
-def settings(family):
-    return dict(FAMILIES[family])
+def settings(task_type):
+    return dict(TASK_TYPES[task_type])
 
 
 def attach(world):
-    """Apply the family's step settings; returns the per-step part, or None."""
-    family = settings(world.task['family'])
-    if family['sleep'] == 'always':
+    """Apply the task type's step settings; returns the per-step part, or None."""
+    task_type = settings(world.task['family'])
+    if task_type['sleep'] == 'always':
         world.model.opt.enableflags |= SLEEP
         return None
-    return IdleSleep(world, family.get('settle_s', 0.))
+    return IdleSleep(world, task_type.get('settle_s', 0.))

@@ -36,10 +36,10 @@ class FinishPhysicsSmokeTests(unittest.TestCase):
         FinishModel.requests.clear()
         try:
             batch=directory/'batch'; case='transport-a04-d1'
-            prepare_batch(batch,['opus'],cases=[case],topology='single-agent')
+            prepare_batch(batch,['opus'],cases=[case],system='single-agent')
             run=batch/'opus'/case
             launch=run/'private/inputs/claude.json'; data=json.loads(launch.read_text())
-            data['profile'].update(base_url=f'http://127.0.0.1:{server.server_port}',env_key='FAKE_KEY')
+            data['model_entry'].update(base_url=f'http://127.0.0.1:{server.server_port}',env_key='FAKE_KEY')
             launch.write_text(json.dumps(data))
             manifest=run/'private/inputs/manifest.json'; frozen=json.loads(manifest.read_text())
             frozen['input_sha256']['private/inputs/claude.json']=hashlib.sha256(launch.read_bytes()).hexdigest()
@@ -60,8 +60,8 @@ class FinishPhysicsSmokeTests(unittest.TestCase):
             report=export(run)
             self.assertEqual(report['lifecycle'],'ended')
             self.assertEqual(report['evaluation'],evaluation)
-            self.assertEqual(report['engine'],'claude')
-            self.assertEqual(report['engine'], 'claude')
+            self.assertEqual(report['harness'],'claude')
+            self.assertEqual(report['harness'], 'claude')
             self.assertIn('not qualified for formal benchmark scoring',(run/'private/outputs/report.md').read_text())
             self.assertFalse(report['all_requested_models_verified'])
             self.assertEqual(report['changed_inputs'],[])

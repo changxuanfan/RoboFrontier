@@ -33,14 +33,14 @@ def serving(batch):
 
 
 class BatchViewerTests(unittest.TestCase):
-    def fixture(self,base,*,engine='codex'):
+    def fixture(self,base,*,harness='codex'):
         run=base/'profile/task'
         (run/'private/state').mkdir(parents=True)
-        job=dict(case_id='transport-a04-d1',family='transport',level=1,arms=4,
-                 profile='test-profile',status='prepared')
+        job=dict(case_id='transport-a04-d1',task_type='transport',level=1,arms=4,
+                 model_entry='test-model',status='prepared')
         job['run_directory']=str(run)
         write(base/'batch.json',dict(status='running',jobs=[job]))
-        write(base/'effective-config.json',{'policy':{'engine':engine}})
+        write(base/'effective-config.json',{'policy':{'harness':harness}})
         return run
 
     def test_http_api_is_readonly_even_with_no_database_and_with_invalid_database(self):
@@ -64,12 +64,12 @@ class BatchViewerTests(unittest.TestCase):
 
     def test_claude_supervisor_updates_and_terminal_snapshot_are_distinct(self):
         with tempfile.TemporaryDirectory() as temporary:
-            base=Path(temporary).resolve();run=self.fixture(base,engine='claude')
+            base=Path(temporary).resolve();run=self.fixture(base,harness='claude')
             write(base/'control/engineering-status.json',{'status':'running','jobs':[{
-                'profile':'test-profile','case_id':'transport-a04-d1','status':'running'}]})
+                'model_entry':'test-model','case_id':'transport-a04-d1','status':'running'}]})
             with serving(base) as url:
                 with urlopen(url+'/api',timeout=3) as response:first=json.load(response)
-                self.assertEqual(first['engine'],'claude')
+                self.assertEqual(first['harness'],'claude')
                 self.assertEqual(first['cases'][0]['lifecycle'],'running')
                 self.assertIsNone(first['cases'][0]['snapshot_mtime'])
                 write(run/'private/outputs/runtime.json',{'lifecycle':'ended','agents':{
@@ -118,7 +118,7 @@ class BatchViewerTests(unittest.TestCase):
             self.assertEqual(row['lifecycle'],'task_state_not_reported')
             self.assertIsNone(row['evaluation']);self.assertIsNone(row['snapshot_mtime'])
 
-    def test_same_case_in_two_profiles_has_unambiguous_image_keys(self):
+    def test_same_case_in_two_model_entries_has_unambiguous_image_keys(self):
         with tempfile.TemporaryDirectory() as temporary:
             base=Path(temporary).resolve();first=self.fixture(base)
             second=base/'other-profile/task';image=first/'private/outputs/final-global.jpg'
@@ -126,7 +126,7 @@ class BatchViewerTests(unittest.TestCase):
             other=second/'private/outputs/final-global.jpg';other.parent.mkdir(parents=True)
             other.write_bytes(b'second saved JPEG fixture')
             data=json.loads((base/'batch.json').read_text());data['jobs'].append({
-                **data['jobs'][0],'profile':'other-profile','run_directory':str(second)})
+                **data['jobs'][0],'model_entry':'other-model','run_directory':str(second)})
             write(base/'batch.json',data)
             with serving(base) as url:
                 with urlopen(url+'/api',timeout=3) as response:rows=json.load(response)['cases']

@@ -233,7 +233,7 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
             store = RuntimeStore(run/'private/state/runtime.sqlite')
             try:
                 record['prepared'] = True; write_json(status_path, record)
-                store.event('MANUAL_TASK_RECOVERY', 'Meta', {'reason': REASON, 'engine': 'claude',
+                store.event('MANUAL_TASK_RECOVERY', 'Meta', {'reason': REASON, 'harness': 'claude',
                                                             'plan': {k: plan[k] for k in ('segment', 'frame', 'sim_s', 'pose_sha256',
                                                                                           'failed_setups', 'remaining_s', 'role_threads')}})
                 record['failed_setups'] = fail_unstarted_reviews(store)

@@ -15,12 +15,12 @@ Platform details are in the [Mac](hosts/mac.md), [RunPod and plain Linux](hosts/
 | --- | --- |
 | Operating system | macOS, or Linux with glibc 2.28 or newer |
 | [uv](https://docs.astral.sh/uv/) | Installs Python 3.12 (`.python-version`) and the locked packages from `uv.lock` |
-| Node.js and npm | Node.js 22 is what CI uses; the Codex host and the engine CLIs need it |
-| Engine CLI | Exactly the pinned version in `roboteam/runtime/run/versions.py`: Codex `0.165.0`, Claude Code `2.1.316`. Install only the engine you will run |
+| Node.js and npm | Node.js 22 is what CI uses; the Codex host and the harness CLIs need it |
+| Harness CLI | Exactly the pinned version in `roboteam/runtime/run/versions.py`: Codex `0.165.0`, Claude Code `2.1.316`. Install only the harness you will run |
 | Rendering | macOS: native OpenGL (`render.device = "native"`). Linux: NVIDIA EGL (`nvidia`, the default) or Mesa OSMesa (`cpu`, needs the system `libosmesa6` package or equivalent) |
 | Network | For `bootstrap` (about 186 MB of pinned assets), building the policy environment, and the model provider |
 
-`prepare` and `run` refuse a different engine CLI, MuJoCo, NumPy or Pillow version than the
+`prepare` and `run` refuse a different harness CLI, MuJoCo, NumPy or Pillow version than the
 pinned ones.
 
 ## 2. Install
@@ -31,7 +31,7 @@ cd RoboTeam
 uv sync --locked
 ```
 
-Install the engine CLI at its pinned version, for example globally:
+Install the harness CLI at its pinned version, for example globally:
 
 ```sh
 npm install --global @openai/codex@0.165.0              # Codex
@@ -52,7 +52,7 @@ off for runs.
 
 `bootstrap` downloads the policy asset archive pinned in `benchmark/assets.json`, checks its
 SHA-256, and restores every referenced file (the scene meshes and textures under
-`benchmark/<family>/<case>/assets/` and the Franka Panda model under `vendor/panda/`), checking
+`benchmark/<task-type>/<case>/assets/` and the Franka Panda model under `vendor/panda/`), checking
 each file's hash. It reuses files that already verify and calls no model. On failure it names
 the file or hash that differs: do not substitute another archive. For a machine without network
 access, copy the archive named in `benchmark/assets.json` over and run
@@ -65,26 +65,26 @@ access, copy the archive named in `benchmark/assets.json` over and run
 ```
 
 This copies `.env.example` to `.env` with mode 0600 and refuses to overwrite an existing `.env`.
-(By hand: `cp .env.example .env && chmod 600 .env`.) Fill in only the variables of the profiles
+(By hand: `cp .env.example .env && chmod 600 .env`.) Fill in only the variables of the models
 you use; `.env` is ignored by Git. Values are read literally, and a variable already set in the
 process environment wins.
 
 | Variable | Used by |
 | --- | --- |
-| `OPENAI_API_KEY` | Codex `sol` (the default profile) and `luna` |
-| `ANTHROPIC_API_KEY` | Claude Code `opus` (the default Claude profile) and `haiku` |
+| `OPENAI_API_KEY` | Codex `sol` (the default model) and `luna` |
+| `ANTHROPIC_API_KEY` | Claude Code `opus` (the default Claude model) and `haiku` |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code `opus_subscription` and `haiku_subscription_token`; create it with `claude setup-token` |
-| `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, `KIMI_API_KEY`, `KIMI_CODE_API_KEY`, `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_ANTHROPIC_BASE_URL` | Third-party profiles of either engine |
+| `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, `KIMI_API_KEY`, `KIMI_CODE_API_KEY`, `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_ANTHROPIC_BASE_URL` | Third-party models of either harness |
 
-Codex subscription profiles (`sol_subscription` and others) use a login in
+Codex subscription models (`sol_subscription` and others) use a login in
 `~/.roboteam/codex-home` instead: `CODEX_HOME=~/.roboteam/codex-home codex login`. Never
 put credentials in a TOML file, a command argument or a commit. The Claude subscription token
-reaches the CLI on a pipe, never in an environment variable. Profiles and their authentication
+reaches the CLI on a pipe, never in an environment variable. Models and their authentication
 are listed in the [provider guide](harness/README.md#providers).
 
 ## 5. A site TOML
 
-`roboteam.toml` holds the defaults: Codex, profile `sol` (gpt-6.1-sol), effort `high`, topology
+`roboteam.toml` holds the defaults: Codex, model `sol` (gpt-6.1-sol), effort `high`, system
 `adaptive`, all 36 released cases, 36 parallel runs, NVIDIA rendering. Override what differs in
 a partial, untracked TOML, starting from the example for your platform:
 
@@ -94,9 +94,9 @@ cp docs/hosts/examples/mac.toml site.toml      # or slurm.toml, linux.toml
 ```
 
 `config` prints the resolved settings. Unknown fields and invalid values are errors. Command
-options override the TOML: `--engine`, `--profile`, `--effort`, `--topology` (`single-agent`,
+options override the TOML: `--harness`, `--model`, `--effort`, `--system` (`single-agent`,
 `hierarchical`, `decentralized`, `adaptive`), `--parallel`, `--render`, `--level`,
-`--min-arms`, `--cases`, `--families`. Runs, receipts, exports and caches go under
+`--min-arms`, `--cases`, `--task-types`. Runs, receipts, exports and caches go under
 `paths.runs_root`; empty means `<repo>/runs`, and `ROBOTEAM_RUNS_ROOT` overrides both.
 
 ## 6. Check the machine: `doctor`
@@ -105,7 +105,7 @@ options override the TOML: `--engine`, `--profile`, `--effort`, `--topology` (`s
 .venv/bin/roboteam --config site.toml doctor
 ```
 
-Doctor starts the selected engine CLI (and Codex's tool sandbox when selected) and renders a real
+Doctor starts the selected harness CLI (and Codex's tool sandbox when selected) and renders a real
 RGB frame with the configured backend. It authenticates nothing and calls no model. The JSON
 report has one entry per check with `passed` and, on failure, `error`. A render failure means the
 backend does not match the machine: use `--render native` on macOS and `--render cpu` on Linux
@@ -117,7 +117,7 @@ without an NVIDIA GPU. A backend never falls back to another one.
 .venv/bin/roboteam --config site.toml plan
 ```
 
-`plan` lists the selected cases (`jobs`), the engine, profile and topology, and
+`plan` lists the selected cases (`jobs`), the harness, model and system, and
 `policy_environment`, the environment the runs will use. It writes nothing and calls no model.
 
 ## 8. The policy Python environment
@@ -132,7 +132,7 @@ needs network access and `uvx`):
 ```
 
 Then check it where the runs will run (on Slurm, on a compute node). The check drives each
-engine CLI with a local stub model, so it contacts no provider:
+harness CLI with a local stub model, so it contacts no provider:
 
 ```sh
 .venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id> \
@@ -142,7 +142,7 @@ engine CLI with a local stub model, so it contacts no provider:
 On macOS `prepare` uses the build under `/Users/Shared/roboteam` by default. On Linux set
 `ROBOTEAM_POLICY_ENV_BASE` to the base folder you built into; without it `prepare` refuses.
 `ROBOTEAM_POLICY_ENV=PATH` names a specific build. Preparation also refuses a build that is
-missing, changed, or has no passing check for this engine and its CLI version, and prints the two
+missing, changed, or has no passing check for this harness and its CLI version, and prints the two
 commands above; run the check again after changing a CLI. On Linux keep runs and `TMPDIR`
 outside `/tmp` (for example under `/var/tmp`). Details and known limits:
 [policy environment](hosts/policy-environment.md).
@@ -153,11 +153,11 @@ outside `/tmp` (for example under `/var/tmp`). Details and known limits:
 .venv/bin/roboteam --config site.toml preflight --confirm-spend
 ```
 
-Preflight makes real, possibly billable model calls: it checks that the selected profile and
-effort work with the engine's images, tools and sessions, and writes a receipt (for Codex under
-`<runs root>/engineering/model-compatibility/<profile>/`). Without `--confirm-spend` it calls no
+Preflight makes real, possibly billable model calls: it checks that the selected model and
+effort work with the harness's images, tools and sessions, and writes a receipt (for Codex under
+`<runs root>/engineering/model-compatibility/<model>/`). Without `--confirm-spend` it calls no
 model and does not pass. `--smoke-only` runs a smaller check whose receipt does not admit runs;
-for Claude, `--max-budget-usd N` caps the check's estimated cost. `run` refuses a profile, effort
+for Claude, `--max-budget-usd N` caps the check's estimated cost. `run` refuses a model, effort
 or CLI version without a matching passed receipt, so check again after changing any of them.
 
 ## 10. Freeze a batch: `prepare`
@@ -221,13 +221,13 @@ files: [continuation](runs/continuation.md).
 
 ```text
 runs/policy/my-batch/
-  batch.json  effective-config.json  control/  logs/  profiles/
-  <profile>/<case>/                 one run
+  batch.json  effective-config.json  control/  logs/  models/
+  <model>/<case>/                 one run
     public/                         what the policy reads: inputs, observations, results
     workspace/                      the policy's only writable folder (skills.md, its own files)
     private/inputs/                 frozen task, scene, harness, source and manifest
     private/outputs/                evaluation.json (the score), seal.json, report.json, motion/, segments
-    private/state/  private/logs/  private/engine/   live database, host logs, engine sessions
+    private/state/  private/logs/  private/harness/   live database, host logs, harness sessions
 ```
 
 When every run has stopped, the batch collects its evidence into
@@ -249,6 +249,6 @@ a batch ([viewer](runs/viewer.md)).
 - Platforms: [Mac](hosts/mac.md), [RunPod and plain Linux](hosts/linux.md),
   [Slurm](hosts/slurm.md) (on the cluster used here, `module load slurm` may be needed before
   `srun` or `sbatch`), [Docker](hosts/docker.md).
-- Engines: [Codex](harness/codex.md), [Claude Code](harness/claude-code.md).
+- Harnesses: [Codex](harness/codex.md), [Claude Code](harness/claude-code.md).
 - What a run is: [architecture](development/architecture.md), [runtime protocol](benchmark/rules.md),
   [physics and robot limits](benchmark/physics.md), [the tasks](tasks/README.md).

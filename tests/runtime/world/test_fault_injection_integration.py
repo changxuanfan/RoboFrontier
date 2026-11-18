@@ -15,7 +15,7 @@ import unittest
 from roboteam.runtime.world.fault_injection import arm as arm_fault
 from roboteam.runtime.tools.pipeline_client import client_call
 from roboteam.runtime.world.store import RuntimeStore
-from harness.shared.test_engine_parity import prepared
+from harness.shared.test_harness_parity import prepared
 from runtime.run.test_run_segments_integration import ROOT, owner_command, wait_until
 
 
@@ -67,7 +67,7 @@ class FaultInjectionTests(unittest.TestCase):
             store = RuntimeStore(run / 'private/state/runtime.sqlite')
             try:
                 kinds = [e['kind'] for e in store.events(500)]
-                self.assertIn('ENGINEERING_FAULT_INJECTED', kinds)
+                self.assertIn('HARNESSERING_FAULT_INJECTED', kinds)
                 self.assertEqual(store.get('lifecycle'), 'running')
             finally: store.close()
 

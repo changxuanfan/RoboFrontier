@@ -25,11 +25,11 @@ def occupancy(intervals, start, end):
 
 
 def model_evidence(directory, actor, thread, config, codex_home=None):
-    if config.get('engine', 'codex') == 'claude':
+    if config.get('harness', 'codex') == 'claude':
         # CLI reports are useful observations but do not establish the effective
         # provider model or rule out remapping and auxiliary requests.
         turns=[]
-        evidence=run_layout.path(directory,'engine_turns')
+        evidence=run_layout.path(directory,'harness_turns')
         for path in evidence.glob('*-summary.json'):
             try:
                 data=json.loads(path.read_text())
@@ -40,7 +40,7 @@ def model_evidence(directory, actor, thread, config, codex_home=None):
                               'status':data.get('status')})
             except (OSError, ValueError, AttributeError, TypeError):
                 continue
-        config_dir=run_layout.path(directory,'engine_config')/'projects'
+        config_dir=run_layout.path(directory,'harness_config')/'projects'
         transcripts=[p for p in session_glob(config_dir,thread+'.jsonl') if p.parent.parent==config_dir] if thread else []
         return {'thread_id':thread, 'turns':turns, 'verified':False,
                 'native_subagent_calls':native_subagent_calls(transcripts),
@@ -94,9 +94,9 @@ def export(directory, codex_home=None):
     if metric_evaluation is None and (output/'interruption-evaluation.json').exists():
         metric_evaluation=json.loads((output/'interruption-evaluation.json').read_text()).get('evaluation')
     report={'lifecycle':lifecycle,'evaluation':evaluation,
-            'host_metrics': export_metrics(directory, config.get('engine', 'codex')),
+            'host_metrics': export_metrics(directory, config.get('harness', 'codex')),
             'scope':'One run, potentially multiple native sessions; public initial information, RGB and robot feedback. No population or architecture superiority claim.',
-            'topology':config['topology'],'robot_count':robot_count,
+            'system':config['system'],'robot_count':robot_count,
             'run_id':run_id,'start_sim_time_s':start_sim_time,
             'sim_seconds':end['details']['sim_time_s']-start_sim_time if end and start_sim_time is not None else None,
             'wall_seconds':end['created_at']-start['created_at'] if start and end else None,
@@ -120,8 +120,8 @@ def export(directory, codex_home=None):
                                 if e['kind']=='TOOL_RETURN' and e['details'].get('op')=='wait_events')),
             'async_actions':async_actions,
             'interpretation':'Action overlap covers active tool executions, excluding idle pose/grasp holding. It does not establish independent useful work or an architecture advantage.'}
-    # Both engines report the same way; a run's precheck receipts gate it before it starts.
-    report['engine'] = config.get('engine', 'codex')
+    # Both harnesses report the same way; a run's precheck receipts gate it before it starts.
+    report['harness'] = config.get('harness', 'codex')
     if isinstance(metric_evaluation,dict) and 'metrics' in metric_evaluation:
         report['task_metrics']={**metric_evaluation['metrics'],
             'robot_action_count':sum('started_sim_s' in a for a in actions.values()),
@@ -136,7 +136,7 @@ def export(directory, codex_home=None):
            f"Wall time: {report['wall_seconds']} seconds; actions: {sum(report['actions_by_arm'].values())}; messages: {len(messages)}.",'',
            f"Requested model settings verified: {report['all_requested_models_verified']}; frozen input changes: {report['changed_inputs']}.",'',
            'Action overlap excludes idle holding. Interpret it alongside task progress and video; one pilot does not establish architectural superiority.']
-    if config.get('engine', 'codex') == 'claude':
+    if config.get('harness', 'codex') == 'claude':
         lines[2:2]=['Claude engineering run: not qualified for formal benchmark scoring; do not report it as a scored result.','']
     if 'task_metrics' in report:
         lines+=['',f"Task metrics: {report['task_metrics']}."]

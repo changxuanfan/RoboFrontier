@@ -1,29 +1,29 @@
 """The first message every policy role receives, generated once at preparation.
 
 Hosts send private/inputs/bootstrap/<actor>.md unchanged. The text is the same for both
-engines except its last line (ENGINE_LINES). It carries the role's public text inputs
+harnesses except its last line (HARNESS_LINES). It carries the role's public text inputs
 inline, so no role depends on reading files to start, and states this run's startup
-protocol. The run's rules go into the system prompt (system.md), which both engines keep
+protocol. The run's rules go into the system prompt (system.md), which both harnesses keep
 whole when they compact a long conversation.
 """
 import json
 from pathlib import Path
 
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.tools import tool_mode
+from roboteam.runtime.tools import tools_mode
 
-ENGINE_LINES = {
+HARNESS_LINES = {
     'claude': ('To view an image listed in the task (initial_reference_images, robot_layout_image, '
                'target.reference_image), call robot with op public_image and data {"names": ["<listed path>"]}.'),
     'codex': ('View images listed in the task with view_image. Do not use Codex collaboration tools '
               '(spawn_agent and similar); split work only through robot delegate.'),
 }
-# The last line of a robot_only run's first message, the same on every engine: the robot
-# tool is the role's only tool (runtime/tools/tool_mode.py).
+# The last line of a robot_only run's first message, the same on every harness: the robot
+# tool is the role's only tool (runtime/tools/tools_mode.py).
 ROBOT_ONLY_LINE = ('To view an image listed in the task (initial_reference_images, robot_layout_image, '
                    'target.reference_image), call robot with op public_file and data {"path": "<listed path>"}. '
                    'robot is your only tool: split work only through robot delegate.')
-# The first part of every policy turn's system prompt on both engines (system_prompt adds the
+# The first part of every policy turn's system prompt on both harnesses (system_prompt adds the
 # run's rules): it replaces Claude Code's and Codex's own coding-agent instructions, so both
 # models see the same text.
 SYSTEM_PROMPT = ('You are a RoboTeam policy agent. Follow the frozen public task, your current role, '
@@ -51,7 +51,7 @@ ROBOT_ONLY_WORDING = (
 
 def for_mode(text, mode):
     """A frozen message in the wording of this run's tool mode."""
-    if mode == tool_mode.ROBOT_ONLY:
+    if mode == tools_mode.ROBOT_ONLY:
         for full, robot_only in ROBOT_ONLY_WORDING:
             text = text.replace(full, robot_only)
         if 'skills.md' in text or 'grep' in text:
@@ -95,7 +95,7 @@ MODEL_RESTART = ('Your model session was restarted after the model host stopped 
 MAX_MODEL_RESTARTS = 3
 NETWORK_RESUME = ('Network connectivity recovered after a recorded infrastructure pause. Your previous native turn is confirmed failed; this is a new continuation in the same session and the original live world. Read your saved work and inbox, inspect pending requests and original action IDs, and obtain fresh observations before choosing further work. Preserve completed results and submitted actions. Never replay an old request or infer that a failed model turn means its robot actions did not execute. Continue within your existing role and delegated scope; explicitly return when its agreed completion or documented failure boundary is reached.\n')
 # Sent to a role whose model turn failed on a confirmed capacity or rate limit, after the
-# host's wait (at most MAX_CAPACITY_RETRIES per session); the same on both engines. When the
+# host's wait (at most MAX_CAPACITY_RETRIES per session); the same on both harnesses. When the
 # retries are used up, both hosts pause the run (DISPATCH_PAUSED) instead of sending it again.
 CAPACITY_RESUME = ('Your previous model turn failed because of a capacity or rate limit and the host waited before '
                    'this continuation. It is the same session and the same live world; nothing was reset or replayed. '
@@ -103,10 +103,10 @@ CAPACITY_RESUME = ('Your previous model turn failed because of a capacity or rat
                    'submitted actions and completed results. Then continue the task.\n')
 MAX_CAPACITY_RETRIES = 3  # Also in harness/codex/host/policy_host.js.
 # How long a run's roles may take to start: batch.startup_timeout_s in roboteam.toml, which a
-# prepared run freezes in harness.json; this is the default for callers that pass none.
+# prepared run freezes in run.json; this is the default for callers that pass none.
 STARTUP_TIMEOUT_S = 600.0
 # Sent once to a role whose turn failed on the plan's usage limit, after the world paused until
-# the reset and resumed (runtime/time/quota.py); the same on both engines.
+# the reset and resumed (runtime/time/quota.py); the same on both harnesses.
 QUOTA_RESUME = ('Your previous model turn failed because the account\'s usage limit was reached. The trial was '
                 'paused until the limit reset; that time was not counted, and the world was held exactly as it was. '
                 'It is the same session and the same live world; nothing was reset or replayed. Read your inbox, '
@@ -131,14 +131,14 @@ def bootstrap_text(run, actor):
     public = run / 'public/inputs'
     task = json.loads((public / 'task.json').read_text())
     roles = json.loads((public / 'roles.json').read_text())
-    harness = json.loads((run / 'private/inputs/harness.json').read_text())
-    topology = roles['topology']
+    run_settings = json.loads((run / 'private/inputs/run.json').read_text())
+    system = roles['system']
     if roles['roles'].get(actor, {}).get('kind') in (None, 'manager'):
         raise ValueError('Not a policy role: ' + actor)
     paths = ['rules.md', 'task.json', 'roles.json', 'roles/' + actor + '.md', 'guide/guide.md',
              'guide/tools.md', 'guide/motion-check.md']
-    if topology != 'single-agent': paths.append('guide/communication.md')
-    if topology == 'adaptive': paths.append('guide/adaptive.md')
+    if system != 'single-agent': paths.append('guide/communication.md')
+    if system == 'adaptive': paths.append('guide/adaptive.md')
     if (public / 'environment.md').is_file(): paths.append('environment.md')
     for name in task.get('family_materials', []):
         if not isinstance(name, str): raise ValueError('Invalid public material reference')
@@ -155,17 +155,17 @@ def bootstrap_text(run, actor):
     lessons = run / run_layout.PATHS['skills_file']
     lessons_line = ('Before acting, read the headings of ' + str(lessons) + ', the run\'s shared lessons; '
                     'teammates may add entries during the run.\n\n' if lessons.is_file() else '')
-    mode = tool_mode.of(harness)
-    if mode == tool_mode.ROBOT_ONLY:
+    mode = tools_mode.of(run_settings)
+    if mode == tools_mode.ROBOT_ONLY:
         lessons_line = ('Before acting, list the headings of the run\'s shared lessons with robot op skills and data '
                         '{"action":"headings"}; teammates may add entries during the run.\n\n')
-    startup = STARTUP[harness['startup_protocol']]
+    startup = STARTUP[run_settings['startup_protocol']]
     text = ('This is a new, independent RoboTeam trial in ' + str(run) + '. Your role is ' + actor + '.\n\n'
             'The run\'s rules are in your system prompt (also at ' + str(public / 'rules.md') + '). Your other '
             'public inputs follow in full, each under its path.\n\n' + '\n\n'.join(parts) + '\n\n--- end of inputs ---\n\n'
-            + (READABLE_ROBOT_ONLY if mode == tool_mode.ROBOT_ONLY else
+            + (READABLE_ROBOT_ONLY if mode == tools_mode.ROBOT_ONLY else
                READABLE_ENV if (public / 'environment.md').is_file() else READABLE) + '\n\n' + lessons_line + startup + '\n\n'
-            + (ROBOT_ONLY_LINE if mode == tool_mode.ROBOT_ONLY else ENGINE_LINES[harness.get('engine', 'codex')]) + '\n')
+            + (ROBOT_ONLY_LINE if mode == tools_mode.ROBOT_ONLY else HARNESS_LINES[run_settings.get('harness', 'codex')]) + '\n')
     if len(text.encode()) > MAX_BOOTSTRAP_BYTES:
         raise ValueError('Public inputs exceed the start message size limit')
     return text
@@ -187,7 +187,7 @@ MAX_BOOTSTRAP_BYTES = 400_000
 def system_prompt(run):
     """The frozen system prompt: the policy role statement, then this run's rules."""
     rules = (Path(run) / 'public/inputs/rules.md').read_text()
-    role = ROBOT_ONLY_SYSTEM_PROMPT if tool_mode.of_run(run) == tool_mode.ROBOT_ONLY else SYSTEM_PROMPT
+    role = ROBOT_ONLY_SYSTEM_PROMPT if tools_mode.of_run(run) == tools_mode.ROBOT_ONLY else SYSTEM_PROMPT
     return role + '\n' + rules.rstrip('\n') + '\n'
 
 
@@ -197,7 +197,7 @@ def write_bootstraps(run):
     roles = json.loads((run / 'public/inputs/roles.json').read_text())['roles']
     folder = run / 'private/inputs/bootstrap'
     folder.mkdir()
-    mode = tool_mode.of_run(run)
+    mode = tools_mode.of_run(run)
     (folder / 'system.md').write_text(system_prompt(run))
     written = [folder / 'system.md']
     for actor, info in roles.items():
@@ -205,7 +205,7 @@ def write_bootstraps(run):
         target = folder / (actor + '.md')
         target.write_text(bootstrap_text(run, actor))
         written.append(target)
-    if json.loads((run / 'public/inputs/roles.json').read_text())['topology'] == 'adaptive':
+    if json.loads((run / 'public/inputs/roles.json').read_text())['system'] == 'adaptive':
         target = folder / 'delegate.md'
         target.write_text(for_mode(DELEGATE, mode))
         written.append(target)

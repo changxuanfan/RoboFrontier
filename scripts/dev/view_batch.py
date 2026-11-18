@@ -17,7 +17,7 @@ HTML='''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewpor
 <footer>Read-only JSON/image snapshots. Missing task state is not reported as a started or successful task. Images and saved runtime snapshots can lag execution; this page does not poll a live database, render images or control a run. Completion and process records remain separate. Real-time video is shown only when an existing recording is available.</footer>
 <script>
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function update(){try{const response=await fetch('/api');if(!response.ok)throw Error('Metadata unavailable');const d=await response.json();document.getElementById('summary').textContent=`${d.cases.length} tasks | Saved batch: ${d.status} | ${d.engine||'engine not reported'}`;document.getElementById('content').innerHTML=d.cases.map(r=>`<article class="card"><div class="head"><b>${esc(r.case_id)}</b><span class="badge">${esc(r.lifecycle)}</span></div><p class="dim">${esc(r.profile||'profile not reported')} | ${esc(r.family||'family not reported')} | Level ${esc(r.level??'?')} | ${esc(r.arms??'?')} arms</p>${r.image_mtime?`<img alt="Latest saved task view" src="/frame/${r.key}?v=${r.image_mtime}">`:'<p>No saved image</p>'}<p>${r.evaluation?(r.evaluation.task_success?'Recorded completion: successful':'Recorded completion: not successful'):'No terminal evaluation reported'}</p><p class="dim">${r.snapshot_mtime?`Saved task snapshot: ${Math.max(0,Math.floor(Date.now()/1000-r.snapshot_mtime))} s old`:'No task runtime snapshot; status is from batch metadata'} | Actions: ${esc(r.actions??'not reported')} | Delegates: ${esc(r.delegates??'not reported')}</p><div class="actions">${r.viewer?`<a target="_blank" rel="noopener" href="${esc(r.viewer)}">Existing observation panel</a>`:''}${r.video?`<a target="_blank" href="/video/${r.key}">Existing real-time video</a>`:''}</div></article>`).join('');}catch(e){document.getElementById('summary').textContent='Batch metadata is unavailable; no task state inferred.';}}update();setInterval(update,3000);
+async function update(){try{const response=await fetch('/api');if(!response.ok)throw Error('Metadata unavailable');const d=await response.json();document.getElementById('summary').textContent=`${d.cases.length} tasks | Saved batch: ${d.status} | ${d.harness||'harness not reported'}`;document.getElementById('content').innerHTML=d.cases.map(r=>`<article class="card"><div class="head"><b>${esc(r.case_id)}</b><span class="badge">${esc(r.lifecycle)}</span></div><p class="dim">${esc(r.model_entry||'model not reported')} | ${esc(r.task_type||'task type not reported')} | Level ${esc(r.level??'?')} | ${esc(r.arms??'?')} arms</p>${r.image_mtime?`<img alt="Latest saved task view" src="/frame/${r.key}?v=${r.image_mtime}">`:'<p>No saved image</p>'}<p>${r.evaluation?(r.evaluation.task_success?'Recorded completion: successful':'Recorded completion: not successful'):'No terminal evaluation reported'}</p><p class="dim">${r.snapshot_mtime?`Saved task snapshot: ${Math.max(0,Math.floor(Date.now()/1000-r.snapshot_mtime))} s old`:'No task runtime snapshot; status is from batch metadata'} | Actions: ${esc(r.actions??'not reported')} | Delegates: ${esc(r.delegates??'not reported')}</p><div class="actions">${r.viewer?`<a target="_blank" rel="noopener" href="${esc(r.viewer)}">Existing observation panel</a>`:''}${r.video?`<a target="_blank" href="/video/${r.key}">Existing real-time video</a>`:''}</div></article>`).join('');}catch(e){document.getElementById('summary').textContent='Batch metadata is unavailable; no task state inferred.';}}update();setInterval(update,3000);
 </script></html>'''
 
 
@@ -42,7 +42,7 @@ def batch_rows(base):
         if run==base or not run.is_relative_to(base):
             raise ValueError('Run directory must stay inside the selected batch')
         live=next((j for j in state.get('jobs',[]) if
-            (j.get('profile'),j.get('case_id'))==(job.get('profile'),job.get('case_id'))),job)
+            (j.get('model_entry'),j.get('case_id'))==(job.get('model_entry'),job.get('case_id'))),job)
         rows.append({**job,'key':str(index),'run_dir':run,'status':live.get('status')})
     return batch,state,rows
 
@@ -72,8 +72,8 @@ def batch_snapshot(base):
         image,kind=frame(row)
         evaluation=document(run/'private/outputs/evaluation.json')
         # Do not return work notes, mail, connection tokens or evaluator truth.
-        values.append(dict(key=row['key'],case_id=row['case_id'],profile=row.get('profile'),
-            family=row.get('family',task.get('family')),level=row.get('level',task.get('level')),
+        values.append(dict(key=row['key'],case_id=row['case_id'],model_entry=row.get('model_entry'),
+            task_type=row.get('task_type',task.get('family')),level=row.get('level',task.get('level')),
             arms=row.get('arms',len(task['arms']) if isinstance(task.get('arms'),(dict,list)) else None),
             lifecycle=lifecycle,snapshot_mtime=snapshot_path.stat().st_mtime if snapshot else None,
             actions=len(jobs) if isinstance(jobs,(dict,list)) else None,
@@ -83,7 +83,7 @@ def batch_snapshot(base):
             viewer=document(run/'private/state/observer.json').get('url'),
             evaluation={'task_success':evaluation['task_success']} if 'task_success' in evaluation else None))
     return dict(cases=values,status=state.get('status','not_reported'),
-        engine=config.get('policy',{}).get('engine',batch.get('engine')),read_only=True,
+        harness=config.get('policy',{}).get('harness',batch.get('harness')),read_only=True,
         source='Existing atomic batch JSON and saved task snapshots; SQLite is never opened')
 
 

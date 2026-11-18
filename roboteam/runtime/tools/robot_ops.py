@@ -8,7 +8,7 @@ POLICY_OPS = frozenset(('public_image', 'ready', 'robot_model', 'check_motion', 
                         'history', 'work', 'delegate', 'return_task', 'team', 'checkpoint', 'yield',
                         'observe', 'stop', 'move', 'gripper', 'action_batch', 'recover_action', 'job', 'finish',
                         'pending',
-                        # Only a robot_only run accepts these (runtime/tools/tool_mode.py); the runtime
+                        # Only a robot_only run accepts these (runtime/tools/tools_mode.py); the runtime
                         # refuses them elsewhere.
                         'public_file', 'skills'))
 

@@ -32,10 +32,10 @@ class RunTaskTests(unittest.TestCase):
             'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2']}}}))
         (self.run / 'private/inputs/claude.json').write_text(json.dumps({
             'schema': 'roboteam.claude-launch.v2',
-            'profile': {'env_key': 'FAKE_KEY', 'model': 'fake', 'effort': 'high'}}))
+            'model_entry': {'env_key': 'FAKE_KEY', 'model': 'fake', 'effort': 'high'}}))
         (self.run / 'private/inputs/manifest.json').write_text(json.dumps({
-            'status': 'prepared', 'engine': 'claude'}))
-        (self.run / 'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'single-agent'}))
+            'status': 'prepared', 'harness': 'claude'}))
+        (self.run / 'private/inputs/run.json').write_text(json.dumps({'harness':'claude','system':'single-agent'}))
         (self.run / 'private/state/connections/Meta.json').write_text('{}')
         self.env = {'FAKE_KEY': 'secret', 'PATH': '/bin'}
         self.verify = patch('roboteam.harness.claude.run.verify_inputs', return_value=[])
@@ -81,7 +81,7 @@ class RunTaskTests(unittest.TestCase):
             def run(self):
                 assert self.owner_alive()
                 return {'reason': 'world_ended', 'seal': {'sealed': True}}
-        with patch('roboteam.harness.claude.run.CentralizedSupervisor', Supervisor):
+        with patch('roboteam.harness.claude.run.RunSupervisor', Supervisor):
             result = run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
                                      policy_factory=Attached, owner_factory=lambda *a, **k: Owner(None))
         self.assertEqual(result['status'], 'needs_review')
@@ -89,14 +89,14 @@ class RunTaskTests(unittest.TestCase):
         self.assertTrue(result['owner_alive'])  # live owner is recorded, never killed implicitly
 
     def test_standing_launch_creates_one_run_ledger_before_world(self):
-        for topology in ('hierarchical', 'decentralized'):
-            with self.subTest(topology=topology), tempfile.TemporaryDirectory() as tmp:
+        for system in ('hierarchical', 'decentralized'):
+            with self.subTest(system=system), tempfile.TemporaryDirectory() as tmp:
                 import shutil
                 run = Path(tmp)/'run'; shutil.copytree(self.run, run)
-                (run/'private/inputs/harness.json').write_text(json.dumps({
-                    'engine':'claude','topology':topology,'startup_protocol':'direct_team'}))
+                (run/'private/inputs/run.json').write_text(json.dumps({
+                    'harness':'claude','system':system,'startup_protocol':'direct_team'}))
                 seen = []
-                def standing(run, profile, env, ledger, **kwargs):
+                def standing(run, model_entry, env, ledger, **kwargs):
                     seen.append((ledger.snapshot()['limit_usd'], kwargs))
                     return Policy()
                 result = run_task(run, self.env, turn_budget_usd=.5, total_budget_usd=2,
@@ -106,9 +106,9 @@ class RunTaskTests(unittest.TestCase):
                 self.assertTrue((run/'private/state/budget.sqlite').is_file())
 
     def test_adaptive_launch_creates_shared_run_budget_before_world(self):
-        (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'adaptive'}))
+        (self.run/'private/inputs/run.json').write_text(json.dumps({'harness':'claude','system':'adaptive'}))
         seen = []
-        def adaptive(run, profile, env, ledger, **kwargs):
+        def adaptive(run, model_entry, env, ledger, **kwargs):
             seen.append((ledger.snapshot()['limit_usd'], kwargs))
             return Policy()
         result = run_task(self.run, self.env, turn_budget_usd=.5, total_budget_usd=2, wall_limit_s=30,
@@ -119,9 +119,9 @@ class RunTaskTests(unittest.TestCase):
         self.assertTrue((self.run/'private/state/budget.sqlite').exists())
 
     def test_default_adaptive_launch_has_an_uncapped_shared_ledger(self):
-        (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'adaptive'}))
+        (self.run/'private/inputs/run.json').write_text(json.dumps({'harness':'claude','system':'adaptive'}))
         seen = []
-        def adaptive(run, profile, env, ledger, **kwargs):
+        def adaptive(run, model_entry, env, ledger, **kwargs):
             seen.append((ledger.snapshot(), kwargs))
             return Policy()
         run_task(self.run, self.env, adaptive_policy_factory=adaptive,
@@ -132,9 +132,9 @@ class RunTaskTests(unittest.TestCase):
         self.assertNotIn('setup_budget_usd', seen[0][1])
 
     def test_uncertain_shared_budget_requires_review_even_when_world_sealed(self):
-        (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine':'claude','topology':'adaptive'}))
+        (self.run/'private/inputs/run.json').write_text(json.dumps({'harness':'claude','system':'adaptive'}))
         (self.run/'private/state/connections/Meta.json').write_text('{"url":"http://127.0.0.1:1234"}')
-        def adaptive(run, profile, env, ledger, **kwargs):
+        def adaptive(run, model_entry, env, ledger, **kwargs):
             ledger.reserve('interrupted-turn','Controller',.5)
             ledger.settle('interrupted-turn',None,outcome_known=False)
             policy=Policy(); policy.store.attached=True
@@ -144,7 +144,7 @@ class RunTaskTests(unittest.TestCase):
         class Supervisor:
             def __init__(self,*a,**k): pass
             def run(self): return {'reason':'wall_limit','seal':{'sealed':True,'unresolved_action_ids':[]}}
-        with patch('roboteam.harness.claude.run.CentralizedSupervisor',Supervisor):
+        with patch('roboteam.harness.claude.run.RunSupervisor',Supervisor):
             result=run_task(self.run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                    adaptive_policy_factory=adaptive,owner_factory=lambda *a,**k: ExitingOwner(None))
         self.assertTrue(result['seal']['sealed'])
@@ -154,8 +154,8 @@ class RunTaskTests(unittest.TestCase):
         self.assertEqual(result['status'],'needs_review')
 
     def test_requested_unreadable_recording_requires_review_even_after_seal(self):
-        config = self.run/'private/inputs/harness.json'
-        config.write_text(json.dumps({'engine':'claude','topology':'single-agent','record_realtime_video':True}))
+        config = self.run/'private/inputs/run.json'
+        config.write_text(json.dumps({'harness':'claude','system':'single-agent','record_realtime_video':True}))
         (self.run/'private/state/connections/Meta.json').write_text('{"url":"http://127.0.0.1:1234"}')
         class Attached(Policy):
             def __init__(self,*a,**k): super().__init__(*a,**k); self.store.attached = True
@@ -164,7 +164,7 @@ class RunTaskTests(unittest.TestCase):
         class Supervisor:
             def __init__(self,*a,**k): pass
             def run(self): return {'reason':'world_ended','seal':{'sealed':True,'video':{'readable':False}}}
-        with patch('roboteam.harness.claude.run.CentralizedSupervisor', Supervisor):
+        with patch('roboteam.harness.claude.run.RunSupervisor', Supervisor):
             result=run_task(self.run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                    policy_factory=Attached,owner_factory=lambda *a,**k: ExitingOwner(None))
         self.assertTrue(result['video_required'])
@@ -189,7 +189,7 @@ class RunTaskTests(unittest.TestCase):
                         seal={'sealed':True}
                         if unresolved is not None: seal['unresolved_action_ids']=unresolved
                         return {'reason':'world_ended','seal':seal,'finish_turns_drained':True}
-                with patch('roboteam.harness.claude.run.CentralizedSupervisor', Supervisor):
+                with patch('roboteam.harness.claude.run.RunSupervisor', Supervisor):
                     result=run_task(run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                            policy_factory=Attached,owner_factory=lambda *a,**k: ExitingOwner(None))
                 self.assertEqual(result['status'], expected)
@@ -210,7 +210,7 @@ class RunTaskTests(unittest.TestCase):
                     def __init__(self,*a,**k): pass
                     def run(self): return {'reason':'world_ended','seal':{'sealed':True,'unresolved_action_ids':[]},
                                           'finish_turns_drained':True}
-                with patch('roboteam.harness.claude.run.CentralizedSupervisor',Supervisor):
+                with patch('roboteam.harness.claude.run.RunSupervisor',Supervisor):
                     result=run_task(run,self.env,turn_budget_usd=.5,total_budget_usd=2,wall_limit_s=30,
                                            policy_factory=Attached,owner_factory=lambda *a,**k: ExitingOwner(None))
                 self.assertTrue(result['evaluation_required'])
@@ -223,9 +223,9 @@ class RunTaskTests(unittest.TestCase):
         (self.run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
             'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'team-controller'},
             'A1': {'kind': 'worker', 'robot': 'A1'}, 'A2': {'kind': 'worker', 'robot': 'A2'}}}))
-        for topology, turn, total in (('hierarchical', None, 1), ('hierarchical', .5, 1), ('decentralized', .6, 1.7)):
-            with self.subTest(topology=topology, turn=turn, total=total):
-                (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine': 'claude', 'topology': topology}))
+        for system, turn, total in (('hierarchical', None, 1), ('hierarchical', .5, 1), ('decentralized', .6, 1.7)):
+            with self.subTest(system=system, turn=turn, total=total):
+                (self.run/'private/inputs/run.json').write_text(json.dumps({'harness': 'claude', 'system': system}))
                 with self.assertRaisesRegex(ValueError, 'budget'):
                     run_task(self.run, self.env, turn_budget_usd=turn, total_budget_usd=total,
                                     standing_policy_factory=lambda *a, **k: self.fail('must not start'),
@@ -233,7 +233,7 @@ class RunTaskTests(unittest.TestCase):
                 self.assertFalse(claim.exists())
                 self.assertFalse((self.run/'private/state/budget.sqlite').exists())
         # Adaptive: the Controller and one delegate per arm.
-        (self.run/'private/inputs/harness.json').write_text(json.dumps({'engine': 'claude', 'topology': 'adaptive'}))
+        (self.run/'private/inputs/run.json').write_text(json.dumps({'harness': 'claude', 'system': 'adaptive'}))
         (self.run/'public/inputs/roles.json').write_text(json.dumps({'roles': {
             'Meta': {'kind': 'manager'}, 'Controller': {'kind': 'controller', 'robots': ['A1', 'A2', 'A3']}}}))
         with self.assertRaisesRegex(ValueError, '4 concurrent roles'):
@@ -246,7 +246,7 @@ class RunTaskTests(unittest.TestCase):
         self.assertEqual(result['reason'], 'launch_error')
 
 
-    def test_a_centralized_launch_failing_before_its_claim_can_be_retried(self):
+    def test_a_single_agent_launch_failing_before_its_claim_can_be_retried(self):
         attempts = []
         def policy(*args, **kwargs):
             attempts.append(kwargs)

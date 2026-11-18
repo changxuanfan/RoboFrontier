@@ -3,7 +3,7 @@ import json,os,sys,tempfile,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 from fake_pipeline import FakeWorld,fake_capture
-from team_harness import prepare_run
+from team_settings import prepare_run
 from roboteam.runtime.world.service import RuntimeService
 from roboteam.launch.slurm.proxy import atomic
 
@@ -13,7 +13,7 @@ class SteppingWorld(FakeWorld):
 class EgressPauseTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
-        self.root=Path(self.temp.name).resolve();self.private=self.root/'engine';self.private.mkdir(mode=0o700)
+        self.root=Path(self.temp.name).resolve();self.private=self.root/'harness';self.private.mkdir(mode=0o700)
         self.marker=self.private/'EGRESS_PAUSED';self.run=self.root/'run';prepare_run(self.run)
         self.env=patch.dict(os.environ,{'ROBOTEAM_EGRESS_PAUSE_FILE':str(self.marker),'ROBOTEAM_EGRESS_INSTANCE':'a'*32,'SLURM_JOB_ID':'123'})
         self.env.start();self.addCleanup(self.env.stop)
@@ -107,7 +107,7 @@ class RealPhysicsPauseTests(unittest.TestCase):
     def test_qpos_qvel_and_sim_time_remain_exactly_frozen_in_original_world(self):
         from roboteam.runtime.world.pipeline import World
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder).resolve();private=root/'engine';private.mkdir(mode=0o700)
+            root=Path(folder).resolve();private=root/'harness';private.mkdir(mode=0o700)
             run=root/'run';prepare_run(run);marker=private/'EGRESS_PAUSED'
             with patch.dict(os.environ,{'ROBOTEAM_EGRESS_PAUSE_FILE':str(marker),'ROBOTEAM_EGRESS_INSTANCE':'a'*32,'SLURM_JOB_ID':'123'}):
                 service=RuntimeService(run,World,fake_capture)

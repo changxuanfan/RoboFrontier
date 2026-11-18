@@ -13,7 +13,7 @@ def validate(task):
     if len(task['arms']) != case['arms']:
         raise ValueError('Task arm count differs from its scene')
     if task.get('execution_readiness') == 'prepared_policy_trial':
-        from .families import validate_policy_task
+        from .task_types import validate_policy_task
         validate_policy_task(task)
     elif task.get('execution_readiness') != 'environment_preview_only':
         raise ValueError('Unknown task execution readiness')
@@ -127,14 +127,14 @@ def clean(public):
     rule wording. Applied once when the release's public files are written (build_release.py
     public); idempotent."""
     result = {k: deepcopy(v) for k, v in public.items() if k not in INTERNAL}
-    family = result['family']
+    task_type = result['family']
     if 'mechanism' in result:
         result['mechanism'] = _sentences(_drop(result['mechanism'], MECHANISM_INTERNAL))
         if result['mechanism'].get('cube_material') == 'Solid wood; inherited nominal density':
             result['mechanism']['cube_material'] = 'Solid wood'
     if isinstance(result.get('completion'), dict):
         result['completion'] = _drop(result['completion'], COMPLETION_INTERNAL)
-    result['objective'] = OBJECTIVES[family]
+    result['objective'] = OBJECTIVES[task_type]
     rules = []
     for rule in result['rules']:
         rule = RULES.get(rule, rule)

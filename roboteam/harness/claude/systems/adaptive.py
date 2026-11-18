@@ -18,8 +18,8 @@ from roboteam.runtime.world.store import RuntimeStore
 
 
 class AdaptivePolicyHost:
-    engine = 'claude'
-    def __init__(self, run_dir, profile, base_env, ledger, *, turn_budget_usd,
+    harness = 'claude'
+    def __init__(self, run_dir, model_entry, base_env, ledger, *, turn_budget_usd,
                  host_factory=ClaudeSessionHost, setup_factory=AdaptiveForkSetup,
                  client=client_call, verifier=verify_inputs, resume=False):
         self.run=Path(run_dir).resolve()
@@ -28,13 +28,13 @@ class AdaptivePolicyHost:
         self.store=RuntimeStore(self.run/'private/state/runtime.sqlite')
         try:
             cfg=self.store.get('config')
-            if not cfg or cfg.get('engine')!=self.engine or cfg.get('topology')!='adaptive':
+            if not cfg or cfg.get('harness')!=self.harness or cfg.get('system')!='adaptive':
                 raise ValueError('Expected adaptive Claude engineering run')
-            launch=json.loads((self.run/('private/inputs/' + self.engine + '.json')).read_text())
-            if cfg.get('model')!=profile.get('model') or cfg.get('effort')!=profile.get('effort') or launch.get('profile')!=profile:
-                raise ValueError('Profile differs from frozen run')
+            launch=json.loads((self.run/('private/inputs/' + self.harness + '.json')).read_text())
+            if cfg.get('model')!=model_entry.get('model') or cfg.get('effort')!=model_entry.get('effort') or launch.get('model_entry')!=model_entry:
+                raise ValueError('Model entry differs from frozen run')
             # A run continued after an unexpected exit (docs/runs/continuation.md) keeps its sessions.
-            self.resuming=resume; self.profile=profile; self.base_env=base_env; self.host_factory=host_factory
+            self.resuming=resume; self.model_entry=model_entry; self.base_env=base_env; self.host_factory=host_factory
             if resume:
                 if self.store.get('lifecycle')!='resuming' or not self.store.agent('Controller')['thread_id']:
                     raise ValueError('No prepared segment to resume')
@@ -43,7 +43,7 @@ class AdaptivePolicyHost:
             changed=verifier(self.run)
             if changed: raise ValueError('Frozen inputs changed: '+', '.join(changed))
             self.prompt=frozen_bootstrap(self.run,'Controller')
-            self.host=host_factory(self.run,'Controller',profile,base_env,
+            self.host=host_factory(self.run,'Controller',model_entry,base_env,
                                    max_budget_usd=turn_budget_usd,budget_ledger=ledger)
             if resume: self.host.adopt(self.store.agent('Controller')['thread_id'])
             self.ledger=ledger; self.setup_factory=setup_factory; self.client=client
@@ -62,7 +62,7 @@ class AdaptivePolicyHost:
         if not reply.get('bound') or self.store.agent('Controller')['thread_id']!=self.host.session_id:
             raise ValueError('Role binding outcome unknown; review instead of retrying')
         self.bound=True
-        self.setup=self.setup_factory(self.store,self.host,self.ledger,self.engine+'-meta-'+uuid.uuid4().hex,
+        self.setup=self.setup_factory(self.store,self.host,self.ledger,self.harness+'-meta-'+uuid.uuid4().hex,
                                       child_budget_usd=self.turn_budget_usd)
         self.dispatcher=AdaptiveDispatcher(self.store,self.setup)
         reply=self.dispatcher.admin('request-start')
@@ -74,11 +74,11 @@ class AdaptivePolicyHost:
         its frozen resume message. Delegates keep their own sessions; none is forked again."""
         if not self.resuming or self.dispatcher: raise ValueError('Not a prepared segment')
         self.bound=True
-        self.setup=self.setup_factory(self.store,self.host,self.ledger,self.engine+'-meta-'+uuid.uuid4().hex,
+        self.setup=self.setup_factory(self.store,self.host,self.ledger,self.harness+'-meta-'+uuid.uuid4().hex,
                                       child_budget_usd=self.turn_budget_usd)
         for actor,agent in self.store.agents().items():
             if agent['kind']=='delegate' and agent.get('delegation_state')=='active' and agent['thread_id']:
-                self.setup.hosts[actor]=self.host_factory(self.run,actor,self.profile,self.base_env,
+                self.setup.hosts[actor]=self.host_factory(self.run,actor,self.model_entry,self.base_env,
                                                           max_budget_usd=self.turn_budget_usd,budget_ledger=self.ledger,
                                                           _validated_delegate=True).adopt(agent['thread_id'])
         self.dispatcher=AdaptiveDispatcher(self.store,self.setup)

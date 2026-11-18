@@ -1,4 +1,4 @@
-"""Both engines receive the same frozen policy inputs; only the declared engine line differs."""
+"""Both harnesses receive the same frozen policy inputs; only the declared harness line differs."""
 import json
 from pathlib import Path
 import tempfile
@@ -8,9 +8,9 @@ from unittest.mock import patch
 from roboteam.runtime.sandbox import access as policy_access
 from roboteam.runtime.run import bootstrap as policy_bootstrap
 from roboteam.tasks.config import ROOT
-from roboteam.tasks.families import prepare
+from roboteam.tasks.task_types import prepare
 
-HARNESS = json.loads((ROOT/'roboteam/runtime/run/defaults.json').read_text())
+RUN_SETTINGS = json.loads((ROOT/'roboteam/runtime/run/defaults.json').read_text())
 STARTUP = {'single-agent': 'direct_controller', 'adaptive': 'direct_controller',
            'hierarchical': 'direct_team', 'decentralized': 'direct_team'}
 
@@ -27,35 +27,35 @@ def snapshot(run):
     return files
 
 
-def prepared(root, engine, case='transport-a04-d1'):
-    """A prepared run of `case` for `engine` with the frozen policy harness."""
-    path = Path(root)/(engine+'-harness.json')
-    path.write_text(json.dumps(dict(HARNESS, engine=engine)))
-    return prepare(case, Path(root)/engine, path)
+def prepared(root, harness, case='transport-a04-d1'):
+    """A prepared run of `case` for `harness` with the default run settings."""
+    path = Path(root)/(harness+'-run.json')
+    path.write_text(json.dumps(dict(RUN_SETTINGS, harness=harness)))
+    return prepare(case, Path(root)/harness, path)
 
 
-class EngineParityTests(unittest.TestCase):
-    def prepare_pair(self, tmp, case, topology):
+class HarnessParityTests(unittest.TestCase):
+    def prepare_pair(self, tmp, case, system):
         runs = {}
-        for engine in ('codex', 'claude'):
-            harness = dict(HARNESS, engine=engine, topology=topology, startup_protocol=STARTUP[topology])
-            path = Path(tmp)/(engine+'-'+topology+'.json')
-            path.write_text(json.dumps(harness))
-            runs[engine] = prepare(case, Path(tmp)/engine/topology/case, path)
+        for harness in ('codex', 'claude'):
+            run_settings = dict(RUN_SETTINGS, harness=harness, system=system, startup_protocol=STARTUP[system])
+            path = Path(tmp)/(harness+'-'+system+'.json')
+            path.write_text(json.dumps(run_settings))
+            runs[harness] = prepare(case, Path(tmp)/harness/system/case, path)
         return runs
 
     def assert_same_inputs(self, runs):
         codex, claude = snapshot(runs['codex']), snapshot(runs['claude'])
         self.assertEqual(sorted(codex), sorted(claude))
-        engine_lines = {line.encode() for line in policy_bootstrap.ENGINE_LINES.values()}
+        harness_lines = {line.encode() for line in policy_bootstrap.HARNESS_LINES.values()}
         for name in codex:
             if codex[name] == claude[name]:
                 continue
-            # A frozen first message may differ only in its last, engine-specific line.
+            # A frozen first message may differ only in its last, harness-specific line.
             self.assertTrue(name.startswith('private/inputs/bootstrap/'), name)
             a, b = codex[name].rstrip(b'\n').rsplit(b'\n', 1), claude[name].rstrip(b'\n').rsplit(b'\n', 1)
             self.assertEqual(a[0], b[0], name)
-            self.assertEqual({a[1], b[1]}, engine_lines, name)
+            self.assertEqual({a[1], b[1]}, harness_lines, name)
         for run in runs.values():
             access = json.loads((run/'private/inputs/policy-access.json').read_text())
             self.assertEqual(policy_access.mode(access['filesystem'], run/'workspace/notes.md'), 'write')
@@ -65,23 +65,23 @@ class EngineParityTests(unittest.TestCase):
             self.assertFalse(access['network'])
             self.assertFalse(access['web_search'])
 
-    def test_every_family_gets_identical_inputs_on_both_engines(self):
+    def test_every_task_type_gets_identical_inputs_on_both_harnesses(self):
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
             for case in ('transport-a04-d1', 'mosaic-a04-6x12-d1', 'relay-a08-d1', 'dial-best5-n04-d1'):
                 with self.subTest(case=case):
                     self.assert_same_inputs(self.prepare_pair(tmp, case, 'adaptive'))
 
-    def test_every_topology_gets_identical_inputs_on_both_engines(self):
+    def test_every_system_gets_identical_inputs_on_both_harnesses(self):
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
-            for topology in ('single-agent', 'hierarchical', 'decentralized'):
-                with self.subTest(topology=topology):
-                    runs = self.prepare_pair(tmp, 'transport-a04-d1', topology)
+            for system in ('single-agent', 'hierarchical', 'decentralized'):
+                with self.subTest(system=system):
+                    runs = self.prepare_pair(tmp, 'transport-a04-d1', system)
                     self.assert_same_inputs(runs)
                     roles = json.loads((runs['codex']/'public/inputs/roles.json').read_text())['roles']
                     for actor, info in roles.items():
                         if info['kind'] != 'manager':
                             text = (runs['codex']/'private/inputs/bootstrap'/(actor+'.md')).read_text()
-                            self.assertIn(policy_bootstrap.STARTUP[STARTUP[topology]], text)
+                            self.assertIn(policy_bootstrap.STARTUP[STARTUP[system]], text)
                             self.assertIn(policy_bootstrap.READABLE, text)
 
     def test_the_start_message_carries_the_inputs_and_the_system_prompt_the_rules(self):
@@ -104,10 +104,10 @@ class EngineParityTests(unittest.TestCase):
             for path in list(public.rglob('*.md'))+list(public.rglob('*.json'))+[run/'private/inputs/bootstrap/Controller.md']:
                 self.assertNotIn('total_wall_limit_s', path.read_text(), path)
 
-    def test_resume_message_is_one_frozen_template_for_both_engines(self):
+    def test_resume_message_is_one_frozen_template_for_both_harnesses(self):
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
             root = Path(tmp).resolve()
-            runs = {engine: prepared(root, engine) for engine in ('claude', 'codex')}
+            runs = {harness: prepared(root, harness) for harness in ('claude', 'codex')}
             record = {'restored_sim_s': 12.345, 'interrupted': {'Controller': ['Controller-call_1']}}
             texts = {e: policy_bootstrap.fill_resume(r, 'Controller', record) for e, r in runs.items()}
             self.assertEqual(texts['claude'], texts['codex'])
@@ -145,14 +145,14 @@ if __name__ == '__main__':
     unittest.main()
 
 
-class EngineRenderingTests(unittest.TestCase):
-    """Each engine renders the same frozen access table and system prompt natively."""
+class HarnessRenderingTests(unittest.TestCase):
+    """Each harness renders the same frozen access table and system prompt natively."""
 
-    def prepared(self, tmp, engine):
-        harness = dict(HARNESS, engine=engine)
-        path = Path(tmp)/(engine+'.json')
-        path.write_text(json.dumps(harness))
-        return prepare('transport-a04-d1', Path(tmp)/engine, path)
+    def prepared(self, tmp, harness):
+        run_settings = dict(RUN_SETTINGS, harness=harness)
+        path = Path(tmp)/(harness+'.json')
+        path.write_text(json.dumps(run_settings))
+        return prepare('transport-a04-d1', Path(tmp)/harness, path)
 
     def test_claude_policy_turns_get_confined_file_tools_and_the_frozen_system_prompt(self):
         from roboteam.harness.claude.session.runner import build_command, policy_settings, policy_system_prompt, policy_cwd
@@ -195,10 +195,10 @@ class EngineRenderingTests(unittest.TestCase):
             self.assertIn('PreToolUse', forked['hooks'])
 
     def test_codex_runs_under_the_frozen_permission_profile_without_web_search(self):
-        from roboteam.harness.codex.launch import launch_config, profile
+        from roboteam.harness.codex.launch import launch_config, model_entry
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
             run = self.prepared(tmp, 'codex')
-            launch = launch_config(profile('luna'), run/'private/inputs', run)
+            launch = launch_config(model_entry('luna'), run/'private/inputs', run)
             args = ' '.join(launch['args'])
             self.assertIn('default_permissions="roboteam"', args)
             self.assertIn('permissions.roboteam.network.enabled=false', args)
@@ -212,14 +212,14 @@ class EngineRenderingTests(unittest.TestCase):
             self.assertEqual(catalog['models'][0]['base_instructions'], policy_bootstrap.SYSTEM_PROMPT)
             (Path(tmp)/'other').mkdir()
             other = self.prepared(Path(tmp)/'other', 'codex')
-            launch_config(profile('luna'), other/'private/inputs', other)
+            launch_config(model_entry('luna'), other/'private/inputs', other)
             self.assertEqual((other/'private/inputs/models.json').read_bytes(), (run/'private/inputs/models.json').read_bytes())
             self.assertEqual(launch['context_window'], 300000)
             self.assertEqual(launch['auto_compact_token_limit'], 267000)
 
 
 class SharedConstantTests(unittest.TestCase):
-    """The Codex host is JavaScript, so the limits both engines share are written twice."""
+    """The Codex host is JavaScript, so the limits both harnesses share are written twice."""
 
     def test_the_codex_host_uses_the_shared_limits(self):
         import re

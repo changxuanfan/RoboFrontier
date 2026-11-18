@@ -1,7 +1,7 @@
 """Write the benchmark release: one conversion of the released scenes to their final form.
 
 The release is frozen after this runs; nothing at run time rebuilds or patches it.
-Each step changes the files under benchmark/<family>/<case>/ in place and is safe to
+Each step changes the files under benchmark/<task-type>/<case>/ in place and is safe to
 run again on its own output.
 
     python -m scripts.release.build_release physics   # contact and solver settings into every scene.xml
@@ -28,7 +28,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 BENCHMARK = ROOT/'benchmark'
-FAMILIES = ('transport', 'mosaic', 'relay', 'dial')
+TASK_TYPES = ('transport', 'mosaic', 'relay', 'dial')
 
 # Solver options every scene carries (docs/benchmark/physics.md). The rest of <option> stays as built:
 # implicitfast, 2 ms steps, Newton with 100 iterations.
@@ -53,7 +53,7 @@ ROBOT_JOINT = re.compile(r'[A-Z]_(joint[1-7]|finger_joint[12])')
 
 
 def cases():
-    return [path.parent for family in FAMILIES for path in sorted((BENCHMARK/family).glob('*/scene.xml'))]
+    return [path.parent for task_type in TASK_TYPES for path in sorted((BENCHMARK/task_type).glob('*/scene.xml'))]
 
 
 def compile_scene(folder, xml=None):
@@ -201,8 +201,8 @@ def index_release():
     """Record each released case's current file hashes in its release.json policy entry."""
     path = BENCHMARK/'release.json'
     release = json.loads(path.read_text())
-    for family in release['families'].values():
-        for case in family['policy']:
+    for task_type in release['families'].values():
+        for case in task_type['policy']:
             folder = ROOT/case['directory']
             case['source_files'] = {name: file_sha256(folder/name) for name in case['source_files']}
             projection = case.get('public_projection')
@@ -212,8 +212,8 @@ def index_release():
     # private codes. Recorded with a date when the release is frozen (docs/benchmark/physics.md).
     content = {'cases': {case['id']: {**case['source_files'], 'public/task.json': case['public_projection']['sha256'],
                                       **{'public/'+n: e['sha256'] for n, e in case.get('public_files', {}).items()}}
-                         for family in release['families'].values() for case in family['policy']},
-               'catalogs': {name: file_sha256(ROOT/family['catalog']['path']) for name, family in release['families'].items()},
+                         for task_type in release['families'].values() for case in task_type['policy']},
+               'catalogs': {name: file_sha256(ROOT/task_type['catalog']['path']) for name, task_type in release['families'].items()},
                'private': release.get('private', {})}
     release_id = hashlib.sha256(json.dumps(content, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
     if release.get('frozen') and release_id != release['frozen']['release_id']:
@@ -258,7 +258,7 @@ def settle_case(folder):
     """Run the scene with its arms holding still until nothing else moves, and return the
     resting coordinates of every joint that is not a robot's, with the largest change."""
     import tempfile
-    from roboteam.tasks.families import prepare
+    from roboteam.tasks.task_types import prepare
     from roboteam.runtime.world.pipeline import World
     task_id = json.loads((folder/'task.json').read_text())['id']
     with tempfile.TemporaryDirectory(prefix='rf-settle-') as temporary:
@@ -371,7 +371,7 @@ def camera_mounts(model, names):
 
 def with_camera_mounts(public, mounts):
     """The public task with `static_camera_mounts` where Transport has it, before the
-    family materials."""
+    task materials."""
     result = {}
     for key, value in public.items():
         if key == 'static_camera_mounts': continue
@@ -384,18 +384,18 @@ def with_camera_mounts(public, mounts):
 def public(args):
     """Write each case's public task exactly as a run receives it, and its materials.
 
-    This writes the result once: public/task.json (without the run's own protocol and image profile) and every family
+    This writes the result once: public/task.json (without the run's own protocol and image profile) and every task type
     material a run receives, except the task guide, which runs copy from prompts/guides.
     The release then names these files, and a run only copies them.
 
     A Relay public task also gets its cameras' mounts, read from the compiled scene; the
-    other families' public tasks already carry their camera calibration."""
+    other task types' public tasks already carry their camera calibration."""
     require_unfrozen()
     import shutil, tempfile
-    from roboteam.tasks.families import prepare
+    from roboteam.tasks.task_types import prepare
     path = BENCHMARK/'release.json'; release = json.loads(path.read_text())
-    for family_name, family in release['families'].items():
-        for case in family['policy']:
+    for task_type_name, task_type in release['families'].items():
+        for case in task_type['policy']:
             folder = ROOT/case['directory']; target = folder/'public'
             with tempfile.TemporaryDirectory(prefix='rf-public-') as temporary:
                 run = Path(temporary)/'run'; prepare(case['id'], run)
@@ -412,7 +412,7 @@ def public(args):
             for name in RUN_ONLY: received.pop(name, None)
             from roboteam.tasks.public import clean
             received = clean(received)
-            if family_name == 'relay':
+            if task_type_name == 'relay':
                 received = with_camera_mounts(received, camera_mounts(compile_scene(folder), received['cameras']))
             (target/'task.json').write_text(json.dumps(received, indent=2, ensure_ascii=False)+'\n')
             for stale in ('public-task.json',):

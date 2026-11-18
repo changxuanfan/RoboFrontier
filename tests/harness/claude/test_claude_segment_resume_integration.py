@@ -1,6 +1,6 @@
 """The real Claude route continues a run after its host was killed mid-action (loopback stub model).
 
-The engine runner runs in a child process. A stub model plays the Controller: it observes
+The harness runner runs in a child process. A stub model plays the Controller: it observes
 and starts a slow move, the test kills the child's process group during that move, the
 world closes by itself, the next segment is prepared, and the runner is started again.
 It must resume the same Claude session and send the frozen resume message naming the
@@ -61,7 +61,7 @@ class ClaudeSegmentResumeTests(unittest.TestCase):
             base = Path(tmp).resolve() / 'batch'
             # A local fake model with a fake key: nothing to expose (claude_prepare.exposed_api_keys).
             with patch('roboteam.launch.claude_prepare.exposed_api_keys', return_value=[]):
-                prepare_batch(base, ['opus'], cases=[CASE], topology='single-agent')
+                prepare_batch(base, ['opus'], cases=[CASE], system='single-agent')
             run = base / 'opus' / CASE
             task = json.loads((run / 'private/inputs/task.json').read_text())
             SlowMoveModel.camera, SlowMoveModel.robot = camera_names(task)[0], sorted(task['arms'])[0]
@@ -70,7 +70,7 @@ class ClaudeSegmentResumeTests(unittest.TestCase):
             threading.Thread(target=server.serve_forever, daemon=True).start()
             launch = run / 'private/inputs/claude.json'
             data = json.loads(launch.read_text())
-            data['profile'].update(base_url='http://127.0.0.1:%d' % server.server_port, env_key='FAKE_KEY')
+            data['model_entry'].update(base_url='http://127.0.0.1:%d' % server.server_port, env_key='FAKE_KEY')
             launch.write_text(json.dumps(data))
             manifest = run / 'private/inputs/manifest.json'; frozen = json.loads(manifest.read_text())
             frozen['input_sha256']['private/inputs/claude.json'] = hashlib.sha256(launch.read_bytes()).hexdigest()
@@ -107,7 +107,7 @@ class ClaudeSegmentResumeTests(unittest.TestCase):
             # The resumed turn carries the whole earlier conversation of the same session.
             self.assertIn('experiment has started', body)
             self.assertIn('toolu_move', body)
-            transcripts = list((run_path(run, 'engine_config') / 'projects').rglob(session + '.jsonl'))
+            transcripts = list((run_path(run, 'harness_config') / 'projects').rglob(session + '.jsonl'))
             self.assertEqual(len(transcripts), 1)
             self.assertIn(RESUME, transcripts[0].read_text())
             s = store()

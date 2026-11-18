@@ -380,7 +380,7 @@ def compute(d, v1_atomic=None, turns=None):
     clk = M.Clock(d)
     if not (S and S.get('lines') and clk.ok):
         return None
-    fam = d['sel']['family']
+    fam = d['sel']['task_type']
     if fam == 'mosaic':
         a = v1_atomic or M.goals_atomic(d, clk)
         return {

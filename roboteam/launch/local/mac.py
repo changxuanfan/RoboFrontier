@@ -1,4 +1,4 @@
-"""Run a prepared batch under the macOS user launchd service, for either engine.
+"""Run a prepared batch under the macOS user launchd service, for either harness.
 
 The service runs the unified `run` command, which loads credentials from the
 ignored .env itself, so the service file stores no credential. A batch is

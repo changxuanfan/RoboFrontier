@@ -48,7 +48,7 @@ def role_mcp_config(run_dir, actor, python=sys.executable, *, _validated_delegat
     info = json.loads(connection.read_text())
     if info.get('actor') != actor or info.get('run_id') != run.name or info.get('schema_version') != 3:
         raise ValueError('Role connection does not match this run')
-    target = run_layout.path(run, 'engine_mcp') / (actor + '.json')
+    target = run_layout.path(run, 'harness_mcp') / (actor + '.json')
     # A model never chooses the actor or a connection path. The server binds it.
     project = Path(__file__).resolve().parents[4]
     write_json(target, {'mcpServers': {'robot': {
@@ -67,12 +67,12 @@ from roboteam.harness.claude.session.session_host_base import SessionHost
 
 class ClaudeSessionHost(SessionHost):
     """Claude setup around the shared role lifecycle."""
-    def __init__(self, run_dir, actor, profile, base_env, *, python=sys.executable, runner=None, **options):
+    def __init__(self, run_dir, actor, model_entry, base_env, *, python=sys.executable, runner=None, **options):
         runner = runner or (PersistentSession() if policy_settings(Path(run_dir)) is not None else run_turn)
         mcp = role_mcp_config(run_dir, actor, python,
                               _validated_delegate=options.get('_validated_delegate', False))
-        super().__init__(run_dir, actor, profile, base_env, python=python, runner=runner,
-                         engine='claude', mcp=mcp, session_id=str(uuid.uuid4()), **options)
+        super().__init__(run_dir, actor, model_entry, base_env, python=python, runner=runner,
+                         harness='claude', mcp=mcp, session_id=str(uuid.uuid4()), **options)
 
     def recover_capacity(self, store, now=None):
         return (recover(self, store, now) or recover_model_loss(self, store) or recover_quota(self, store)
@@ -87,7 +87,7 @@ class ClaudeSessionHost(SessionHost):
         write_json(path, value)
 
     @classmethod
-    def fork_delegate(cls, run_dir, actor, profile, base_env, *, budget_ledger, max_budget_usd, fork_from, gate,
+    def fork_delegate(cls, run_dir, actor, model_entry, base_env, *, budget_ledger, max_budget_usd, fork_from, gate,
                       _verifier=verify_inputs, **kwargs):
         """A host whose first turn forks `fork_from` into this delegate's new session.
 
@@ -106,23 +106,23 @@ class ClaudeSessionHost(SessionHost):
             raise ValueError('A run-local shared budget ledger is required')
         if _verifier(run): raise ValueError('Frozen inputs changed')
         launch = json.loads((run/'private/inputs/claude.json').read_text())
-        if launch.get('profile') != profile:
-            raise ValueError('Delegate profile differs from frozen launch profile')
+        if launch.get('model_entry') != model_entry:
+            raise ValueError('Delegate model entry differs from the frozen launch')
         store_path = run/'private/state/runtime.sqlite'
         if not store_path.is_file(): raise ValueError('Runtime state missing')
         store = RuntimeStore(store_path)
         try:
             config = store.get('config')
-            if (config.get('engine') != 'claude' or config.get('topology') != 'adaptive'
-                    or config.get('model') != profile.get('model') or config.get('effort') != profile.get('effort')
+            if (config.get('harness') != 'claude' or config.get('system') != 'adaptive'
+                    or config.get('model') != model_entry.get('model') or config.get('effort') != model_entry.get('effort')
                     or store.get('lifecycle') != 'running' or store.get('dispatch_paused', False)):
-                raise ValueError('Run or profile cannot fork a delegate')
+                raise ValueError('Run or model entry cannot fork a delegate')
             agent = store.agent(actor)
             if (agent.get('kind') != 'delegate' or agent.get('delegation_state') != 'creating' or agent['thread_id']
                     or store.agent('Controller')['thread_id'] != fork_from):
                 raise ValueError('Delegate is not an uncreated scope of this parent')
         finally: store.close()
-        host = cls(run, actor, profile, base_env, budget_ledger=budget_ledger,
+        host = cls(run, actor, model_entry, base_env, budget_ledger=budget_ledger,
                    max_budget_usd=max_budget_usd, _validated_delegate=True, **kwargs)
         host.fork_from, host.gate = fork_from, gate
         return host

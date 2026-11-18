@@ -1,6 +1,6 @@
 """How observation images look.
 
-A run's harness names one look as `observation_look`:
+A run's settings name one look as `observation_look`:
 
 direct  MuJoCo lights the scene's colours and textures as they are and the result is written
         unchanged. This is the default.
@@ -34,7 +34,7 @@ def _own_colour(geom_rgba):
 
 
 def look_of(config):
-    """The look a frozen harness names; a harness without the field draws directly."""
+    """The look frozen run settings name; settings without the field draw directly."""
     look = config.get('observation_look', DEFAULT_LOOK)
     if look not in (DIRECT, LINEAR):
         raise ValueError('Unknown observation look: ' + str(look))

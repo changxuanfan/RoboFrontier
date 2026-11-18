@@ -8,7 +8,7 @@ import numpy as np
 
 from roboteam.runtime.run import segments as run_segments
 from roboteam.tasks.relay import final_task
-from roboteam.tasks.families import RELAY_HANDOVER_RULE, policy_task
+from roboteam.tasks.task_types import RELAY_HANDOVER_RULE, policy_task
 from tests.tasks.test_relay_goal_support import GoalSupportTests
 
 HANDOVER = dict(sim_time_s=5.0, senders=['A', 'B'], receivers=['B', 'C'], retained=['B'], released=['A'], joined=['C'],
@@ -100,7 +100,7 @@ class Scenario:
 
 
 class AirborneHandoverTests(unittest.TestCase):
-    """Every handover happens off the table (task_families.RELAY_HANDOVER_DEFINITION)."""
+    """Every handover happens off the table (task_types.RELAY_HANDOVER_DEFINITION)."""
     def test_a_regrasp_of_a_timber_resting_on_the_goal_table_is_not_a_handover(self):
         s = Scenario().lifted()
         s.run({'A', 'B'}, .1, grounded=True).run({'A', 'B', 'C'}, .3).run({'B', 'C'}, .1).run(set(), .1)
@@ -157,7 +157,7 @@ class AirborneHandoverTests(unittest.TestCase):
 
 
 class DropRecoveryTests(unittest.TestCase):
-    """A receiver that picks up a dropped timber voids its handovers (task_families.RELAY_RECOVERY_RULE)."""
+    """A receiver that picks up a dropped timber voids its handovers (task_types.RELAY_RECOVERY_RULE)."""
     def handed_over_then_dropped(self):
         s = Scenario(inside=False).lifted()
         s.run({'A', 'B', 'C'}, .3).run({'B', 'C'}, .1)
@@ -274,7 +274,7 @@ class RestartTests(unittest.TestCase):
         self.assertEqual(record['p1'], {'handovers': [HANDOVER], 'drops': 1})
         self.assertEqual(record['p2'], {'handovers': [], 'drops': 0})
 
-    def test_other_families_have_no_relay_record(self):
+    def test_other_task_types_have_no_relay_record(self):
         with tempfile.TemporaryDirectory() as folder:
             run = Path(folder); path = run/'private/outputs/suite-process.jsonl'; path.parent.mkdir(parents=True)
             path.write_text(json.dumps({'type': 'event', 'sim_time_s': 1.0, 'result': {'valid_trials': 1}})+'\n')

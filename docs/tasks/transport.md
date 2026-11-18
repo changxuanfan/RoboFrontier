@@ -46,5 +46,5 @@ implements these checks.
 
 ## Presentation
 
-Robo World and simple-background videos play Transport at 20× and 30 fps (`speedup` in
+Factory-hall and simple-background videos play Transport at 20× and 30 fps (`speedup` in
 `benchmark/release.json`). Each station keeps its own clock and loops independently.

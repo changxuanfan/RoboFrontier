@@ -16,7 +16,7 @@ class PlanAuthenticationTests(unittest.TestCase):
 
     def test_identity_without_plan_permission_is_not_authorized(self):
         tokens = self.tokens()
-        tokens['scope'] = 'openid profile'
+        tokens['scope'] = 'openid model'
         with self.assertRaises(ValueError):
             auth.credentials(tokens, 'test-client', 'urn:uuid:test', {'sub': 'test-subject'})
 

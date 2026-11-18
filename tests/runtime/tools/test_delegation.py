@@ -9,7 +9,7 @@ from unittest.mock import patch
 from fake_pipeline import FakeWorld, fake_capture
 from roboteam.runtime.run.setup import prepare_run
 from roboteam.runtime.world.service import RuntimeService
-from roboteam.tasks.config import load_harness, startup_protocol
+from roboteam.tasks.config import load_run_settings, startup_protocol
 from roboteam.runtime.tools.delegation import Delegations
 
 
@@ -17,9 +17,9 @@ class DelegationTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
-        cfg = load_harness(); cfg['topology'] = 'adaptive'; cfg['startup_protocol'] = startup_protocol('adaptive')
+        cfg = load_run_settings(); cfg['system'] = 'adaptive'; cfg['startup_protocol'] = startup_protocol('adaptive')
         path = root/'config.json'; path.write_text(json.dumps(cfg))
-        self.run = prepare_run(root/'run', harness_path=path)
+        self.run = prepare_run(root/'run', run_settings_path=path)
         self.service = RuntimeService(self.run, FakeWorld, fake_capture)
         self.n = 0
         self.call('Controller', 'ready')

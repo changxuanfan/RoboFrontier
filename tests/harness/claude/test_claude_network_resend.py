@@ -12,7 +12,7 @@ from roboteam.harness.claude.session.session_host import ClaudeSessionHost
 from roboteam.runtime.time.egress_pause import WorldPause
 from roboteam.runtime.time.outage import OutageMonitor
 from roboteam.runtime.time.clock import BudgetGuard, protocol
-from harness.claude.test_claude_session_host import PROFILE
+from harness.claude.test_claude_session_host import MODEL_ENTRY
 from runtime.time import test_active_time as active
 
 NETWORK = {'type': 'assistant', 'is_api_error_message': True, 'error': 'server_error', 'api_error': 'connection_failed'}
@@ -41,7 +41,7 @@ class NetworkResendTests(active.Fixture):
             self.calls.append(kw); self.prompts.append(args[4])
             session = kw.get('resume') or kw['session_id']
             return turn(session, self.turns.pop(0) if self.turns else False)
-        self.host = ClaudeSessionHost(self.run, 'A', PROFILE, {}, runner=runner)
+        self.host = ClaudeSessionHost(self.run, 'A', MODEL_ENTRY, {}, runner=runner)
         self.addCleanup(self.host.wait, 3)
         self.s.store.update_agent('A', thread_id=self.host.session_id)
         self.notice = (self.run/'private/inputs/bootstrap/network-resume.md').read_text()

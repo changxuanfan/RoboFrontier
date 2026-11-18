@@ -198,7 +198,7 @@ def fork_provenance(parent, child, config_dir, at=None):
         raise ForkDiverged('Native fork copied source history beyond the fork point')
     digest = hashlib.sha256(json.dumps(source, sort_keys=True).encode()).hexdigest()
     return {'source_thread_id': parent, 'source_ordinal': len(source),
-            'source_sha256': digest, 'source_last_uuid': source[-1]['uuid'], 'engine': 'claude'}
+            'source_sha256': digest, 'source_last_uuid': source[-1]['uuid'], 'harness': 'claude'}
 
 
 def first_input(rows):

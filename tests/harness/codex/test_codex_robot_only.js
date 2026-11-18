@@ -4,7 +4,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {PolicyHost}=require('../../../roboteam/harness/codex/host/policy_host');
 const broker=require('../../../roboteam/harness/codex/host/tool_broker');
 const PNG=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),Buffer.alloc(32)]);
-function host(answer,launch={tool_backend:'native',tool_mode:'robot_only'}){
+function host(answer,launch={tool_backend:'native',tools:'robot_only'}){
   const run=fs.mkdtempSync(path.join(os.tmpdir(),'rf-robot-only-'));
   fs.mkdirSync(path.join(run,'public/inputs'),{recursive:true});fs.mkdirSync(path.join(run,'private'));
   fs.writeFileSync(path.join(run,'public/inputs/target.png'),PNG);fs.writeFileSync(path.join(run,'private/secret.png'),PNG);
@@ -15,15 +15,15 @@ function host(answer,launch={tool_backend:'native',tool_mode:'robot_only'}){
 }
 const call=(h,op,data={})=>h.toolRequest('item/tool/call',{threadId:'thread',tool:'robot',callId:'c1',arguments:{op,data}});
 test('robot_only is separate from the tool worker and adds no file tools',()=>{
-  const launch={tool_backend:'native',tool_mode:'robot_only'};
+  const launch={tool_backend:'native',tools:'robot_only'};
   assert.equal(broker.robotOnly(launch),true);assert.equal(broker.enabled(launch),false);
-  assert.equal(broker.robotOnly({profile:{tool_mode:'robot_only'}}),true);
+  assert.equal(broker.robotOnly({model_entry:{tools:'robot_only'}}),true);
   assert.equal(broker.robotOnly({tool_backend:'landlock-v1'}),false);
   assert.equal(broker.robotOnly({}),false);
 });
 test('admission refuses a robot_only launch whose Codex tools are still on',async()=>{
   const rpc={call:async()=>({config:{mcp_servers:{},features:{shell_tool:true}}})};
-  await assert.rejects(broker.admit(rpc,{tool_backend:'native',tool_mode:'robot_only',args:[]}),/not restricted/);
+  await assert.rejects(broker.admit(rpc,{tool_backend:'native',tools:'robot_only',args:[]}),/not restricted/);
   // A full native launch is not checked here, as before.
   await broker.admit({call:async()=>{throw new Error('not consulted');}},{tool_backend:'native',args:[]});
 });

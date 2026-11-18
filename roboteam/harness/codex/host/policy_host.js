@@ -23,7 +23,7 @@ const requiredText=(run,name)=>{const text=frozenText(run,name);
 const MAX_CAPACITY_RETRIES=3;  // As roboteam/runtime/run/bootstrap.py.
 // How far either side of a network pause a failed turn counts as part of it (claude/recovery.py NETWORK_WINDOW_S).
 const NETWORK_WINDOW_S=30;
-// The default startup timeout when harness.json names none, as STARTUP_TIMEOUT_S there.
+// The default startup timeout when run.json names none, as STARTUP_TIMEOUT_S there.
 const STARTUP_TIMEOUT_S=600;
 // As in roboteam/harness/claude/supervisor.py (finish_turn_grace_s): after a normal finish the
 // world is already frozen, so existing turns may write their final reply before closing.
@@ -61,7 +61,7 @@ function observationMime(data) {
   if (data.length>=3 && data[0]===255 && data[1]===216 && data[2]===255) return 'image/jpeg';
   throw new Error('Observation is not PNG or JPEG');
 }
-// One description for every engine's robot tool (harness/shared/robot_tool.json).
+// One description for every harness's robot tool (harness/shared/robot_tool.json).
 const robotTool = {type:'function',...require('../../shared/robot_tool.json')};
 
 // One persistent `pipeline_client --serve` per role, so a robot call costs no Python
@@ -116,7 +116,7 @@ class PolicyHost {
     this.networkFailures=new Map();
     this.failedAt=new Map();  // When each failed turn was seen, in seconds.
   }
-  // Host file locations come from roboteam/runtime/run/layout.py, the one source for both engines.
+  // Host file locations come from roboteam/runtime/run/layout.py, the one source for both harnesses.
   hostPath(key) {
     if (!this.layout) this.layout=JSON.parse(execFileSync(this.python,['-m','roboteam.runtime.run.layout',this.run],
       {cwd:this.cwd??path.resolve(__dirname,'../../../..'),encoding:'utf8'})).paths;
@@ -227,7 +227,7 @@ class PolicyHost {
           token_usage:p.tokenUsage,error:p.error});
       if (m.method==='turn/completed') this.turnStarted.delete(turnKey);
     }};
-    this.jobScoped=this.launch.profile?.runner_backend==='slurm-managed-v1';
+    this.jobScoped=this.launch.model_entry?.runner_backend==='slurm-managed-v1';
     if(this.jobScoped){
       if(!process.env.ROBOTEAM_CODEX_GATEWAY||!process.env.ROBOTEAM_CODEX_TASK)
         throw new Error('Missing admitted job gateway channel');
@@ -466,14 +466,14 @@ class PolicyHost {
     try {
       await this.startServer();
       const ownerLog=fs.openSync(this.hostPath('owner_log'),'a');
-      // The owner's environment is the same for both engines and carries no credentials
+      // The owner's environment is the same for both harnesses and carries no credentials
       // (roboteam/harness/shared/owner.py); it runs in its own process group.
       const ownerEnv=JSON.parse(execFileSync(this.python,['-m','roboteam.harness.shared.owner','env'],
         {cwd:this.cwd??path.resolve(__dirname,'../../../..'),encoding:'utf8'}));
       this.owner=spawn(this.python,['-m','roboteam.runtime.world.pipeline','--run-dir',this.run,'--hidden'],
         {cwd:this.cwd,stdio:['ignore',ownerLog,ownerLog],env:ownerEnv,detached:true}); fs.closeSync(ownerLog);
       this.owner.on('error',error=>{this.ownerError=error;});
-      const startupTimeout=read(path.join(this.run,'private/inputs/harness.json')).startup_timeout_s ?? STARTUP_TIMEOUT_S;
+      const startupTimeout=read(path.join(this.run,'private/inputs/run.json')).startup_timeout_s ?? STARTUP_TIMEOUT_S;
       if (!Number.isFinite(startupTimeout) || startupTimeout<=0) throw new Error('Invalid owner startup timeout');
       const ownerDeadline=performance.now()+startupTimeout*1000;
       for (;;) {
@@ -482,7 +482,7 @@ class PolicyHost {
         await sleep(1000);
       }
       const roles=read(path.join(this.run,'public/inputs/roles.json')).roles;
-      const startupProtocol=read(path.join(this.run,'private/inputs/harness.json')).startup_protocol;
+      const startupProtocol=read(path.join(this.run,'private/inputs/run.json')).startup_protocol;
       // A run continued after an unexpected exit reopens its roles' own threads instead.
       if ((await this.admin('snapshot')).lifecycle==='resuming') await this.resumeSessions();
       else await this.startInitialRoles(roles,startupProtocol);
@@ -520,8 +520,8 @@ class PolicyHost {
             stopRequested:()=>this.stopRequested()||this.rpcLost||this.ownerExited()});
         } catch (error) { if (!this.rpcLost) throw error; }
         if (!this.rpcLost || this.stopRequested()) return outcome;
-        if(this.jobScoped)throw new Error('Shared Codex engine stopped; automatic redispatch is disabled');
-        const claim=restartable?await this.admin('model-restart',{actor:'Meta',engine:'codex'}):{allowed:false};
+        if(this.jobScoped)throw new Error('Shared Codex harness stopped; automatic redispatch is disabled');
+        const claim=restartable?await this.admin('model-restart',{actor:'Meta',harness:'codex'}):{allowed:false};
         if (!claim.allowed) throw new Error('Codex app-server stopped; model restarts unavailable or exhausted');
         this.event({event:'model_host_restart',attempt:claim.restart});
         await this.restartModelHost();

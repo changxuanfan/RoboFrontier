@@ -1,7 +1,7 @@
 """Trusted job-level native process lifecycle and task-channel manifest.
 
 No scheduler calls or credential reads. Native refresh custody is external;
-an explicitly admitted access-only engine can follow its canonical generation.
+an explicitly admitted access-only harness can follow its canonical generation.
 Each task keeps a distinct frozen filesystem profile and runtime database.
 """
 from contextlib import contextmanager
@@ -26,7 +26,7 @@ CLI_TIMEOUT_S = 30
 
 
 def fingerprint():
-    names = ('harness/codex/job_engine.py', 'harness/codex/host/job_gateway.js', 'harness/codex/host/gateway_rpc.js',
+    names = ('harness/codex/job_harness.py', 'harness/codex/host/job_gateway.js', 'harness/codex/host/gateway_rpc.js',
              'harness/codex/file_sandbox.py', 'harness/codex/tool_worker.py', 'harness/codex/tool_backend.py',
              'harness/codex/host/rpc.js', 'harness/codex/host/policy_host.js', 'launch/codex_batch.py',
              'harness/codex/host/tool_broker.js', 'harness/codex/launch.py', 'launch/slurm/auth.py', 'launch/slurm/job.py',
@@ -45,7 +45,7 @@ def task_id(run):
 def _common_args(launch):
     args, common = launch['args'], []
     if len(args) % 2 or any(args[i] != '-c' for i in range(0, len(args), 2)):
-        raise ValueError('Job engine requires explicit native configuration overrides')
+        raise ValueError('Job harness requires explicit native configuration overrides')
     for key, value in zip(args[::2], args[1::2]):
         name = value.split('=', 1)[0]
         if name == 'default_permissions' or name.startswith('permissions.') or name == 'model_catalog_json':
@@ -72,15 +72,15 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
             if not supported:
                 raise ValueError('Short-outage pause requires the run to be frozen on this runtime; task left untouched')
         current = json.loads(Path(job.get('launch_file', run/'private/inputs/codex.json')).read_text())
-        if (current.get('tool_backend') != 'landlock-v1' or current['profile']['provider'] != 'openai'
-                or current['profile'].get('runner_backend') != BACKEND):
-            raise ValueError('Job engine requires an explicit managed-subscription broker profile')
+        if (current.get('tool_backend') != 'landlock-v1' or current['model_entry']['provider'] != 'openai'
+                or current['model_entry'].get('runner_backend') != BACKEND):
+            raise ValueError('Job harness requires an explicit managed-subscription broker model')
         native_args = _common_args(current)
         model_bytes = Path(current['model_catalog']).read_bytes()
         if args is None:
             args, launch, catalog = native_args, current, model_bytes
         elif native_args != args or model_bytes != catalog:
-            raise ValueError('A job engine requires one exact model/provider/catalog configuration')
+            raise ValueError('A job harness requires one exact model/provider/catalog configuration')
         access = json.loads((run/'private/inputs/policy-access.json').read_text())
         if access.get('network') is not False:
             raise ValueError('Job policy networking must be disabled')
@@ -102,7 +102,7 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
                       **({'resumeThreads': job['resume_threads']} if job.get('resume_threads') else {}),
                       **({'image': current.get('tool_probe', {}).get('image', str(Path(job['launch_file']).parent/'colors.png'))} if preflight else {})})
     if not tasks:
-        raise ValueError('No tasks for job engine')
+        raise ValueError('No tasks for job harness')
     args = [*args, '-c', 'model_catalog_json=' + json.dumps(launch['model_catalog']),
             '-c', 'cli_auth_credentials_store="file"', '-c', 'default_permissions="rf_closed"',
             '-c', 'permissions.rf_closed.filesystem={"/"="deny"}',
@@ -112,7 +112,7 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
         table = ','.join(json.dumps(p)+'='+json.dumps(v) for p, v in access['filesystem'].items())
         prefix = 'permissions.' + task['permissions']
         args.extend(['-c', prefix+'.filesystem={'+table+'}', '-c', prefix+'.network.enabled=false'])
-    endpoint = str(control/'engine.sock')
+    endpoint = str(control/'harness.sock')
     if len(endpoint.encode()) >= 104:
         raise ValueError('Job gateway socket path is too long; use a shorter node-local scratch path')
     return {'backend': BACKEND, 'fingerprint': fingerprint(), 'tasks': tasks, 'args': args,
@@ -126,7 +126,7 @@ def export_sessions(manifest, home):
 
     Normal role/snapshot sessions use the existing canonical index. Retain
     unbound forks separately too, e.g. an acknowledgement lost before binding.
-    Never walk/copy the engine home or collect auth/config/native SQLite.
+    Never walk/copy the harness home or collect auth/config/native SQLite.
     """
     from roboteam.launch.results.session_archive import keep_codex, _copy_verified
     ownership = Path(manifest['ownership'])
@@ -159,11 +159,11 @@ def export_sessions(manifest, home):
             source = matches[0]
             if source.is_symlink() or not source.is_file():
                 raise ValueError('Gateway transcript source must be a regular file')
-            target = run/'private/engine/gateway-transcripts'/source.name
+            target = run/'private/harness/gateway-transcripts'/source.name
             target.parent.mkdir(parents=True, exist_ok=True)
             digest = _copy_verified(source, target)
             rows.append({'thread_id': thread, 'file': target.relative_to(run).as_posix(), 'sha256': digest, 'verified': True})
-        write_json(run/'private/engine/gateway-transcripts/index.json',
+        write_json(run/'private/harness/gateway-transcripts/index.json',
                    {'backend': BACKEND, 'task_id': task['id'], 'threads': rows})
 
 
@@ -176,7 +176,7 @@ def pinned_cli():
 
 
 def require_pinned_cli(env=None, timeout_s=CLI_TIMEOUT_S):
-    """Refuse any Codex CLI but the pinned one, for every job-scoped engine.
+    """Refuse any Codex CLI but the pinned one, for every job-scoped harness.
 
     This covers each Slurm subscription batch and its preflight, with or without a policy
     environment: a newer CLI can reject this backend's configuration, and a shared account's
@@ -186,12 +186,12 @@ def require_pinned_cli(env=None, timeout_s=CLI_TIMEOUT_S):
     pinned = pinned_cli()
     actual = policy_env.cli_version('codex', env, timeout_s)
     if actual != 'codex-cli ' + pinned:
-        raise ValueError('Every job-scoped Codex engine needs Codex CLI %s first on PATH; found %s'
+        raise ValueError('Every job-scoped Codex harness needs Codex CLI %s first on PATH; found %s'
                          % (pinned, actual or 'none'))
 
 
 @contextmanager
-def engine(jobs, *, env, preflight=False, timeout_s=180):
+def harness(jobs, *, env, preflight=False, timeout_s=180):
     env = dict(env)
     # Every job-scoped batch and preflight, not only runs with a policy environment.
     require_pinned_cli(env)
@@ -206,7 +206,7 @@ def engine(jobs, *, env, preflight=False, timeout_s=180):
     if env.get('ROBOTEAM_EGRESS_PAUSE_FILE'):
         expected = str(private/'EGRESS_PAUSED')
         if env['ROBOTEAM_EGRESS_PAUSE_FILE'] != expected:
-            raise ValueError('Egress pause marker must belong to the original engine private root')
+            raise ValueError('Egress pause marker must belong to the original harness private root')
         manifest['pause_file'] = expected
     if env.get('ROBOTEAM_BORROWED_AUTH'):
         expected = str(Path(env['ROBOTEAM_CREDENTIAL_STORE'])/'current.json')
@@ -223,13 +223,13 @@ def engine(jobs, *, env, preflight=False, timeout_s=180):
             if any((private/name).exists() for name in ('CREDENTIAL_ERROR', 'EGRESS_ERROR')) and proc.poll() is None:
                 proc.terminate()
                 return
-    watcher = threading.Thread(target=supervise, name='codex-engine-custody', daemon=True)
+    watcher = threading.Thread(target=supervise, name='codex-harness-custody', daemon=True)
     watcher.start()
     try:
         deadline = time.monotonic() + timeout_s
         while not Path(manifest['ready']).exists():
             if proc.poll() is not None or time.monotonic() >= deadline:
-                raise RuntimeError('Shared native engine failed admission before START; see private supervisor logs')
+                raise RuntimeError('Shared native harness failed admission before START; see private supervisor logs')
             time.sleep(.05)
         yield manifest, proc
     finally:
@@ -257,4 +257,4 @@ def engine(jobs, *, env, preflight=False, timeout_s=180):
         finally:
             log.close()
         if proc.returncode:
-            raise RuntimeError('Shared native engine did not close cleanly; task evidence needs review')
+            raise RuntimeError('Shared native harness did not close cleanly; task evidence needs review')

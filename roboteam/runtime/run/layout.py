@@ -8,7 +8,7 @@ batch in batch.json.
 The run root holds public/ (host-written policy inputs and results), workspace/ (the
 policy's only writable folder and working directory, with one shared lessons file,
 skills.md) and private/. private/ is split by lifecycle: inputs (frozen), state (live;
-control files in state/control), outputs (results), logs and engine (CLI configuration,
+control files in state/control), outputs (results), logs and harness (CLI configuration,
 MCP configuration, per-turn evidence and transcripts). A stopped run continues in the
 same directory; segment k >= 1 keeps its restore pose in
 private/inputs/segments/<k>/ and its process outputs in
@@ -31,12 +31,12 @@ PATHS = {
     'engineering_lock': 'private/state/control/engineering.lock',
     'host_process': 'private/state/control/host-process.json',
     'world_lock': 'private/state/control/world.lock',
-    'engine_config': 'private/engine/config',
-    'engine_mcp': 'private/engine/mcp',
-    'engine_turns': 'private/engine/turns',
-    'engine_transcripts': 'private/engine/transcripts',
-    'collected_sessions': 'private/engine/collected-sessions.json',
-    'codex_home_marker': 'private/engine/codex-home.json',
+    'harness_config': 'private/harness/config',
+    'harness_mcp': 'private/harness/mcp',
+    'harness_turns': 'private/harness/turns',
+    'harness_transcripts': 'private/harness/transcripts',
+    'collected_sessions': 'private/harness/collected-sessions.json',
+    'codex_home_marker': 'private/harness/codex-home.json',
     # The run's cost ledger, shared by every role, model restart and segment.
     'budget_ledger': 'private/state/budget.sqlite',
     # The policy's only writable folder and its working directory. Claude's sandbox
@@ -48,7 +48,7 @@ PATHS = {
     'segment_outputs': 'private/outputs/segments',
 }
 # Folders a run creates at preparation.
-FOLDERS = ('workspace', 'private/logs', 'private/state/control', 'private/engine')
+FOLDERS = ('workspace', 'private/logs', 'private/state/control', 'private/harness')
 
 
 def manifest_record():
@@ -71,9 +71,9 @@ def for_store(store_path, key):
     return store.parent/'admin-client.log'
 
 
-# A batch folder holds batch.json, effective-config.json, profiles/ and its
-# <profile>/<case>/ runs, with control files in control/ and logs in logs/, the
-# same for both engines.
+# A batch folder holds batch.json, effective-config.json, models/ and its
+# <model>/<case>/ runs, with control files in control/ and logs in logs/, the
+# same for both harnesses.
 BATCH_CURRENT = 'batch-v2'
 BATCH_PATHS = {
     'stop': 'control/STOP',

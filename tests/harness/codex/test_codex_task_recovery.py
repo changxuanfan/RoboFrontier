@@ -12,12 +12,12 @@ import numpy as np
 
 from roboteam.harness.codex import recover_task as recovery
 from roboteam.harness.shared import recovery as common_recovery
-from roboteam.harness.codex.job_engine import task_id
+from roboteam.harness.codex.job_harness import task_id
 from roboteam.runtime.run.layout import path as run_path
 from roboteam.runtime.run.setup import write_json
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.tasks.config import ROOT
-from harness.shared.test_engine_parity import prepared
+from harness.shared.test_harness_parity import prepared
 
 
 class RecoveryTests(unittest.TestCase):
@@ -39,7 +39,7 @@ class RecoveryTests(unittest.TestCase):
         self.manifest = {'endpoint': '/not-used', 'recovery_directory': str(self.root/'grants'),
                          'tasks': [{'id': self.identity, 'run': str(self.run)}]}
         (self.root/'grants').mkdir(mode=0o700)
-        self.scratch = self.run/'private/engine/recovery-scratch'; self.scratch.mkdir(mode=0o700)
+        self.scratch = self.run/'private/harness/recovery-scratch'; self.scratch.mkdir(mode=0o700)
         pose = np.array([.25], dtype=np.float32)
         reader = SimpleNamespace(meta={'case_id': 'fixture', 'source_scene_sha256': 'fixture'},
                                  selected_frames=lambda indices: iter([(0, 1., pose)]))

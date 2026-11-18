@@ -4,8 +4,8 @@ from pathlib import Path
 import tempfile
 import unittest
 from roboteam.runtime.run.setup import verify_inputs
-from team_harness import prepare_run
-from roboteam.tasks.config import ROOT,load_task,load_harness, startup_protocol
+from team_settings import prepare_run
+from roboteam.tasks.config import ROOT,load_task,load_run_settings, startup_protocol
 from roboteam.runtime.world.store import RuntimeStore
 
 class SetupTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(verify_inputs(run),[])
         self.assertEqual(json.loads((run/'public/inputs/task.json').read_text())['id'],load_task()['id'])
         # New runs show letter labels where their videos do.
-        self.assertEqual(json.loads((run/'private/inputs/harness.json').read_text())['robot_labels'],'beside-robot-v1')
+        self.assertEqual(json.loads((run/'private/inputs/run.json').read_text())['robot_labels'],'beside-robot-v1')
         store=RuntimeStore(run/'private/state/runtime.sqlite')
         try:
             self.assertEqual(store.get('lifecycle'),'prepared')
@@ -93,25 +93,25 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(old.read_bytes(),before)
         self.assertFalse((run/'private/state').exists())
 
-    def test_eight_workers_prepare_with_same_skill_in_both_topologies(self):
+    def test_eight_workers_prepare_with_same_skill_in_both_systems(self):
         p=ROOT/'benchmark/transport/transport-a08-d1/task.json'
         # The template marks its tool-dependent passages; a full run gets the full wording.
-        from roboteam.runtime.tools.tool_mode import render
+        from roboteam.runtime.tools.tools_mode import render
         skill=render((Path(__file__).resolve().parents[3]/'prompts/guides/collaboration/guide.md').read_text(),'full').encode()
-        for topology in ('hierarchical','decentralized'):
-            cfg=load_harness();cfg['topology']=topology;cfg['startup_protocol']=startup_protocol(topology)
-            c=self.root/(topology+'.json');c.write_text(json.dumps(cfg))
-            run=prepare_run(self.root/topology,p,c)
+        for system in ('hierarchical','decentralized'):
+            cfg=load_run_settings();cfg['system']=system;cfg['startup_protocol']=startup_protocol(system)
+            c=self.root/(system+'.json');c.write_text(json.dumps(cfg))
+            run=prepare_run(self.root/system,p,c)
             roles=json.loads((run/'public/inputs/roles.json').read_text())['roles']
             self.assertEqual(sum(v['kind']=='worker' for v in roles.values()),8)
-            self.assertEqual('Controller' in roles,topology=='hierarchical')
+            self.assertEqual('Controller' in roles,system=='hierarchical')
             self.assertEqual((run/'public/inputs/guide/guide.md').read_bytes(),skill)
             self.assertEqual(verify_inputs(run),[])
 
     def test_hierarchical_lead_is_the_controller(self):
-        cfg=load_harness();cfg['topology']='hierarchical';cfg['startup_protocol']=startup_protocol('hierarchical')
+        cfg=load_run_settings();cfg['system']='hierarchical';cfg['startup_protocol']=startup_protocol('hierarchical')
         config=self.root/'hierarchical.json';config.write_text(json.dumps(cfg))
-        run=prepare_run(self.root/'run-hierarchical',harness_path=config)
+        run=prepare_run(self.root/'run-hierarchical',run_settings_path=config)
         roles=json.loads((run/'public/inputs/roles.json').read_text())
         self.assertEqual(roles['roles']['Controller']['kind'],'team-controller')
         self.assertTrue((run/'public/inputs/roles/Controller.md').exists())

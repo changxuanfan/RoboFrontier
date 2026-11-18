@@ -6,7 +6,7 @@ A run uses it when the trusted launcher names it in ROBOTEAM_POLICY_ENV. On macO
 the repository, is read-only, and holds a standalone Python with a few preinstalled
 packages plus an offline wheel store (roboteam/runtime/sandbox/policy-env/). scripts/release/build_policy_env.py
 builds it. Policy shells get variables() instead of the host's environment, so scripts
-see the same interpreter and libraries on every host and for every engine.
+see the same interpreter and libraries on every host and for every harness.
 
 Only policy shells get these variables. The native CLIs keep their own environment,
 credentials and HOME.
@@ -29,7 +29,7 @@ GUIDE_FILE = 'environment.md'
 RECEIPT_SUFFIX = '.check.json'
 RECEIPT_SCHEMA = 'roboteam.policy-env-check.v2'
 CLIS = {'codex': 'codex', 'claude': 'claude'}
-# What each engine's policy shells run in: the Codex tool backend, or Claude Code's Bash isolation.
+# What each harness's policy shells run in: the Codex tool backend, or Claude Code's Bash isolation.
 ISOLATION = {'codex': 'tool_backend', 'claude': 'bash_isolation'}
 
 
@@ -80,7 +80,7 @@ def receipt_path(root):
     """Beside the read-only environment, one per build.
 
     A build on shared storage has one receipt for every node that uses it: the check passes the
-    build with the engines, sandboxes and CLIs it ran, not each node. A node without what Codex's
+    build with the harnesses, sandboxes and CLIs it ran, not each node. A node without what Codex's
     confined tools need (unprivileged user namespaces) fails each command rather than running it
     less confined.
     """
@@ -98,15 +98,15 @@ def cli_version(binary, env=None, timeout_s=30):
     return (done.stdout.strip() or None) if done.returncode == 0 else None
 
 
-def combination(engine, isolation, env=None):
-    """One engine as a run would use it here: its sandbox and the CLI version on PATH."""
-    return {'engine': engine, ISOLATION[engine]: isolation, 'cli': cli_version(CLIS[engine], env)}
+def combination(harness, isolation, env=None):
+    """One harness as a run would use it here: its sandbox and the CLI version on PATH."""
+    return {'harness': harness, ISOLATION[harness]: isolation, 'cli': cli_version(CLIS[harness], env)}
 
 
 def require_checked(root, manifest, wanted=None):
     """Refuse an environment whose build scripts/release/check_policy_env.py has not passed.
 
-    With `wanted` (a combination()), also refuse when the check did not run that engine with
+    With `wanted` (a combination()), also refuse when the check did not run that harness with
     that sandbox and CLI version.
     """
     rerun = 'Run scripts/release/check_policy_env.py on this build first: ' + str(root)
@@ -117,20 +117,20 @@ def require_checked(root, manifest, wanted=None):
     if not isinstance(receipt, dict) or not receipt.get('passed') or receipt.get('tree_sha256') != manifest['tree_sha256']:
         raise ValueError(rerun)
     if receipt.get('schema') != RECEIPT_SCHEMA or not isinstance(receipt.get('checked'), list):
-        raise ValueError('This build\'s check does not record which engines, sandboxes and CLI versions it '
+        raise ValueError('This build\'s check does not record which harnesses, sandboxes and CLI versions it '
                          'ran; rerun scripts/release/check_policy_env.py: ' + str(root))
     if wanted is not None and wanted not in receipt['checked']:
         raise ValueError('scripts/release/check_policy_env.py has not checked %s on this build (it checked %s); rerun it '
-                         'with this engine, sandbox and CLI: %s'
+                         'with this harness, sandbox and CLI: %s'
                          % (json.dumps(wanted, sort_keys=True),
                             ', '.join(json.dumps(item, sort_keys=True) for item in receipt['checked']), root))
 
 
-def require_combination(engine, isolation):
-    """Before preparing runs with an environment: refuse an engine combination its check did not run."""
+def require_combination(harness, isolation):
+    """Before preparing runs with an environment: refuse an harness combination its check did not run."""
     root = selected()
     if root is not None:
-        require_checked(root, load(root), combination(engine, isolation))
+        require_checked(root, load(root), combination(harness, isolation))
 
 
 def require_private_route(config):
@@ -239,7 +239,7 @@ def shell_text(values):
 
 
 def guide_text(root):
-    """What the policy is told about its Python, the same for every engine."""
+    """What the policy is told about its Python, the same for every harness."""
     manifest = load(root)
     core = ', '.join('%s %s' % (name, manifest['packages'][name]) for name in manifest['core'])
     store = ', '.join(manifest['store'])

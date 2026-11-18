@@ -3,9 +3,9 @@
 encode:  each source MP4 becomes a 720p H.264 file (CRF 28, preset slow, faststart, no
          audio) and a 1280-px JPEG poster. The manifest records size, duration and SHA-256
          of every output and the SHA-256 of its source. Existing verified outputs are kept.
-montage: one 1920 x 1080 video per family, a 3 x 3 grid of its nine tasks (rows are
+montage: one 1920 x 1080 video per task type, a 3 x 3 grid of its nine tasks (rows are
          difficulty levels, columns scales), each tile sped up to a common length.
-explainer: the README benchmark figure: per family, its largest team at Levels 1-3, with what
+explainer: the README benchmark figure: per task type, its largest team at Levels 1-3, with what
          each level changes. IMAGES holds initial-state renders named <case>-top.jpg and
          <case>-global.jpg (the retired task atlas made them).
 stills:  README images: montage posters with a play badge and a 400-px thumbnail of every
@@ -15,7 +15,7 @@ Sources is a JSON file: {"set": "oracle", "tasks": {"<case>": {"front": path, "s
 Run from the repository root:
 
     .venv/bin/python -m scripts.site.site_media encode SOURCES OUT
-    .venv/bin/python -m scripts.site.site_media montage OUT/manifest.json FAMILY OUT_MP4
+    .venv/bin/python -m scripts.site.site_media montage OUT/manifest.json TASK_TYPE OUT_MP4
     .venv/bin/python -m scripts.site.site_media stills OUT/manifest.json MONTAGE_DIR docs/media/readme
     .venv/bin/python -m scripts.site.site_media explainer IMAGES docs/media/readme/benchmark.jpg
 """
@@ -96,13 +96,13 @@ def encode(sources, out, workers=2):
     return manifest
 
 
-def montage(manifest_path, family, output, length_s=60, view='front'):
-    """A 3 x 3 grid of one family: rows are levels 1-3, columns increasing scale."""
+def montage(manifest_path, task_type, output, length_s=60, view='front'):
+    """A 3 x 3 grid of one task type: rows are levels 1-3, columns increasing scale."""
     manifest_path = Path(manifest_path)
     manifest = json.loads(manifest_path.read_text())
-    cases = sorted(c for c in manifest['tasks'] if c.startswith(family + '-'))
+    cases = sorted(c for c in manifest['tasks'] if c.startswith(task_type + '-'))
     if len(cases) != 9:
-        raise ValueError(f'{family} has {len(cases)} encoded tasks, expected 9')
+        raise ValueError(f'{task_type} has {len(cases)} encoded tasks, expected 9')
     scale = lambda c: int(re.search(r'-[an](\d+)', c).group(1))  # arms, or dials for Dial
     columns = sorted({scale(c) for c in cases})
     grid = [[next(c for c in cases if scale(c) == col and c.endswith(f'-d{level}')) for col in columns] for level in (1, 2, 3)]
@@ -141,7 +141,7 @@ def play_badge(path, size=0.16):
 
 
 def explainer(atlas, out, width=1800):
-    """The README benchmark figure: one row per family, its largest team at Levels 1-3, each
+    """The README benchmark figure: one row per task type, its largest team at Levels 1-3, each
     the task's real initial state from a render in `atlas`, with what the level changes."""
     from PIL import Image, ImageDraw, ImageFont
     fonts = Path(__file__).resolve().parents[2] / 'benchmark/hall/fonts'
@@ -159,7 +159,7 @@ def explainer(atlas, out, width=1800):
     for i, label in enumerate(['LEVEL 1', 'LEVEL 2', 'LEVEL 3']):
         x = pad + side + i * (cw + gap)
         d.text((x, pad + 10), label, font=mono(22), fill=dim)
-    d.text((pad, pad + 10), 'LARGEST TEAM PER FAMILY', font=mono(22), fill=dim)
+    d.text((pad, pad + 10), 'LARGEST TEAM PER TASK TYPE', font=mono(22), fill=dim)
     for r, key in enumerate(['transport', 'mosaic', 'relay', 'dial']):
         fam, y = data['families'][key], pad + head + r * (row + gap)
         tasks = [t for t in data['tasks'] if t['family'] == key]
@@ -215,7 +215,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest='command', required=True)
     e = sub.add_parser('encode'); e.add_argument('sources'); e.add_argument('out'); e.add_argument('--workers', type=int, default=2)
-    m = sub.add_parser('montage'); m.add_argument('manifest'); m.add_argument('family'); m.add_argument('output')
+    m = sub.add_parser('montage'); m.add_argument('manifest'); m.add_argument('task_type'); m.add_argument('output')
     m.add_argument('--length-s', type=float, default=60); m.add_argument('--view', default='front')
     s = sub.add_parser('stills'); s.add_argument('manifest'); s.add_argument('montages'); s.add_argument('out')
     x = sub.add_parser('explainer'); x.add_argument('atlas'); x.add_argument('out')
@@ -227,7 +227,7 @@ def main(argv=None):
     elif args.command == 'stills':
         print('\n'.join(stills(args.manifest, args.montages, args.out)))
     else:
-        print(json.dumps(montage(args.manifest, args.family, args.output, args.length_s, args.view), indent=1))
+        print(json.dumps(montage(args.manifest, args.task_type, args.output, args.length_s, args.view), indent=1))
 
 
 if __name__ == '__main__':

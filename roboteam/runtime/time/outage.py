@@ -2,7 +2,7 @@
 
 Runs that count active time (run_protocol clock active_time_v1) and have no Slurm egress pause
 (a Mac, a RunPod host, or a Slurm job with direct egress) probe the model API host the run's
-profile names (its `upstream_host` or `base_url`), or their engine's default hosts, from the world process with a verified HTTPS request (a bare TCP connect succeeds through a
+model names (its `upstream_host` or `base_url`), or their harness's default hosts, from the world process with a verified HTTPS request (a bare TCP connect succeeds through a
 local VPN tunnel whose route is gone). After `FAILURES` consecutive failed probes the world pauses as for a
 Slurm egress outage; the first successful probe resumes it. Slurm runs keep their egress
 pause. See docs/runs/continuation.md#time.
@@ -17,7 +17,7 @@ import ssl
 import threading
 import time
 
-ENGINE_HOSTS = {'claude': ('api.anthropic.com',), 'codex': ('chatgpt.com', 'auth.openai.com')}
+HARNESS_HOSTS = {'claude': ('api.anthropic.com',), 'codex': ('chatgpt.com', 'auth.openai.com')}
 INTERVAL_S = 5.
 TIMEOUT_S = 5.
 FAILURES = 3
@@ -125,18 +125,18 @@ class OutageMonitor:
         self.stopping.set()
 
 
-def model_hosts(run, engine):
-    """The model API hosts a run uses: its frozen profile's base_url host, else the engine's own."""
+def model_hosts(run, harness):
+    """The model API hosts a run uses: its frozen model's base_url host, else the harness's own."""
     import json
     from pathlib import Path
     from urllib.parse import urlsplit
     if run is not None:
-        try: profile = json.loads((Path(run)/'private/inputs'/(engine+'.json')).read_text()).get('profile') or {}
-        except (OSError, ValueError, AttributeError): profile = {}
-        # A profile behind a local protocol adapter names the API host its adapter calls.
-        host = profile.get('upstream_host') or urlsplit(profile.get('base_url') or '').hostname
+        try: model_entry = json.loads((Path(run)/'private/inputs'/(harness+'.json')).read_text()).get('model_entry') or {}
+        except (OSError, ValueError, AttributeError): model_entry = {}
+        # A model entry behind a local protocol adapter names the API host its adapter calls.
+        host = model_entry.get('upstream_host') or urlsplit(model_entry.get('base_url') or '').hostname
         if host: return (host,)
-    return ENGINE_HOSTS.get(engine)
+    return HARNESS_HOSTS.get(harness)
 
 
 def monitor_for(task, config, probe=None, run=None):
@@ -149,6 +149,6 @@ def monitor_for(task, config, probe=None, run=None):
     if task.get('execution_readiness') != 'prepared_policy_trial': return None
     if os.environ.get('ROBOTEAM_EGRESS_PAUSE_FILE'): return None
     if os.environ.get(SWITCH, '').strip().lower() in ('off', '0', 'false', 'no'): return None
-    hosts = model_hosts(run, (config or {}).get('engine', 'codex'))
+    hosts = model_hosts(run, (config or {}).get('harness', 'codex'))
     if not hosts: return None
     return OutageMonitor(hosts, probe or https_probe)
