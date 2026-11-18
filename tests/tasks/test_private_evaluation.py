@@ -1,7 +1,7 @@
 """Private evaluation evidence is saved at close, never sent to policy roles."""
 import json
 import unittest
-from runtime import test_centralized as fixture
+from runtime.world import test_centralized as fixture
 
 
 class PrivateEvaluationTests(unittest.TestCase):

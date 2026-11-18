@@ -1,7 +1,7 @@
 """Joint target references follow the segment that geometry checks sample."""
 import unittest
 import numpy as np
-from physics.test_motion_check import robot_fixture
+from sim.test_motion_check import robot_fixture
 from roboteam.tasks.config import load_harness
 
 class JointCoordinationTests(unittest.TestCase):

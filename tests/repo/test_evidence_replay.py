@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import unittest
 
-from scripts.verify_evidence_replay import verify_evidence
+from scripts.dev.verify_evidence_replay import verify_evidence
 
 
 class EvidenceReplayInputTests(unittest.TestCase):

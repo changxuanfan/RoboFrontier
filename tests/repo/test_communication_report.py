@@ -6,7 +6,7 @@ import unittest
 
 from unittest import mock
 
-from scripts.communication_report import main, report_run
+from scripts.analysis.communication_report import main, report_run
 
 
 def empty_run(run):

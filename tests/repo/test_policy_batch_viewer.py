@@ -13,7 +13,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from scripts.view_policy_batch import HTML, batch_snapshot, create_server
+from scripts.dev.view_batch import HTML, batch_snapshot, create_server
 
 
 def write(path,value):

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from scripts import site_data
+from scripts.site import site_data
 
 ROOT = Path(__file__).resolve().parents[2]
 

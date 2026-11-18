@@ -49,7 +49,7 @@ class BestFiveFeedbackTests(unittest.TestCase):
     def test_record_brightness_tracks_readiness_and_replay_records_it(self):
         folder=ROOT/'benchmark/dial/dial-best5-n04-d1'
         if not folder.exists():self.skipTest('Generate the new scene first')
-        from roboteam.media.motion_recording import MotionWriter,MotionReader
+        from roboteam.sim.motion_recording import MotionWriter,MotionReader
         m=mujoco.MjModel.from_xml_path(str(folder/'scene.xml'));d=mujoco.MjData(m)
         game=DialFeedback([1]*4)
         with tempfile.TemporaryDirectory() as tmp:
@@ -77,7 +77,7 @@ class BestFiveFeedbackTests(unittest.TestCase):
     def test_five_symbol_inputs_are_private_and_feedback_source_is_fingerprinted(self):
         task=ROOT/'benchmark/dial/dial-best5-n04-d1/task.json'
         if not task.exists():self.skipTest('Generate the new scene first')
-        from roboteam.runtime.setup import prepare_run,verify_inputs
+        from roboteam.runtime.run.setup import prepare_run,verify_inputs
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);code=p/'code.json';code.write_text(json.dumps({'code_symbols':[5]*4}))
             run=prepare_run(p/'run',task,private_puzzle_path=code)
@@ -136,7 +136,7 @@ class BestFiveFeedbackTests(unittest.TestCase):
     def test_compiled_world_cannot_qualify_angles_without_robot_grasps(self):
         folder=ROOT/'benchmark/dial/dial-best5-n04-d1'
         if not folder.exists():self.skipTest('Generate the new scene first')
-        from roboteam.physics.robot_control import PandaArm
+        from roboteam.sim.robot_control import PandaArm
         task=json.loads((folder/'task.json').read_text());m=mujoco.MjModel.from_xml_path(str(folder/'scene.xml'));d=mujoco.MjData(m);mujoco.mj_resetDataKeyframe(m,d,m.key('initial').id)
         arms={name:PandaArm(m,d,name) for name in task['arms']}
         world=SimpleNamespace(model=m,data=d,task=task,arms=arms);mon=Monitor(world,secret=[1]*4)

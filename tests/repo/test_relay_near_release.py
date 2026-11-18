@@ -7,7 +7,7 @@ from unittest.mock import patch
 import mujoco
 import numpy as np
 
-from roboteam.physics.robot_control import PandaArm
+from roboteam.sim.robot_control import PandaArm
 from roboteam.tasks.evaluate import Monitor
 from roboteam.tasks.families import ROOT
 

@@ -1,4 +1,4 @@
-"""scripts/run_analysis.py reports missing and failed runs instead of passing them as empty."""
+"""scripts/analysis/run_analysis.py reports missing and failed runs instead of passing them as empty."""
 
 import contextlib
 import io
@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts import run_analysis
+from scripts.analysis import run_analysis
 from analysis.test_run_analysis_segments import BASE, Fixture, action, header, snap
 
 

@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 
-from roboteam.runtime import segments as run_segments
+from roboteam.runtime.run import segments as run_segments
 from roboteam.tasks.relay import final_task
 from roboteam.tasks.families import RELAY_HANDOVER_RULE, policy_task
 from tests.tasks.test_relay_goal_support import GoalSupportTests
@@ -209,7 +209,7 @@ class RestartTests(unittest.TestCase):
         _, _, relay = GoalSupportTests().world()
         relay.mon.w = type('World', (), {'directory': Path('/run')})()
         note = {'evaluator': {'relay_payloads': {'p1': {'handovers': [HANDOVER], 'drops': 2}, 'gone': {'handovers': [], 'drops': 0}}}}
-        with patch('roboteam.runtime.segments.current_restore', return_value=(note, Path('/run/pose.npy'))):
+        with patch('roboteam.runtime.run.segments.current_restore', return_value=(note, Path('/run/pose.npy'))):
             relay.continue_record()
         self.assertEqual(relay.states['p1']['transitions'], [HANDOVER])
         self.assertEqual(relay.states['p1']['drops'], 2)
@@ -220,7 +220,7 @@ class RestartTests(unittest.TestCase):
         for state in s.relay.states.values(): state.update(airborne=False, custody=set())
         s.relay.mon.w = type('World', (), {'directory': Path('/run')})()
         note = {'evaluator': {'relay_payloads': {'p1': item, 'p2': item}}}
-        with patch('roboteam.runtime.segments.current_restore', return_value=(note, Path('/run/pose.npy'))):
+        with patch('roboteam.runtime.run.segments.current_restore', return_value=(note, Path('/run/pose.npy'))):
             s.relay.continue_record()
         return s
 

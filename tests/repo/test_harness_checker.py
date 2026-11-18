@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.check_harness import documentation_links
+from scripts.dev.check_harness import documentation_links
 
 
 class DocumentationLinkTests(unittest.TestCase):

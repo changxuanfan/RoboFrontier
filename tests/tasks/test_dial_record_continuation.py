@@ -1,4 +1,4 @@
-"""A continued segment's Dial evaluator takes over trials and BEST (docs/running/continuation.md)."""
+"""A continued segment's Dial evaluator takes over trials and BEST (docs/runs/continuation.md)."""
 import math
 from types import SimpleNamespace
 import unittest
@@ -18,7 +18,7 @@ class ContinuationTests(unittest.TestCase):
     def monitor(self, game, angles, record):
         stub = SimpleNamespace(w=SimpleNamespace(directory='run'), d=SimpleNamespace(qpos=np.array(angles), time=40.),
                                qids=list(range(len(angles))), game=game, carried_trials=0)
-        with patch('roboteam.runtime.segments.current_restore', lambda run: ({'evaluator': record}, None)):
+        with patch('roboteam.runtime.run.segments.current_restore', lambda run: ({'evaluator': record}, None)):
             Monitor.continue_dial_record(stub)
         return stub
 
@@ -48,7 +48,7 @@ class ContinuationTests(unittest.TestCase):
     def test_without_a_carried_record_the_evaluator_starts_empty(self):
         game = DialFeedback((1, 1, 1, 1))
         stub = SimpleNamespace(w=SimpleNamespace(directory='run'), game=game, carried_trials=0)
-        with patch('roboteam.runtime.segments.current_restore', lambda run: None):
+        with patch('roboteam.runtime.run.segments.current_restore', lambda run: None):
             Monitor.continue_dial_record(stub)
         self.assertEqual((game.queries, game.best, stub.carried_trials), (0, 0, 0))
 
@@ -80,7 +80,7 @@ class SampledContinuationTests(unittest.TestCase):
         mon.blue_qualification = [SupportQualification()]; mon.previous_red = set(); mon.unsupported_since = {}
         mon.holding_s = 0.; mon.minimum_clearance = np.full(1, math.inf); mon.violations = []; mon.carried_trials = 0
         mon.game = DialFeedback((1,))
-        with patch('roboteam.runtime.segments.current_restore', lambda run: ({'evaluator': record}, None)):
+        with patch('roboteam.runtime.run.segments.current_restore', lambda run: ({'evaluator': record}, None)):
             mon.continue_dial_record()
         return mon
 

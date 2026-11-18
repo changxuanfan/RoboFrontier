@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from roboteam.runtime.setup import verify_inputs
+from roboteam.runtime.run.setup import verify_inputs
 from roboteam.tasks.families import (ROOT, RELEASE, read, resolve_case,
     policy_task, validate_policy_task, validate_frozen_policy, prepare)
 
@@ -12,7 +12,7 @@ from roboteam.tasks.families import (ROOT, RELEASE, read, resolve_case,
 class FamilyReleaseTests(unittest.TestCase):
     def test_asset_audit_detects_missing_changed_and_unsafe_paths(self):
         import hashlib
-        from roboteam.batch.tasks import check_case_assets
+        from roboteam.launch.tasks import check_case_assets
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);scene=root/'scene';(scene/'assets').mkdir(parents=True)
             file=scene/'assets/a';file.write_bytes(b'original')
@@ -100,7 +100,7 @@ class FamilyReleaseTests(unittest.TestCase):
                     validate_frozen_policy(task, run)
 
     def test_each_family_starts_frozen_evaluator_and_recording_without_steps(self):
-        from roboteam.runtime.pipeline import World
+        from roboteam.runtime.world.pipeline import World
         cases = ['transport-a04-d1', 'mosaic-a04-6x12-d1',
                  'relay-a08-d1', 'dial-best5-n04-d1']
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
@@ -117,11 +117,11 @@ class FamilyReleaseTests(unittest.TestCase):
                         world.close()
 
     def test_policy_harness_records_motion_at_its_frozen_rate(self):
-        from roboteam.runtime.pipeline import World
+        from roboteam.runtime.world.pipeline import World
         from roboteam.tasks.config import load_harness
-        self.assertEqual(read(ROOT/'configs/harness.json')['motion_hz'], 30)
+        self.assertEqual(read(ROOT/'roboteam/runtime/run/defaults.json')['motion_hz'], 30)
         with tempfile.TemporaryDirectory() as tmp, patch('mujoco.mj_step', side_effect=AssertionError('No physics')):
-            run = prepare('mosaic-a04-6x12-d1', Path(tmp)/'run', harness=ROOT/'configs/harness.json')
+            run = prepare('mosaic-a04-6x12-d1', Path(tmp)/'run', harness=ROOT/'roboteam/runtime/run/defaults.json')
             self.assertEqual(read(run/'private/inputs/harness.json')['motion_hz'], 30)
             world = World(run, read(run/'private/inputs/task.json'))
             try:
@@ -133,7 +133,7 @@ class FamilyReleaseTests(unittest.TestCase):
             finally:
                 world.close()
             # A harness without motion_hz and process_log records at 60 Hz with full logs.
-            plain_cfg = {k: v for k, v in read(ROOT/'configs/harness.json').items() if k not in ('motion_hz', 'process_log')}
+            plain_cfg = {k: v for k, v in read(ROOT/'roboteam/runtime/run/defaults.json').items() if k not in ('motion_hz', 'process_log')}
             plain_path = Path(tmp)/'plain.json'; plain_path.write_text(json.dumps(plain_cfg))
             plain = prepare('mosaic-a04-6x12-d1', Path(tmp)/'plain', harness=plain_path)
             world = World(plain, read(plain/'private/inputs/task.json'))
@@ -145,18 +145,18 @@ class FamilyReleaseTests(unittest.TestCase):
                 world.close()
             bad = Path(tmp)/'bad.json'
             for value in (0, -30, True, float('nan')):
-                bad.write_text(json.dumps({**read(ROOT/'configs/harness.json'), 'motion_hz': value}))
+                bad.write_text(json.dumps({**read(ROOT/'roboteam/runtime/run/defaults.json'), 'motion_hz': value}))
                 with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'motion sampling'):
                     load_harness(bad)
             for value in ('every-step', 'events-5s', 'events-10'):
-                bad.write_text(json.dumps({**read(ROOT/'configs/harness.json'), 'process_log': value}))
+                bad.write_text(json.dumps({**read(ROOT/'roboteam/runtime/run/defaults.json'), 'process_log': value}))
                 with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'process log format'):
                     load_harness(bad)
             # Every Monitor format, and only those, is accepted (task_config keeps the list literal).
             from roboteam.tasks.evaluate import PROCESS_LOG_FORMATS
             self.assertEqual(sorted(PROCESS_LOG_FORMATS), ['events-10s', 'events-1s', 'events-60s', 'full'])
             for value in PROCESS_LOG_FORMATS:
-                bad.write_text(json.dumps({**read(ROOT/'configs/harness.json'), 'process_log': value}))
+                bad.write_text(json.dumps({**read(ROOT/'roboteam/runtime/run/defaults.json'), 'process_log': value}))
                 with self.subTest(value=value):
                     self.assertEqual(load_harness(bad)['process_log'], value)
 
@@ -167,7 +167,7 @@ class ReleaseRecordTests(unittest.TestCase):
         # harness pin could go stale with nothing enforcing it.
         from roboteam.tasks.families import sha
         self.assertNotIn('harness', sorted(read(ROOT/RELEASE)))
-        assets = read(ROOT/'configs/policy-assets.json')
+        assets = read(ROOT/'benchmark/assets.json')
         self.assertEqual(assets['release_sha256'], sha(ROOT/RELEASE))
         # The archive may come from an earlier revision that changed task files only; restoring
         # checks every scene and Panda file against this release's hashes (handoff.restore_assets).
@@ -179,8 +179,7 @@ class FrozenReleaseTests(unittest.TestCase):
         # build_release.index_release recomputes release_id from every case file and refuses a
         # change once frozen; here the record and the files must agree.
         import sys
-        sys.path.insert(0, str(ROOT/'scripts'))
-        import build_release
+        from scripts.release import build_release
         release = read(ROOT/RELEASE)
         self.assertTrue(release['frozen'])
         self.assertEqual(release['frozen']['release_id'], release['release_id'])

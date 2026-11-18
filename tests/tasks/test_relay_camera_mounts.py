@@ -9,8 +9,7 @@ import numpy as np
 
 from roboteam.tasks.families import ROOT, RELEASE, read, prepare
 
-sys.path.insert(0, str(ROOT/'scripts'))
-import build_release
+from scripts.release import build_release
 
 
 class RelayCameraMountTests(unittest.TestCase):
