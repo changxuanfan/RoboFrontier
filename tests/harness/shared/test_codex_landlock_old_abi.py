@@ -113,9 +113,9 @@ denied('readonly_o_trunc_cloexec',lambda:os.open(p,os.O_RDONLY|os.O_TRUNC|os.O_C
 denied('invalid_access_o_trunc',lambda:os.open(p,os.O_ACCMODE|os.O_TRUNC))
 denied('chmod',lambda:os.chmod(p,0o777))
 denied('utime',lambda:os.utime(p,(1,1)))
-for name,task type,kind in [('unix',socket.AF_UNIX,socket.SOCK_STREAM),('tcp',socket.AF_INET,socket.SOCK_STREAM),
+for name,domain,kind in [('unix',socket.AF_UNIX,socket.SOCK_STREAM),('tcp',socket.AF_INET,socket.SOCK_STREAM),
                          ('udp',socket.AF_INET,socket.SOCK_DGRAM)]:
- denied(name,lambda task type=task type,kind=kind:socket.socket(task type,kind))
+ denied(name,lambda domain=domain,kind=kind:socket.socket(domain,kind))
 class How(ctypes.Structure):
  _fields_=[('flags',ctypes.c_uint64),('mode',ctypes.c_uint64),('resolve',ctypes.c_uint64)]
 libc=ctypes.CDLL(None,use_errno=True)

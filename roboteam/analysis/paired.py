@@ -1,7 +1,7 @@
 """Paired comparisons between conditions that ran the same tasks.
 
 Every condition runs the same tasks once, so two conditions are compared task by task: an exact
-McNemar test on the tasks that only one of them completes, Holm's correction over a task type of
+McNemar test on the tasks that only one of them completes, Holm's correction over a set of
 such tests, and bootstrap intervals from resampling the tasks within each task type.
 
 `results` maps a condition to `{task: (completed, hours)}`; `types` maps a task to its type.

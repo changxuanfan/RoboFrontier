@@ -108,7 +108,13 @@ class IdentityTests(unittest.TestCase):
 
 class SelectionTests(unittest.TestCase):
     def setUp(self):
-        folder = tempfile.TemporaryDirectory()
+        # Outside /tmp, where Linux refuses a run with an environment.
+        outside = (
+            '/var/tmp'
+            if Path(tempfile.gettempdir()).resolve().is_relative_to(Path('/tmp').resolve())
+            else None
+        )
+        folder = tempfile.TemporaryDirectory(dir=outside)
         self.addCleanup(folder.cleanup)
         self.tmp = Path(folder.name).resolve()
 

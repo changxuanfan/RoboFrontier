@@ -201,8 +201,8 @@ checks['public_intact']=(r/'public/task.txt').read_text()=='public'
 for key,p in [('private',r/'private/secret.txt'),('other_run',r.parent/'other.txt'),('proc',Path('/proc/self/environ'))]:
  denied(key,lambda p=p:p.read_bytes())
 denied('public_write',lambda:(r/'public/illegal').write_text('bad'))
-for key,task type,kind in [('unix',socket.AF_UNIX,socket.SOCK_STREAM),('tcp',socket.AF_INET,socket.SOCK_STREAM),('udp',socket.AF_INET,socket.SOCK_DGRAM)]:
- denied(key,lambda task type=task type,kind=kind:socket.socket(task type,kind))
+for key,domain,kind in [('unix',socket.AF_UNIX,socket.SOCK_STREAM),('tcp',socket.AF_INET,socket.SOCK_STREAM),('udp',socket.AF_INET,socket.SOCK_DGRAM)]:
+ denied(key,lambda domain=domain,kind=kind:socket.socket(domain,kind))
 checks['environment']=not any(k in os.environ for k in ('CODEX_HOME','OPENAI_API_KEY','CLAUDE_CODE_OAUTH_TOKEN','BASH_ENV'))
 print(json.dumps(checks));sys.exit(0 if all(checks.values()) else 1)
 '''
