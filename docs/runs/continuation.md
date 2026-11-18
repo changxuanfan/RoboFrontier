@@ -5,7 +5,7 @@ run directory, runtime database, workspace and model sessions. Only the physical
 world is new, rebuilt approximately from the last recorded motion frame. Both
 engines and all four agent systems (single-agent, hierarchical, decentralized,
 adaptive) continue the same way. The functions named `segments.*` below are in
-`roboteam/runtime/segments.py`.
+`roboteam/runtime/run/segments.py`.
 
 - After an **unexpected** stop (a host, world or model session ended without a
   finish, cutoff or STOP) the batch continues the run by itself, **once** per run.
@@ -148,8 +148,8 @@ with the same restore frame and end time, and uses no further continuation.
 
 - **A host or world exits while the batch process lives:** the batch runner
   checks after every run and, if the run may continue, prepares its next segment
-  and starts its host again (`roboteam/batch/codex_batch.py` for Codex,
-  `roboteam/batch/claude_batch.py` for Claude).
+  and starts its host again (`roboteam/launch/codex_batch.py` for Codex,
+  `roboteam/launch/claude_batch.py` for Claude).
 - **The batch process died too:** the world processes close by themselves.
   Then run the batch once more; started runs continue in their next segment (by
   the same stop table) and unstarted runs start:
@@ -170,7 +170,7 @@ with the same restore frame and end time, and uses no further continuation.
 
 ## Testing single-arm recovery: fault injection
 
-`python -m roboteam.runtime.fault_injection RUN --robot ARM|'*' --action-index N`
+`python -m roboteam.runtime.world.fault_injection RUN --robot ARM|'*' --action-index N`
 freezes one fault before the run starts: the N-th independent action of that arm
 (or of any arm, with `*`) times out quickly and, once stopping, stays unsettled
 for a set time, so it becomes an uncertain action with local recovery, and
@@ -213,7 +213,7 @@ time already used. The frozen `run_protocol.clock` says how a run counts it.
 ### Active time (`clock: active_time_v1`)
 
 Every policy run counts active time. The world owner adds it up tick by tick
-(`BudgetGuard` in `roboteam/runtime/clock.py`). An interval counts only while
+(`BudgetGuard` in `roboteam/runtime/time/clock.py`). An interval counts only while
 the lifecycle is `running`, physics is `running` and dispatch is not paused
 (`clock.counting`). It does not count:
 
@@ -280,7 +280,7 @@ backstop then counts again from that moment.
 
 A run without a Slurm egress pause (a Mac, a RunPod host, or a Slurm job with direct
 egress) has no route watcher to pause its world, so its world owner probes the model
-API hosts (`roboteam/runtime/outage.py`): the host of the run's profile
+API hosts (`roboteam/runtime/time/outage.py`): the host of the run's profile
 `base_url` when it has one, else the engine's own, Claude `api.anthropic.com` and
 Codex `chatgpt.com` and `auth.openai.com`, all of which must answer. A Slurm job on
 the `mac-ssh` route keeps its egress pause (`slurm.egress_pause_s`, by default as
@@ -300,7 +300,7 @@ turn that failed on the network during the pause gets its one network
 continuation per role and pause, as after an egress pause: Codex resends it when
 the app-server reports a transport failure, Claude when the CLI's structured API
 error names a lost connection or does not say what failed
-([Claude network continuation](../engines/claude-code.md#run-status-and-stop)). The resent turn
+([Claude network continuation](../harness/claude-code.md#run-status-and-stop)). The resent turn
 continues the same session and replays nothing; a second failure in the same
 pause, or a failure for another reason within it, holds the run for review.
 
@@ -315,10 +315,10 @@ pauses: after 12 failures it stops and records `OUTAGE_PROBE_UNAVAILABLE`.
 ### Usage-limit pause (every platform)
 
 A subscription's 5-hour or weekly limit lasts until its reset, so it is not retried
-like a short rate limit. When a model turn fails on it (`runtime/quota.py`: Claude
+like a short rate limit. When a model turn fails on it (`runtime/time/quota.py`: Claude
 Code's "You've hit your … limit · resets …" or "usage limit reached|<time>", Codex's
 `usageLimitExceeded` or "try again at/in …"), the host reads the reset time and asks
-the world to pause (the `quota-pause` operation of `roboteam/runtime/cli.py`, `QUOTA_PAUSE_REQUESTED`). The world
+the world to pause (the `quota-pause` operation of `roboteam/runtime/run/cli.py`, `QUOTA_PAUSE_REQUESTED`). The world
 pauses exactly as in an outage (`QUOTA_PAUSED`): physics and dispatch held, original
 calls kept, the time counted neither as active time nor by the wall backstop. A second
 role's request joins the first (the later reset wins). The world resumes by itself a
@@ -354,7 +354,7 @@ as an unexpected stop and continues by itself once (see the stop table).
 
 ## Claude task recovery
 
-`python -m roboteam.engines.claude.recover_task` continues one task of a Claude
+`python -m roboteam.harness.claude.recover_task` continues one task of a Claude
 engineering batch whose host closed while its world was paused. It is the Claude
 counterpart of [Codex task recovery](#codex-task-recovery). Its default mode
 only reports eligibility.
@@ -371,7 +371,7 @@ Run from any checkout, against the original one. `SOURCE` is the checkout the
 batch runs from, and `PYTHON` is its interpreter.
 
 ```sh
-python -m roboteam.engines.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" --python "$PYTHON"
+python -m roboteam.harness.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" --python "$PYTHON"
 ```
 
 The task may recover only if every one of these holds:
@@ -392,7 +392,7 @@ The task may recover only if every one of these holds:
 table denies, for example `$RUN/private/engine/recovery-scratch`.
 
 ```sh
-python -m roboteam.engines.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" \
+python -m roboteam.harness.claude.recover_task --run-dir "$RUN" --source-root "$SOURCE" \
   --python "$PYTHON" --scratch "$SCRATCH" --execute
 ```
 
@@ -403,7 +403,7 @@ agent session that started it. `--foreground` runs it in the current process ins
 as on Linux. In order, it:
 
 1. **Seals a live world.** A world that is still alive is sealed through its own
-   shutdown (`seal_run` in `roboteam/runtime/seal.py`): a final observation, then exit. It is never
+   shutdown (`seal_run` in `roboteam/runtime/world/seal.py`): a final observation, then exit. It is never
    killed, and no motion is replayed.
 2. **Validates the restore.** It rebuilds the world from the last recorded pose on
    a private copy and checks the pose, zero velocity, simulation time and grasp
@@ -417,7 +417,7 @@ as on Linux. In order, it:
    (`segments.prepare_retry` with the manual sealed-host exception) and checks
    that the call and action ledger is unchanged.
 6. **Runs the frozen runner.** It starts the original runner
-   (`roboteam.engines.claude.run.run_task`) from `SOURCE`, with that checkout's
+   (`roboteam.harness.claude.run.run_task`) from `SOURCE`, with that checkout's
    `.env` and the batch's frozen configuration. That runner restarts the world from
    the restore pose and resumes the Controller and every active delegate in their
    own sessions, each with its frozen resume message.
@@ -436,7 +436,7 @@ collects.
 
 ### Validation
 
-`tests/runtime/test_claude_task_recovery.py` covers:
+`tests/harness/claude/test_claude_task_recovery.py` covers:
 
 - read-only inspection;
 - refusal of a live session, an unsettled call, a started delegate and a task the
@@ -451,7 +451,7 @@ scene. These tests make no model calls.
 
 ## Codex task recovery
 
-`python -m roboteam.engines.codex.recover_task` is an explicit, single-task entrypoint.
+`python -m roboteam.harness.codex.recover_task` is an explicit, single-task entrypoint.
 Its default mode only reports eligibility. It does not restart the allocation,
 the shared native app-server, another task, or the batch supervisor. The same
 native process remains the sole subscription refresh owner.
@@ -471,7 +471,7 @@ renderer and filesystem layout available. `SOURCE` is the original immutable
 runtime, not the synchronized development checkout. `PYTHON` is its interpreter.
 
 ```sh
-python -m roboteam.engines.codex.recover_task \
+python -m roboteam.harness.codex.recover_task \
   --run-dir "$RUN" \
   --engine-manifest "$ENGINE/control/manifest.json" \
   --source-root "$SOURCE" \
@@ -493,7 +493,7 @@ table. Supply the actual allocation expiry as Unix seconds. Execution refuses
 an allocation too short for the remaining budget plus closure time.
 
 ```sh
-python -m roboteam.engines.codex.recover_task \
+python -m roboteam.harness.codex.recover_task \
   --run-dir "$RUN" \
   --engine-manifest "$ENGINE/control/manifest.json" \
   --source-root "$SOURCE" \
@@ -529,11 +529,11 @@ requires review; the entrypoint never automatically repeats it.
 
 ### Validation
 
-`tests/runtime/test_codex_task_recovery.py` covers read-only inspection, refusal of old
+`tests/harness/codex/test_codex_task_recovery.py` covers read-only inspection, refusal of old
 gateways and unsettled actions, unchanged completed receipts, and a real private
 Mosaic pose/grasp reconstruction without advancing physics. Gateway tests cover
 single-use authority, active-role refusal, retired sockets and peer containment.
-`tests/engines/test_slurm_gateway_native.py` uses the real pinned CLI with synthetic
+`tests/harness/codex/test_slurm_gateway_native.py` uses the real pinned CLI with synthetic
 loopback authentication and inference: 36 independent channels, a closed task
 rebound to its original native thread, resumed tools, another fork, transcript
 collection, unchanged peer access and one native credential owner. These tests

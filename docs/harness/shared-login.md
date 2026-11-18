@@ -5,7 +5,7 @@ without stopping it and without becoming a second refresh owner. Set
 `ROBOTEAM_BORROWED_AUTH` to the configured credential store's `current.json`
 (`<slurm.credential_store>/current.json`; any other path is refused) in the second batch's
 environment. The running job keeps its own lease on the store
-([Slurm credential store](slurm.md#codex-credential-store)).
+([Slurm credential store](../hosts/slurm.md#codex-credential-store)).
 
 What the attachment does:
 
@@ -21,6 +21,6 @@ What the attachment does:
 The store and both engine homes stay closed in every run's access table. The second batch has
 its own runs, ledgers, sessions and worlds; it reads nothing from the first.
 
-Tests: `tests/batch/test_slurm_auth.py`, `tests/engines/test_codex_borrowed_auth.js` and
-`tests/engines/test_slurm_gateway_native.py`, the last with the real pinned CLI, synthetic
+Tests: `tests/launch/test_slurm_auth.py`, `tests/harness/codex/test_codex_borrowed_auth.js` and
+`tests/harness/codex/test_slurm_gateway_native.py`, the last with the real pinned CLI, synthetic
 credentials and a loopback provider.

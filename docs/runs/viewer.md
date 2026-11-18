@@ -5,7 +5,7 @@ sessions, calls no model, advances no physics, opens no SQLite database and chan
 the batch.
 
 ```sh
-.venv/bin/python -m scripts.view_policy_batch runs/policy/my-batch
+.venv/bin/python -m scripts.dev.view_batch runs/policy/my-batch
 ```
 
 It prints a loopback URL (`127.0.0.1`, a free port; `--port 8088` picks one). Open it on the

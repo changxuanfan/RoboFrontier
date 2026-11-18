@@ -7,7 +7,7 @@ node-local scratch, prepares and runs the batch there, and after the step ends c
 verified evidence ZIP back into the submission folder. Live databases, sessions and temporary
 files never touch shared storage.
 
-[`configs/examples/slurm.toml`](../../configs/examples/slurm.toml) is a starting site TOML (36
+[`docs/hosts/examples/slurm.toml`](examples/slurm.toml) is a starting site TOML (36
 runs, Codex subscription): copy it to an untracked file (here `site.toml`) and edit it.
 
 ## 1. Prerequisites
@@ -21,7 +21,7 @@ runs, Codex subscription): copy it to an untracked file (here `site.toml`) and e
 - Node-local scratch: `SLURM_TMPDIR` or `slurm.scratch_root`. The job accepts only ext2/ext3,
   xfs, btrfs, tmpfs, overlayfs or zfs, and the policy environment refuses runs under `/tmp`, so
   set `slurm.scratch_root` to a node-local folder outside `/tmp`, such as `/var/tmp`.
-- The pinned CLI first on `PATH` on the compute nodes (`roboteam/runtime/versions.py`: Codex
+- The pinned CLI first on `PATH` on the compute nodes (`roboteam/runtime/run/versions.py`: Codex
   0.165.0, Claude Code 2.1.316). A shared account's own copy can drift; every run refuses
   another version.
 - Claude Code: `bwrap` and `socat` on the compute-node `PATH` where user namespaces work (Bash
@@ -75,9 +75,9 @@ each refresh back atomically. Jobs on the same store are serialized with
 `--dependency=singleton`. A wrong owner, an outside change to the generation or a failed write
 fences the job. A revoked grant, or a node lost right after a refresh, can require a fresh
 login; never restore an older `auth.json` over `current.json`.
-`roboteam.batch.slurm_auth.migrate_store(source, destination)` moves a stopped store. A
+`roboteam.launch.slurm.auth.migrate_store(source, destination)` moves a stopped store. A
 second batch can borrow an existing job's access without refreshing it:
-[access-only attachments](codex-access-attachments.md).
+[access-only attachments](../harness/shared-login.md).
 
 ## 4. Site TOML
 
@@ -125,8 +125,8 @@ Build it once on shared storage, outside `/tmp` and every checkout, then check i
 node, with `--scratch` under the scratch root the batch will use:
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /shared/roboteam-env     # login node; prints its root
-srun --time=60 --cpus-per-task=4 .venv/bin/python -m scripts.check_policy_env \
+.venv/bin/python -m scripts.release.build_policy_env --base /shared/roboteam-env     # login node; prints its root
+srun --time=60 --cpus-per-task=4 .venv/bin/python -m scripts.release.check_policy_env \
   /shared/roboteam-env/policy-env-<id> --scratch /var/tmp
 ```
 
@@ -220,7 +220,7 @@ When collection fails, `results/` holds the stopped raw run folders and native s
 instead (no Codex auth, config or state), marked `needs_review`. Stage-out never deletes the
 node-local folder; if it fails, keep the node-local path it reports and ask the site about
 scratch retention. A collected ZIP is not a claim that runs succeeded: read each run's
-evaluation and collection issues ([evidence storage](evidence-storage.md)).
+evaluation and collection issues ([evidence storage](../runs/evidence-storage.md)).
 
 ## 10. The Mac route (`mac-ssh`)
 
@@ -237,12 +237,12 @@ egress_pause_s = 172800                              # how long an outage may ho
 ```
 
 Once the job is `RUNNING`, keep this running on the Mac (from a checkout whose
-`roboteam/batch/slurm_proxy.py` matches the cluster's):
+`roboteam/launch/slurm/proxy.py` matches the cluster's):
 
 ```sh
-.venv/bin/python -m roboteam.batch.slurm_proxy connect \
+.venv/bin/python -m roboteam.launch.slurm.proxy connect \
   --ssh-host CLUSTER_SSH_ALIAS --job-id JOB_ID --engine codex --pause-grace-s 172800 \
-  --remote-script /CLUSTER/CHECKOUT/roboteam/batch/slurm_proxy.py \
+  --remote-script /CLUSTER/CHECKOUT/roboteam/launch/slurm/proxy.py \
   --remote-python /CLUSTER/CHECKOUT/.venv/bin/python \
   --state-root /var/tmp/USER/roboteam-egress \
   --srun /CLUSTER/SLURM/bin/srun --slurm-conf /CLUSTER/SLURM/slurm.conf
@@ -262,7 +262,7 @@ Once the job is `RUNNING`, keep this running on the Mac (from a checkout whose
   un-fence it. Mac shutdown, logout and network loss are therefore dependencies of this route.
 - `connect --ssh-config FILE` takes a private OpenSSH config for this route only, for example
   to bind the SSH connection to one interface past a VPN with
-  `ProxyCommand python3 -I /path/slurm_proxy.py tcp-pipe --host %h --port %p --interface en0`.
+  `ProxyCommand python3 -I /path/proxy.py tcp-pipe --host %h --port %p --interface en0`.
 
 ## Limits
 

@@ -15,12 +15,12 @@ incomplete, interrupted, or wrong-model streams do not emit `message_stop`.
 
 ## Authentication and trust
 
-Install the optional [adapter dependencies](../../configs/requirements/chatgpt-plan.txt),
+Install the optional [adapter dependencies](../../roboteam/harness/adapters/gpt_in_claude/requirements.txt),
 then run the standalone sign-in helper:
 
 ```sh
-python -m pip install -r configs/requirements/chatgpt-plan.txt
-python scripts/chatgpt_plan_auth.py login --credential-file /private/plan/account.json
+python -m pip install -r roboteam/harness/adapters/gpt_in_claude/requirements.txt
+python roboteam/harness/adapters/gpt_in_claude/auth.py login --credential-file /private/plan/account.json
 ```
 
 Follow the printed official OpenAI sign-in link. It registers this self-hosted
@@ -44,7 +44,7 @@ An authorization or quota failure never switches to an API key, GitHub token,
 another model, or another account.
 
 ```sh
-python scripts/claude_chatgpt_gateway.py \
+python roboteam/harness/adapters/gpt_in_claude/gateway.py \
   --credential-file /private/plan/account.json \
   --key-file /private/plan/gateway-key.json --port 18461 \
   --log /private/plan/transport-metadata.jsonl

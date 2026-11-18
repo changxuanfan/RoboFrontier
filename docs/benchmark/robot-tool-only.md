@@ -38,8 +38,8 @@ No policy Python environment is frozen for a robot-only run.
 
 ## Checks
 
-`tests/runtime/test_robot_only.py` covers preparation and the two operations.
-`tests/engines/test_claude_robot_only.py` and `tests/engines/test_codex_robot_only.py` run the
+`tests/runtime/tools/test_robot_only.py` covers preparation and the two operations.
+`tests/harness/claude/test_claude_robot_only.py` and `tests/harness/codex/test_codex_robot_only.py` run the
 installed CLIs against a local stub model and read the tool list the model is sent on a first
 turn, a fork and a resumed session: it is the robot tool alone, and the engines' own tools are
 refused.

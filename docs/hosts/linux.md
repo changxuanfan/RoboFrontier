@@ -1,7 +1,7 @@
 # Running on RunPod (plain Linux)
 
 A RunPod pod, or any Linux host without Slurm, runs a batch as a background service started by
-`run --durable`. [`configs/examples/runpod.toml`](../../configs/examples/runpod.toml) is a
+`run --durable`. [`docs/hosts/examples/linux.toml`](examples/linux.toml) is a
 starting site TOML (four level-3 runs, Codex subscription, CPU rendering): copy it to an
 untracked file (here `site.toml`) and edit it.
 
@@ -13,7 +13,7 @@ untracked file (here `site.toml`) and edit it.
   Claude Code's bubblewrap sandbox cannot run and both engines use Landlock + seccomp
   (`landlock-v1`).
 - Python 3.12, [uv](https://docs.astral.sh/uv/) (with `uvx`), Node.js, `ffmpeg`, and the engine
-  CLI at its pinned version (`roboteam/runtime/versions.py`: Claude Code 2.1.316, Codex
+  CLI at its pinned version (`roboteam/runtime/run/versions.py`: Claude Code 2.1.316, Codex
   0.165.0).
 - Put the Node.js and CLI folders on `PATH` in every shell that prepares, runs or checks (on the
   author's pod `/workspace/tools/node/bin` and `/workspace/tools/npm/bin`):
@@ -39,7 +39,7 @@ cp .env.example .env && chmod 600 .env
 ```
 
 Fill in only your profile's variable (`CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`,
-`OPENAI_API_KEY`, ...; see `configs/models.json`). For a Codex subscription profile log in once
+`OPENAI_API_KEY`, ...; see `models.json`). For a Codex subscription profile log in once
 with `CODEX_HOME=~/.roboteam/codex-home codex login` (the example uses
 `runtime.codex_home_scope = "shared"`). Keep credentials in `.env`, not exported: runs load it
 themselves and the background service is started without them.
@@ -66,8 +66,8 @@ prepares runs:
 
 ```sh
 export ROBOTEAM_POLICY_ENV_BASE=/workspace/roboteam-env
-.venv/bin/python -m scripts.build_policy_env --base $ROBOTEAM_POLICY_ENV_BASE   # prints its root
-.venv/bin/python -m scripts.check_policy_env $ROBOTEAM_POLICY_ENV_BASE/policy-env-<id> \
+.venv/bin/python -m scripts.release.build_policy_env --base $ROBOTEAM_POLICY_ENV_BASE   # prints its root
+.venv/bin/python -m scripts.release.check_policy_env $ROBOTEAM_POLICY_ENV_BASE/policy-env-<id> \
   --scratch /workspace/roboteam-runs
 ```
 
@@ -97,20 +97,20 @@ B=/workspace/roboteam-runs/policy/my-batch
 ```
 
 Without a systemd user manager (RunPod containers have none), `--durable` starts a `setsid`
-daemon in its own session; with one, a transient user service (`roboteam/batch/linux.py`).
+daemon in its own session; with one, a transient user service (`roboteam/launch/local/linux.py`).
 `<batch>/control/durable/` holds `service.json`, `stdout.log` and `stderr.log`; a second
 submission of the same batch is refused. Without `--durable`, `run` and `continue` run in the
 current shell and end with it.
 
 Each run gets 24 h of active time from START and is scored at the cutoff or when the team
 finishes. A run that stops unexpectedly continues by itself once; outages and usage limits
-pause it in place ([continuation](continuation.md)).
+pause it in place ([continuation](../runs/continuation.md)).
 
 ## 8. Results
 
 Runs stay under the batch folder; when the batch ends it is collected into
 `<runs root>/exports/<batch>-<hash>/` with a verified ZIP beside it
-([evidence storage](evidence-storage.md)).
+([evidence storage](../runs/evidence-storage.md)).
 
 ## Limits
 

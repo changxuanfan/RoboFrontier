@@ -24,7 +24,7 @@ Once per host, into a folder outside the home folder, the repository and `/tmp`.
 network and `uvx`; the result is read-only and runs need no network:
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam
+.venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam
 ```
 
 It prints the build's `root`. The folder name carries a hash of the locks, the Python version
@@ -36,7 +36,7 @@ Run the check where batches will run (on a compute node for Slurm), with `--scra
 filesystem the batch will use:
 
 ```sh
-.venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id> --scratch <batch location>
+.venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id> --scratch <batch location>
 ```
 
 It drives each real CLI with a local stub model in a throwaway run, with the access table and
@@ -62,7 +62,7 @@ Nodes should match the one checked (kernel, Landlock ABI, user namespaces).
 
 ## What a run gets
 
-- `python` and `pip` for Python 3.12 with the packages of `configs/policy-env/core.in`. The
+- `python` and `pip` for Python 3.12 with the packages of `roboteam/runtime/sandbox/policy-env/core.in`. The
   packages of `store.in` install offline with `pip install NAME` and stay in the run.
 - No robot simulators, planners, kinematics libraries or PyTorch. No network or web search.
 - A shell environment holding only the frozen variables, with temporary files, `HOME` and caches
@@ -121,5 +121,5 @@ a permission profile; Claude Code as file-tool rules plus its Bash isolation.
 
 ## Newer versions
 
-Update `PYTHON` in `roboteam/runtime/policy_env.py` and `UV` in
-`scripts/build_policy_env.py`, relock as the build script's docstring shows, rebuild and check.
+Update `PYTHON` in `roboteam/runtime/sandbox/policy_env.py` and `UV` in
+`scripts/release/build_policy_env.py`, relock as the build script's docstring shows, rebuild and check.

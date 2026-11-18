@@ -3,14 +3,14 @@
 Every policy role is a native Codex app-server thread (`thread/start`, `turn/start`,
 `thread/fork`) with the robot tool as an app-server dynamic tool. All four topologies run:
 `adaptive` (the default), `single-agent`, `hierarchical` and `decentralized`. The pinned CLI is
-Codex 0.165.0 (`roboteam/runtime/versions.py`). A run starts only with a passed compatibility
+Codex 0.165.0 (`roboteam/runtime/run/versions.py`). A run starts only with a passed compatibility
 receipt for its profile, catalog and CLI version ([Preflight and receipts](#preflight-and-receipts)).
 What both engines share is in the [engine overview](README.md); the
 [Claude Code guide](claude-code.md) has the same sections.
 
-The engine is `roboteam/engines/codex/`: `launch.py` builds the app-server configuration and
-Codex home, `roboteam/batch/codex_batch.py` prepares and supervises batches, and the Node
-`codex_policy_host.js`, `codex_rpc.js`, `codex_preflight.js` and `codex_initialize.js` drive
+The engine is `roboteam/harness/codex/`: `launch.py` builds the app-server configuration and
+Codex home, `roboteam/launch/codex_batch.py` prepares and supervises batches, and the Node
+`policy_host.js`, `rpc.js`, `preflight.js` and `initialize.js` drive
 app-server.
 
 ## Install
@@ -35,7 +35,7 @@ freezes the run and starts no world or model session. The Claude CLI is not need
 
 ## Authentication
 
-Profiles are the `codex` section of `configs/models.json`; the
+Profiles are the `codex` section of `models.json`; the
 [authentication matrix](README.md#authentication-matrix) lists each one's credential. Model and
 provider settings are process-local and never change the user's global Codex configuration.
 
@@ -46,7 +46,7 @@ lineage stays readable. Homes are initialized one at a time before any task host
 
 **Claude through the Messages adapter** (`opus_claude_api`) is an experimental ablation: Codex
 talks to a loopback process that holds the Anthropic key and translates the protocol. See
-[Codex with Claude](codex-claude-api.md) before using it; it is not an Anthropic-supported route.
+[Codex with Claude](claude-in-codex.md) before using it; it is not an Anthropic-supported route.
 
 **ChatGPT login** (`sol_subscription`, `luna_subscription`, `terra_subscription`, `astra_subscription`)
 uses Codex's own login and needs `runtime.codex_home_scope = "shared"` (task scope refuses these
@@ -70,8 +70,8 @@ codex_home_scope = "shared"
 
 On Slurm, subscription runs use `codex_home_scope = "job"` with `slurm.auth_mode =
 "subscription"` and a private `slurm.credential_store`
-([Slurm subscription jobs](../running/slurm.md#subscription-jobs),
-[`configs/examples/slurm.toml`](../../configs/examples/slurm.toml)).
+([Slurm subscription jobs](../hosts/slurm.md#subscription-jobs),
+[`docs/hosts/examples/slurm.toml`](../hosts/examples/slurm.toml)).
 
 Every home must lie outside the batch; the access table denies it to the policy. Preparation adds
 command-line overrides that disable every MCP server found in the native and project
@@ -83,7 +83,7 @@ render. It does not check credentials or call a model.
 
 ## Isolation
 
-The frozen access table (`roboteam/runtime/access.py`) closes the checkout, the home
+The frozen access table (`roboteam/runtime/sandbox/access.py`) closes the checkout, the home
 directory, other runs and shared storage to the policy. `runtime.codex_tool_backend` selects how
 model shell, patch and image tools are confined:
 
@@ -100,16 +100,16 @@ processes stay visible but their environments cannot be read. The trusted Codex 
 authentication, sessions and robot transport. Subscription runs under this backend use a
 process-local `OpenAI` provider over HTTP/SSE instead of WebSockets. Docker hosts can instead
 allow the native sandbox with `container.seccomp_profile = "unconfined"`
-([Docker](../running/docker.md)). [`configs/examples/runpod.toml`](../../configs/examples/runpod.toml)
+([Docker](../hosts/docker.md)). [`docs/hosts/examples/linux.toml`](../hosts/examples/linux.toml)
 is a complete RunPod example; put the Node.js and CLI folders on `PATH`
-([RunPod guide](../running/runpod.md)).
+([RunPod guide](../hosts/linux.md)).
 
 A receipt pins the backend; a backend change needs a new preflight and newly prepared batches.
 The installed-CLI broker test, without inference, inspects the model's tool inventory, rejects
 forged native calls and runs fork/resume with eight concurrent roles:
 
 ```sh
-.venv/bin/python -m roboteam.engines.codex.check_codex_broker --output runs/engineering/broker-check
+.venv/bin/python -m roboteam.harness.codex.checks.broker --output runs/engineering/broker-check
 ```
 
 ## Preflight and receipts
@@ -129,8 +129,8 @@ hash, CLI version and tool backend, and refuses on any mismatch; a smoke receipt
 run. Local checks of the real CLI against a synthetic Responses service, with no billing:
 
 ```sh
-.venv/bin/python -m roboteam.engines.codex.check_codex_cli --output runs/engineering/cli-check
-.venv/bin/python -m roboteam.engines.codex.check_codex_snapshot
+.venv/bin/python -m roboteam.harness.codex.checks.cli --output runs/engineering/cli-check
+.venv/bin/python -m roboteam.harness.codex.checks.snapshot
 ```
 
 ## Run, status and stop
@@ -148,8 +148,8 @@ inventory, validates each home's startup configuration without inference, then s
 actions, brakes, evaluates and seals. An ended world never restarts. Each run's status is
 `stopped_before_start`, `closed` (host exited cleanly; says nothing about task success) or
 `needs_review` (any other exit, a stop between segments, or the 48 h
-[wall backstop](../running/continuation.md#wall-backstop), whose result is not counted). On Slurm, use
-`roboteam slurm-submit` ([Slurm](../running/slurm.md)).
+[wall backstop](../runs/continuation.md#wall-backstop), whose result is not counted). On Slurm, use
+`roboteam slurm-submit` ([Slurm](../hosts/slurm.md)).
 
 ## Sessions and delegation
 
@@ -163,7 +163,7 @@ acknowledgements keep their evidence and stop automatic replay.
 Do not start a turn by hand in a live run's thread. Codex Desktop's `notLoaded` label does not mean
 an app-server stopped; when auditing with `thread/list`, include the app-server and exec sources.
 Threads that Codex Desktop creates cannot receive the dynamic `robot` tool;
-`python -m roboteam.engines.codex.desktop_robot_mcp` is a global MCP server that gives them
+`python -m roboteam.harness.codex.desktop_robot_mcp` is a global MCP server that gives them
 the same role API by mapping the calling thread (from each call's `_meta`) to its bound role.
 Print its Desktop `config.toml` entry with `--print-config` (add `--runs-root` when runs are not
 under the default runs root) and register it once; the entry sets
@@ -187,8 +187,8 @@ model requests inside each run; `batch.parallel` counts runs.
   role has no robot work in flight. A network or unclassified failure is continued; any other
   failure in that window, or a second one, holds the run for review.
 - **Unexpected stop**: the run continues by itself once
-  ([continuation](../running/continuation.md#when-a-run-continues),
-  [Codex task recovery](../running/continuation.md#codex-task-recovery)). A Slurm `job`-scope
+  ([continuation](../runs/continuation.md#when-a-run-continues),
+  [Codex task recovery](../runs/continuation.md#codex-task-recovery)). A Slurm `job`-scope
   run never reconnects or replays turns automatically.
 - For an uncertain robot operation, query its original request ID
   ([requests and queries](README.md#new-requests-queries-and-delegation)). Nothing replays a
@@ -205,8 +205,8 @@ The settings do not enlarge the provider's real context.
 
 `private/logs/host.jsonl` holds host scheduling, tool and timing events; the native
 `<session-id>.jsonl` transcripts are under the home's `sessions/` directory, with verified copies
-in `private/engine/transcripts/` ([session transcripts](../running/evidence-storage.md#session-transcripts)).
-Observations are JPEG 1280 x 800 at quality 90 ([observation images](../protocol.md#observation-images));
+in `private/engine/transcripts/` ([session transcripts](../runs/evidence-storage.md#session-transcripts)).
+Observations are JPEG 1280 x 800 at quality 90 ([observation images](../benchmark/rules.md#observation-images));
 motion is sampled at 60 Hz; real-time MP4 is off
 by default. Collection copies the relevant transcripts without authentication, configuration or
 state databases. Read metrics from stopped evidence in the environment that ran the batch, never

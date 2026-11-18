@@ -14,14 +14,14 @@ a local stub model and skip when the CLI is absent.
 ## Every test, in parallel
 
 ```sh
-.venv/bin/python -m scripts.run_tests                          # one worker per CPU
-.venv/bin/python -m scripts.run_tests runtime engines.test_codex_quota --workers 4
-.venv/bin/python -m scripts.run_tests --report runs/engineering/all-tests.json
+.venv/bin/python -m scripts.dev.run_tests                          # one worker per CPU
+.venv/bin/python -m scripts.dev.run_tests runtime harness.codex.test_codex_quota --workers 4
+.venv/bin/python -m scripts.dev.run_tests --report runs/engineering/all-tests.json
 ```
 
 Each `tests/**/test_*.py` module runs in its own process and each `tests/**/test_*.js` with
-`node --test`. Arguments name modules (`runtime.test_run_segments`) or folders under `tests/`
-(`engines`). A failed module runs once more alone; only a repeated failure counts, and the report
+`node --test`. Arguments name modules (`runtime.run.test_run_segments`) or folders under `tests/`
+(`harness`). A failed module runs once more alone; only a repeated failure counts, and the report
 says which modules failed only in parallel. Other options: `--timeout-s`, `--no-node`,
 `--skip NAME ...`. The command exits 1 when a failure repeats.
 
@@ -32,41 +32,41 @@ window service does not answer otherwise); on Linux use a display, for example
 ## One module
 
 ```sh
-PYTHONPATH=tests:scripts .venv/bin/python -m unittest runtime.test_pipeline
-node --test tests/engines/test_tool_errors.js
+PYTHONPATH=tests:tests/helpers .venv/bin/python -m unittest runtime.world.test_pipeline
+node --test tests/harness/codex/test_tool_errors.js
 ```
 
 ## The harness checker
 
 ```sh
-.venv/bin/python -m scripts.check_harness --protocol-only --report runs/engineering/protocol.json
-.venv/bin/python -m scripts.check_harness --report runs/engineering/full.json
+.venv/bin/python -m scripts.dev.check_harness --protocol-only --report runs/engineering/protocol.json
+.venv/bin/python -m scripts.dev.check_harness --report runs/engineering/full.json
 ```
 
 `--protocol-only` runs a fixed set of contract modules with MuJoCo model creation and stepping
 blocked; the full mode discovers every Python test. Both also run the Node host tests, JavaScript
 syntax checks and the documentation link check. What each covers is in
-[harness check coverage](../harness-verification.md).
+[harness check coverage](test-coverage.md).
 
 ## Physics validation
 
 ```sh
-.venv/bin/python -m scripts.validate_physics                    # every scenario, every case
-.venv/bin/python -m scripts.validate_physics carry dial --workers 4
-.venv/bin/python -m scripts.validate_physics rest --cases transport-a04-d1
+.venv/bin/python -m scripts.release.validate_physics                    # every scenario, every case
+.venv/bin/python -m scripts.release.validate_physics carry dial --workers 4
+.venv/bin/python -m scripts.release.validate_physics rest --cases transport-a04-d1
 ```
 
 Scenarios: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`. Results go to
-`runs/engineering/validate-physics/<time>.json`; `tests/physics/test_validation.py` runs a fast
-part. Criteria and the current status are in [physics](../physics.md#validation).
+`runs/engineering/validate-physics/<time>.json`; `tests/sim/test_validation.py` runs a fast
+part. Criteria and the current status are in [physics](../benchmark/physics.md#validation).
 
 ## CI
 
 `.github/workflows/harness.yml` has one job, `all-tests`, on a clean Linux machine. It runs
-`check_harness --protocol-only`, then `scripts.run_tests --workers 4` under `xvfb-run` with the
+`check_harness --protocol-only`, then `scripts.dev.run_tests --workers 4` under `xvfb-run` with the
 scene assets restored. It starts on pull requests and on pushes to `main`, except when a change
 touches only `docs/`, `site/`, `README.md` or the licenses; the files under those folders that
-tests read (`docs/running/continuation.md`, `site/data/`) still start it.
+tests read (`docs/runs/continuation.md`, `site/data/`) still start it.
 
 `all-tests` sets `ROBOTEAM_OUTAGE_PROBE=off` and `ROBOTEAM_NO_NOTIFY=1`; set them locally
 too to keep the network-outage probe and desktop notifications out of test runs.
@@ -80,10 +80,10 @@ These environment variables turn on longer tests that need a native CLI or local
 
 | Variable | Test |
 | --- | --- |
-| `ROBOTEAM_PHYSICS_SMOKE=1`, `ROBOTEAM_PHYSICS_VIDEO=1` | `engines.test_claude_physics_smoke`, with video |
-| `ROBOTEAM_PHYSICS_BATCH=1` | `engines.test_claude_parallel_physics_smoke` |
+| `ROBOTEAM_PHYSICS_SMOKE=1`, `ROBOTEAM_PHYSICS_VIDEO=1` | `harness.claude.test_claude_physics_smoke`, with video |
+| `ROBOTEAM_PHYSICS_BATCH=1` | `harness.claude.test_claude_parallel_physics_smoke` |
 | `ROBOTEAM_PHYSICS_STANDING=1`, `ROBOTEAM_PHYSICS_SIGNAL=1`, `ROBOTEAM_PHYSICS_FINISH=1`, `ROBOTEAM_MOSAIC_IMAGE=1` | Claude standing-team, signal, finish and Mosaic image integration tests |
-| `ROBOTEAM_NATIVE_TEST_RECEIPTS=1` | Keep the receipts of `engines.test_claude_standing_team_integration` |
+| `ROBOTEAM_NATIVE_TEST_RECEIPTS=1` | Keep the receipts of `harness.claude.test_claude_standing_team_integration` |
 
 ## Filesystems
 

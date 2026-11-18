@@ -4,13 +4,13 @@ What the offline harness checker exercises and what it does not establish. It is
 coverage, not a pass record: a pass is the report the checker writes.
 
 ```sh
-.venv/bin/python -m scripts.check_harness --report runs/engineering/full.json
-.venv/bin/python -m scripts.check_harness --protocol-only --report runs/engineering/protocol.json
+.venv/bin/python -m scripts.dev.check_harness --report runs/engineering/full.json
+.venv/bin/python -m scripts.dev.check_harness --protocol-only --report runs/engineering/protocol.json
 ```
 
 Both modes also run every Node host test (`tests/**/test_*.js` with `node --test`) and the Meta
-dispatcher scenarios (`tests/engines/test_meta_dispatcher.cjs`), check the syntax of every
-JavaScript file and of the inline scripts in `assets/pipeline_dashboard.html`, `docs/meta-runbook.md`
+dispatcher scenarios (`tests/harness/codex/test_meta_dispatcher.cjs`), check the syntax of every
+JavaScript file and of the inline scripts in `roboteam/runtime/world/dashboard.html`, `docs/development/manager-runbook.md`
 and the tool reference, compile every Python file, and check that every relative link in tracked
 Markdown resolves inside the checkout. `--skill-validator PATH --skill-python PYTHON` adds an
 external Skill format check; valid formatting does not show better coordination.
@@ -58,7 +58,7 @@ external Skill format check; valid formatting does not show better coordination.
 - **Scoring and evidence.** Final and interrupted evaluation stay private under
   `private/outputs/`. Interrupted geometry that meets a goal is not scored as success; evaluation
   sampling does not restore physics; policy results contain no private object truth. Terminal
-  completion and process events are separate ([terminal outcome](protocol.md#terminal-outcome)).
+  completion and process events are separate ([terminal outcome](../benchmark/rules.md#terminal-outcome)).
   Completion images are captured only for explicitly selected cameras. Exports happen at
   termination or close, with infrequent integrity checks, not per-second world checkpoints.
 - **Grasp regressions.** After an offset single-arm contact, fingers reopen and normal grasping
@@ -72,9 +72,9 @@ They do not establish live multi-agent policy trials, real provider inference, i
 another machine or better coordination. A physical reference run shows its own layout and executor
 completing selected work; it is not a general certification of multi-arm swept trajectories.
 Shared user files are not a security sandbox (the policy's access table is: see
-[policy environment](running/policy-environment.md)). Inspecting native state and then sending is
+[policy environment](../hosts/policy-environment.md)). Inspecting native state and then sending is
 not atomic. A crashed world is not restored in place; a stopped run continues in a new segment
-from its last recorded frame ([continuation](running/continuation.md)).
+from its last recorded frame ([continuation](../runs/continuation.md)).
 
 State and evidence boundaries are in [architecture](architecture.md); operating instructions in
-the [manager runbook](meta-runbook.md); how to run the tests in [testing](development/testing.md).
+the [manager runbook](manager-runbook.md); how to run the tests in [testing](testing.md).

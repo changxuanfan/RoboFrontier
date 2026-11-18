@@ -1,7 +1,7 @@
 # Running on a Mac
 
 A Mac runs a batch as a user launchd job, so the batch outlives the terminal or agent session
-that started it. [`configs/examples/mac.toml`](../../configs/examples/mac.toml) is a starting
+that started it. [`docs/hosts/examples/mac.toml`](examples/mac.toml) is a starting
 site TOML: copy it to an untracked file (here `site.toml`) and edit it.
 
 ## 1. Prerequisites
@@ -10,7 +10,7 @@ site TOML: copy it to an untracked file (here `site.toml`) and edit it.
 - Python 3.12, [uv](https://docs.astral.sh/uv/) (its `uvx` builds the policy environment),
   Node.js and `ffmpeg`.
 - The engine CLI at its pinned version, first on `PATH`: Claude Code 2.1.316 (`claude`) or
-  Codex 0.165.0 (`codex`). `roboteam/runtime/versions.py` holds the pins, with MuJoCo,
+  Codex 0.165.0 (`codex`). `roboteam/runtime/run/versions.py` holds the pins, with MuJoCo,
   NumPy and Pillow; `prepare` and `run` refuse any other version.
 
 ## 2. Install
@@ -28,7 +28,7 @@ uv sync --locked
 cp .env.example .env && chmod 600 .env
 ```
 
-Fill in only the variable your profile reads (`configs/models.json`, `env_key`):
+Fill in only the variable your profile reads (`models.json`, `env_key`):
 
 | Profile | Credential |
 | --- | --- |
@@ -47,8 +47,8 @@ Build once per Mac, then check it. The default base is `/Users/Shared/roboteam`,
 variable is needed:
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam   # prints its root
-.venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id>
+.venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam   # prints its root
+.venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id>
 ```
 
 The check drives each real CLI against a local stub (no model calls) and records a receipt
@@ -73,7 +73,7 @@ without receipts matching its profile and CLI version.
 ## 6. Prepare and run
 
 A running batch checks its source for changes and aborts every run, for good, when one appears
-(`INTEGRITY_ABORT`; [continuation](continuation.md)). Run batches from a checkout nothing edits
+(`INTEGRITY_ABORT`; [continuation](../runs/continuation.md)). Run batches from a checkout nothing edits
 while they run, a detached worktree of `main` outside the repository for example, with the data
 root pointing where the receipts and results belong:
 
@@ -95,7 +95,7 @@ export ROBOTEAM_RUNS_ROOT=~/Repos/RoboTeam/runs
 runs in the current process instead of launchd. `run` refuses a batch that is not freshly
 prepared; `run --continue` picks up a batch whose supervisor died. Each run gets 24 h of
 active time from START and is scored at the cutoff or when the team finishes. A run that stops
-unexpectedly continues by itself once; see [continuation](continuation.md).
+unexpectedly continues by itself once; see [continuation](../runs/continuation.md).
 
 The launchd job:
 
@@ -105,14 +105,14 @@ The launchd job:
   `<batch>/control/durable/` (a continuation into `control/durable/continue-<n>/`).
 
 A network outage and a used-up usage limit pause the run in place and resume it by themselves
-([continuation](continuation.md#time)).
+([continuation](../runs/continuation.md#time)).
 
 ## 7. Results
 
 Each run's results, videos and evidence stay in its folder under the batch. When the batch ends,
 `run` collects it into `<runs root>/exports/<batch>-<hash>/` and archives a verified ZIP beside
 it. The runs root is `paths.runs_root` or `ROBOTEAM_RUNS_ROOT` (default `<repo>/runs`).
-See [evidence storage](evidence-storage.md).
+See [evidence storage](../runs/evidence-storage.md).
 
 ## Limits
 

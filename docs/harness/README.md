@@ -8,40 +8,40 @@ specific to each CLI.
 | Guide | Contents |
 | --- | --- |
 | [Codex](codex.md) | app-server sessions, Codex homes, tool backends, receipts |
-| [Codex with Claude](codex-claude-api.md) | Experimental loopback Responses-to-Messages adapter, thinking blocks, prompt-cache monitor |
+| [Codex with Claude](claude-in-codex.md) | Experimental loopback Responses-to-Messages adapter, thinking blocks, prompt-cache monitor |
 | [Claude Code](claude-code.md) | `claude -p` sessions over MCP, authentication modes, Bash isolation, prechecks, cost ledger |
 | [Providers](#providers) | Profiles, the authentication matrix, third-party endpoints |
-| [Unified CLI](../unified-cli.md) | Configuration and the `roboteam` commands |
-| [Runtime protocol](../protocol.md) | Observation images, START, terminal scoring, robot tool errors |
+| [Unified CLI](../cli.md) | Configuration and the `roboteam` commands |
+| [Runtime protocol](../benchmark/rules.md) | Observation images, START, terminal scoring, robot tool errors |
 
 A run gets 24 h of active time from START and is scored at the cutoff; accepting `finish`
 starts evaluation, it does not establish success. After an unexpected stop a run continues by
 itself once; `roboteam continue` continues it by hand
-([continuation](../running/continuation.md)).
+([continuation](../runs/continuation.md)).
 
 ## Outer manager and evaluated policy
 
 The commands (prepare, run, status, stop, collect) can be driven from a shell or from any
 coding agent; no outer agent is needed, and the outer session's model has no effect on the run.
 The frozen engine and profile select the measured model. The manager prompts
-([Codex](../../prompts/managers/codex.md), [Claude Code](../../prompts/managers/claude.md)) and
-the [manager runbook](../meta-runbook.md) define the manager's authority: engineering
+([Codex](../development/manager-codex.md), [Claude Code](../development/manager-claude.md)) and
+the [manager runbook](../development/manager-runbook.md) define the manager's authority: engineering
 operations only, never task strategy, robot actions or changed inputs. A manager that injects
 either invalidates the run.
 
 ## Shared setup
 
 Install Python 3.12, uv, Node.js and the CLI of the engine you will use, at the version pinned in
-`roboteam/runtime/versions.py` (Codex 0.165.0, Claude Code 2.1.316).
+`roboteam/runtime/run/versions.py` (Codex 0.165.0, Claude Code 2.1.316).
 `prepare` and `run` refuse any other version.
 
 ```sh
 uv sync --locked
 .venv/bin/roboteam bootstrap
-.venv/bin/python -m roboteam.batch.handoff init-env
+.venv/bin/python -m roboteam.launch.results.assets init-env
 ```
 
-New runs use the frozen [policy Python environment](../running/policy-environment.md) by default.
+New runs use the frozen [policy Python environment](../hosts/policy-environment.md) by default.
 
 ### Credentials file
 
@@ -54,36 +54,36 @@ line, a commit or a chat. A remote host needs its own `.env`; SSH does not forwa
 
 ### Policy assets
 
-`bootstrap` downloads the archive named in `configs/policy-assets.json`, checks its SHA-256,
+`bootstrap` downloads the archive named in `benchmark/assets.json`, checks its SHA-256,
 restores every referenced scene and Panda asset with hash checks, and reuses files that are
 already correct; `prepare` does the same when needed. A wrong or conflicting file fails
 verification; never substitute an approximate asset or edit an expected hash. On a host without
 network access, copy the archive over and run:
 
 ```sh
-.venv/bin/python -m roboteam.batch.handoff setup-assets --archive /path/to/archive.tar.gz
+.venv/bin/python -m roboteam.launch.results.assets setup-assets --archive /path/to/archive.tar.gz
 ```
 
 ## Codex and Claude Code component map
 
 | Component | Codex | Claude Code |
 | --- | --- | --- |
-| Profiles | `codex` section of `configs/models.json` | `claude` section of `configs/models.json` |
-| Preparation | `roboteam/batch/codex_batch.py` | `roboteam/batch/claude_prepare.py` |
-| Batch supervision | `roboteam/batch/codex_batch.py` | `roboteam/batch/claude_batch.py`, `engines/claude/supervisor.py` |
-| One policy turn | app-server `turn/start` (`codex_policy_host.js`, `codex_rpc.js`) | `claude -p` (`engines/claude/runner.py`, `session_host.py`) |
-| Robot tool | app-server dynamic `robot` tool | role-bound MCP server `engines/claude/robot_mcp.py` |
-| Per-task host | `engines/codex/codex_policy_host.js` | `policy_host.py`, `adaptive_policy_host.py`, `standing_team.py` |
-| Scheduling | `engines/codex/meta_dispatcher.js` | `dispatch.py`, `adaptive_dispatch.py`, `standing_team.py` |
+| Profiles | `codex` section of `models.json` | `claude` section of `models.json` |
+| Preparation | `roboteam/launch/codex_batch.py` | `roboteam/launch/claude_prepare.py` |
+| Batch supervision | `roboteam/launch/codex_batch.py` | `roboteam/launch/claude_batch.py`, `harness/claude/supervisor.py` |
+| One policy turn | app-server `turn/start` (`policy_host.js`, `rpc.js`) | `claude -p` (`harness/claude/session/runner.py`, `session_host.py`) |
+| Robot tool | app-server dynamic `robot` tool | role-bound MCP server `harness/claude/robot_mcp.py` |
+| Per-task host | `harness/codex/host/policy_host.js` | `policy_host.py`, `adaptive_policy_host.py`, `standing_team.py` |
+| Scheduling | `harness/codex/host/meta_dispatcher.js` | `dispatch.py`, `adaptive_dispatch.py`, `standing_team.py` |
 | Delegate fork | `thread/fork` with lineage hashes | `--resume --fork-session` checked by `provenance.py`, `fork_setup.py`, `adaptive_setup.py` |
 | Shell isolation | Codex sandbox, or `landlock-v1` broker | Claude Code sandbox, or `landlock-v1` shell prefix |
 | Paid compatibility check | `roboteam preflight` (one receipt) | `roboteam preflight` (two receipts) |
-| Capacity recovery | `codex_policy_host.js` | `engines/claude/recovery.py` |
+| Capacity recovery | `policy_host.js` | `harness/claude/session/recovery.py` |
 | Host events | `private/logs/host.jsonl` | `private/logs/host.jsonl` |
 
-Both engines share the robot tool description `roboteam/engines/common/robot_tool.json`,
-the runtime under `roboteam/runtime/`, the access table `roboteam/runtime/access.py`,
-metrics `roboteam/batch/metrics.py` and reports `roboteam/batch/report.py`.
+Both engines share the robot tool description `roboteam/harness/shared/robot_tool.json`,
+the runtime under `roboteam/runtime/`, the access table `roboteam/runtime/sandbox/access.py`,
+metrics `roboteam/launch/results/host_metrics.py` and reports `roboteam/launch/results/report.py`.
 
 ## New requests, queries and delegation
 
@@ -92,7 +92,7 @@ earlier action, send a new `job` request with the old ID in `data.call_id`. To r
 whose outcome is uncertain, resend it under its original ID with exactly the same operation and
 arguments, and confirm the old outcome before choosing another physical action. A known ID
 conflict is a rejection; an uncertain transport outcome is not. Error payloads are in
-[robot tool error feedback](../protocol.md#robot-tool-error-feedback).
+[robot tool error feedback](../benchmark/rules.md#robot-tool-error-feedback).
 
 A Claude MCP request ID is not the native `tool_use.id`. Before an automatic delegation the host
 finds the one unanswered native tool call in the Controller's transcript whose parameters match
@@ -111,7 +111,7 @@ hook holds every tool call until activation
 
 ## Capacity recovery
 
-The same rule on both hosts (`MAX_CAPACITY_RETRIES` in `roboteam/runtime/bootstrap.py`):
+The same rule on both hosts (`MAX_CAPACITY_RETRIES` in `roboteam/runtime/run/bootstrap.py`):
 after a turn fails with a structured capacity error, the host resumes the same session with the
 frozen `capacity-resume.md` at most three consecutive times, 10, 20 and 40 s apart plus a 0-5 s
 jitter fixed by the session ID; a completed turn resets the count. Claude counts only a
@@ -120,13 +120,13 @@ conclusively exited CLI whose session matches and whose error code is `rate_limi
 Accepted or running robot requests settle first; unknown actions, a fork in progress, a paused
 run or a stop request block recovery. Recovery never resubmits motion or recreates a delegate.
 When the attempts are used up, dispatch pauses and the run ends as an unexpected stop
-([when a run continues](../running/continuation.md#when-a-run-continues)). A plan's usage limit
+([when a run continues](../runs/continuation.md#when-a-run-continues)). A plan's usage limit
 is not a capacity error: the world pauses until it resets
-([usage-limit pause](../running/continuation.md#usage-limit-pause-every-platform)).
+([usage-limit pause](../runs/continuation.md#usage-limit-pause-every-platform)).
 
 Both hosts also resend a turn that failed during a network-outage pause once per role and pause,
 in the same session, with the frozen `network-resume.md`
-([network-outage pause](../running/continuation.md#network-outage-pause)). After a normal finish,
+([network-outage pause](../runs/continuation.md#network-outage-pause)). After a normal finish,
 both give existing turns up to 30 s to write their final reply and accounting.
 
 ## Reports and metric definitions
@@ -134,7 +134,7 @@ both give existing turns up to 30 s to write their final reply and accounting.
 After every writer has stopped, in the environment that ran the batch:
 
 ```sh
-.venv/bin/python -m roboteam.batch.report RUN_DIR
+.venv/bin/python -m roboteam.launch.results.report RUN_DIR
 ```
 
 This writes `RUN_DIR/private/outputs/report.json` with the shared `host_metrics`. For Codex,
@@ -176,24 +176,24 @@ not a provider invoice.
 | Task limit | `batch.task_wall_limit_s` | the same, at most 86,400 s |
 
 Both freeze `context_window` 300,000 and `auto_compact_token_limit` 267,000 from
-`configs/models.json`. Equal effort names do not mean equal computation across engines.
+`models.json`. Equal effort names do not mean equal computation across engines.
 
 ## Offline checks
 
 See [development checks](../development/testing.md). The engine tests are under
-`tests/engines/` and `tests/batch/`:
+`tests/harness/` and `tests/launch/`:
 
 ```sh
-.venv/bin/python -m scripts.run_tests engines batch
+.venv/bin/python -m scripts.dev.run_tests harness launch
 ```
 
 The opt-in physical Claude group runs real MuJoCo worlds and the real Claude CLI against a local
 synthetic model service, with no paid provider; it needs the assets and a graphics backend:
 
 ```sh
-PYTHONPATH=tests ROBOTEAM_PHYSICS_SMOKE=1 ROBOTEAM_PHYSICS_BATCH=1 ROBOTEAM_PHYSICS_FINISH=1 \
-  .venv/bin/python -m unittest engines.test_claude_physics_smoke engines.test_claude_parallel_physics_smoke \
-  engines.test_claude_finish_physics_smoke
+PYTHONPATH=tests:tests/helpers ROBOTEAM_PHYSICS_SMOKE=1 ROBOTEAM_PHYSICS_BATCH=1 ROBOTEAM_PHYSICS_FINISH=1 \
+  .venv/bin/python -m unittest harness.claude.test_claude_physics_smoke harness.claude.test_claude_parallel_physics_smoke \
+  harness.claude.test_claude_finish_physics_smoke
 ```
 
 They cover generated IDs, native fork and return, resumed actions, scoring after `finish` (the
@@ -203,7 +203,7 @@ synthetic task is left unfinished, so evaluation must fail) and collection.
 
 ### Catalogs and profiles
 
-Profiles are the `codex` and `claude` sections of `configs/models.json`; a run freezes its
+Profiles are the `codex` and `claude` sections of `models.json`; a run freezes its
 engine's section as `private/inputs/models.json`. A profile names a model, effort, provider
 endpoint and credential variable. Being in the catalog does not make a profile compatible: its
 preflight receipt does. Each batch has one profile.
@@ -217,7 +217,7 @@ selects `opus` (`claude-opus-5-5`) with `ANTHROPIC_API_KEY`.
 | Engine | Authentication | Profiles | Credential or setting |
 | --- | --- | --- | --- |
 | Codex | OpenAI API key | `sol` (default), `luna` | `OPENAI_API_KEY` |
-| Codex | Anthropic API key behind a loopback adapter, experimental | `opus_claude_api` | `ROBOTEAM_CLAUDE_GATEWAY_KEY`, a local key; the Anthropic key stays with the adapter ([setup](codex-claude-api.md)) |
+| Codex | Anthropic API key behind a loopback adapter, experimental | `opus_claude_api` | `ROBOTEAM_CLAUDE_GATEWAY_KEY`, a local key; the Anthropic key stays with the adapter ([setup](claude-in-codex.md)) |
 | Codex | ChatGPT login | `sol_subscription`, `luna_subscription`, `terra_subscription`, `astra_subscription` | Login in the Codex home ([Codex authentication](codex.md#authentication)) |
 | Codex | Third-party Responses API | `deepseek`, `qwen`, `glm`, `kimi` | `DEEPSEEK_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_BASE_URL`; `ZAI_API_KEY`; `KIMI_API_KEY` |
 | Claude | Anthropic API key | `opus` (default), `haiku` | `ANTHROPIC_API_KEY` |

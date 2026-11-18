@@ -2,8 +2,8 @@
 
 The rules every policy run follows between preparation and scoring. Each prepared run freezes
 its inputs, source and protocol identifiers; read a frozen run with the protocol it records.
-Engine-specific behavior is in the [engine guides](engines/README.md); time and continuation in
-[continuation](running/continuation.md).
+Engine-specific behavior is in the [engine guides](../harness/README.md); time and continuation in
+[continuation](../runs/continuation.md).
 
 ## Start: system prompt, start message, START
 
@@ -26,7 +26,7 @@ Engine-specific behavior is in the [engine guides](engines/README.md); time and 
 - **Time.** The public `task.json` states no time limit (`run_protocol.total_wall_limit_s` and
   `run_protocol.clock` are only in the private task), and the rules ask policies to plan as if
   time were unlimited. The host gives each run 24 hours of active time (`active_time_v1`) and
-  scores it at that cutoff ([how it is counted](running/continuation.md#time)).
+  scores it at that cutoff ([how it is counted](../runs/continuation.md#time)).
 
 `public/inputs/rules.md` is the one policy contract both engines receive; the hosts keep their
 own native tool transports. The CLI, model and harness together are the experimental condition:
@@ -42,7 +42,7 @@ When a published camera calibration names an image size, the run gets a copy at 
 resolution and the published file stays as it is. Video recording has its own resolution.
 
 A run's harness also names the look of its images as `observation_look`
-(`roboteam/physics/observation_look.py`). `direct`, the default, writes the scene as MuJoCo draws
+(`roboteam/sim/render/look.py`). `direct`, the default, writes the scene as MuJoCo draws
 it. `linear` draws from a copy of the world's model whose colours and textures are converted to
 linear light, with fill light added so that a white object comes out white, and gives each image one
 display transform; its pictures are brighter and less heavy. Neither look changes the world's own
@@ -57,7 +57,7 @@ returns it. To query an earlier physical action, send a new request
 and `data.call_id` names the action. To retry a request whose result is uncertain, resend it under
 its original outer ID with exactly the same operation and data. Never replay an uncertain physical
 action under a new ID. How the Claude host binds IDs to native tool calls is in
-[new requests, queries and delegation](engines/README.md#new-requests-queries-and-delegation).
+[new requests, queries and delegation](../harness/README.md#new-requests-queries-and-delegation).
 
 A blocking action that is still running after 600 s returns as pending under its original ID (an
 engine may give up on a tool call sooner); the action keeps running and `job` follows it.
@@ -81,9 +81,9 @@ the Claude MCP bridge uses the same typed exception and payloads.
 Offline checks (no model calls, no physics):
 
 ```sh
-PYTHONPATH=tests:scripts .venv/bin/python -m unittest runtime.test_tool_errors \
-  runtime.test_pipeline_client runtime.test_runtime_store engines.test_claude_tool_errors
-node --test tests/engines/test_tool_errors.js
+PYTHONPATH=tests:tests/helpers .venv/bin/python -m unittest runtime.tools.test_tool_errors \
+  runtime.tools.test_pipeline_client runtime.world.test_runtime_store harness.claude.test_claude_tool_errors
+node --test tests/harness/codex/test_tool_errors.js
 ```
 
 ## IK failure detail
@@ -100,7 +100,7 @@ solution is rejected before execution with its `error` and an `ik_detail`:
 
 The solver searches locally from the current joint references, so these are solver facts, not a
 proof of the reach limit or a suggested target. No object state is used. The extra
-home-orientation solve runs only after a rejection (`roboteam/physics/robot_control.py`).
+home-orientation solve runs only after a rejection (`roboteam/sim/robot_control.py`).
 
 ## Terminal outcome
 
@@ -141,7 +141,7 @@ The run store uses SQLite WAL with a 30-second busy timeout. A non-nested `BEGIN
 returns plain `SQLITE_BUSY` is tried at most four times, 0.25 s apart, about 120.75 s in all.
 Warnings go to standard logging, not the contested database, with elapsed time, attempts and
 outcome. Nested savepoints, errors inside a transaction, commits, extended busy codes and other
-errors are not retried (`roboteam/runtime/sqlite_busy.py`).
+errors are not retried (`roboteam/runtime/world/sqlite_busy.py`).
 
 The local HTTP client's default timeout is that maximum wait plus 45 s; a caller's explicit
 timeout is kept. A timeout does not establish whether an action ran: reconcile or query its

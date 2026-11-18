@@ -3,8 +3,8 @@
 The manager (a person, a shell script or an outer coding agent) prepares, launches, watches,
 stops and collects batches. It never decides task strategy, chooses robots, scopes, grasps or
 recovery moves, or changes frozen inputs; the measured team follows its frozen role files and the
-[collaboration skill](../prompts/skills/robot-collaboration/SKILL.md). Ready-made prompts for an
-outer agent: [Codex](../prompts/managers/codex.md), [Claude Code](../prompts/managers/claude.md).
+[collaboration skill](../../prompts/guides/collaboration/guide.md). Ready-made prompts for an
+outer agent: [Codex](manager-codex.md), [Claude Code](manager-claude.md).
 State and evidence boundaries are in the [architecture](architecture.md).
 
 ## Keep the policy's inputs clean
@@ -17,7 +17,7 @@ derives a grasp or route from simulator truth is Oracle evidence and stays out o
 
 ## Operate a batch
 
-Follow the [unified CLI](unified-cli.md):
+Follow the [unified CLI](../cli.md):
 
 ```sh
 .venv/bin/roboteam bootstrap
@@ -36,7 +36,7 @@ Follow the [unified CLI](unified-cli.md):
    or shared-filesystem boundary; a live process or lock alone does not show healthy progress.
 4. `stop` requests a stop; read the seal and `needs_review` fields afterwards.
 5. A run that stopped unexpectedly continues by itself once; continue others with
-   `roboteam continue` only when asked ([continuation](running/continuation.md)).
+   `roboteam continue` only when asked ([continuation](../runs/continuation.md)).
 
 The task limit is 24 h of active time from START, scored at the cutoff. Do not shorten it for a
 test in the public task; use `batch.task_wall_limit_s` in a new batch or an engineering stop. A
@@ -51,13 +51,13 @@ stop is not a success and not a physical checkpoint.
   an intervention and must be recorded.
 - **Requests.** New requests omit the outer ID; queries name the old ID in `job` data; an uncertain
   request is retried only under its original ID
-  ([requests and queries](engines/README.md#new-requests-queries-and-delegation)).
+  ([requests and queries](../harness/README.md#new-requests-queries-and-delegation)).
 - **Integrity.** Inputs are checked at launch, START, finish and periodically; a changed input
   invalidates the run, pauses scheduling and stops known actions. A lost physical owner is never
   replaced by a new world for the same run.
 - **Delegates.** The Controller chooses `delegate` scopes. Codex forks a snapshot of the Controller
   and then each delegate; Claude Code forks each delegate from the blocked Controller at the
-  pending call and holds its tools until activation ([Claude delegate fork](engines/claude-code.md#sessions-and-delegation)).
+  pending call and holds its tools until activation ([Claude delegate fork](../harness/claude-code.md#sessions-and-delegation)).
   Lineage is verified before authority is granted; unknown creation or wrong lineage becomes
   `needs_review` and is never reforked automatically. `native_setup_timeout_s` (120 s) bounds fork
   setup, not the delegate's work.
@@ -73,8 +73,8 @@ stop is not a success and not a physical checkpoint.
 For a run outside a managed batch, the runtime CLI seals a world and exports committed events:
 
 ```sh
-.venv/bin/python -m roboteam.runtime.cli --run-dir runs/EXISTING seal --data '{"timeout_s":30}'
-.venv/bin/python -m roboteam.runtime.cli --run-dir runs/EXISTING export --data '{"path":"/ABSOLUTE/OUTPUT.jsonl"}'
+.venv/bin/python -m roboteam.runtime.run.cli --run-dir runs/EXISTING seal --data '{"timeout_s":30}'
+.venv/bin/python -m roboteam.runtime.run.cli --run-dir runs/EXISTING export --data '{"path":"/ABSOLUTE/OUTPUT.jsonl"}'
 ```
 
 Sealing blocks new actions, waits for running ones, requests fresh final images and closure from
@@ -85,4 +85,4 @@ its own `seal.json`, which records closure, fresh final observations, unknown ac
 readability. Do not seal a world that is only paused.
 
 Collected evidence includes task sessions, motion and records, never authentication stores
-([evidence storage](running/evidence-storage.md), [verification boundaries](harness-verification.md)).
+([evidence storage](../runs/evidence-storage.md), [verification boundaries](test-coverage.md)).

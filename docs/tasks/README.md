@@ -18,23 +18,23 @@ in `benchmark/<family>/<case>/`, and each family's cases are listed in
 - **What a policy sees.** The case's public task (`public/task.json`: rules, objective, cameras
   and their mounts, initial geometry, stock, orders or targets, completion rules), the family
   materials in `public/inputs/family/` (the Mosaic target image; Dial previews, camera
-  calibration and table geometry) and the family Skill (`prompts/skills/<family>/SKILL.md`).
+  calibration and table geometry) and the family Skill (`prompts/guides/<family>.md`).
   While running it sees timestamped RGB images from the cameras it asks for, robot
   proprioception and action feedback. It never sees the scene file, the evaluator or live
   object state.
 - **Physics.** The release physics is written into each scene file, and every action states its
-  speed, acceleration or force within the limits of a real Franka Panda ([physics](../physics.md)).
+  speed, acceleration or force within the limits of a real Franka Panda ([physics](../benchmark/physics.md)).
   Only robot actuators and real contacts change the world: no resets, welds or state writes.
 - **Time.** 24 hours of active time from START; outages, usage-limit pauses and host sleep do
   not count: when the infrastructure pauses a run, the world, the clock and the agents stop
-  together. The policy is not told the limit ([time](../running/continuation.md#time)).
+  together. The policy is not told the limit ([time](../runs/continuation.md#time)).
 - **Scoring.** The world is scored when the team calls `finish` or at the 24 h cutoff, after
   every arm is stopped and the world has run 1.5 s with the arms still. The score is the
   terminal outcome (`terminal_outcome_v2`); collisions, drops and other process events are
   recorded beside it and do not veto it. Relay's handover rule is part of its completion
-  ([protocol](../protocol.md#terminal-outcome)).
+  ([protocol](../benchmark/rules.md#terminal-outcome)).
 - **Continuing.** A stopped run continues as the same trial, never a new attempt
-  ([continuation](../running/continuation.md)).
+  ([continuation](../runs/continuation.md)).
 
 ## Cameras
 
@@ -73,10 +73,10 @@ time and input tokens.
   position. A step fails if any attempt at it goes wrong, even if it is completed later. The
   rate of a run is the share of its steps that fail at least once. Failures are read from the
   records of the robot tool and the simulator, never from the agents' reports
-  (`roboteam/analysis/atomic.py`, `scripts/run_analysis.py`).
+  (`roboteam/analysis/atomic.py`, `scripts/analysis/run_analysis.py`).
 - **Grasp failure rate.** A grasp fails when the gripper closes on a width that does not match
   the object: the grasp command states the expected width, and the gripper stops outside it.
   The rate of a condition is the share of all its grasps that fail.
 - **Paired tests.** Every condition runs the same tasks, so two conditions are compared task
   by task with an exact McNemar test, Holm's correction and bootstrap intervals
-  (`roboteam/analysis/paired.py`, `scripts/paired_tests.py`).
+  (`roboteam/analysis/paired.py`, `scripts/analysis/paired_tests.py`).

@@ -12,13 +12,13 @@ command's result as JSON).
 | `prepare --output DIR` | Freeze a new batch; no model calls, no world |
 | `doctor` | Local CLI, sandbox and render checks; no model calls |
 | `preflight [--confirm-spend] [--smoke-only] [--max-budget-usd N]` | Paid compatibility check |
-| `slurm-submit --output DIR [--queue]` | Freeze a Slurm submission, and queue it with `--queue` ([Slurm](running/slurm.md)) |
+| `slurm-submit --output DIR [--queue]` | Freeze a Slurm submission, and queue it with `--queue` ([Slurm](hosts/slurm.md)) |
 | `bootstrap` | Restore and verify pinned policy assets |
 | `run BATCH [--durable] [--foreground] [--continue]` | Run a prepared batch |
 | `continue BATCH [--cases ...] [--durable] [--foreground]` | Continue stopped runs by hand |
 | `status BATCH`, `stop BATCH` | Read the status snapshot; request a stop |
 | `collect`, `archive`, `extract` | Evidence collection and ZIP files ([below](#evidence-and-zip-output)) |
-| `container` | The same commands in Docker volumes ([Docker](running/docker.md)) |
+| `container` | The same commands in Docker volumes ([Docker](hosts/docker.md)) |
 
 `config`, `plan`, `prepare`, `doctor`, `preflight` and `slurm-submit` accept the selection
 options `--engine {codex,claude}`, `--profile`, `--effort`, `--topology`,
@@ -35,8 +35,8 @@ uv sync --locked
 
 `bootstrap` downloads the pinned policy asset archive if needed, checks its SHA-256 and restores
 every referenced file with hash checks, reusing files that are already correct. Install the CLI of the engine you will use at its pinned
-version (`roboteam/runtime/versions.py`: Codex 0.165.0, Claude Code 2.1.316); `prepare` and
-`run` refuse others ([engine setup](engines/README.md#shared-setup)).
+version (`roboteam/runtime/run/versions.py`: Codex 0.165.0, Claude Code 2.1.316); `prepare` and
+`run` refuse others ([engine setup](harness/README.md#shared-setup)).
 
 ## Defaults and precedence
 
@@ -57,13 +57,13 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 | Setting | Meaning |
 | --- | --- |
 | `policy.engine` | `codex` or `claude` |
-| `policy.profile` | Entry in the engine's section of `configs/models.json`. Defaults: `sol` for Codex, `opus` for Claude. |
+| `policy.profile` | Entry in the engine's section of `models.json`. Defaults: `sol` for Codex, `opus` for Claude. |
 | `policy.effort` | Requested reasoning effort; must match the preflight receipt |
 | `policy.topology` | `adaptive`, `single-agent`, `hierarchical` or `decentralized` |
-| `policy.tool_mode` | `full` (default) or `robot_only`: the robot tool alone ([robot-only runs](running/robot-only.md)) |
+| `policy.tool_mode` | `full` (default) or `robot_only`: the robot tool alone ([robot-only runs](benchmark/robot-tool-only.md)) |
 | `batch.parallel` | Runs at once, 1 to 36 |
 | `batch.startup_interval_s` | Gap between host launches (0.3 s); never between robot calls |
-| `batch.task_wall_limit_s` | Active time per run, 86,400 s ([how it is counted](running/continuation.md#time)); at most 86,400 for Claude Code |
+| `batch.task_wall_limit_s` | Active time per run, 86,400 s ([how it is counted](runs/continuation.md#time)); at most 86,400 for Claude Code |
 | `batch.startup_timeout_s` | Owner readiness timeout (600 s) |
 | `selection.families` / `cases` | Filters on `benchmark/release.json`; empty selects all |
 | `selection.level` | 0 for every level, else 1, 2 or 3 |
@@ -73,13 +73,34 @@ topology, 36 runs at once, 0.3 s between host launches, and 24 h of active time 
 | `render.record_realtime_video` | Live MP4 recording, off by default |
 | `runtime.codex_home_scope` | `task` (one home per run), `shared` (ChatGPT login) or `job` (Slurm subscription) |
 | `runtime.codex_home` | Home root; empty picks one automatically; must be outside the batch |
-| `runtime.codex_tool_backend` | `native` or `landlock-v1` ([Codex isolation](engines/codex.md#isolation)) |
+| `runtime.codex_tool_backend` | `native` or `landlock-v1` ([Codex isolation](harness/codex.md#isolation)) |
 | `evidence.auto_collect` / `auto_archive` | Collect after the supervisor exits; then build a verified ZIP |
 | `evidence.delete_sources` | Must stay false |
-| `slurm.*` | Allocation, authentication and egress settings ([Slurm](running/slurm.md)) |
+| `slurm.*` | Allocation, authentication and egress settings ([Slurm](hosts/slurm.md)) |
 | `container.workspace` / `image` / `memory_gib` / `cpus` | Docker volumes, image tag and limits (0 adds none) |
 | `container.seccomp_profile` | `default`, or `unconfined` for Codex's nested sandbox |
 | `paths.runs_root` | Where runs, receipts, exports and caches go; empty is `<repo>/runs`; `ROBOTEAM_RUNS_ROOT` overrides |
+
+## Settings files
+
+Settings for new runs start in `roboteam.toml`. The loader layers the repository defaults, a
+partial site TOML (`roboteam --config FILE ...`) and command-line options, in that order, rejects
+unknown fields, and freezes the result into each new batch; changing a setting never changes a
+prepared batch.
+
+| Path | What it is |
+| --- | --- |
+| `roboteam.toml` | The defaults for new runs |
+| `models.json` | Every selectable model profile, one section per engine (`engines.codex`, `engines.claude`, which also holds Claude transcript prices). A run freezes its engine's section |
+| `roboteam/runtime/run/defaults.json` | The policy runtime's settings (topology, startup protocol, timeouts, check intervals, motion and video rates, and optionally `observation_look`); no speeds or forces, which every action states. A batch sets the engine, topology, model and effort over it |
+| `roboteam/runtime/sandbox/policy-env/` | The policy Python environment's inputs (`core.in`, `store.in`) and locks (`core.lock`, `all.lock`) |
+| `roboteam/harness/adapters/*/requirements.txt` | The optional dependencies of the two model adapters: `claude_in_codex` (opus-5.5 in Codex) and `gpt_in_claude` (gpt-6.1-sol in Claude Code) |
+| `benchmark/assets.json` | The pinned policy asset archive and its inventory, restored by `roboteam bootstrap` |
+| `docs/hosts/examples/mac.toml`, `slurm.toml`, `linux.toml` | A starting site TOML for each platform; copy one to an untracked file |
+
+Credentials belong in the ignored `.env` or the environment, never in these files. Choosing a
+model name alone does not establish provider compatibility: a run needs passed preflight
+receipts for its profile.
 
 ## Startup in all four modes
 
@@ -104,7 +125,7 @@ libraries are not installed by `uv sync`.
 
 ## Models, credentials and preflight
 
-Each profile names its credential variable ([authentication matrix](engines/README.md#authentication-matrix)).
+Each profile names its credential variable ([authentication matrix](harness/README.md#authentication-matrix)).
 `.env` is read as literal values; a variable already in the environment wins.
 
 ```sh
@@ -115,8 +136,8 @@ Each profile names its credential variable ([authentication matrix](engines/READ
 
 Without `--confirm-spend` no model is called and the result is `not_run`. Receipts go under
 `<runs_root>/engineering/`; `run` refuses a batch whose profile, catalog or CLI version does not
-match a passed receipt. Details: [Codex](engines/codex.md#preflight-and-receipts) and
-[Claude Code](engines/claude-code.md#preflight-and-receipts).
+match a passed receipt. Details: [Codex](harness/codex.md#preflight-and-receipts) and
+[Claude Code](harness/claude-code.md#preflight-and-receipts).
 
 ## Run, monitor and stop
 
@@ -139,9 +160,9 @@ started from, so keep active runs on their checkout and develop in another workt
 `status` reads the supervisor's JSON snapshot, never a live database. `stop` writes stop markers;
 check the seal and status afterwards. `continue` continues stopped runs by hand as the same trials,
 also after a finish or cutoff (the score stands); an unexpected stop already continues by itself
-once ([continuation](running/continuation.md#continuing-by-hand)). Platforms:
-[Mac](running/mac.md), [RunPod and plain Linux](running/runpod.md), [Slurm](running/slurm.md),
-[Docker](running/docker.md). Keep live databases on local storage, never Lustre or NFS, and never
+once ([continuation](runs/continuation.md#continuing-by-hand)). Platforms:
+[Mac](hosts/mac.md), [RunPod and plain Linux](hosts/linux.md), [Slurm](hosts/slurm.md),
+[Docker](hosts/docker.md). Keep live databases on local storage, never Lustre or NFS, and never
 open a Docker writer's database from the host.
 
 ## Evidence and ZIP output
@@ -154,7 +175,7 @@ With `evidence.auto_collect`, once every task host has exited the CLI collects t
 .venv/bin/roboteam collect runs/policy/my-batch --output runs/exports/manual-collection
 .venv/bin/roboteam archive runs/exports/manual-collection --output runs/exports/manual.zip
 .venv/bin/roboteam extract runs/exports/manual.zip --output runs/restored/manual-archive
-.venv/bin/python -m roboteam.batch.archive_policy_batch restore runs/restored/manual-archive \
+.venv/bin/python -m roboteam.launch.results.archive_batch restore runs/restored/manual-archive \
   --output runs/restored/manual-evidence
 ```
 
@@ -162,4 +183,4 @@ With `evidence.auto_collect`, once every task host has exited the CLI collects t
 motion paths and checks every original byte hash. The archive replaces repeated image payloads with
 reversible references; motion keeps its float32 capture and XOR/ZIP encoding. Nothing is deleted:
 the batch and the collection stay until an operator removes them after verifying a restore. See
-[evidence storage](running/evidence-storage.md).
+[evidence storage](runs/evidence-storage.md).

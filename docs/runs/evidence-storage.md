@@ -13,7 +13,7 @@ physics and change no score, and they never delete the original batch.
 
 `roboteam run` collects and archives a batch when it ends (`evidence.auto_collect`,
 `evidence.auto_archive`, both on by default). Docker and Slurm copy only that ZIP back to the
-host ([Docker](docker.md), [Slurm](slurm.md)).
+host ([Docker](../hosts/docker.md), [Slurm](../hosts/slurm.md)).
 
 ## Collect by hand
 
@@ -24,7 +24,7 @@ role hosts and worlds have all stopped:
 .venv/bin/roboteam collect runs/policy/MY_BATCH --output runs/exports/MY_BATCH
 ```
 
-The lower-level entry is `.venv/bin/python -m roboteam.batch.collect BATCH --output DIR`;
+The lower-level entry is `.venv/bin/python -m roboteam.launch.results.collect BATCH --output DIR`;
 it exits 1 after publishing a collection that needs review.
 
 - The collector checks writer locks, recorded host processes and terminal state, and detects
@@ -50,7 +50,7 @@ it exits 1 after publishing a collection that needs review.
 ```sh
 .venv/bin/roboteam archive runs/exports/MY_BATCH --output runs/archives/MY_BATCH.zip
 .venv/bin/roboteam extract runs/archives/MY_BATCH.zip --output runs/extracted/MY_BATCH
-.venv/bin/python -m roboteam.batch.archive_policy_batch restore runs/extracted/MY_BATCH \
+.venv/bin/python -m roboteam.launch.results.archive_batch restore runs/extracted/MY_BATCH \
   --output runs/restored/MY_BATCH
 ```
 
@@ -63,9 +63,9 @@ it cannot fill gaps, settle unknown actions or change a score. The directory for
 complete collection unless told otherwise:
 
 ```sh
-.venv/bin/python -m roboteam.batch.archive_policy_batch create runs/exports/MY_BATCH \
+.venv/bin/python -m roboteam.launch.results.archive_batch create runs/exports/MY_BATCH \
   --output runs/archives/MY_BATCH-directory [--allow-incomplete]
-.venv/bin/python -m roboteam.batch.archive_policy_batch verify runs/archives/MY_BATCH-directory
+.venv/bin/python -m roboteam.launch.results.archive_batch verify runs/archives/MY_BATCH-directory
 ```
 
 How the archive stores data:
@@ -116,7 +116,7 @@ another machine. Restoring does not restart a world or repeat physical actions.
 To compare an original collection with its restored copy:
 
 ```sh
-.venv/bin/python -m scripts.verify_evidence_replay runs/exports/MY_BATCH \
+.venv/bin/python -m scripts.dev.verify_evidence_replay runs/exports/MY_BATCH \
   runs/restored/MY_BATCH --output runs/engineering/MY_BATCH-replay-check
 ```
 
@@ -133,7 +133,7 @@ removing any source.
 
 ## Storage settings of policy runs
 
-`configs/harness.json` freezes these into each run's `harness.json`:
+`roboteam/runtime/run/defaults.json` freezes these into each run's `harness.json`:
 
 - `motion_hz: 30`: 30 motion states per simulated second. Colour changes are written on the
   physics clock to `motion/events.jsonl`.
@@ -162,7 +162,7 @@ resumes those threads. Reports and collection read the run's copies first.
 Once a run is final and idle, compress its transcripts:
 
 ```sh
-.venv/bin/python -m roboteam.batch.session_archive archive RUN_DIR
+.venv/bin/python -m roboteam.launch.results.session_archive archive RUN_DIR
 ```
 
 Each transcript becomes `.jsonl.xz` in place, and for Codex the home originals are removed.

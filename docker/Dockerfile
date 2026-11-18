@@ -27,4 +27,4 @@ ENV PATH="/opt/RoboTeam/.venv/bin:${PATH}" \
     TMPDIR=/var/tmp/roboteam ROBOTEAM_POLICY_ENV_BASE=/opt/roboteam-policy \
     OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 # The CLI sets CPU OSMesa or NVIDIA EGL explicitly from frozen task settings.
-ENTRYPOINT ["python", "-m", "roboteam.batch.container_entrypoint"]
+ENTRYPOINT ["python", "-m", "roboteam.launch.container.entrypoint"]

@@ -6,7 +6,7 @@ A passing preflight qualifies only the measured combination; it does not establi
 native Claude Code or with Codex on a GPT model.
 
 The native Codex CLI owns tool execution, sessions, compaction and forks. A loopback process,
-[`scripts/codex_claude_gateway.py`](../../scripts/codex_claude_gateway.py), translates the
+[`roboteam/harness/adapters/claude_in_codex/gateway.py`](../../roboteam/harness/adapters/claude_in_codex/gateway.py), translates the
 Responses requests Codex sends into Anthropic Messages requests and the streamed answer back.
 It does not run an agent loop, execute tools or store conversations. Every upstream request
 selects `claude-opus-5-5` with adaptive thinking and the effort Codex asked for (`high` in the
@@ -49,11 +49,11 @@ The SDK is an optional dependency, kept out of the core environment:
 
 ```sh
 python3 -m venv .venv-gateway
-.venv-gateway/bin/python -m pip install -r configs/requirements/codex-claude.txt
+.venv-gateway/bin/python -m pip install -r roboteam/harness/adapters/claude_in_codex/requirements.txt
 mkdir -p -m 700 ~/.roboteam/secrets ~/.roboteam/codex-claude
 # Put the Anthropic key, alone, in ~/.roboteam/secrets/anthropic-api-key.txt (chmod 600).
 
-.venv-gateway/bin/python scripts/codex_claude_gateway.py \
+.venv-gateway/bin/python roboteam/harness/adapters/claude_in_codex/gateway.py \
   --anthropic-key-file ~/.roboteam/secrets/anthropic-api-key.txt \
   --key-file ~/.roboteam/secrets/codex-claude-gateway-key.json \
   --log ~/.roboteam/codex-claude/transport-metadata.jsonl \
@@ -77,7 +77,7 @@ a session's next compaction request is refused.
 
 ## Profile and launch behavior
 
-`opus_claude_api` in the `codex` section of `configs/models.json`:
+`opus_claude_api` in the `codex` section of `models.json`:
 
 | Field | Value |
 | --- | --- |
@@ -86,7 +86,7 @@ a session's next compaction request is refused.
 | `transport`, `transport_revision` | `loopback_gateway`, `messages-adapter-v1` |
 | `base_url` | `http://127.0.0.1:18470/v1` |
 | `env_key` | `ROBOTEAM_CLAUDE_GATEWAY_KEY`: the local gateway key, not an Anthropic key |
-| `upstream_host` | `api.anthropic.com`, the host the [outage probe](../running/continuation.md#network-outage-pause) watches |
+| `upstream_host` | `api.anthropic.com`, the host the [outage probe](../runs/continuation.md#network-outage-pause) watches |
 | `context_capacity` | 1,000,000; the run still uses the catalog's 300,000 window and 267,000 compaction limit |
 
 Plain HTTP is accepted only for a profile that declares `transport: loopback_gateway`, and
@@ -226,9 +226,9 @@ instead, give the key file as `{"keys": {"label": "key", ...}}`.
 Watch the cache while a batch runs, from any terminal:
 
 ```sh
-.venv/bin/python scripts/codex_claude_monitor.py ~/.roboteam/codex-claude/transport-metadata.jsonl \
+.venv/bin/python roboteam/harness/adapters/claude_in_codex/monitor.py ~/.roboteam/codex-claude/transport-metadata.jsonl \
   --batch runs/policy/codex-claude-l1 --min-hit-rate 0.7
-.venv/bin/python scripts/codex_claude_monitor.py LOG --once --json --min-hit-rate 0.7   # for scripts
+.venv/bin/python roboteam/harness/adapters/claude_in_codex/monitor.py LOG --once --json --min-hit-rate 0.7   # for scripts
 ```
 
 It reprints every five seconds, per run and overall: requests, cache-hit rate (cumulative
@@ -276,8 +276,8 @@ whole requests. A refusal is never sent to another model.
 ## Offline checks
 
 ```sh
-.venv/bin/python -m scripts.run_tests repo.test_codex_claude_gateway repo.test_codex_claude_monitor engines.test_codex_claude_api
-PYTHONPATH=tests:scripts .venv-gateway/bin/python -m unittest repo.test_codex_claude_gateway
+.venv/bin/python -m scripts.dev.run_tests harness.adapters.test_codex_claude_gateway harness.adapters.test_codex_claude_monitor harness.adapters.test_codex_claude_api
+PYTHONPATH=tests:tests/helpers .venv-gateway/bin/python -m unittest harness.adapters.test_codex_claude_gateway
 ```
 
 The first command runs in the core environment: translation in both directions, the monitor

@@ -5,9 +5,9 @@ the command, what it checks and what to do when it fails. Commands run from the 
 root. Global options such as `--config FILE` go before the subcommand:
 `.venv/bin/roboteam --config site.toml plan`.
 
-Platform details are in the [Mac](running/mac.md), [RunPod and plain Linux](running/runpod.md),
-[Slurm](running/slurm.md) and [Docker](running/docker.md) guides; every setting is in the
-[command-line guide](unified-cli.md).
+Platform details are in the [Mac](hosts/mac.md), [RunPod and plain Linux](hosts/linux.md),
+[Slurm](hosts/slurm.md) and [Docker](hosts/docker.md) guides; every setting is in the
+[command-line guide](cli.md).
 
 ## 1. Prerequisites
 
@@ -16,7 +16,7 @@ Platform details are in the [Mac](running/mac.md), [RunPod and plain Linux](runn
 | Operating system | macOS, or Linux with glibc 2.28 or newer |
 | [uv](https://docs.astral.sh/uv/) | Installs Python 3.12 (`.python-version`) and the locked packages from `uv.lock` |
 | Node.js and npm | Node.js 22 is what CI uses; the Codex host and the engine CLIs need it |
-| Engine CLI | Exactly the pinned version in `roboteam/runtime/versions.py`: Codex `0.165.0`, Claude Code `2.1.316`. Install only the engine you will run |
+| Engine CLI | Exactly the pinned version in `roboteam/runtime/run/versions.py`: Codex `0.165.0`, Claude Code `2.1.316`. Install only the engine you will run |
 | Rendering | macOS: native OpenGL (`render.device = "native"`). Linux: NVIDIA EGL (`nvidia`, the default) or Mesa OSMesa (`cpu`, needs the system `libosmesa6` package or equivalent) |
 | Network | For `bootstrap` (about 186 MB of pinned assets), building the policy environment, and the model provider |
 
@@ -50,18 +50,18 @@ off for runs.
 .venv/bin/roboteam bootstrap
 ```
 
-`bootstrap` downloads the policy asset archive pinned in `configs/policy-assets.json`, checks its
+`bootstrap` downloads the policy asset archive pinned in `benchmark/assets.json`, checks its
 SHA-256, and restores every referenced file (the scene meshes and textures under
 `benchmark/<family>/<case>/assets/` and the Franka Panda model under `vendor/panda/`), checking
 each file's hash. It reuses files that already verify and calls no model. On failure it names
 the file or hash that differs: do not substitute another archive. For a machine without network
-access, copy the archive named in `configs/policy-assets.json` over and run
-`.venv/bin/python -m roboteam.batch.handoff setup-assets --archive /path/to/the-archive.tar.gz`.
+access, copy the archive named in `benchmark/assets.json` over and run
+`.venv/bin/python -m roboteam.launch.results.assets setup-assets --archive /path/to/the-archive.tar.gz`.
 
 ## 4. Credentials: `.env`
 
 ```sh
-.venv/bin/python -m roboteam.batch.handoff init-env
+.venv/bin/python -m roboteam.launch.results.assets init-env
 ```
 
 This copies `.env.example` to `.env` with mode 0600 and refuses to overwrite an existing `.env`.
@@ -80,7 +80,7 @@ Codex subscription profiles (`sol_subscription` and others) use a login in
 `~/.roboteam/codex-home` instead: `CODEX_HOME=~/.roboteam/codex-home codex login`. Never
 put credentials in a TOML file, a command argument or a commit. The Claude subscription token
 reaches the CLI on a pipe, never in an environment variable. Profiles and their authentication
-are listed in the [provider guide](engines/README.md#providers).
+are listed in the [provider guide](harness/README.md#providers).
 
 ## 5. A site TOML
 
@@ -89,7 +89,7 @@ are listed in the [provider guide](engines/README.md#providers).
 a partial, untracked TOML, starting from the example for your platform:
 
 ```sh
-cp configs/examples/mac.toml site.toml      # or slurm.toml, runpod.toml
+cp docs/hosts/examples/mac.toml site.toml      # or slurm.toml, linux.toml
 .venv/bin/roboteam --config site.toml config
 ```
 
@@ -128,14 +128,14 @@ reach. Build it once per host, into a folder outside the home folder and the rep
 needs network access and `uvx`):
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam
+.venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam
 ```
 
 Then check it where the runs will run (on Slurm, on a compute node). The check drives each
 engine CLI with a local stub model, so it contacts no provider:
 
 ```sh
-.venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id> \
+.venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id> \
   --scratch <folder next to where batches go>
 ```
 
@@ -145,7 +145,7 @@ On macOS `prepare` uses the build under `/Users/Shared/roboteam` by default. On 
 missing, changed, or has no passing check for this engine and its CLI version, and prints the two
 commands above; run the check again after changing a CLI. On Linux keep runs and `TMPDIR`
 outside `/tmp` (for example under `/var/tmp`). Details and known limits:
-[policy environment](running/policy-environment.md).
+[policy environment](hosts/policy-environment.md).
 
 ## 9. Check the provider: `preflight`
 
@@ -215,7 +215,7 @@ continuation is by hand:
 
 A continuation after the finish or the cutoff keeps the score recorded at that stop. If the
 supervisor itself died, `run runs/policy/my-batch --continue` resumes the batch. Rules and
-files: [continuation](running/continuation.md).
+files: [continuation](runs/continuation.md).
 
 ## 14. Where results go
 
@@ -240,15 +240,15 @@ To do it by hand:
 .venv/bin/roboteam extract runs/exports/my-batch.zip --output runs/restored/my-batch
 ```
 
-None of `runs/` is in Git; back it up separately ([evidence storage](running/evidence-storage.md)).
-`.venv/bin/python -m scripts.view_policy_batch runs/policy/my-batch` serves a read-only viewer of
-a batch ([viewer](running/local-viewer.md)).
+None of `runs/` is in Git; back it up separately ([evidence storage](runs/evidence-storage.md)).
+`.venv/bin/python -m scripts.dev.view_batch runs/policy/my-batch` serves a read-only viewer of
+a batch ([viewer](runs/viewer.md)).
 
 ## Next
 
-- Platforms: [Mac](running/mac.md), [RunPod and plain Linux](running/runpod.md),
-  [Slurm](running/slurm.md) (on the cluster used here, `module load slurm` may be needed before
-  `srun` or `sbatch`), [Docker](running/docker.md).
-- Engines: [Codex](engines/codex.md), [Claude Code](engines/claude-code.md).
-- What a run is: [architecture](architecture.md), [runtime protocol](protocol.md),
-  [physics and robot limits](physics.md), [the tasks](tasks/README.md).
+- Platforms: [Mac](hosts/mac.md), [RunPod and plain Linux](hosts/linux.md),
+  [Slurm](hosts/slurm.md) (on the cluster used here, `module load slurm` may be needed before
+  `srun` or `sbatch`), [Docker](hosts/docker.md).
+- Engines: [Codex](harness/codex.md), [Claude Code](harness/claude-code.md).
+- What a run is: [architecture](development/architecture.md), [runtime protocol](benchmark/rules.md),
+  [physics and robot limits](benchmark/physics.md), [the tasks](tasks/README.md).

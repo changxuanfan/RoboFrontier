@@ -10,14 +10,14 @@ lessons.
 | --- | --- |
 | `roboteam.toml` | Defaults for new runs, validated and frozen at preparation |
 | `benchmark/` | The released cases; `benchmark/release.json` selects every run's inputs |
-| `prompts/` | Shared rules, role prompts, Skills and the two outer manager prompts |
-| `configs/` | Model profiles, harnesses, asset and environment locks, example site TOMLs |
+| `prompts/` | Shared rules, role prompts and guides |
+| `models.json` | Model profiles, one section per engine |
 | `roboteam/` | Run setup, scheduling, native engine hosts, robot tools, MuJoCo world, IK and scoring |
 | `scripts/` | Engineering commands: policy environment, release, validation, analysis, media |
 | `tests/` | Synthetic contracts, kinematics, physics and native CLI checks |
 | `runs/` | Run evidence and engineering outputs, not in Git (`paths.runs_root`) |
 
-The command line is `roboteam` ([command-line guide](unified-cli.md)); the full folder map is
+The command line is `roboteam` ([command-line guide](../cli.md)); the full folder map is
 in [repository layout](repository-layout.md).
 
 ## Engines and topologies
@@ -39,18 +39,18 @@ The coordinating Controller does not get its Workers' action authority. A Single
 names the robot in each command and can move independent arms concurrently. An Adaptive run may
 alternate between no delegates and several in one task; using none does not change its topology.
 Standing teams bind one native session per initial role. Both engines run all four topologies
-([Claude standing teams](engines/claude-code.md#standing-teams)).
+([Claude standing teams](../harness/claude-code.md#standing-teams)).
 
 ## START and time
 
 Single and Adaptive runs use `direct_controller`, standing teams `direct_team`: the host
 binds every initial role to its own native session, persists one START, then sends each role its
-start message ([protocol](protocol.md#start-system-prompt-start-message-start)). Reading and
+start message ([protocol](../benchmark/rules.md#start-system-prompt-start-message-start)). Reading and
 observing count as task time. `ready` is an optional capability query, not a START gate.
 
 The task limit is `batch.task_wall_limit_s`, 86,400 s of active running time from START, counted
 in the run store; host stops, pauses and network outages do not count
-([time](running/continuation.md#time)). The run is scored at that cutoff. `batch.startup_timeout_s`
+([time](../runs/continuation.md#time)). The run is scored at that cutoff. `batch.startup_timeout_s`
 bounds preparation separately. An operator's stop is not the task limit.
 
 `batch.startup_interval_s` (0.3 s) spaces the launches of run hosts, never robot actions or model
@@ -64,7 +64,7 @@ public/inputs/task.json            frozen public task
 public/inputs/rules.md             frozen shared rules (also in the system prompt)
 public/inputs/roles.json           roles and communication topology
 public/inputs/roles/<role>.md      role instructions
-public/inputs/skill/               the robot-collaboration Skill and its references
+public/inputs/guide/               the robot-collaboration Skill and its references
 public/inputs/family/              family Skill and materials
 public/inputs/environment.md       the policy environment; policy-env.sh is sourced before each Claude command
 public/observations/               timestamped RGB observations
@@ -92,10 +92,10 @@ private/engine/                    CLI and MCP configuration, per-turn evidence,
 
 A batch folder holds `batch.json`, `effective-config.json`, `profiles/`, `control/` (STOP,
 status snapshot, locks, `durable/`), `logs/` and one `<profile>/<case>/` run per selected case.
-The layouts are defined in `roboteam/runtime/layout.py`.
+The layouts are defined in `roboteam/runtime/run/layout.py`.
 
 `public` and `private` define the evidence contract; the operating-system boundary is the
-access table ([policy environment](running/policy-environment.md#what-a-policy-can-reach)):
+access table ([policy environment](../hosts/policy-environment.md#what-a-policy-can-reach)):
 a policy writes only `workspace/` and `/tmp`, reads `public/` and its environment, and cannot
 reach the rest of the run, other runs, the checkout, the home folder or shared storage. Roles use
 their own authenticated connections. Engineering object truth is never a policy observation.
@@ -134,7 +134,7 @@ regions, current occupancy or task assignments.
 
 New requests omit the outer `call_id`; to query an action, send a new `job` request with its ID
 in `data.call_id`; retry an uncertain request only under its original ID with identical contents
-([robot requests and IDs](protocol.md#robot-requests-and-ids)). A transport error does not show
+([robot requests and IDs](../benchmark/rules.md#robot-requests-and-ids)). A transport error does not show
 that nothing ran, and provider recovery never replays physical actions under fresh IDs.
 
 Action time budgets come from distance, angle, aperture and the requested rates and are recorded
@@ -177,7 +177,7 @@ records successful observations, cycles, deliveries and redacted errors.
 
 Completion is independent of an agent's claim: under `terminal_outcome_v2` the task's final
 conditions decide it, and collisions, drops and other process events are reported separately
-([terminal outcome](protocol.md#terminal-outcome)). Agents keep observing, recovering and acting
+([terminal outcome](../benchmark/rules.md#terminal-outcome)). Agents keep observing, recovering and acting
 while the task is unfinished, and propose `finish` when it is complete or permitted evidence shows
 recovery is impossible. An accepted incomplete finish is reported as incomplete.
 
@@ -191,11 +191,11 @@ The engines own the native session history; host events and robot evidence compl
 live session files are append-only. Observations are JPEG 1280 × 800 at quality 90; offline video
 size is independent. Motion keeps actual times, float32 poses, appearance events and lossless
 XOR/ZIP compression; the float64-to-float32 conversion is the one lossy step
-([evidence storage](running/evidence-storage.md)).
+([evidence storage](../runs/evidence-storage.md)).
 
 Process memory, controller state, queues and model context are not a restartable physics
 checkpoint. A stopped run continues in a new segment of the same trial, with the world rebuilt
-approximately from its last recorded frame ([continuation](running/continuation.md)).
+approximately from its last recorded frame ([continuation](../runs/continuation.md)).
 
 ## Robot adapter and batches
 

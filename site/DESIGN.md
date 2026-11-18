@@ -68,10 +68,10 @@ set and task.
 
 ## Media pipeline
 
-- `scripts/site_media.py`: `encode` (CPU libx264, CRF 28, `+faststart`, no audio, 720p task
+- `scripts/site/site_media.py`: `encode` (CPU libx264, CRF 28, `+faststart`, no audio, 720p task
   videos, JPEG posters), `montage`, `stills` and `explainer`. Each output is checked for
   duration and frame count.
-- `scripts/site_data.py`: `tasks` (writes `data/tasks.json` from the release and the public
+- `scripts/site/site_data.py`: `tasks` (writes `data/tasks.json` from the release and the public
   tasks, with how each Oracle recording was made from `data/oracle-videos.json`), `media` (writes `data/media.json` from
   the encode manifests) and `readme-gallery`.
 

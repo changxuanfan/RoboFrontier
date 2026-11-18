@@ -20,7 +20,7 @@ it counts. Final placement in GOAL is free: timbers may touch or stack.
 Tables are 0.8 m high. Arms grasp the red timber, never the pendant, its eyes or shaft.
 
 The public task lists every camera's fixed world position, `wxyz` orientation and vertical field
-of view in `static_camera_mounts`, the form Transport uses; `scripts/build_release.py public`
+of view in `static_camera_mounts`, the form Transport uses; `scripts/release/build_release.py public`
 reads the values from the compiled scene.
 
 ## Completion
@@ -65,7 +65,7 @@ and recorded as process events; they do not veto the score.
   the drop lift it clear again; only handovers after that lift count.
 
 A continued run keeps each timber's handovers, drops and holders from the moment it stopped
-([continuation](../running/continuation.md)).
+([continuation](../runs/continuation.md)).
 
 ## Presentation
 

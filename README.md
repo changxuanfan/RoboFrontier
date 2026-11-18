@@ -153,10 +153,10 @@ https://github.com/user-attachments/assets/f4abfc06-8e7c-433a-bc16-aa3cb9df9641
 
 | | |
 | --- | --- |
-| **Host** | macOS on Apple silicon, Linux with an NVIDIA GPU or CPU only, a Slurm cluster, a RunPod pod or Docker. Each has a guide in [docs/running/](docs/README.md). |
+| **Host** | macOS on Apple silicon, Linux with an NVIDIA GPU or CPU only, a Slurm cluster, a RunPod pod or Docker. Each has a guide in [docs/hosts/](docs/README.md). |
 | **Software** | Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js, `ffmpeg`, and the CLI of the engine you run: Claude Code 2.1.316 (`claude`) or Codex 0.165.0 (`codex`). Other versions are refused. |
 | **Linux sandbox** | `bwrap` and `socat` where user namespaces work; otherwise Linux 6.7 or newer (Landlock ABI 4) with `libseccomp`. |
-| **A model account** | A Claude subscription token, or an API key for one of the profiles in [`configs/models.json`](configs/models.json). |
+| **A model account** | A Claude subscription token, or an API key for one of the profiles in [`models.json`](models.json). |
 
 ### 2. Install
 
@@ -186,7 +186,7 @@ hand the Claude token to the CLI on a pipe, so no policy shell can read it.
 Defaults are in [`roboteam.toml`](roboteam.toml): Codex with `sol` (`--engine claude` selects `opus`), the adaptive
 protocol, all 36 tasks, and a renderer picked for the host. Change them with options or a
 small TOML of your own, passed before the command (`roboteam --config site.toml ...`);
-[`configs/examples/`](configs/examples) has one for the Mac, RunPod and Slurm.
+[`docs/hosts/examples/`](docs/hosts/examples) has one for the Mac, RunPod and Slurm.
 
 ```sh
 .venv/bin/roboteam doctor --engine claude                  # CLI version, sandbox, renderer, credentials
@@ -202,15 +202,15 @@ host. Build it once per host, in a folder outside your home folder and the repos
 check that its sandbox holds:
 
 ```sh
-.venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam   # prints its root
-.venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id>
+.venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam   # prints its root
+.venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id>
 ```
 
 On macOS that base is the default. On Linux pick one (outside `/tmp`) and set
 `ROBOTEAM_POLICY_ENV_BASE` to it in the shell that prepares runs. The check starts each
 engine's real CLI against a local stub, with no model calls, and tries about 50 things a policy
 must and must not be able to do; `prepare` refuses an environment that has not passed it.
-[Policy environment](docs/running/policy-environment.md) covers what each platform allows.
+[Policy environment](docs/hosts/policy-environment.md) covers what each platform allows.
 
 ### 6. Preflight, then run
 
@@ -243,11 +243,12 @@ is `paths.runs_root`, default `runs/`). [Getting started](docs/getting-started.m
 | [`benchmark/`](benchmark/README.md) | The 36 released tasks and `release.json` |
 | [`roboteam/`](roboteam) | The package: simulation, robot tool, runtime with its sandbox, the Codex and Claude Code adapters, evaluation and analysis |
 | [`prompts/`](prompts) | Every text an agent reads: rules, roles and guides |
-| [`configs/`](configs/README.md) | Model profiles, harness settings, pinned asset archives, examples |
-| [`scripts/`](scripts/README.md) | Engineering commands: policy environment, release, analysis, media |
+| [`roboteam.toml`](roboteam.toml), [`models.json`](models.json) | The defaults for new runs and the model profiles ([settings](docs/cli.md#settings-files)) |
+| [`scripts/`](scripts/README.md) | Engineering commands: release and policy environment, analysis, project page, tests |
 | [`tests/`](docs/development/testing.md) | The test suite |
 | [`docs/`](docs/README.md) | Guides by topic |
 | [`site/`](site/DESIGN.md) | The project page |
+| [`docker/`](docker/Dockerfile) | The container image |
 
 ## Citation
 

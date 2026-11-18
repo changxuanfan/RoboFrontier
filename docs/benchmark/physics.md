@@ -7,8 +7,8 @@ how the simulation differs from the real robot, and the current validation statu
 
 ## Contacts and solver
 
-`scripts/build_release.py physics` writes these values into all 36 released scenes;
-`python -m scripts.build_release check` confirms that every scene carries them.
+`scripts/release/build_release.py physics` writes these values into all 36 released scenes;
+`python -m scripts.release.build_release check` confirms that every scene carries them.
 
 | Setting | Value | Why |
 | --- | --- | --- |
@@ -22,17 +22,17 @@ how the simulation differs from the real robot, and the current validation statu
 | Dial module disk and stem | condim 6, rolling 0.03 m | A disk leans on its rim and needs it to stop |
 | Hand actuator range | ±280 N | The tendon passes half to each finger: 140 N per finger |
 
-What a scene file cannot hold is in `roboteam/physics/profile.py`: Mosaic objects may always
+What a scene file cannot hold is in `roboteam/sim/profile.py`: Mosaic objects may always
 sleep (its large scenes would otherwise run below real time); in the other families objects sleep
 only after every arm has been idle for 2 s, and any action wakes them; Relay settles 30 s before
 anything may sleep, so its hanging weights come to rest. Every scene starts at rest under this
 physics (`build_release.py settle`). Each run writes `private/outputs/effective-physics.json`,
 the options and contact parameters it actually ran with and their hash. A full contact or
-constraint buffer or a bad inertia fails the step (`roboteam/physics/health.py`).
+constraint buffer or a bad inertia fails the step (`roboteam/sim/health.py`).
 
 ## Robot limits
 
-`roboteam/physics/franka_limits.py` holds the limits, from the Panda datasheet (2018-05)
+`roboteam/sim/franka_limits.py` holds the limits, from the Panda datasheet (2018-05)
 and libfranka 0.9.2 `include/franka/rate_limiting.h` (its base values, without the safety
 margin). An action that omits any of its rates is refused; there are no defaults. Every value
 must be above 0.001 and at most its limit.
@@ -64,9 +64,9 @@ Joint moves finish all joints together.
 
 ## Validation
 
-`scripts/validate_physics.py` runs each check in the policy runtime's own world, controller and
+`scripts/release/validate_physics.py` runs each check in the policy runtime's own world, controller and
 step settings, and writes `runs/engineering/validate-physics/<time>.json`;
-`tests/physics/test_validation.py` runs a fast part of it. Pass criteria: a held object slips
+`tests/sim/test_validation.py` runs a fast part of it. Pass criteria: a held object slips
 less than 2 mm, ends less than 1° turned in the hand and never turns more than 2°; a resting
 object drifts less than 0.2 mm after its first 5 s; a placed cube settles within 1 s; a Dial knob
 follows the hand within 5°; a 20 ms control step of each family's largest case computes in less than 20 ms.
@@ -111,7 +111,7 @@ lets a held object creep 2.9 mm in 60 s.
 during fast motion: a held object turns or slides slightly while the hand moves fast, and a Dial
 turned at 1 rad/s ends behind the wrist. A policy chooses its own speeds and sees the result, so
 it can move slowly where precision matters or look again and correct; the simulation is not made
-easier for it. `scripts/validate_physics.py` keeps every criterion and reports each of these as
+easier for it. `scripts/release/validate_physics.py` keeps every criterion and reports each of these as
 `accepted` only inside the envelope measured then (slip at most 3 mm, in-hand turn at most 7°
 during motion and 2° after, Dial lag at most 7°, Relay slip at most 2.5 mm), so a regression
 beyond it still fails.
@@ -120,5 +120,5 @@ beyond it still fails.
 
 `benchmark/release.json` names every case file by hash and carries `release_id`, a hash of the
 whole release. The release is frozen: `frozen` records release `f62513a8e211a513`, 2026-11-18, and
-the validation run it passed. Every step of `scripts/build_release.py` that writes the release
+the validation run it passed. Every step of `scripts/release/build_release.py` that writes the release
 refuses from then on, so physics, scenes and task files no longer change.
