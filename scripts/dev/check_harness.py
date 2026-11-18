@@ -13,9 +13,9 @@ from unittest.mock import patch
 from urllib.parse import unquote
 from zoneinfo import ZoneInfo
 
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT))
-sys.path.insert(0,str(ROOT/'scripts'))
+sys.path.insert(0,str(ROOT/'tests/helpers'))
 sys.path.insert(0,str(ROOT/'tests'))
 
 
@@ -55,16 +55,16 @@ def main():
             from_binary_path=staticmethod(forbidden)
         guard=patch.multiple(mujoco,MjModel=NoPhysicsModel,MjData=forbidden,mj_step=forbidden,mj_forward=forbidden)
         guard.start()
-        modules=('runtime.test_action_batch','runtime.test_sync_groups','runtime.test_pipeline','runtime.test_pipeline_client',
-                 'runtime.test_runtime_store','runtime.test_run_setup','runtime.test_scheduling','runtime.test_centralized','runtime.test_delegation',
-                 'runtime.test_delegate_callbacks','tasks.test_private_evaluation','runtime.test_run_seal','batch.test_run_report',
-                 'media.test_recording','repo.test_harness_checker','repo.test_policy_batch_viewer')
+        modules=('runtime.tools.test_action_batch','runtime.tools.test_sync_groups','runtime.world.test_pipeline','runtime.tools.test_pipeline_client',
+                 'runtime.world.test_runtime_store','runtime.run.test_run_setup','runtime.tools.test_scheduling','runtime.world.test_centralized','runtime.tools.test_delegation',
+                 'runtime.tools.test_delegate_callbacks','tasks.test_private_evaluation','runtime.world.test_run_seal','launch.test_run_report',
+                 'sim.test_recording','repo.test_harness_checker','repo.test_policy_batch_viewer')
         suite=unittest.defaultTestLoader.loadTestsFromNames(modules)
     else:suite=unittest.defaultTestLoader.discover(str(ROOT/'tests'),pattern='test_*.py')
     try:result=unittest.TextTestRunner(verbosity=2).run(suite)
     finally:
         if guard:guard.stop()
-    node=subprocess.run(['node',str(ROOT/'tests/engines/test_meta_dispatcher.cjs')],capture_output=True,text=True,cwd=ROOT)
+    node=subprocess.run(['node',str(ROOT/'tests/harness/codex/test_meta_dispatcher.cjs')],capture_output=True,text=True,cwd=ROOT)
     print(node.stdout,end='');print(node.stderr,end='',file=sys.stderr)
     # Every Node host test (Codex RPC, preflight, restart, seal, wall limit, tool errors...).
     node_tests={}
@@ -81,18 +81,18 @@ def main():
         py_compile.compile(str(source),doraise=True);compilation.append(str(source.relative_to(ROOT)))
     # Parse the inline UI scripts without executing a browser or opening a port.
     ui_script="const fs=require('fs'),vm=require('vm');for(const f of process.argv.slice(1)){const s=fs.readFileSync(f,'utf8');for(const m of s.matchAll(/<script>([\\s\\S]*?)<\\/script>/g))new vm.Script(m[1]);}"
-    ui=subprocess.run(['node','-e',ui_script,str(ROOT/'assets/pipeline_dashboard.html')],capture_output=True,text=True)
+    ui=subprocess.run(['node','-e',ui_script,str(ROOT/'roboteam/runtime/world/dashboard.html')],capture_output=True,text=True)
     # Validate runnable documentation as syntax, without executing its tools.
     doc_js="const fs=require('fs');const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;const s=fs.readFileSync(process.argv[1],'utf8');for(const m of s.matchAll(/```javascript\\n([\\s\\S]*?)```/g))new AsyncFunction(m[1]);"
-    runbook=subprocess.run(['node','-e',doc_js,str(ROOT/'docs/meta-runbook.md')],capture_output=True,text=True)
-    tool_docs=subprocess.run(['node','-e',doc_js,str(ROOT/'prompts/skills/robot-collaboration/references/tools.md')],capture_output=True,text=True)
+    runbook=subprocess.run(['node','-e',doc_js,str(ROOT/'docs/development/manager-runbook.md')],capture_output=True,text=True)
+    tool_docs=subprocess.run(['node','-e',doc_js,str(ROOT/'prompts/guides/collaboration/tools.md')],capture_output=True,text=True)
     # Tracked Markdown only: ignored local renders under docs/generated are not documentation.
     tracked=subprocess.run(['git','ls-files','-z','*.md'],capture_output=True,text=True,cwd=ROOT).stdout.split('\0')
     documents=[ROOT/name for name in tracked if name]
     broken_links=documentation_links(ROOT,documents)
     validator=None
     if args.skill_validator:
-        validator=subprocess.run([args.skill_python,str(args.skill_validator),str(ROOT/'prompts/skills/robot-collaboration')],capture_output=True,text=True)
+        validator=subprocess.run([args.skill_python,str(args.skill_validator),str(ROOT/'prompts/guides/collaboration')],capture_output=True,text=True)
         print(validator.stdout,end='');print(validator.stderr,end='',file=sys.stderr)
     dispatcher_count=re.search(r'^PASS: (\d+) dispatcher scenarios:',node.stdout,re.MULTILINE)
     dispatcher_passed=node.returncode==0 and dispatcher_count is not None

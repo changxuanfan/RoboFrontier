@@ -14,10 +14,10 @@ stills:  README images: montage posters with a play badge and a 400-px thumbnail
 Sources is a JSON file: {"set": "oracle", "tasks": {"<case>": {"front": path, "side": path}}}.
 Run from the repository root:
 
-    .venv/bin/python -m scripts.site_media encode SOURCES OUT
-    .venv/bin/python -m scripts.site_media montage OUT/manifest.json FAMILY OUT_MP4
-    .venv/bin/python -m scripts.site_media stills OUT/manifest.json MONTAGE_DIR docs/media/readme
-    .venv/bin/python -m scripts.site_media explainer IMAGES docs/media/readme/benchmark.jpg
+    .venv/bin/python -m scripts.site.site_media encode SOURCES OUT
+    .venv/bin/python -m scripts.site.site_media montage OUT/manifest.json FAMILY OUT_MP4
+    .venv/bin/python -m scripts.site.site_media stills OUT/manifest.json MONTAGE_DIR docs/media/readme
+    .venv/bin/python -m scripts.site.site_media explainer IMAGES docs/media/readme/benchmark.jpg
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -144,10 +144,10 @@ def explainer(atlas, out, width=1800):
     """The README benchmark figure: one row per family, its largest team at Levels 1-3, each
     the task's real initial state from a render in `atlas`, with what the level changes."""
     from PIL import Image, ImageDraw, ImageFont
-    fonts = Path(__file__).resolve().parents[1] / 'assets/robo_factory/fonts'
+    fonts = Path(__file__).resolve().parents[2] / 'benchmark/hall/fonts'
     display = lambda n: ImageFont.truetype(str(fonts / 'SpaceGrotesk-Bold.ttf'), n)
     mono = lambda n: ImageFont.truetype(str(fonts / 'JetBrainsMono-Medium.ttf'), n)
-    data = json.loads((Path(__file__).resolve().parents[1] / 'site/data/tasks.json').read_text())
+    data = json.loads((Path(__file__).resolve().parents[2] / 'site/data/tasks.json').read_text())
     colors = {'transport': (59, 127, 196), 'mosaic': (63, 148, 64), 'relay': (214, 91, 60), 'dial': (185, 138, 18)}
     view = {'transport': 'global', 'mosaic': 'top', 'relay': 'global', 'dial': 'global'}
     ink, ink2, dim, line = (21, 24, 28), (59, 65, 72), (105, 113, 124), (211, 214, 219)

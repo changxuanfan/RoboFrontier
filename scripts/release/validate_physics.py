@@ -2,7 +2,7 @@
 
 Every scenario runs a released case in the policy runtime's own World, controller and
 step settings, and reports measurements with a pass or fail against the criteria of the
-release (docs/physics.md):
+release (docs/benchmark/physics.md):
 
     rest      every case at rest for 60 s: nothing drifts, hanging weights stay hung
     carry     a grasped object through fast joint turns, Cartesian moves at up to 2 m/s
@@ -14,7 +14,7 @@ release (docs/physics.md):
     dial      a Dial knob grasped and turned: the dial follows the hand
     timing    the step time of the largest case of each family
 
-    python -m scripts.validate_physics [SCENARIO ...] [--cases ID ...] [--workers N]
+    python -m scripts.release.validate_physics [SCENARIO ...] [--cases ID ...] [--workers N]
 
 Results go to runs/engineering/validate-physics/<time>.json.
 """
@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 # Pass criteria.
@@ -49,7 +49,7 @@ ACCEPTED_ENVELOPE = {
     'dial': dict(follow_error_deg=7.),
     'relay': dict(carry_slip_mm=2.5),
 }
-ACCEPTED_REASON = 'Fast-motion lag at the 2 ms step, inside the accepted envelope (docs/physics.md#validation)'
+ACCEPTED_REASON = 'Fast-motion lag at the 2 ms step, inside the accepted envelope (docs/benchmark/physics.md#validation)'
 
 FAST = dict(speed_m_s=2., acceleration_m_s2=13., angular_speed_rad_s=2.5, angular_acceleration_rad_s2=25.)
 GENTLE = dict(speed_m_s=.1, acceleration_m_s2=1., angular_speed_rad_s=.5, angular_acceleration_rad_s2=5.)
@@ -60,7 +60,7 @@ class Bench:
 
     def __init__(self, case_id, folder):
         from roboteam.tasks.families import prepare
-        from roboteam.runtime.pipeline import World
+        from roboteam.runtime.world.pipeline import World
         run = Path(folder)/'run'
         prepare(case_id, run)
         self.task = json.loads((run/'private/inputs/task.json').read_text())
@@ -235,7 +235,7 @@ def place(name='transport-cube'):
 
 def push():
     """Push a cube 5 cm along the table with the closed hand, in the first direction the arm reaches."""
-    from roboteam.physics.robot_control import IKNoSolution
+    from roboteam.sim.robot_control import IKNoSolution
     with task_dir() as folder:
         b = Bench('transport-a04-d1', folder); arm = 'A'; body = 'A_item1'
         base = b.data.body(arm+'_link0').xpos.copy(); item, _ = b.body(body)

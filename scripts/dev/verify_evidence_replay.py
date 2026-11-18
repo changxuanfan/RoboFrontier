@@ -15,10 +15,10 @@ import mujoco
 import numpy as np
 from PIL import Image
 
-from roboteam.media.motion_recording import MotionReader
-from roboteam.physics.workstation import Workstation
-from roboteam.batch.collect import digest
-from roboteam.batch.archive_policy_batch import safe, verify_collection
+from roboteam.sim.motion_recording import MotionReader
+from roboteam.sim.workstation import Workstation
+from roboteam.launch.results.collect import digest
+from roboteam.launch.results.archive_batch import safe, verify_collection
 
 
 def simple_frames(recording, indices):

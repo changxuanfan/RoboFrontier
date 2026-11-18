@@ -8,7 +8,7 @@ receipt lists each engine with the sandbox and CLI version it ran, and preparati
 other combination. Give --scratch where batches will really run, since where a run sits changes
 what can be opened.
 
-    .venv/bin/python -m scripts.check_policy_env /Users/Shared/roboteam/policy-env-<id>
+    .venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id>
 """
 import argparse
 import http.server
@@ -24,10 +24,12 @@ import tempfile
 import threading
 import time
 
-from roboteam.runtime import access as policy_access, policy_env, policy_env_probe
-from roboteam.runtime.layout import manifest_record
+from roboteam.runtime.sandbox import access as policy_access
+from roboteam.runtime.sandbox import policy_env
+from roboteam.runtime.sandbox import policy_env_probe
+from roboteam.runtime.run.layout import manifest_record
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 MUST_WORK = ('python_is_environment', 'python_on_path_is_environment', 'tmpdir_in_workspace', 'home_in_workspace',
              'threads_not_limited', 'host_variables_gone', 'libraries_and_plots', 'tempfile', 'shell_heredoc', 'shell_sort',
              'subprocess_system_tool', 'read_public', 'write_workspace', 'read_environment', 'pip_install_store',
@@ -134,7 +136,7 @@ def codex_stub(command, seen):
 
 
 CODEX_DRIVER = r'''
-const fs=require('fs'),{CodexRpc}=require(process.argv[1]+'/roboteam/engines/codex/codex_rpc');
+const fs=require('fs'),{CodexRpc}=require(process.argv[1]+'/roboteam/harness/codex/host/rpc');
 const out=process.argv[2],launch=JSON.parse(fs.readFileSync(out+'/launch.json')),run=fs.readFileSync(out+'/cwd.txt','utf8');
 process.env.ROBOTEAM_OFFLINE_STUB_TOKEN='local-stub-no-credential';
 (async()=>{let done;
@@ -149,7 +151,7 @@ await rpc.close();process.exit(0);})().catch(e=>{console.error(e.stack);process.
 
 
 def run_claude(run, command, scratch, seen, shared):
-    from roboteam.engines.claude.runner import build_command, confine, policy_settings, start_cli
+    from roboteam.harness.claude.session.runner import build_command, confine, policy_settings, start_cli
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), claude_stub(command, seen, shared))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     config = run/'private/engine/config'
@@ -174,7 +176,7 @@ def run_claude(run, command, scratch, seen, shared):
 
 
 def run_codex(run, command, scratch, seen, shared):
-    from roboteam.engines.codex.launch import launch_config
+    from roboteam.harness.codex.launch import launch_config
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), codex_stub(command, seen))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     out = scratch/'codex-host'
@@ -204,7 +206,7 @@ def run_codex(run, command, scratch, seen, shared):
 
 def run_codex_landlock(run, command, scratch, seen, shared):
     """The Linux Codex path: its tools run in a confined worker, with no shell in the CLI."""
-    from roboteam.engines.codex import tool_backend
+    from roboteam.harness.codex import tool_backend
     tool_backend.prepare(run, {'tool_backend': 'landlock-v1', 'runner_backend': 'slurm-managed-v1'})
     done = tool_backend.execute(run, {'tool': 'policy_exec', 'command': command}, timeout=PROBE_LIMIT_S)
     seen.append({'content': done.stdout + done.stderr, 'is_error': done.returncode != 0})
@@ -217,7 +219,7 @@ def isolation(name):
     """The sandbox the check runs `name` in, which a run prepared on this host would freeze."""
     if name == 'codex':
         return 'landlock-v1' if ENGINES['codex'] is run_codex_landlock else 'native'
-    from roboteam.engines.common.landlock import choose
+    from roboteam.harness.shared.landlock import choose
     return choose()
 
 
@@ -320,7 +322,7 @@ def check_engine(name, environment, scratch, mode):
 
 def private_shared_memory_possible():
     """Whether a command here can get an empty /dev/shm of its own, as a Codex command does."""
-    probe = 'from roboteam.engines.codex.tool_worker import private_shared_memory as p; p()'
+    probe = 'from roboteam.harness.codex.tool_worker import private_shared_memory as p; p()'
     return subprocess.run([sys.executable, '-c', probe], cwd=ROOT, capture_output=True, timeout=60).returncode == 0
 
 

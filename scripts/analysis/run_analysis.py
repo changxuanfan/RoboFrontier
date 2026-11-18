@@ -32,7 +32,7 @@ from pathlib import Path
 import sys
 import traceback
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from roboteam.analysis import atomic, extract, metrics, session_archive  # noqa: E402
 from roboteam.analysis.archive import Run  # noqa: E402

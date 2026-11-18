@@ -4,14 +4,14 @@ The release is frozen after this runs; nothing at run time rebuilds or patches i
 Each step changes the files under benchmark/<family>/<case>/ in place and is safe to
 run again on its own output.
 
-    python -m scripts.build_release physics   # contact and solver settings into every scene.xml
-    python -m scripts.build_release settle    # start every scene at rest under that physics
-    python -m scripts.build_release letters   # print Transport block letters upright
-    python -m scripts.build_release codes     # one fixed private code per Dial case
-    python -m scripts.build_release public    # each case's final public task and materials
-    python -m scripts.build_release check     # the scenes already carry them
+    python -m scripts.release.build_release physics   # contact and solver settings into every scene.xml
+    python -m scripts.release.build_release settle    # start every scene at rest under that physics
+    python -m scripts.release.build_release letters   # print Transport block letters upright
+    python -m scripts.release.build_release codes     # one fixed private code per Dial case
+    python -m scripts.release.build_release public    # each case's final public task and materials
+    python -m scripts.release.build_release check     # the scenes already carry them
 
-See docs/physics.md for the values and where they come from.
+See docs/benchmark/physics.md for the values and where they come from.
 """
 import argparse
 import hashlib
@@ -25,12 +25,12 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 BENCHMARK = ROOT/'benchmark'
 FAMILIES = ('transport', 'mosaic', 'relay', 'dial')
 
-# Solver options every scene carries (docs/physics.md). The rest of <option> stays as built:
+# Solver options every scene carries (docs/benchmark/physics.md). The rest of <option> stays as built:
 # implicitfast, 2 ms steps, Newton with 100 iterations.
 OPTION = {'cone': 'elliptic', 'impratio': '1', 'noslip_iterations': '10', 'noslip_tolerance': '1e-9'}
 # One contact stiffness for every collision geom: the stiffest that is stable at 2 ms steps
@@ -45,7 +45,7 @@ DIAL_MODULE_ROLLING = .03       # a module disk leans on its rim and needs this 
 ROUND_ROLLING_PER_RADIUS = .1   # loose cylinders and spheres
 
 # The hand's tendon actuator passes half its force to each finger; a grasp may press each
-# finger with up to 140 N (physics/franka_limits.py), so the actuator reaches 280 N.
+# finger with up to 140 N (sim/franka_limits.py), so the actuator reaches 280 N.
 HAND_ACTUATOR = re.compile(r'[A-Z]_actuator8')
 HAND_FORCE_RANGE = '-280 280'
 MODULE = re.compile(r'_module_(disk|stem)$')
@@ -209,7 +209,7 @@ def index_release():
             if projection: projection['sha256'] = file_sha256(ROOT/projection['path'])
             for entry in case.get('public_files', {}).values(): entry['sha256'] = file_sha256(ROOT/entry['path'])
     # The release's identity: every case file, public file and catalog by hash, and the
-    # private codes. Recorded with a date when the release is frozen (docs/physics.md).
+    # private codes. Recorded with a date when the release is frozen (docs/benchmark/physics.md).
     content = {'cases': {case['id']: {**case['source_files'], 'public/task.json': case['public_projection']['sha256'],
                                       **{'public/'+n: e['sha256'] for n, e in case.get('public_files', {}).items()}}
                          for family in release['families'].values() for case in family['policy']},
@@ -221,7 +221,7 @@ def index_release():
     release['release_id'] = release_id
     release.setdefault('frozen', None)
     path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
-    from scripts import site_data
+    from scripts.site import site_data
     site_data.tasks()  # the project page's task index records the release hash
 
 
@@ -243,9 +243,9 @@ def physics(args):
 def pin_asset_release():
     """Record which release the pinned asset archive serves. Only valid while the scene assets
     are unchanged: a step that changes an asset (letters) needs a new archive
-    (roboteam.batch.handoff assets), published and pinned in configs/policy-assets.json;
+    (roboteam.launch.results.assets assets), published and pinned in benchmark/assets.json;
     restore_assets refuses an archive whose files differ from the release's hashes."""
-    path = ROOT/'configs/policy-assets.json'
+    path = ROOT/'benchmark/assets.json'
     config = json.loads(path.read_text()); config['release_sha256'] = file_sha256(BENCHMARK/'release.json')
     path.write_text(json.dumps(config, indent=2)+'\n')
 
@@ -259,7 +259,7 @@ def settle_case(folder):
     resting coordinates of every joint that is not a robot's, with the largest change."""
     import tempfile
     from roboteam.tasks.families import prepare
-    from roboteam.runtime.pipeline import World
+    from roboteam.runtime.world.pipeline import World
     task_id = json.loads((folder/'task.json').read_text())['id']
     with tempfile.TemporaryDirectory(prefix='rf-settle-') as temporary:
         run = Path(temporary)/'run'; prepare(task_id, run)
@@ -385,7 +385,7 @@ def public(args):
     """Write each case's public task exactly as a run receives it, and its materials.
 
     This writes the result once: public/task.json (without the run's own protocol and image profile) and every family
-    material a run receives, except the family skill, which runs copy from prompts/skills.
+    material a run receives, except the task guide, which runs copy from prompts/guides.
     The release then names these files, and a run only copies them.
 
     A Relay public task also gets its cameras' mounts, read from the compiled scene; the
@@ -426,7 +426,7 @@ def public(args):
 
 def require_unfrozen():
     if json.loads((BENCHMARK/'release.json').read_text()).get('frozen'):
-        raise SystemExit('The release is frozen; physics, scenes and task files no longer change (docs/physics.md)')
+        raise SystemExit('The release is frozen; physics, scenes and task files no longer change (docs/benchmark/physics.md)')
 
 
 def freeze(args):
@@ -436,7 +436,7 @@ def freeze(args):
     validation = Path(args.validation)
     report = json.loads(validation.read_text())
     if not report.get('passed'):
-        raise SystemExit('Freeze only after a passing physics validation (scripts/validate_physics.py)')
+        raise SystemExit('Freeze only after a passing physics validation (scripts/release/validate_physics.py)')
     if check(args):
         raise SystemExit('A scene does not carry the release physics')
     index_release()
@@ -445,7 +445,7 @@ def freeze(args):
                          'physics_validation': validation.name}
     path.write_text(json.dumps(release, indent=2, ensure_ascii=False)+'\n')
     pin_asset_release()
-    from scripts import site_data
+    from scripts.site import site_data
     site_data.tasks()  # the page's task index records the release hash, which this changed
     print(json.dumps(release['frozen']))
 

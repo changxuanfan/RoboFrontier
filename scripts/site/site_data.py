@@ -4,11 +4,11 @@ tasks:  site/data/tasks.json, the 36 released cases with their public facts (fam
         arms, workload) and the one-line level differences, from the release and each case's
         public policy task, with the note on each Oracle video from site/data/oracle-videos.json.
 media:  site/data/media.json, every video set (Oracle, then one per model) with its base URL
-        and per-task front/side files, from the manifests that scripts.site_media writes.
+        and per-task front/side files, from the manifests that scripts.site.site_media writes.
 
-    .venv/bin/python -m scripts.site_data tasks
-    .venv/bin/python -m scripts.site_data media SET=BASE_URL=MANIFEST [...] [--film VIDEO POSTER]
-    .venv/bin/python -m scripts.site_data readme-gallery
+    .venv/bin/python -m scripts.site.site_data tasks
+    .venv/bin/python -m scripts.site.site_data media SET=BASE_URL=MANIFEST [...] [--film VIDEO POSTER]
+    .venv/bin/python -m scripts.site.site_data readme-gallery
 
 A set's BASE_URL is where its files are published (its media repository's Pages site), or a
 relative path such as `_media/oracle/` for a local preview.

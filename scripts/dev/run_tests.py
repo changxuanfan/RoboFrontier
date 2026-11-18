@@ -2,10 +2,10 @@
 tests/**/test_*.js with node --test. A module that fails is run once more alone; only a failure
 that repeats counts, and the report says which modules failed only in parallel.
 
-    .venv/bin/python -m scripts.run_tests                 # everything, one worker per CPU
-    .venv/bin/python -m scripts.run_tests --workers 4 runtime.test_run_segments engines
+    .venv/bin/python -m scripts.dev.run_tests                 # everything, one worker per CPU
+    .venv/bin/python -m scripts.dev.run_tests --workers 4 runtime.run.test_run_segments harness
 
-Arguments name modules (runtime.test_run_segments) or folders under tests/ (engines).
+Arguments name modules (runtime.run.test_run_segments) or folders under tests/ (harness, harness.codex).
 Exits 1 when a failure repeats. CI runs it in the all-tests job (.github/workflows/harness.yml).
 """
 import argparse
@@ -18,7 +18,7 @@ import subprocess
 import sys
 import time
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT/'tests'
 
 
@@ -67,7 +67,7 @@ def run(command, timeout, env=None):
 
 def run_python(module, timeout):
     began = time.monotonic()
-    env = dict(os.environ, PYTHONPATH=os.pathsep.join(('tests', 'scripts')))
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(('tests', 'tests/helpers')))
     ok, out = run([sys.executable, '-m', 'unittest', module], timeout, env)
     ran = re.search(r'Ran (\d+) test', out)
     return {'test': module, 'ok': ok, 'tests': int(ran.group(1)) if ran else 0,

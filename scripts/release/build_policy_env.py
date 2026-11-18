@@ -1,15 +1,15 @@
 """Build the read-only Python environment and offline wheel store for policy scripts.
 
-Downloads the pinned Python and the hash-locked packages of configs/policy-env/, so it
+Downloads the pinned Python and the hash-locked packages of roboteam/runtime/sandbox/policy-env/, so it
 needs the network and is run once per host, by an operator, before preparing runs. The
 folder name carries a hash of the locks, Python version and platform; an existing valid
 environment is kept. Point prepared runs at it with ROBOTEAM_POLICY_ENV.
 
-    .venv/bin/python -m scripts.build_policy_env --base /Users/Shared/roboteam
+    .venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam
 
 Each host builds its own folder from the same locks. Linux needs glibc 2.28 or newer,
 which the wheels in the locks require. To move to newer versions, update PYTHON (in
-roboteam/runtime/policy_env.py) and UV,
+roboteam/runtime/sandbox/policy_env.py) and UV,
 then relock; --upgrade matters, since compile otherwise keeps a lock's existing versions:
 
     uv pip compile --universal --python-version 3.12 --generate-hashes --no-header --upgrade core.in store.in -o all.lock
@@ -28,11 +28,11 @@ import stat
 import subprocess
 import sys
 
-from roboteam.runtime import policy_env
+from roboteam.runtime.sandbox import policy_env
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 CONFIG = policy_env.CONFIG
-# The harness's Python series, in a separate installation. configs/policy-env/*.lock are resolved for it.
+# The harness's Python series, in a separate installation. roboteam/runtime/sandbox/policy-env/*.lock are resolved for it.
 PYTHON = policy_env.PYTHON
 identity = policy_env.identity
 UV = ('uvx', '--from', 'uv==0.13.7', 'uv')  # A host's own uv may not know this Python yet.

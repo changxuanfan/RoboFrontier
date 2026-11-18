@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sqlite3
 import statistics
-from roboteam.runtime import layout as run_layout
+from roboteam.runtime.run import layout as run_layout
 
 
 def report_run(run):
