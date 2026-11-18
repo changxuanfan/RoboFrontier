@@ -154,7 +154,7 @@ def media(specs, film=None):
         document['film'] = {
             'video': film[0],
             'poster': film[1],
-            'note': 'A tour of the factory hall: one moment from each zone, then every task type and scale; 3 min 41 s, 1080p. Oracle reference runs, not model results.',
+            'note': 'A tour of the factory hall: one moment from each zone, then every task type and team size; 3 min 41 s, 1080p. Oracle reference runs, not model results.',
         }
     return write(SITE / 'media.json', document)
 

@@ -39,9 +39,7 @@ code{font:.88em var(--mono);background:var(--card2);border:1px solid var(--line)
 .rail.solid{border-color:var(--line)}
 .brand{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:700;letter-spacing:-.01em}
 .brand:hover{text-decoration:none}
-.brand-mark{display:grid;grid-template-columns:7px 7px;gap:2px}
-.brand-mark i{width:7px;height:7px;border-radius:1.5px;background:var(--transport)}
-.brand-mark i:nth-child(2){background:var(--mosaic)}.brand-mark i:nth-child(3){background:var(--relay)}.brand-mark i:nth-child(4){background:var(--dial)}
+.brand-mark{width:20px;height:20px;flex:none}
 .rail nav{display:flex;gap:2px;margin-left:auto}
 .rail nav a{color:var(--dim);font-size:14px;font-weight:500;padding:6px 10px;border-radius:7px}
 .rail nav a:hover{color:var(--ink);text-decoration:none;background:var(--card2)}

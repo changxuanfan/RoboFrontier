@@ -583,5 +583,10 @@
     }
    }
   }
- ]
+ ],
+ "film": {
+  "video": "https://changxuanfan.github.io/RoboTeam-media/film/roboteam-film-1080p.mp4",
+  "poster": "https://changxuanfan.github.io/RoboTeam-media/film/film.jpg",
+  "note": "A tour of the factory hall: one moment from each zone, then every task type and team size; 3 min 41 s, 1080p. Oracle reference runs, not model results."
+ }
 }
