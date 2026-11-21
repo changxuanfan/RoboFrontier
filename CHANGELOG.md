@@ -17,6 +17,8 @@ comparable.
   `observation` conditions are in `roboteam/tasks/`. The subpackages no longer import upward
   (`tests/repo/test_layering.py`).
 - A wrong CLI or library version is refused with the command that installs the pinned one.
+- A world started under an X display that needs an authority file (`xvfb-run`, a forwarded
+  display) now gets `XAUTHORITY`; before, its window could not open.
 - Claude Code models: `opus_subscription` now uses the saved Claude Code login, like
   `haiku_subscription`; the token model is `opus_subscription_token`.
 - `seal.json` names the final images taken at the cutoff (`cutoff_observation`) and says

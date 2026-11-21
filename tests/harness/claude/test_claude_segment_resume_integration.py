@@ -36,8 +36,9 @@ RESUME = 'The host stopped unexpectedly'
 CHILD = (
     'import json,os,sys;from roboteam.harness.claude.run import run_task;'
     "env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'FAKE_KEY':'synthetic',"
-    # The rendering backend, as roboteam run passes it (EGL on a Linux GPU host).
-    "**{k:os.environ[k] for k in ('MUJOCO_GL','PYOPENGL_PLATFORM') if k in os.environ}};"
+    # The rendering backend and display, as roboteam run passes them (EGL on a Linux GPU host,
+    # or the X display the tests run under).
+    "**{k:os.environ[k] for k in ('MUJOCO_GL','PYOPENGL_PLATFORM','DISPLAY','XAUTHORITY') if k in os.environ}};"
     'print(json.dumps(run_task(sys.argv[1],env,wall_limit_s=600,startup_timeout_s=90,poll_s=.1)))'
 )
 

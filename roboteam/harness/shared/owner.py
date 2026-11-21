@@ -19,6 +19,8 @@ PASSED = (
     'LC_ALL',
     'TMPDIR',
     'DISPLAY',
+    # The X authority file of that display (xvfb-run, a forwarded display); GLFW cannot open it without.
+    'XAUTHORITY',
     'MUJOCO_GL',
     'PYOPENGL_PLATFORM',
     'LIBGL_ALWAYS_SOFTWARE',

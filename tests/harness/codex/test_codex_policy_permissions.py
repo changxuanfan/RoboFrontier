@@ -148,7 +148,27 @@ await turn(child,'go-child');
 await rpc.close();})().catch(e=>{console.error(e.stack);process.exit(1);});'''
 
 
+def _codex_sandbox_starts():
+    """Whether Codex's own sandbox can run a command on this host.
+
+    On Linux it uses bubblewrap, which cannot start where unprivileged user namespaces are
+    forbidden (Ubuntu 24.04 by default). Runs on Linux do not use it: they confine Codex's
+    tools with landlock-v1 (test_codex_tool_backend)."""
+    if not shutil.which('codex'):
+        return False
+    try:
+        return (
+            subprocess.run(['codex', 'sandbox', '--', 'true'], capture_output=True, timeout=60).returncode
+            == 0
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 @unittest.skipUnless(shutil.which('codex') and shutil.which('node'), 'Codex CLI or node is not installed')
+@unittest.skipUnless(
+    _codex_sandbox_starts(), "Codex's own sandbox cannot start on this host; runs here use landlock-v1"
+)
 class AppServerPermissionTests(unittest.TestCase):
     def test_model_entry_applies_to_policy_and_forked_threads(self):
         with tempfile.TemporaryDirectory() as tmp:
