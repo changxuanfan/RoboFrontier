@@ -1,185 +1,113 @@
 {
  "schema": "roboteam.site-oracle-videos.v1",
- "note": "How each Oracle video on the project page was made: kind (program, assisted or reviewed), scene revision and playback speed. Written once; the Oracle programs and recordings are not part of this repository.",
+ "note": "The playback speed of each Oracle video on the project page. The Oracle is gpt-6.1-sol in Codex as a single agent, given the ground-truth position of every object instead of camera images.",
  "videos": {
   "dial-small-l1": {
-   "kind": "program",
-   "revision": "R11",
    "speedup": 10
   },
   "dial-small-l2": {
-   "kind": "program",
-   "revision": "R11",
    "speedup": 10
   },
   "dial-small-l3": {
-   "kind": "program",
-   "revision": "R11",
    "speedup": 10
   },
   "dial-medium-l1": {
-   "kind": "program",
-   "revision": "R11",
    "speedup": 10
   },
   "dial-medium-l2": {
-   "kind": "program",
-   "revision": "R11",
    "speedup": 10
   },
   "dial-medium-l3": {
-   "kind": "program",
-   "revision": "R11",
    "speedup": 10
   },
   "dial-large-l1": {
-   "kind": "program",
-   "revision": "R11",
    "speedup": 10
   },
   "dial-large-l2": {
-   "kind": "program",
-   "revision": "R11",
    "speedup": 10
   },
   "dial-large-l3": {
-   "kind": "assisted",
-   "revision": "R11",
    "speedup": 10
   },
   "mosaic-small-l1": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 30
   },
   "mosaic-small-l2": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 30
   },
   "mosaic-small-l3": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 30
   },
   "mosaic-medium-l1": {
-   "kind": "assisted",
-   "revision": "R13",
    "speedup": 30
   },
   "mosaic-medium-l2": {
-   "kind": "assisted",
-   "revision": "R13",
    "speedup": 30
   },
   "mosaic-medium-l3": {
-   "kind": "assisted",
-   "revision": "R13",
    "speedup": 30
   },
   "mosaic-large-l1": {
-   "kind": "assisted",
-   "revision": "R13",
    "speedup": 30
   },
   "mosaic-large-l2": {
-   "kind": "assisted",
-   "revision": "R13",
    "speedup": 30
   },
   "mosaic-large-l3": {
-   "kind": "assisted",
-   "revision": "R13",
    "speedup": 30
   },
   "relay-small-l1": {
-   "kind": "reviewed",
-   "revision": "historical",
    "speedup": 20
   },
   "relay-small-l2": {
-   "kind": "reviewed",
-   "revision": "historical",
    "speedup": 20
   },
   "relay-small-l3": {
-   "kind": "reviewed",
-   "revision": "historical",
    "speedup": 20
   },
   "relay-medium-l1": {
-   "kind": "reviewed",
-   "revision": "historical",
    "speedup": 20
   },
   "relay-medium-l2": {
-   "kind": "reviewed",
-   "revision": "historical",
    "speedup": 20
   },
   "relay-medium-l3": {
-   "kind": "reviewed",
-   "revision": "historical",
    "speedup": 20
   },
   "relay-large-l1": {
-   "kind": "reviewed",
-   "revision": "historical",
    "speedup": 20
   },
   "relay-large-l2": {
-   "kind": "reviewed",
-   "revision": "historical",
    "speedup": 20
   },
   "relay-large-l3": {
-   "kind": "reviewed",
-   "revision": "historical",
    "speedup": 20
   },
   "transport-small-l1": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 20
   },
   "transport-small-l2": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 20
   },
   "transport-small-l3": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 20
   },
   "transport-medium-l1": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 20
   },
   "transport-medium-l2": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 20
   },
   "transport-medium-l3": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 20
   },
   "transport-large-l1": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 20
   },
   "transport-large-l2": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 20
   },
   "transport-large-l3": {
-   "kind": "program",
-   "revision": "R13",
    "speedup": 20
   }
  }

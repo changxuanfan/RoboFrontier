@@ -45,7 +45,7 @@ provider settings are process-local and never change the user's global Codex con
 (or under `runtime.codex_home`), shared by that run's Controller, snapshots and delegates so fork
 lineage stays readable. Homes are initialized one at a time before any task host starts.
 
-**Claude through a local adapter** (`opus_claude_api`) is experimental: Codex talks to a local
+**Claude through a local adapter** (`opus_claude_api`): Codex talks to a local
 process that holds the Anthropic key and translates between the two APIs. See
 [Claude in Codex](claude-in-codex.md) before using it.
 

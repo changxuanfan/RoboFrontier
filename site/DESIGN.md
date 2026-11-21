@@ -37,8 +37,7 @@ so the main repository stays small. Each set is one folder there, named by the s
 every set uses the task ids as file names. `media.json` lists every file URL, size, duration
 and SHA-256.
 
-How each Oracle recording was made (which were operator-assisted, which scene revision) is
-stated wherever Oracle videos appear; the facts are in
+The playback speed of each Oracle video is in
 [`data/oracle-videos.json`](data/oracle-videos.json).
 
 ## Results data
@@ -73,7 +72,7 @@ set and task.
   videos, JPEG posters), `montage`, `stills` and `explainer`. Each output is checked for
   duration and frame count.
 - `scripts/site/site_data.py`: `tasks` (writes `data/tasks.json` from the release and the public
-  tasks, with how each Oracle recording was made from `data/oracle-videos.json`), `media` (writes `data/media.json` from
+  tasks, with the playback speed of each Oracle video from `data/oracle-videos.json`), `media` (writes `data/media.json` from
   the encode manifests) and `readme-gallery`.
 
 ## Files
@@ -85,7 +84,7 @@ site/
   assets/img/          favicon, social image
   assets/atlas/        task start images
   data/tasks.json      36 public task facts
-  data/oracle-videos.json  how each Oracle video was made: kind, scene revision, playback speed
+  data/oracle-videos.json  the playback speed of each Oracle video
   data/media.json      every video URL by set, task and view
   DESIGN.md            this file
 ```

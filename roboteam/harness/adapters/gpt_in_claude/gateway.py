@@ -1,4 +1,4 @@
-"""Experimental Messages adapter with explicitly selected OpenAI authentication.
+"""Messages adapter with explicitly selected OpenAI authentication.
 
 Only the model transport is translated. Claude Code owns sessions, tools and forks.
 No credential fallback, external relay, prompt logging, or implicit model substitution.

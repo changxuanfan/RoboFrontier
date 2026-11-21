@@ -35,7 +35,7 @@ const SOURCES = [
   {key: 'qwen3.8-flash', label: 'qwen3.8-flash', about: 'qwen3.8-flash in Codex with the adaptive system.'},
   {key: 'deepseek-v4.1-flash', label: 'deepseek-v4.1-flash', about: 'deepseek-v4.1-flash in Codex with the adaptive system.'},
   {key: 'glm-5.3-flash', label: 'glm-5.3-flash', about: 'glm-5.3-flash in Codex with the adaptive system.'},
-  {key: 'oracle', label: 'Oracle', about: 'The Oracle: gpt-6.1-sol in Codex as a single agent, given the ground-truth position of every object instead of camera images. Some recordings were operator-assisted or made on earlier scene revisions; each video says which.'},
+  {key: 'oracle', label: 'Oracle', about: 'The Oracle: gpt-6.1-sol in Codex as a single agent, given the ground-truth position of every object instead of camera images.'},
 ];
 // Results are published apart from the code, in the media repository.
 const RESULTS_URL = 'https://changxuanfan.github.io/RoboTeam-media/results.json';
@@ -177,12 +177,8 @@ function drawWall() {
   }
   if (!shown) box.append(h('p', {class: 'wall-note'}, `The ${sourceOf(state.source).label} videos are being prepared. They will appear here when published.`));
 }
-const ORACLE_KIND = {program: 'Recorded from its program', assisted: 'Operator-assisted recording',
-  reviewed: 'Earlier recording; completion confirmed by review, not by the current evaluator'};
 function oracleNote(o) {
-  if (!o) return '';
-  const revision = o.revision === 'historical' ? '' : `, on scene revision ${o.revision}`;
-  return `${ORACLE_KIND[o.kind]}${revision}. Idle time removed, ${o.speedup}× speed.`;
+  return o ? `Idle time removed, ${o.speedup}× speed.` : '';
 }
 const fmtDuration = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 

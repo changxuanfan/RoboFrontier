@@ -34,7 +34,7 @@ Models are the `claude` section of `models.json`; the
 [authentication matrix](README.md#authentication-matrix) lists each one's credential. Put
 credentials in `.env` ([credentials file](README.md#credentials-file)). An API-key model passes
 only its own key and endpoint to the CLI; setting sources and unrelated MCP servers are turned off
-on the command line in every mode. The experimental model `sol_chatgpt_plan` runs GPT-6.1 Sol
+on the command line in every mode. The model `sol_chatgpt_plan` runs GPT-6.1 Sol
 through a local adapter and has its own guide: [GPT in Claude Code](gpt-in-claude-code.md).
 
 ### Subscription token

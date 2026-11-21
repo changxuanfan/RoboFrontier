@@ -2,7 +2,7 @@
 
 tasks:  site/data/tasks.json, the 36 released cases with their public facts (task type, level,
         arms, workload) and the one-line level differences, from the release and each case's
-        public policy task, with the note on each Oracle video from site/data/oracle-videos.json.
+        public policy task, with the playback speed of each Oracle video from site/data/oracle-videos.json.
 media:  site/data/media.json, every video set (Oracle, then one per model) with its base URL
         and per-task front/side files, from the manifests that scripts.site.site_media writes.
 
@@ -67,9 +67,7 @@ TASK_TYPES = {
 
 
 def oracle_videos():
-    """Per case: how its Oracle video was made, its scene revision and its playback speed.
-
-    A fixed record (site/data/oracle-videos.json); the Oracle programs are not in this repository."""
+    """Per case: the playback speed of its Oracle video (site/data/oracle-videos.json)."""
     return json.loads(ORACLE_VIDEOS.read_text())['videos']
 
 

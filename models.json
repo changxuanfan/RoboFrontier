@@ -65,7 +65,7 @@
           "effort": "high",
           "vision": true,
           "context_capacity": 1000000,
-          "compatibility": "Experimental native Codex harness with a loopback Responses-to-Messages adapter and an Anthropic API key held by that adapter only; requires the running adapter and a matching live preflight",
+          "compatibility": "Native Codex harness with a loopback Responses-to-Messages adapter and an Anthropic API key held by that adapter only; requires the running adapter and a matching live preflight",
           "documentation": "docs/harness/claude-in-codex.md"
         },
         "deepseek": {
@@ -192,7 +192,7 @@
           "base_url": "http://127.0.0.1:18461",
           "effort": "high",
           "context_capacity": 300000,
-          "compatibility": "Experimental native Claude Code harness with a loopback Messages-to-Responses adapter and explicitly authorized ChatGPT plan use. API-equivalent dollar estimates are not subscription invoices.",
+          "compatibility": "Native Claude Code harness with a loopback Messages-to-Responses adapter and explicitly authorized ChatGPT plan use. API-equivalent dollar estimates are not subscription invoices.",
           "managed_settings": {
             "modelPricing": {
               "overrides": {

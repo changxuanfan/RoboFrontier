@@ -1,4 +1,4 @@
-"""Experimental loopback adapter: Codex CLI Responses requests to Anthropic Messages.
+"""Loopback adapter: Codex CLI Responses requests to Anthropic Messages.
 
 Only the model transport is translated. The native Codex CLI owns tools, sessions,
 compaction and forks. Every upstream request selects claude-opus-5-5 through the official

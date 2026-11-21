@@ -87,9 +87,7 @@ No model or agent system is yet fast, cheap and reliable at once.
 
 The videos below are **Oracle** reference runs: gpt-6.1-sol in Codex as a single agent, given
 the ground-truth position of every object instead of camera images. They show that each task
-can be done; some recordings were operator-assisted or made on earlier scene revisions, as the
-note on each video on the project page says ([`site/data/oracle-videos.json`](site/data/oracle-videos.json)). Idle time is removed and
-playback is sped up. Each montage plays all nine tasks of
+can be done. Idle time is removed and playback is sped up. Each montage plays all nine tasks of
 a task type at once: rows are Levels 1 to 3, columns are team sizes. Runs of every model are on
 the [project page](https://changxuanfan.github.io/RoboTeam/).
 

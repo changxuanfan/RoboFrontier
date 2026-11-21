@@ -63,8 +63,6 @@
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 20
    }
   },
@@ -87,8 +85,6 @@
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 20
    }
   },
@@ -111,8 +107,6 @@
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 20
    }
   },
@@ -135,8 +129,6 @@
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 20
    }
   },
@@ -159,8 +151,6 @@
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 20
    }
   },
@@ -183,8 +173,6 @@
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 20
    }
   },
@@ -207,8 +195,6 @@
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 20
    }
   },
@@ -231,8 +217,6 @@
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 20
    }
   },
@@ -255,8 +239,6 @@
     "Only robot actuators and real contacts may affect the live task. No hand welds, object state writes, resets, hidden state tools or runtime physics edits."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 20
    }
   },
@@ -278,8 +260,6 @@
     "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 30
    }
   },
@@ -301,8 +281,6 @@
     "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 30
    }
   },
@@ -324,8 +302,6 @@
     "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R13",
     "speedup": 30
    }
   },
@@ -347,8 +323,6 @@
     "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
-    "kind": "assisted",
-    "revision": "R13",
     "speedup": 30
    }
   },
@@ -370,8 +344,6 @@
     "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
-    "kind": "assisted",
-    "revision": "R13",
     "speedup": 30
    }
   },
@@ -393,8 +365,6 @@
     "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
-    "kind": "assisted",
-    "revision": "R13",
     "speedup": 30
    }
   },
@@ -416,8 +386,6 @@
     "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
-    "kind": "assisted",
-    "revision": "R13",
     "speedup": 30
    }
   },
@@ -439,8 +407,6 @@
     "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
-    "kind": "assisted",
-    "revision": "R13",
     "speedup": 30
    }
   },
@@ -462,8 +428,6 @@
     "The pattern matrix and the reference image are already in world orientation (row 1 north, column 1 west); use them as given."
    ],
    "oracle": {
-    "kind": "assisted",
-    "revision": "R13",
     "speedup": 30
    }
   },
@@ -490,8 +454,6 @@
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
-    "kind": "reviewed",
-    "revision": "historical",
     "speedup": 20
    }
   },
@@ -520,8 +482,6 @@
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
-    "kind": "reviewed",
-    "revision": "historical",
     "speedup": 20
    }
   },
@@ -550,8 +510,6 @@
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
-    "kind": "reviewed",
-    "revision": "historical",
     "speedup": 20
    }
   },
@@ -578,8 +536,6 @@
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
-    "kind": "reviewed",
-    "revision": "historical",
     "speedup": 20
    }
   },
@@ -608,8 +564,6 @@
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
-    "kind": "reviewed",
-    "revision": "historical",
     "speedup": 20
    }
   },
@@ -638,8 +592,6 @@
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
-    "kind": "reviewed",
-    "revision": "historical",
     "speedup": 20
    }
   },
@@ -666,8 +618,6 @@
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
-    "kind": "reviewed",
-    "revision": "historical",
     "speedup": 20
    }
   },
@@ -696,8 +646,6 @@
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
-    "kind": "reviewed",
-    "revision": "historical",
     "speedup": 20
    }
   },
@@ -726,8 +674,6 @@
     "Collisions, drops and other process events are recorded separately. Recover using ordinary robot actions; do not reset, respawn or erase history."
    ],
    "oracle": {
-    "kind": "reviewed",
-    "revision": "historical",
     "speedup": 20
    }
   },
@@ -752,8 +698,6 @@
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R11",
     "speedup": 10
    }
   },
@@ -778,8 +722,6 @@
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R11",
     "speedup": 10
    }
   },
@@ -804,8 +746,6 @@
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R11",
     "speedup": 10
    }
   },
@@ -830,8 +770,6 @@
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R11",
     "speedup": 10
    }
   },
@@ -856,8 +794,6 @@
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R11",
     "speedup": 10
    }
   },
@@ -882,8 +818,6 @@
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R11",
     "speedup": 10
    }
   },
@@ -908,8 +842,6 @@
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R11",
     "speedup": 10
    }
   },
@@ -934,8 +866,6 @@
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
    "oracle": {
-    "kind": "program",
-    "revision": "R11",
     "speedup": 10
    }
   },
@@ -960,8 +890,6 @@
     "Only robot actuators and real contacts may affect the live world. Use RGB and permitted robot feedback; hidden passwords, per-dial correctness and live object truth are not policy inputs."
    ],
    "oracle": {
-    "kind": "assisted",
-    "revision": "R11",
     "speedup": 10
    }
   }

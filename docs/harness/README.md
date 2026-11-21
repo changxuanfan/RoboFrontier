@@ -224,14 +224,14 @@ selects `opus` (`claude-opus-5-5`) with `ANTHROPIC_API_KEY`.
 | Harness | Authentication | Models | Credential or setting |
 | --- | --- | --- | --- |
 | Codex | OpenAI API key | `sol` (default), `luna` | `OPENAI_API_KEY` |
-| Codex | Anthropic API key behind a local adapter, experimental | `opus_claude_api` | `ROBOTEAM_CLAUDE_GATEWAY_KEY`, a local key; the Anthropic key stays with the adapter ([Claude in Codex](claude-in-codex.md)) |
+| Codex | Anthropic API key behind a local adapter | `opus_claude_api` | `ROBOTEAM_CLAUDE_GATEWAY_KEY`, a local key; the Anthropic key stays with the adapter ([Claude in Codex](claude-in-codex.md)) |
 | Codex | ChatGPT login | `sol_subscription`, `luna_subscription`, `terra_subscription`, `astra_subscription` | Login in the Codex home ([Codex authentication](codex.md#authentication)) |
 | Codex | Third-party Responses API | `deepseek`, `qwen`, `glm`, `kimi` | `DEEPSEEK_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_BASE_URL`; `ZAI_API_KEY`; `KIMI_API_KEY` |
 | Claude | Anthropic API key | `opus` (default), `haiku` | `ANTHROPIC_API_KEY` |
 | Claude | Subscription token (`claude setup-token`) | `opus_subscription_token`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` |
 | Claude | Saved login, default directory | `opus_subscription`, `haiku_subscription` | `ROBOTEAM_CLAUDE_HOME` = `$HOME/.claude`, `CLAUDE_CONFIG_DIR` unset |
 | Claude | Saved login, explicit directory | `opus_subscription_directory`, `haiku_subscription_directory` | `ROBOTEAM_CLAUDE_HOME` = the `CLAUDE_CONFIG_DIR` used at login |
-| Claude | ChatGPT plan or OpenAI API key behind a local adapter, experimental | `sol_chatgpt_plan` | `ROBOTEAM_CHATGPT_GATEWAY_KEY`, a local key; the OpenAI credential stays with the adapter ([GPT in Claude Code](gpt-in-claude-code.md)) |
+| Claude | ChatGPT plan or OpenAI API key behind a local adapter | `sol_chatgpt_plan` | `ROBOTEAM_CHATGPT_GATEWAY_KEY`, a local key; the OpenAI credential stays with the adapter ([GPT in Claude Code](gpt-in-claude-code.md)) |
 | Claude | Third-party Anthropic-compatible API | `kimi`, `kimi_code`, `qwen`, `glm`, `deepseek` | `KIMI_API_KEY`; `KIMI_CODE_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_ANTHROPIC_BASE_URL`; `ZAI_API_KEY`; `DEEPSEEK_API_KEY` |
 
 `models.json` is authoritative when this table and it differ.
