@@ -2,7 +2,6 @@ __pycache__/
 *.pyc
 .DS_Store
 .pytest_cache/
-.robot-bridge.json
 
 # Local data and runtime state. No trailing slash, so these also match the
 # symlinks that worktree checkouts use in place of the folders.
@@ -11,8 +10,6 @@ __pycache__/
 /vendor
 /runs
 /outputs
-/docs/generated
-/.codex-tools/
 /.roboteam/
 /.claude/
 /MUJOCO_LOG.TXT

@@ -1,4 +1,4 @@
-"""Read-only audit of a finished v3 run; writes derived outputs only."""
+"""Read-only audit of a finished run; writes derived outputs only."""
 
 import argparse
 import json
@@ -223,7 +223,7 @@ def export(directory, codex_home=None):
         '',
         f"Requested model settings verified: {report['all_requested_models_verified']}; frozen input changes: {report['changed_inputs']}.",
         '',
-        'Action overlap excludes idle holding. Interpret it alongside task progress and video; one pilot does not establish architectural superiority.',
+        'Action overlap excludes idle holding. Interpret it alongside task progress and video; one run does not rank agent systems.',
     ]
     if 'task_metrics' in report:
         lines += ['', f"Task metrics: {report['task_metrics']}."]

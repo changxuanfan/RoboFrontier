@@ -2,12 +2,11 @@
 .venv
 .env*
 !.env.example
-.codex-tools
+.harness-cli
 .roboteam
 runs
 outputs
 vendor
-docs/generated
 benchmark/*/*/assets
 benchmark/*/*/preview-*.png
 benchmark/*/*/FROZEN

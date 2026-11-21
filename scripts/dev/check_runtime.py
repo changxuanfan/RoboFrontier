@@ -148,7 +148,7 @@ def main():
         capture_output=True,
         text=True,
     )
-    # Tracked Markdown only: ignored local renders under docs/generated are not documentation.
+    # Tracked Markdown only: an untracked local file is not documentation.
     tracked = subprocess.run(
         ['git', 'ls-files', '-z', '*.md'], capture_output=True, text=True, cwd=ROOT
     ).stdout.split('\0')
