@@ -27,7 +27,7 @@ from roboteam.launch.prepare import select_cases
 from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.segments import try_continue, wall_backstopped
 from roboteam.runtime.run.setup import prepare_case, verify_inputs, write_json
-from roboteam.tasks.config import DEFAULT_RUN_SETTINGS
+from roboteam.tasks.config import DEFAULT_RUN_SETTINGS, MAX_WALL_LIMIT_S
 from roboteam.tasks.task_types import ROOT, read
 
 
@@ -39,7 +39,7 @@ def prepare_batch(
     config=None,
     level=None,
     min_arms=False,
-    wall_limit_s=86400,
+    wall_limit_s=MAX_WALL_LIMIT_S,
     *,
     run_settings_overrides=None,
 ):
@@ -516,7 +516,7 @@ def main():
             a.add_argument(
                 '--wall-limit-s',
                 type=float,
-                default=86400,
+                default=MAX_WALL_LIMIT_S,
                 help='Per-task seconds after START, including initial model work',
             )
         else:

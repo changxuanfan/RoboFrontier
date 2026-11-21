@@ -8,7 +8,7 @@ import math
 import time
 
 from roboteam.io import write_json
-from roboteam.tasks.config import ACTIVE_CLOCK
+from roboteam.tasks.config import ACTIVE_CLOCK, MAX_WALL_LIMIT_S
 
 # Active time: one owner tick more than this after the previous one is a stall (a frozen or
 # sleeping host) and adds nothing. Ticks normally come every few milliseconds.
@@ -78,7 +78,7 @@ def validate_protocol(value):
         isinstance(limit, bool)
         or not isinstance(limit, (int, float))
         or not math.isfinite(limit)
-        or not 0 < limit <= 86400
+        or not 0 < limit <= MAX_WALL_LIMIT_S
     ):
         raise ValueError('Positive finite wall budget required')
     return dict(value)

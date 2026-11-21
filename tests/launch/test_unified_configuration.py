@@ -81,6 +81,46 @@ class UnifiedConfigurationTests(unittest.TestCase):
 
             self.assertEqual(config['render']['device'], detected_render_device())
 
+    def test_every_option_sets_its_one_setting(self):
+        import contextlib
+        import io
+
+        from roboteam.cli import main
+
+        out = io.StringIO()
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch.dict('os.environ', {}, clear=False),
+            contextlib.redirect_stdout(out),
+        ):
+            code = main(
+                ['--runs-root', temporary, 'config', '--wall-limit', '1800', '--record-video']
+                + [
+                    '--observation-profile',
+                    'jpeg_128x80_q95',
+                    '--parallel',
+                    '2',
+                    '--cases',
+                    'transport-small-l1',
+                ]
+            )
+            root = str(Path(temporary).resolve())
+        config = json.loads(out.getvalue())
+        self.assertFalse(code)
+        self.assertEqual(config['batch']['task_wall_limit_s'], 1800)
+        self.assertEqual(config['batch']['parallel'], 2)
+        self.assertEqual(config['render']['observation_profile'], 'jpeg_128x80_q95')
+        self.assertIs(config['render']['record_realtime_video'], True)
+        self.assertEqual(config['selection']['cases'], ['transport-small-l1'])
+        self.assertEqual(config['paths']['runs_root'], root)
+
+    def test_a_time_limit_over_24_hours_is_refused_for_both_harnesses(self):
+        for harness in ('codex', 'claude'):
+            with self.assertRaisesRegex(ValueError, 'at most 86400'):
+                load_configuration(
+                    None, {'policy': {'harness': harness}, 'batch': {'task_wall_limit_s': 90000.0}}
+                )
+
     def test_auto_rendering_follows_the_host(self):
         from roboteam.configuration import detected_render_device
 

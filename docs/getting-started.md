@@ -161,7 +161,9 @@ task_wall_limit_s = 1800.0     # 30 minutes instead of 24 hours
 cases = ["transport-small-l1"]
 ```
 
-`--config` goes before the command. Command options override the file.
+`--config` goes before the command. Command options override the file, and the same three
+settings can be given as options instead of a file: `--harness claude --parallel 1 --wall-limit
+1800 --cases transport-small-l1`.
 
 ```sh
 .venv/bin/roboteam --config site.toml config
@@ -179,9 +181,9 @@ A failed render check means the renderer does not match the machine. `render.dev
 picks `native` on macOS, `nvidia` on Linux with an NVIDIA GPU and `cpu` otherwise; `--render`
 or `render.device` sets it by hand. One renderer never falls back to another.
 
-The options that select what to run are `--harness`, `--model`, `--effort`, `--system`,
-`--tools`, `--observation`, `--task-types`, `--level`, `--min-arms`, `--cases` and
-`--parallel`. The [command-line guide](cli.md) lists every option and setting, and
+The options are `--harness`, `--model`, `--effort`, `--system`, `--tools`, `--observation`,
+`--task-types`, `--level`, `--min-arms`, `--cases`, `--parallel`, `--wall-limit`, `--render`,
+`--observation-profile` and `--record-video`. The [command-line guide](cli.md) lists every option and setting, and
 [`docs/hosts/examples/`](hosts/examples) has a starting site TOML for a Mac, a Linux host and
 Slurm.
 
@@ -323,7 +325,7 @@ Nothing under `runs/` is in Git; back it up separately
 - The conditions of the paper: `--system`, `--tools robot_only`
   ([robot-only runs](benchmark/robot-tool-only.md)), `--observation ground_truth`
   ([ground-truth observation](benchmark/rules.md#ground-truth-observation)) and
-  `render.observation_profile = "jpeg_128x80_q95"` for low-resolution images.
+  `--observation-profile jpeg_128x80_q95` for low-resolution images.
 - Harnesses: [overview](harness/README.md), [Codex](harness/codex.md),
   [Claude Code](harness/claude-code.md).
 - What a run is: [the tasks](tasks/README.md), [rules of a run](benchmark/rules.md),

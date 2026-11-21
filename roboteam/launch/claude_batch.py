@@ -16,6 +16,7 @@ from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.bootstrap import STARTUP_TIMEOUT_S
 from roboteam.runtime.run.segments import try_continue
 from roboteam.runtime.run.setup import verify_inputs, write_json
+from roboteam.tasks.config import MAX_STARTUP_TIMEOUT_S, MAX_WALL_LIMIT_S
 
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z')
 
@@ -177,7 +178,7 @@ def run_batch(
     parallel,
     turn_budget_usd=None,
     total_budget_usd=None,
-    wall_limit_s=86400,
+    wall_limit_s=MAX_WALL_LIMIT_S,
     startup_timeout_s=STARTUP_TIMEOUT_S,
     runner=run_task,
     verifier=verify_inputs,
@@ -197,8 +198,8 @@ def run_batch(
         _positive(turn_budget_usd, 'per-turn budget', 1000)
     if total_budget_usd is not None:
         _positive(total_budget_usd, 'per-task budget', 1000)
-    _positive(wall_limit_s, 'wall limit', 86400)
-    _positive(startup_timeout_s, 'startup timeout', 86400)
+    _positive(wall_limit_s, 'wall limit', MAX_WALL_LIMIT_S)
+    _positive(startup_timeout_s, 'startup timeout', MAX_STARTUP_TIMEOUT_S)
     jobs = _jobs(folder)
     schedule = LaunchSchedule(startup_interval_s)
     lock_path = _b(folder, 'supervisor_lock')

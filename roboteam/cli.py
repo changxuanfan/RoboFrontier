@@ -574,9 +574,20 @@ def archive_collection(collection, output):
         return pack(directory, output)
 
 
+def _observation_profiles():
+    from roboteam.sim.render.image import PROFILES
+
+    return PROFILES
+
+
 def argument_parser(*, prog=None):
     parser = argparse.ArgumentParser(prog=prog, description=__doc__)
     parser.add_argument('--config', type=Path, help='Partial TOML overriding repository defaults')
+    parser.add_argument(
+        '--runs-root',
+        type=Path,
+        help='Where batches, receipts, exports and caches go (paths.runs_root; default <repo>/runs)',
+    )
     parser.add_argument('--result-file', type=Path, help='Write the terminal command result as atomic JSON')
     sub = parser.add_subparsers(dest='command', required=True)
     for name in ('config', 'plan', 'prepare', 'doctor', 'preflight', 'slurm-submit'):
@@ -597,8 +608,25 @@ def argument_parser(*, prog=None):
             choices=('images', 'ground_truth'),
             help='images: camera images; ground_truth: the simulator state instead of camera images',
         )
-        p.add_argument('--parallel', type=int)
-        p.add_argument('--render', choices=('nvidia', 'cpu', 'native'))
+        p.add_argument('--parallel', type=int, help='How many runs run at once (batch.parallel)')
+        p.add_argument(
+            '--wall-limit',
+            type=float,
+            metavar='SECONDS',
+            help='Active time each run gets from its START (batch.task_wall_limit_s; 24 hours by default and at most)',
+        )
+        p.add_argument('--render', choices=('nvidia', 'cpu', 'native'), help='Renderer (render.device)')
+        p.add_argument(
+            '--observation-profile',
+            choices=tuple(_observation_profiles()),
+            help='Size and quality of the camera images (render.observation_profile)',
+        )
+        p.add_argument(
+            '--record-video',
+            action='store_true',
+            default=None,
+            help='Record a real-time video of each run; needs ffmpeg (render.record_realtime_video)',
+        )
         p.add_argument('--level', type=int, choices=(1, 2, 3))
         p.add_argument('--min-arms', action='store_true', default=None)
         p.add_argument('--cases', nargs='+')
@@ -678,6 +706,10 @@ def main(argv=None):
             write_json(args.result_file, value)
         _print(value)
 
+    if args.runs_root:
+        # Every command, also those that read a prepared batch, resolves the runs root from here.
+        args.runs_root = args.runs_root.expanduser().resolve()
+        os.environ['ROBOTEAM_RUNS_ROOT'] = str(args.runs_root)
     try:
         if args.command == 'container':
             from roboteam.launch.container.container import execute, validate_arguments
@@ -704,8 +736,16 @@ def main(argv=None):
                 }
                 if updates:
                     overrides[section] = updates
-            if args.render:
-                overrides['render'] = {'device': args.render}
+            # Options whose name differs from the field they set.
+            for section, field, value in (
+                ('batch', 'task_wall_limit_s', args.wall_limit),
+                ('render', 'device', args.render),
+                ('render', 'observation_profile', args.observation_profile),
+                ('render', 'record_realtime_video', args.record_video),
+                ('paths', 'runs_root', str(args.runs_root) if args.runs_root else None),
+            ):
+                if value is not None:
+                    overrides.setdefault(section, {})[field] = value
             config = load_configuration(
                 args.config, overrides, host='slurm' if args.command == 'slurm-submit' else None
             )

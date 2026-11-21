@@ -8,6 +8,7 @@ import math
 import time
 
 from roboteam.runtime.run.bootstrap import STARTUP_TIMEOUT_S
+from roboteam.tasks.config import MAX_STARTUP_TIMEOUT_S, MAX_WALL_LIMIT_S
 
 # The world counts active running time and ends the run itself: the host ends a run on its own only this far past the world's limit, and
 # waits this long after the world's cutoff for it to brake and close.
@@ -23,7 +24,7 @@ class RunSupervisor:
         *,
         stop_requested=lambda: False,
         startup_timeout_s=STARTUP_TIMEOUT_S,
-        wall_limit_s=86400,
+        wall_limit_s=MAX_WALL_LIMIT_S,
         poll_s=1,
         seal_timeout_s=30,
         finish_turn_grace_s=30,
@@ -33,8 +34,8 @@ class RunSupervisor:
         sleep=time.sleep,
     ):
         for name, value, maximum in (
-            ('startup_timeout_s', startup_timeout_s, 86400),
-            ('wall_limit_s', wall_limit_s, 86400),
+            ('startup_timeout_s', startup_timeout_s, MAX_STARTUP_TIMEOUT_S),
+            ('wall_limit_s', wall_limit_s, MAX_WALL_LIMIT_S),
             ('poll_s', poll_s, 60),
         ):
             if (

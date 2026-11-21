@@ -10,7 +10,7 @@ from pathlib import Path
 
 from ..io import ROOT
 from ..io import file_sha256 as sha
-from .config import ACTIVE_CLOCK
+from .config import ACTIVE_CLOCK, MAX_WALL_LIMIT_S
 
 RELEASE = 'benchmark/release.json'
 READINESS = 'prepared_policy_trial'
@@ -58,14 +58,14 @@ RELAY_HANDOVER_RULE = 'relay-airborne-handover-v1'
 WALL_BACKSTOP_S = 172800
 
 
-def protocol_for(case, release_sha256, wall_limit_s=86400):
+def protocol_for(case, release_sha256, wall_limit_s=MAX_WALL_LIMIT_S):
     import math
 
     if (
         isinstance(wall_limit_s, bool)
         or not isinstance(wall_limit_s, (int, float))
         or not math.isfinite(wall_limit_s)
-        or not 0 < wall_limit_s <= 86400
+        or not 0 < wall_limit_s <= MAX_WALL_LIMIT_S
     ):
         raise ValueError('Invalid policy wall limit')
     protocol = dict(
@@ -95,7 +95,7 @@ def dial_code(case_id, root=ROOT):
     return list(codes[case_id])
 
 
-def policy_task(case_id, root=ROOT, wall_limit_s=86400):
+def policy_task(case_id, root=ROOT, wall_limit_s=MAX_WALL_LIMIT_S):
     name, task_type, case = resolve_case(case_id, root=root)
     task = read(Path(root) / case['directory'] / 'task.json')
     task['execution_readiness'] = READINESS

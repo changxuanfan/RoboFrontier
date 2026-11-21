@@ -198,8 +198,14 @@ def validate_configuration(config):
             or (field != 'startup_interval_s' and value == 0)
         ):
             raise ValueError('Invalid batch.' + field)
-    if config['policy']['harness'] == 'claude' and batch['task_wall_limit_s'] > 86400:
-        raise ValueError('A Claude Code run supports at most 86400 seconds')
+    from roboteam.tasks.config import MAX_STARTUP_TIMEOUT_S, MAX_WALL_LIMIT_S
+
+    if batch['task_wall_limit_s'] > MAX_WALL_LIMIT_S:
+        raise ValueError(
+            f'batch.task_wall_limit_s is at most {MAX_WALL_LIMIT_S} seconds (24 hours of active time)'
+        )
+    if batch['startup_timeout_s'] > MAX_STARTUP_TIMEOUT_S:
+        raise ValueError(f'batch.startup_timeout_s is at most {MAX_STARTUP_TIMEOUT_S} seconds')
     choice('selection', 'level', (0, 1, 2, 3))
     if type(config['selection']['level']) is not int:
         raise ValueError('selection.level must be an integer')
@@ -208,7 +214,9 @@ def validate_configuration(config):
         if not all(type(value) is str and value for value in values) or len(set(values)) != len(values):
             raise ValueError('selection.' + field + ' must contain distinct nonempty strings')
     choice('render', 'device', ('nvidia', 'cpu', 'native'))
-    choice('render', 'observation_profile', ('jpeg_1280x800_q90', 'jpeg_128x80_q95'))
+    from roboteam.sim.render.image import PROFILES as observation_profiles
+
+    choice('render', 'observation_profile', tuple(observation_profiles))
     choice('runtime', 'codex_home_scope', ('task', 'shared', 'job'))
     choice('runtime', 'codex_tool_backend', ('native', 'landlock-v1'))
     if config['policy']['harness'] != 'codex' and config['runtime']['codex_tool_backend'] != 'native':

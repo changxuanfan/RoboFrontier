@@ -55,8 +55,8 @@ jobs:
           uv sync --locked
       - name: Formatting and lint
         run: |
-          uvx ruff@0.17.5 format --check roboteam scripts tests
-          uvx ruff@0.17.5 check roboteam scripts tests
+          .venv/bin/ruff format --check roboteam scripts tests
+          .venv/bin/ruff check roboteam scripts tests
       - name: Restore pinned policy assets
         run: .venv/bin/python -m roboteam.cli bootstrap
       - name: Protocol contract (physics blocked)

@@ -29,7 +29,7 @@ from roboteam.runtime.run.bootstrap import STARTUP_TIMEOUT_S
 from roboteam.runtime.run.setup import verify_inputs, write_json
 from roboteam.runtime.time.clock import wall_backstop_s
 from roboteam.runtime.world.seal import seal_run
-from roboteam.tasks.config import ROOT
+from roboteam.tasks.config import MAX_STARTUP_TIMEOUT_S, MAX_WALL_LIMIT_S, ROOT
 
 
 def _ledger(run, total_budget_usd, resuming):
@@ -106,7 +106,7 @@ def run_task(
     *,
     turn_budget_usd=None,
     total_budget_usd=None,
-    wall_limit_s=86400,
+    wall_limit_s=MAX_WALL_LIMIT_S,
     startup_timeout_s=STARTUP_TIMEOUT_S,
     poll_s=0.5,
     owner_factory=subprocess.Popen,
@@ -127,8 +127,8 @@ def run_task(
         if val is not None:
             _positive(val, name, 1000)
     for val, name, limit in (
-        (wall_limit_s, 'wall limit', 86400),
-        (startup_timeout_s, 'startup timeout', 86400),
+        (wall_limit_s, 'wall limit', MAX_WALL_LIMIT_S),
+        (startup_timeout_s, 'startup timeout', MAX_STARTUP_TIMEOUT_S),
         (poll_s, 'poll interval', 60),
     ):
         _positive(val, name, limit)

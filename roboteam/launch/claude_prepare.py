@@ -16,7 +16,7 @@ from roboteam.launch.cases import check_case_assets
 from roboteam.launch.prepare import select_cases
 from roboteam.launch.results.assets import digest
 from roboteam.runtime.run import layout as run_layout
-from roboteam.tasks.config import DEFAULT_RUN_SETTINGS
+from roboteam.tasks.config import DEFAULT_RUN_SETTINGS, MAX_WALL_LIMIT_S
 from roboteam.tasks.task_types import RELEASE, ROOT, read
 
 
@@ -63,7 +63,7 @@ def prepare_batch(
     system='adaptive',
     record_video=False,
     *,
-    wall_limit_s=86400,
+    wall_limit_s=MAX_WALL_LIMIT_S,
     observation_image_profile=None,
     startup_timeout_s=None,
     render_device=None,

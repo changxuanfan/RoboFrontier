@@ -15,6 +15,10 @@ DEFAULT_RUN_SETTINGS = ROOT / 'roboteam/runtime/run/defaults.json'
 CONTROLLER = 'Controller'
 # The one trial clock: only time the world runs unpaused counts toward the limit.
 ACTIVE_CLOCK = 'active_time_v1'
+# The longest a run may get, and the default (batch.task_wall_limit_s): 24 hours of active time.
+MAX_WALL_LIMIT_S = 86400
+# The longest a world may take to become ready (batch.startup_timeout_s is 600 s by default).
+MAX_STARTUP_TIMEOUT_S = 86400
 
 
 def action_limits():

@@ -2,7 +2,7 @@
 
 **How it was checked**
 
-- [ ] `uvx ruff@0.17.5 format --check roboteam scripts tests` and `uvx ruff@0.17.5 check roboteam scripts tests`
+- [ ] `.venv/bin/ruff format --check roboteam scripts tests` and `.venv/bin/ruff check roboteam scripts tests`
 - [ ] `python -m scripts.dev.run_tests` (say which modules, or all)
 - [ ] Docs updated for renamed paths, options or files
 

@@ -205,7 +205,8 @@ shell can read it.
 ### 4. Choose what to run
 
 Defaults are in [`roboteam.toml`](roboteam.toml): Codex with `sol` (`--harness claude` selects `opus`), the adaptive
-system, all 36 tasks, and a renderer picked for the host. Change them with options or a
+system, all 36 tasks, 24 hours per run, and a renderer picked for the host. Change them with
+options (`--cases`, `--parallel`, `--wall-limit`, ...; [all of them](docs/cli.md#commands)) or a
 small TOML of your own, passed before the command (`roboteam --config site.toml ...`);
 [`docs/hosts/examples/`](docs/hosts/examples) has one for the Mac, RunPod and Slurm.
 
@@ -223,7 +224,7 @@ The conditions of the paper are these settings:
 | Agent system | `--system adaptive`, `single-agent`, `hierarchical` or `decentralized` |
 | Harness and model | `--harness codex` or `claude`, `--model` with an entry of [`models.json`](models.json) |
 | Robot tool only | `--tools robot_only` |
-| Low resolution | `render.observation_profile = "jpeg_128x80_q95"` in your TOML |
+| Low resolution | `--observation-profile jpeg_128x80_q95` |
 | Oracle | `--harness codex --model sol --system single-agent --observation ground_truth` |
 
 The Oracle gets the ground-truth state of every object instead of camera images

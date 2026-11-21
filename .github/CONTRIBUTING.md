@@ -17,8 +17,8 @@ work. [Getting started](../docs/getting-started.md) has the full setup, and
 ## Check a change
 
 ```sh
-uvx ruff@0.17.5 format roboteam scripts tests
-uvx ruff@0.17.5 check roboteam scripts tests
+.venv/bin/ruff format roboteam scripts tests
+.venv/bin/ruff check roboteam scripts tests
 xvfb-run -a -s "-screen 0 1920x1080x24" .venv/bin/python -m scripts.dev.run_tests   # Linux
 .venv/bin/python -m scripts.dev.run_tests                                           # macOS
 ```

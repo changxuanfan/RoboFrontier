@@ -14,6 +14,7 @@ from roboteam.sim.render.image import observation_profile
 from roboteam.tasks import observation_mode, tools_mode
 from roboteam.tasks.config import (
     CONTROLLER,
+    MAX_WALL_LIMIT_S,
     ROOT,
     load_run_settings,
     load_task,
@@ -389,7 +390,9 @@ def verify_inputs(directory, *, source_root=None):
     return changed
 
 
-def prepare_case(case_id, directory, run_settings=None, private_puzzle_path=None, wall_limit_s=86400):
+def prepare_case(
+    case_id, directory, run_settings=None, private_puzzle_path=None, wall_limit_s=MAX_WALL_LIMIT_S
+):
     """Prepare one released case as a run folder; simulator, role sessions and model inference stay stopped."""
     import tempfile
 
