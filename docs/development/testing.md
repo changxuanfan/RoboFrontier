@@ -13,13 +13,14 @@ a local stub model and skip when the CLI is absent.
 
 ## Formatting and lint
 
-Python is formatted and linted with [ruff](https://docs.astral.sh/ruff/) at the version CI pins;
-the settings are in `pyproject.toml` (110 columns, quotes kept as written). CI runs both checks
+Python is formatted and linted with [ruff](https://docs.astral.sh/ruff/). Its version is pinned in
+`pyproject.toml` (the `dev` dependency group), so `uv sync` installs the one CI uses; the settings
+are in `pyproject.toml` too (110 columns, quotes kept as written). CI runs both checks
 before the tests:
 
 ```sh
-uvx ruff@0.17.5 format --check roboteam scripts tests    # without --check: rewrite the files
-uvx ruff@0.17.5 check roboteam scripts tests             # --fix applies the safe fixes
+.venv/bin/ruff format --check roboteam scripts tests    # without --check: rewrite the files
+.venv/bin/ruff check roboteam scripts tests             # --fix applies the safe fixes
 ```
 
 The Codex host and the Node tests are formatted with Prettier (`.github/prettierrc.json`):

@@ -6,8 +6,9 @@ walks through a first run; this page is the reference.
 
 ## Commands
 
-Two global options go before the command: `--config FILE` (a site TOML that overrides some
-defaults) and `--result-file FILE` (also write the command's result as JSON to a file).
+Three global options go before the command: `--config FILE` (a site TOML that overrides some
+defaults), `--runs-root DIR` (where batches, receipts, exports and caches go; the setting
+`paths.runs_root`) and `--result-file FILE` (also write the command's result as JSON to a file).
 
 | Command | What it does | Calls a model |
 | --- | --- | --- |
@@ -27,8 +28,8 @@ defaults) and `--result-file FILE` (also write the command's result as JSON to a
 | `slurm-submit --output DIR [--queue]` | Freezes a Slurm submission and, with `--queue`, queues it ([Slurm](hosts/slurm.md)) | No |
 | `container ...` | Runs the same commands inside Docker ([Docker](hosts/docker.md)) | Depends on the command |
 
-`config`, `plan`, `doctor`, `preflight`, `prepare` and `slurm-submit` accept the selection
-options:
+`config`, `plan`, `doctor`, `preflight`, `prepare` and `slurm-submit` accept these options.
+Each sets one setting of `roboteam.toml`, for this command only:
 
 | Option | Values | Setting |
 | --- | --- | --- |
@@ -43,7 +44,13 @@ options:
 | `--min-arms` | Flag: only the cases with the fewest arms in each selected task type | `selection.min_arms` |
 | `--cases` | One or more task ids, such as `transport-small-l1` | `selection.cases` |
 | `--parallel` | 1 to 36 | `batch.parallel` |
+| `--wall-limit` | Seconds of active time per run, at most 86400 | `batch.task_wall_limit_s` |
 | `--render` | `nvidia`, `cpu`, `native` | `render.device` |
+| `--observation-profile` | `jpeg_1280x800_q90`, `jpeg_128x80_q95` | `render.observation_profile` |
+| `--record-video` | Flag: record an MP4 of each run | `render.record_realtime_video` |
+
+The other settings (startup timing, the Codex home, evidence collection, Slurm and Docker) are
+set in a site TOML only.
 
 ```sh
 .venv/bin/roboteam config
@@ -73,7 +80,7 @@ The default plan selects all 36 tasks with Codex and the model `sol` (gpt-6.1-so
 | `policy.observation` | `images` (default) or `ground_truth`: the simulator's state instead of camera images ([ground-truth observation](benchmark/rules.md#ground-truth-observation)) |
 | `batch.parallel` | Runs at once, 1 to 36 |
 | `batch.startup_interval_s` | Gap between the launches of two runs (0.3 s) |
-| `batch.task_wall_limit_s` | Active time per run, 86,400 s ([how it is counted](runs/time.md)); at most 86,400 for Claude Code |
+| `batch.task_wall_limit_s` | Active time per run, 86,400 s ([how it is counted](runs/time.md)); 86,400 is also the most a run may get |
 | `batch.startup_timeout_s` | How long a run's world may take to become ready (600 s) |
 | `selection.task_types`, `selection.cases` | Filters on the released tasks; empty selects all |
 | `selection.level` | 0 for every level, else 1, 2 or 3 |
@@ -89,7 +96,7 @@ The default plan selects all 36 tasks with Codex and the model `sol` (gpt-6.1-so
 | `slurm.*` | The allocation, authentication and network route of a Slurm job ([Slurm](hosts/slurm.md)) |
 | `container.workspace`, `container.image`, `container.memory_gib`, `container.cpus` | Docker volumes, image tag and limits (0 adds none) |
 | `container.seccomp_profile` | `default`, or `unconfined` where Docker's seccomp filter refuses the sandbox ([Docker](hosts/docker.md#limits)) |
-| `paths.runs_root` | Where runs, receipts and exports go; empty is `<repo>/runs`; `ROBOTEAM_RUNS_ROOT` overrides it |
+| `paths.runs_root` | Where runs, receipts and exports go; empty is `<repo>/runs`; `--runs-root` or `ROBOTEAM_RUNS_ROOT` overrides it |
 
 ## Settings files
 
@@ -100,7 +107,7 @@ changing a file never changes a prepared batch.
 | --- | --- |
 | `roboteam.toml` | The defaults for new runs |
 | `models.json` | Every selectable model, one section per harness (`harnesses.codex`, `harnesses.claude`). A run freezes its harness's section |
-| `roboteam/runtime/run/defaults.json` | Settings of the runtime inside a run: timeouts, check intervals, message limits, motion and video rates. A batch sets the harness, system, model and effort over it |
+| `roboteam/runtime/run/defaults.json` | The rules of the runtime inside a run: action timeouts, check intervals, message limits, the workspace, motion and video rates. They are part of the benchmark, not settings: `roboteam.toml` and the options set only the harness, model, effort, system, tools, observation, image profile, renderer, video recording and startup timeout over this file. A run made after editing it is not comparable with the paper's ([fixed rules](benchmark/rules.md#fixed-runtime-rules)) |
 | `roboteam/runtime/sandbox/policy-env/` | The package lists and locks of the [policy Python environment](hosts/policy-environment.md) |
 | `roboteam/harness/adapters/*/requirements.txt` | The optional dependencies of the two [adapters](harness/README.md#guides) |
 | `benchmark/assets.json` | The pinned asset archive, restored by `roboteam bootstrap` |

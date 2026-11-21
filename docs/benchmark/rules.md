@@ -202,6 +202,24 @@ count of physical drops. Transport, Mosaic and Dial have no validated general dr
 absent metric means not measured, not zero. Dial's red-operation support violations are detected
 only before unlock.
 
+## Fixed runtime rules
+
+Some rules of a run are numbers in `roboteam/runtime/run/defaults.json`. No setting of
+`roboteam.toml` and no command option changes them, and every prepared run freezes them in
+`private/inputs/run.json`. Changing the file changes what is measured.
+
+| Rule | Value | Field |
+| --- | --- | --- |
+| Time one action may take before it times out | 30 simulated seconds plus 1.5 times its estimated duration, at most 600 | `action_timeout_sim_s`, `max_action_timeout_sim_s` |
+| Longest message between roles | 8,000 characters | `max_message_chars` |
+| Most messages and bytes delivered to a role at once | 32 messages, 32,768 bytes | `max_batch_messages`, `max_batch_bytes` |
+| Review deadline a role may save (`after_s`); the upper end also bounds a synchronization timeout | 1 to 600 seconds | `min_check_interval_s`, `max_check_interval_s` |
+| Clearance below which the motion check reports a planned move | 0.02 m, over a preview of at most 15 s | `motion_check` |
+| Rate of the motion recording and of a recorded video | 30 per simulated second | `motion_hz`, `video_fps` |
+
+The time limit of a run is not in this file: it is `batch.task_wall_limit_s`
+(`--wall-limit`), 24 hours by default and at most ([time and pauses](../runs/time.md)).
+
 ## Database write contention
 
 Each run keeps its state in one SQLite database (`private/state/runtime.sqlite`) in WAL mode with

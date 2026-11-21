@@ -26,6 +26,12 @@ comparable.
 - A failed Codex preflight prints its cause instead of a Python traceback.
 - The operator guides moved to `docs/runs/` (`operator-runbook.md` and two prompts).
 - Citation, contribution guide and package metadata added.
+- New options: `--wall-limit`, `--observation-profile`, `--record-video` and the global
+  `--runs-root`. A time limit over 24 hours is refused for both harnesses when the settings are
+  read, not later at `prepare`.
+- The 24-hour limit is one constant, and a test keeps the CLI versions named in the Dockerfile
+  and the guides equal to `roboteam/runtime/run/versions.py`. Ruff comes from the locked
+  environment (`.venv/bin/ruff`).
 - Fewer files at the repository root: the contribution guide, the code of conduct and the
   Prettier settings are in `.github/`, this changelog in `docs/`, the Docker ignore file beside
   the Dockerfile; `.python-version` is gone (`requires-python` already says 3.12).
