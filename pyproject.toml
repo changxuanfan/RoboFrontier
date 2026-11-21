@@ -33,7 +33,7 @@ Repository = "https://github.com/changxuanfan/RoboTeam"
 Issues = "https://github.com/changxuanfan/RoboTeam/issues"
 Paper = "https://arxiv.org/abs/2611.22138"
 
-# Tools for working on the code (CONTRIBUTING.md). `uv sync` installs them; a run does not need them.
+# Tools for working on the code (.github/CONTRIBUTING.md). `uv sync` installs them; a run does not need them.
 [dependency-groups]
 dev = ["ruff==0.17.5"]
 

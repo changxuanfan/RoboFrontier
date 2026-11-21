@@ -28,7 +28,7 @@ The [documentation index](README.md#terms) defines the other terms the guides us
 | Need | Version and notes |
 | --- | --- |
 | Operating system | macOS on Apple silicon, or Linux with glibc 2.28 or newer |
-| [uv](https://docs.astral.sh/uv/) | Installs Python 3.12 (`.python-version`) and the locked packages of `uv.lock` |
+| [uv](https://docs.astral.sh/uv/) | Installs Python 3.12 (`requires-python` in `pyproject.toml`) and the locked packages of `uv.lock` |
 | Node.js and npm | Node.js 22 is what CI uses. The harness CLIs and the Codex host need it |
 | `ffmpeg` | Encodes the video of a run when recording is on (`render.record_realtime_video`); some tests use it |
 | Harness CLI | Exactly the pinned version: Claude Code `2.1.316` or Codex `0.165.0` (`roboteam/runtime/run/versions.py`). Install only the harness you will run |

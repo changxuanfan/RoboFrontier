@@ -26,6 +26,9 @@ comparable.
 - A failed Codex preflight prints its cause instead of a Python traceback.
 - The operator guides moved to `docs/runs/` (`operator-runbook.md` and two prompts).
 - Citation, contribution guide and package metadata added.
+- Fewer files at the repository root: the contribution guide, the code of conduct and the
+  Prettier settings are in `.github/`, this changelog in `docs/`, the Docker ignore file beside
+  the Dockerfile; `.python-version` is gone (`requires-python` already says 3.12).
 
 ## 0.1.0
 

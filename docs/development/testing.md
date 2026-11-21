@@ -22,10 +22,10 @@ uvx ruff@0.17.5 format --check roboteam scripts tests    # without --check: rewr
 uvx ruff@0.17.5 check roboteam scripts tests             # --fix applies the safe fixes
 ```
 
-The Codex host and the Node tests are formatted with Prettier (`.prettierrc.json`):
+The Codex host and the Node tests are formatted with Prettier (`.github/prettierrc.json`):
 
 ```sh
-npx --yes prettier@3 --write roboteam/harness/codex/host/*.js "tests/**/*.js" "tests/**/*.cjs"
+npx --yes prettier@3 --config .github/prettierrc.json --write roboteam/harness/codex/host/*.js "tests/**/*.js" "tests/**/*.cjs"
 ```
 
 ## Every test, in parallel

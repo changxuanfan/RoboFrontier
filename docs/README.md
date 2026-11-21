@@ -12,7 +12,7 @@ The [command-line guide](cli.md) lists every command and setting.
 | Optional adapters | [Claude in Codex](harness/claude-in-codex.md), [GPT in Claude Code](harness/gpt-in-claude-code.md), [sharing a Codex login on Slurm](harness/shared-login.md) |
 | Hosts | [Mac](hosts/mac.md), [Linux](hosts/linux.md), [Slurm](hosts/slurm.md), [Docker](hosts/docker.md), [policy Python environment](hosts/policy-environment.md), [example site TOMLs](hosts/examples) |
 | Runs | [Run folders](runs/run-folder.md) (every file of a run), [time and pauses](runs/time.md), [continuing a stopped run](runs/continuation.md), [task recovery](runs/recovery.md), [evidence storage](runs/evidence-storage.md), [saved-run viewer](runs/viewer.md) |
-| Development | [Architecture](development/architecture.md), [repository layout](development/repository-layout.md), [testing](development/testing.md), [what the runtime checker covers](development/test-coverage.md), [engineering scripts](../scripts/README.md) |
+| Development | [Changelog](changelog.md), [architecture](development/architecture.md), [repository layout](development/repository-layout.md), [testing](development/testing.md), [what the runtime checker covers](development/test-coverage.md), [engineering scripts](../scripts/README.md) |
 | Managing batches with an agent | [Operator runbook](runs/operator-runbook.md), prompts for [Codex](runs/operator-prompt-codex.md) and [Claude Code](runs/operator-prompt-claude.md) |
 | Project page | [Design and sources](../site/DESIGN.md) |
 

@@ -23,12 +23,11 @@ Files at the root:
 | `README.md` | The introduction to the benchmark |
 | `roboteam.toml` | The defaults for new runs |
 | `models.json` | The models, one section per harness |
-| `pyproject.toml`, `uv.lock`, `.python-version` | The Python package and its locked environment |
+| `pyproject.toml`, `uv.lock` | The Python package (Python 3.12, `requires-python`) and its locked environment |
 | `.env.example` | The credentials template |
 | `LICENSE`, `LICENSE-DATA.md` | The license of the code and the license of the data and media |
-| `.prettierrc.json` | Formatting of the JavaScript files |
-| `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `CITATION.cff` | How to contribute, what changed between releases, and how to cite the paper |
-| `.gitignore`, `.gitattributes`, `.dockerignore` | Git and Docker settings |
+| `CITATION.cff` | How to cite the paper; GitHub reads it from the root |
+| `.gitignore`, `.gitattributes` | Git settings |
 
 ## The package
 
@@ -125,8 +124,8 @@ runs. `tests/repo/test_layering.py` checks it.
 | `tests/` | `test_*.py`, `test_*.js` and one `.cjs` file, laid out like the package: `sim/` (with `hall/`), `tasks/`, `runtime/{world,tools,run,time,sandbox}/`, `harness/{codex,claude,shared,adapters}/`, `launch/`, `analysis/`, and `repo/` for checks of the repository and the scripts. `helpers/` holds what tests share (`fake_pipeline.py`, `fake_session.py`, `motion.py`, `single_arm_scene.py`, `team_settings.py`, `relay_contract.py`, `claude_batch_control.py`, two provider stand-ins and three Node.js clients); the test runner puts it on the import path. See [testing](testing.md) | Large recorded evidence |
 | `docs/` | `README.md` (the index), `getting-started.md` and `cli.md` at the top level; `tasks/`; `benchmark/` (rules, physics, robot-only runs); `harness/` (overview, Codex, Claude Code, the two adapters, shared login); `hosts/` (Mac, Linux, Slurm, Docker, the policy environment, and `examples/` with a starting site TOML per platform); `runs/` (the run folder, time, continuation, recovery, evidence storage, viewer, the operator runbook and prompts); `development/`; `media/readme/`, the README's images. Every prepared run freezes `runs/operator-runbook.md`, `development/architecture.md` and `development/test-coverage.md` by name | Generated files |
 | `site/` | The project page: `index.html`, `DESIGN.md`, `data/` (`tasks.json`, `media.json`, `oracle-videos.json`) and `assets/` (`atlas/`, `css/`, `img/`, `js/`) | The task videos and the results, which the page fetches from the media repository `RoboTeam-media` |
-| `docker/` | `Dockerfile` for `roboteam container` | |
-| `.github/` | `workflows/tests.yml` (the offline checks), `workflows/site.yml` (the project page), and the issue and pull request templates | |
+| `docker/` | `Dockerfile` for `roboteam container`, and `Dockerfile.dockerignore`, what a build from the checkout leaves out | |
+| `.github/` | `workflows/tests.yml` (the offline checks), `workflows/site.yml` (the project page), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, the issue and pull request templates, and `prettierrc.json` (formatting of the JavaScript files) | |
 
 ## Folders not in Git
 

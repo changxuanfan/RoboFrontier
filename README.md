@@ -293,8 +293,8 @@ is `paths.runs_root`, default `runs/`). [Getting started](docs/getting-started.m
 | [`site/`](site/DESIGN.md) | The project page |
 | [`docker/`](docker/Dockerfile) | The container image |
 
-To change the code, read [CONTRIBUTING.md](CONTRIBUTING.md); [CHANGELOG.md](CHANGELOG.md)
-lists what changed between releases.
+To change the code, read the [contribution guide](.github/CONTRIBUTING.md); the
+[changelog](docs/changelog.md) lists what changed between releases.
 
 ## Citation
 
