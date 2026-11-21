@@ -16,7 +16,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
 from roboteam.runtime.sandbox import policy_env
 from roboteam.runtime.sandbox.access import mode
 from roboteam.tasks.config import ROOT
@@ -81,7 +81,7 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
                     'roboteam/runtime/time/egress_pause.py',
                     'roboteam/runtime/world/service.py',
                     'roboteam/runtime/world/pipeline.py',
-                    'roboteam/runtime/run/cli.py',
+                    'roboteam/runtime/run/admin.py',
                     'roboteam/harness/codex/host/meta_dispatcher.js',
                     'roboteam/harness/codex/host/gateway_rpc.js',
                     'roboteam/harness/codex/host/policy_host.js',
@@ -131,7 +131,7 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
                 'id': identity,
                 'run': str(run),
                 'cwd': str(run / 'workspace'),
-                'permissions': 'rf_' + identity,
+                'permissions': 'roboteam_' + identity,
                 'model': current['model'],
                 'provider': current['provider'],
                 'effort': current['effort'],
@@ -157,11 +157,11 @@ def build_manifest(jobs, control, private_root, credential_store, *, preflight=F
         '-c',
         'cli_auth_credentials_store="file"',
         '-c',
-        'default_permissions="rf_closed"',
+        'default_permissions="roboteam_closed"',
         '-c',
-        'permissions.rf_closed.filesystem={"/"="deny"}',
+        'permissions.roboteam_closed.filesystem={"/"="deny"}',
         '-c',
-        'permissions.rf_closed.network.enabled=false',
+        'permissions.roboteam_closed.network.enabled=false',
     ]
     for task in tasks:
         access = json.loads((Path(task['run']) / 'private/inputs/policy-access.json').read_text())

@@ -872,7 +872,7 @@ class PipelineTests(unittest.TestCase):
         self.call('A', 'move', {'delta_m': [0, 0, 0.01], 'wait': False}, 'later-move')
         self.assertEqual(calls, ['first-move'])
         kinds = [e['kind'] for e in self.service.store.events()]
-        self.assertEqual(kinds.count('HARNESSERING_FAULT_INJECTED'), 1)
+        self.assertEqual(kinds.count('ENGINEERING_FAULT_INJECTED'), 1)
 
 
 if __name__ == '__main__':

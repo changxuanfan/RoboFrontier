@@ -8,8 +8,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from roboteam.harness.claude.systems.provenance import fork_provenance, transcript_rows
+from roboteam.harness.shared.provenance import native_fork_provenance
 from roboteam.launch.results.report import model_evidence
-from roboteam.runtime.run import cli as runtime_cli
 from roboteam.runtime.run.setup import prepare_run, verify_inputs
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.tasks.config import ROOT, load_run_settings
@@ -103,7 +103,7 @@ class HarnessTests(unittest.TestCase):
             & frozen(claude)
         )
         self.assertTrue(
-            {'roboteam/launch/prepare.py', 'roboteam/launch/results/assets.py', 'roboteam/launch/tasks.py'}
+            {'roboteam/launch/prepare.py', 'roboteam/launch/results/assets.py', 'roboteam/launch/cases.py'}
             <= frozen(claude)
         )
         self.assertIn('roboteam/harness/codex/host/meta_dispatcher.js', frozen(claude))
@@ -229,10 +229,12 @@ class ClaudeProvenanceTests(unittest.TestCase):
         store = RuntimeStore(run / 'private/state/runtime.sqlite')
         try:
             store.initialize('fake', load_run_settings(run_settings_file(self.tmp.name, 'claude')), ['A'])
-            self.assertEqual(runtime_cli.native_fork_provenance(store, PARENT, CHILD)['harness'], 'claude')
+            self.assertEqual(native_fork_provenance(store, PARENT, CHILD)['harness'], 'claude')
             store.put('config', load_run_settings())
-            with patch('roboteam.runtime.run.cli.fork_provenance', return_value={'codex': True}) as codex:
-                self.assertEqual(runtime_cli.native_fork_provenance(store, PARENT, CHILD), {'codex': True})
+            with patch(
+                'roboteam.harness.shared.provenance.fork_provenance', return_value={'codex': True}
+            ) as codex:
+                self.assertEqual(native_fork_provenance(store, PARENT, CHILD), {'codex': True})
             codex.assert_called_once_with(PARENT, CHILD)
         finally:
             store.close()

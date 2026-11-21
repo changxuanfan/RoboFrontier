@@ -26,10 +26,10 @@ from roboteam.harness.claude.session.cost_state import amount, baseline, invocat
 from roboteam.harness.claude.session.native_home import config_directory
 from roboteam.harness.claude.session.session_recovery import api_error, capacity_code, usage_limit_of
 from roboteam.harness.shared.native import PreLaunchCancelled
-from roboteam.launch.results.host_metrics import host_event
 from roboteam.runtime.run import layout as run_layout
+from roboteam.runtime.run.host_log import host_event
 from roboteam.runtime.sandbox import policy_env
-from roboteam.runtime.tools import tools_mode
+from roboteam.tasks import tools_mode
 
 ENV_PASSTHROUGH = ('PATH', 'LANG', 'LC_ALL', 'TMPDIR')
 ROBOT_TOOL = 'mcp__robot__robot'
@@ -158,7 +158,7 @@ def policy_settings(run_dir):
 
 
 def robot_only(run_dir):
-    """Whether this run's policy turns keep the robot tool alone (runtime/tools/tools_mode.py)."""
+    """Whether this run's policy turns keep the robot tool alone (tasks/tools_mode.py)."""
     return tools_mode.of_run(run_dir) == tools_mode.ROBOT_ONLY
 
 

@@ -183,7 +183,7 @@ class WorldPause:
         if self.operator_hold:
             return self.store.get('dispatch_paused', True)
         try:
-            from roboteam.launch.slurm.proxy import EgressError, read_record
+            from roboteam.runtime.time.egress_record import EgressError, read_record
 
             marker = read_record(self.path)
         except FileNotFoundError:

@@ -1,4 +1,4 @@
-"""Experimental adaptive policy host for an already-owned physical world.
+"""Adaptive policy host for an already-owned physical world.
 
 Not exposed as a benchmark launcher. The caller creates the world and a shared
 budget ledger, explicitly starts supervision, and seals the world afterwards.
@@ -42,7 +42,7 @@ class AdaptivePolicyHost:
         try:
             cfg = self.store.get('config')
             if not cfg or cfg.get('harness') != self.harness or cfg.get('system') != 'adaptive':
-                raise ValueError('Expected adaptive Claude engineering run')
+                raise ValueError('Expected an adaptive Claude Code run')
             launch = json.loads((self.run / ('private/inputs/' + self.harness + '.json')).read_text())
             if (
                 cfg.get('model') != model_entry.get('model')

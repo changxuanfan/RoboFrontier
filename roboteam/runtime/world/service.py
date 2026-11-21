@@ -16,11 +16,13 @@ from pathlib import Path
 
 from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.setup import verify_inputs, write_json
-from roboteam.runtime.tools import observation_mode, public_files, run_skills, tools_mode
+from roboteam.runtime.tools import public_files, run_skills
 from roboteam.runtime.tools.delegation import Delegations
 from roboteam.runtime.tools.stop_diagnostics import stop_diagnostics
 from roboteam.runtime.world.store import RuntimeStore
-from roboteam.tasks.config import action_limits, execution_timing
+from roboteam.sim.timing import execution_timing
+from roboteam.tasks import observation_mode, tools_mode
+from roboteam.tasks.config import action_limits
 from roboteam.tasks.scene import camera_names
 
 # Finish and the budget cutoff score after the world has run this long with every arm still.
@@ -314,7 +316,7 @@ class RuntimeService:
         if not getattr(self, '_fault_injected', False):
             self._fault_injected = (
                 self.store.db.execute(
-                    "SELECT 1 FROM events WHERE kind='HARNESSERING_FAULT_INJECTED' LIMIT 1"
+                    "SELECT 1 FROM events WHERE kind='ENGINEERING_FAULT_INJECTED' LIMIT 1"
                 ).fetchone()
                 is not None
             )
@@ -883,7 +885,7 @@ class RuntimeService:
                         else None
                     )
                     if injected:
-                        self.store.event('HARNESSERING_FAULT_INJECTED', 'Meta', injected)
+                        self.store.event('ENGINEERING_FAULT_INJECTED', 'Meta', injected)
                         self._fault_injected = True
                 except Exception as error:
                     self.store.uncertain_action(
@@ -1082,7 +1084,7 @@ class RuntimeService:
         budget = getattr(self, 'policy_budget', None)
         directory = getattr(self, 'directory', None)
         if directory is not None:
-            from roboteam.launch.results.host_metrics import simulation_speed
+            from roboteam.runtime.run.host_log import simulation_speed
 
             result['speed'] = simulation_speed(
                 directory, start, getattr(budget, 'active', None), getattr(budget, 'stalls', None)

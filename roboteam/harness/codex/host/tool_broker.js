@@ -32,7 +32,7 @@ const tools = [
 function enabled(launch) {
   return (launch.tool_backend ?? launch.model_entry?.tool_backend ?? 'native') === 'landlock-v1';
 }
-// A robot_only run (runtime/tools/tools_mode.py): Codex's own tools are off and no file tools replace them.
+// A robot_only run (tasks/tools_mode.py): Codex's own tools are off and no file tools replace them.
 function robotOnly(launch) {
   return (launch.tools ?? launch.model_entry?.tools ?? 'full') === 'robot_only';
 }

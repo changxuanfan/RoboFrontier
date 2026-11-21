@@ -36,7 +36,7 @@ def batch_rows(base):
     batch = document(base / 'batch.json')
     if 'jobs' not in batch:
         raise ValueError('No supported batch metadata')
-    state = document(run_layout.batch_path(base, 'engineering_status')) or batch
+    state = document(run_layout.batch_path(base, 'supervisor_status')) or batch
     rows = []
     for index, job in enumerate(batch['jobs']):
         raw = Path(job.get('run_directory', ''))

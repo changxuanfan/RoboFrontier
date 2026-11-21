@@ -225,11 +225,6 @@ def export(directory, codex_home=None):
         '',
         'Action overlap excludes idle holding. Interpret it alongside task progress and video; one pilot does not establish architectural superiority.',
     ]
-    if config.get('harness', 'codex') == 'claude':
-        lines[2:2] = [
-            'Claude engineering run: not qualified for formal benchmark scoring; do not report it as a scored result.',
-            '',
-        ]
     if 'task_metrics' in report:
         lines += ['', f"Task metrics: {report['task_metrics']}."]
     (output / 'report.md').write_text('\n'.join(lines) + '\n')

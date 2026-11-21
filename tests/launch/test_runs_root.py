@@ -16,7 +16,8 @@ class RunsRootTests(unittest.TestCase):
             self.assertEqual(config['paths']['runs_root'], '')
             self.assertEqual(runs_root(config), ROOT / 'runs')
             self.assertEqual(
-                runs_root(dict(config, paths={'runs_root': '/data/rf-runs'})), Path('/data/rf-runs')
+                runs_root(dict(config, paths={'runs_root': '/data/roboteam-runs'})),
+                Path('/data/roboteam-runs'),
             )
             self.assertEqual(runs_root(dict(config, paths={'runs_root': 'elsewhere'})), ROOT / 'elsewhere')
             os.environ['ROBOTEAM_RUNS_ROOT'] = '/srv/runs'

@@ -87,7 +87,7 @@ function networkHost(folder, state, record, { failedAt = Date.now() / 1000, inFl
   };
 }
 test('as on Claude: only failures near the outage are its, other kinds hold for review, work in flight waits', async (t) => {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-network-host-'));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-network-host-'));
   t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
   fs.mkdirSync(path.join(folder, 'private/inputs/bootstrap'), { recursive: true });
   fs.writeFileSync(path.join(folder, 'private/inputs/bootstrap/network-resume.md'), 'notice');
@@ -117,7 +117,7 @@ test('as on Claude: only failures near the outage are its, other kinds hold for 
   assert.deepEqual(record, ['snapshot', 'network-recovery', 'send']);
 });
 test('network continuation is one fresh notice after a durable claim, never an old turn replay', async (t) => {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-network-host-'));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-network-host-'));
   t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
   fs.mkdirSync(path.join(folder, 'private/inputs/bootstrap'), { recursive: true });
   fs.writeFileSync(
@@ -152,7 +152,7 @@ test('network continuation is one fresh notice after a durable claim, never an o
   assert.equal(operations.filter((v) => v === 'network-recovery').length, 1);
 });
 test('unknown network continuation acknowledgement holds review and is never repeated', async (t) => {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-network-host-'));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-network-host-'));
   t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
   fs.mkdirSync(path.join(folder, 'private/inputs/bootstrap'), { recursive: true });
   fs.writeFileSync(path.join(folder, 'private/inputs/bootstrap/network-resume.md'), 'notice');

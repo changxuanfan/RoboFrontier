@@ -38,7 +38,7 @@ class SetupTests(unittest.TestCase):
         self.assertTrue((run / 'public/inputs/guide/tools.md').exists())
         # One shared lessons file in the only writable folder, frozen first
         # messages and access table, and Meta's files kept private.
-        self.assertEqual(json.loads((run / 'private/inputs/manifest.json').read_text())['layout'], 'run-v6')
+        self.assertEqual(json.loads((run / 'private/inputs/manifest.json').read_text())['layout'], 'run-v7')
         self.assertTrue((run / 'workspace/skills.md').read_text().startswith('# Run skills'))
         self.assertTrue((run / 'public/inputs/rules.md').is_file())
         self.assertFalse((run / 'public/inputs/role_tools.js').exists())
@@ -126,8 +126,8 @@ class SetupTests(unittest.TestCase):
         p = ROOT / 'benchmark/transport/transport-medium-l1/task.json'
         # The template marks the passages that depend on the tools and on what a role observes
         # with; a full images run gets those wordings.
-        from roboteam.runtime.tools import observation_mode
-        from roboteam.runtime.tools.tools_mode import render
+        from roboteam.tasks import observation_mode
+        from roboteam.tasks.tools_mode import render
 
         skill = observation_mode.render(
             render(

@@ -69,7 +69,7 @@ Joint moves finish all joints together.
 ## Validation
 
 `scripts/release/validate_physics.py` runs each check in the same world, controller and step
-settings as a run, and writes `runs/engineering/validate-physics/<time>.json`
+settings as a run, and writes `runs/checks/validate-physics/<time>.json`
 ([how to run it](../development/testing.md#physics-validation)). `tests/sim/test_validation.py`
 runs a fast part of it.
 

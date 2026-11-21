@@ -14,8 +14,8 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+from roboteam.io import write_json
 from roboteam.runtime.run import segments as run_segments
-from roboteam.runtime.run.setup import write_json
 
 
 class RecoveryBlocked(ValueError):

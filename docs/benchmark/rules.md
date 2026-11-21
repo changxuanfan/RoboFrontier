@@ -68,7 +68,7 @@ model and system may select it. The default is `images`. The paper's Oracle cond
 with the model entry `sol` and the single-agent system:
 
 ```sh
-.venv/bin/roboteam prepare --output runs/policy/<batch> --harness codex --model sol \
+.venv/bin/roboteam prepare --output runs/batches/<batch> --harness codex --model sol \
   --system single-agent --observation ground_truth
 ```
 
@@ -109,7 +109,7 @@ never gives the code or which dial is right.
 ground_truth run freezes `"observation": "ground_truth"` in `private/inputs/run.json`. Codex
 keeps a separate preflight receipt, `<model>.ground_truth/`. The prompt passages that differ are
 marked in the templates with `<!-- observation:images -->` and `<!-- observation:ground_truth
--->` (`roboteam/runtime/tools/observation_mode.py`). Tests:
+-->` (`roboteam/tasks/observation_mode.py`). Tests:
 `tests/runtime/tools/test_ground_truth.py`,
 `tests/launch/test_observation_mode_configuration.py` and
 `tests/runtime/sandbox/test_policy_env_variant.py`.

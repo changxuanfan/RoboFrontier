@@ -15,9 +15,9 @@ from roboteam.harness.claude.session.session_recovery import (
     recover_quota,
 )
 from roboteam.harness.shared.native import PreLaunchCancelled
+from roboteam.io import write_json
 from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.bootstrap import MAX_CAPACITY_RETRIES
-from roboteam.runtime.run.setup import write_json
 
 
 class SessionHost:
@@ -99,7 +99,7 @@ class SessionHost:
         write_json(path, value)
 
     def event(self, event, **fields):
-        from roboteam.launch.results.host_metrics import host_event
+        from roboteam.runtime.run.host_log import host_event
 
         host_event(
             self.run, event, actor=self.actor, session_id=self.session_id, turn_id=self.turn_id, **fields

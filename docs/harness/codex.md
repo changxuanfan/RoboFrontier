@@ -20,13 +20,13 @@ Follow [shared setup](README.md#shared-setup), then install the pinned CLI and p
 model calls:
 
 ```sh
-npm install --global @openai/codex@0.165.0      # or: npm install --prefix "$PWD/.codex-tools" @openai/codex@0.165.0
+npm install --global @openai/codex@0.165.0      # or: npm install --prefix "$PWD/.harness-cli" @openai/codex@0.165.0
 codex --version
 .venv/bin/roboteam plan --level 1 --min-arms --parallel 4
-.venv/bin/roboteam prepare --level 1 --min-arms --parallel 4 --output runs/policy/codex-l1
+.venv/bin/roboteam prepare --level 1 --min-arms --parallel 4 --output runs/batches/codex-l1
 ```
 
-With a prefix install, put `$PWD/.codex-tools/node_modules/.bin` first on `PATH`; Slurm
+With a prefix install, put `$PWD/.harness-cli/node_modules/.bin` first on `PATH`; Slurm
 subscription jobs and their preflight refuse to start with another `codex` first on `PATH`.
 `--render` may be left out: the default picks `native` on macOS, `nvidia` on Linux with an
 NVIDIA GPU and `cpu` otherwise. CPU rendering needs Mesa OSMesa (`libosmesa6` on Debian and Ubuntu
@@ -112,7 +112,7 @@ the model would get, rejects forged calls to Codex's own tools and runs fork and
 eight roles at once:
 
 ```sh
-.venv/bin/python -m roboteam.harness.codex.checks.broker --output runs/engineering/broker-check
+.venv/bin/python -m roboteam.harness.codex.checks.broker --output runs/checks/broker-check
 ```
 
 ## Preflight and receipts
@@ -125,25 +125,25 @@ eight roles at once:
 Without `--confirm-spend` it makes no call and reports `not_run`. Pass the same `--config` and
 options as for `prepare`. The full check runs image and tool round trips, a manual compaction, and
 a fork whose child inherits history and then uses tools. Receipts:
-`<runs root>/engineering/model-compatibility/<model>/report.json` (full) and
-`<runs root>/engineering/model-smoke/<model>/report.json` (smoke). A robot-only or ground-truth
+`<runs root>/receipts/codex/compatibility/<model>/report.json` (full) and
+`<runs root>/receipts/codex/smoke/<model>/report.json` (smoke). A robot-only or ground-truth
 batch has its own receipt, in `<model>.robot_only/` or `<model>.ground_truth/`. Before each run, the batch
 checks the full receipt against the frozen model, provider address, context, effort, catalog
 hash, CLI version and tool backend, and refuses on any mismatch; a smoke receipt never qualifies a
 run. Local checks of the real CLI against a synthetic Responses service, with no billing:
 
 ```sh
-.venv/bin/python -m roboteam.harness.codex.checks.cli --output runs/engineering/cli-check
+.venv/bin/python -m roboteam.harness.codex.checks.cli --output runs/checks/cli-check
 .venv/bin/python -m roboteam.harness.codex.checks.snapshot
 ```
 
 ## Run, status and stop
 
 ```sh
-.venv/bin/roboteam run runs/policy/codex-l1        # launchd on macOS; --durable on Linux
-.venv/bin/roboteam status runs/policy/codex-l1
-.venv/bin/roboteam stop runs/policy/codex-l1
-.venv/bin/roboteam continue runs/policy/codex-l1   # by hand, as the same trials
+.venv/bin/roboteam run runs/batches/codex-l1        # launchd on macOS; --durable on Linux
+.venv/bin/roboteam status runs/batches/codex-l1
+.venv/bin/roboteam stop runs/batches/codex-l1
+.venv/bin/roboteam continue runs/batches/codex-l1   # by hand, as the same trials
 ```
 
 `run` makes paid calls. It checks the receipt, the frozen configuration and every run's input

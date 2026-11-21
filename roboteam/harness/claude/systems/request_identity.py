@@ -7,7 +7,7 @@ from pathlib import Path
 
 from roboteam.harness.claude.session.native_home import history_directory
 from roboteam.harness.claude.systems.provenance import history, transcript_rows
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
 from roboteam.runtime.world.store import RuntimeStore
 
 

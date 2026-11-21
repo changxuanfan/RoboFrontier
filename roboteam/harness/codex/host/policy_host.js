@@ -187,7 +187,7 @@ class PolicyHost {
   async admin(op, data = {}) {
     const { stdout } = await execFileAsync(
       this.python,
-      ['-m', 'roboteam.runtime.run.cli', '--run-dir', this.run, op, '--data', JSON.stringify(data)],
+      ['-m', 'roboteam.runtime.run.admin', '--run-dir', this.run, op, '--data', JSON.stringify(data)],
       { cwd: this.cwd, maxBuffer: 8 * 1024 * 1024 },
     );
     return JSON.parse(stdout);

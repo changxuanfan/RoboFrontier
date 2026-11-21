@@ -257,10 +257,8 @@ class RestartTests(unittest.TestCase):
                 }
             }
         }
-        with patch(
-            'roboteam.runtime.run.segments.current_restore', return_value=(note, Path('/run/pose.npy'))
-        ):
-            relay.continue_record()
+        relay.mon.w.restore_record = lambda: (note, Path('/run/pose.npy'))
+        relay.continue_record()
         self.assertEqual(relay.states['p1']['transitions'], [HANDOVER])
         self.assertEqual(relay.states['p1']['drops'], 2)
         self.assertEqual(relay.states['p2']['transitions'], [])
@@ -271,10 +269,8 @@ class RestartTests(unittest.TestCase):
             state.update(airborne=False, custody=set())
         s.relay.mon.w = type('World', (), {'directory': Path('/run')})()
         note = {'evaluator': {'relay_payloads': {'p1': item, 'p2': item}}}
-        with patch(
-            'roboteam.runtime.run.segments.current_restore', return_value=(note, Path('/run/pose.npy'))
-        ):
-            s.relay.continue_record()
+        s.relay.mon.w.restore_record = lambda: (note, Path('/run/pose.npy'))
+        s.relay.continue_record()
         return s
 
     def test_a_handover_under_way_at_the_restore_frame_can_still_complete(self):

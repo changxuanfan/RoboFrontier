@@ -111,7 +111,7 @@ class PolicyArchiveTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             source = root / 'source'
-            source.write_bytes(b'"@RF_IMAGE_' + b'a' * 64 + b'@"\n')
+            source.write_bytes(b'"@ROBOTEAM_IMAGE_' + b'a' * 64 + b'@"\n')
             self.assertIsNone(transform_session(source, root, {}))
 
     def test_roundtrip_and_corruption(self):
@@ -130,7 +130,7 @@ class PolicyArchiveTest(unittest.TestCase):
             )
             (source / 'batch/motion.npz').write_bytes(b'motion\x00')
             (source / 'batch/large.bin').write_bytes(b'unchanged-state\x00' * (160000))
-            quoted_marker = b'{"quoted":"@RF_IMAGE_' + b'a' * 64 + b'@"}\n'
+            quoted_marker = b'{"quoted":"@ROBOTEAM_IMAGE_' + b'a' * 64 + b'@"}\n'
             (source / 'batch/quoted.jsonl').write_bytes(quoted_marker)
             (source / 'collection.json').write_text(json.dumps(collection(source, 'sessions/a/abc.jsonl')))
             archive = root / 'archive'

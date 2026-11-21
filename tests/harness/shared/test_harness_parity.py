@@ -7,9 +7,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 from roboteam.runtime.run import bootstrap as policy_bootstrap
+from roboteam.runtime.run.setup import prepare_case
 from roboteam.runtime.sandbox import access as policy_access
 from roboteam.tasks.config import ROOT
-from roboteam.tasks.task_types import prepare
 
 RUN_SETTINGS = json.loads((ROOT / 'roboteam/runtime/run/defaults.json').read_text())
 STARTUP = {
@@ -40,7 +40,7 @@ def prepared(root, harness, case='transport-small-l1'):
     """A prepared run of `case` for `harness` with the default run settings."""
     path = Path(root) / (harness + '-run.json')
     path.write_text(json.dumps(dict(RUN_SETTINGS, harness=harness)))
-    return prepare(case, Path(root) / harness, path)
+    return prepare_case(case, Path(root) / harness, path)
 
 
 class HarnessParityTests(unittest.TestCase):
@@ -52,7 +52,7 @@ class HarnessParityTests(unittest.TestCase):
             )
             path = Path(tmp) / (harness + '-' + system + '.json')
             path.write_text(json.dumps(run_settings))
-            runs[harness] = prepare(case, Path(tmp) / harness / system / case, path)
+            runs[harness] = prepare_case(case, Path(tmp) / harness / system / case, path)
         return runs
 
     def assert_same_inputs(self, runs):
@@ -169,7 +169,7 @@ class PolicyAccessTests(unittest.TestCase):
     def test_the_most_specific_path_wins_and_credentials_stay_hidden(self):
         with tempfile.TemporaryDirectory() as tmp:
             home, repo = Path(tmp) / 'home', Path(tmp) / 'repo'
-            run = repo / 'runs/policy/batch/p/case'
+            run = repo / 'runs/batches/batch/p/case'
             (run / 'workspace').mkdir(parents=True)
             with patch.dict(
                 'os.environ',
@@ -192,7 +192,7 @@ class PolicyAccessTests(unittest.TestCase):
             self.assertEqual(mode(run / 'workspace/skills.md'), 'write')
             self.assertEqual(mode(run / 'public/inputs/task.json'), 'read')
             self.assertEqual(mode(run / 'private/state/runtime.sqlite'), 'deny')
-            self.assertEqual(mode(repo / 'runs/policy/batch/p/other/public/results/x'), 'deny')
+            self.assertEqual(mode(repo / 'runs/batches/batch/p/other/public/results/x'), 'deny')
             self.assertEqual(mode(repo / '.env'), 'deny')
             self.assertEqual(mode(Path(tmp) / 'worktree/scripts/oracle.py'), 'deny')
             for secret in (
@@ -219,7 +219,7 @@ class HarnessRenderingTests(unittest.TestCase):
         run_settings = dict(RUN_SETTINGS, harness=harness)
         path = Path(tmp) / (harness + '.json')
         path.write_text(json.dumps(run_settings))
-        return prepare('transport-small-l1', Path(tmp) / harness, path)
+        return prepare_case('transport-small-l1', Path(tmp) / harness, path)
 
     def test_claude_policy_turns_get_confined_file_tools_and_the_frozen_system_prompt(self):
         from roboteam.harness.claude.session.runner import (

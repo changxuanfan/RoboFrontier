@@ -103,7 +103,6 @@ class ParallelPhysicsSmokeTests(unittest.TestCase):
             self.assertFalse(failures, failures)
             self.assertIn(outcome[0]['status'], ('closed', 'needs_review'), outcome[0])
             self.assertEqual(outcome[0]['startup_timeout_s'], 180)
-            self.assertFalse(outcome[0]['scored'])
             self.assertEqual(
                 maximum_live, 4, f'Expected four overlapping physical owners, observed {maximum_live}'
             )
@@ -111,7 +110,7 @@ class ParallelPhysicsSmokeTests(unittest.TestCase):
             budget_review = False
             for job in jobs:
                 run = Path(job['run_directory'])
-                detail = json.loads((run / 'private/state/control/engineering-status.json').read_text())
+                detail = json.loads((run / 'private/state/control/supervisor-status.json').read_text())
                 self.assertEqual(
                     detail['status'],
                     'needs_review' if detail['budget_review_required'] else 'finished',

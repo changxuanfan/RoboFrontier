@@ -9,6 +9,7 @@ from pathlib import Path
 from fake_pipeline import fake_capture
 from harness.claude.test_claude_supervisor import Dispatcher, Policy
 from roboteam.runtime.run import segments as run_segments
+from roboteam.runtime.run.setup import prepare_case
 from roboteam.runtime.time.clock import BudgetGuard, protocol
 from roboteam.runtime.world.service import RuntimeService
 from roboteam.tasks import task_types as task_types
@@ -208,7 +209,7 @@ class ProtocolAndEligibilityTests(unittest.TestCase):
         return store
 
     def test_continuation_needs_remaining_active_time(self):
-        run = task_types.prepare('transport-small-l1', self.root / 'new')
+        run = prepare_case('transport-small-l1', self.root / 'new')
         store = self.store(run)
         # Twice the limit has passed on the wall clock, but little of it was active.
         store.put('start_at', time.time() - 2 * 86400)

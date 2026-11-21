@@ -104,7 +104,7 @@ private/state/budget.sqlite        Claude Code: the cost records of each turn
 private/state/connections/         role authentication and service addresses
 private/state/client-state/        submitted requests, results and delivery receipts
 private/state/control/             STOP marker, status snapshot, locks
-private/outputs/                   evaluation.json, seal.json, report.json, motion/, events, exports
+private/outputs/                   evaluation.json, seal.json, motion/, events; report.json once made (runs/run-folder.md)
 private/outputs/segments/<k>/      segment k's own motion, video and evaluation
 private/logs/                      owner, host, server and supervisor logs
 private/harness/                    CLI and MCP configuration, per-turn evidence, transcripts

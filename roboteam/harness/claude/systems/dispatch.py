@@ -1,13 +1,13 @@
-"""Native session observations and deterministic continuation, under development.
+"""Session observations and deterministic continuation for a single-agent Claude Code run.
 
-This dispatcher does not launch a world, start a benchmark, create sessions, or
-implement adaptive delegation. It operates only on an already-bound Controller.
+This dispatcher does not launch a world, start a benchmark or create sessions; it operates
+only on an already-bound Controller. Adaptive runs use adaptive_dispatch.py.
 """
 
 import time
 import uuid
 
-from roboteam.runtime.run.cli import execute
+from roboteam.runtime.run.admin import execute
 
 
 class ClaudeDispatcher:
@@ -21,7 +21,7 @@ class ClaudeDispatcher:
         cfg = store.get('config')
         if cfg.get('harness') != self.harness or cfg.get('system') != 'single-agent':
             raise ValueError(
-                'Only an harness=claude single-agent run is supported; adaptive is not qualified'
+                'This dispatcher serves a harness=claude single-agent run; adaptive runs use AdaptiveDispatcher'
             )
         if host.actor != 'Controller':
             raise ValueError('Expected the bound Controller host')

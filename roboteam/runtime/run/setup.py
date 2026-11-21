@@ -9,9 +9,9 @@ from pathlib import Path
 from roboteam.io import write_json
 from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.bootstrap import SKILLS_HEADER, write_bootstraps
-from roboteam.runtime.tools import observation_mode, tools_mode
 from roboteam.runtime.world.store import RuntimeStore, packed
 from roboteam.sim.render.image import observation_profile
+from roboteam.tasks import observation_mode, tools_mode
 from roboteam.tasks.config import (
     CONTROLLER,
     ROOT,
@@ -22,7 +22,7 @@ from roboteam.tasks.config import (
 )
 from roboteam.tasks.provenance import environment_logic_manifest
 
-# Every roboteam/**/*.py is frozen for each run; these are an harness's other sources.
+# Every roboteam/**/*.py is frozen for each run; these are a harness's other sources.
 HARNESS_SCRIPTS = {
     'codex': (
         'roboteam/harness/codex/host/rpc.js',
@@ -180,9 +180,11 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
     (directory / run_layout.PATHS['skills_file']).write_text(SKILLS_HEADER)
     # Meta is engineering, outside the policy team: its role file and runbook stay private.
     (directory / 'private/inputs/meta').mkdir()
-    runbook = (ROOT / 'docs/development/manager-runbook.md').read_text()
+    runbook = (ROOT / 'docs/runs/operator-runbook.md').read_text()
     for target in ('architecture.md', 'test-coverage.md'):
-        runbook = runbook.replace('](' + target + ')', '](../frozen-source/docs/development/' + target + ')')
+        runbook = runbook.replace(
+            '](../development/' + target + ')', '](../frozen-source/docs/development/' + target + ')'
+        )
     runbook = runbook.replace('](../../prompts/', '](../frozen-source/prompts/')
     (directory / 'private/inputs/meta/meta-runbook.md').write_text(runbook)
     python = ROOT / '.venv/bin/python'
@@ -265,8 +267,12 @@ def prepare_run(directory, task_path=None, run_settings_path=None, private_puzzl
     paths += [ROOT / 'roboteam/harness/codex/host/meta_dispatcher.js']
     paths += [ROOT / name for name in HARNESS_SCRIPTS[cfg.get('harness', 'codex')]]
     paths += [
-        ROOT / 'docs/development' / name
-        for name in ('manager-runbook.md', 'architecture.md', 'test-coverage.md')
+        ROOT / 'docs' / name
+        for name in (
+            'runs/operator-runbook.md',
+            'development/architecture.md',
+            'development/test-coverage.md',
+        )
     ]
     source_hashes = {}
     for source in paths:
@@ -381,3 +387,16 @@ def verify_inputs(directory, *, source_root=None):
         if not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest() != digest:
             changed.append('input:' + relative)
     return changed
+
+
+def prepare_case(case_id, directory, run_settings=None, private_puzzle_path=None, wall_limit_s=86400):
+    """Prepare one released case as a run folder; simulator, role sessions and model inference stay stopped."""
+    import tempfile
+
+    from roboteam.tasks.task_types import policy_task
+
+    task = policy_task(case_id, wall_limit_s=wall_limit_s)
+    with tempfile.TemporaryDirectory(prefix='roboteam-policy-') as temporary:
+        path = Path(temporary) / 'task.json'
+        path.write_text(json.dumps(task, ensure_ascii=False) + '\n')
+        return prepare_run(directory, path, run_settings, private_puzzle_path)

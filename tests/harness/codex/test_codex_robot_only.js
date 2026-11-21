@@ -8,7 +8,7 @@ const { PolicyHost } = require('../../../roboteam/harness/codex/host/policy_host
 const broker = require('../../../roboteam/harness/codex/host/tool_broker');
 const PNG = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.alloc(32)]);
 function host(answer, launch = { tool_backend: 'native', tools: 'robot_only' }) {
-  const run = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-robot-only-'));
+  const run = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-robot-only-'));
   fs.mkdirSync(path.join(run, 'public/inputs'), { recursive: true });
   fs.mkdirSync(path.join(run, 'private'));
   fs.writeFileSync(path.join(run, 'public/inputs/target.png'), PNG);

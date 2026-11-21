@@ -34,7 +34,7 @@ Fill in only the variable your model reads (`models.json`, `env_key`):
 | Model | Credential |
 | --- | --- |
 | Claude `opus` (default), `haiku` | `ANTHROPIC_API_KEY` in `.env` |
-| Claude `opus_subscription`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` in `.env` (from `claude setup-token`) |
+| Claude `opus_subscription_token`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` in `.env` (from `claude setup-token`) |
 | Codex `sol` (default), `luna` | `OPENAI_API_KEY` in `.env` |
 | Codex `sol_subscription`, `luna_subscription` | No variable: log in once with `CODEX_HOME=~/.roboteam/codex-home codex login`, and set `runtime.codex_home_scope = "shared"` in the site TOML |
 
@@ -67,8 +67,8 @@ version. Details: [policy environment](policy-environment.md).
 
 `preflight` makes a few paid calls. `--max-budget-usd` is for Claude Code; leave it out for
 Codex. For Claude Code it runs two checks and writes receipts under
-`<runs root>/engineering/claude-precheck/` and `claude-blocked-precheck/`; for Codex it writes
-`<runs root>/engineering/model-compatibility/<model>/report.json`. `run` refuses a batch
+`<runs root>/receipts/claude/basic/` and `receipts/claude/blocked-parent/`; for Codex it writes
+`<runs root>/receipts/codex/compatibility/<model>/report.json`. `run` refuses a batch
 without receipts matching its model and CLI version.
 
 ## 6. Prepare and run
@@ -85,11 +85,11 @@ export ROBOTEAM_RUNS_ROOT=~/Repos/RoboTeam/runs
 ```
 
 ```sh
-.venv/bin/roboteam --config site.toml prepare --output runs/policy/my-batch
-.venv/bin/roboteam run runs/policy/my-batch          # submits the launchd job and returns
-.venv/bin/roboteam status runs/policy/my-batch       # includes the job's state under "durable"
-.venv/bin/roboteam stop runs/policy/my-batch         # an orderly stop
-.venv/bin/roboteam continue runs/policy/my-batch     # continue stopped runs by hand
+.venv/bin/roboteam --config site.toml prepare --output runs/batches/my-batch
+.venv/bin/roboteam run runs/batches/my-batch          # submits the launchd job and returns
+.venv/bin/roboteam status runs/batches/my-batch       # includes the job's state under "durable"
+.venv/bin/roboteam stop runs/batches/my-batch         # an orderly stop
+.venv/bin/roboteam continue runs/batches/my-batch     # continue stopped runs by hand
 ```
 
 `run` and `continue` read the batch's frozen configuration, not `--config`. `run --foreground`

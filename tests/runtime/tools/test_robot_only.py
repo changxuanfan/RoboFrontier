@@ -10,10 +10,11 @@ from pathlib import Path
 from fake_pipeline import FakeWorld, fake_capture
 from roboteam.runtime.run import bootstrap
 from roboteam.runtime.run.setup import prepare_run, verify_inputs
-from roboteam.runtime.tools import observation_mode, public_files, run_skills, tools_mode
+from roboteam.runtime.tools import public_files, run_skills
 from roboteam.runtime.tools.delegation import Delegations
 from roboteam.runtime.tools.robot_ops import check_request
 from roboteam.runtime.world.service import RuntimeService
+from roboteam.tasks import observation_mode, tools_mode
 from roboteam.tasks.config import ROOT, load_run_settings, startup_protocol
 
 PNG = b'\x89PNG\r\n\x1a\n' + b'\0' * 32

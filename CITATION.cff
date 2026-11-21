@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use RoboTeam, please cite the paper."
+title: "RoboTeam: Benchmarking Vision-Based Multi-Agent Control of Many Robot Arms in Real Time"
+type: software
+license: MIT
+repository-code: "https://github.com/changxuanfan/RoboTeam"
+url: "https://changxuanfan.github.io/RoboTeam/"
+authors: &authors
+  - {family-names: Fan, given-names: Changxuan}
+  - {family-names: Xie, given-names: Zhongwei}
+  - {family-names: Zhang, given-names: Boyi}
+  - {family-names: Hu, given-names: Shaoli}
+  - {family-names: Xu, given-names: Chang}
+  - {family-names: Ren, given-names: Xiyu}
+  - {family-names: Li, given-names: Yufei}
+  - {family-names: Xiao, given-names: Qiao}
+  - {family-names: Jing, given-names: Huihao}
+  - {family-names: Chung, given-names: Kawai}
+  - {family-names: Hu, given-names: Wenbin}
+  - {family-names: Luo, given-names: Hongyu}
+  - {family-names: Xie, given-names: Lingyun}
+  - {family-names: Gao, given-names: Yisen}
+  - {family-names: Li, given-names: Chunyang}
+  - {family-names: Huang, given-names: Haoyu}
+  - {family-names: Song, given-names: Wuganjing}
+  - {family-names: Liu, given-names: Yuxuan}
+  - {family-names: Tang, given-names: Chiu Yeung}
+  - {family-names: Zhan, given-names: Fangneng}
+  - {family-names: Yang, given-names: Xi}
+preferred-citation:
+  type: article
+  title: "RoboTeam: Benchmarking Vision-Based Multi-Agent Control of Many Robot Arms in Real Time"
+  authors: *authors
+  year: 2026
+  journal: "arXiv preprint arXiv:2611.22138"
+  url: "https://arxiv.org/abs/2611.22138"
+  identifiers:
+    - {type: other, value: "arXiv:2611.22138", description: "arXiv preprint"}

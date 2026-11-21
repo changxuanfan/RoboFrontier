@@ -215,7 +215,7 @@ class EnvironmentTests(unittest.TestCase):
 
             def do_GET(self):
                 self.send_response(200)
-                self.send_header('X-RF-Instance', instance)
+                self.send_header('X-RoboTeam-Instance', instance)
                 self.send_header('Content-Length', '0')
                 self.end_headers()
 

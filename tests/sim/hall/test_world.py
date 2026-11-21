@@ -9,10 +9,10 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
+from roboteam.runtime.run.setup import prepare_case
 from roboteam.runtime.world.pipeline import World
 from roboteam.sim.hall.flat import BUILT, HALL_GROUP
 from roboteam.sim.hall.world import HALL_BODY, has_desk, task_copy, task_geoms
-from roboteam.tasks.task_types import prepare
 
 CASES = ('transport-small-l1', 'mosaic-small-l1', 'relay-small-l2', 'dial-small-l2')
 
@@ -36,7 +36,7 @@ class HallWorldTests(unittest.TestCase):
         cls.worlds = {}
         for case in CASES:
             run = Path(cls.tmp.name) / case
-            prepare(case, run)
+            prepare_case(case, run)
             cls.worlds[case] = World(run, json.loads((run / 'private/inputs/task.json').read_text()))
 
     @classmethod

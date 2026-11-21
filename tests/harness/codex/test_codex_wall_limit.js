@@ -6,7 +6,7 @@ const fs = require('node:fs'),
 const { PolicyHost } = require('../../../roboteam/harness/codex/host/policy_host');
 
 test('host lifetime never consumes task time, while explicit STOP still works', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-clock-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-clock-'));
   try {
     const host = {
       run: dir,

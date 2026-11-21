@@ -19,8 +19,8 @@ from .tasks.config import startup_protocol
 
 
 def _receipt_name(policy):
-    from roboteam.runtime.tools import observation_mode
-    from roboteam.runtime.tools.tools_mode import receipt_name
+    from roboteam.tasks import observation_mode
+    from roboteam.tasks.tools_mode import receipt_name
 
     return observation_mode.receipt_name(
         receipt_name(policy['model'], policy.get('tools', 'full')), observation_mode.of(policy)
@@ -28,7 +28,7 @@ def _receipt_name(policy):
 
 
 def _environment_variant(policy):
-    from roboteam.runtime.tools.observation_mode import environment_variant
+    from roboteam.tasks.observation_mode import environment_variant
 
     return environment_variant(policy)
 
@@ -136,9 +136,8 @@ def _run_settings(config):
 
 
 def prepare(output, config):
-    from roboteam.launch.prepare import load_env
+    from roboteam.io import load_env, write_json
     from roboteam.launch.results.assets import setup_assets
-    from roboteam.runtime.run.setup import write_json
 
     policy, selection = config['policy'], config['selection']
     load_env(ROOT / '.env')
@@ -212,7 +211,7 @@ def prepare(output, config):
 
 def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=None):
     """Explicit paid connectivity check; preparation and planning never call it."""
-    from roboteam.launch.prepare import load_env
+    from roboteam.io import load_env
 
     load_env(ROOT / '.env')
     policy = config['policy']
@@ -235,7 +234,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
 
             from roboteam.harness.claude.checks.preflight import run_precheck
 
-            output = runs_root() / 'engineering/claude-precheck' / uuid.uuid4().hex
+            output = runs_root() / 'receipts/claude/basic' / uuid.uuid4().hex
             report = run_precheck(
                 policy['model'],
                 output,
@@ -249,7 +248,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             # The blocked-parent fork check: a run needs both receipts, as a Codex run needs its one.
             from roboteam.harness.claude.checks.blocked_precheck import run_blocked_precheck
 
-            blocked_output = runs_root() / 'engineering/claude-blocked-precheck' / uuid.uuid4().hex
+            blocked_output = runs_root() / 'receipts/claude/blocked-parent' / uuid.uuid4().hex
             blocked = run_blocked_precheck(
                 policy['model'], blocked_output, max_budget_usd, dict(os.environ), catalog=catalog
             )
@@ -275,7 +274,7 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
             if not scratch:
                 raise ValueError('Job preflight requires node-local Slurm scratch')
             _local_storage(scratch)
-            with tempfile.TemporaryDirectory(prefix='rf-pf-', dir=scratch) as temporary:
+            with tempfile.TemporaryDirectory(prefix='roboteam-pf-', dir=scratch) as temporary:
                 with subscription_environment(config, temporary, on_failure=lambda: None):
                     command = [
                         sys.executable,
@@ -292,8 +291,8 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
                     subprocess.run(command, cwd=ROOT, check=True)
             folder = (
                 runs_root(config)
-                / 'engineering'
-                / ('model-smoke' if smoke_only else 'model-compatibility')
+                / 'receipts/codex'
+                / ('smoke' if smoke_only else 'compatibility')
                 / _receipt_name(policy)
             )
             return json.loads((folder / 'report.json').read_text())
@@ -322,8 +321,8 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
         env['CODEX_HOME'] = str(home)
         folder = (
             runs_root(config)
-            / 'engineering'
-            / ('model-smoke' if smoke_only else 'model-compatibility')
+            / 'receipts/codex'
+            / ('smoke' if smoke_only else 'compatibility')
             / _receipt_name(policy)
         )
         folder.mkdir(parents=True, exist_ok=True)
@@ -340,8 +339,14 @@ def preflight(config, *, confirm_spend=False, smoke_only=False, max_budget_usd=N
         ]
         if smoke_only:
             command.append('--smoke-only')
-        subprocess.run(command, cwd=ROOT, env=env, check=True)
-        return json.loads((folder / 'report.json').read_text())
+        # A failed check has written its cause to the receipt (a usage limit, a refused login, a
+        # model that ignored the image): report that instead of the child's exit status.
+        result = subprocess.run(command, cwd=ROOT, env=env)
+        report = json.loads((folder / 'report.json').read_text())
+        if result.returncode:
+            report['passed'] = False
+            report.setdefault('error', f'Preflight exited with status {result.returncode}')
+        return report
 
 
 def _frozen_configuration(batch):
@@ -392,7 +397,7 @@ def run(batch, *, continuing=False):
     document = json.loads((Path(batch) / 'batch.json').read_text())
     # Every run uses a policy environment and the closed access table, except a robot_only
     # run: its roles have no shell or file tool, so there is nothing for either to confine.
-    from roboteam.runtime.tools import tools_mode
+    from roboteam.tasks import tools_mode
 
     for job in document.get('jobs', []):
         if tools_mode.of_run(job['run_directory']) == tools_mode.ROBOT_ONLY:
@@ -465,7 +470,7 @@ def _with_live_runs(batch, state):
     for job, entry in zip(jobs, state.get('jobs', [])):
         run = Path(job['run_directory'])
         if entry.get('status') == 'starting':  # Claude: the run's own status file
-            own = run_layout.path(run, 'engineering_status')
+            own = run_layout.path(run, 'supervisor_status')
             try:
                 working = json.loads(own.read_text()).get('status') == 'running'
             except (OSError, ValueError):
@@ -488,13 +493,13 @@ def continue_runs(batch, cases=None):
     run (default: every run that may continue) gets its next segment; the batch then runs
     them like `run --continue`. Returns what was prepared and what was not, with why."""
     os.environ.setdefault('ROBOTEAM_RUNS_ROOT', str(runs_root(_frozen_configuration(batch))))
+    from roboteam.io import write_json
     from roboteam.runtime.run import segments
-    from roboteam.runtime.run.setup import write_json
 
     batch = Path(batch).resolve()
     config = _frozen_configuration(batch)
     harness = config['policy']['harness']
-    lock = run_layout.batch_path(batch, 'engineering_lock' if harness == 'claude' else 'supervisor_lock')
+    lock = run_layout.batch_path(batch, 'supervisor_lock')
     if _lock_held(lock):
         raise ValueError('The batch is still running; stop it or wait before continuing runs')
     document = json.loads((batch / 'batch.json').read_text())
@@ -531,7 +536,7 @@ def continue_runs(batch, cases=None):
         return {'batch': str(batch), 'prepared': [], 'refused': refused}
     # Reopen the batch for exactly these runs; the others keep their final status.
     if harness == 'claude':
-        path = run_layout.batch_path(batch, 'engineering_status')
+        path = run_layout.batch_path(batch, 'supervisor_status')
         state = json.loads(path.read_text())
         for job, entry in zip(document['jobs'], state['jobs']):
             if job['case_id'] in prepared:
@@ -561,7 +566,7 @@ def archive_collection(collection, output):
 
     output = Path(output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='.rf-archive-', dir=output.parent) as temporary:
+    with tempfile.TemporaryDirectory(prefix='.roboteam-archive-', dir=output.parent) as temporary:
         directory = Path(temporary) / 'archive'
         # Preserve reviewed/incomplete evidence too; its manifest keeps every
         # issue and does not certify physical actions, task success or scores.
@@ -668,7 +673,7 @@ def main(argv=None):
 
     def emit(value):
         if args.result_file:
-            from roboteam.runtime.run.setup import write_json
+            from roboteam.io import write_json
 
             write_json(args.result_file, value)
         _print(value)
@@ -727,7 +732,7 @@ def main(argv=None):
                 emit(report)
                 return 0 if report.get('passed') else 2
             elif args.command == 'slurm-submit':
-                from roboteam.launch.prepare import load_env
+                from roboteam.io import load_env
                 from roboteam.launch.slurm.job import submit
 
                 load_env(ROOT / '.env')
@@ -741,7 +746,7 @@ def main(argv=None):
                     os.environ[ENV_VAR] = 'off'
                 else:
                     # A ground_truth run uses the environment variant with a simulator.
-                    from roboteam.runtime.tools.observation_mode import environment_variant
+                    from roboteam.tasks.observation_mode import environment_variant
 
                     apply_default(environment_variant(config['policy']))
                 emit({'batch': str(prepare(args.output, config)), 'model_calls': 0})
@@ -757,7 +762,7 @@ def main(argv=None):
                         from roboteam.launch.local.linux import submit as submit_durable
                     report['service'] = submit_durable(args.batch, continuing=True)
                 else:
-                    from roboteam.launch.prepare import load_env
+                    from roboteam.io import load_env
 
                     load_env(ROOT / '.env')
                     report['result'] = run(args.batch, continuing=True)
@@ -774,13 +779,13 @@ def main(argv=None):
                 from roboteam.launch.local.linux import submit as submit_durable
             emit(submit_durable(args.batch, continuing=args.continuing))
         elif args.command == 'run':
-            from roboteam.launch.prepare import load_env
+            from roboteam.io import load_env
 
             load_env(ROOT / '.env')
             emit(run(args.batch, continuing=args.continuing))
         elif args.command == 'status':
             # Read the supervisor's atomic snapshot, never open a writer's SQLite.
-            snapshot = run_layout.batch_path(args.batch, 'engineering_status')
+            snapshot = run_layout.batch_path(args.batch, 'supervisor_status')
             state = _with_live_runs(
                 args.batch,
                 json.loads((snapshot if snapshot.is_file() else args.batch / 'batch.json').read_text()),

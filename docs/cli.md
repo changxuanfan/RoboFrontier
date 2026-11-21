@@ -125,17 +125,17 @@ no graphics drivers or system OpenGL libraries.
 ```
 
 Without `--confirm-spend` no model is called and the result is `not_run`. Receipts go under
-`<runs root>/engineering/`. `run` refuses a batch whose model, model catalog or CLI version
+`<runs root>/receipts/`. `run` refuses a batch whose model, model catalog or CLI version
 does not match a passed receipt. Details: [Codex](harness/codex.md#preflight-and-receipts),
 [Claude Code](harness/claude-code.md#preflight-and-receipts).
 
 ## Run, watch and stop
 
 ```sh
-.venv/bin/roboteam run runs/policy/my-batch
-.venv/bin/roboteam status runs/policy/my-batch
-.venv/bin/roboteam stop runs/policy/my-batch
-.venv/bin/roboteam continue runs/policy/my-batch --cases transport-small-l1
+.venv/bin/roboteam run runs/batches/my-batch
+.venv/bin/roboteam status runs/batches/my-batch
+.venv/bin/roboteam stop runs/batches/my-batch
+.venv/bin/roboteam continue runs/batches/my-batch --cases transport-small-l1
 ```
 
 `run` reads the batch's frozen `effective-config.json`, not `--config`. To change anything,
@@ -166,7 +166,7 @@ When every run of a batch has stopped, `run` collects the batch into
 it. By hand:
 
 ```sh
-.venv/bin/roboteam collect runs/policy/my-batch --output runs/exports/my-batch
+.venv/bin/roboteam collect runs/batches/my-batch --output runs/exports/my-batch
 .venv/bin/roboteam archive runs/exports/my-batch --output runs/exports/my-batch.zip
 .venv/bin/roboteam extract runs/exports/my-batch.zip --output runs/restored/my-batch-objects
 .venv/bin/python -m roboteam.launch.results.archive_batch restore runs/restored/my-batch-objects \

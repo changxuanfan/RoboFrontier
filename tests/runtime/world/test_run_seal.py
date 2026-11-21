@@ -10,8 +10,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from fake_pipeline import FakeWorld, fake_capture
-from roboteam.runtime.run.cli import execute
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
+from roboteam.runtime.run.admin import execute
 from roboteam.runtime.world.service import RuntimeService
 from roboteam.runtime.world.store import RuntimeStore
 from team_settings import prepare_run

@@ -27,9 +27,9 @@ import sqlite3
 import time
 from pathlib import Path
 
+from roboteam.io import write_json
 from roboteam.launch.results.host_metrics import session_glob
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.run.setup import write_json
 
 FINISHED = ('ended', 'interrupted', 'recovery_required')
 

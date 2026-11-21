@@ -7,7 +7,8 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
-from roboteam.tasks.task_types import RELEASE, ROOT, prepare, read
+from roboteam.runtime.run.setup import prepare_case
+from roboteam.tasks.task_types import RELEASE, ROOT, read
 from scripts.release import build_release
 
 
@@ -65,7 +66,7 @@ class RelayCameraMountTests(unittest.TestCase):
 
     def test_a_prepared_relay_run_receives_the_mounts_of_its_own_frozen_scene(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = prepare('relay-small-l1', Path(tmp) / 'relay')
+            run = prepare_case('relay-small-l1', Path(tmp) / 'relay')
             public = read(run / 'public/inputs/task.json')
             self.assert_mounts_match_scene(public, run / 'private/inputs/scene')
 

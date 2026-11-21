@@ -26,8 +26,8 @@ from pathlib import Path, PurePosixPath
 
 from roboteam.configuration import ROOT, runs_root, validate_configuration
 from roboteam.io import file_sha256 as checksum
+from roboteam.io import write_json
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.run.setup import write_json
 
 
 def _copy_verified(source, destination):
@@ -165,7 +165,7 @@ def queue_command(slurm, folder):
         command.append('--gpus=' + str(slurm['gpus']))
     if slurm.get('auth_mode') == 'subscription':
         stream = hashlib.sha256(slurm['credential_store'].encode()).hexdigest()[:24]
-        command.extend(['--job-name=rf-auth-' + stream, '--dependency=singleton'])
+        command.extend(['--job-name=roboteam-auth-' + stream, '--dependency=singleton'])
     for field in ('partition', 'account', 'qos'):
         if slurm[field]:
             command.append('--' + field + '=' + slurm[field])
@@ -273,12 +273,12 @@ def submit(config, output, *, queue=False, root=ROOT):
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     # Where preflight wrote it: the configured runs root, else the submitting checkout's runs/.
     receipts = runs_root(config) if runs_root(config) != ROOT / 'runs' else root / 'runs'
-    from roboteam.runtime.tools import observation_mode
-    from roboteam.runtime.tools.tools_mode import receipt_name
+    from roboteam.tasks import observation_mode
+    from roboteam.tasks.tools_mode import receipt_name
 
     receipt = (
         receipts
-        / 'engineering/model-compatibility'
+        / 'receipts/codex/compatibility'
         / observation_mode.receipt_name(
             receipt_name(policy['model'], policy.get('tools', 'full')), observation_mode.of(policy)
         )
@@ -319,7 +319,7 @@ def submit(config, output, *, queue=False, root=ROOT):
     archive = ensure_asset_archive(root)
     python = Path(sys.executable).absolute()  # Preserve the venv symlink and site-packages.
     output.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='.rf-submission-', dir=output.parent) as temporary:
+    with tempfile.TemporaryDirectory(prefix='.roboteam-submission-', dir=output.parent) as temporary:
         staged = Path(temporary) / 'submission'
         staged.mkdir(mode=0o700)
         subprocess.run(
@@ -327,7 +327,7 @@ def submit(config, output, *, queue=False, root=ROOT):
             cwd=root,
             check=True,
         )
-        with tempfile.TemporaryDirectory(prefix='rf-source-check-') as check:
+        with tempfile.TemporaryDirectory(prefix='roboteam-source-check-') as check:
             _extract_source(staged / 'source.tar', Path(check))
             if (Path(check) / '.env').exists():
                 raise ValueError('A source snapshot must not contain .env')
@@ -409,12 +409,12 @@ def stage(submission, local):
     asset = source / 'runs/asset-cache' / (manifest['sha256']['policy-assets.tar.gz'] + '.tar.gz')
     _copy_verified(submission / 'policy-assets.tar.gz', asset)
     if config['policy']['harness'] == 'codex':
-        from roboteam.runtime.tools import observation_mode
-        from roboteam.runtime.tools.tools_mode import receipt_name
+        from roboteam.tasks import observation_mode
+        from roboteam.tasks.tools_mode import receipt_name
 
         receipt = (
             source
-            / 'runs/engineering/model-compatibility'
+            / 'runs/receipts/codex/compatibility'
             / observation_mode.receipt_name(
                 receipt_name(config['policy']['model'], config['policy'].get('tools', 'full')),
                 observation_mode.of(config['policy']),
@@ -456,7 +456,7 @@ def execute(local):
     manifest = json.loads((Path(document['submission']) / 'submission.json').read_text())
     if manifest.get('credential_file'):
         # Into this process's environment only; its children get it on a pipe (claude.runner.start_cli).
-        from roboteam.launch.prepare import load_env
+        from roboteam.io import load_env
 
         load_env(manifest['credential_file'])
     # Everything this job writes stays in its node-local source until stage-out, whatever
@@ -473,15 +473,15 @@ def execute(local):
             if config['policy'].get('tools', 'full') == 'robot_only':
                 os.environ[ENV_VAR] = 'off'  # As `roboteam prepare`: no shell, so no Python environment.
             else:
-                from roboteam.runtime.tools.observation_mode import environment_variant
+                from roboteam.tasks.observation_mode import environment_variant
 
                 apply_default(environment_variant(config['policy']))
-            prepare(ROOT / 'runs/policy/batch', config)
+            prepare(ROOT / 'runs/batches/batch', config)
             if (local / 'STOP').exists():
                 request_stop(local)
                 result = {'status': 'stopped_before_start'}
             else:
-                result = run(ROOT / 'runs/policy/batch')
+                result = run(ROOT / 'runs/batches/batch')
             # Persist the result (naming any verified archive) before leaving the managed
             # route/credential context, whose exit raises when its fence fired.
             write_json(path, result)
@@ -601,7 +601,7 @@ def routed_environment(config, local, *, on_failure):
 def request_stop(local):
     local = Path(local).resolve()
     (local / 'STOP').touch()
-    batch = local / 'source/runs/policy/batch'
+    batch = local / 'source/runs/batches/batch'
     if batch.is_dir():
         stops = [run_layout.batch_path(batch, 'stop')]
         if (batch / 'batch.json').exists():
@@ -621,12 +621,12 @@ def request_stop(local):
 def snapshot(local, submission):
     """Publish atomic JSON only, without opening any active database."""
     state = {'updated_at': time.time(), 'job_id': os.environ.get('SLURM_JOB_ID'), 'status': 'starting'}
-    batch = Path(local) / 'source/runs/policy/batch'
+    batch = Path(local) / 'source/runs/batches/batch'
     for name, path in (
         ('batch.json', batch / 'batch.json'),
         (
-            'engineering-status.json',
-            run_layout.batch_path(batch, 'engineering_status') if batch.is_dir() else None,
+            'supervisor-status.json',
+            run_layout.batch_path(batch, 'supervisor_status') if batch.is_dir() else None,
         ),
     ):
         if path is not None and path.is_file():
@@ -640,8 +640,8 @@ def _writer_locks(local):
     """Every lock path the batch and run layouts define.
 
     Only these fixed paths: a file a policy names world.lock in its workspace is not a lock."""
-    batch = (Path(local) / 'source/runs/policy/batch').resolve()
-    locks = {run_layout.batch_path(batch, key) for key in ('supervisor_lock', 'engineering_lock')}
+    batch = (Path(local) / 'source/runs/batches/batch').resolve()
+    locks = {run_layout.batch_path(batch, 'supervisor_lock')}
     runs = set()
     try:
         jobs = (
@@ -658,7 +658,7 @@ def _writer_locks(local):
     for run in runs:
         if not run.is_relative_to(batch) or run == batch:
             continue
-        locks |= {run_layout.path(run, key) for key in ('world_lock', 'engineering_lock')}
+        locks |= {run_layout.path(run, key) for key in ('world_lock', 'supervisor_lock')}
     return sorted(locks)
 
 
@@ -715,7 +715,7 @@ def _stage_out_stopped(local, submission, step_exit_code, lock_issues=()):
         with zipfile.ZipFile(archive) as check:
             if 'manifest.json' not in check.namelist() or check.testzip() is not None:
                 raise ValueError('Evidence ZIP failed its stage-out integrity check')
-    with tempfile.TemporaryDirectory(prefix='.rf-stage-out-', dir=submission) as temporary:
+    with tempfile.TemporaryDirectory(prefix='.roboteam-stage-out-', dir=submission) as temporary:
         staged = Path(temporary) / 'results'
         staged.mkdir(mode=0o700)
         files, issues = {}, list(lock_issues)
@@ -744,7 +744,7 @@ def _stage_out_stopped(local, submission, step_exit_code, lock_issues=()):
             def name(file):
                 return file.relative_to(source).as_posix()
 
-            for base in (source / 'runs/policy', source / 'runs/state-assets'):
+            for base in (source / 'runs/batches', source / 'runs/scene-cache'):
                 if base.exists() or base.is_symlink():
                     for file in _stopped_files(base, name, issues):
                         keep(file, name(file))

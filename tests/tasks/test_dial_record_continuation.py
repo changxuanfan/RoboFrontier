@@ -18,16 +18,13 @@ def held(symbols, step=60.0):
 class ContinuationTests(unittest.TestCase):
     def monitor(self, game, angles, record):
         stub = SimpleNamespace(
-            w=SimpleNamespace(directory='run'),
+            w=SimpleNamespace(directory='run', restore_record=lambda: ({'evaluator': record}, None)),
             d=SimpleNamespace(qpos=np.array(angles), time=40.0),
             qids=list(range(len(angles))),
             game=game,
             carried_trials=0,
         )
-        with patch(
-            'roboteam.runtime.run.segments.current_restore', lambda run: ({'evaluator': record}, None)
-        ):
-            Monitor.continue_dial_record(stub)
+        Monitor.continue_dial_record(stub)
         return stub
 
     def play(self, game, t, angles, seconds=0.4):
@@ -59,9 +56,10 @@ class ContinuationTests(unittest.TestCase):
 
     def test_without_a_carried_record_the_evaluator_starts_empty(self):
         game = DialFeedback((1, 1, 1, 1))
-        stub = SimpleNamespace(w=SimpleNamespace(directory='run'), game=game, carried_trials=0)
-        with patch('roboteam.runtime.run.segments.current_restore', lambda run: None):
-            Monitor.continue_dial_record(stub)
+        stub = SimpleNamespace(
+            w=SimpleNamespace(directory='run', restore_record=lambda: None), game=game, carried_trials=0
+        )
+        Monitor.continue_dial_record(stub)
         self.assertEqual((game.queries, game.best, stub.carried_trials), (0, 0, 0))
 
 
@@ -88,6 +86,7 @@ class SampledContinuationTests(unittest.TestCase):
         mon.d = SimpleNamespace(time=40.0, qpos=np.radians([2 * step]), qvel=np.zeros(1))
         mon.w = SimpleNamespace(
             directory='run',
+            restore_record=lambda: ({'evaluator': record}, None),
             arms={
                 'R': SimpleNamespace(job=None, job_op=None, dofs=[0], grasp_force=30.0),
                 'B': SimpleNamespace(job=None, job_op=None, dofs=[0], grasp_force=70.0),
@@ -117,10 +116,7 @@ class SampledContinuationTests(unittest.TestCase):
         mon.violations = []
         mon.carried_trials = 0
         mon.game = DialFeedback((1,))
-        with patch(
-            'roboteam.runtime.run.segments.current_restore', lambda run: ({'evaluator': record}, None)
-        ):
-            mon.continue_dial_record()
+        mon.continue_dial_record()
         return mon
 
     def play(self, mon, seconds, symbol=None):

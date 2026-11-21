@@ -12,9 +12,9 @@ def batch_state(folder):
     """The batch's recorded status, whether its supervisor still holds the lock, and each run's markers."""
     folder = Path(folder).resolve()
     jobs = claude_batch._jobs(folder)
-    state_file = layout.batch_path(folder, 'engineering_status')
+    state_file = layout.batch_path(folder, 'supervisor_status')
     state = json.loads(state_file.read_text()) if state_file.exists() else {'status': 'not_started'}
-    lock_path = layout.batch_path(folder, 'engineering_lock')
+    lock_path = layout.batch_path(folder, 'supervisor_lock')
     live = False
     if lock_path.exists():
         with lock_path.open('r') as lock:
@@ -28,11 +28,11 @@ def batch_state(folder):
     state['stop_requested'] = layout.batch_path(folder, 'stop').exists()
     state['runs'] = []
     for run in (Path(job['run_directory']) for job in jobs):
-        status = layout.path(run, 'engineering_status')
+        status = layout.path(run, 'supervisor_status')
         state['runs'].append(
             {
                 'detail': json.loads(status.read_text()) if status.exists() else None,
-                'claim_record_present': layout.path(run, 'engineering_claim').exists(),
+                'claim_record_present': layout.path(run, 'supervisor_claim').exists(),
                 'stop_requested': layout.path(run, 'stop').exists(),
             }
         )

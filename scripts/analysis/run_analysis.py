@@ -3,7 +3,7 @@
 
 Data never lives in the repository: pass the data root, the run list and output paths.
 A run list is a JSON array of objects with at least `id` and the archive key `k` (see
-`roboteam.analysis.archive`); `task_type` (transport, mosaic, relay, dial) and any other
+`roboteam.analysis.run_files`); `task_type` (transport, mosaic, relay, dial) and any other
 fields are copied into the outputs.
 
   run_analysis.py extract  --root DATA --runs runs.json --out extracted/
@@ -35,7 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from roboteam.analysis import atomic, extract, metrics, session_archive  # noqa: E402
-from roboteam.analysis.archive import Run  # noqa: E402
+from roboteam.analysis.run_files import Run  # noqa: E402
 
 
 def _valid_record(path):

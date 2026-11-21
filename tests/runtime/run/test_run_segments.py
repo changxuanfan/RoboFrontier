@@ -101,7 +101,7 @@ class EligibilityTests(unittest.TestCase):
 
     def test_a_seal_of_a_live_world_after_a_session_error_continues(self):
         report = str(self.run / 'private/outputs/seal.json')
-        self.store.event('RUN_SEALED', 'Meta', {'report_ref': report, 'owner_was_live': True})
+        self.store.event('RUN_SEALED', 'Meta', {'seal_file': report, 'owner_was_live': True})
         self.store.put('lifecycle', 'interrupted')
         self.assertEqual(run_segments.stop_reason(self.run, self.store), 'unexpected')
         self.assertEqual(self.reason(), 'no recorded motion frame')

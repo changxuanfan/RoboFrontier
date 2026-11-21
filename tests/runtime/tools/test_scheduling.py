@@ -242,7 +242,7 @@ class SchedulingTests(unittest.TestCase):
         self.assertEqual(dispatch_once(self.s, adapter, 'owner', 101), [])
 
     def test_meta_dispatch_snapshot_does_not_need_business_notes(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         self.s.update_agent('A', note='private task planning text ' * 600)
         snapshot = execute(self.s, 'snapshot', {}, 'owner', 100)

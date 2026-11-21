@@ -1,8 +1,5 @@
 """Harness-neutral benchmark helpers: .env loading and released case selection."""
 
-import os
-import re
-import shlex
 from pathlib import Path
 
 from roboteam.tasks.task_types import RELEASE, ROOT, read
@@ -19,29 +16,6 @@ def env_file_names(path, *names):
         if sep and key in names:
             found.add(key)
     return sorted(found)
-
-
-def load_env(path):
-    """Load literal KEY=value entries; existing process environment wins."""
-    path = Path(path)
-    if not path.is_file():
-        return
-    for number, line in enumerate(path.read_text().splitlines(), 1):
-        line = line.strip()
-        if not line or line.startswith('#'):
-            continue
-        if line.startswith('export '):
-            line = line[7:].lstrip()
-        key, sep, raw = line.partition('=')
-        if not sep or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', key):
-            raise ValueError(f'Invalid .env entry at line {number}')
-        try:
-            values = shlex.split(raw, comments=True, posix=True)
-        except ValueError as error:
-            raise ValueError(f'Invalid .env value at line {number}') from error
-        if len(values) > 1:
-            raise ValueError(f'Quote whitespace in .env value at line {number}')
-        os.environ.setdefault(key, values[0] if values else '')
 
 
 def select_cases(task_types=None, cases=None, level=None, min_arms=False):

@@ -139,7 +139,7 @@ def main():
     # Validate runnable documentation as syntax, without executing its tools.
     doc_js = "const fs=require('fs');const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;const s=fs.readFileSync(process.argv[1],'utf8');for(const m of s.matchAll(/```javascript\\n([\\s\\S]*?)```/g))new AsyncFunction(m[1]);"
     runbook = subprocess.run(
-        ['node', '-e', doc_js, str(ROOT / 'docs/development/manager-runbook.md')],
+        ['node', '-e', doc_js, str(ROOT / 'docs/runs/operator-runbook.md')],
         capture_output=True,
         text=True,
     )

@@ -26,7 +26,7 @@ See [policy environment](../docs/hosts/policy-environment.md).
 | --- | --- |
 | `build_release.py` | The steps that wrote the released case folders: `physics`, `letters`, `codes`, `public`, `cameras`, `settle`, and `freeze`. The release is frozen, so every step that writes now refuses. `check` confirms that the scenes carry the release physics |
 | `build_hall.py` | Build the factory hall that runs load (`benchmark/hall/built/`, not in Git) from the released scenes, and pin its hash in `benchmark/assets.json` |
-| `validate_physics.py` | Check the release physics and the Franka limits on the released scenes. Scenarios: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`. Results go to `runs/engineering/validate-physics/` |
+| `validate_physics.py` | Check the release physics and the Franka limits on the released scenes. Scenarios: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`. Results go to `runs/checks/validate-physics/` |
 
 See [physics](../docs/benchmark/physics.md) and [the released files](../benchmark/README.md).
 
@@ -62,17 +62,17 @@ repository: the data folder, the list of runs and the output paths are arguments
 ## Commands inside the package
 
 Some lower-level commands live in the package and run the same way, for example
-`.venv/bin/python -m roboteam.launch.tasks list`.
+`.venv/bin/python -m roboteam.launch.cases list`.
 
 | Module | Purpose |
 | --- | --- |
 | `roboteam.launch.results.assets` | `doctor` (a report on tools, models and assets), `init-env` (create `.env` from `.env.example` with mode 0600), `assets` and `setup-assets` (pack the asset archive; install one without network access), `restore` |
-| `roboteam.launch.tasks` | `list`, `check`, `prepare`, `prepare-batch`: list the released tasks, check their inputs, or prepare runs directly |
+| `roboteam.launch.cases` | `list`, `check`, `prepare`, `prepare-batch`: list the released tasks, check their inputs, or prepare runs directly |
 | `roboteam.launch.results.collect` | The collector behind `roboteam collect` |
 | `roboteam.launch.results.archive_batch` | `create`, `verify`, `restore`: the evidence archive as a folder; `restore` rebuilds the original files from an extracted archive |
 | `roboteam.launch.results.session_archive` | `keep`, `archive`: copy and compress a run's session transcripts ([evidence storage](../docs/runs/evidence-storage.md#session-transcripts)) |
 | `roboteam.launch.results.report` | Write a finished run's `report.json` ([reports](../docs/harness/README.md#reports-and-metric-definitions)) |
-| `roboteam.runtime.run.cli` | Low-level operations on one run, such as `seal` and `export` ([manager runbook](../docs/development/manager-runbook.md)) |
+| `roboteam.runtime.run.admin` | Low-level operations on one run, such as `seal` and `export` ([operator runbook](../docs/runs/operator-runbook.md)) |
 | `roboteam.runtime.world.fault_injection` | Freeze one failing action into a prepared engineering run ([testing](../docs/development/testing.md#fault-injection)) |
 | `roboteam.harness.claude.recover_task`, `roboteam.harness.codex.recover_task` | Recover one run whose host closed while its world stayed paused ([task recovery](../docs/runs/recovery.md)) |
 | `roboteam.harness.codex.checks.cli`, `.broker`, `.snapshot` | Check the installed Codex CLI's tools, images, forks and tool backend against a local stub ([Codex](../docs/harness/codex.md)) |

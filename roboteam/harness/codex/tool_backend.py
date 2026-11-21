@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 from roboteam.harness.shared.tool_worker import SCHEMA
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
 from roboteam.runtime.sandbox import access as policy_access
 
 BACKENDS = ('native', 'landlock-v1')
@@ -173,7 +173,7 @@ print('BROKER_ISOLATION_OK')
 def doctor():
     if not sys.platform.startswith('linux'):
         raise ValueError('landlock-v1 requires Linux')
-    with tempfile.TemporaryDirectory(prefix='rf-codex-tools-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='roboteam-codex-tools-') as temporary:
         base = Path(temporary).resolve()
         run = base / 'repo/run'
         for name in ('private/inputs', 'public', 'workspace'):

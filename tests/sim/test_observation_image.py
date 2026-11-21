@@ -193,7 +193,7 @@ class ObservationImageTests(unittest.TestCase):
             ]['observation_profile'],
             LOW_RESOLUTION_PROFILE,
         )
-        from roboteam.tasks.task_types import prepare
+        from roboteam.runtime.run.setup import prepare_case
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -211,8 +211,8 @@ class ObservationImageTests(unittest.TestCase):
                 }
 
             for case in ('mosaic-small-l3', 'dial-small-l3'):
-                sharp = prepare(case, root / case / 'sharp', root / (DEFAULT_PROFILE + '.json'))
-                low = prepare(case, root / case / 'low', root / (LOW_RESOLUTION_PROFILE + '.json'))
+                sharp = prepare_case(case, root / case / 'sharp', root / (DEFAULT_PROFILE + '.json'))
+                low = prepare_case(case, root / case / 'low', root / (LOW_RESOLUTION_PROFILE + '.json'))
                 self.assertEqual(
                     json.loads((sharp / 'private/inputs/run.json').read_text())['observation_image_profile'],
                     DEFAULT_PROFILE,
@@ -251,10 +251,10 @@ class ObservationImageTests(unittest.TestCase):
             self.assertIn('camera_calibration', task_low)
 
     def test_dial_calibration_copy_keeps_frozen_original(self):
-        from roboteam.tasks.task_types import prepare
+        from roboteam.runtime.run.setup import prepare_case
 
         with tempfile.TemporaryDirectory() as tmp:
-            run = prepare('dial-small-l1', Path(tmp) / 'dial')
+            run = prepare_case('dial-small-l1', Path(tmp) / 'dial')
             public = json.loads((run / 'public/inputs/task.json').read_text())
             # The policy sees one calibration sized for this run; the signed original is private.
             original = json.loads(

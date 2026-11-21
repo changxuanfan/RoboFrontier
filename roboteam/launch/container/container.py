@@ -16,7 +16,7 @@ from pathlib import Path
 
 from roboteam.configuration import ROOT, validate_configuration
 from roboteam.io import file_sha256 as _digest
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
 
 CONTAINER_ROOT = '/opt/RoboTeam'
 # The policy environment's base, a persistent volume outside the checkout: built and checked once
@@ -193,7 +193,7 @@ def _ensure_image(image, commit, root, *, rebuild=False):
         return
     if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=root, text=True):
         raise ValueError('Commit tracked changes before building a frozen container image')
-    with tempfile.TemporaryDirectory(prefix='rf-build-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='roboteam-build-') as temporary:
         snapshot = Path(temporary) / 'source.tar'
         subprocess.run(
             ['git', 'archive', '--format=tar', '--output=' + str(snapshot), commit], cwd=root, check=True
@@ -381,7 +381,7 @@ def _export_archive(name, receipt, destination):
         if _digest(output) != expected:
             raise ValueError('A different exported archive already exists: ' + str(output))
         return output
-    with tempfile.TemporaryDirectory(prefix='.rf-export-', dir=destination) as temporary:
+    with tempfile.TemporaryDirectory(prefix='.roboteam-export-', dir=destination) as temporary:
         staged = Path(temporary) / path.name
         subprocess.run(['docker', 'cp', name + ':' + str(path), str(staged)], check=True)
         if _digest(staged) != expected:
@@ -398,7 +398,7 @@ def execute(arguments, config, *, root=ROOT):
     A disconnected/live container is retained for review; it is never blindly
     restarted. Only stopped ZIP evidence is exported to the host.
     """
-    from roboteam.launch.prepare import load_env
+    from roboteam.io import load_env
 
     arguments = validate_arguments(arguments)
     if shutil.which('docker') is None:
@@ -422,7 +422,7 @@ def execute(arguments, config, *, root=ROOT):
     if config['container']['workspace'] != launch_workspace:
         raise ValueError('Frozen batch belongs to a different container workspace')
     credentials = {} if arguments[0] == 'auth' else _credential_environment(config, os.environ)
-    name = 'rf-' + uuid.uuid4().hex[:20]
+    name = 'roboteam-' + uuid.uuid4().hex[:20]
     record = root / '.roboteam/containers' / config['container']['workspace'] / 'commands' / (name + '.json')
     state = {
         'schema': 'roboteam.container-command.v1',
@@ -435,7 +435,7 @@ def execute(arguments, config, *, root=ROOT):
         'status': 'starting',
     }
     write_json(record, state)
-    with tempfile.TemporaryDirectory(prefix='rf-container-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='roboteam-container-') as temporary:
         settings = Path(temporary) / 'effective.toml'
         settings.write_text(_toml(config))
         settings.chmod(0o600)

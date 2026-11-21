@@ -39,7 +39,7 @@ class SlurmJobTests(unittest.TestCase):
             cwd=self.repo,
             check=True,
         )
-        receipt = self.repo / 'runs/engineering/model-compatibility/sol/report.json'
+        receipt = self.repo / 'runs/receipts/codex/compatibility/sol/report.json'
         receipt.parent.mkdir(parents=True)
         receipt.write_text(json.dumps({'passed': True}))
         self.asset = self.root / 'assets.tar.gz'
@@ -104,7 +104,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertEqual(cache.read_bytes(), self.asset.read_bytes())
         self.assertFalse((source / '.env').exists())
         self.assertFalse((source / '.codex').exists())
-        self.assertTrue((source / 'runs/engineering/model-compatibility/sol/report.json').is_file())
+        self.assertTrue((source / 'runs/receipts/codex/compatibility/sol/report.json').is_file())
         with (
             patch.object(slurm.platform, 'system', return_value='Linux'),
             patch.dict(os.environ, {'SLURM_JOB_ID': '123'}),
@@ -120,7 +120,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_live_world_lock_blocks_stage_out_before_copying(self):
         self.stage()
-        lock_path = self.local / 'source/runs/policy/batch/luna/case/private/state/control/world.lock'
+        lock_path = self.local / 'source/runs/batches/batch/luna/case/private/state/control/world.lock'
         lock_path.parent.mkdir(parents=True)
         with lock_path.open('a+') as owner:
             fcntl.flock(owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -132,7 +132,7 @@ class SlurmJobTests(unittest.TestCase):
         import signal
 
         self.stage()
-        run = self.local / 'source/runs/policy/batch/luna/case'
+        run = self.local / 'source/runs/batches/batch/luna/case'
         (run / 'workspace').mkdir(parents=True)
         os.mkfifo(run / 'workspace/world.lock')
         (run / 'private/state/control').mkdir(parents=True)
@@ -154,21 +154,21 @@ class SlurmJobTests(unittest.TestCase):
             report['issues'],
         )
         self.assertIn(
-            'runs/policy/batch/luna/case/workspace/world.lock', [i['path'] for i in report['issues']]
+            'runs/batches/batch/luna/case/workspace/world.lock', [i['path'] for i in report['issues']]
         )
 
     def test_failed_collection_returns_stopped_raw_motion_and_sessions_without_auth(self):
         self.stage()
         source = self.local / 'source'
         files = {
-            'runs/policy/batch/luna/case/private/state/runtime.sqlite': b'stopped SQLite fixture',
-            'runs/policy/batch/luna/case/private/outputs/motion/frames.bin': b'exact motion',
-            'runs/state-assets/abc': b'frozen asset',
+            'runs/batches/batch/luna/case/private/state/runtime.sqlite': b'stopped SQLite fixture',
+            'runs/batches/batch/luna/case/private/outputs/motion/frames.bin': b'exact motion',
+            'runs/scene-cache/abc': b'frozen asset',
             '.roboteam/codex/task/sessions/session.jsonl': b'exact native session\n',
             '.roboteam/codex/task/auth.json': b'PRIVATE AUTH',
             '.roboteam/codex/task/state.sqlite': b'private CLI runtime state',
-            'runs/policy/batch/haiku/case/private/harness/config/.credentials.json': b'PRIVATE CLAUDE AUTH',
-            'runs/policy/batch/haiku/case/private/harness/config/projects/project/session.jsonl': b'Claude session',
+            'runs/batches/batch/haiku/case/private/harness/config/.credentials.json': b'PRIVATE CLAUDE AUTH',
+            'runs/batches/batch/haiku/case/private/harness/config/projects/project/session.jsonl': b'Claude session',
         }
         for relative, content in files.items():
             path = source / relative
@@ -196,7 +196,7 @@ class SlurmJobTests(unittest.TestCase):
     def test_raw_fallback_with_a_workspace_symlink_still_stages_motion_and_records_the_link(self):
         self.stage()
         source = self.local / 'source'
-        run = source / 'runs/policy/batch/luna/case'
+        run = source / 'runs/batches/batch/luna/case'
         (run / 'private/outputs/motion').mkdir(parents=True)
         (run / 'private/outputs/motion/frames.bin').write_bytes(b'only copy')
         (run / 'private/state').mkdir(parents=True)
@@ -213,12 +213,12 @@ class SlurmJobTests(unittest.TestCase):
         output = self.submission / 'results'
         self.assertEqual(report['status'], 'needs_review')
         self.assertEqual(
-            (output / 'runs/policy/batch/luna/case/private/outputs/motion/frames.bin').read_bytes(),
+            (output / 'runs/batches/batch/luna/case/private/outputs/motion/frames.bin').read_bytes(),
             b'only copy',
         )
-        self.assertTrue((output / 'runs/policy/batch/luna/case/private/state/runtime.sqlite').is_file())
+        self.assertTrue((output / 'runs/batches/batch/luna/case/private/state/runtime.sqlite').is_file())
         issues = {item['path']: item for item in report['issues']}
-        base = 'runs/policy/batch/luna/case/workspace/'
+        base = 'runs/batches/batch/luna/case/workspace/'
         self.assertEqual(
             issues[base + '.tmp/venv/bin/python'],
             {'path': base + '.tmp/venv/bin/python', 'issue': 'symlink', 'link': '/etc/hosts'},
@@ -319,7 +319,7 @@ class SlurmJobTests(unittest.TestCase):
 
     def test_stop_and_snapshot_use_json_without_opening_databases(self):
         self.stage()
-        batch = self.local / 'source/runs/policy/batch'
+        batch = self.local / 'source/runs/batches/batch'
         run = batch / 'luna/case'
         run.mkdir(parents=True)
         (batch / 'batch.json').write_text(
@@ -352,7 +352,7 @@ class SlurmJobTests(unittest.TestCase):
                 },
             },
         )
-        report = self.repo / 'runs/engineering/model-compatibility/luna_subscription/report.json'
+        report = self.repo / 'runs/receipts/codex/compatibility/luna_subscription/report.json'
         report.parent.mkdir(parents=True)
         report.write_text(json.dumps({'passed': True, 'job_gateway_sha256': fingerprint()}))
         # Submission freezes a reference only. The credential directory does
@@ -365,7 +365,7 @@ class SlurmJobTests(unittest.TestCase):
         self.assertEqual(command.count('--ntasks=1'), 1)
         self.assertEqual(command.count('--gpus=1'), 1)
         self.assertIn('--dependency=singleton', command)
-        self.assertTrue(any(arg.startswith('--job-name=rf-auth-') for arg in command))
+        self.assertTrue(any(arg.startswith('--job-name=roboteam-auth-') for arg in command))
         self.assertFalse((self.root / 'not-yet-provisioned').exists())
 
     def test_subscription_requires_fresh_gateway_qualification_and_private_store(self):
@@ -377,7 +377,7 @@ class SlurmJobTests(unittest.TestCase):
                 'slurm': {'auth_mode': 'subscription', 'credential_store': str(self.root / 'credentials')},
             },
         )
-        report = self.repo / 'runs/engineering/model-compatibility/luna_subscription/report.json'
+        report = self.repo / 'runs/receipts/codex/compatibility/luna_subscription/report.json'
         report.parent.mkdir(parents=True)
         report.write_text(json.dumps({'passed': True, 'job_gateway_sha256': 'stale'}))
         with self.assertRaisesRegex(ValueError, 'job-gateway subscription preflight'):

@@ -14,7 +14,7 @@ from harness.claude.test_claude_standing_team import standing_fixture
 from roboteam.harness.claude.session.session_host import ClaudeSessionHost
 from roboteam.runtime.run import layout as run_layout
 
-POST_IDLE_PROMPT = 'RF_NATIVE_POST_IDLE_MAIL'
+POST_IDLE_PROMPT = 'ROBOTEAM_NATIVE_POST_IDLE_MAIL'
 POST_IDLE_MESSAGE = 'Synthetic post-idle milestone from A'
 
 

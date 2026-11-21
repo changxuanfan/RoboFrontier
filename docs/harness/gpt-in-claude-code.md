@@ -83,8 +83,8 @@ ROBOTEAM_CHATGPT_GATEWAY_KEY=<the key>
 ```sh
 .venv/bin/roboteam preflight --harness claude --model sol_chatgpt_plan --max-budget-usd 1 --confirm-spend
 .venv/bin/roboteam prepare --harness claude --model sol_chatgpt_plan --level 1 --min-arms \
-  --parallel 4 --output runs/policy/claude-gpt-l1
-.venv/bin/roboteam run runs/policy/claude-gpt-l1
+  --parallel 4 --output runs/batches/claude-gpt-l1
+.venv/bin/roboteam run runs/batches/claude-gpt-l1
 ```
 
 The preflight is the ordinary Claude Code one

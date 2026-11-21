@@ -326,7 +326,7 @@ class NativeCliThroughGatewayTests(unittest.TestCase):
 
         self.stub = AnthropicStub(script)
         self.addCleanup(self.stub.close)
-        temporary = tempfile.TemporaryDirectory(prefix='rf-codex-claude-')
+        temporary = tempfile.TemporaryDirectory(prefix='roboteam-codex-claude-')
         self.addCleanup(temporary.cleanup)
         out = Path(temporary.name).resolve()
         work, private = out / 'work', out / 'private-gateway'

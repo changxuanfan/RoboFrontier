@@ -9,12 +9,13 @@ from unittest.mock import patch
 
 from fake_pipeline import fake_capture
 from roboteam.harness.codex.launch import launch_config, model_entry
+from roboteam.io import load_env
 from roboteam.launch import codex_batch as benchmark
 from roboteam.launch.codex_batch import prepare_batch
-from roboteam.launch.prepare import load_env, select_cases
-from roboteam.runtime.run.cli import fork_provenance
+from roboteam.launch.prepare import select_cases
+from roboteam.runtime.run.admin import fork_provenance
+from roboteam.runtime.run.setup import prepare_case
 from roboteam.runtime.world.service import RuntimeService
-from roboteam.tasks.task_types import prepare
 from runtime.world.test_policy_probe import BudgetWorld
 
 
@@ -143,7 +144,7 @@ class CliBenchmarkTests(unittest.TestCase):
     def test_failed_preflight_cannot_relabel_an_older_pass(self):
         selected = model_entry('astra_subscription')
         with tempfile.TemporaryDirectory() as tmp:
-            target = Path(tmp) / 'runs/engineering/model-compatibility/astra_subscription'
+            target = Path(tmp) / 'runs/receipts/codex/compatibility/astra_subscription'
             target.mkdir(parents=True)
             (target / 'report.json').write_text(json.dumps({'passed': True, 'model_entry_sha256': 'old'}))
             with (
@@ -206,7 +207,7 @@ class CliBenchmarkTests(unittest.TestCase):
             (folder / 'batch.json').write_text(
                 json.dumps({'jobs': [{'run_directory': str(run)} for run in runs]})
             )
-            own = run_layout.path(runs[0], 'engineering_status')
+            own = run_layout.path(runs[0], 'supervisor_status')
             own.parent.mkdir(parents=True)
             own.write_text(json.dumps({'status': 'running'}))
             host = run_layout.path(runs[1], 'host_process')
@@ -226,14 +227,14 @@ class CliBenchmarkTests(unittest.TestCase):
     def test_env_is_literal_and_existing_values_win(self):
         with (
             tempfile.TemporaryDirectory() as tmp,
-            patch.dict(os.environ, {'RF_EXISTING': 'existing'}, clear=True),
+            patch.dict(os.environ, {'ROBOTEAM_EXISTING': 'existing'}, clear=True),
         ):
             env = Path(tmp) / '.env'
-            env.write_text("RF_EXISTING=other\nRF_LITERAL='$(touch nope)'\nRF_EMPTY=\n")
+            env.write_text("ROBOTEAM_EXISTING=other\nROBOTEAM_LITERAL='$(touch nope)'\nROBOTEAM_EMPTY=\n")
             load_env(env)
-            self.assertEqual(os.environ['RF_EXISTING'], 'existing')
-            self.assertEqual(os.environ['RF_LITERAL'], '$(touch nope)')
-            self.assertEqual(os.environ['RF_EMPTY'], '')
+            self.assertEqual(os.environ['ROBOTEAM_EXISTING'], 'existing')
+            self.assertEqual(os.environ['ROBOTEAM_LITERAL'], '$(touch nope)')
+            self.assertEqual(os.environ['ROBOTEAM_EMPTY'], '')
             env.write_text('INVALID KEY=value\n')
             with self.assertRaisesRegex(ValueError, 'line 1'):
                 load_env(env)
@@ -273,7 +274,7 @@ class CliBenchmarkTests(unittest.TestCase):
                     }
                 )
             )
-            receipt = root / 'runs/engineering/model-compatibility/astra_subscription/report.json'
+            receipt = root / 'runs/receipts/codex/compatibility/astra_subscription/report.json'
             receipt.parent.mkdir(parents=True)
             model_entry_hash = hashlib.sha256(
                 json.dumps(launch['model_entry'], sort_keys=True).encode()
@@ -301,7 +302,7 @@ class CliBenchmarkTests(unittest.TestCase):
 
     def test_released_policy_service_enforces_24h_of_active_time_without_host(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = prepare('transport-small-l1', Path(tmp) / 'run')
+            run = prepare_case('transport-small-l1', Path(tmp) / 'run')
             s = RuntimeService(run, BudgetWorld, fake_capture)
             try:
                 s.store.update_agent('Controller', ready=True, thread_id='engineering-only')

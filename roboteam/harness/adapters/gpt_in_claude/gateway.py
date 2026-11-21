@@ -35,7 +35,7 @@ from roboteam.harness.adapters.gpt_in_claude.websocket import (
 )
 
 MODEL = 'gpt-6.1-sol'
-OPAQUE = 'rf_responses_v1:'
+OPAQUE = 'roboteam_responses_v1:'
 
 
 class APIKeyStore:

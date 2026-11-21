@@ -69,7 +69,7 @@ async function runMetaDispatcher({
   const failures = new Map();
   let statusPaused = false;
   async function runtime(op, data = {}) {
-    const command = `${quote(python)} -m roboteam.runtime.run.cli --run-dir ${quote(runDir)} --owner ${quote(owner)} ${op} --data ${quote(JSON.stringify(data))}`;
+    const command = `${quote(python)} -m roboteam.runtime.run.admin --run-dir ${quote(runDir)} --owner ${quote(owner)} ${op} --data ${quote(JSON.stringify(data))}`;
     const result = await tools.exec_command({ cmd: command, workdir: cwd, max_output_tokens: 12000 });
     if (result.exit_code !== 0) throw new Error('Runtime operation failed: ' + op + ': ' + result.output);
     try {

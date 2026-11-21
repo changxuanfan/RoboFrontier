@@ -11,8 +11,8 @@ from pathlib import Path
 
 from roboteam.harness.claude.session.budget import BudgetExhausted
 from roboteam.harness.claude.session.session_host import ClaudeSessionHost
+from roboteam.runtime.run.admin import execute
 from roboteam.runtime.run.bootstrap import frozen_bootstrap
-from roboteam.runtime.run.cli import execute
 from roboteam.runtime.run.setup import verify_inputs
 from roboteam.runtime.tools.pipeline_client import client_call
 from roboteam.runtime.world.store import RuntimeStore
@@ -88,7 +88,7 @@ class StandingTeamPolicyHost:
                 or cfg.get('system') not in ('hierarchical', 'decentralized')
                 or cfg.get('startup_protocol') != 'direct_team'
             ):
-                raise ValueError('Expected a direct-team Native standing-team engineering run')
+                raise ValueError('Expected a hierarchical or decentralized Claude Code run')
             if cfg.get('model') != model_entry.get('model') or cfg.get('effort') != model_entry.get('effort'):
                 raise ValueError('Model entry differs from frozen runtime configuration')
             agents = {a: v for a, v in self.store.agents().items() if v['kind'] != 'manager'}

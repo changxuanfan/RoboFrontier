@@ -5,8 +5,9 @@ import hashlib
 import json
 from pathlib import Path
 
-from roboteam.runtime.run.setup import write_json
-from roboteam.tasks.task_types import RELEASE, ROOT, prepare, read, resolve_case
+from roboteam.io import write_json
+from roboteam.runtime.run.setup import prepare_case
+from roboteam.tasks.task_types import RELEASE, ROOT, read, resolve_case
 
 
 def check_case_assets(case, root=ROOT):
@@ -48,7 +49,7 @@ def prepare_batch(output, task_types=None, run_settings=None):
     write_json(output / 'batch.json', manifest)
     try:
         for job in jobs:
-            prepare(job['case_id'], job['run_directory'], run_settings)
+            prepare_case(job['case_id'], job['run_directory'], run_settings)
             job['status'] = 'prepared'
             write_json(output / 'batch.json', manifest)
     except Exception as error:
@@ -81,7 +82,7 @@ def main():
         print(prepare_batch(args.output, args.task_types, args.run_settings))
         return
     if args.command == 'prepare':
-        print(prepare(args.case_id, args.output, args.run_settings))
+        print(prepare_case(args.case_id, args.output, args.run_settings))
         return
     rows = []
     failed = False

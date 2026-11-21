@@ -62,24 +62,13 @@ def fork_provenance(parent, child):
     }
 
 
-def native_fork_provenance(store, parent, child):
-    """Dispatch lineage verification to the evidence format of this run's harness."""
-    harness = store.get('config').get('harness', 'codex')
-    if harness == 'claude':
-        from roboteam.harness.claude.session.native_home import history_directory
-        from roboteam.harness.claude.systems.provenance import fork_provenance as claude_provenance
-
-        return claude_provenance(parent, child, history_directory(store.path.parents[2]))
-    return fork_provenance(parent, child)
-
-
 def execute(store, op, data, owner, now):
     cfg = store.get('config')
     if op == 'seal':
         from roboteam.runtime.world.seal import seal_run
 
         if set(data) - {'timeout_s'}:
-            raise ValueError('Seal accepts only an engineering timeout_s')
+            raise ValueError('Seal accepts only timeout_s')
         return seal_run(store, data.get('timeout_s', 30))
     if op == 'snapshot':
         return {
@@ -100,24 +89,28 @@ def execute(store, op, data, owner, now):
         }
     if op == 'delegate-snapshot-bind':
         if cfg.get('harness', 'codex') != 'codex':
-            raise ValueError('Claude adaptive delegation is not yet qualified')
+            raise ValueError(
+                'delegate-snapshot-bind is a Codex operation; a Claude Code run binds its delegates in its own host'
+            )
         d = Delegations(store)
         key = data['id']
         thread_id = data['thread_id']
         with store.transaction():
             store.lease(owner, now, cfg['manager_lease_s'])
             d.snapshot_created(key, thread_id, owner)
-        provenance = native_fork_provenance(store, d.batch(key)['source_thread_id'], thread_id)
+        provenance = fork_provenance(d.batch(key)['source_thread_id'], thread_id)
         with store.transaction():
             store.lease(owner, time.time(), cfg['manager_lease_s'])
             d.snapshot_bind(key, thread_id, provenance, owner)
         return {'recorded': True}
     if op == 'delegate-bind':
-        # Matching transcript prefixes alone do not authenticate a native fork.
-        # Claude adaptive delegation stays closed until creation and role binding
-        # can be verified together by the trusted host.
+        # Matching transcript prefixes alone do not authenticate a native fork. A Claude
+        # Code run creates and binds its delegates together inside its trusted host
+        # (harness/claude/systems/adaptive_setup.py), so this general operation refuses it.
         if cfg.get('harness') == 'claude':
-            raise ValueError('Claude adaptive delegation is not yet qualified')
+            raise ValueError(
+                'delegate-bind is a Codex operation; a Claude Code run binds its delegates in its own host'
+            )
         # Commit identity before reading platform files: a failed check must
         # not erase a native fork that already exists.
         d = Delegations(store)
@@ -128,7 +121,7 @@ def execute(store, op, data, owner, now):
         batch = d.batch(key)
         if not batch.get('snapshot_thread_id') or not batch.get('snapshot_provenance'):
             raise ValueError('Verified delegation snapshot required')
-        provenance = native_fork_provenance(store, batch['snapshot_thread_id'], data['thread_id'])
+        provenance = fork_provenance(batch['snapshot_thread_id'], data['thread_id'])
         with store.transaction():
             store.lease(owner, time.time(), cfg['manager_lease_s'])
             d.bind(key, data['actor'], data['thread_id'], provenance, owner)

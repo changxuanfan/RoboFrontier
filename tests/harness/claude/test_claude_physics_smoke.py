@@ -76,7 +76,6 @@ class PhysicsSmokeTests(unittest.TestCase):
                 startup_timeout_s=90,
                 poll_s=0.1,
             )
-            self.assertFalse(result['scored'])
             self.assertEqual(result['reason'], 'wall_limit', result)
             self.assertEqual(
                 result['status'], 'needs_review' if result['budget_review_required'] else 'finished', result

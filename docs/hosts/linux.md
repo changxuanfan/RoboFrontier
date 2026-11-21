@@ -80,12 +80,12 @@ export ROBOTEAM_POLICY_ENV_BASE=/workspace/roboteam-env
 
 For Claude Code, add `--max-budget-usd 1`.
 
-Receipts go under `<runs root>/engineering/`; `run` refuses a batch without matching ones.
+Receipts go under `<runs root>/receipts/`; `run` refuses a batch without matching ones.
 
 ## 7. Prepare and run
 
 ```sh
-B=/workspace/roboteam-runs/policy/my-batch
+B=/workspace/roboteam-runs/batches/my-batch
 .venv/bin/roboteam --config site.toml prepare --output $B
 .venv/bin/roboteam run $B --durable
 .venv/bin/roboteam status $B          # includes "durable": the service record and whether it runs

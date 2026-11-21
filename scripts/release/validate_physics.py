@@ -16,7 +16,7 @@ release (docs/benchmark/physics.md):
 
     python -m scripts.release.validate_physics [SCENARIO ...] [--cases ID ...] [--workers N]
 
-Results go to runs/engineering/validate-physics/<time>.json.
+Results go to runs/checks/validate-physics/<time>.json.
 """
 
 import argparse
@@ -62,11 +62,11 @@ class Bench:
     """One prepared run of a released case and its World."""
 
     def __init__(self, case_id, folder):
+        from roboteam.runtime.run.setup import prepare_case
         from roboteam.runtime.world.pipeline import World
-        from roboteam.tasks.task_types import prepare
 
         run = Path(folder) / 'run'
-        prepare(case_id, run)
+        prepare_case(case_id, run)
         self.task = json.loads((run / 'private/inputs/task.json').read_text())
         self.cfg = json.loads((run / 'private/inputs/run.json').read_text())
         self.world = World(run, self.task)
@@ -154,7 +154,7 @@ def angle_deg(R):
 
 
 def task_dir():
-    return tempfile.TemporaryDirectory(prefix='rf-physics-')
+    return tempfile.TemporaryDirectory(prefix='roboteam-physics-')
 
 
 # ---- scenarios ----
@@ -726,7 +726,7 @@ def main(argv=None):
         for result in pool.map(run, work):
             results.append(result)
             print(json.dumps(result), flush=True)
-    out = ROOT / 'runs/engineering/validate-physics' / (time.strftime('%Y%m%d-%H%M%S') + '.json')
+    out = ROOT / 'runs/checks/validate-physics' / (time.strftime('%Y%m%d-%H%M%S') + '.json')
     out.parent.mkdir(parents=True, exist_ok=True)
     failed = [r for r in results if not r['passed'] and not r.get('accepted')]
     out.write_text(json.dumps(dict(results=results, passed=not failed), indent=1) + '\n')

@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 from roboteam.harness.codex import launch
 from roboteam.harness.shared import preflight_probe
+from roboteam.io import write_json
 from roboteam.launch import codex_batch as benchmark
-from roboteam.runtime.run.setup import write_json
 
 
 class CodexTaskHomesTests(unittest.TestCase):
@@ -51,7 +51,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                 )
             catalog = (Path(jobs[0]['run_directory']) / 'private/inputs/models.json').read_bytes()
             write_json(
-                root / 'runs/engineering/model-compatibility/luna_subscription/report.json',
+                root / 'runs/receipts/codex/compatibility/luna_subscription/report.json',
                 {
                     'passed': True,
                     'model_entry_sha256': hashlib.sha256(
@@ -125,7 +125,7 @@ class CodexTaskHomesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             batch = root / 'batch'
-            selected = {'provider': 'openai_api', 'env_key': 'RF_TEST_KEY'}
+            selected = {'provider': 'openai_api', 'env_key': 'ROBOTEAM_TEST_KEY'}
             launch = {'model_entry': selected, 'args': []}
             jobs = []
             for case in ('one', 'two', 'three'):
@@ -138,7 +138,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                 )
             catalog = (Path(jobs[0]['run_directory']) / 'private/inputs/models.json').read_bytes()
             write_json(
-                root / 'runs/engineering/model-compatibility/luna/report.json',
+                root / 'runs/receipts/codex/compatibility/luna/report.json',
                 {
                     'passed': True,
                     'model_entry_sha256': hashlib.sha256(
@@ -176,7 +176,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                 patch.object(benchmark.subprocess, 'check_output', return_value='test-cli'),
                 patch.object(benchmark.subprocess, 'run'),
                 patch.object(benchmark.subprocess, 'Popen', side_effect=host),
-                patch.dict(os.environ, {'RF_TEST_KEY': 'never-persist-this'}),
+                patch.dict(os.environ, {'ROBOTEAM_TEST_KEY': 'never-persist-this'}),
             ):
                 benchmark.run_batch(batch, 3)
             self.assertEqual(len(set(initialized)), 3)
@@ -199,7 +199,7 @@ class CodexTaskHomesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             batch = root / 'batch'
-            selected = {'provider': 'openai_api', 'env_key': 'RF_TEST_KEY'}
+            selected = {'provider': 'openai_api', 'env_key': 'ROBOTEAM_TEST_KEY'}
             run = batch / 'luna' / 'one'
             write_json(run / 'private/inputs/codex.json', {'model_entry': selected, 'args': []})
             write_json(run / 'private/inputs/models.json', {'models': []})
@@ -209,7 +209,7 @@ class CodexTaskHomesTests(unittest.TestCase):
             ]
             catalog = (run / 'private/inputs/models.json').read_bytes()
             write_json(
-                root / 'runs/engineering/model-compatibility/luna/report.json',
+                root / 'runs/receipts/codex/compatibility/luna/report.json',
                 {
                     'passed': True,
                     'model_entry_sha256': hashlib.sha256(
@@ -247,7 +247,7 @@ class CodexTaskHomesTests(unittest.TestCase):
                 patch.object(benchmark.subprocess, 'run'),
                 patch.object(benchmark.subprocess, 'Popen', side_effect=host),
                 patch.object(benchmark, 'try_continue', side_effect=prepared),
-                patch.dict(os.environ, {'RF_TEST_KEY': 'never-persist-this'}),
+                patch.dict(os.environ, {'ROBOTEAM_TEST_KEY': 'never-persist-this'}),
             ):
                 benchmark.run_batch(batch, 1)
             self.assertEqual(len(launched), 1)

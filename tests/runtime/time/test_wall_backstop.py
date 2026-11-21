@@ -14,6 +14,7 @@ from fake_pipeline import fake_capture
 from launch import test_claude_batch as claude_batch
 from roboteam.analysis import extract, metrics
 from roboteam.runtime.run import segments as run_segments
+from roboteam.runtime.run.setup import prepare_case
 from roboteam.runtime.time.clock import BudgetGuard, backstop_since, protocol, wall_backstop_s
 from roboteam.runtime.time.egress_pause import WorldPause
 from roboteam.runtime.time.outage import OutageMonitor
@@ -49,7 +50,7 @@ class ProtocolTests(unittest.TestCase):
 
     def test_the_world_owner_reads_the_frozen_backstop(self):
         with tempfile.TemporaryDirectory() as tmp:
-            run = task_types.prepare('transport-small-l1', Path(tmp) / 'run')
+            run = prepare_case('transport-small-l1', Path(tmp) / 'run')
             s = RuntimeService(run, BudgetWorld, fake_capture)
             try:
                 self.assertEqual(s.policy_budget.wall_backstop_s, BACKSTOP)
@@ -196,7 +197,7 @@ class ContinuationTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.run = task_types.prepare('transport-small-l1', Path(self.tmp.name) / 'run')
+        self.run = prepare_case('transport-small-l1', Path(self.tmp.name) / 'run')
         from roboteam.runtime.world.store import RuntimeStore
 
         self.store = RuntimeStore(self.run / 'private/state/runtime.sqlite')
@@ -321,13 +322,13 @@ class CodexBatchSummaryTests(unittest.TestCase):
         from unittest.mock import patch
 
         from roboteam.harness.shared import preflight_probe
+        from roboteam.io import write_json
         from roboteam.launch import codex_batch as benchmark
-        from roboteam.runtime.run.setup import write_json
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             batch = root / 'batch'
-            selected = {'provider': 'openai_api', 'env_key': 'RF_TEST_KEY'}
+            selected = {'provider': 'openai_api', 'env_key': 'ROBOTEAM_TEST_KEY'}
             jobs = []
             for case, backstopped in (('one', True), ('two', False)):
                 run = batch / 'luna' / case
@@ -342,7 +343,7 @@ class CodexBatchSummaryTests(unittest.TestCase):
                 )
             catalog = (Path(jobs[0]['run_directory']) / 'private/inputs/models.json').read_bytes()
             write_json(
-                root / 'runs/engineering/model-compatibility/luna/report.json',
+                root / 'runs/receipts/codex/compatibility/luna/report.json',
                 {
                     'passed': True,
                     'model_entry_sha256': hashlib.sha256(
@@ -372,7 +373,7 @@ class CodexBatchSummaryTests(unittest.TestCase):
                     benchmark.subprocess, 'Popen', return_value=SimpleNamespace(pid=99999, wait=lambda: 0)
                 ),
                 patch.object(benchmark, 'try_continue', return_value=(False, run_segments.BACKSTOP_REFUSAL)),
-                patch.dict(os.environ, {'RF_TEST_KEY': 'never-persist-this'}),
+                patch.dict(os.environ, {'ROBOTEAM_TEST_KEY': 'never-persist-this'}),
             ):
                 benchmark.run_batch(batch, 1)
             state = json.loads((batch / 'batch.json').read_text())

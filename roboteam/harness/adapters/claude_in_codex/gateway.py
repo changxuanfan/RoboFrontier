@@ -32,7 +32,7 @@ from roboteam.harness.adapters.claude_in_codex.monitor import summarize  # noqa:
 MODEL = 'claude-opus-5-5'
 REVISION = 'messages-adapter-v1'
 UPSTREAM = 'https://api.anthropic.com'
-OPAQUE = 'rf_claude_thinking_v1:'
+OPAQUE = 'roboteam_claude_thinking_v1:'
 BINDING_BETA = 'thinking-binding-controls-2026-08-01'
 DEFAULT_MAX_TOKENS = 64000
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')

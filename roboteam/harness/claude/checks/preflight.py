@@ -20,13 +20,13 @@ import uuid
 from pathlib import Path
 
 from roboteam.configuration import DEFAULT_MODELS
+from roboteam.harness.claude.models import model_entry
 from roboteam.harness.claude.session.native_home import config_directory, history_directory
 from roboteam.harness.claude.session.runner import run_turn
 from roboteam.harness.claude.systems.provenance import fork_provenance
 from roboteam.harness.shared import preflight_probe
 from roboteam.harness.shared.identity import fingerprint
-from roboteam.launch.claude_prepare import model_entry
-from roboteam.launch.prepare import load_env
+from roboteam.io import load_env
 from roboteam.tasks.task_types import ROOT
 
 MIN_TURN_BUDGET = 0.02
@@ -399,7 +399,7 @@ def main():
     stamp = time.strftime('%Y%m%d-%H%M%S')
     from roboteam.configuration import runs_root
 
-    output = args.output or runs_root() / 'engineering/claude-precheck' / (args.model + '-' + stamp)
+    output = args.output or runs_root() / 'receipts/claude/basic' / (args.model + '-' + stamp)
     receipt = run_precheck(
         args.model, Path(output).absolute(), args.max_budget_usd, dict(os.environ), check_fork=args.check_fork
     )

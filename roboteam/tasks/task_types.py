@@ -8,10 +8,9 @@ import shutil
 from copy import deepcopy
 from pathlib import Path
 
-from roboteam.runtime.time.clock import ACTIVE_CLOCK as ACTIVE_TIME_CLOCK
-
 from ..io import ROOT
 from ..io import file_sha256 as sha
+from .config import ACTIVE_CLOCK
 
 RELEASE = 'benchmark/release.json'
 READINESS = 'prepared_policy_trial'
@@ -77,7 +76,7 @@ def protocol_for(case, release_sha256, wall_limit_s=86400):
         source_task_sha256=case['source_files']['task.json'],
         source_scene_sha256=case['source_files']['scene.xml'],
         total_wall_limit_s=wall_limit_s,
-        clock=ACTIVE_TIME_CLOCK,
+        clock=ACTIVE_CLOCK,
         wall_backstop_s=WALL_BACKSTOP_S,
         evaluation_semantics='terminal_outcome_v2',
         experience='fresh_run_only',
@@ -156,7 +155,7 @@ def freeze_public(task, directory, public, root=ROOT, observation='images'):
         if Path(name).name != name or sha(root / source['path']) != source['sha256']:
             raise ValueError('Invalid/changed public task type file: ' + name)
     sources['guide.md'] = root / 'prompts/guides' / (task_type_name + '.md')
-    from roboteam.runtime.tools import observation_mode
+    from roboteam.tasks import observation_mode
 
     for name, source in sorted(sources.items()):
         shutil.copyfile(source, task_type_dir / name)
@@ -177,19 +176,6 @@ def freeze_public(task, directory, public, root=ROOT, observation='images'):
         public_files=hashes,
         public_projection=projection,
     )
-
-
-def prepare(case_id, directory, run_settings=None, private_puzzle_path=None, wall_limit_s=86400):
-    """Prepare only; simulator, role sessions and model inference stay stopped."""
-    import tempfile
-
-    from roboteam.runtime.run.setup import prepare_run
-
-    task = policy_task(case_id, wall_limit_s=wall_limit_s)
-    with tempfile.TemporaryDirectory(prefix='roboteam-policy-') as temporary:
-        path = Path(temporary) / 'task.json'
-        path.write_text(json.dumps(task, ensure_ascii=False) + '\n')
-        return prepare_run(directory, path, run_settings, private_puzzle_path)
 
 
 def validate_frozen_policy(task, directory):

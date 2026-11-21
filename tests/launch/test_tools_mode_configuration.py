@@ -41,7 +41,7 @@ class ToolModeConfigurationTests(unittest.TestCase):
 
     def test_a_robot_only_codex_receipt_never_replaces_the_full_one(self):
         from roboteam.cli import _receipt_name
-        from roboteam.runtime.tools.tools_mode import receipt_name
+        from roboteam.tasks.tools_mode import receipt_name
 
         self.assertEqual(receipt_name('luna', 'full'), 'luna')
         self.assertEqual(receipt_name('luna', 'robot_only'), 'luna.robot_only')

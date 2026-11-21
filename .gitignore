@@ -44,3 +44,11 @@ __pycache__/
 
 # Offline Cycles rendering, the film and their sources: local only, never published.
 /offline
+
+# Site settings of one machine (docs/getting-started.md)
+/site.toml
+/site-*.toml
+/*.site.toml
+
+# Harness CLIs installed with npm --prefix
+/.harness-cli/

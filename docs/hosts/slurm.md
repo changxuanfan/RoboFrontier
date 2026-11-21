@@ -51,7 +51,7 @@ modes:
 | Mode | What to set | How the job gets it |
 | --- | --- | --- |
 | API key (Codex `sol`, Claude `opus`, third-party models) | The model's `env_key`, e.g. `OPENAI_API_KEY`, in `.env` | `slurm-submit` loads `.env`; `sbatch --export=ALL` hands it to the job |
-| Claude subscription token (`opus_subscription`, `haiku_subscription_token`) | `CLAUDE_CODE_OAUTH_TOKEN` in the checkout's `.env`, **not** exported | `slurm-submit` strips it from the `sbatch` environment and records the `.env` path; the job reads it from there and passes it to the CLI on a pipe |
+| Claude subscription token (`opus_subscription_token`, `haiku_subscription_token`) | `CLAUDE_CODE_OAUTH_TOKEN` in the checkout's `.env`, **not** exported | `slurm-submit` strips it from the `sbatch` environment and records the `.env` path; the job reads it from there and passes it to the CLI on a pipe |
 | Codex subscription (`sol_subscription`) | `slurm.auth_mode = "subscription"` and a credential store (below) | The job takes a lease on the store after allocation |
 
 - A Claude run refuses to start when the token is in a starting environment under bubblewrap:
@@ -150,7 +150,7 @@ srun --time=10 --gpus=1 .venv/bin/roboteam --config site.toml doctor   # on a co
 
 | Harness and mode | Preflight | What `slurm-submit` checks |
 | --- | --- | --- |
-| Codex API | `.venv/bin/roboteam --config site.toml preflight --confirm-spend` on the login node | A passed `<runs root>/engineering/model-compatibility/<model>/report.json`, copied into the submission |
+| Codex API | `.venv/bin/roboteam --config site.toml preflight --confirm-spend` on the login node | A passed `<runs root>/receipts/codex/compatibility/<model>/report.json`, copied into the submission |
 | Codex subscription | The same command inside an allocation (`srun ...`), which needs node-local scratch and, with the Mac route, the connector running | That report with a `job_gateway_sha256` matching the current job gateway |
 | Claude Code | `.venv/bin/roboteam --config site.toml preflight --confirm-spend --max-budget-usd 1` | The two passed receipts for the model and CLI version, copied into the submission |
 

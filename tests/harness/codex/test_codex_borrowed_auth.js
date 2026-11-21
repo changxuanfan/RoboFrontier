@@ -5,7 +5,7 @@ const fs = require('node:fs'),
   os = require('node:os');
 const { borrowedAuth } = require('../../../roboteam/harness/codex/host/borrowed_auth');
 function fixture(t) {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-access-'));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-access-'));
   t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
   const file = path.join(folder, 'current.json');
   function write(generation = 1, account = 'fixture-account', expiry = Date.now() / 1000 + 3600) {

@@ -13,9 +13,8 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
+from roboteam.io import clone_or_copy, write_json
 from roboteam.io import file_sha256 as digest
-from roboteam.runtime.run.setup import write_json
-from roboteam.tasks.scene import clone_or_copy
 
 
 def freeze_source(source, destination, cache=None):

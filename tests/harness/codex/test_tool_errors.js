@@ -6,7 +6,7 @@ const fs = require('node:fs'),
 const { PolicyHost } = require('../../../roboteam/harness/codex/host/policy_host');
 
 async function failedReply(stdout) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-tool-error-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-tool-error-'));
   try {
     const python = path.join(root, 'python');
     fs.writeFileSync(
@@ -80,7 +80,7 @@ test('conflict guidance distinguishes query request ID from original action ID',
 });
 
 test('omitted outer ID generates a distinct request ID and preserves action target', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-tool-id-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-tool-id-'));
   try {
     const python = path.join(root, 'python');
     // A served client (pipeline_client --serve): one JSON request per line on stdin.

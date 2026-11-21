@@ -13,7 +13,7 @@ in the run's run.json; a run without the field is an images run.
 import json
 from pathlib import Path
 
-from roboteam.runtime.tools import tools_mode
+from roboteam.tasks import tools_mode
 
 IMAGES, GROUND_TRUTH = 'images', 'ground_truth'
 MODES = (IMAGES, GROUND_TRUTH)

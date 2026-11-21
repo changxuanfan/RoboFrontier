@@ -19,7 +19,7 @@ npm install --global @anthropic-ai/claude-code@2.1.316
 claude --version
 .venv/bin/roboteam plan --harness claude --level 1 --min-arms --parallel 4
 .venv/bin/roboteam prepare --harness claude --level 1 --min-arms --parallel 4 \
-  --output runs/policy/claude-l1
+  --output runs/batches/claude-l1
 ```
 
 `--render` may be left out: the default picks the renderer for the host. Preparation
@@ -39,7 +39,7 @@ through a local adapter and has its own guide: [GPT in Claude Code](gpt-in-claud
 
 ### Subscription token
 
-`opus_subscription` (Opus 5.5) and `haiku_subscription_token` (Haiku 5.5) use a subscription
+`opus_subscription_token` (Opus 5.5) and `haiku_subscription_token` (Haiku 5.5) use a subscription
 token. Generate a one-year token locally with the official command and store it in `.env` as
 `CLAUDE_CODE_OAUTH_TOKEN`:
 
@@ -58,20 +58,21 @@ work with this token; Remote Control and claude.ai connectors do not. See
 
 ### Saved login
 
-`haiku_subscription` and `haiku_subscription_directory` use a login made with Claude Code itself. Name its
-configuration directory in `ROBOTEAM_CLAUDE_HOME` before preparing:
+`opus_subscription`, `haiku_subscription` and their `_directory` variants use a login made with
+Claude Code itself. Name its configuration directory in `ROBOTEAM_CLAUDE_HOME` before preparing:
 
 ```sh
 export ROBOTEAM_CLAUDE_HOME="$HOME/.claude"
 claude auth login --claudeai
 claude auth status --json
 .venv/bin/roboteam prepare --harness claude --model haiku_subscription \
-  --cases transport-small-l1 --output runs/policy/haiku-login
+  --cases transport-small-l1 --output runs/batches/haiku-login
 ```
 
-`haiku_subscription` requires `$HOME/.claude` with `CLAUDE_CONFIG_DIR` unset. Claude Code keeps a
+`opus_subscription` and `haiku_subscription` require `$HOME/.claude` with `CLAUDE_CONFIG_DIR` unset. Claude Code keeps a
 separate credential store whenever `CLAUDE_CONFIG_DIR` is set, even to the same path, so for a
-login made with `CLAUDE_CONFIG_DIR` choose `haiku_subscription_directory` and set
+login made with `CLAUDE_CONFIG_DIR` choose `opus_subscription_directory` or
+`haiku_subscription_directory` and set
 `ROBOTEAM_CLAUDE_HOME` to that directory. The choice is part of the model fingerprint;
 receipts do not carry over between the two. The directory is frozen in the run, must lie outside
 the batch, and is never collected: collection copies only the bound transcripts and their
@@ -124,12 +125,12 @@ and caps each of the two checks by CLI-reported cost, not provider billing.
    call that returns an image of two halves in two colors, chosen at random from four, which
    the model must name; a resumed turn; and a fork of the idle session, without tools, that must
    recall the colors and whose transcript must start with the parent's. Receipt:
-   `<runs_root>/engineering/claude-precheck/<id>/receipt.json`.
+   `<runs_root>/receipts/claude/basic/<id>/receipt.json`.
 2. **Blocked parent** (`harness/claude/checks/blocked_precheck.py`), run only when the basic one
    passed. This is how an `adaptive` Controller creates delegates: start a parent session, hold
    it at an image tool call, fork it while it waits, check that the fork starts with the parent's
    history, release the parent and check its image answer. Receipt:
-   `<runs_root>/engineering/claude-blocked-precheck/<id>/receipt.json`.
+   `<runs_root>/receipts/claude/blocked-parent/<id>/receipt.json`.
 
 `--smoke-only` runs the basic check without the fork and skips the blocked one; it does not make
 a run eligible. A receipt records CLI version, requested and reported model, model
@@ -150,10 +151,10 @@ model the provider served.
 ## Run, status and stop
 
 ```sh
-.venv/bin/roboteam run runs/policy/claude-l1        # launchd on macOS; --durable on Linux
-.venv/bin/roboteam status runs/policy/claude-l1
-.venv/bin/roboteam stop runs/policy/claude-l1
-.venv/bin/roboteam continue runs/policy/claude-l1   # by hand, as the same trials
+.venv/bin/roboteam run runs/batches/claude-l1        # launchd on macOS; --durable on Linux
+.venv/bin/roboteam status runs/batches/claude-l1
+.venv/bin/roboteam stop runs/batches/claude-l1
+.venv/bin/roboteam continue runs/batches/claude-l1   # by hand, as the same trials
 ```
 
 `run` makes paid calls. It checks the receipts, the frozen configuration and every run's input
@@ -232,7 +233,7 @@ dispatch without resending. Stop cancels every role's turn, then seals.
 
 ```sh
 .venv/bin/roboteam prepare --harness claude --system hierarchical \
-  --level 1 --min-arms --parallel 2 --output runs/policy/claude-standing-l1
+  --level 1 --min-arms --parallel 2 --output runs/batches/claude-standing-l1
 ```
 
 ## Recovery

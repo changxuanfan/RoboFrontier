@@ -3,7 +3,7 @@
 It calls a paid model. A run is claimed once and never restarted; a stopped run continues
 only in a new segment (runtime/run/segments.py). The batch supervisor
 (roboteam/launch/claude_batch.py) calls run_task for each run. The status, claim and lock
-files keep their layout names (`engineering_*`), which runs already prepared record.
+files are named in runtime/run/layout.py (`supervisor_*`).
 """
 
 import fcntl
@@ -138,7 +138,7 @@ def run_task(
         raise ValueError('Expected a Claude run')
     launch = json.loads((run / 'private/inputs/claude.json').read_text())
     manifest = json.loads((run / 'private/inputs/manifest.json').read_text())
-    from roboteam.launch.claude_prepare import LAUNCH_SCHEMA
+    from roboteam.harness.claude.models import LAUNCH_SCHEMA
 
     verifier = _verifier or verify_inputs
     supervisor_type = _supervisor or RunSupervisor
@@ -183,9 +183,9 @@ def run_task(
     owner = None
     result = None
     claimed = False
-    claim = run_layout.path(run, 'engineering_claim')
-    status = run_layout.path(run, 'engineering_status')
-    lock_path = run_layout.path(run, 'engineering_lock')
+    claim = run_layout.path(run, 'supervisor_claim')
+    status = run_layout.path(run, 'supervisor_status')
+    lock_path = run_layout.path(run, 'supervisor_lock')
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     lock = lock_path.open('a+')
     try:
@@ -242,7 +242,6 @@ def run_task(
             {
                 'status': 'starting',
                 'claimed_at': time.time(),
-                'scored': False,
                 'turn_budget_usd': turn_budget_usd,
                 'task_budget_usd': total_budget_usd,
                 'wall_limit_s': wall_limit_s,
@@ -265,7 +264,7 @@ def run_task(
                 stderr=log,
                 start_new_session=True,
             )
-        write_json(status, {'status': 'waiting_for_owner', 'owner_pid': owner.pid, 'scored': False})
+        write_json(status, {'status': 'waiting_for_owner', 'owner_pid': owner.pid})
         deadline = clock() + startup_timeout_s
         connection = run / 'private/state/connections/Meta.json'
         while True:
@@ -289,7 +288,7 @@ def run_task(
                     raise ValueError('Expected the owner local loopback endpoint')
                 break
             sleep(poll_s)
-        write_json(status, {'status': 'running', 'owner_pid': owner.pid, 'scored': False})
+        write_json(status, {'status': 'running', 'owner_pid': owner.pid})
         supervisor = supervisor_type(
             policy,
             lambda: owner.poll() is None,
@@ -390,7 +389,6 @@ def run_task(
             result.update(
                 status='finished' if closed else 'needs_review',
                 owner_alive=owner_alive,
-                scored=False,
                 budget_status=budget_status,
                 budget_review_required=budget_review_required,
                 video_required=video_required,

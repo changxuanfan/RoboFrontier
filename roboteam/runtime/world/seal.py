@@ -8,8 +8,8 @@ import time
 import uuid
 from pathlib import Path
 
+from roboteam.io import write_json
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.run.setup import write_json
 from roboteam.runtime.tools.pipeline_client import client_call
 from roboteam.sim.live_video import probe_video
 from roboteam.tasks.scene import camera_names
@@ -121,7 +121,7 @@ def seal_run(store, timeout_s=30):
                     'sealed',
                     'lifecycle',
                     'fresh_observation',
-                    'report_ref',
+                    'seal_file',
                     'unresolved_action_ids',
                     'video',
                 )
@@ -141,19 +141,35 @@ def seal_run(store, timeout_s=30):
                         },
                     )
         video_path = segment_output / (task.get('recording_camera', 'global') + '-realtime.mp4')
-        video = {'path': str(video_path), **probe_video(video_path)}
+        if store.get('config').get('record_realtime_video', True) or video_path.exists():
+            video = {'recording': 'on', 'path': str(video_path), **probe_video(video_path)}
+        else:
+            # No video was asked for (render.record_realtime_video): nothing is missing.
+            video = {'recording': 'off'}
+        # At a time-limit cutoff the world takes the final images itself, before it scores and
+        # exits; the seal's own capture above then finds no world to ask. Name those images here.
+        cutoff_observation = None
+        evaluation_path = segment_output / 'evaluation.json'
+        if evaluation_path.is_file():
+            try:
+                cutoff_observation = json.loads(evaluation_path.read_text()).get('final_observation') or None
+            except ValueError:
+                cutoff_observation = None
         result = {
             'sealed': True,
             'lifecycle': store.get('lifecycle'),
             'fresh_observation': observation is not None,
-            'report_ref': str(report_path),
+            'seal_file': str(report_path),
             'unresolved_action_ids': _unsettled(store),
             'video': video,
             'final_observation': observation,
+            'cutoff_observation': cutoff_observation,
             'capture_error': capture_error,
             'shutdown_error': shutdown_error,
             'owner_was_live': live,
-            'scope': 'Engineering closure only; not a successful task or fresh offline evaluation.',
+            'scope': 'The closing record of the run: how the world ended. The score is in evaluation.json. '
+            'final_observation is the seal\'s own capture from a world that was still running; '
+            'cutoff_observation names the images the world took at its time limit.',
         }
         write_json(report_path, result)
         # owner_was_live tells a normal end from a seal after the world had already died.
@@ -163,7 +179,7 @@ def seal_run(store, timeout_s=30):
             {
                 k: result[k]
                 for k in (
-                    'report_ref',
+                    'seal_file',
                     'fresh_observation',
                     'unresolved_action_ids',
                     'video',
@@ -178,7 +194,7 @@ def seal_run(store, timeout_s=30):
                 'sealed',
                 'lifecycle',
                 'fresh_observation',
-                'report_ref',
+                'seal_file',
                 'unresolved_action_ids',
                 'video',
             )

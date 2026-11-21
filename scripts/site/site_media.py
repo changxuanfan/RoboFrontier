@@ -385,18 +385,19 @@ def starts(atlas, thumbnails, views=('global',)):
     import numpy as np
     from PIL import Image
 
+    from roboteam.runtime.run.setup import prepare_case
     from roboteam.runtime.world.pipeline import World
     from roboteam.sim.render.worker import LocalRenderer, _graphics_context
-    from roboteam.tasks.task_types import RELEASE, ROOT, prepare, read
+    from roboteam.tasks.task_types import RELEASE, ROOT, read
 
     atlas, thumbnails = Path(atlas), Path(thumbnails)
     graphics = _graphics_context()
     written = []
     for task_type in read(ROOT / RELEASE)['task_types'].values():
         for case in task_type['policy']:
-            with tempfile.TemporaryDirectory(prefix='rf-starts-') as temporary:
+            with tempfile.TemporaryDirectory(prefix='roboteam-starts-') as temporary:
                 run = Path(temporary) / 'run'
-                prepare(case['id'], run)
+                prepare_case(case['id'], run)
                 world = World(run, json.loads((run / 'private/inputs/task.json').read_text()))
                 renderer = LocalRenderer(mujoco, world.model)
                 for view in views:

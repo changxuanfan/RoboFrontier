@@ -6,7 +6,7 @@ import unittest
 
 from roboteam import cli
 from roboteam.configuration import load_configuration, validate_configuration
-from roboteam.runtime.tools import observation_mode
+from roboteam.tasks import observation_mode
 from roboteam.tasks.config import load_run_settings
 
 

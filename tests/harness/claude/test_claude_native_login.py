@@ -33,7 +33,7 @@ class NativeLoginTests(unittest.TestCase):
                 build_env(selected, {'HOME': str(home)}, home)
 
     def test_runtime_verifies_fork_history_in_the_frozen_native_home(self):
-        from roboteam.runtime.run.cli import native_fork_provenance
+        from roboteam.harness.shared.provenance import native_fork_provenance
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

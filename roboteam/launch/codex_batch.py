@@ -21,13 +21,14 @@ from roboteam.harness.codex.launch import (
     model_entry,
     require_gateway,
 )
+from roboteam.io import load_env
 from roboteam.launch.launch_schedule import LaunchSchedule
-from roboteam.launch.prepare import load_env, select_cases
+from roboteam.launch.prepare import select_cases
 from roboteam.runtime.run import layout as run_layout
 from roboteam.runtime.run.segments import try_continue, wall_backstopped
-from roboteam.runtime.run.setup import verify_inputs, write_json
+from roboteam.runtime.run.setup import prepare_case, verify_inputs, write_json
 from roboteam.tasks.config import DEFAULT_RUN_SETTINGS
-from roboteam.tasks.task_types import ROOT, prepare, read
+from roboteam.tasks.task_types import ROOT, read
 
 
 def prepare_batch(
@@ -108,7 +109,7 @@ def prepare_batch(
         write_json(run_settings_path, run_settings)
         for case in selected:
             run = output / name / case
-            prepare(case, run, run_settings_path, puzzles.get(case), wall_limit_s=wall_limit_s)
+            prepare_case(case, run, run_settings_path, puzzles.get(case), wall_limit_s=wall_limit_s)
             from roboteam.harness.codex.tool_backend import prepare as prepare_tools
 
             prepare_tools(run, p)
@@ -261,13 +262,13 @@ def _run_batch_locked(folder, parallel, batch, continuing=False, *, stack=None):
         key = launch['model_entry'].get('env_key')
         if key and not os.environ.get(key):
             raise ValueError('Missing credential environment variable: ' + key)
-        from roboteam.runtime.tools import observation_mode
-        from roboteam.runtime.tools.tools_mode import of as tools_mode_of
-        from roboteam.runtime.tools.tools_mode import receipt_name
+        from roboteam.tasks import observation_mode
+        from roboteam.tasks.tools_mode import of as tools_mode_of
+        from roboteam.tasks.tools_mode import receipt_name
 
         receipt = (
             runs_root()
-            / 'engineering/model-compatibility'
+            / 'receipts/codex/compatibility'
             / observation_mode.receipt_name(
                 receipt_name(job['model_entry'], tools_mode_of(launch['model_entry'])),
                 observation_mode.of(launch['model_entry']),
@@ -580,14 +581,14 @@ def main():
             key = selected.get('env_key')
             if key and not os.environ.get(key):
                 raise ValueError('Set ' + key + ' before live preflight')
-            scope = 'model-smoke' if args.smoke_only else 'model-compatibility'
-            from roboteam.runtime.tools import observation_mode
-            from roboteam.runtime.tools.tools_mode import of as tools_mode_of
-            from roboteam.runtime.tools.tools_mode import receipt_name
+            scope = 'smoke' if args.smoke_only else 'compatibility'
+            from roboteam.tasks import observation_mode
+            from roboteam.tasks.tools_mode import of as tools_mode_of
+            from roboteam.tasks.tools_mode import receipt_name
 
             target = (
                 runs_root()
-                / 'engineering'
+                / 'receipts/codex'
                 / scope
                 / observation_mode.receipt_name(
                     receipt_name(name, tools_mode_of(selected)), observation_mode.of(selected)

@@ -1,11 +1,12 @@
-# Manager runbook
+# Operator runbook
 
-The manager (a person, a shell script or an outer coding agent) prepares, launches, watches,
+The operator (a person, a shell script or an outer coding agent; the code and Meta's frozen
+copy of this page call it the manager) prepares, launches, watches,
 stops and collects batches. It never decides task strategy, chooses robots, scopes, grasps or
 recovery moves, or changes frozen inputs; the measured team follows its frozen role files and the
 [collaboration guide](../../prompts/guides/collaboration/guide.md). Ready-made prompts for an
-outer agent: [Codex](manager-codex.md), [Claude Code](manager-claude.md).
-State and evidence boundaries are in the [architecture](architecture.md).
+outer agent: [Codex](operator-prompt-codex.md), [Claude Code](operator-prompt-claude.md).
+State and evidence boundaries are in the [architecture](../development/architecture.md).
 
 ## Keep the policy's inputs clean
 
@@ -24,10 +25,10 @@ Follow the [command-line guide](../cli.md):
 .venv/bin/roboteam bootstrap
 .venv/bin/roboteam doctor
 .venv/bin/roboteam plan --level 1 --min-arms --parallel 4
-.venv/bin/roboteam prepare --level 1 --min-arms --parallel 4 --output runs/policy/NEW
+.venv/bin/roboteam prepare --level 1 --min-arms --parallel 4 --output runs/batches/NEW
 .venv/bin/roboteam preflight --confirm-spend      # paid; Claude Code also needs --max-budget-usd
-.venv/bin/roboteam run runs/policy/NEW
-.venv/bin/roboteam status runs/policy/NEW
+.venv/bin/roboteam run runs/batches/NEW
+.venv/bin/roboteam status runs/batches/NEW
 ```
 
 1. Inspect the plan and get spend authorization before `preflight` and `run`.
@@ -37,7 +38,7 @@ Follow the [command-line guide](../cli.md):
    or shared-filesystem boundary; a live process or lock alone does not show healthy progress.
 4. `stop` requests a stop; read the seal and `needs_review` fields afterwards.
 5. A run that stopped unexpectedly continues by itself once; continue others with
-   `roboteam continue` only when asked ([continuing a stopped run](../runs/continuation.md)).
+   `roboteam continue` only when asked ([continuing a stopped run](continuation.md)).
 
 The task limit is 24 h of active time from START, scored at the cutoff. Do not shorten it for a
 test in the public task; use `batch.task_wall_limit_s` in a new batch or an engineering stop. A
@@ -75,8 +76,8 @@ stop is not a success and not a physical checkpoint.
 For a run outside a managed batch, the runtime CLI seals a world and exports committed events:
 
 ```sh
-.venv/bin/python -m roboteam.runtime.run.cli --run-dir runs/EXISTING seal --data '{"timeout_s":30}'
-.venv/bin/python -m roboteam.runtime.run.cli --run-dir runs/EXISTING export --data '{"path":"/ABSOLUTE/OUTPUT.jsonl"}'
+.venv/bin/python -m roboteam.runtime.run.admin --run-dir runs/EXISTING seal --data '{"timeout_s":30}'
+.venv/bin/python -m roboteam.runtime.run.admin --run-dir runs/EXISTING export --data '{"path":"/ABSOLUTE/OUTPUT.jsonl"}'
 ```
 
 Sealing blocks new actions, waits for running ones, requests fresh final images and closure from
@@ -87,4 +88,4 @@ its own `seal.json`, which records closure, fresh final observations, unknown ac
 readability. Do not seal a world that is only paused.
 
 Collected evidence includes task sessions, motion and records, never authentication stores
-([evidence storage](../runs/evidence-storage.md), [verification boundaries](test-coverage.md)).
+([evidence storage](evidence-storage.md), [verification boundaries](../development/test-coverage.md)).

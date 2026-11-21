@@ -5,13 +5,13 @@ sessions, calls no model, advances no physics, opens no SQLite database and chan
 the batch.
 
 ```sh
-.venv/bin/python -m scripts.dev.view_batch runs/policy/my-batch
+.venv/bin/python -m scripts.dev.view_batch runs/batches/my-batch
 ```
 
 It prints a loopback URL (`127.0.0.1`, a free port; `--port 8088` picks one). Open it on the
 same host, or through an SSH tunnel for a remote host. Ctrl-C stops the viewer, not the batch.
 
-The page refreshes every three seconds from `batch.json`, `engineering-status.json` when present
+The page refreshes every three seconds from `batch.json`, `supervisor-status.json` when present
 and each run's saved `private/outputs/runtime.json`. Saved state can lag execution; the page shows
 each snapshot's age and reports missing counts as missing, never as zero or as START. It does
 not prove that a process is alive: use `roboteam status` to supervise.

@@ -25,8 +25,8 @@ from roboteam.harness.claude.systems.provenance import (
     transcript_rows,
 )
 from roboteam.harness.claude.systems.request_identity import matches_binding
-from roboteam.launch.results.host_metrics import host_event
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
+from roboteam.runtime.run.host_log import host_event
 from roboteam.runtime.tools.delegation import Delegations
 
 ACTOR = re.compile(r'Delegate_[a-f0-9]{12}\Z')

@@ -89,7 +89,7 @@ class BatchViewerTests(unittest.TestCase):
             base = Path(temporary).resolve()
             run = self.fixture(base, harness='claude')
             write(
-                base / 'control/engineering-status.json',
+                base / 'control/supervisor-status.json',
                 {
                     'status': 'running',
                     'jobs': [

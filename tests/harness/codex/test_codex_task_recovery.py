@@ -14,8 +14,8 @@ from harness.shared.test_harness_parity import prepared
 from roboteam.harness.codex import recover_task as recovery
 from roboteam.harness.codex.job_harness import task_id
 from roboteam.harness.shared import recovery as common_recovery
+from roboteam.io import write_json
 from roboteam.runtime.run.layout import path as run_path
-from roboteam.runtime.run.setup import write_json
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.tasks.config import ROOT
 
@@ -42,7 +42,7 @@ class RecoveryTests(unittest.TestCase):
         self.store.event(
             'RUN_SEALED',
             'Meta',
-            {'owner_was_live': True, 'report_ref': str(self.run / 'private/outputs/seal.json')},
+            {'owner_was_live': True, 'seal_file': str(self.run / 'private/outputs/seal.json')},
         )
         write_json(
             self.run / 'private/outputs/seal.json',

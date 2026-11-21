@@ -112,7 +112,7 @@ def main():
     batch = json.loads((args.batch / 'batch.json').read_text())
     # A Claude draft's batch.json keeps its static preparation status; the supervisor's
     # snapshot holds the live one.
-    snapshot = run_layout.batch_path(args.batch, 'engineering_status')
+    snapshot = run_layout.batch_path(args.batch, 'supervisor_status')
     status = (
         json.loads(snapshot.read_text()).get('status', batch['status'])
         if snapshot.is_file()

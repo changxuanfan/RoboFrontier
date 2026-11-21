@@ -100,7 +100,7 @@ def tasks():
             # The same rule overlay a new policy run receives.
             task = policy_task(record['id'])
             public = public_task(task)
-            with tempfile.TemporaryDirectory(prefix='rf-site-public-') as temporary:
+            with tempfile.TemporaryDirectory(prefix='roboteam-site-public-') as temporary:
                 for folder in ('public/inputs', 'private/inputs'):
                     (Path(temporary) / folder).mkdir(parents=True)
                 freeze_public(task, Path(temporary), public)

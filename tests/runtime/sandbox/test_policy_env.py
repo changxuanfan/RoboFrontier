@@ -135,7 +135,7 @@ class AccessTableTests(Fixture):
             self.freeze()
 
     def test_the_rest_of_the_batch_stays_closed_even_when_scratch_is_under_tmp(self):
-        scratch = Path(tempfile.mkdtemp(prefix='rf-', dir='/tmp')).resolve()
+        scratch = Path(tempfile.mkdtemp(prefix='roboteam-', dir='/tmp')).resolve()
         self.addCleanup(lambda: __import__('shutil').rmtree(scratch, ignore_errors=True))
         run = scratch / 'runs/profile/case-a'
         with patch.object(policy_access.sys, 'platform', 'darwin'):
@@ -211,7 +211,7 @@ class AccessTableTests(Fixture):
             self.assertIsNone(policy_env.cli_version(str(Path(folder) / 'absent')))
 
     def test_linux_refuses_a_run_or_tmpdir_under_tmp(self):
-        scratch = Path(tempfile.mkdtemp(prefix='rf-', dir='/tmp')).resolve()
+        scratch = Path(tempfile.mkdtemp(prefix='roboteam-', dir='/tmp')).resolve()
         self.addCleanup(lambda: __import__('shutil').rmtree(scratch, ignore_errors=True))
         run = scratch / 'runs/profile/case-a'
 

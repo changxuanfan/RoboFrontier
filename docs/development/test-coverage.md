@@ -5,14 +5,14 @@ contacted. This page says what it exercises and what it does not establish. It d
 coverage; a pass is the report the checker writes.
 
 ```sh
-.venv/bin/python -m scripts.dev.check_runtime --report runs/engineering/full.json
-.venv/bin/python -m scripts.dev.check_runtime --protocol-only --report runs/engineering/protocol.json
+.venv/bin/python -m scripts.dev.check_runtime --report runs/checks/full.json
+.venv/bin/python -m scripts.dev.check_runtime --protocol-only --report runs/checks/protocol.json
 ```
 
 Both modes also run every Node host test (`tests/**/test_*.js` with `node --test`) and the Meta
 dispatcher scenarios (`tests/harness/codex/test_meta_dispatcher.cjs`), check the syntax of every
 JavaScript file, of the inline scripts in `roboteam/runtime/world/dashboard.html` and of any
-`javascript` code block in `docs/development/manager-runbook.md` and
+`javascript` code block in `docs/runs/operator-runbook.md` and
 `prompts/guides/collaboration/tools.md`, compile every Python file, and check that every
 relative link in tracked Markdown resolves inside the checkout.
 
@@ -78,4 +78,4 @@ not atomic. A crashed world is not restored in place; a stopped run continues in
 from its last recorded frame ([continuing a stopped run](../runs/continuation.md)).
 
 State and evidence boundaries are in [architecture](architecture.md); operating instructions in
-the [manager runbook](manager-runbook.md); how to run the tests in [testing](testing.md).
+the [operator runbook](../runs/operator-runbook.md); how to run the tests in [testing](testing.md).

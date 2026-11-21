@@ -56,9 +56,9 @@ class CommunicationReportTest(unittest.TestCase):
             batch, output = Path(tmp) / 'batch', Path(tmp) / 'report.json'
             (batch / 'control').mkdir(parents=True)
             (batch / 'batch.json').write_text(
-                json.dumps({'status': 'prepared_not_started', 'jobs': [], 'layout': 'batch-v2'})
+                json.dumps({'status': 'prepared_not_started', 'jobs': [], 'layout': 'batch-v3'})
             )
-            (batch / 'control/engineering-status.json').write_text(json.dumps({'status': 'running'}))
+            (batch / 'control/supervisor-status.json').write_text(json.dumps({'status': 'running'}))
             with mock.patch('sys.argv', ['communication_report', str(batch), '--output', str(output)]):
                 main()
             self.assertEqual(json.loads(output.read_text())['status'], 'running')

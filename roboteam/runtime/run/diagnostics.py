@@ -23,7 +23,7 @@ def _checked(command, *, env, timeout=60):
 
 
 def _native_probe(harness, backend='native', robot_only=False):
-    with tempfile.TemporaryDirectory(prefix='rf-native-probe-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='roboteam-native-probe-') as temporary:
         # Do not import another Desktop/session's mutable config or credentials.
         env = {
             key: value

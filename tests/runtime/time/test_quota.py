@@ -98,7 +98,7 @@ class WorldQuotaPauseTests(active.Fixture):
         self.s.store.put('physics_state', 'running')
 
     def test_held_until_the_reset_then_resumed_with_a_continuation_window(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         request = {
             'actor': 'Controller',

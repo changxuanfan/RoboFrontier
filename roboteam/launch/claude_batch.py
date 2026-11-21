@@ -124,7 +124,7 @@ def _run_once_continued(runner, run_dir, base_env, continuing=False, **options):
 def _preflight(jobs, env, verifier, continuing=False, budgets=(None, None)):
     for job in jobs:
         run = Path(job['run_directory'])
-        if _r(run, 'stop').exists() or (_r(run, 'engineering_claim').exists() and not continuing):
+        if _r(run, 'stop').exists() or (_r(run, 'supervisor_claim').exists() and not continuing):
             raise ValueError('A run is stopped or already claimed')
         changed = verifier(run)
         if changed:
@@ -201,12 +201,12 @@ def run_batch(
     _positive(startup_timeout_s, 'startup timeout', 86400)
     jobs = _jobs(folder)
     schedule = LaunchSchedule(startup_interval_s)
-    lock_path = _b(folder, 'engineering_lock')
+    lock_path = _b(folder, 'supervisor_lock')
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open('a+') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        claim = _b(folder, 'engineering_claim')
-        state_path = _b(folder, 'engineering_status')
+        claim = _b(folder, 'supervisor_claim')
+        state_path = _b(folder, 'supervisor_status')
         if continuing:
             state = json.loads(state_path.read_text())
             if not claim.exists() or state.get('status') != 'running':
@@ -232,11 +232,10 @@ def run_batch(
                 out.flush()
                 os.fsync(out.fileno())
             state = {
-                'schema': 'roboteam.claude-engineering-status.v1',
+                'schema': 'roboteam.claude-batch-status.v1',
                 'status': 'running',
                 'started_at': time.time(),
                 'parallel': parallel,
-                'scored': False,
                 'turn_budget_usd': turn_budget_usd,
                 'task_budget_usd': total_budget_usd,
                 'wall_limit_s': wall_limit_s,

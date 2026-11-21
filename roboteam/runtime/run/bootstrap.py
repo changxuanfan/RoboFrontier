@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.tools import observation_mode, tools_mode
+from roboteam.tasks import observation_mode, tools_mode
 
 HARNESS_LINES = {
     'claude': (
@@ -23,7 +23,7 @@ HARNESS_LINES = {
         '(spawn_agent and similar); split work only through robot delegate.'
     ),
 }
-# The last line of a ground_truth run's first message (runtime/tools/observation_mode.py);
+# The last line of a ground_truth run's first message (tasks/observation_mode.py);
 # {{FOLDER}} is the run's ground-truth folder.
 GROUND_TRUTH_LINES = {
     harness: (
@@ -40,7 +40,7 @@ GROUND_TRUTH_LINES = {
     )
 }
 # The last line of a robot_only run's first message, the same on every harness: the robot
-# tool is the role's only tool (runtime/tools/tools_mode.py).
+# tool is the role's only tool (tasks/tools_mode.py).
 ROBOT_ONLY_LINE = (
     'To view an image listed in the task (initial_reference_images, robot_layout_image, '
     'target.reference_image), call robot with op public_file and data {"path": "<listed path>"}. '

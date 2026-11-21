@@ -70,7 +70,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
             },
         )
         if harness == 'claude':
-            write(batch / 'control/engineering-status.json', {'status': status, 'jobs': [job]})
+            write(batch / 'control/supervisor-status.json', {'status': status, 'jobs': [job]})
             home = run / 'private/harness/config'
             sessions = home / 'projects/project'
             sessions.mkdir(parents=True)
@@ -282,7 +282,7 @@ class BenchmarkCollectionTests(unittest.TestCase):
         for name in (
             'control/supervisor.lock',
             'model/demo/private/state/control/world.lock',
-            'model/demo/private/state/control/engineering.lock',
+            'model/demo/private/state/control/supervisor.lock',
         ):
             with self.subTest(lock=name), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)

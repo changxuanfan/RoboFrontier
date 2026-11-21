@@ -1,10 +1,10 @@
-"""Experimental deterministic dispatch for an existing adaptive Claude world."""
+"""Deterministic dispatch for an existing adaptive Claude world."""
 
 import threading
 import time
 
 from roboteam.harness.claude.session.budget import BudgetExhausted
-from roboteam.runtime.run.cli import execute
+from roboteam.runtime.run.admin import execute
 from roboteam.runtime.tools.delegation import Delegations
 
 

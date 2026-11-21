@@ -4,6 +4,7 @@
 
 **Benchmarking Vision-Based Multi-Agent Control of Many Robot Arms in Real Time**
 
+[Paper](https://arxiv.org/abs/2611.22138) ·
 [Project page](https://changxuanfan.github.io/RoboTeam/) ·
 [Tasks](docs/tasks/README.md) ·
 [Getting started](docs/getting-started.md) ·
@@ -154,9 +155,9 @@ https://github.com/user-attachments/assets/f4abfc06-8e7c-433a-bc16-aa3cb9df9641
 | | |
 | --- | --- |
 | **Host** | macOS on Apple silicon, Linux with an NVIDIA GPU or CPU only, a Slurm cluster, a RunPod pod or Docker. Each has a guide in [docs/hosts/](docs/README.md). |
-| **Software** | Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js, `ffmpeg`, and the CLI of the harness you run: Claude Code 2.1.316 (`claude`) or Codex 0.165.0 (`codex`). Other versions are refused. |
+| **Software** | Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js, `ffmpeg`, and the CLI of the harness you run: Claude Code 2.1.316 (`claude`) or Codex 0.165.0 (`codex`). Other versions are refused, so that every run uses the CLI the results were measured with. |
 | **Linux sandbox** | `bwrap` and `socat` where user namespaces work; otherwise Linux 6.7 or newer (Landlock ABI 4) with `libseccomp`. |
-| **A model account** | A Claude subscription token, or an API key for one of the models in [`models.json`](models.json). |
+| **A model account** | An API key, a Claude subscription (token or saved login) or a ChatGPT login, for one of the models in [`models.json`](models.json). |
 
 ### 2. Install
 
@@ -167,7 +168,20 @@ uv sync --locked
 .venv/bin/roboteam bootstrap
 ```
 
-`bootstrap` downloads the pinned task assets and checks every file against its hash.
+`bootstrap` downloads the pinned task assets and checks every file against its hash. The
+project runs from this checkout; it is not installed with `pip`.
+
+Install the harness CLI at its pinned version. A `--prefix` install keeps it apart from a
+newer CLI you use yourself; put its `node_modules/.bin` first on `PATH`:
+
+```sh
+npm install --prefix "$PWD/.harness-cli" @anthropic-ai/claude-code@2.1.316   # Claude Code
+npm install --prefix "$PWD/.harness-cli" @openai/codex@0.165.0               # Codex
+export PATH="$PWD/.harness-cli/node_modules/.bin:$PATH"
+```
+
+On Ubuntu or Debian, the system packages are
+`sudo apt-get install ffmpeg bubblewrap socat libosmesa6`.
 
 ### 3. Credentials
 
@@ -176,10 +190,17 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Fill in only the variable your model reads: `OPENAI_API_KEY` for Codex's default `sol`
-(gpt-6.1-sol), `ANTHROPIC_API_KEY` for Claude Code's default `opus` (claude-opus-5-5), or
-`CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) for a Claude subscription model. Keep credentials in `.env`, not exported in the shell: runs load it themselves and
-hand the Claude token to the CLI on a pipe, so no policy shell can read it.
+Fill in only the variable your model reads. Keep credentials in `.env`, not exported in the
+shell: runs load it themselves and hand the Claude token to the CLI on a pipe, so no policy
+shell can read it.
+
+| You have | Model (`--model`) | What to set |
+| --- | --- | --- |
+| An OpenAI API key | `sol` (the Codex default), `luna` | `OPENAI_API_KEY` in `.env` |
+| An Anthropic API key | `opus` (the Claude Code default), `haiku` | `ANTHROPIC_API_KEY` in `.env` |
+| A Claude subscription, with a token | `opus_subscription_token`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` in `.env`, from `claude setup-token` |
+| A Claude subscription, logged in with Claude Code | `opus_subscription`, `haiku_subscription` | Nothing in `.env`. `export ROBOTEAM_CLAUDE_HOME="$HOME/.claude"` and leave `CLAUDE_CONFIG_DIR` unset ([saved login](docs/harness/claude-code.md#saved-login)) |
+| A ChatGPT plan | `sol_subscription`, `luna_subscription` | Nothing in `.env`. Log in once in the project's own Codex home, `CODEX_HOME=~/.roboteam/codex-home codex login`, and set `runtime.codex_home_scope = "shared"` in your TOML ([Codex login](docs/harness/codex.md#authentication)). Your personal `~/.codex` is never used |
 
 ### 4. Choose what to run
 
@@ -215,12 +236,21 @@ host. Build it once per host, in a folder outside your home folder and the repos
 check that its sandbox holds:
 
 ```sh
+# macOS: /Users/Shared/roboteam is the default base
 .venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam   # prints its root
 .venv/bin/python -m scripts.release.check_policy_env --harness claude /Users/Shared/roboteam/policy-env-<id>
 ```
 
-On macOS that base is the default. On Linux pick one (outside `/tmp`) and set
-`ROBOTEAM_POLICY_ENV_BASE` to it in the shell that prepares runs. The check starts each
+```sh
+# Linux: pick a base outside your home folder, the checkout and /tmp, and keep it exported
+export ROBOTEAM_POLICY_ENV_BASE=/var/lib/roboteam/env      # any folder you can write
+.venv/bin/python -m scripts.release.build_policy_env --base $ROBOTEAM_POLICY_ENV_BASE   # prints its root
+.venv/bin/python -m scripts.release.check_policy_env --harness claude $ROBOTEAM_POLICY_ENV_BASE/policy-env-<id>
+```
+
+`prepare` refuses on Linux without `ROBOTEAM_POLICY_ENV_BASE`. Where the host forbids
+unprivileged user namespaces (Ubuntu 24.04 does by default), the check reports
+`landlock-v1` instead of `claude-sandbox`; that is expected. The check starts each
 harness's real CLI against a local stub, with no model calls, and tries about 50 things a policy
 must and must not be able to do; `prepare` refuses an environment that has not passed it.
 [Policy environment](docs/hosts/policy-environment.md) covers what each platform allows.
@@ -229,9 +259,9 @@ must and must not be able to do; `prepare` refuses an environment that has not p
 
 ```sh
 .venv/bin/roboteam preflight --harness claude --confirm-spend --max-budget-usd 1
-.venv/bin/roboteam prepare --harness claude --task-types relay --level 1 --output runs/policy/claude-relay-l1
-.venv/bin/roboteam run runs/policy/claude-relay-l1
-.venv/bin/roboteam status runs/policy/claude-relay-l1
+.venv/bin/roboteam prepare --harness claude --task-types relay --level 1 --output runs/batches/claude-relay-l1
+.venv/bin/roboteam run runs/batches/claude-relay-l1
+.venv/bin/roboteam status runs/batches/claude-relay-l1
 ```
 
 - `preflight` makes a few small, paid calls to confirm the model and CLI behave as the runtime
@@ -263,20 +293,28 @@ is `paths.runs_root`, default `runs/`). [Getting started](docs/getting-started.m
 | [`site/`](site/DESIGN.md) | The project page |
 | [`docker/`](docker/Dockerfile) | The container image |
 
+To change the code, read [CONTRIBUTING.md](CONTRIBUTING.md); [CHANGELOG.md](CHANGELOG.md)
+lists what changed between releases.
+
 ## Citation
 
 ```bibtex
-@misc{roboteam2026,
-  title  = {RoboTeam: Benchmarking Vision-Based Multi-Agent Control of
-            Many Robot Arms in Real Time},
-  author = {Fan, Changxuan and others},
-  year   = {2026},
-  url    = {https://github.com/changxuanfan/RoboTeam}
+@article{fan2026roboteam,
+  title   = {RoboTeam: Benchmarking Vision-Based Multi-Agent Control of
+             Many Robot Arms in Real Time},
+  author  = {Fan, Changxuan and Xie, Zhongwei and Zhang, Boyi and Hu, Shaoli and
+             Xu, Chang and Ren, Xiyu and Li, Yufei and Xiao, Qiao and Jing, Huihao and
+             Chung, Kawai and Hu, Wenbin and Luo, Hongyu and Xie, Lingyun and
+             Gao, Yisen and Li, Chunyang and Huang, Haoyu and Song, Wuganjing and
+             Liu, Yuxuan and Tang, Chiu Yeung and Zhan, Fangneng and Yang, Xi},
+  journal = {arXiv preprint arXiv:2611.22138},
+  year    = {2026},
+  url     = {https://arxiv.org/abs/2611.22138}
 }
 ```
 
-First author: **Changxuan Fan**, Hong Kong University of Science and Technology. The
-remaining author list, publication status and paper URL are not finalized.
+The paper is [arXiv:2611.22138](https://arxiv.org/abs/2611.22138);
+[`CITATION.cff`](CITATION.cff) has the same record.
 
 ## License
 

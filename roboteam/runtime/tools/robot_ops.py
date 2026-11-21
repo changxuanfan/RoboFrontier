@@ -30,11 +30,11 @@ POLICY_OPS = frozenset(
         'job',
         'finish',
         'pending',
-        # Only a robot_only run accepts these (runtime/tools/tools_mode.py); the runtime
+        # Only a robot_only run accepts these (tasks/tools_mode.py); the runtime
         # refuses them elsewhere.
         'public_file',
         'skills',
-        # Only a ground_truth run accepts this (runtime/tools/observation_mode.py).
+        # Only a ground_truth run accepts this (tasks/observation_mode.py).
         'state',
     )
 )

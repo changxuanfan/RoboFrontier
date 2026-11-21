@@ -1,4 +1,4 @@
-"""What a policy script can and cannot do, as it runs inside an harness's sandbox.
+"""What a policy script can and cannot do, as it runs inside a harness's sandbox.
 
 scripts/release/check_policy_env.py copies this file into a throwaway run and has each harness's
 real CLI run it as an ordinary shell command. It writes ok/denied results to a file, once

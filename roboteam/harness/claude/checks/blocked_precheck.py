@@ -15,13 +15,13 @@ import uuid
 from pathlib import Path
 
 from roboteam.harness.claude.checks.preflight import MIN_TURN_BUDGET, PROMPTS, claude_version, setup_run
+from roboteam.harness.claude.models import model_entry
 from roboteam.harness.claude.session.native_home import config_directory, history_directory
 from roboteam.harness.claude.session.runner import run_turn
 from roboteam.harness.claude.systems.provenance import fork_provenance, history, transcript_rows
 from roboteam.harness.shared import preflight_probe
 from roboteam.harness.shared.identity import fingerprint
-from roboteam.launch.claude_prepare import model_entry
-from roboteam.launch.prepare import load_env
+from roboteam.io import load_env
 from roboteam.tasks.task_types import ROOT
 
 
@@ -275,7 +275,7 @@ def main():
         raise SystemExit('Missing credential variable: ' + selected['env_key'])
     from roboteam.configuration import runs_root
 
-    output = args.output or runs_root() / 'engineering/claude-blocked-precheck' / (
+    output = args.output or runs_root() / 'receipts/claude/blocked-parent' / (
         args.model + '-' + time.strftime('%Y%m%d-%H%M%S')
     )
     result = run_blocked_precheck(args.model, output, args.max_budget_usd, dict(os.environ))

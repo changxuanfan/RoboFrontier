@@ -33,7 +33,7 @@ from roboteam.tasks.config import action_limits, load_task, panda_control_profil
 
 
 def atomic_json(path, value):
-    from roboteam.runtime.run.setup import write_json
+    from roboteam.io import write_json
 
     write_json(path, value)
 
@@ -62,6 +62,14 @@ class Arm(PandaArm):
 
 class World:
     segment = 0
+
+    def restore_record(self):
+        """The restore record of the segment this world was started for, or None for segment 0.
+
+        The evaluators (roboteam/tasks/evaluate.py) read their carried episode history from it."""
+        from roboteam.runtime.run.segments import current_restore
+
+        return current_restore(self.directory)
 
     def __init__(self, directory, task=None):
         self.directory = Path(directory)
@@ -394,7 +402,7 @@ class World:
                 self.model,
                 self.data,
                 hz=hz,
-                cache=runs_root() / 'state-assets',
+                cache=runs_root() / 'scene-cache',
             )
 
     def end_trial(self):
@@ -593,14 +601,14 @@ class Service(RuntimeService):
                 if path == '/viewer/' + observer:
                     self.send_response(302)
                     self.send_header(
-                        'Set-Cookie', 'rf_observer=' + observer + '; HttpOnly; SameSite=Strict; Path=/'
+                        'Set-Cookie', 'roboteam_observer=' + observer + '; HttpOnly; SameSite=Strict; Path=/'
                     )
                     self.send_header('Location', '/')
                     self.end_headers()
                     return
                 cookie = SimpleCookie()
                 cookie.load(self.headers.get('Cookie', ''))
-                if not cookie.get('rf_observer') or cookie['rf_observer'].value != observer:
+                if not cookie.get('roboteam_observer') or cookie['roboteam_observer'].value != observer:
                     self.send_error(403, 'Use the observer link saved for Meta')
                     return
                 if path == '/':

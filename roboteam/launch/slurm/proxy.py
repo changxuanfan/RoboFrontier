@@ -29,6 +29,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from roboteam.runtime.time.egress_record import EgressError, read_record
+
 SCHEMA = 'roboteam.slurm-egress.v3'
 HEARTBEAT_S = 2
 STALE_S = 12
@@ -41,10 +43,6 @@ CHANNEL_WINDOW = 524288
 # this many consecutive failed probes mark the route down (about 8-17 s after
 # an outage starts); one successful probe marks it up again.
 PROBE_FAILURES = 3
-
-
-class EgressError(RuntimeError):
-    pass
 
 
 def require_local_storage(root):
@@ -78,27 +76,6 @@ def atomic(path, value):
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
-
-
-def read_record(path):
-    for _ in range(4):
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
-        with os.fdopen(fd, 'rb') as stream:
-            info = os.fstat(stream.fileno())
-            if (
-                not stat.S_ISREG(info.st_mode)
-                or info.st_uid != os.getuid()
-                or info.st_mode & 0o077
-                or info.st_size > 16384
-                or info.st_nlink > 1
-            ):
-                raise EgressError('Unsafe egress readiness record')
-            if info.st_nlink == 0:
-                # Atomic heartbeat publication can unlink the inode after open
-                # but before fstat. Reopen the path; never admit that old inode.
-                continue
-            return json.loads(stream.read(16385))
-    raise EgressError('Egress readiness record kept changing during read')
 
 
 def pause_marker(identity, instance, watcher, pause_id, claim):
@@ -190,7 +167,7 @@ def health(record, url):
     try:
         connection.request('GET', '/health', headers={'Proxy-Authorization': 'Basic ' + token})
         response = connection.getresponse()
-        if response.status != 200 or response.getheader('X-RF-Instance') != record['instance']:
+        if response.status != 200 or response.getheader('X-RoboTeam-Instance') != record['instance']:
             raise EgressError('Egress listener identity check failed')
         response.read(1024)
     except (OSError, http.client.HTTPException):
@@ -634,7 +611,7 @@ class ComputeRelay:
                     (
                         'HTTP/1.1 '
                         + status
-                        + '\r\nContent-Length: 0\r\nX-RF-Instance: '
+                        + '\r\nContent-Length: 0\r\nX-RoboTeam-Instance: '
                         + self.instance
                         + '\r\n\r\n'
                     ).encode()

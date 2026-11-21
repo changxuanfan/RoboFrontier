@@ -119,7 +119,7 @@ class EgressPauseTests(unittest.TestCase):
         self.assertTrue(self.service.shutdown)
 
     def test_network_continuation_waits_for_original_receipt_and_claims_only_once(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         self.call('A', 'gripper', {'state': 'close', 'wait': False}, 'original-before-network')
         self.pause()

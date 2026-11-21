@@ -91,8 +91,8 @@ no orphan holding the world lock.
 ## Continuing by hand
 
 ```sh
-.venv/bin/roboteam continue runs/policy/my-batch                        # every run that may continue
-.venv/bin/roboteam continue runs/policy/my-batch --cases dial-small-l1  # only these
+.venv/bin/roboteam continue runs/batches/my-batch                        # every run that may continue
+.venv/bin/roboteam continue runs/batches/my-batch --cases dial-small-l1  # only these
 ```
 
 The batch must not be running. Each run gets its next segment (`segments.prepare_retry` with
@@ -149,7 +149,7 @@ end time, and uses no further continuation.
 | Anything else | Nothing continues by itself. Use `roboteam continue`, or [task recovery](recovery.md) for a host that closed on review while its world stayed paused |
 
 ```sh
-.venv/bin/roboteam run runs/policy/my-batch --continue
+.venv/bin/roboteam run runs/batches/my-batch --continue
 ```
 
 ## Known approximations

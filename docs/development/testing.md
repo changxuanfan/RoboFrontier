@@ -33,7 +33,7 @@ npx --yes prettier@3 --write roboteam/harness/codex/host/*.js "tests/**/*.js" "t
 ```sh
 .venv/bin/python -m scripts.dev.run_tests                          # one worker per CPU
 .venv/bin/python -m scripts.dev.run_tests runtime harness.codex.test_codex_quota --workers 4
-.venv/bin/python -m scripts.dev.run_tests --report runs/engineering/all-tests.json
+.venv/bin/python -m scripts.dev.run_tests --report runs/checks/all-tests.json
 ```
 
 Each `tests/**/test_*.py` module runs in its own process and each `tests/**/test_*.js` with
@@ -57,8 +57,8 @@ node --test tests/harness/codex/test_tool_errors.js
 ## The runtime checker
 
 ```sh
-.venv/bin/python -m scripts.dev.check_runtime --protocol-only --report runs/engineering/protocol.json
-.venv/bin/python -m scripts.dev.check_runtime --report runs/engineering/full.json
+.venv/bin/python -m scripts.dev.check_runtime --protocol-only --report runs/checks/protocol.json
+.venv/bin/python -m scripts.dev.check_runtime --report runs/checks/full.json
 ```
 
 `--protocol-only` runs a fixed set of contract modules with MuJoCo model creation and stepping
@@ -75,7 +75,7 @@ syntax checks and the documentation link check. What each covers is in
 ```
 
 Scenarios: `rest`, `carry`, `place`, `push`, `collide`, `relay`, `dial`, `timing`. Results go to
-`runs/engineering/validate-physics/<time>.json`; `tests/sim/test_validation.py` runs a fast
+`runs/checks/validate-physics/<time>.json`; `tests/sim/test_validation.py` runs a fast
 part. The criteria and the results are in [physics](../benchmark/physics.md#validation).
 
 ## Fault injection

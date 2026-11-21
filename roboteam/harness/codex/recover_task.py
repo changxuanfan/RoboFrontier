@@ -29,10 +29,10 @@ from roboteam.harness.shared.recovery import (
 from roboteam.harness.shared.recovery import (
     ledger as _ledger,
 )
+from roboteam.io import write_json
 from roboteam.runtime.run import segments as run_segments
 from roboteam.runtime.run.layout import batch_path
 from roboteam.runtime.run.layout import path as run_path
-from roboteam.runtime.run.setup import write_json
 from roboteam.runtime.world.store import RuntimeStore
 
 

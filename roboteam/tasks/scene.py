@@ -1,15 +1,13 @@
 """Released-scene checks, freezing a scene into a run, and its camera names."""
 
-import ctypes
 import hashlib
 import json
 import math
-import os
 import shutil
 import xml.etree.ElementTree as ET
 from copy import deepcopy
 
-from ..io import ROOT
+from ..io import ROOT, clone_or_copy
 
 
 def validate_scene_asset(task):
@@ -43,46 +41,6 @@ def validate_scene_asset(task):
     if len(task['cameras']) != len(set(task['cameras'])) or set(task['cameras']) != actual:
         raise ValueError('Camera list differs from generated scene')
     return folder, env
-
-
-try:  # macOS clonefile(2); absent elsewhere.
-    _clonefile = ctypes.CDLL(None, use_errno=True).clonefile
-    _clonefile.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32)
-except (AttributeError, OSError):
-    _clonefile = None
-FICLONE = 0x40049409  # Linux reflink ioctl (Btrfs, XFS, bcachefs).
-
-
-def _reflink(source, target):
-    import fcntl
-
-    with open(source, 'rb') as src, open(target, 'xb') as dst:
-        try:
-            fcntl.ioctl(dst.fileno(), FICLONE, src.fileno())
-        except OSError:
-            dst.close()
-            os.unlink(target)
-            raise
-    shutil.copystat(source, target)
-
-
-def clone_or_copy(source, target):
-    """Copy-on-write clone where the file system supports it (APFS clonefile, Linux
-    reflink), else a plain copy.
-
-    A clone takes no extra space yet stays an independent file: writing to a run's
-    frozen copy never reaches the source or other runs, unlike a hard link."""
-    try:
-        if _clonefile is not None:
-            if _clonefile(os.fsencode(source), os.fsencode(target), 0) == 0:
-                shutil.copystat(source, target)
-                return target
-        elif hasattr(os, 'uname') and os.uname().sysname == 'Linux':
-            _reflink(source, target)
-            return target
-    except (OSError, ImportError):
-        pass
-    return shutil.copy2(source, target)
 
 
 def freeze_scene(task, directory):

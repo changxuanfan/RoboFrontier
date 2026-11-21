@@ -371,7 +371,7 @@ class Delegations:
             for r in a['robots']:
                 if owners[r] != actor:
                     raise ValueError('Robot ownership changed unexpectedly')
-            from roboteam.runtime.run.setup import write_json
+            from roboteam.io import write_json
 
             path = self.s.path.parents[2] / 'public/results' / f'{actor}.json'
             reported_at = time.time()

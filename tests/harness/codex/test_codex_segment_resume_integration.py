@@ -25,9 +25,10 @@ from harness.codex.test_codex_policy_permissions import STUB
 from roboteam.harness.codex.launch import hidden_skills, launch_config
 from roboteam.runtime.run.layout import path as run_path
 from roboteam.runtime.run.segments import try_continue
+from roboteam.runtime.run.setup import prepare_case
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.tasks.scene import camera_names
-from roboteam.tasks.task_types import ROOT, prepare
+from roboteam.tasks.task_types import ROOT
 from runtime.run.test_run_segments_integration import wait_until
 
 CASE = 'mosaic-small-l1'
@@ -140,7 +141,7 @@ class CodexSegmentResumeTests(unittest.TestCase):
                 record_realtime_video=False,
             )
             (t / 'run.json').write_text(json.dumps(run_settings))
-            run = prepare(CASE, t / 'batch/stub' / CASE, t / 'run.json', wall_limit_s=900).resolve()
+            run = prepare_case(CASE, t / 'batch/stub' / CASE, t / 'run.json', wall_limit_s=900).resolve()
             task = json.loads((run / 'private/inputs/task.json').read_text())
             arm, camera = sorted(task['arms'])[0], camera_names(task)[0]
             steps = {

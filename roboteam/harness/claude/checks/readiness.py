@@ -1,6 +1,6 @@
 """Compare Claude precheck receipts with current configuration; no model calls.
 
-A match is a local evidence check, not scored-run qualification, proof of model
+A match is a local evidence check, not proof of model
 identity, or an authentication mechanism against a user who can edit files.
 """
 
@@ -11,9 +11,9 @@ import uuid
 from pathlib import Path
 
 from roboteam.harness.claude.checks.preflight import claude_version
+from roboteam.harness.claude.models import model_entry
 from roboteam.harness.shared.identity import fingerprint
-from roboteam.launch.claude_prepare import model_entry
-from roboteam.launch.prepare import load_env
+from roboteam.io import load_env
 from roboteam.tasks.task_types import ROOT
 
 BASIC = {
@@ -193,8 +193,8 @@ def check_receipts(name, basic_path, blocked_path, *, selected=None, version=Non
     }
 
 
-PRECHECKS = 'engineering/claude-precheck'
-BLOCKED_PRECHECKS = 'engineering/claude-blocked-precheck'
+PRECHECKS = 'receipts/claude/basic'
+BLOCKED_PRECHECKS = 'receipts/claude/blocked-parent'
 
 
 def latest_receipts(name, runs=None):

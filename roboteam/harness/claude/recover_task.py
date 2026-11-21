@@ -1,4 +1,4 @@
-"""Explicit recovery of one Claude engineering task whose host closed while its world lived.
+"""Explicit recovery of one Claude Code run whose host closed while its world lived.
 
 Default: read-only eligibility report. --execute seals the paused world if it is still
 alive, validates the approximate pose restore on a private clone, ends any delegation
@@ -48,7 +48,7 @@ FAILED_SETUP = (
 def _batch(run):
     folder = run.parent.parent
     batch = json.loads((folder / 'batch.json').read_text())
-    from roboteam.launch.claude_prepare import BATCH_SCHEMA
+    from roboteam.harness.claude.models import BATCH_SCHEMA
 
     if batch.get('schema') != BATCH_SCHEMA:
         raise RecoveryBlocked('Run is not part of a Claude batch')
@@ -156,13 +156,13 @@ def inspect(run, source, *, processes=None, own=False):
             raise RecoveryBlocked('This run was already recovered once; never repeat it automatically')
     if run_layout.batch_path(folder, 'stop').exists() or run_layout.path(run, 'stop').exists():
         raise RecoveryBlocked('Stop requested')
-    job = json.loads(run_layout.batch_path(folder, 'engineering_status').read_text())['jobs'][index]
+    job = json.loads(run_layout.batch_path(folder, 'supervisor_status').read_text())['jobs'][index]
     if job.get('status') != 'needs_review' or job.get('reason') not in RECOVERABLE_REASONS:
         raise RecoveryBlocked('The batch has not handed this task back after a recoverable host end')
-    status = json.loads(run_layout.path(run, 'engineering_status').read_text())
+    status = json.loads(run_layout.path(run, 'supervisor_status').read_text())
     if status.get('status') != 'needs_review' or status.get('reason') not in RECOVERABLE_REASONS:
         raise RecoveryBlocked('The run did not end with a recoverable host end')
-    if not _lock_free(run_layout.path(run, 'engineering_lock')):
+    if not _lock_free(run_layout.path(run, 'supervisor_lock')):
         raise RecoveryBlocked('The original Claude runner still holds this run')
     with readonly(run) as store:
         if store.get('integrity_valid') is not True:
@@ -246,7 +246,7 @@ def inspect(run, source, *, processes=None, own=False):
 RUNNER = """import json, os, platform, sys
 from pathlib import Path
 source, batch, run = map(Path, sys.argv[1:4]); sys.path.insert(0, str(source))
-from roboteam.launch.prepare import load_env
+from roboteam.io import load_env
 from roboteam.cli import _frozen_configuration
 from roboteam.configuration import rendering_environment
 from roboteam.runtime.run.diagnostics import require_runtime
@@ -389,7 +389,7 @@ def execute(run, source, python, scratch, *, seal=None, launcher=subprocess.Pope
             with readonly(run) as final:
                 resumed = any(s.get('index') == plan['segment'] for s in (final.get('segments') or []))
                 lifecycle = final.get('lifecycle')
-            result = json.loads(run_layout.path(run, 'engineering_status').read_text())
+            result = json.loads(run_layout.path(run, 'supervisor_status').read_text())
             complete = (
                 code == 0
                 and resumed

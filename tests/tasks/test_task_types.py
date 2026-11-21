@@ -4,12 +4,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from roboteam.runtime.run.setup import verify_inputs
+from roboteam.runtime.run.setup import prepare_case, verify_inputs
 from roboteam.tasks.task_types import (
     RELEASE,
     ROOT,
     policy_task,
-    prepare,
     read,
     resolve_case,
     validate_frozen_policy,
@@ -21,7 +20,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
     def test_asset_audit_detects_missing_changed_and_unsafe_paths(self):
         import hashlib
 
-        from roboteam.launch.tasks import check_case_assets
+        from roboteam.launch.cases import check_case_assets
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -77,7 +76,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
             patch('mujoco.mj_step', side_effect=AssertionError('No physics')),
         ):
             for case in cases:
-                run = prepare(case, Path(tmp) / case)
+                run = prepare_case(case, Path(tmp) / case)
                 self.assertEqual(verify_inputs(run), [])
                 public = read(run / 'public/inputs/task.json')
                 task = read(run / 'private/inputs/task.json')
@@ -142,7 +141,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
         ):
             for case in cases:
                 with self.subTest(case=case):
-                    run = prepare(case, Path(tmp) / case)
+                    run = prepare_case(case, Path(tmp) / case)
                     world = World(run, read(run / 'private/inputs/task.json'))
                     try:
                         world.start_trial()
@@ -161,7 +160,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
             tempfile.TemporaryDirectory() as tmp,
             patch('mujoco.mj_step', side_effect=AssertionError('No physics')),
         ):
-            run = prepare(
+            run = prepare_case(
                 'mosaic-small-l1',
                 Path(tmp) / 'run',
                 run_settings=ROOT / 'roboteam/runtime/run/defaults.json',
@@ -186,7 +185,7 @@ class TaskTypeReleaseTests(unittest.TestCase):
             }
             plain_path = Path(tmp) / 'plain.json'
             plain_path.write_text(json.dumps(plain_cfg))
-            plain = prepare('mosaic-small-l1', Path(tmp) / 'plain', run_settings=plain_path)
+            plain = prepare_case('mosaic-small-l1', Path(tmp) / 'plain', run_settings=plain_path)
             world = World(plain, read(plain / 'private/inputs/task.json'))
             try:
                 world.start_trial()
@@ -243,7 +242,7 @@ class FrozenReleaseTests(unittest.TestCase):
         self.assertTrue(release['frozen'])
         self.assertEqual(release['frozen']['release_id'], release['release_id'])
         self.assertTrue(
-            (ROOT / 'runs/engineering/validate-physics' / release['frozen']['physics_validation']).name
+            (ROOT / 'runs/checks/validate-physics' / release['frozen']['physics_validation']).name
         )
         with self.assertRaises(SystemExit):
             build_release.require_unfrozen()

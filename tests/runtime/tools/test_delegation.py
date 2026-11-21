@@ -250,7 +250,7 @@ class DelegationTests(unittest.TestCase):
     def test_report_write_failure_keeps_ownership_and_sends_no_completion(self):
         self.delegate()
         child = self.activate()[0]['actor']
-        with patch('roboteam.runtime.run.setup.write_json', side_effect=OSError('synthetic disk failure')):
+        with patch('roboteam.io.write_json', side_effect=OSError('synthetic disk failure')):
             reply = self.call(child, 'return_task', {'outcome': 'completed', 'result': 'evidence'})['result']
         self.assertIn('error', reply)
         self.assertEqual(self.d.owners()['A'], child)
@@ -297,13 +297,15 @@ class DelegationTests(unittest.TestCase):
         self.assertFalse(self.service.store.get('dispatch_paused', False))
 
     def test_known_native_id_survives_provenance_failure_without_authorization(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         self.delegate()
         self.d.claim('batch', 'manager')
         a = self.d.batch('batch')['children'][0]['actor']
         tid = '11111111-1111-4111-8111-111111111111'
-        with patch('roboteam.runtime.run.cli.fork_provenance', side_effect=ValueError('lineage unavailable')):
+        with patch(
+            'roboteam.runtime.run.admin.fork_provenance', side_effect=ValueError('lineage unavailable')
+        ):
             with self.assertRaises(ValueError):
                 execute(
                     self.service.store,
@@ -319,14 +321,14 @@ class DelegationTests(unittest.TestCase):
         self.assertIn('error', self.call(a, 'gripper', {'robot': 'A', 'state': 'open'})['result'])
 
     def test_snapshot_lineage_and_children_require_same_snapshot_boundary(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         self.delegate(('A', 'B'))
         self.d.claim('batch', 'manager')
         children = self.d.batch('batch')['children']
         snapshot = '22222222-2222-4222-8222-222222222222'
         anchor = {'source_thread_id': 'parent', 'source_ordinal': 13, 'source_sha256': 'controller-cut'}
-        with patch('roboteam.runtime.run.cli.fork_provenance', return_value=anchor):
+        with patch('roboteam.runtime.run.admin.fork_provenance', return_value=anchor):
             execute(
                 self.service.store,
                 'delegate-snapshot-bind',
@@ -337,7 +339,7 @@ class DelegationTests(unittest.TestCase):
         self.assertEqual(self.d.batch('batch')['snapshot_provenance'], anchor)
         for i, child in enumerate(children):
             proof = {'source_thread_id': snapshot, 'source_ordinal': 17, 'source_sha256': 'snapshot-cut'}
-            with patch('roboteam.runtime.run.cli.fork_provenance', return_value=proof) as read:
+            with patch('roboteam.runtime.run.admin.fork_provenance', return_value=proof) as read:
                 execute(
                     self.service.store,
                     'delegate-bind',
@@ -350,12 +352,14 @@ class DelegationTests(unittest.TestCase):
         self.assertEqual(self.d.batch('batch')['status'], 'active')
 
     def test_snapshot_id_persists_on_failed_lineage_and_cannot_activate(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         self.delegate()
         self.d.claim('batch', 'manager')
         snapshot = '22222222-2222-4222-8222-222222222222'
-        with patch('roboteam.runtime.run.cli.fork_provenance', side_effect=ValueError('lineage unavailable')):
+        with patch(
+            'roboteam.runtime.run.admin.fork_provenance', side_effect=ValueError('lineage unavailable')
+        ):
             with self.assertRaisesRegex(ValueError, 'lineage unavailable'):
                 execute(
                     self.service.store,
@@ -476,7 +480,7 @@ class DelegationTests(unittest.TestCase):
         self.assertIn('error', self.call('Controller', 'send', {'to': [child], 'text': 'new work'})['result'])
 
     def test_missing_native_status_invalidates_previously_fresh_idle_claim(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
         from roboteam.runtime.tools.scheduling import Scheduler
 
         s = self.service.store

@@ -1,4 +1,4 @@
-"""Experimental role-bound MCP stdio server; not yet qualified for scored runs."""
+"""Role-bound MCP stdio server: the robot tool of one Claude Code session."""
 
 import base64
 import json
@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from roboteam.harness.shared.identity import fingerprint
-from roboteam.launch.results.host_metrics import host_event
+from roboteam.runtime.run.host_log import host_event
 from roboteam.runtime.tools.pipeline_client import client_call
 from roboteam.runtime.tools.robot_ops import check_request
 from roboteam.runtime.tools.tool_errors import CallIdConflict, conflict_error, uncertain_error
@@ -249,7 +249,7 @@ class RobotBridge:
 
     def public_images(self, data):
         """Return only reference images explicitly listed in the frozen public task."""
-        from roboteam.runtime.tools import observation_mode
+        from roboteam.tasks import observation_mode
 
         if observation_mode.of_run(self.run) == observation_mode.GROUND_TRUTH:
             raise ValueError('This run has no camera images: public_image is not available')

@@ -20,7 +20,7 @@ test('a usage limit is not a capacity failure', () => {
 });
 
 test('the host asks for a pause, waits for the reset, then continues the turn once', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-quota-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-quota-'));
   try {
     fs.mkdirSync(path.join(dir, 'private/inputs/bootstrap'), { recursive: true });
     fs.writeFileSync(path.join(dir, 'private/inputs/bootstrap/quota-resume.md'), 'QUOTA NOTICE');

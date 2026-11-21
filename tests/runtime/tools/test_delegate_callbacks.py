@@ -206,7 +206,7 @@ class DelegateCallbackTests(unittest.TestCase):
         self.assertIn(a['actor'], [w['actor'] for w in wakes])
 
     def test_failed_native_turn_resumes_on_new_parent_request_with_terminal_evidence(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         a, b = self.start_children()
         now = time.time()
@@ -246,7 +246,7 @@ class DelegateCallbackTests(unittest.TestCase):
         )
 
     def test_error_recovery_requires_failed_turn_and_rechecks_before_send(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         a, b = self.start_children()
         now = time.time()
@@ -285,7 +285,7 @@ class DelegateCallbackTests(unittest.TestCase):
         self.assertIsNone(scheduler.claim(command['wake_id'], 'manager', now))
 
     def test_failed_native_recovery_blocks_unresolved_physical_calls(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         a, b = self.start_children()
         now = time.time()
@@ -344,7 +344,7 @@ class DelegateCallbackTests(unittest.TestCase):
         self.assertEqual(self.d.owners()['A'], a['actor'])
 
     def test_session_observation_health_is_persistent_and_distinct_from_delivery(self):
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         now = time.time()
         execute(

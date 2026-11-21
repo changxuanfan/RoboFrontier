@@ -282,5 +282,5 @@ class RunSupervisor:
             'ended_by': ended_by,
             # Stopped by wall time, not the active-time limit: needs review, never counted.
             'wall_backstop': reason == 'wall_backstop' or ended_by == 'wall_backstop',
-            'scope': 'engineering lifecycle; task success requires runtime evaluation',
+            'scope': 'How the run ended; task success is in evaluation.json',
         }

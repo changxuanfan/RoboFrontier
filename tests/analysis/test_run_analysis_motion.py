@@ -16,7 +16,7 @@ import numpy as np
 from analysis.test_run_analysis_segments import BASE, Fixture, action, header, snap
 from roboteam.analysis import atomic, extract, motion
 from roboteam.analysis import metrics as M
-from roboteam.analysis.archive import Run
+from roboteam.analysis.run_files import Run
 
 HZ = 30
 

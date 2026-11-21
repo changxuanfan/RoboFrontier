@@ -1,4 +1,4 @@
 # Preinstalled only in the `mujoco` variant, which a ground_truth run uses
-# (roboteam/runtime/tools/observation_mode.py): the simulator the benchmark itself runs
+# (roboteam/tasks/observation_mode.py): the simulator the benchmark itself runs
 # on, at the version of the repository's uv.lock. No other run has it.
 mujoco==3.16.0

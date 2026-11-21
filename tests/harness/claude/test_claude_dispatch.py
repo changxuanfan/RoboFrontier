@@ -82,14 +82,14 @@ class ClaudeDispatchTests(unittest.TestCase):
     def test_claude_delegate_binding_is_closed_until_verified(self):
         import time
 
-        from roboteam.runtime.run.cli import execute
+        from roboteam.runtime.run.admin import execute
 
         cfg = self.store.get('config')
         cfg['system'] = 'adaptive'
         self.store.put('config', cfg)
-        with self.assertRaisesRegex(ValueError, 'not yet qualified'):
+        with self.assertRaisesRegex(ValueError, 'is a Codex operation'):
             execute(self.store, 'delegate-bind', {}, 'test-owner', time.time())
-        with self.assertRaisesRegex(ValueError, 'not yet qualified'):
+        with self.assertRaisesRegex(ValueError, 'is a Codex operation'):
             execute(self.store, 'delegate-snapshot-bind', {}, 'test-owner', time.time())
         self.assertEqual(
             execute(self.store, 'snapshot', {}, 'test-owner', time.time())['config']['harness'], 'claude'

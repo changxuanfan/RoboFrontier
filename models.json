@@ -121,13 +121,33 @@
           "base_url": "https://api.anthropic.com",
           "effort": "high"
         },
-        "opus_subscription": {
+        "opus_subscription_token": {
           "provider": "anthropic",
           "model": "claude-opus-5-5",
           "env_key": "CLAUDE_CODE_OAUTH_TOKEN",
           "base_url": "https://api.anthropic.com",
           "effort": "high",
           "auth_mode": "oauth_token"
+        },
+        "opus_subscription": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "env_key": null,
+          "base_url": "https://api.anthropic.com",
+          "effort": "high",
+          "auth_mode": "native_login",
+          "native_config_scope": "default",
+          "native_config_dir_env": "ROBOTEAM_CLAUDE_HOME"
+        },
+        "opus_subscription_directory": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "env_key": null,
+          "base_url": "https://api.anthropic.com",
+          "effort": "high",
+          "auth_mode": "native_login",
+          "native_config_scope": "directory",
+          "native_config_dir_env": "ROBOTEAM_CLAUDE_HOME"
         },
         "haiku": {
           "provider": "anthropic",

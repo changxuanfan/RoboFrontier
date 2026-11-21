@@ -101,17 +101,17 @@ class RunTaskTests(unittest.TestCase):
         self.assertEqual(result['status'], 'needs_review')
         self.assertEqual(result['reason'], 'launch_error')
         self.assertNotIn('FAKE_KEY', observed[0])
-        status = (self.run / 'private/state/control/engineering-status.json').read_text()
+        status = (self.run / 'private/state/control/supervisor-status.json').read_text()
         with self.assertRaisesRegex(ValueError, 'never restart'):
             self.run_case(owner_factory=create)
-        self.assertEqual(status, (self.run / 'private/state/control/engineering-status.json').read_text())
+        self.assertEqual(status, (self.run / 'private/state/control/supervisor-status.json').read_text())
         self.assertEqual(len(observed), 1)
 
     def test_stop_and_an_unprepared_run_fail_before_owner_or_claim(self):
         (self.run / 'private/state/control/STOP').touch()
         with self.assertRaisesRegex(ValueError, 'stopped'):
             self.run_case(owner_factory=lambda *a, **k: self.fail('must not start'))
-        self.assertFalse((self.run / 'private/state/control/engineering-claim.json').exists())
+        self.assertFalse((self.run / 'private/state/control/supervisor-claim.json').exists())
         (self.run / 'private/state/control/STOP').unlink()
         path = self.run / 'private/inputs/claude.json'
         data = json.loads(path.read_text())
@@ -147,7 +147,6 @@ class RunTaskTests(unittest.TestCase):
                 owner_factory=lambda *a, **k: Owner(None),
             )
         self.assertEqual(result['status'], 'needs_review')
-        self.assertFalse(result['scored'])
         self.assertTrue(result['owner_alive'])  # live owner is recorded, never killed implicitly
 
     def test_standing_launch_creates_one_run_ledger_before_world(self):
@@ -392,7 +391,7 @@ class RunTaskTests(unittest.TestCase):
                 self.assertEqual(result['status'], 'finished' if expected else 'needs_review')
 
     def test_a_task_cap_that_concurrent_roles_could_exhaust_is_refused_before_any_claim(self):
-        claim = self.run / 'private/state/control/engineering-claim.json'
+        claim = self.run / 'private/state/control/supervisor-claim.json'
         (self.run / 'public/inputs/roles.json').write_text(
             json.dumps(
                 {
@@ -478,7 +477,7 @@ class RunTaskTests(unittest.TestCase):
                 policy_factory=policy,
                 owner_factory=lambda *a, **k: self.fail('must not start'),
             )
-        self.assertFalse((self.run / 'private/state/control/engineering-claim.json').exists())
+        self.assertFalse((self.run / 'private/state/control/supervisor-claim.json').exists())
         self.assertFalse(list((self.run / 'private/state').glob('claude-budget.sqlite*')))
         result = run_task(
             self.run,

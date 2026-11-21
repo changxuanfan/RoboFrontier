@@ -1,4 +1,4 @@
-"""Experimental host-controlled adaptive fork setup; not an admission endpoint.
+"""Host-controlled adaptive fork setup; not an admission endpoint.
 
 The caller is the trusted process which owns the active parent and shared budget.
 This module does not start a world, schedule subsequent wakes, or qualify a batch.
@@ -21,8 +21,8 @@ from roboteam.harness.claude.systems.fork_setup import (
     pending_history,
 )
 from roboteam.harness.claude.systems.provenance import fork_provenance
+from roboteam.runtime.run.admin import execute
 from roboteam.runtime.run.bootstrap import delegate_prompt
-from roboteam.runtime.run.cli import execute
 from roboteam.runtime.tools.delegation import Delegations
 
 

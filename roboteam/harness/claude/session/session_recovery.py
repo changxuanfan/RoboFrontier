@@ -78,7 +78,7 @@ def recover(host, store, now=None, *, history_available=None):
             and store.get('lifecycle') == 'running'
         ):
             # Used up: pause the run, as the Codex host does (policy_host.js retryCapacity).
-            from roboteam.runtime.run.cli import execute
+            from roboteam.runtime.run.admin import execute
 
             host.capacity_exhausted = True
             execute(
@@ -252,7 +252,7 @@ def recover_quota(host, store, now=None):
     """A turn that failed on the plan's usage limit: the world pauses until the reset, then the
     same session continues once with the frozen quota notice (runtime/time/quota.py), as the Codex
     host does (policy_host.js retryQuota). Returns True while asking, waiting or resending."""
-    from roboteam.runtime.run.cli import execute
+    from roboteam.runtime.run.admin import execute
 
     wall = time.time() if now is None else now
     notice = host.run / 'private/inputs/bootstrap/quota-resume.md'
@@ -339,7 +339,7 @@ def recover_network(host, store, now=None):
     that failed for another reason within it, holds the run for review
     (runtime_cli network-recovery-uncertain). A network failure seen before any pause waits up
     to NETWORK_WAIT_S for one. Returns True while waiting, resending or holding."""
-    from roboteam.runtime.run.cli import execute
+    from roboteam.runtime.run.admin import execute
 
     wall = time.time() if now is None else now
     notice = host.run / 'private/inputs/bootstrap/network-resume.md'

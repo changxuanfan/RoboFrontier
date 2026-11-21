@@ -19,7 +19,7 @@ import argparse
 import json
 from pathlib import Path
 
-CURRENT = 'run-v6'
+CURRENT = 'run-v7'
 PATHS = {
     'stop': 'private/state/control/STOP',
     'owner_log': 'private/logs/owner.log',
@@ -27,9 +27,9 @@ PATHS = {
     'server_log': 'private/logs/server.log',
     'supervisor_log': 'private/logs/supervisor.log',
     'admin_log': 'private/logs/admin-client.log',
-    'engineering_status': 'private/state/control/engineering-status.json',
-    'engineering_claim': 'private/state/control/engineering-claim.json',
-    'engineering_lock': 'private/state/control/engineering.lock',
+    'supervisor_status': 'private/state/control/supervisor-status.json',
+    'supervisor_claim': 'private/state/control/supervisor-claim.json',
+    'supervisor_lock': 'private/state/control/supervisor.lock',
     'host_process': 'private/state/control/host-process.json',
     'world_lock': 'private/state/control/world.lock',
     'harness_config': 'private/harness/config',
@@ -77,20 +77,18 @@ def for_store(store_path, key):
 
 
 # A batch folder holds batch.json, effective-config.json, models/ and its
-# <model>/<case>/ runs, with control files in control/ and logs in logs/, the
-# same for both harnesses.
-BATCH_CURRENT = 'batch-v2'
+# <model>/<case>/ runs, with control files in control/, the same for both
+# harnesses.
+BATCH_CURRENT = 'batch-v3'
 BATCH_PATHS = {
     'stop': 'control/STOP',
-    'engineering_claim': 'control/engineering-claim.json',
-    'engineering_status': 'control/engineering-status.json',
-    'engineering_lock': 'control/engineering-supervisor.lock',
+    'supervisor_claim': 'control/supervisor-claim.json',
+    'supervisor_status': 'control/supervisor-status.json',
     'supervisor_lock': 'control/supervisor.lock',
     'codex_home_marker': 'control/codex-home.json',
-    'codex_init_log': 'logs/codex-initialize.log',
     'durable': 'control/durable',
 }
-BATCH_FOLDERS = ('control', 'logs')
+BATCH_FOLDERS = ('control',)
 
 
 def batch_record():

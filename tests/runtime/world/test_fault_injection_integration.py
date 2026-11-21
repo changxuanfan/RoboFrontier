@@ -125,7 +125,7 @@ class FaultInjectionTests(unittest.TestCase):
             store = RuntimeStore(run / 'private/state/runtime.sqlite')
             try:
                 kinds = [e['kind'] for e in store.events(500)]
-                self.assertIn('HARNESSERING_FAULT_INJECTED', kinds)
+                self.assertIn('ENGINEERING_FAULT_INJECTED', kinds)
                 self.assertEqual(store.get('lifecycle'), 'running')
             finally:
                 store.close()

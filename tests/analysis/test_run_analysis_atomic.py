@@ -8,7 +8,7 @@ from pathlib import Path
 
 from roboteam.analysis import atomic
 from roboteam.analysis import metrics as M
-from roboteam.analysis.archive import Run
+from roboteam.analysis.run_files import Run
 
 BASE = 1_000_000.0
 

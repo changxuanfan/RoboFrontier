@@ -1,4 +1,4 @@
-"""The ground-truth files of a ground_truth run (runtime/tools/observation_mode.py).
+"""The ground-truth files of a ground_truth run (tasks/observation_mode.py).
 
 Such a run's roles read, under public/inputs/ground-truth/, what an ordinary role never
 gets: the task as the evaluator has it (every object with its initial pose, every goal with
@@ -66,7 +66,7 @@ def task_definition(task):
 
 def freeze(task, directory):
     """Write the ground-truth folder of a prepared run from its frozen private scene."""
-    from roboteam.tasks.scene import clone_or_copy
+    from roboteam.io import clone_or_copy
 
     directory = Path(directory)
     source = directory / Path(task['scene_asset']).parent

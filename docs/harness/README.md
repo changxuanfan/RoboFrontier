@@ -28,10 +28,10 @@ continues it by hand ([continuing a stopped run](../runs/continuation.md)).
 
 The commands (prepare, run, status, stop, collect) can be driven from a shell or from any
 coding agent; no outer agent is needed, and the outer session's model has no effect on the run.
-The frozen harness and model select the model that is measured. The manager prompts
-([Codex](../development/manager-codex.md), [Claude Code](../development/manager-claude.md)) and
-the [manager runbook](../development/manager-runbook.md) define the manager's authority: engineering
-operations only, never task strategy, robot actions or changed inputs. A manager that injects
+The frozen harness and model select the model that is measured. The operator prompts
+([Codex](../runs/operator-prompt-codex.md), [Claude Code](../runs/operator-prompt-claude.md)) and
+the [operator runbook](../runs/operator-runbook.md) define the operator's authority: engineering
+operations only, never task strategy, robot actions or changed inputs. An operator that injects
 either invalidates the run.
 
 ## Shared setup
@@ -228,9 +228,9 @@ selects `opus` (`claude-opus-5-5`) with `ANTHROPIC_API_KEY`.
 | Codex | ChatGPT login | `sol_subscription`, `luna_subscription`, `terra_subscription`, `astra_subscription` | Login in the Codex home ([Codex authentication](codex.md#authentication)) |
 | Codex | Third-party Responses API | `deepseek`, `qwen`, `glm`, `kimi` | `DEEPSEEK_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_BASE_URL`; `ZAI_API_KEY`; `KIMI_API_KEY` |
 | Claude | Anthropic API key | `opus` (default), `haiku` | `ANTHROPIC_API_KEY` |
-| Claude | Subscription token (`claude setup-token`) | `opus_subscription`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` |
-| Claude | Saved login, default directory | `haiku_subscription` | `ROBOTEAM_CLAUDE_HOME` = `$HOME/.claude`, `CLAUDE_CONFIG_DIR` unset |
-| Claude | Saved login, explicit directory | `haiku_subscription_directory` | `ROBOTEAM_CLAUDE_HOME` = the `CLAUDE_CONFIG_DIR` used at login |
+| Claude | Subscription token (`claude setup-token`) | `opus_subscription_token`, `haiku_subscription_token` | `CLAUDE_CODE_OAUTH_TOKEN` |
+| Claude | Saved login, default directory | `opus_subscription`, `haiku_subscription` | `ROBOTEAM_CLAUDE_HOME` = `$HOME/.claude`, `CLAUDE_CONFIG_DIR` unset |
+| Claude | Saved login, explicit directory | `opus_subscription_directory`, `haiku_subscription_directory` | `ROBOTEAM_CLAUDE_HOME` = the `CLAUDE_CONFIG_DIR` used at login |
 | Claude | ChatGPT plan or OpenAI API key behind a local adapter, experimental | `sol_chatgpt_plan` | `ROBOTEAM_CHATGPT_GATEWAY_KEY`, a local key; the OpenAI credential stays with the adapter ([GPT in Claude Code](gpt-in-claude-code.md)) |
 | Claude | Third-party Anthropic-compatible API | `kimi`, `kimi_code`, `qwen`, `glm`, `deepseek` | `KIMI_API_KEY`; `KIMI_CODE_API_KEY`; `DASHSCOPE_API_KEY` + `DASHSCOPE_ANTHROPIC_BASE_URL`; `ZAI_API_KEY`; `DEEPSEEK_API_KEY` |
 

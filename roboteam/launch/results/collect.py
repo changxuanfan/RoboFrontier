@@ -19,9 +19,9 @@ from pathlib import Path
 
 from roboteam.harness.claude.session.native_home import history_directory
 from roboteam.io import file_sha256 as digest
+from roboteam.io import write_json
 from roboteam.launch.results.host_metrics import codex_run_transcripts, session_glob, session_stem
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.run.setup import write_json
 
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z')
 TERMINAL = {'closed', 'needs_review', 'stopped', 'stopped_before_start'}
@@ -252,7 +252,7 @@ def collect_batch(batch_path, output):
         raise ValueError('Unsupported batch schema')
     harness = harnesses[batch['schema']]
     state_path = (
-        run_layout.batch_path(batch_path, 'engineering_status')
+        run_layout.batch_path(batch_path, 'supervisor_status')
         if harness == 'claude'
         else batch_path / 'batch.json'
     )
@@ -299,13 +299,12 @@ def collect_batch(batch_path, output):
                 raise ValueError('Keep the native authentication home outside the evidence batch')
         runs.append((job, run, status))
     output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = Path(tempfile.mkdtemp(prefix='.rf-collection-', dir=output.parent))
+    temporary = Path(tempfile.mkdtemp(prefix='.roboteam-collection-', dir=output.parent))
     try:
         with ExitStack() as stack:
-            for key in ('supervisor_lock', 'engineering_lock'):
-                lock_if_present(stack, run_layout.batch_path(batch_path, key))
+            lock_if_present(stack, run_layout.batch_path(batch_path, 'supervisor_lock'))
             for job, run, status in runs:
-                for key in ('world_lock', 'engineering_lock'):
+                for key in ('world_lock', 'supervisor_lock'):
                     lock_if_present(stack, run_layout.path(run, key))
                 host = run_layout.path(run, 'host_process')
                 if host.is_file() and host_is_live(load(host).get('pid'), run):
@@ -341,7 +340,7 @@ def collect_batch(batch_path, output):
                         # SQLite can update shared-memory bookkeeping even in a
                         # read-only connection. Validate a disposable copy so the
                         # collected DB/WAL/SHM bytes remain original evidence.
-                        with tempfile.TemporaryDirectory(prefix='rf-db-check-') as check:
+                        with tempfile.TemporaryDirectory(prefix='roboteam-db-check-') as check:
                             check = Path(check)
                             for suffix in ('', '-wal', '-shm'):
                                 if Path(str(db) + suffix).is_file():

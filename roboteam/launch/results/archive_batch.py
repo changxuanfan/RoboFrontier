@@ -16,10 +16,10 @@ from roboteam.io import file_sha256 as checksum
 from roboteam.runtime.run import layout as run_layout
 
 IMAGE = re.compile(rb'(data:image/[^;,\s"\\]+;base64,)([A-Za-z0-9+/=]+)')
-REF = re.compile(rb'(data:image/[^;,\s"\\]+;base64,)@RF_IMAGE_([a-f0-9]{64})@')
-MARKER = b'@RF_IMAGE_'
-B64_MARKER = b'@RF_B64_'
-B64_REF = re.compile(rb'"@RF_B64_([a-f0-9]{64})@"')
+REF = re.compile(rb'(data:image/[^;,\s"\\]+;base64,)@ROBOTEAM_IMAGE_([a-f0-9]{64})@')
+MARKER = b'@ROBOTEAM_IMAGE_'
+B64_MARKER = b'@ROBOTEAM_B64_'
+B64_REF = re.compile(rb'"@ROBOTEAM_B64_([a-f0-9]{64})@"')
 BLOCK = 1024 * 1024
 
 
@@ -160,7 +160,7 @@ def verify_collection(source, allow_incomplete=False):
         raise ValueError('A complete collection is required; stopped evidence can use --allow-incomplete')
     batch = json.loads((source / 'batch' / 'batch.json').read_text())
     state = (
-        json.loads(run_layout.batch_path(source / 'batch', 'engineering_status').read_text())
+        json.loads(run_layout.batch_path(source / 'batch', 'supervisor_status').read_text())
         if report.get('harness') == 'claude'
         else batch
     )
@@ -205,7 +205,7 @@ def create(source, output, allow_incomplete=False):
         for role in job['roles']:
             expected[role['session']] = role['sha256']
     output.parent.mkdir(parents=True, exist_ok=True)
-    tmp = Path(tempfile.mkdtemp(prefix='.rf-archive-', dir=output.parent))
+    tmp = Path(tempfile.mkdtemp(prefix='.roboteam-archive-', dir=output.parent))
     objects = {}
     records = []
     dirs = []
@@ -411,7 +411,7 @@ def verify(root, output=None):
     if output.exists() or output.is_relative_to(root) or root.is_relative_to(output):
         raise ValueError('Restore output must be new and outside archive')
     output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = Path(tempfile.mkdtemp(prefix='.rf-restore-', dir=output.parent))
+    temporary = Path(tempfile.mkdtemp(prefix='.roboteam-restore-', dir=output.parent))
     try:
         result = _verify(root, temporary)
         if output.exists():

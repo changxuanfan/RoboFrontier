@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 from . import motion as trial_motion
-from .archive import Run
+from .run_files import Run
 
 
 def num(v):
@@ -46,7 +46,7 @@ def runtime_db(run):
         yield None
         return
     n = names[0]
-    T = tempfile.mkdtemp(prefix='rf-sq-', dir=os.environ.get('RF_TMP') or None)
+    T = tempfile.mkdtemp(prefix='roboteam-sq-', dir=os.environ.get('ROBOTEAM_TMP') or None)
     db = None
     try:
         p = Path(T) / 'r.sqlite'

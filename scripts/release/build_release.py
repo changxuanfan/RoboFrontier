@@ -332,13 +332,13 @@ def settle_case(folder):
     resting coordinates of every joint that is not a robot's, with the largest change."""
     import tempfile
 
+    from roboteam.runtime.run.setup import prepare_case
     from roboteam.runtime.world.pipeline import World
-    from roboteam.tasks.task_types import prepare
 
     task_id = json.loads((folder / 'task.json').read_text())['id']
-    with tempfile.TemporaryDirectory(prefix='rf-settle-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='roboteam-settle-') as temporary:
         run = Path(temporary) / 'run'
-        prepare(task_id, run)
+        prepare_case(task_id, run)
         world = World(run, json.loads((run / 'private/inputs/task.json').read_text()))
         model, data = world.model, world.data
         world.physics_profile = None
@@ -534,7 +534,7 @@ def public(args):
     import shutil
     import tempfile
 
-    from roboteam.tasks.task_types import prepare
+    from roboteam.runtime.run.setup import prepare_case
 
     path = BENCHMARK / 'release.json'
     release = json.loads(path.read_text())
@@ -542,9 +542,9 @@ def public(args):
         for case in task_type['policy']:
             folder = ROOT / case['directory']
             target = folder / 'public'
-            with tempfile.TemporaryDirectory(prefix='rf-public-') as temporary:
+            with tempfile.TemporaryDirectory(prefix='roboteam-public-') as temporary:
                 run = Path(temporary) / 'run'
-                prepare(case['id'], run)
+                prepare_case(case['id'], run)
                 received = json.loads((run / 'public/inputs/task.json').read_text())
                 materials = {
                     p.name: p for p in sorted((run / 'public/inputs/task').iterdir()) if p.name != 'guide.md'
@@ -609,13 +609,13 @@ def draw_previews(folder, names, width=1280, height=800):
 
     from PIL import Image
 
+    from roboteam.runtime.run.setup import prepare_case
     from roboteam.runtime.world.pipeline import World
     from roboteam.sim.render.worker import LocalRenderer, _graphics_context
-    from roboteam.tasks.task_types import prepare
 
-    with tempfile.TemporaryDirectory(prefix='rf-preview-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='roboteam-preview-') as temporary:
         run = Path(temporary) / 'run'
-        prepare(folder.name, run)
+        prepare_case(folder.name, run)
         world = World(run, json.loads((run / 'private/inputs/task.json').read_text()))
         graphics = _graphics_context()
         renderer = LocalRenderer(mujoco, world.model)
@@ -739,7 +739,7 @@ def main(argv=None):
     frozen = sub.add_parser('freeze')
     frozen.set_defaults(run=freeze)
     frozen.add_argument(
-        '--validation', required=True, help='A passing runs/engineering/validate-physics/<time>.json'
+        '--validation', required=True, help='A passing runs/checks/validate-physics/<time>.json'
     )
     args = parser.parse_args(argv)
     return args.run(args) or 0

@@ -1,7 +1,7 @@
-"""Experimental single-agent policy orchestration for an existing world.
+"""Single-agent policy orchestration for an existing world.
 
-This module deliberately does not launch worlds, admit scored batches, or
-support adaptive delegation. A caller owns the world process and final seal.
+This module does not launch worlds or admit batches; adaptive delegation is in
+adaptive.py. A caller owns the world process and final seal.
 """
 
 import uuid
@@ -34,7 +34,7 @@ class SingleAgentPolicyHost:
         try:
             config = self.store.get('config')
             if not config or config.get('harness') != self.harness or config.get('system') != 'single-agent':
-                raise ValueError('Only single-agent Claude engineering runs are supported')
+                raise ValueError('Expected a single-agent Claude Code run')
             if config.get('model') != model_entry.get('model') or config.get('effort') != model_entry.get(
                 'effort'
             ):

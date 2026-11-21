@@ -19,7 +19,7 @@ from PIL import Image
 
 from roboteam.harness.codex.launch import launch_config
 from roboteam.harness.codex.tool_backend import doctor, preflight_probe
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
 from roboteam.tasks.config import ROOT
 
 NATIVE = {

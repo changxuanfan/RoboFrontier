@@ -6,7 +6,7 @@ const fs = require('node:fs'),
 const { PolicyHost } = require('../../../roboteam/harness/codex/host/policy_host');
 
 test('seal failure propagates after cleanup and never reports host success', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-seal-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-seal-'));
   try {
     fs.mkdirSync(path.join(dir, 'private/inputs'), { recursive: true });
     fs.writeFileSync(

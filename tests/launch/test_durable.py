@@ -80,7 +80,7 @@ class RunDefaultTests(unittest.TestCase):
             patch('sys.platform', platform),
             patch('roboteam.launch.local.mac.submit', return_value={'label': 'x'}) as submit,
             patch('roboteam.cli.run', return_value={'status': 'ok'}) as run,
-            patch('roboteam.launch.prepare.load_env'),
+            patch('roboteam.io.load_env'),
             patch('builtins.print'),
         ):
             cli.main(argv)

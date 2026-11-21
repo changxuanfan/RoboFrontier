@@ -10,7 +10,7 @@ import tomllib
 from copy import deepcopy
 from pathlib import Path
 
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
 from roboteam.tasks.task_types import ROOT, read
 
 
@@ -154,9 +154,9 @@ def launch_config(p, folder, run_dir=None):
     from roboteam.harness.codex.tool_backend import fingerprint, selected
 
     backend = selected(p)
-    # A robot_only role keeps the robot tool alone (runtime/tools/tools_mode.py): Codex's own tools
+    # A robot_only role keeps the robot tool alone (tasks/tools_mode.py): Codex's own tools
     # are switched off exactly as for the tool worker, and no file tools replace them.
-    from roboteam.runtime.tools import tools_mode
+    from roboteam.tasks import tools_mode
 
     robot_only = tools_mode.of(p) == tools_mode.ROBOT_ONLY
     if robot_only and backend != 'native':

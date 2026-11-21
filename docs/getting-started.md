@@ -64,8 +64,25 @@ npm install --global @anthropic-ai/claude-code@2.1.316  # Claude Code
 npm install --global @openai/codex@0.165.0              # Codex
 ```
 
+The versions are pinned because a newer CLI can change the tools, the prompts and the session
+format the agents get; `prepare` and `run` name the version they need when another one is
+installed. If you use a newer CLI yourself, install the pinned one beside it instead of
+globally and put it first on `PATH`:
+
+```sh
+npm install --prefix "$PWD/.harness-cli" @anthropic-ai/claude-code@2.1.316
+export PATH="$PWD/.harness-cli/node_modules/.bin:$PATH"
+```
+
 The CLI must come first on `PATH` in every shell that prepares, checks or runs. Check with
-`claude --version` or `codex --version`.
+`claude --version` or `codex --version`. The [Docker image](hosts/docker.md) has both CLIs at
+their pinned versions already.
+
+On Ubuntu or Debian, install the system packages with:
+
+```sh
+sudo apt-get install ffmpeg bubblewrap socat libosmesa6
+```
 
 ## 3. Credentials
 
@@ -80,14 +97,45 @@ literally, and a variable already set in the process environment wins.
 | Variable | Used by |
 | --- | --- |
 | `ANTHROPIC_API_KEY` | Claude Code `opus` (the default Claude Code model) and `haiku` |
-| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code `opus_subscription` and `haiku_subscription_token`; create the token with `claude setup-token` |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code `opus_subscription_token` and `haiku_subscription_token`; create the token with `claude setup-token` |
 | `OPENAI_API_KEY` | Codex `sol` (the default model) and `luna` |
 | `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, `KIMI_API_KEY`, `KIMI_CODE_API_KEY`, `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_ANTHROPIC_BASE_URL` | Third-party models of either harness |
 
 Keep credentials in `.env`, not exported in the shell: runs load the file themselves, and the
 Claude subscription token reaches the CLI on a pipe, so no shell of the agents can read it.
-Never put a credential in a TOML file, a command argument or a commit. Codex subscription
-models use a login instead of a variable ([Codex authentication](harness/codex.md#authentication)).
+Never put a credential in a TOML file, a command argument or a commit.
+
+Two kinds of model use a login instead of a variable, and need nothing in `.env`:
+
+- **Claude subscription, saved login** (`opus_subscription`, `haiku_subscription`): the login
+  you already made with Claude Code. Name its folder before `preflight` and `prepare`, and
+  leave `CLAUDE_CONFIG_DIR` unset:
+
+  ```sh
+  export ROBOTEAM_CLAUDE_HOME="$HOME/.claude"
+  claude auth status --json          # "loggedIn": true
+  ```
+
+  Details and the variant for a login made with `CLAUDE_CONFIG_DIR`:
+  [saved login](harness/claude-code.md#saved-login).
+- **ChatGPT plan** (`sol_subscription`, `luna_subscription` and the other `*_subscription`
+  Codex models): the project never uses your personal `~/.codex`. Log in once in its own Codex
+  home and select the shared home in your site TOML:
+
+  ```sh
+  CODEX_HOME=~/.roboteam/codex-home codex login
+  CODEX_HOME=~/.roboteam/codex-home codex login status
+  ```
+
+  ```toml
+  [runtime]
+  codex_home_scope = "shared"
+  ```
+
+  Details: [Codex authentication](harness/codex.md#authentication).
+
+A subscription has a usage limit. When it is used up, `preflight` fails with the provider's
+message and a run pauses in place until the limit resets ([time and pauses](runs/time.md)).
 Every model and its credential is in the
 [authentication matrix](harness/README.md#authentication-matrix).
 
@@ -148,8 +196,17 @@ Build the environment once per host, in a folder outside your home folder, the r
 `/tmp`. This needs the network. Then check that its sandbox holds on this host:
 
 ```sh
+# macOS
 .venv/bin/python -m scripts.release.build_policy_env --base /Users/Shared/roboteam
 .venv/bin/python -m scripts.release.check_policy_env /Users/Shared/roboteam/policy-env-<id> \
+  --harness claude
+```
+
+```sh
+# Linux
+export ROBOTEAM_POLICY_ENV_BASE=/var/lib/roboteam/env    # any folder you can write, see below
+.venv/bin/python -m scripts.release.build_policy_env --base $ROBOTEAM_POLICY_ENV_BASE
+.venv/bin/python -m scripts.release.check_policy_env $ROBOTEAM_POLICY_ENV_BASE/policy-env-<id> \
   --harness claude
 ```
 
@@ -162,7 +219,9 @@ again after changing a CLI version.
 On macOS, `prepare` uses the build under `/Users/Shared/roboteam` by default. On Linux, pick a
 base folder (for example under `/var/tmp` or on a data volume) and set
 `ROBOTEAM_POLICY_ENV_BASE` to it in the shell that prepares runs; without it `prepare` refuses.
-On Linux also keep batches and `TMPDIR` outside `/tmp`.
+On Linux also keep batches and `TMPDIR` outside `/tmp`. The check prints the isolation it
+found: `claude-sandbox` where bubblewrap can create user namespaces, `landlock-v1` where it
+cannot (Ubuntu 24.04 forbids them by default). Both are supported.
 [Policy environment](hosts/policy-environment.md) has the details and the known limits of each
 platform.
 
@@ -170,14 +229,14 @@ platform.
 
 ```sh
 .venv/bin/roboteam --config site.toml preflight --confirm-spend --max-budget-usd 1
-.venv/bin/roboteam --config site.toml prepare --output runs/policy/first-run
-.venv/bin/roboteam run runs/policy/first-run
-.venv/bin/roboteam status runs/policy/first-run
+.venv/bin/roboteam --config site.toml prepare --output runs/batches/first-run
+.venv/bin/roboteam run runs/batches/first-run
+.venv/bin/roboteam status runs/batches/first-run
 ```
 
 **`preflight`** makes a few small, paid model calls. It checks that the model works with the
 harness's images, tools, sessions and forks, and writes a *receipt*: a file under
-`runs/engineering/` that records the model, the CLI version and the result. `run` refuses a
+`runs/receipts/` that records the model, the CLI version and the result. `run` refuses a
 batch without a passed receipt that matches, so run `preflight` again after changing the model,
 the effort or the CLI. Without `--confirm-spend` it calls no model and does not pass. For
 Claude Code, `--max-budget-usd` is required and caps the cost the CLI reports for each check.
@@ -205,7 +264,7 @@ itself ([time and pauses](runs/time.md)).
 To end a batch early:
 
 ```sh
-.venv/bin/roboteam stop runs/policy/first-run
+.venv/bin/roboteam stop runs/batches/first-run
 ```
 
 `stop` asks every run to stop in order. Check `status` afterwards.
@@ -215,39 +274,41 @@ cutoff or a stop) continues by itself once, as the same trial. After that, conti
 runs by hand ([continuing a stopped run](runs/continuation.md)):
 
 ```sh
-.venv/bin/roboteam continue runs/policy/first-run
+.venv/bin/roboteam continue runs/batches/first-run
 ```
 
 ## 7. Read the results
 
 ```text
-runs/policy/first-run/
-  batch.json  effective-config.json  control/  logs/  models/
+runs/batches/first-run/
+  batch.json  effective-config.json  control/  models/
   opus/transport-small-l1/          one run: <model>/<case>/
-    public/                         what the agents read: inputs, observations, results
+    public/                         what the agents read: inputs, observations, delegate results
     workspace/                      the agents' only writable folder (skills.md and their own files)
     private/inputs/                 the frozen task, scene, source and settings
-    private/outputs/                evaluation.json (the score), seal.json, report.json, motion/
+    private/outputs/                evaluation.json (the score), seal.json, events.jsonl, motion/
     private/state/  private/logs/  private/harness/    database, logs, harness sessions
 ```
 
 `private/outputs/evaluation.json` holds the score; `task_success` says whether the task was
-completed. `seal.json` is the run's closing record: it says the world closed, that final
-images were taken and whether any action was left unresolved.
+completed, and `final_observation` names the images taken at the cutoff. `seal.json` is the
+run's closing record: it says the world closed and whether any action was left unresolved.
+[Run folders](runs/run-folder.md) explains every file, and how to make a per-role report
+(`report.json`) from a stopped run.
 
 When every run has stopped, the batch collects its evidence into
 `runs/exports/<batch>-<hash>/` and writes a verified ZIP beside it. The originals stay. By
 hand:
 
 ```sh
-.venv/bin/roboteam collect runs/policy/first-run --output runs/exports/first-run
+.venv/bin/roboteam collect runs/batches/first-run --output runs/exports/first-run
 .venv/bin/roboteam archive runs/exports/first-run --output runs/exports/first-run.zip
 ```
 
 To look at a batch in a browser, during or after the runs:
 
 ```sh
-.venv/bin/python -m scripts.dev.view_batch runs/policy/first-run
+.venv/bin/python -m scripts.dev.view_batch runs/batches/first-run
 ```
 
 Nothing under `runs/` is in Git; back it up separately

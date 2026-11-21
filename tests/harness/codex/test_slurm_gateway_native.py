@@ -21,8 +21,8 @@ from unittest.mock import patch
 from roboteam.harness.codex.job_harness import harness
 from roboteam.harness.codex.launch import launch_config, model_entry
 from roboteam.harness.codex.tool_backend import prepare as prepare_tools
+from roboteam.io import write_json
 from roboteam.launch.slurm.auth import BorrowedAccess, CredentialLease
-from roboteam.runtime.run.setup import write_json
 from roboteam.runtime.sandbox import access as policy_access
 
 ROOT = Path(__file__).resolve().parents[3]

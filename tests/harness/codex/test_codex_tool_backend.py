@@ -17,7 +17,7 @@ from roboteam.configuration import load_configuration
 from roboteam.harness.codex import tool_backend
 from roboteam.harness.codex.launch import launch_config
 from roboteam.harness.shared.landlock import abi
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
 from roboteam.runtime.sandbox.access import mode, record
 
 

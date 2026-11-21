@@ -8,12 +8,12 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
+from roboteam.runtime.run.setup import prepare_case
 from roboteam.runtime.world.pipeline import World
 from roboteam.sim.hall.flat import BUILT, HALL_GROUP
 from roboteam.sim.hall.world import HALL_BODY
 from roboteam.sim.render.look import HIDDEN_GROUP, HallView, look_model
 from roboteam.sim.render.worker import LocalRenderer
-from roboteam.tasks.task_types import prepare
 
 CASE = 'transport-small-l1'
 CAMERAS = ('global', 'global_rear', 'global_side', 'top', 'A_front', 'B_side')
@@ -25,7 +25,7 @@ class HallViewTests(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
         run = Path(cls.tmp.name) / CASE
-        prepare(CASE, run)
+        prepare_case(CASE, run)
         cls.world = World(run, json.loads((run / 'private/inputs/task.json').read_text()))
 
     @classmethod

@@ -1,4 +1,4 @@
-# Claude Code batch manager prompt
+# Operator prompt for a Claude Code batch
 
 Give this prompt to a coding agent with terminal and repository access. The outer session can
 use any model; Claude Code and the frozen model entry select the measured model. Read the
@@ -18,7 +18,7 @@ Settings:
 - system: adaptive
 - parallel: 4
 - mode: plan            (plan | precheck | run)
-- output: runs/policy/claude-l1
+- output: runs/batches/claude-l1
 - precheck_budget_usd: 1
 
 1. Inspect the checkout, its commit and whether the tree is clean. Manage this batch only;

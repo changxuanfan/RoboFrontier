@@ -6,7 +6,7 @@ const fs = require('node:fs'),
 const { PolicyHost } = require('../../../roboteam/harness/codex/host/policy_host');
 
 test('a lost app-server is replaced and each working role resumes with the frozen notice', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-restart-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-restart-'));
   try {
     fs.mkdirSync(path.join(dir, 'private/inputs/bootstrap'), { recursive: true });
     fs.writeFileSync(path.join(dir, 'private/inputs/bootstrap/model-restart.md'), 'RESTART NOTICE');

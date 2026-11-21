@@ -57,7 +57,7 @@ function fakeRpc({
   };
 }
 async function run(opts, mode = {}, provider = 'sample') {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-preflight-'));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-preflight-'));
   try {
     fs.writeFileSync(
       path.join(folder, 'launch.json'),

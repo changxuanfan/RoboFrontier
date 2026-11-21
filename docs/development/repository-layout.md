@@ -27,6 +27,7 @@ Files at the root:
 | `.env.example` | The credentials template |
 | `LICENSE`, `LICENSE-DATA.md` | The license of the code and the license of the data and media |
 | `.prettierrc.json` | Formatting of the JavaScript files |
+| `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `CITATION.cff` | How to contribute, what changed between releases, and how to cite the paper |
 | `.gitignore`, `.gitattributes`, `.dockerignore` | Git and Docker settings |
 
 ## The package
@@ -37,7 +38,7 @@ Every folder also has an `__init__.py`.
 roboteam/
   cli.py                 the `roboteam` command
   configuration.py       loads and validates roboteam.toml, a site TOML and command options
-  io.py                  the repository root, file hashes, atomic JSON writes
+  io.py                  the repository root, file hashes, atomic JSON writes, file clones, the .env loader
   sim/                   the simulation
     robot_control.py     the arm and hand controller
     kinematics.py        inverse kinematics
@@ -48,6 +49,7 @@ roboteam/
     workstation.py       reads a frozen workstation's visible poses
     motion_recording.py  the recording of a run's motion
     live_video.py        MP4 recording while a run runs
+    timing.py            the time allowance of one action
     render/              worker.py image.py look.py backend.py cocoa.py
     hall/                build.py (the factory hall scene) desks.py (the cases placed in it) labels.py
                          flat.py (the built hall that runs load) world.py (a task at its desk in the hall)
@@ -57,6 +59,8 @@ roboteam/
     public.py            the public task, and checks of a released task against its scene
     scene.py             scene checks, freezing a scene into a run, camera names
     ground_truth.py      the files of a ground_truth run
+    tools_mode.py        the `tools` condition: full or robot_only
+    observation_mode.py  the `observation` condition: images or ground_truth
     provenance.py        content fingerprints of scenes and logic
     evaluate.py          the evaluator: process events and completion
     dial.py              the Dial feedback rules
@@ -66,12 +70,12 @@ roboteam/
     world/               pipeline.py service.py store.py sqlite_busy.py effective_physics.py seal.py
                          fault_injection.py dashboard.html
     tools/               the robot tool: robot_ops.py action_batch.py delegation.py scheduling.py
-                         run_skills.py public_files.py stop_diagnostics.py tool_errors.py tools_mode.py
-                         observation_mode.py ground_truth.py (the `state` operation)
-                         pipeline_client.py
-    run/                 setup.py bootstrap.py layout.py segments.py versions.py diagnostics.py cli.py
-                         defaults.json (the runtime's default settings)
-    time/                clock.py quota.py outage.py egress_pause.py
+                         run_skills.py public_files.py stop_diagnostics.py tool_errors.py
+                         ground_truth.py (the `state` operation) pipeline_client.py
+    run/                 setup.py bootstrap.py layout.py (where every file of a run is) segments.py
+                         versions.py diagnostics.py host_log.py admin.py (operations on one run, for
+                         the hosts and the operator) defaults.json (the runtime's default settings)
+    time/                clock.py quota.py outage.py egress_pause.py egress_record.py
     sandbox/             access.py policy_env.py policy_env_probe.py
       policy-env/        core.in core.lock store.in all.lock mujoco.in mujoco.lock
   harness/
@@ -81,9 +85,10 @@ roboteam/
       host/              the Node.js host: policy_host.js rpc.js gateway_rpc.js job_gateway.js
                          tool_broker.js meta_dispatcher.js initialize.js preflight.js borrowed_auth.js
                          model_template.json
-    claude/              run.py supervisor.py recover_task.py robot_mcp.py
-      session/           runner.py session_host.py session_host_base.py session_recovery.py recovery.py
-                         native_home.py budget.py cost_state.py
+    claude/              run.py supervisor.py recover_task.py robot_mcp.py models.py
+      session/           runner.py session_host.py session_host_base.py native_home.py budget.py
+                         cost_state.py session_recovery.py (the recovery rules) recovery.py (their
+                         adapter to Claude Code's session history)
       systems/           single_agent.py adaptive.py adaptive_dispatch.py standing_team.py dispatch.py
                          fork_setup.py adaptive_setup.py provenance.py request_identity.py
       checks/            preflight.py readiness.py blocked_precheck.py offline_probe.py
@@ -92,16 +97,22 @@ roboteam/
     adapters/
       claude_in_codex/   gateway.py monitor.py requirements.txt
       gpt_in_claude/     gateway.py auth.py websocket.py requirements.txt
-  launch/                prepare.py tasks.py supervise.py launch_schedule.py codex_batch.py
+  launch/                prepare.py cases.py supervise.py launch_schedule.py codex_batch.py
                          claude_batch.py claude_prepare.py
     local/               mac.py linux.py
     slurm/               job.py auth.py proxy.py
     container/           container.py entrypoint.py
-    results/             collect.py archive.py archive_batch.py session_archive.py report.py
+    results/             collect.py archive.py archive_batch.py session_archive.py report.py (these
+                         write a batch's evidence)
                          host_metrics.py assets.py
-  analysis/              analysis of finished runs: archive.py extract.py metrics.py atomic.py
-                         motion.py motion_query.py paired.py session_archive.py
+  analysis/              analysis of finished runs: run_files.py (reads a run from a folder, tar or
+                         zip) extract.py metrics.py atomic.py motion.py motion_query.py paired.py
+                         session_archive.py (summarizes a session archive)
 ```
+
+The subpackages are layered: `sim` imports none of the others; `tasks` imports `sim`; `runtime`
+imports both; `harness` imports `runtime`; `launch` imports `harness`; `analysis` reads finished
+runs. `tests/repo/test_layering.py` checks it.
 
 ## Tracked folders
 
@@ -112,16 +123,16 @@ roboteam/
 | `prompts/` | `rules.md`; `roles/` with one prompt per role (`single-agent.md`, `adaptive-controller.md`, `team-controller.md` for `hierarchical`, `worker.md`, `meta-manager.md`); `guides/` with `collaboration/` (`guide.md`, `tools.md`, `communication.md`, `adaptive.md`, `motion-check.md`) and one guide per task type (`transport.md`, `mosaic.md`, `relay.md`, `dial.md`) | Anything a model does not read (the prompts for an outer manager are in `docs/development/`) |
 | `scripts/` | Commands an engineer runs with `python -m scripts.FOLDER.NAME`, in `release/`, `analysis/`, `site/` and `dev/`, each listed in [scripts/README.md](../../scripts/README.md) | Library code (put it in `roboteam/`) |
 | `tests/` | `test_*.py`, `test_*.js` and one `.cjs` file, laid out like the package: `sim/` (with `hall/`), `tasks/`, `runtime/{world,tools,run,time,sandbox}/`, `harness/{codex,claude,shared,adapters}/`, `launch/`, `analysis/`, and `repo/` for checks of the repository and the scripts. `helpers/` holds what tests share (`fake_pipeline.py`, `fake_session.py`, `motion.py`, `single_arm_scene.py`, `team_settings.py`, `relay_contract.py`, `claude_batch_control.py`, two provider stand-ins and three Node.js clients); the test runner puts it on the import path. See [testing](testing.md) | Large recorded evidence |
-| `docs/` | `README.md` (the index), `getting-started.md` and `cli.md` at the top level; `tasks/`; `benchmark/` (rules, physics, robot-only runs); `harness/` (overview, Codex, Claude Code, the two adapters, shared login); `hosts/` (Mac, Linux, Slurm, Docker, the policy environment, and `examples/` with a starting site TOML per platform); `runs/` (time, continuation, recovery, evidence storage, viewer); `development/`; `media/readme/`, the README's images. Every prepared run freezes `development/manager-runbook.md`, `architecture.md` and `test-coverage.md` by name | Generated files |
+| `docs/` | `README.md` (the index), `getting-started.md` and `cli.md` at the top level; `tasks/`; `benchmark/` (rules, physics, robot-only runs); `harness/` (overview, Codex, Claude Code, the two adapters, shared login); `hosts/` (Mac, Linux, Slurm, Docker, the policy environment, and `examples/` with a starting site TOML per platform); `runs/` (the run folder, time, continuation, recovery, evidence storage, viewer, the operator runbook and prompts); `development/`; `media/readme/`, the README's images. Every prepared run freezes `runs/operator-runbook.md`, `development/architecture.md` and `development/test-coverage.md` by name | Generated files |
 | `site/` | The project page: `index.html`, `DESIGN.md`, `data/` (`tasks.json`, `media.json`, `oracle-videos.json`) and `assets/` (`atlas/`, `css/`, `img/`, `js/`) | The task videos and the results, which the page fetches from the media repository `RoboTeam-media` |
 | `docker/` | `Dockerfile` for `roboteam container` | |
-| `.github/` | `workflows/tests.yml` (the offline checks) and `workflows/site.yml` (the project page) | |
+| `.github/` | `workflows/tests.yml` (the offline checks), `workflows/site.yml` (the project page), and the issue and pull request templates | |
 
 ## Folders not in Git
 
 | Folder | Holds |
 | --- | --- |
-| `runs/` (or `paths.runs_root`) | `policy/` (batches: frozen inputs, evidence, recorded motion), `engineering/` (receipts, checks, validation results), `exports/` (collections of stopped batches and their ZIPs), `state-assets/` and `asset-cache/` (caches addressed by content hash) |
+| `runs/` (or `paths.runs_root`) | `batches/` (the batches you prepare: frozen inputs, evidence, recorded motion), `receipts/` (preflight receipts, by harness), `checks/` (reports of local checks and physics validation), `exports/` (collections of stopped batches and their ZIPs), `scene-cache/` and `asset-cache/` (caches addressed by content hash). [Run folders](../runs/run-folder.md) says what every file of a run is |
 | `vendor/panda/` | The Franka Panda model, restored by `roboteam bootstrap` |
 | `benchmark/*/*/assets/` | Scene meshes and textures, restored by `roboteam bootstrap` |
 | `benchmark/hall/built/` | The hall that runs load, built by `scripts/release/build_hall.py` and restored by `roboteam bootstrap` |

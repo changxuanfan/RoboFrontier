@@ -16,7 +16,7 @@ def pack(archive, output):
         raise ValueError('ZIP output must be new and outside the archive directory')
     verify(archive)
     output.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix='.rf-evidence-', suffix='.zip', dir=output.parent)
+    fd, temporary = tempfile.mkstemp(prefix='.roboteam-evidence-', suffix='.zip', dir=output.parent)
     os.close(fd)
     try:
         # Object payloads already use their own lossless encoding. Recompressing
@@ -66,7 +66,7 @@ def unpack(source, output):
         if 'manifest.json' not in names:
             raise ValueError('Expected an evidence archive manifest')
         output.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix='.rf-unpack-', dir=output.parent) as temporary:
+        with tempfile.TemporaryDirectory(prefix='.roboteam-unpack-', dir=output.parent) as temporary:
             staged = Path(temporary) / 'archive'
             archive.extractall(staged)
             from roboteam.launch.results.archive_batch import verify

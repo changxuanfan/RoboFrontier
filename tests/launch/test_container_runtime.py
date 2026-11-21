@@ -125,7 +125,7 @@ class ContainerRuntimeTests(unittest.TestCase):
     def test_commands_use_named_volumes_and_never_put_api_values_in_arguments(self):
         with patch.object(runtime.platform, 'system', return_value='Darwin'):
             command = self.command(
-                ['run', 'runs/policy/batch'], credentials={'OPENAI_API_KEY': 'SECRET_VALUE'}
+                ['run', 'runs/batches/batch'], credentials={'OPENAI_API_KEY': 'SECRET_VALUE'}
             )
         self.assertIn('type=volume,src=runs,dst=/opt/RoboTeam/runs', command)
         self.assertIn('type=volume,src=state,dst=/opt/RoboTeam/.roboteam', command)
@@ -141,11 +141,11 @@ class ContainerRuntimeTests(unittest.TestCase):
         self.assertEqual(credentials, {'OPENAI_API_KEY': 'openai'})
 
     def test_nested_sandbox_permission_is_explicit_and_never_privileged(self):
-        self.assertNotIn('--security-opt', self.command(['run', 'runs/policy/batch']))
+        self.assertNotIn('--security-opt', self.command(['run', 'runs/batches/batch']))
         config = load_configuration(
             overrides={'render': {'device': 'cpu'}, 'container': {'seccomp_profile': 'unconfined'}}
         )
-        command = self.command(['run', 'runs/policy/batch'], config)
+        command = self.command(['run', 'runs/batches/batch'], config)
         self.assertIn('seccomp=unconfined', command)
         self.assertNotIn('--privileged', command)
         self.assertNotIn('--cap-add', command)
@@ -153,7 +153,7 @@ class ContainerRuntimeTests(unittest.TestCase):
         # Both harnesses' Landlock shells need it where Docker's model refuses Landlock.
         config['policy'].update(harness='claude', model='haiku')
         config['runtime']['codex_tool_backend'] = 'native'
-        self.assertIn('seccomp=unconfined', self.command(['run', 'runs/policy/batch'], config))
+        self.assertIn('seccomp=unconfined', self.command(['run', 'runs/batches/batch'], config))
         self.assertIn('seccomp=unconfined', self.command(['policy-env'], config))
 
     def test_render_mode_requires_hardware_only_for_real_task_execution(self):
@@ -161,20 +161,20 @@ class ContainerRuntimeTests(unittest.TestCase):
         with patch.object(runtime.platform, 'system', return_value='Darwin'):
             self.assertNotIn('--gpus', self.command(['plan'], config))
             with self.assertRaisesRegex(ValueError, 'requires Linux'):
-                self.command(['run', 'runs/policy/batch'], config)
+                self.command(['run', 'runs/batches/batch'], config)
         with patch.object(runtime.platform, 'system', return_value='Linux'):
-            self.assertIn('--gpus', self.command(['run', 'runs/policy/batch'], config))
+            self.assertIn('--gpus', self.command(['run', 'runs/batches/batch'], config))
 
     def test_run_reads_frozen_render_settings_from_the_container_volume(self):
         with patch.object(runtime.subprocess, 'check_output', return_value=json.dumps(self.config)) as read:
             result = runtime._frozen_settings(
-                ['run', 'runs/policy/batch'],
+                ['run', 'runs/batches/batch'],
                 load_configuration(),
                 'image',
                 {'runs': 'runs', 'state': 'state', 'policy': 'policy'},
             )
         self.assertEqual(result['render']['device'], 'cpu')
-        self.assertIn('/opt/RoboTeam/runs/policy/batch/effective-config.json', read.call_args.args[0])
+        self.assertIn('/opt/RoboTeam/runs/batches/batch/effective-config.json', read.call_args.args[0])
         self.assertIn('--rm', read.call_args.args[0])
         for path in ('/host/batch', '../batch', 'runs/../batch'):
             with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'relative paths'):

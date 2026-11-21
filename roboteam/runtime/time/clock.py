@@ -7,10 +7,9 @@ and closure are deterministic; this module never chooses a robot task or motion.
 import math
 import time
 
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
+from roboteam.tasks.config import ACTIVE_CLOCK
 
-# The one trial clock: only time the world runs unpaused counts toward the limit.
-ACTIVE_CLOCK = 'active_time_v1'
 # Active time: one owner tick more than this after the previous one is a stall (a frozen or
 # sleeping host) and adds nothing. Ticks normally come every few milliseconds.
 STALL_S = 5.0

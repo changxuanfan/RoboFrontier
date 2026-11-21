@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from roboteam.runtime.run.cli import execute
+from roboteam.runtime.run.admin import execute
 
 
 class FakeStore:

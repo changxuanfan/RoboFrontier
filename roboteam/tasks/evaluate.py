@@ -235,11 +235,11 @@ class Monitor:
         Blue support ready at that frame stays qualified, and red knobs held there are not new
         contacts, so the restart neither re-counts a held input nor records a violation.
         """
-        from roboteam.runtime.run.segments import current_restore
-
         # Red contacts present at the first sample are carried, not new (sample_dial).
         self.previous_red = None
-        found = current_restore(self.w.directory) if getattr(self.w, 'directory', None) is not None else None
+        # The world knows whether it was rebuilt from a restore record (World.restore_record).
+        restore_record = getattr(self.w, 'restore_record', None)
+        found = restore_record() if restore_record is not None else None
         record = found[0].get('evaluator') if found else None
         if not record:
             return
@@ -983,10 +983,8 @@ class Relay:
         lift check, with the custody and drop state it had at that frame
         (docs/runs/continuation.md).
         """
-        from roboteam.runtime.run.segments import current_restore
-
-        directory = getattr(self.mon.w, 'directory', None)
-        found = current_restore(directory) if directory is not None else None
+        restore_record = getattr(self.mon.w, 'restore_record', None)
+        found = restore_record() if restore_record is not None else None
         record = found[0].get('evaluator', {}).get('relay_payloads') if found else None
         for ident, item in (record or {}).items():
             if ident not in self.states:

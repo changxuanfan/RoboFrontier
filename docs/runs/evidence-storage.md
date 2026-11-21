@@ -24,7 +24,7 @@ Run the collector on the machine, container or node that ran the batch, after th
 role hosts and worlds have all stopped:
 
 ```sh
-.venv/bin/roboteam collect runs/policy/MY_BATCH --output runs/exports/MY_BATCH
+.venv/bin/roboteam collect runs/batches/MY_BATCH --output runs/exports/MY_BATCH
 ```
 
 The lower-level entry is `.venv/bin/python -m roboteam.launch.results.collect BATCH --output DIR`;
@@ -119,7 +119,7 @@ To compare an original collection with its restored copy:
 
 ```sh
 .venv/bin/python -m scripts.dev.verify_evidence_replay runs/exports/MY_BATCH \
-  runs/restored/MY_BATCH --output runs/engineering/MY_BATCH-replay-check
+  runs/restored/MY_BATCH --output runs/checks/MY_BATCH-replay-check
 ```
 
 It compares every file hash, all motion states, timestamps and appearance events, then rendered

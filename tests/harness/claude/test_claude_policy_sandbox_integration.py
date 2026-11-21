@@ -114,7 +114,22 @@ def cli_version():
         return 'unknown (%s)' % error
 
 
+def _claude_sandbox_available():
+    """Whether this host runs Claude Code's own sandbox; elsewhere runs use landlock-v1 instead."""
+    from roboteam.harness.shared.landlock import choose
+
+    try:
+        return choose() == 'claude-sandbox'
+    except ValueError:
+        return False
+
+
 @unittest.skipUnless(shutil.which('claude'), 'Claude Code CLI is not installed')
+@unittest.skipUnless(
+    _claude_sandbox_available(),
+    "Claude Code's own sandbox cannot start here (bubblewrap cannot create namespaces); "
+    'this host confines Bash with landlock-v1, which test_claude_landlock covers',
+)
 class PolicySandboxTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

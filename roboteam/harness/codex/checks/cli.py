@@ -17,8 +17,8 @@ from pathlib import Path
 from PIL import Image
 
 from roboteam.harness.codex.launch import launch_config
-from roboteam.runtime.run.cli import fork_provenance
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
+from roboteam.runtime.run.admin import fork_provenance
 
 
 def check(output):

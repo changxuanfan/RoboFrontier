@@ -12,7 +12,7 @@ test('observation MIME uses image bytes and supports old PNG and new JPEG', () =
   assert.throws(() => observationMime(Buffer.from('invalid')), /not PNG or JPEG/);
 });
 test('Codex bridge keeps original action result and emits the proper image MIME', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-observation-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-observation-'));
   try {
     const dir = path.join(root, 'public', 'observations');
     fs.mkdirSync(dir, { recursive: true });

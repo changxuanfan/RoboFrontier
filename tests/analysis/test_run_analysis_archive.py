@@ -9,7 +9,7 @@ import unittest
 import zlib
 from pathlib import Path
 
-from roboteam.analysis.archive import Run
+from roboteam.analysis.run_files import Run
 
 LOG = 'private/outputs/suite-process.jsonl'
 

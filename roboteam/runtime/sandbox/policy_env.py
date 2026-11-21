@@ -145,7 +145,7 @@ def require_checked(root, manifest, wanted=None):
 
 
 def require_combination(harness, isolation):
-    """Before preparing runs with an environment: refuse an harness combination its check did not run."""
+    """Before preparing runs with an environment: refuse a harness combination its check did not run."""
     root = selected()
     if root is not None:
         require_checked(root, load(root), combination(harness, isolation))
@@ -171,7 +171,7 @@ CONFIG = Path(__file__).resolve().with_name('policy-env')
 
 # The ordinary environment (None) holds no physics simulator. A named variant adds the
 # locked packages of its file to the preinstalled ones; only the runs it is meant for may
-# use it (require_variant). `mujoco` is for ground_truth runs (runtime/tools/observation_mode.py).
+# use it (require_variant). `mujoco` is for ground_truth runs (tasks/observation_mode.py).
 VARIANTS = {None: None, 'mujoco': 'mujoco'}
 # System folders a variant's shells search after /usr/bin and /bin. On macOS `import mujoco`
 # runs `sysctl`, which lives in /usr/sbin.

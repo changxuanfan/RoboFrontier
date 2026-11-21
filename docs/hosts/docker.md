@@ -83,10 +83,10 @@ MuJoCo render context, without authenticating. Receipts land in the runs volume.
 ## 6. Prepare, run, status, stop
 
 ```sh
-.venv/bin/roboteam --config docker.toml container prepare --output runs/policy/my-batch
-.venv/bin/roboteam --config docker.toml container run runs/policy/my-batch
-.venv/bin/roboteam --config docker.toml container status runs/policy/my-batch
-.venv/bin/roboteam --config docker.toml container stop runs/policy/my-batch
+.venv/bin/roboteam --config docker.toml container prepare --output runs/batches/my-batch
+.venv/bin/roboteam --config docker.toml container run runs/batches/my-batch
+.venv/bin/roboteam --config docker.toml container status runs/batches/my-batch
+.venv/bin/roboteam --config docker.toml container stop runs/batches/my-batch
 ```
 
 (`prepare` refuses until `container policy-env` has passed.) Batch paths are

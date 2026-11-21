@@ -16,17 +16,18 @@ import numpy as np
 from fake_pipeline import FakeWorld, fake_capture
 from roboteam.harness.shared.robot_mcp import RobotBridge
 from roboteam.runtime.run import bootstrap
-from roboteam.runtime.run.setup import prepare_run, verify_inputs
+from roboteam.runtime.run.setup import prepare_case, prepare_run, verify_inputs
 from roboteam.runtime.sandbox import access as policy_access
-from roboteam.runtime.tools import ground_truth, observation_mode, tools_mode
+from roboteam.runtime.tools import ground_truth
 from roboteam.runtime.tools.robot_ops import check_request
 from roboteam.runtime.world.pipeline import World
 from roboteam.runtime.world.service import RuntimeService
 from roboteam.sim.hall.flat import BUILT
 from roboteam.tasks import ground_truth as ground_truth_files
+from roboteam.tasks import observation_mode, tools_mode
 from roboteam.tasks.config import ROOT, load_run_settings, startup_protocol
 from roboteam.tasks.evaluate import Monitor
-from roboteam.tasks.task_types import RELEASE, dial_code, prepare, read
+from roboteam.tasks.task_types import RELEASE, dial_code, read
 
 TEMPLATES = sorted((ROOT / 'prompts').rglob('*.md'))
 IMAGES_SHA256 = json.loads(Path(__file__).with_name('images_prompt_sha256.json').read_text())
@@ -367,7 +368,7 @@ class StateTests(unittest.TestCase):
         try:
             cls.worlds = {}
             for case in cls.CASES:
-                run = prepare(case, root / case, run_settings(root, 'ground_truth'))
+                run = prepare_case(case, root / case, run_settings(root, 'ground_truth'))
                 world = World(run, json.loads((run / 'private/inputs/task.json').read_text()))
                 # The evaluator as START attaches it, without the run's recorders.
                 world.suite_sampler = Monitor(world)
@@ -550,7 +551,7 @@ class DialSecrecyTests(unittest.TestCase):
         for case in DIAL_CASES:
             code = dial_code(case)
             for observation in ('ground_truth', 'images'):
-                run = prepare(case, self.root / observation / case, run_settings(self.root, observation))
+                run = prepare_case(case, self.root / observation / case, run_settings(self.root, observation))
                 task = json.loads((run / 'private/inputs/task.json').read_text())
                 patterns = code_patterns(task, code)
                 stored = json.loads((run / 'private/inputs/suite-code.json').read_text())
@@ -603,7 +604,7 @@ class DialSecrecyTests(unittest.TestCase):
 
     def test_state_shows_the_display_and_nothing_that_depends_on_which_dial_is_right(self):
         case = 'dial-small-l1'
-        run = prepare(case, self.root / case, run_settings(self.root, 'ground_truth'))
+        run = prepare_case(case, self.root / case, run_settings(self.root, 'ground_truth'))
         task = json.loads((run / 'private/inputs/task.json').read_text())
         world = World(run, task)
         try:

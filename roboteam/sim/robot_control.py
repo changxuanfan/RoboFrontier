@@ -9,7 +9,7 @@ import numpy as np
 from roboteam.sim import franka_limits as franka
 from roboteam.sim.kinematics import RobotIK
 from roboteam.sim.motion_check import TRACKING_LIMIT
-from roboteam.tasks.config import execution_timing
+from roboteam.sim.timing import execution_timing
 
 JOINT_SPEED = np.array(franka.JOINT_SPEED_RAD_S)
 JOINT_ACCEL = np.array(franka.JOINT_ACCEL_RAD_S2)

@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from roboteam.harness.codex.job_harness import build_manifest
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
 
 
 class JobManifestTests(unittest.TestCase):
@@ -73,7 +73,7 @@ class JobManifestTests(unittest.TestCase):
     def test_shared_harness_has_independent_model_entries_and_no_union_default(self):
         manifest = self.build()
         self.assertEqual(len({t['permissions'] for t in manifest['tasks']}), 2)
-        self.assertIn('default_permissions="rf_closed"', manifest['args'])
+        self.assertIn('default_permissions="roboteam_closed"', manifest['args'])
         self.assertNotIn('default_permissions="roboteam"', manifest['args'])
         self.assertTrue(all(t['model'] == 'gpt-6-luna' for t in manifest['tasks']))
 

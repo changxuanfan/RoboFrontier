@@ -88,7 +88,7 @@ def load_configuration(path=None, overrides=None, *, host=None):
     _merge(result, updates)
     if overrides:
         _merge(result, deepcopy(overrides))
-    # An harness chosen without a model gets that harness's default model.
+    # A harness chosen without a model gets that harness's default model.
     if 'model' not in updates.get('policy', {}) and 'model' not in (overrides or {}).get('policy', {}):
         result['policy']['model'] = DEFAULT_MODELS[result['policy']['harness']]
     # `auto` values are settled here, before anything is frozen: for this host, for the Slurm
@@ -156,7 +156,7 @@ def validate_configuration(config):
         raise ValueError(
             'Unsupported configuration schema_version: this code reads version %d' % SCHEMA_VERSION
         )
-    from roboteam.runtime.tools import observation_mode
+    from roboteam.tasks import observation_mode
 
     # A batch prepared before the observation setting existed is an images batch; its frozen
     # configuration is read as it is, never rewritten.
@@ -175,7 +175,7 @@ def validate_configuration(config):
     choice('policy', 'harness', ('codex', 'claude'))
     choice('policy', 'system', SYSTEMS)
     choice('policy', 'effort', ('minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
-    from roboteam.runtime.tools.tools_mode import MODES, ROBOT_ONLY
+    from roboteam.tasks.tools_mode import MODES, ROBOT_ONLY
 
     choice('policy', 'tools', MODES)
     robot_only = config['policy']['tools'] == ROBOT_ONLY
@@ -199,7 +199,7 @@ def validate_configuration(config):
         ):
             raise ValueError('Invalid batch.' + field)
     if config['policy']['harness'] == 'claude' and batch['task_wall_limit_s'] > 86400:
-        raise ValueError('The current Claude engineering runner supports at most 86400 seconds')
+        raise ValueError('A Claude Code run supports at most 86400 seconds')
     choice('selection', 'level', (0, 1, 2, 3))
     if type(config['selection']['level']) is not int:
         raise ValueError('selection.level must be an integer')

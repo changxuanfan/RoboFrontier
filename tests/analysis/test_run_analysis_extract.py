@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from roboteam.analysis import extract, session_archive
-from roboteam.analysis.archive import Run
+from roboteam.analysis.run_files import Run
 
 
 def stamp(s):

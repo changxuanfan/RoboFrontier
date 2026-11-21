@@ -13,12 +13,12 @@ import numpy as np
 from harness.shared.test_harness_parity import RUN_SETTINGS
 from roboteam.harness.claude import recover_task as recovery
 from roboteam.harness.shared import recovery as common_recovery
+from roboteam.io import write_json
 from roboteam.runtime.run import layout as run_layout
-from roboteam.runtime.run.setup import write_json
+from roboteam.runtime.run.setup import prepare_case
 from roboteam.runtime.tools.delegation import Delegations
 from roboteam.runtime.world.store import RuntimeStore
 from roboteam.tasks.config import ROOT
-from roboteam.tasks.task_types import prepare
 
 
 class ClaudeRecoveryTests(unittest.TestCase):
@@ -33,7 +33,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
             )
         )
         self.batch = self.root / 'batch'
-        self.run = prepare(
+        self.run = prepare_case(
             'transport-small-l1', self.batch / 'opus_subscription' / 'transport-small-l1', run_settings
         ).resolve()
         write_json(
@@ -50,7 +50,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
             },
         )
         write_json(
-            run_layout.batch_path(self.batch, 'engineering_status'),
+            run_layout.batch_path(self.batch, 'supervisor_status'),
             {
                 'status': 'running',
                 'jobs': [
@@ -59,7 +59,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
             },
         )
         write_json(
-            run_layout.path(self.run, 'engineering_status'),
+            run_layout.path(self.run, 'supervisor_status'),
             {'status': 'needs_review', 'reason': 'dispatch_paused'},
         )
         self.store = RuntimeStore(self.run / 'private/state/runtime.sqlite')
@@ -116,7 +116,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         store.put('physics_state', 'stopped')
         report = self.run / 'private/outputs/seal.json'
         write_json(report, {'sealed': True, 'fresh_observation': True, 'unresolved_action_ids': []})
-        store.event('RUN_SEALED', 'Meta', {'owner_was_live': True, 'report_ref': str(report)})
+        store.event('RUN_SEALED', 'Meta', {'owner_was_live': True, 'seal_file': str(report)})
         return {'sealed': True, 'unresolved_action_ids': []}
 
     def test_inspection_is_read_only_and_names_the_unstarted_delegation(self):
@@ -152,7 +152,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
         batch['late-fork']['children'][0]['start_status'] = 'pending'
         self.store.put('delegations', batch)
         write_json(
-            run_layout.batch_path(self.batch, 'engineering_status'),
+            run_layout.batch_path(self.batch, 'supervisor_status'),
             {'status': 'running', 'jobs': [{'case_id': 'transport-small-l1', 'status': 'starting'}]},
         )
         with self.assertRaisesRegex(recovery.RecoveryBlocked, 'not handed this task back'):
@@ -169,7 +169,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
                 store.put('segments', [{'index': 0}, {'index': 1}])
                 store.put('lifecycle', 'ended')
                 write_json(
-                    run_layout.path(run, 'engineering_status'),
+                    run_layout.path(run, 'supervisor_status'),
                     {'status': 'finished', 'reason': 'world_ended'},
                 )
                 return 0
@@ -246,7 +246,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
                 store.put('segments', [{'index': 0}, {'index': 1}])
                 store.put('lifecycle', 'ended')
                 write_json(
-                    run_layout.path(run, 'engineering_status'),
+                    run_layout.path(run, 'supervisor_status'),
                     {'status': 'finished', 'reason': 'world_ended'},
                 )
                 return 0
@@ -296,7 +296,7 @@ class ClaudeRecoveryTests(unittest.TestCase):
                 store.put('segments', [{'index': 0}, {'index': 1}])
                 store.put('lifecycle', 'ended')
                 write_json(
-                    run_layout.path(run, 'engineering_status'),
+                    run_layout.path(run, 'supervisor_status'),
                     {'status': 'finished', 'reason': 'world_ended'},
                 )
                 return 0

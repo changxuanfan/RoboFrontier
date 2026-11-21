@@ -6,22 +6,15 @@ import math
 from pathlib import Path
 
 from ..io import ROOT
+from ..sim.timing import execution_timing
 
 DEFAULT_CASE = 'transport-small-l1'  # The smallest released case; tests and bare prepare_run use it.
 # The policy runtime's settings; a batch sets the harness, system, model and effort over them.
 DEFAULT_RUN_SETTINGS = ROOT / 'roboteam/runtime/run/defaults.json'
 # The lead role: the one agent of a single-agent or adaptive run, and the lead of a hierarchical team.
 CONTROLLER = 'Controller'
-
-
-def execution_timing(config):
-    """One timing contract for validation, READY and the physical executor."""
-    return {
-        'base_timeout_sim_s': config['action_timeout_sim_s'],
-        'max_timeout_sim_s': config.get('max_action_timeout_sim_s', 600.0),
-        'reference_time_factor': 1.5,
-        'scope': 'base + factor * estimated reference duration; bounded execution budget, not a success prediction',
-    }
+# The one trial clock: only time the world runs unpaused counts toward the limit.
+ACTIVE_CLOCK = 'active_time_v1'
 
 
 def action_limits():
@@ -131,10 +124,10 @@ def load_run_settings(path=None):
         raise ValueError('Unknown system')
     if c.get('harness', 'codex') not in ('codex', 'claude'):
         raise ValueError('Unknown policy harness')
-    from roboteam.runtime.tools.tools_mode import of as tools_mode
+    from roboteam.tasks.tools_mode import of as tools_mode
 
     tools_mode(c)
-    from roboteam.runtime.tools.observation_mode import check_combination
+    from roboteam.tasks.observation_mode import check_combination
 
     check_combination(c)
     if c.get('startup_protocol') not in ('direct_controller', 'direct_team'):

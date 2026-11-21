@@ -81,8 +81,8 @@ closes to the agents, and out of every checkout and evidence folder.
 curl -s http://127.0.0.1:18470/healthz
 .venv/bin/roboteam preflight --harness codex --model opus_claude_api --confirm-spend
 .venv/bin/roboteam prepare --harness codex --model opus_claude_api --level 1 --min-arms \
-  --parallel 4 --output runs/policy/codex-claude-l1
-.venv/bin/roboteam run runs/policy/codex-claude-l1
+  --parallel 4 --output runs/batches/codex-claude-l1
+.venv/bin/roboteam run runs/batches/codex-claude-l1
 ```
 
 Use the same `--config` and options for `preflight` and `prepare`, and keep the default
@@ -97,7 +97,7 @@ and tool mode. It says nothing about long sessions.
 ```sh
 .venv/bin/python roboteam/harness/adapters/claude_in_codex/monitor.py \
   ~/.roboteam/codex-claude/transport-metadata.jsonl \
-  --batch runs/policy/codex-claude-l1 --min-hit-rate 0.7
+  --batch runs/batches/codex-claude-l1 --min-hit-rate 0.7
 ```
 
 The monitor only reads the log. It never stops, pauses or changes a run.

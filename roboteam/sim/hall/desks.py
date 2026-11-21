@@ -16,7 +16,7 @@ import mujoco
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from roboteam.runtime.run.setup import write_json
+from roboteam.io import write_json
 from roboteam.sim.hall.labels import place_label, region_title
 from roboteam.sim.robot_control import matrix_quat, quat_matrix
 from roboteam.sim.workstation import Workstation

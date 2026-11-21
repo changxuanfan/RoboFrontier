@@ -7,7 +7,7 @@ Everything else is the same: task inputs, robot operations, physics, scoring, ti
 context window and compaction.
 
 ```sh
-.venv/bin/roboteam prepare --output runs/policy/<batch> --harness claude --tools robot_only
+.venv/bin/roboteam prepare --output runs/batches/<batch> --harness claude --tools robot_only
 ```
 
 ## What a role has

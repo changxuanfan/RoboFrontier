@@ -18,8 +18,8 @@ from pathlib import Path, PurePosixPath
 
 from roboteam.harness.codex.launch import model_entry
 from roboteam.io import file_sha256 as digest
-from roboteam.launch.prepare import load_env
-from roboteam.launch.tasks import check_case_assets
+from roboteam.io import load_env
+from roboteam.launch.cases import check_case_assets
 from roboteam.tasks.task_types import RELEASE, ROOT, read
 
 
@@ -126,7 +126,7 @@ def restore_assets(archive_path, root=ROOT):
     root = Path(root).resolve()
     with (
         tarfile.open(archive_path, 'r:gz') as archive,
-        tempfile.TemporaryDirectory(prefix='rf-assets-') as temporary,
+        tempfile.TemporaryDirectory(prefix='roboteam-assets-') as temporary,
     ):
         members = archive.getmembers()
         if any(not m.isfile() for m in members):

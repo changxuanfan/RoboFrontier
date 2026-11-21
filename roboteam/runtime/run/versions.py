@@ -13,6 +13,7 @@ import subprocess
 HARNESSES = {'claude': '2.1.316', 'codex': '0.165.0'}
 LIBRARIES = {'mujoco': '3.16.0', 'numpy': '2.5.4', 'pillow': '12.3.0'}
 HARNESS_COMMANDS = {'claude': ['claude', '--version'], 'codex': ['codex', '--version']}
+NPM_PACKAGES = {'claude': '@anthropic-ai/claude-code', 'codex': '@openai/codex'}
 HARNESS_ENVIRONMENT = {'claude': {'DISABLE_AUTOUPDATER': '1'}, 'codex': {}}
 
 
@@ -46,8 +47,15 @@ def require(harness, run=subprocess.run):
         if actual[name] != expected[name]
     }
     if wrong:
+        hints = []
+        if harness in wrong:
+            hints.append(f'npm install --global {NPM_PACKAGES[harness]}@{expected[harness]}')
+        if set(wrong) - {harness}:
+            hints.append('uv sync --locked')
         raise ValueError(
             'Installed versions differ from the pinned ones: '
             + ', '.join(f"{name} {v['installed']} (pinned {v['pinned']})" for name, v in wrong.items())
+            + '. To get the pinned ones: '
+            + '; '.join(hints)
         )
     return expected

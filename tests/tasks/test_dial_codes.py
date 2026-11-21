@@ -5,8 +5,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from roboteam.runtime.run.setup import prepare_case
 from roboteam.tasks.dial import alphabet
-from roboteam.tasks.task_types import RELEASE, ROOT, dial_code, prepare, read
+from roboteam.tasks.task_types import RELEASE, ROOT, dial_code, read
 
 
 class DialCodeTests(unittest.TestCase):
@@ -24,7 +25,7 @@ class DialCodeTests(unittest.TestCase):
     def test_a_prepared_run_uses_the_release_code_privately(self):
         with tempfile.TemporaryDirectory() as folder:
             run = Path(folder) / 'run'
-            prepare('dial-small-l1', run)
+            prepare_case('dial-small-l1', run)
             stored = json.loads((run / 'private/inputs/suite-code.json').read_text())
             self.assertEqual(stored, {'code_symbols': dial_code('dial-small-l1')})
             for path in (run / 'public').rglob('*'):

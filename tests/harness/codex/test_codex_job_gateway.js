@@ -11,7 +11,7 @@ function fixture(count = 2) {
     id: 'task-' + i,
     run: '/runs/' + i,
     cwd: '/runs/' + i + '/workspace',
-    permissions: 'rf_' + i,
+    permissions: 'roboteam_' + i,
     model: 'gpt-6-luna',
     provider: 'managed',
     effort: 'high',
@@ -55,7 +55,7 @@ function fixture(count = 2) {
 }
 
 function grant(f, task, nonce = 'recovery-fixture') {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-recover-'));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-recover-'));
   fs.chmodSync(folder, 0o700);
   f.gateway.recoveryDirectory = folder;
   const value = {
@@ -107,7 +107,7 @@ test('a fenced task never dispatches a turn that was waiting for the network', a
 
 test('bound transport gives queued model mutations the configured pause grace', async (t) => {
   const f = fixture(),
-    folder = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-pause-rpc-'));
+    folder = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-pause-rpc-'));
   t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
   await f.gateway.listen(path.join(folder, 'harness.sock'));
   const rpc = new GatewayRpc(path.join(folder, 'harness.sock'), 'task-0', { pauseGraceMs: 300 });
@@ -259,7 +259,7 @@ test('cross-task read, fork, interrupt, profile and input references are rejecte
   for (const method of ['thread/read', 'thread/fork', 'thread/resume', 'turn/interrupt', 'turn/start'])
     await assert.rejects(f.gateway.request(f.clients[1], method, { threadId: parent.thread.id }));
   await assert.rejects(
-    f.gateway.request(f.clients[0], 'thread/fork', { threadId: parent.thread.id, permissions: 'rf_1' }),
+    f.gateway.request(f.clients[0], 'thread/fork', { threadId: parent.thread.id, permissions: 'roboteam_1' }),
   );
   await assert.rejects(f.gateway.request(f.clients[0], 'thread/start', { sandbox: 'danger-full-access' }));
   await assert.rejects(
@@ -317,7 +317,7 @@ test('shared harness loss fences channels and never retries an uncertain turn', 
 });
 
 test('real Unix transport supports identical client request IDs without crossing results', async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-gw-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-gw-'));
   const f = fixture(36); // Recreate channels through the socket instead of binding in memory.
   for (const task of f.gateway.tasks.values()) {
     task.state = 'new';
@@ -456,7 +456,7 @@ test('a host lost while its turn cannot settle fences only its own task', async 
 });
 
 test('a delayed tool response keeps its Unix task channel and leaves peers usable', async (t) => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-gw-long-')),
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'roboteam-gw-long-')),
     f = fixture();
   for (const task of f.gateway.tasks.values()) {
     task.state = 'new';
